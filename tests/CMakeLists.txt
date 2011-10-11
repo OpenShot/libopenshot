@@ -1,0 +1,73 @@
+################### UNITTEST++ #####################
+# Find UnitTest++ libraries (used for unit testing)
+FIND_PACKAGE(UnitTest++ REQUIRED)
+
+# Include UnitTest++ headers (needed for compile)
+include_directories(${UNITTEST++_INCLUDE_DIR})
+
+
+
+
+################ IMAGE MAGICK ##################
+# Find the ImageMagick++ library
+FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+
+# Include ImageMagick++ headers (needed for compile)
+include_directories(${ImageMagick_INCLUDE_DIRS})
+
+################### FFMPEG #####################
+# Find FFmpeg libraries (used for video encoding / decoding)
+FIND_PACKAGE(FFmpeg REQUIRED)
+
+# Include FFmpeg headers (needed for compile)
+include_directories(${FFMPEG_INCLUDE_DIR})
+
+################# JACK AUDIO ###################
+# Find Jack Audio libraries
+#FIND_PACKAGE(Jack)
+
+# Include Jack headers (needed for compile)
+#include_directories(${LIBJACK_INCLUDE_DIR})
+
+################# JUCE AUDIO ###################
+# Find JUCE Audio libraries
+FIND_PACKAGE(Juce)
+
+# Include Juce headers (needed for compile)
+include_directories(${LIBJUCE_INCLUDE_DIRS})
+
+################# SDL ###################
+# Find SDL libraries
+FIND_PACKAGE(SDL REQUIRED)
+
+# Include SDL headers (needed for compile)
+include_directories(${SDL_INCLUDE_DIR})
+
+################# GTK2 ###################
+# Find GTK2 libraries
+#FIND_PACKAGE(GTK2 COMPONENTS gtk gtkmm)
+#
+# Include GTK headers (needed for compile)
+#include_directories(${GTK2_INCLUDE_DIRS})
+
+
+################ TESTER EXECUTABLE #################
+# Create unit test executable (tester)
+add_executable(tester
+			   tests.cpp
+			   Cache_Tests.cpp
+			   Coordinate_Tests.cpp
+			   FileReaderBase_Tests.cpp
+			   Fraction_Tests.cpp
+			   FrameMapper_Tests.cpp
+			   FrameRate_Tests.cpp
+			   KeyFrame_Tests.cpp
+			   Point_Tests.cpp)
+
+# Link libraries to the new executable
+target_link_libraries(tester openshot ${UNITTEST++_LIBRARY})
+
+
+#################### MAKE TEST ######################
+# Hook up the 'make test' target to the 'tester' executable
+ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/tester)

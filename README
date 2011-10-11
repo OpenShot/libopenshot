@@ -1,0 +1,63 @@
+OpenShot Video Library is a program that creates, modifies, and edits video files.
+Copyright (C) 2011  Jonathan Thomas
+
+OpenShot Video Editor is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+OpenShot Video Editor is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with OpenShot Video Editor.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#################
+  INSTALLATION
+#################
+
+Please see /doc/InstallationGuide.pdf for a very detailed  
+Linux and Windows compiling instruction guide.
+
+
+
+#################
+    WEBSITES
+#################
+
+http://www.openshotvideo.com/  (PROJECT WEBSITE and BLOG)
+http://launchpad.net/openshot/ (SOURCE CODE, BUG TRACKER, TRANSLATIONS)
+http://freshmeat.net/projects/openshot-video-editor/
+https://sourceforge.net/projects/openshotvideo/
+https://www.ohloh.net/p/openshot-video-editor/
+
+
+
+####################
+    REPORT A BUG
+####################
+
+https://bugs.launchpad.net/openshot
+
+
+
+####################
+    TRANSLATIONS
+####################
+
+https://translations.launchpad.net/openshot
+
+
+
+####################
+   ASK A QUESTION  
+####################
+
+https://answers.launchpad.net/openshot
+
+
+
+
