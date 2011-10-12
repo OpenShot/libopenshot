@@ -145,12 +145,12 @@ for (int stuff = 0; stuff < number_of_cycles; stuff++)
 		const Magick::PixelPacket *pixel = reduced_color;
 
 		// Get the RGB colors
-//		float r = pixel[pixel_index].red / 255.0;
-//		float b = pixel[pixel_index].blue / 255.0;
-//		float g = pixel[pixel_index].green / 255.0;
-		float r = 100.0;
-		float g = 100.0;
-		float b = 100.0;
+		float r = pixel[pixel_index].red / 255.0;
+		float b = pixel[pixel_index].blue / 255.0;
+		float g = pixel[pixel_index].green / 255.0;
+//		float r = 100.0;
+//		float g = 100.0;
+//		float b = 100.0;
 
 		// Calculate UV colors
 		float v = (0.439 * r) - (0.368 * g) - (0.071 * b) + 128;

@@ -139,15 +139,18 @@ const Magick::PixelPacket* Frame::GetPixels(int row)
 const Magick::PixelPacket* Frame::GetPixels(unsigned int width, unsigned int height, int frame)
 {
 	// Create a new resized image
-	Magick::Image newImage = *image;
-	newImage.resize(Magick::Geometry(width, height));
+	//Magick::Image newImage = *image;
+	small_image = new Magick::Image(*(image));
+	small_image->resize(Magick::Geometry(width, height));
+	small_image->colorize(255, 0, 0, Magick::Color(0,0,255));
+	small_image->blur(5.0, 5.0);
 
 	stringstream file;
 	file << "frame" << frame << ".png";
-	newImage.write(file.str());
+	small_image->write(file.str());
 
 	// Return arry of pixel packets
-	return newImage.getConstPixels(0,0, newImage.columns(), newImage.rows());
+	return small_image->getConstPixels(0,0, small_image->columns(), small_image->rows());
 }
 
 // Get height of image

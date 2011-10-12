@@ -31,6 +31,7 @@ namespace openshot
 	{
 	private:
 		Magick::Image *image;
+		Magick::Image *small_image;
 		juce::AudioSampleBuffer *audio;
 
 	public:
