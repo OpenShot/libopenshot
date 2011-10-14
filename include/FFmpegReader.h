@@ -57,7 +57,8 @@ namespace openshot
 		AVFrame *pFrame;
 
 		Frame new_frame;
-		Cache cache;
+		Cache final_cache;
+		Cache working_cache;
 		bool is_seeking;
 		int seeking_pts;
 
@@ -81,6 +82,12 @@ namespace openshot
 
 		/// Convert Frame Number into PTS
 		int ConvertFrameToPTS(int frame_number);
+
+		/// Calculate Starting video frame for an audio PTS
+		int GetFrameFromAudioPTS(int pts);
+
+		/// Calculate the # of samples per video frame
+		int GetSamplesPerFrame();
 
 	public:
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads

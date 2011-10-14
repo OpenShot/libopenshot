@@ -28,10 +28,16 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		Player g;
-		g.SetReader(&r);
+		r.GetFrame(300);
+		r.GetFrame(300);
+		r.GetFrame(301);
+		r.GetFrame(302);
+		r.GetFrame(5);
+
+		//Player g;
+		//g.SetReader(&r);
 		//g.SetFrameCallback(&FrameReady);
-		g.Play();
+		//g.Play();
 
 		// Get a frame
 		//Frame f = r.GetFrame(300);

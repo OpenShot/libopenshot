@@ -4,7 +4,8 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: current_frame(0), current_pts(0), is_seeking(0), seeking_pts(0),
-	  found_frame(false), needs_packet(true), pts_offset(1), found_pts_offset(false), path(path) {
+	  found_frame(false), needs_packet(true), pts_offset(1), found_pts_offset(false),
+	  working_cache(50), path(path) {
 
 	// Open the file (if possible)
 	Open();
@@ -173,11 +174,11 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 	audio_position = 0;
 
 	// Check the cache for this frame
-	if (cache.Exists(requested_frame))
+	if (final_cache.Exists(requested_frame))
 	{
 		cout << "Cached Frame!" << endl;
 		// Return the cached frame
-		return cache.GetFrame(requested_frame);
+		return final_cache.GetFrame(requested_frame);
 	}
 	else
 	{
@@ -222,19 +223,19 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 			// Loop through the stream until the correct frame is found
 			while (true)
 			{
-				// Should we get the next packet? (sometimes we already have an unprocessed packet)
-				if (needs_packet)
-				{
+//				// Should we get the next packet? (sometimes we already have an unprocessed packet)
+//				if (needs_packet)
+//				{
 					// Get the next packet (if any)
 					if (GetNextPacket() < 0)
 						// Break loop when no more packets found
 						break;
-				}
-				else
-				{
-					// Reset this flag so next time around we get a new packet
-					needs_packet = true;
-				}
+//				}
+//				else
+//				{
+//					// Reset this flag so next time around we get a new packet
+//					needs_packet = true;
+//				}
 
 				// Video packet
 				if (packet.stream_index == videoStream)
@@ -244,13 +245,13 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 						// Stop looping
 						break;
 
-					// Set the frame number and pts
-					SetFrameNumber();
-
 					// Check if the AVFrame is finished and set it
 					if (GetAVFrame())
 					{
 						cout << endl << "VIDEO PACKET (DTS: " << packet.dts << ")" << endl;
+
+						// Set the frame number and pts
+						SetFrameNumber();
 
 						// Check the status of a seek (if any)
 						if (CheckSeek())
@@ -267,8 +268,8 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				{
 					cout << "AUDIO PACKET (DTS: " << packet.dts << ")" << endl;
 
-					// Process Audio Packet
-					ProcessAudioPacket(requested_frame);
+					// Process Audio Packet (determine related video frame from audio PTS)
+					ProcessAudioPacket(GetFrameFromAudioPTS(packet.pts));
 
 				}
 
@@ -278,7 +279,7 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 	} // end omp parallel
 
 	// Set flag to not get the next packet (since we already got it)
-	needs_packet = false;
+	//needs_packet = false;
 
 	// Delete packet
 	//av_free_packet(&packet);
@@ -305,6 +306,14 @@ void FFmpegReader::SetFrameNumber()
 		current_pts = packet.dts;
 	else
 		current_pts = -1;
+
+	// Determine the offset between the PTS and Frame number (only for 1st frame)
+	if (!found_pts_offset)
+	{
+		// Find the difference between PTS and frame number
+		pts_offset = 1 - current_pts;
+		found_pts_offset = true;
+	}
 
 	// Set the current frame correctly
 	current_frame = ConvertPTStoFrame(current_pts);
@@ -384,7 +393,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		new_frame = convert_image(&copyFrame, w, h, pCodecCtx->pix_fmt);
 
 		// Cache Frame
-		cache.Add(current_frame, new_frame);
+		working_cache.Add(current_frame, new_frame);
 
 		// Free AVPicture
 		avpicture_free(&copyFrame);
@@ -392,15 +401,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		// Break the loop when the correct frame is found
 		if (current_frame == requested_frame)
 			found_frame = true;
-
-		// Determine the offset between the PTS and Frame number (if needed)
-		if (!found_pts_offset)
-		{
-			// Find the difference between PTS and frame number
-			pts_offset = current_frame - current_pts;
-			found_pts_offset = true;
-		}
-
 
 	} // end omp task
 
@@ -485,7 +485,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame)
 		}
 
 		// Cache Frame (or update an existing frame)
-		cache.Add(current_frame, new_frame);
+		final_cache.Add(current_frame, new_frame);
 
 		// clear channel buffer
 		delete channel_buffer;
@@ -503,6 +503,9 @@ void FFmpegReader::Seek(int requested_frame)
 		requested_frame = 1;
 	if (requested_frame > info.video_length)
 		requested_frame = info.video_length;
+
+	// Clear working cache (since we are seeking to another location in the file)
+	working_cache.Clear();
 
 	// Set seeking flags
 	is_seeking = true;
@@ -601,6 +604,7 @@ Frame FFmpegReader::convert_image(AVPicture *copyFrame, int original_width, int 
 // Convert PTS into Frame Number
 int FFmpegReader::ConvertPTStoFrame(int pts)
 {
+	// Sometimes the PTS of the 1st frame is not 1 (so we have to adjust)
 	return pts + pts_offset;
 }
 
@@ -610,3 +614,19 @@ int FFmpegReader::ConvertFrameToPTS(int frame_number)
 	return frame_number - pts_offset;
 }
 
+// Calculate Starting video frame for an audio PTS
+int FFmpegReader::GetFrameFromAudioPTS(int pts)
+{
+	// Get the audio packet start time (in seconds)
+	int audio_seconds = pts * info.audio_timebase.ToDouble();
+
+	// Divide by the video timebase, to get the video frame number
+	return audio_seconds / info.video_timebase.ToDouble();
+}
+
+// Calculate the # of samples per video frame
+int FFmpegReader::GetSamplesPerFrame()
+{
+	// Get the number of samples per video frame (sample rate X video timebase)
+	return info.sample_rate * info.video_timebase.ToDouble();
+}
