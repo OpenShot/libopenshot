@@ -121,3 +121,56 @@ TEST(Cache_GetFrame)
 	CHECK_EQUAL(3, c.GetFrame(3).number);
 }
 
+TEST(Cache_GetFront)
+{
+	// Create cache object (with a max of 10 items)
+	Cache c(10);
+
+	// Create 3 frames
+	Frame red(1, 300, 300, "red");
+	Frame blue(2, 400, 400, "blue");
+	Frame green(3, 500, 500, "green");
+
+	// Add frames to cache
+	c.Add(red.number, red);
+	c.Add(blue.number, blue);
+	c.Add(green.number, green);
+
+	// Check if frame 1 is the front
+	CHECK_EQUAL(1, c.GetFront().number);
+
+	// Check if frame 1 is STILL the front
+	CHECK_EQUAL(1, c.GetFront().number);
+
+	// Erase frame 1
+	c.Pop();
+
+	// Check if frame 2 is the front
+	CHECK_EQUAL(2, c.GetFront().number);
+}
+
+TEST(Cache_Pop)
+{
+	// Create cache object (with a max of 10 items)
+	Cache c(10);
+
+	// Create 3 frames
+	Frame red(1, 300, 300, "red");
+	Frame blue(2, 400, 400, "blue");
+	Frame green(3, 500, 500, "green");
+
+	// Add frames to cache
+	c.Add(red.number, red);
+	c.Add(blue.number, blue);
+	c.Add(green.number, green);
+
+	// Check if frame 1 is the front
+	Frame pop1 = c.Pop();
+	CHECK_EQUAL(1, pop1.number);
+
+	Frame pop2 = c.Pop();
+	CHECK_EQUAL(2, pop2.number);
+
+	Frame pop3 = c.Pop();
+	CHECK_EQUAL(3, pop3.number);
+}

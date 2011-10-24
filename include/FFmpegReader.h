@@ -33,6 +33,14 @@ using namespace std;
 
 namespace openshot
 {
+	/// This struct holds the associated video frame and starting sample # for an audio packet.
+	/// Because audio packets do not match up with video frames, this helps determine exactly
+	/// where the audio packet's samples belong.
+	struct audio_packet_location
+	{
+		int frame;
+		int sample_start;
+	};
 
 	/**
 	 * \brief This class uses the FFmpeg libraries, to open video files and audio files, and return
@@ -56,38 +64,54 @@ namespace openshot
 		AVPacket packet;
 		AVFrame *pFrame;
 
-		Frame new_frame;
 		Cache final_cache;
 		Cache working_cache;
+
 		bool is_seeking;
 		int seeking_pts;
+		int seeking_frame;
+		bool is_video_seek;
 
-		bool found_pts_offset;
-		int pts_offset;
+		int audio_pts_offset;
+		int video_pts_offset;
 
-		bool found_frame;
-		int current_frame;
-		int current_pts;
-		int audio_position;
-		bool needs_packet;
+		int last_video_frame;
+		int last_audio_frame;
+
 
 		/// Open File - which is called by the constructor automatically
 		void Open();
 
 		/// Convert image to RGB format
-		Frame convert_image(AVPicture *copyFrame, int original_width, int original_height, PixelFormat pix_fmt);
+		void convert_image(int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
 
-		/// Convert PTS into Frame Number
-		int ConvertPTStoFrame(int pts);
+		/// Get the PTS for the current video packet
+		int GetVideoPTS();
 
-		/// Convert Frame Number into PTS
-		int ConvertFrameToPTS(int frame_number);
+		/// Update PTS Offset (if any)
+		void UpdatePTSOffset(bool is_video);
 
-		/// Calculate Starting video frame for an audio PTS
-		int GetFrameFromAudioPTS(int pts);
+		/// Convert Video PTS into Frame Number
+		int ConvertVideoPTStoFrame(int pts);
+
+		/// Convert Frame Number into Video PTS
+		int ConvertFrameToVideoPTS(int frame_number);
+
+		/// Convert Frame Number into Audio PTS
+		int ConvertFrameToAudioPTS(int frame_number);
+
+		/// Calculate Starting video frame and sample # for an audio PTS
+		audio_packet_location GetAudioPTSLocation(int pts);
 
 		/// Calculate the # of samples per video frame
 		int GetSamplesPerFrame();
+
+		/// Create a new Frame (or return an existing one) and add it to the working queue.
+		Frame CreateFrame(int requested_frame);
+
+		/// Check the working queue, and move finished frames to the finished queue
+		void CheckWorkingFrames(bool end_of_stream);
+
 
 	public:
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
@@ -119,19 +143,16 @@ namespace openshot
 		void ProcessVideoPacket(int requested_frame);
 
 		/// Process an audio packet
-		void ProcessAudioPacket(int requested_frame);
+		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
 
 		/// Get the next packet (if any)
 		int GetNextPacket();
-
-		/// Set the frame number and current pts
-		void SetFrameNumber();
 
 		/// Get an AVFrame (if any)
 		bool GetAVFrame();
 
 		/// Check the current seek position and determine if we need to seek again
-		bool CheckSeek();
+		bool CheckSeek(bool is_video);
 
 	};
 

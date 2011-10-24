@@ -10,7 +10,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), pts(0), image(0), audio(0)
+Frame::Frame() : number(1), image(0), audio(0)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
@@ -21,7 +21,7 @@ Frame::Frame() : number(1), pts(0), image(0), audio(0)
 };
 
 // Constructor - image only (48kHz audio silence)
-Frame::Frame(int number, int width, int height, string color) : number(number), pts(0), image(0), audio(0)
+Frame::Frame(int number, int width, int height, string color) : number(number), image(0), audio(0)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -32,8 +32,8 @@ Frame::Frame(int number, int width, int height, string color) : number(number), 
 };
 
 // Constructor - image only from pixel array (48kHz audio silence)
-Frame::Frame(int number, int pts, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), pts(pts), image(0), audio(0)
+Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
+	: number(number), image(0), audio(0)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
@@ -44,7 +44,7 @@ Frame::Frame(int number, int pts, int width, int height, const string map, const
 };
 
 // Constructor - audio only (300x200 blank image)
-Frame::Frame(int number, int samples, int channels) : number(number), pts(0), image(0), audio(0)
+Frame::Frame(int number, int samples, int channels) : number(number), image(0), audio(0)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
@@ -55,7 +55,7 @@ Frame::Frame(int number, int samples, int channels) : number(number), pts(0), im
 };
 
 // Constructor - image & audio
-Frame::Frame(int number, int width, int height, string color, int samples, int channels) : number(number), pts(0), image(0), audio(0)
+Frame::Frame(int number, int width, int height, string color, int samples, int channels) : number(number), image(0), audio(0)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -174,6 +174,17 @@ void Frame::Save()
 	stringstream file;
 	file << "frame" << number << ".png";
 	image->write(file.str());
+}
+
+// Add (or replace) pixel data to the frame
+void Frame::AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels)
+{
+	// Deallocate image memory
+	delete image;
+	image = NULL;
+
+	// Create new image object, and fill with pixel data
+	image = new Magick::Image(width, height, map, type, pixels);
 }
 
 // Add audio samples to a specific channel

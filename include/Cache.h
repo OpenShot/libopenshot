@@ -44,8 +44,14 @@ namespace openshot {
 		/// Check for the existance of a frame in the cache
 		bool Exists(int frame_number);
 
+		/// Return the front frame and remove it
+		Frame Pop();
+
 		/// Get a frame from the cache
 		Frame GetFrame(int frame_number);
+
+		/// Get the front frame in this cache
+		Frame GetFront();
 
 		/// Clear the cache of all frames
 		void Clear();

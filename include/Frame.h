@@ -36,7 +36,6 @@ namespace openshot
 
 	public:
 		int number;		///< This is the frame number (starting at 1)
-		int pts;		///< This is the presentation timestamp (in frames)
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();
@@ -45,7 +44,7 @@ namespace openshot
 		Frame(int number, int width, int height, string color);
 
 		/// Constructor - image only from pixel array (48kHz audio silence)
-		Frame(int number, int pts, int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
+		Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
 		/// Constructor - audio only (300x200 blank image)
 		Frame(int number, int samples, int channels);
@@ -88,6 +87,9 @@ namespace openshot
 
 		/// Save the frame image
 		void Save();
+
+		/// Add (or replace) pixel data to the frame
+		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
 		/// Add audio samples to a specific channel
 		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);

@@ -28,11 +28,8 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		r.GetFrame(300);
-		r.GetFrame(300);
-		r.GetFrame(301);
-		r.GetFrame(302);
-		r.GetFrame(5);
+		r.GetFrame(1).Display();
+		r.GetFrame(300).Display();
 
 		//Player g;
 		//g.SetReader(&r);

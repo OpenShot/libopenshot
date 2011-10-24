@@ -46,6 +46,23 @@ bool Cache::Exists(int frame_number)
 		return false;
 }
 
+// Return the front frame and remove it
+Frame Cache::Pop()
+{
+	// Remove the oldest frame
+	int frame_to_remove = frame_numbers.front();
+
+	// Get the front frame
+	Frame f = GetFrame(frame_to_remove);
+
+	// Remove frame_number and frame
+	frame_numbers.pop();
+	frames.erase(frame_to_remove);
+
+	// Return the frame
+	return f;
+}
+
 // Get a frame from the cache
 Frame Cache::GetFrame(int frame_number)
 {
@@ -58,6 +75,13 @@ Frame Cache::GetFrame(int frame_number)
 	else
 		// throw an exception for the missing frame
 		throw OutOfBoundsFrame("Frame not found in the cache", frame_number, -1);
+}
+
+// Get the front frame in this cache
+Frame Cache::GetFront()
+{
+	// Return oldest frame in the cache
+	return GetFrame(frame_numbers.front());
 }
 
 // Clear the cache of all frames
