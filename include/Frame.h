@@ -70,6 +70,9 @@ namespace openshot
 		/// Display the frame image to the screen (primarily used for debugging reasons)
 		void Display();
 
+		/// Display the wave form
+		void DisplayWaveform(bool resize);
+
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
 

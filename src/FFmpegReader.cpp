@@ -429,6 +429,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		packet.size -= sample_count;
 	}
 
+
+	cout << "Added Audio Samples: " << packet_samples << endl;
+
+
 	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 	{
 		// Array of floats (to hold samples for each channel)
