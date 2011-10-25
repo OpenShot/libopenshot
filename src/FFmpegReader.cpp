@@ -411,10 +411,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
 
 		// decode audio packet into samples (put samples in the audio_buf array)
-		int sample_count = avcodec_decode_audio2(aCodecCtx, audio_buf, &buf_size,
+		int used = avcodec_decode_audio2(aCodecCtx, audio_buf, &buf_size,
 				packet.data, packet.size);
 
-		if (sample_count < 0) {
+		if (used < 0) {
 			// Throw exception
 			throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
 			packet.size = 0;
@@ -422,11 +422,11 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		}
 
 		// Calculate total number of samples
-		packet_samples += sample_count;
+		packet_samples += buf_size;
 
 		// process samples...
-		packet.data += sample_count;
-		packet.size -= sample_count;
+		packet.data += used;
+		packet.size -= used;
 	}
 
 
@@ -547,7 +547,7 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seeking_pts = ConvertFrameToVideoPTS(requested_frame);
-		int64_t seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
+		seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 	else if (info.audio_stream_index >= 0)
 	{
@@ -557,7 +557,7 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seeking_pts = ConvertFrameToAudioPTS(requested_frame); // PTS seems to always start at zero, and our frame numbers start at 1.
-		int64_t seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
+		seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 
 	// If valid stream, rescale timestamp so the av_seek_frame method will understand it

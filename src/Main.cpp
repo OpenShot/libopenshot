@@ -17,8 +17,8 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/test.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/test.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/bannertemplate.png");
@@ -28,13 +28,12 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		r.GetFrame(400).DisplayWaveform(false);
-		r.GetFrame(401).DisplayWaveform(false);
-		r.GetFrame(402).DisplayWaveform(false);
-		r.GetFrame(403).DisplayWaveform(false);
-		r.GetFrame(404).DisplayWaveform(false);
-		//r.GetFrame(301).DisplayWaveform();
-		//r.GetFrame(302).DisplayWaveform();
+		for (int frame = 1500; frame < 2000; frame++)
+		{
+			Frame f = r.GetFrame(frame);
+			f.Play();
+			f.DisplayWaveform(false);
+		}
 
 		//Player g;
 		//g.SetReader(&r);
