@@ -402,13 +402,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		return;
 
 	// Allocate audio buffer
-	static int16_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+	int16_t audio_buf[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
 	int packet_samples = 0;
 	while (packet.size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-		buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 
 		// decode audio packet into samples (put samples in the audio_buf array)
 		int used = avcodec_decode_audio2(aCodecCtx, audio_buf, &buf_size,
@@ -422,15 +421,14 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		}
 
 		// Calculate total number of samples
-		packet_samples += buf_size;
+		packet_samples += (buf_size / sizeof(int16_t));
 
 		// process samples...
 		packet.data += used;
 		packet.size -= used;
 	}
 
-
-	cout << "Added Audio Samples: " << packet_samples << endl;
+	cout << "Samples Added to Frame " << target_frame << ": " << packet_samples << " (starting at sample: " << starting_sample << ")" << endl;
 
 
 	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
@@ -448,6 +446,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		// Loop through all samples and add them to our Frame based on channel.
 		// Toggle through each channel number, since channel data is stored like (left right left right)
 		int channel = 0;
+
 		for (int sample = 0; sample < packet_samples; sample++)
 		{
 			// Only add samples for current channel
@@ -480,6 +479,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		int samples_per_frame = GetSamplesPerFrame();
 
 		// Loop through samples, and add them to the correct frames
+		int start = starting_sample;
 		int remaining_samples = channel_buffer_size;
 		while (remaining_samples > 0)
 		{
@@ -488,12 +488,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			last_audio_frame = starting_frame_number;
 
 			// Calculate # of samples to add to this frame
-			int samples = samples_per_frame - starting_sample;
+			int samples = samples_per_frame - start;
 			if (samples > remaining_samples)
 				samples = remaining_samples;
 
 			// Add samples for current channel to the frame
-			f.AddAudio(channel_filter, starting_sample, channel_buffer, samples, 1.0f);
+			f.AddAudio(channel_filter, start, channel_buffer, samples, 1.0f);
 
 			// Update working cache
 			working_cache.Add(starting_frame_number, f);
@@ -505,7 +505,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			starting_frame_number++;
 
 			// Reset starting sample #
-			starting_sample = 0;
+			start = 0;
 		}
 
 		// clear channel buffer
