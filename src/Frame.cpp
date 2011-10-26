@@ -283,8 +283,6 @@ void Frame::Play()
 	ScopedPointer<AudioBufferSource> my_source;
 	my_source = new AudioBufferSource(audio->getNumSamples(), audio->getNumChannels());
 
-	cout << "audio->getNumSamples(): " << audio->getNumSamples() << endl;
-
 	// Add audio to AudioBufferSource
 	for (int channel = 0; channel < audio->getNumChannels(); channel++)
 	{
@@ -295,7 +293,7 @@ void Frame::Play()
 	AudioTransportSource transport1;
 	transport1.setSource (my_source,
 			5000, // tells it to buffer this many samples ahead
-			(double) 8000);
+			(double) 48000); // sample rate of source
 	transport1.setPosition (0);
 	transport1.setGain(1.0);
 

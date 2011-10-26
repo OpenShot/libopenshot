@@ -705,7 +705,7 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 
 	// Get Samples per frame
 	int samples_per_frame = GetSamplesPerFrame();
-	int sample_start = double(samples_per_frame) * sample_start_percentage;
+	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
 
 	// Prepare final audio packet location
 	audio_packet_location location = {whole_frame, sample_start};

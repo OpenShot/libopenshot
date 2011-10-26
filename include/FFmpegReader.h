@@ -20,14 +20,15 @@ extern "C" {
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
 }
-
-#include <iostream>
-#include <stdio.h>
+#include <cmath>
 #include <ctime>
+#include <iostream>
 #include <omp.h>
+#include <stdio.h>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
+
 
 using namespace std;
 
