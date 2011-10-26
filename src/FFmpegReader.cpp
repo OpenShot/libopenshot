@@ -290,7 +290,8 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 	av_free(pFrame);
 
 	// End of stream?  Mark the any other working frames as 'finished'
-	CheckWorkingFrames(true);
+	if (end_of_stream)
+		CheckWorkingFrames(end_of_stream);
 
 	// Return requested frame (if found)
 	if (final_cache.Exists(requested_frame))
@@ -428,16 +429,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		packet.size -= used;
 	}
 
-	cout << "Samples Added to Frame " << target_frame << ": " << packet_samples << " (starting at sample: " << starting_sample << ")" << endl;
-
-
 	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 	{
 		// Array of floats (to hold samples for each channel)
 		int starting_frame_number = target_frame;
 		int channel_buffer_size = (packet_samples / info.channels) + 1;
 		float *channel_buffer = new float[channel_buffer_size];
-		int position = 0;
 
 		// Init buffer array
 		for (int z = 0; z < channel_buffer_size; z++)
@@ -446,7 +443,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		// Loop through all samples and add them to our Frame based on channel.
 		// Toggle through each channel number, since channel data is stored like (left right left right)
 		int channel = 0;
-
+		int position = 0;
 		for (int sample = 0; sample < packet_samples; sample++)
 		{
 			// Only add samples for current channel
@@ -460,20 +457,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			}
 
 			// increment channel (if needed)
-			if (channel < info.channels)
+			if ((channel + 1) < info.channels)
 				// move to next channel
 				channel ++;
 			else
 				// reset channel
 				channel = 0;
 		}
-
-		// Add channel buffer to Frame object
-//		if (packet_samples > 0) // DEBUG to prevent overwriting samples with multiple audio packets
-//		{
-//			//cout << " *** ADDED AUDIO FOR FRAME " << current_frame << " *** (" << channel_buffer_size << " samples)" << endl;
-//			new_frame.AddAudio(channel_filter, audio_position, channel_buffer, channel_buffer_size, 1.0f);
-//		}
 
 		// Get Samples per frame
 		int samples_per_frame = GetSamplesPerFrame();
@@ -769,7 +759,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			break;
 
 		// Get the front frame of working cache
-		Frame f = working_cache.GetFront();
+		Frame f = working_cache.GetSmallestFrame();
 
 		// Check if working frame is final
 		if ((!end_of_stream && f.number <= last_video_frame && f.number < last_audio_frame) || end_of_stream)
@@ -778,7 +768,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			final_cache.Add(f.number, f);
 
 			// Remove frame from working cache
-			working_cache.Pop();
+			working_cache.Remove(f.number);
 		}
 		else
 			// Stop looping

@@ -121,14 +121,14 @@ TEST(Cache_GetFrame)
 	CHECK_EQUAL(3, c.GetFrame(3).number);
 }
 
-TEST(Cache_GetFront)
+TEST(Cache_GetSmallest)
 {
 	// Create cache object (with a max of 10 items)
 	Cache c(10);
 
 	// Create 3 frames
-	Frame red(1, 300, 300, "red");
 	Frame blue(2, 400, 400, "blue");
+	Frame red(1, 300, 300, "red");
 	Frame green(3, 500, 500, "green");
 
 	// Add frames to cache
@@ -137,19 +137,19 @@ TEST(Cache_GetFront)
 	c.Add(green.number, green);
 
 	// Check if frame 1 is the front
-	CHECK_EQUAL(1, c.GetFront().number);
+	CHECK_EQUAL(1, c.GetSmallestFrame().number);
 
 	// Check if frame 1 is STILL the front
-	CHECK_EQUAL(1, c.GetFront().number);
+	CHECK_EQUAL(1, c.GetSmallestFrame().number);
 
 	// Erase frame 1
-	c.Pop();
+	c.Remove(1);
 
 	// Check if frame 2 is the front
-	CHECK_EQUAL(2, c.GetFront().number);
+	CHECK_EQUAL(2, c.GetSmallestFrame().number);
 }
 
-TEST(Cache_Pop)
+TEST(Cache_Remove)
 {
 	// Create cache object (with a max of 10 items)
 	Cache c(10);
@@ -164,13 +164,27 @@ TEST(Cache_Pop)
 	c.Add(blue.number, blue);
 	c.Add(green.number, green);
 
-	// Check if frame 1 is the front
-	Frame pop1 = c.Pop();
-	CHECK_EQUAL(1, pop1.number);
+	// Check if count is 3
+	CHECK_EQUAL(3, c.Count());
 
-	Frame pop2 = c.Pop();
-	CHECK_EQUAL(2, pop2.number);
+	// Check if frame 2 exists
+	CHECK_EQUAL(true, c.Exists(2));
 
-	Frame pop3 = c.Pop();
-	CHECK_EQUAL(3, pop3.number);
+	// Remove frame 2
+	c.Remove(2);
+
+	// Check if frame 2 exists
+	CHECK_EQUAL(false, c.Exists(2));
+
+	// Check if count is 2
+	CHECK_EQUAL(2, c.Count());
+
+	// Remove frame 1
+	c.Remove(1);
+
+	// Check if frame 1 exists
+	CHECK_EQUAL(false, c.Exists(1));
+
+	// Check if count is 1
+	CHECK_EQUAL(1, c.Count());
 }

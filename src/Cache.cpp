@@ -23,7 +23,7 @@ void Cache::Add(int frame_number, Frame frame)
 	{
 		// Add frame to queue and map
 		frames[frame_number] = frame;
-		frame_numbers.push(frame_number);
+		frame_numbers.push_front(frame_number);
 
 		// Clean up older frames (that exceed the max frames)
 		CleanUp();
@@ -46,23 +46,6 @@ bool Cache::Exists(int frame_number)
 		return false;
 }
 
-// Return the front frame and remove it
-Frame Cache::Pop()
-{
-	// Remove the oldest frame
-	int frame_to_remove = frame_numbers.front();
-
-	// Get the front frame
-	Frame f = GetFrame(frame_to_remove);
-
-	// Remove frame_number and frame
-	frame_numbers.pop();
-	frames.erase(frame_to_remove);
-
-	// Return the frame
-	return f;
-}
-
 // Get a frame from the cache
 Frame Cache::GetFrame(int frame_number)
 {
@@ -77,11 +60,42 @@ Frame Cache::GetFrame(int frame_number)
 		throw OutOfBoundsFrame("Frame not found in the cache", frame_number, -1);
 }
 
-// Get the front frame in this cache
-Frame Cache::GetFront()
+// Get the smallest frame number
+Frame Cache::GetSmallestFrame()
 {
-	// Return oldest frame in the cache
-	return GetFrame(frame_numbers.front());
+	// Loop through frame numbers
+	 deque<int>::iterator itr;
+	 int smallest_frame = -1;
+	 for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	 {
+		 if (*itr < smallest_frame || smallest_frame == -1)
+			 smallest_frame = *itr;
+	 }
+
+	 // Return frame (or error if no frame found)
+	 return GetFrame(smallest_frame);
+}
+
+// Remove a specific frame
+void Cache::Remove(int frame_number)
+{
+	// Get the frame (or throw exception)
+	Frame f = GetFrame(frame_number);
+
+	// Loop through frame numbers
+	 deque<int>::iterator itr;
+	 for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	 {
+		 if (*itr == frame_number)
+		 {
+			 // erase frame number
+			 frame_numbers.erase(itr);
+			 break;
+		 }
+	 }
+
+	 // Remove frame from map
+	 frames.erase(frame_number);
 }
 
 // Clear the cache of all frames
@@ -91,7 +105,7 @@ void Cache::Clear()
 	frames.clear();
 
 	// pop each of the frames from the queue... which emptys the queue
-	while(!frame_numbers.empty()) frame_numbers.pop();
+	while(!frame_numbers.empty()) frame_numbers.pop_back();
 }
 
 // Count the frames in the queue
@@ -108,11 +122,10 @@ void Cache::CleanUp()
 	if (frame_numbers.size() > max_frames)
 	{
 		// Remove the oldest frame
-		int frame_to_remove = frame_numbers.front();
+		int frame_to_remove = frame_numbers.back();
 
 		// Remove frame_number and frame
-		frame_numbers.pop();
-		frames.erase(frame_to_remove);
+		Remove(frame_to_remove);
 	}
 }
 
@@ -124,12 +137,11 @@ void Cache::DisplayAndClear()
 	while(!frame_numbers.empty())
 	{
 		// Print the frame number
-		int frame_number = frame_numbers.front();
+		int frame_number = frame_numbers.back();
 		cout << " " << i << ") --- Frame " << frame_number << endl;
 
 		// Remove this frame
-		frame_numbers.pop();
-		frames.erase(frame_number);
+		Remove(frame_number);
 
 		// increment counter
 		i++;

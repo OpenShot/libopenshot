@@ -8,7 +8,7 @@
  */
 
 #include <map>
-#include <queue>
+#include <deque>
 #include "Frame.h"
 #include "Exceptions.h"
 
@@ -26,7 +26,7 @@ namespace openshot {
 	private:
 		int max_frames;				///< This is the max number of frames to cache
 		map<int, Frame> frames;		///< This map holds the frame number and Frame objects
-		queue<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
 		/// Clean up cached frames that exceed the number in our max_frames variable
 		void CleanUp();
@@ -44,14 +44,14 @@ namespace openshot {
 		/// Check for the existance of a frame in the cache
 		bool Exists(int frame_number);
 
-		/// Return the front frame and remove it
-		Frame Pop();
-
 		/// Get a frame from the cache
 		Frame GetFrame(int frame_number);
 
-		/// Get the front frame in this cache
-		Frame GetFront();
+		/// Get the smallest frame number
+		Frame GetSmallestFrame();
+
+		/// Remove a specific frame
+		void Remove(int frame_number);
 
 		/// Clear the cache of all frames
 		void Clear();
