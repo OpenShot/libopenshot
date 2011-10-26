@@ -26,7 +26,7 @@ TEST(Cache_Max_Frames_Constructor)
 	Cache c(10);
 
 	// Loop 20 times
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i <= 20; i++)
 	{
 		// Add blank frame to the cache
 		c.Add(i, Frame());
@@ -34,6 +34,16 @@ TEST(Cache_Max_Frames_Constructor)
 
 	// Cache should only have 10 items
 	CHECK_EQUAL(10, c.Count());
+
+	// Check which 10 items the cache kept (should be the 10 most recent)
+	CHECK_EQUAL(false, c.Exists(1));
+	CHECK_EQUAL(false, c.Exists(5));
+	CHECK_EQUAL(false, c.Exists(9));
+	CHECK_EQUAL(false, c.Exists(10));
+	CHECK_EQUAL(true, c.Exists(11));
+	CHECK_EQUAL(true, c.Exists(15));
+	CHECK_EQUAL(true, c.Exists(19));
+	CHECK_EQUAL(true, c.Exists(20));
 }
 
 TEST(Cache_Clear)
