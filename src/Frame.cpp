@@ -117,8 +117,9 @@ void Frame::DeletePointers()
 // Display the frame image to the screen (primarily used for debugging reasons)
 void Frame::Display()
 {
-	// display the image
-	image->display();
+	// display the image (if any)
+	if (image->size().width() > 1 && image->size().height() > 1)
+		image->display();
 }
 
 // Display the wave form

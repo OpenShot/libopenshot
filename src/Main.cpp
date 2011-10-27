@@ -18,9 +18,9 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/beat.wav");
-	//	openshot::FFmpegReader r("/home/jonathan/Music/lonely island/B004YRCAOO_(disc_1)_09_-_Shy_Ronnie_2__Ronnie_&_Clyde_[Expli.mp3");
+		openshot::FFmpegReader r("/home/jonathan/Music/lonely island/B004YRCAOO_(disc_1)_09_-_Shy_Ronnie_2__Ronnie_&_Clyde_[Expli.mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Pictures/Photo 3 - Sky.jpeg");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/60fps.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
@@ -28,7 +28,7 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		for (int frame = 1000; frame < 2000; frame++)
+		for (int frame = 653; frame < 2000; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 			f.Play();
