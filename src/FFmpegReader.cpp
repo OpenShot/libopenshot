@@ -128,6 +128,18 @@ void FFmpegReader::UpdateAudioInfo()
 	info.duration = info.audio_length * time_base;
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
+
+	// Set video timebase (if no video stream was found)
+	if (!info.has_video)
+	{
+		// Set a few important default video settings (so audio can be divided into frames)
+		double video_time_base = Fraction(1, 30).ToDouble();
+		info.video_length = info.duration / video_time_base;
+		info.video_timebase.num = 1;
+		info.video_timebase.den = 30;
+		info.fps.num = 30;
+		info.fps.den = 1;
+	}
 }
 
 void FFmpegReader::UpdateVideoInfo()
@@ -529,7 +541,7 @@ void FFmpegReader::Seek(int requested_frame)
 
 	// Find a valid stream index
 	int stream_index = -1;
-	if (info.video_stream_index >= 0)
+	if (info.has_video)
 	{
 		// VIDEO SEEK
 		is_video_seek = true;
@@ -539,7 +551,7 @@ void FFmpegReader::Seek(int requested_frame)
 		seeking_pts = ConvertFrameToVideoPTS(requested_frame);
 		seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
-	else if (info.audio_stream_index >= 0)
+	else if (info.has_audio)
 	{
 		// AUDIO SEEK
 		is_video_seek = false;
@@ -576,8 +588,10 @@ void FFmpegReader::Seek(int requested_frame)
 	}
 
 	// Flush buffers
-	avcodec_flush_buffers(pCodecCtx);
-	avcodec_flush_buffers(aCodecCtx);
+	if (info.has_video)
+		avcodec_flush_buffers(pCodecCtx);
+	if (info.has_audio)
+		avcodec_flush_buffers(aCodecCtx);
 }
 
 // Convert image to RGB format
