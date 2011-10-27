@@ -558,7 +558,7 @@ void FFmpegReader::Seek(int requested_frame)
 		stream_index = info.audio_stream_index;
 
 		// Calculate seek target
-		seeking_pts = ConvertFrameToAudioPTS(requested_frame); // PTS seems to always start at zero, and our frame numbers start at 1.
+		seeking_pts = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
 		seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 
