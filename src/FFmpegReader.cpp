@@ -760,9 +760,9 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
 	// Adjust for video only, or audio only
-	if (info.video_stream_index < 0)
+	if (!info.has_video)
 		last_video_frame = last_audio_frame;
-	if (info.audio_stream_index < 0)
+	if (!info.has_audio)
 		last_audio_frame = last_video_frame;
 
 	// Loop through all working queue frames

@@ -124,69 +124,91 @@ void Frame::Display()
 // Display the wave form
 void Frame::DisplayWaveform(bool resize)
 {
-	// Create black image
-	int width = audio->getNumSamples();
-	int height = 200 * audio->getNumChannels();
-	int height_padding = 20 * (audio->getNumChannels() - 1);
-	int total_height = height + height_padding;
-	Magick::Image wave_image(Magick::Geometry(width, total_height), Magick::Color("#000000"));
+	// Create blank image
+	Magick::Image wave_image;
 
 	// Init a list of lines
 	list<Magick::Drawable> lines;
 	lines.push_back(Magick::DrawableFillColor("#0070ff"));
 	lines.push_back(Magick::DrawablePointSize(16));
 
-	// Loop through each audio channel
-	int Y = 100;
-	for (int channel = 0; channel < audio->getNumChannels(); channel++)
+	// Calculate the width of an image based on the # of samples
+	int width = audio->getNumSamples();
+
+	if (width > 0)
 	{
-		// Get audio for this channel
-		float *samples = audio->getSampleData(channel);
+		// If samples are present...
+		int height = 200 * audio->getNumChannels();
+		int height_padding = 20 * (audio->getNumChannels() - 1);
+		int total_height = height + height_padding;
+		wave_image = Magick::Image(Magick::Geometry(width, total_height), Magick::Color("#000000"));
 
-		for (int sample = 0; sample < audio->getNumSamples(); sample++)
+		// Loop through each audio channel
+		int Y = 100;
+		for (int channel = 0; channel < audio->getNumChannels(); channel++)
 		{
-			// Sample value (scaled to -100 to 100)
-			float value = samples[sample] * 100;
+			// Get audio for this channel
+			float *samples = audio->getSampleData(channel);
 
-			if (value > 100 || value < -100)
-				cout << "TOO BIG!!! " << value << endl;
+			for (int sample = 0; sample < audio->getNumSamples(); sample++)
+			{
+				// Sample value (scaled to -100 to 100)
+				float value = samples[sample] * 100;
 
-			// Append a line segment for each sample
-			if (value != 0.0)
-			{
-				// LINE
-				lines.push_back(Magick::DrawableStrokeColor("#0070ff"));
-				lines.push_back(Magick::DrawableStrokeWidth(1));
-				lines.push_back(Magick::DrawableLine(sample,Y, sample,Y-value)); // sample=X coordinate, Y=100 is the middle
+				if (value > 100 || value < -100)
+					cout << "TOO BIG!!! " << value << endl;
+
+				// Append a line segment for each sample
+				if (value != 0.0)
+				{
+					// LINE
+					lines.push_back(Magick::DrawableStrokeColor("#0070ff"));
+					lines.push_back(Magick::DrawableStrokeWidth(1));
+					lines.push_back(Magick::DrawableLine(sample,Y, sample,Y-value)); // sample=X coordinate, Y=100 is the middle
+				}
+				else
+				{
+					// DOT
+					lines.push_back(Magick::DrawableFillColor("#0070ff"));
+					lines.push_back(Magick::DrawableStrokeWidth(1));
+					lines.push_back(Magick::DrawablePoint(sample,Y));
+				}
 			}
-			else
-			{
-				// DOT
-				lines.push_back(Magick::DrawableFillColor("#0070ff"));
-				lines.push_back(Magick::DrawableStrokeWidth(1));
-				lines.push_back(Magick::DrawablePoint(sample,Y));
-			}
+
+			// Add Channel Label
+			stringstream label;
+			label << "Channel " << channel;
+			lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
+			lines.push_back(Magick::DrawableFillColor("#ffffff"));
+			lines.push_back(Magick::DrawableStrokeWidth(0.1));
+			lines.push_back(Magick::DrawableText(5, Y - 5, label.str()));
+
+			// Increment Y
+			Y += (200 + height_padding);
 		}
 
+		// Draw the waveform
+		wave_image.draw(lines);
+
+		// Resize Image (if requested)
+		if (resize)
+			// Resize to 60%
+			wave_image.resize(Magick::Geometry(width * 0.6, total_height * 0.6));
+	}
+	else
+	{
+		// No audio samples present
+		wave_image = Magick::Image(Magick::Geometry(720, 480), Magick::Color("#000000"));
+
 		// Add Channel Label
-		stringstream label;
-		label << "Channel " << channel;
 		lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
 		lines.push_back(Magick::DrawableFillColor("#ffffff"));
 		lines.push_back(Magick::DrawableStrokeWidth(0.1));
-		lines.push_back(Magick::DrawableText(5, Y - 5, label.str()));
+		lines.push_back(Magick::DrawableText(265, 240, "No Audio Samples Found"));
 
-		// Increment Y
-		Y += (200 + height_padding);
+		// Draw the waveform
+		wave_image.draw(lines);
 	}
-
-	// Draw the waveform
-	wave_image.draw(lines);
-
-	// Resize Image (if requested)
-	if (resize)
-		// Resize to 60%
-		wave_image.resize(Magick::Geometry(width * 0.6, total_height * 0.6));
 
 	// Display Image
 	wave_image.display();
@@ -268,6 +290,10 @@ void Frame::AddAudio(int destChannel, int destStartSample, const float* source, 
 // Play audio samples for this frame
 void Frame::Play()
 {
+	// Check if samples are present
+	if (!audio->getNumSamples())
+		return;
+
 	AudioDeviceManager deviceManager;
 	deviceManager.initialise (0, /* number of input channels */
 	        audio->getNumChannels(), /* number of output channels */
