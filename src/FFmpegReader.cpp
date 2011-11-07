@@ -664,7 +664,7 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 		// VIDEO PACKET
 		if (video_pts_offset == 999) // Has the offset been set yet?
 			// Find the difference between PTS and frame number
-			video_pts_offset = 1 - GetVideoPTS();
+			video_pts_offset = 0 - GetVideoPTS();
 
 	}
 	else
@@ -672,30 +672,43 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 		// AUDIO PACKET
 		if (audio_pts_offset == 999) // Has the offset been set yet?
 			// Find the difference between PTS and frame number
-			audio_pts_offset = 1 - packet.pts;
+			audio_pts_offset = 0 - packet.pts;
 	}
 }
 
-// Convert PTS into Frame Number
+// Convert Video PTS into Frame Number
 int FFmpegReader::ConvertVideoPTStoFrame(int pts)
 {
+	// Get the video packet start time (in seconds)
+	double seconds = double(pts + video_pts_offset) * info.video_timebase.ToDouble();
+
+	// Calculate frame # based on frames per second... and video timestamp
+	double frame = seconds * info.fps.ToDouble();
+
 	// Sometimes the PTS of the 1st frame is not 1 (so we have to adjust)
-	return pts + video_pts_offset;
+	return frame;
 }
 
 // Convert Frame Number into Video PTS
 int FFmpegReader::ConvertFrameToVideoPTS(int frame_number)
 {
-	return frame_number - video_pts_offset;
+	// Get timestamp of this frame (in seconds)
+	double seconds = double(frame_number - 1) / info.fps.ToDouble();
+
+	// Calculate the video packet timestamp (based on seconds)
+	int video_pts = seconds / info.video_timebase.ToDouble();
+
+	// Return the PTS of this frame number
+	return video_pts - video_pts_offset;
 }
 
-// Convert Frame Number into Video PTS
+// Convert Frame Number into Audio PTS
 int FFmpegReader::ConvertFrameToAudioPTS(int frame_number)
 {
-	// Get timestamp of this frame
-	double seconds = double(frame_number) * info.video_timebase.ToDouble();
+	// Get timestamp of this frame (in seconds)
+	double seconds = double(frame_number - 1) / info.fps.ToDouble();
 
-	// Calculate the # of audio packets in this timestamp
+	// Calculate the audio packet timestamp (based on seconds)
 	int audio_pts = seconds / info.audio_timebase.ToDouble();
 
 	// Subtract audio pts offset and return audio PTS
@@ -706,10 +719,10 @@ int FFmpegReader::ConvertFrameToAudioPTS(int frame_number)
 audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 {
 	// Get the audio packet start time (in seconds)
-	double audio_seconds = double(pts) * info.audio_timebase.ToDouble();
+	double audio_seconds = double(pts + audio_pts_offset) * info.audio_timebase.ToDouble();
 
-	// Divide by the video timebase, to get the video frame number (frame # is decimal at this point)
-	double frame = audio_seconds / info.video_timebase.ToDouble() + 1;
+	// Calculate frame # based on frames per second... and audio timestamp
+	double frame = audio_seconds * info.fps.ToDouble();
 
 	// Frame # as a whole number (no more decimals)
 	int whole_frame = int(frame);
@@ -719,6 +732,8 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 
 	// Get Samples per frame
 	int samples_per_frame = GetSamplesPerFrame();
+
+	// Calculate the sample # to start on
 	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
 
 	// Prepare final audio packet location
@@ -732,7 +747,7 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 int FFmpegReader::GetSamplesPerFrame()
 {
 	// Get the number of samples per video frame (sample rate X video timebase)
-	return info.sample_rate * info.video_timebase.ToDouble();
+	return info.sample_rate / info.fps.ToDouble();
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
