@@ -64,6 +64,7 @@ namespace openshot
 		AVStream *pStream, *aStream;
 		AVPacket packet;
 		AVFrame *pFrame;
+		bool check_interlace;
 
 		Cache final_cache;
 		Cache working_cache;
@@ -79,54 +80,75 @@ namespace openshot
 		int last_video_frame;
 		int last_audio_frame;
 
-
-		/// Open File - which is called by the constructor automatically
-		void Open();
-
-		/// Convert image to RGB format
-		void convert_image(int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
-
-		/// Get the PTS for the current video packet
-		int GetVideoPTS();
-
-		/// Update PTS Offset (if any)
-		void UpdatePTSOffset(bool is_video);
-
-		/// Convert Video PTS into Frame Number
-		int ConvertVideoPTStoFrame(int pts);
-
-		/// Convert Frame Number into Video PTS
-		int ConvertFrameToVideoPTS(int frame_number);
-
-		/// Convert Frame Number into Audio PTS
-		int ConvertFrameToAudioPTS(int frame_number);
-
-		/// Calculate Starting video frame and sample # for an audio PTS
-		audio_packet_location GetAudioPTSLocation(int pts);
-
-		/// Calculate the # of samples per video frame
-		int GetSamplesPerFrame();
-
-		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		Frame CreateFrame(int requested_frame);
+		/// Check the current seek position and determine if we need to seek again
+		bool CheckSeek(bool is_video);
 
 		/// Check the working queue, and move finished frames to the finished queue
 		void CheckWorkingFrames(bool end_of_stream);
 
+		/// Convert image to RGB format
+		void convert_image(int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
+
+		/// Convert Frame Number into Audio PTS
+		int ConvertFrameToAudioPTS(int frame_number);
+
+		/// Convert Frame Number into Video PTS
+		int ConvertFrameToVideoPTS(int frame_number);
+
+		/// Convert Video PTS into Frame Number
+		int ConvertVideoPTStoFrame(int pts);
+
+		/// Create a new Frame (or return an existing one) and add it to the working queue.
+		Frame CreateFrame(int requested_frame);
+
+		/// Calculate Starting video frame and sample # for an audio PTS
+		audio_packet_location GetAudioPTSLocation(int pts);
+
+		/// Get an AVFrame (if any)
+		bool GetAVFrame();
+
+		/// Get the next packet (if any)
+		int GetNextPacket();
+
+		/// Calculate the # of samples per video frame
+		int GetSamplesPerFrame();
+
+		/// Get the PTS for the current video packet
+		int GetVideoPTS();
+
+		/// Open File - which is called by the constructor automatically
+		void Open();
+
+		/// Process a video packet
+		void ProcessVideoPacket(int requested_frame);
+
+		/// Process an audio packet
+		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
+
+		/// Read the stream until we find the requested Frame
+		Frame ReadStream(int requested_frame);
+
+		/// Update PTS Offset (if any)
+		void UpdatePTSOffset(bool is_video);
+
+		/// Update File Info for audio streams
+		void UpdateAudioInfo();
+
+		/// Update File Info for video streams
+		void UpdateVideoInfo();
 
 	public:
+
+		/// Enable or disable seeking.  Seeking can more quickly locate the requested frame, but some
+		/// codecs have trouble seeking, and can introduce artifacts or blank images into the video.
+		bool enable_seek;
+
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
 		FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec);
 
 		/// Close File
 		void Close();
-
-		/// Update File Info for video streams
-		void UpdateVideoInfo();
-
-		/// Update File Info for audio streams
-		void UpdateAudioInfo();
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.
 		///
@@ -137,23 +159,6 @@ namespace openshot
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 		void Seek(int requested_frame);
 
-		/// Read the stream until we find the requested Frame
-		Frame ReadStream(int requested_frame);
-
-		/// Process a video packet
-		void ProcessVideoPacket(int requested_frame);
-
-		/// Process an audio packet
-		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
-
-		/// Get the next packet (if any)
-		int GetNextPacket();
-
-		/// Get an AVFrame (if any)
-		bool GetAVFrame();
-
-		/// Check the current seek position and determine if we need to seek again
-		bool CheckSeek(bool is_video);
 
 	};
 

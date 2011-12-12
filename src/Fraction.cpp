@@ -43,3 +43,10 @@ void Fraction::Reduce() {
 	num = num / GCD;
 	den = den / GCD;
 }
+
+// Return the reciprocal as a new Fraction
+Fraction Fraction::Reciprocal()
+{
+	// flip the fraction
+	return Fraction(den, num);
+}

@@ -4,7 +4,8 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(999), video_pts_offset(999), working_cache(50), path(path), is_video_seek(true) {
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(50), path(path),
+	  is_video_seek(true), check_interlace(false), enable_seek(true) {
 
 	// Open the file (if possible)
 	Open();
@@ -122,24 +123,32 @@ void FFmpegReader::UpdateAudioInfo()
 	info.sample_rate = aCodecCtx->sample_rate;
 	info.audio_bit_rate = aCodecCtx->bit_rate;
 
-	// Timebase of audio stream
-	double time_base = Fraction(aStream->time_base.num, aStream->time_base.den).ToDouble();
-	info.audio_length = aStream->duration;
-	info.duration = info.audio_length * time_base;
+	// Set audio timebase
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
+
+	// Timebase of audio stream
+	info.duration = aStream->duration * info.audio_timebase.ToDouble();
+
+	// Check for an invalid video length
+	if (info.has_video && info.video_length == 0)
+	{
+		// Calculate the video length from the audio duration
+		info.video_length = info.duration * info.fps.ToDouble();
+	}
 
 	// Set video timebase (if no video stream was found)
 	if (!info.has_video)
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
-		double video_time_base = Fraction(1, 30).ToDouble();
-		info.video_length = info.duration / video_time_base;
-		info.video_timebase.num = 1;
-		info.video_timebase.den = 30;
 		info.fps.num = 30;
 		info.fps.den = 1;
+		info.video_timebase.num = 1;
+		info.video_timebase.den = 30;
+		info.video_length = info.duration * info.fps.ToDouble();
+
 	}
+
 }
 
 void FFmpegReader::UpdateVideoInfo()
@@ -154,14 +163,25 @@ void FFmpegReader::UpdateVideoInfo()
 	info.fps.num = pStream->r_frame_rate.num;
 	info.fps.den = pStream->r_frame_rate.den;
 	if (pStream->sample_aspect_ratio.num != 0)
+	{
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
+		info.pixel_ratio.den = pStream->sample_aspect_ratio.den;
+	}
+	else if (pCodecCtx->sample_aspect_ratio.num != 0)
+	{
+		info.pixel_ratio.num = pCodecCtx->sample_aspect_ratio.num;
+		info.pixel_ratio.den = pCodecCtx->sample_aspect_ratio.den;
+	}
 	else
+	{
 		info.pixel_ratio.num = 1;
-	info.pixel_ratio.den = pStream->sample_aspect_ratio.den;
+		info.pixel_ratio.den = 1;
+	}
+
 	info.pixel_format = pCodecCtx->pix_fmt;
 
 	// Calculate the DAR (display aspect ratio)
-	Fraction size(info.width, info.height);
+	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
 
 	// Reduce size fraction
 	size.Reduce();
@@ -170,12 +190,14 @@ void FFmpegReader::UpdateVideoInfo()
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	// Timebase of video stream
-	double time_base = Fraction(pStream->time_base.num, pStream->time_base.den).ToDouble();
-	info.video_length = pStream->duration;
-	info.duration = info.video_length * time_base;
+	// Set the video timebase
 	info.video_timebase.num = pStream->time_base.num;
 	info.video_timebase.den = pStream->time_base.den;
+
+	// Set the duration in seconds, and video length (# of frames)
+	info.duration = pStream->duration * info.video_timebase.ToDouble();
+	info.video_length = round(info.duration * info.fps.ToDouble());
+
 }
 
 Frame FFmpegReader::GetFrame(int requested_frame)
@@ -195,6 +217,9 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 			requested_frame = 1;
 		if (requested_frame > info.video_length)
 			requested_frame = info.video_length;
+		if (info.has_video && info.video_length == 0)
+			// Invalid duration of video file
+			throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
 		// Are we within 20 frames of the requested frame?
 		int diff = requested_frame - last_video_frame;
@@ -208,7 +233,9 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 		{
 			// Greater than 20 frames away, we need to seek to the nearest key frame
 			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM" << endl;
-			Seek(requested_frame);
+			if (enable_seek)
+				// Only seek if enabled
+				Seek(requested_frame);
 
 			// Then continue walking the stream
 			return ReadStream(requested_frame);
@@ -281,7 +308,8 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				}
 
 				// Check if working frames are 'finished'
-				CheckWorkingFrames(false);
+				if (!is_seeking)
+					CheckWorkingFrames(false);
 
 				// Check if requested 'final' frame is available
 				if (final_cache.Exists(requested_frame))
@@ -330,6 +358,14 @@ bool FFmpegReader::GetAVFrame()
 	avcodec_decode_video(pCodecCtx, pFrame, &frameFinished,
 			packet.data, packet.size);
 
+	// Detect interlaced frame (only once)
+	if (frameFinished && !check_interlace)
+	{
+		check_interlace = true;
+		info.interlaced_frame = pFrame->interlaced_frame;
+		info.top_field_first = pFrame->top_field_first;
+	}
+
 	// Did we get a video frame?
 	return frameFinished;
 }
@@ -337,28 +373,27 @@ bool FFmpegReader::GetAVFrame()
 // Check the current seek position and determine if we need to seek again
 bool FFmpegReader::CheckSeek(bool is_video)
 {
-	bool check = false;
-
 	// Are we seeking for a specific frame?
 	if (is_seeking)
 	{
 		// CHECK VIDEO SEEK?
+		int current_pts = 0;
 		if (is_video && is_video_seek)
-			check = true;
+			current_pts = GetVideoPTS();
 		// CHECK AUDIO SEEK?
 		else if (!is_video && !is_video_seek)
-			check = true;
+			current_pts = packet.pts;
 
 		// determine if we are "before" the requested frame
-		if (check)
+		if (current_pts != 0)
 		{
-			if (packet.pts > seeking_pts)
+			if (current_pts > seeking_pts)
 			{
 				// SEEKED TOO FAR
 				cout << "Woops!  Need to seek backwards further..." << endl;
 
 				// Seek again... to the nearest Keyframe
-				Seek(seeking_frame - 5);
+				Seek(seeking_frame - 10);
 			}
 			else
 			{
@@ -458,11 +493,28 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		int position = 0;
 		for (int sample = 0; sample < packet_samples; sample++)
 		{
+
 			// Only add samples for current channel
 			if (channel_filter == channel)
 			{
+
 				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
 				channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
+
+				// Experimental audio conversion
+//				switch (aCodecCtx->sample_fmt)
+//				{
+//				case SAMPLE_FMT_U8:
+//					channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 7));
+//				case SAMPLE_FMT_S16:
+//					channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
+//				case SAMPLE_FMT_S32:
+//					channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 31));
+//				case SAMPLE_FMT_FLT:
+//					channel_buffer[position] = audio_buf[sample];
+//				case SAMPLE_FMT_DBL:
+//					channel_buffer[position] = audio_buf[sample];
+//				}
 
 				// Increment audio position
 				position++;
@@ -535,9 +587,7 @@ void FFmpegReader::Seek(int requested_frame)
 	last_audio_frame = 0;
 
 	// Set seeking flags
-	is_seeking = true;
 	int64_t seek_target = 0;
-	seeking_frame = requested_frame;
 
 	// Find a valid stream index
 	int stream_index = -1;
@@ -548,8 +598,8 @@ void FFmpegReader::Seek(int requested_frame)
 		stream_index = info.video_stream_index;
 
 		// Calculate seek target
-		seeking_pts = ConvertFrameToVideoPTS(requested_frame);
-		seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
+		seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
+		//seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 	else if (info.has_audio)
 	{
@@ -558,15 +608,15 @@ void FFmpegReader::Seek(int requested_frame)
 		stream_index = info.audio_stream_index;
 
 		// Calculate seek target
-		seeking_pts = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
-		seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
+		seek_target = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
+		//seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 
 	// If valid stream, rescale timestamp so the av_seek_frame method will understand it
-	if (stream_index >= 0) {
-		seek_target = av_rescale_q(seek_target, AV_TIME_BASE_Q,
-				pFormatCtx->streams[stream_index]->time_base);
-	}
+//	if (stream_index >= 0) {
+//		seek_target = av_rescale_q(seek_target, AV_TIME_BASE_Q,
+//				pFormatCtx->streams[stream_index]->time_base);
+//	}
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
 	if (requested_frame == 1)
@@ -584,6 +634,22 @@ void FFmpegReader::Seek(int requested_frame)
 		// Seek to nearest key-frame (aka, i-frame)
 		if (av_seek_frame(pFormatCtx, stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 			fprintf(stderr, "%s: error while seeking\n", pFormatCtx->filename);
+		}
+		else
+		{
+			// If not already seeking, set flags
+			if (!is_seeking)
+			{
+				// init seek flags
+				is_seeking = true;
+				seeking_frame = requested_frame;
+				seeking_pts = seek_target;
+			}
+			else
+			{
+				// update seek frame number
+				seeking_frame = requested_frame;
+			}
 		}
 	}
 
@@ -617,7 +683,7 @@ void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int wi
 
 	struct SwsContext *img_convert_ctx = NULL;
 
-	// Convert the image into YUV format that SDL uses
+	// Convert the image into RGB (for ImageMagick++)
 	if(img_convert_ctx == NULL) {
 	     img_convert_ctx = sws_getContext(width, height, pix_fmt, width, height,
 	                      PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
@@ -627,6 +693,7 @@ void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int wi
 	     }
 	}
 
+	// Resize / Convert to RGB
 	sws_scale(img_convert_ctx, copyFrame->data, copyFrame->linesize,
 	 0, height, pFrameRGB->data, pFrameRGB->linesize);
 
@@ -637,7 +704,20 @@ void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int wi
 	f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 	// Update working cache
-	working_cache.Add(current_frame, f);
+	working_cache.Add(f.number, f);
+
+	// Add interlaced image (if any)
+	if (info.interlaced_frame)
+	{
+		// Update working cache
+		Frame f1 = CreateFrame(current_frame + 1);
+
+		// Add Image data to frame
+		f1.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
+
+		// Update working cache
+		working_cache.Add(f1.number, f1);
+	}
 
 	// Free the RGB image
 	av_free(buffer);
@@ -647,7 +727,7 @@ void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int wi
 // Get the PTS for the current video packet
 int FFmpegReader::GetVideoPTS()
 {
-	int current_pts = -1;
+	int current_pts = 0;
 	if(packet.dts != AV_NOPTS_VALUE)
 		current_pts = packet.dts;
 
@@ -662,7 +742,7 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 	if (is_video)
 	{
 		// VIDEO PACKET
-		if (video_pts_offset == 999) // Has the offset been set yet?
+		if (video_pts_offset == 99999) // Has the offset been set yet?
 			// Find the difference between PTS and frame number
 			video_pts_offset = 0 - GetVideoPTS();
 
@@ -670,22 +750,25 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 	else
 	{
 		// AUDIO PACKET
-		if (audio_pts_offset == 999) // Has the offset been set yet?
+		if (audio_pts_offset == 99999) // Has the offset been set yet?
 			// Find the difference between PTS and frame number
 			audio_pts_offset = 0 - packet.pts;
 	}
 }
 
-// Convert Video PTS into Frame Number
+// Convert PTS into Frame Number
 int FFmpegReader::ConvertVideoPTStoFrame(int pts)
 {
+	// Apply PTS offset
+	pts = pts + video_pts_offset;
+
 	// Get the video packet start time (in seconds)
-	double seconds = double(pts + video_pts_offset) * info.video_timebase.ToDouble();
+	double video_seconds = double(pts) * info.video_timebase.ToDouble();
 
-	// Calculate frame # based on frames per second... and video timestamp
-	double frame = seconds * info.fps.ToDouble();
+	// Divide by the video timebase, to get the video frame number (frame # is decimal at this point)
+	int frame = round(video_seconds * info.fps.ToDouble()) + 1;
 
-	// Sometimes the PTS of the 1st frame is not 1 (so we have to adjust)
+	// Return frame #
 	return frame;
 }
 
@@ -693,36 +776,39 @@ int FFmpegReader::ConvertVideoPTStoFrame(int pts)
 int FFmpegReader::ConvertFrameToVideoPTS(int frame_number)
 {
 	// Get timestamp of this frame (in seconds)
-	double seconds = double(frame_number - 1) / info.fps.ToDouble();
+	double seconds = double(frame_number) / info.fps.ToDouble();
 
-	// Calculate the video packet timestamp (based on seconds)
-	int video_pts = seconds / info.video_timebase.ToDouble();
+	// Calculate the # of video packets in this timestamp
+	int video_pts = round(seconds / info.video_timebase.ToDouble());
 
-	// Return the PTS of this frame number
+	// Apply PTS offset (opposite)
 	return video_pts - video_pts_offset;
 }
 
-// Convert Frame Number into Audio PTS
+// Convert Frame Number into Video PTS
 int FFmpegReader::ConvertFrameToAudioPTS(int frame_number)
 {
 	// Get timestamp of this frame (in seconds)
-	double seconds = double(frame_number - 1) / info.fps.ToDouble();
+	double seconds = double(frame_number) / info.fps.ToDouble();
 
-	// Calculate the audio packet timestamp (based on seconds)
-	int audio_pts = seconds / info.audio_timebase.ToDouble();
+	// Calculate the # of audio packets in this timestamp
+	int audio_pts = round(seconds / info.audio_timebase.ToDouble());
 
-	// Subtract audio pts offset and return audio PTS
+	// Apply PTS offset (opposite)
 	return audio_pts - audio_pts_offset;
 }
 
 // Calculate Starting video frame and sample # for an audio PTS
 audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 {
-	// Get the audio packet start time (in seconds)
-	double audio_seconds = double(pts + audio_pts_offset) * info.audio_timebase.ToDouble();
+	// Apply PTS offset
+	pts = pts + audio_pts_offset;
 
-	// Calculate frame # based on frames per second... and audio timestamp
-	double frame = audio_seconds * info.fps.ToDouble();
+	// Get the audio packet start time (in seconds)
+	double audio_seconds = double(pts) * info.audio_timebase.ToDouble();
+
+	// Divide by the video timebase, to get the video frame number (frame # is decimal at this point)
+	double frame = (audio_seconds * info.fps.ToDouble()) + 1;
 
 	// Frame # as a whole number (no more decimals)
 	int whole_frame = int(frame);
@@ -746,8 +832,8 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 // Calculate the # of samples per video frame
 int FFmpegReader::GetSamplesPerFrame()
 {
-	// Get the number of samples per video frame (sample rate X video timebase)
-	return info.sample_rate / info.fps.ToDouble();
+	// Get the number of samples per video frame (sample rate X reciprocal of frame rate)
+	return round(double(info.sample_rate) / info.fps.ToDouble());
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
@@ -764,6 +850,8 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 
 		// Create a new frame on the working cache
 		Frame f(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
+		f.SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
+		f.SetSampleRate(info.sample_rate);
 		working_cache.Add(requested_frame, f);
 
 		// Return new frame

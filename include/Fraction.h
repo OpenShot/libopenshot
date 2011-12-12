@@ -37,6 +37,9 @@ namespace openshot {
 
 		/// Return this fraction as a double (i.e. 1/2 = 0.5)
 		double ToDouble();
+
+		/// Return the reciprocal as a Fraction
+		Fraction Reciprocal();
 	};
 
 

@@ -16,6 +16,7 @@
 #include "Magick++.h"
 #include "juce.h"
 #include "AudioBufferSource.h"
+#include "Fraction.h"
 
 using namespace std;
 
@@ -33,6 +34,8 @@ namespace openshot
 		Magick::Image *image;
 		Magick::Image *small_image;
 		juce::AudioSampleBuffer *audio;
+		Fraction pixel_ratio;
+		int sample_rate;
 
 	public:
 		int number;		///< This is the frame number (starting at 1)
@@ -81,6 +84,12 @@ namespace openshot
 
 		/// Get pixel data (for a resized image)
 		const Magick::PixelPacket* GetPixels(unsigned int width, unsigned int height, int frame);
+
+		/// Set Pixel Aspect Ratio
+		void SetPixelRatio(int num, int den);
+
+		/// Set Sample Rate, used for playback (Play() method)
+		void SetSampleRate(int sample_rate);
 
 		/// Get height of image
 		int GetHeight();

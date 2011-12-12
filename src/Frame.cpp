@@ -10,7 +10,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), image(0), audio(0)
+Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
@@ -21,7 +21,8 @@ Frame::Frame() : number(1), image(0), audio(0)
 };
 
 // Constructor - image only (48kHz audio silence)
-Frame::Frame(int number, int width, int height, string color) : number(number), image(0), audio(0)
+Frame::Frame(int number, int width, int height, string color)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -33,7 +34,7 @@ Frame::Frame(int number, int width, int height, string color) : number(number), 
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), image(0), audio(0)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
@@ -44,7 +45,8 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 };
 
 // Constructor - audio only (300x200 blank image)
-Frame::Frame(int number, int samples, int channels) : number(number), image(0), audio(0)
+Frame::Frame(int number, int samples, int channels) :
+		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
@@ -55,7 +57,8 @@ Frame::Frame(int number, int samples, int channels) : number(number), image(0), 
 };
 
 // Constructor - image & audio
-Frame::Frame(int number, int width, int height, string color, int samples, int channels) : number(number), image(0), audio(0)
+Frame::Frame(int number, int width, int height, string color, int samples, int channels)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -101,6 +104,8 @@ void Frame::DeepCopy(const Frame& other)
 	number = other.number;
 	image = new Magick::Image(*(other.image));
 	audio = new juce::AudioSampleBuffer(*(other.audio));
+	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
+	sample_rate = other.sample_rate;
 }
 
 // Deallocate image and audio memory
@@ -117,9 +122,29 @@ void Frame::DeletePointers()
 // Display the frame image to the screen (primarily used for debugging reasons)
 void Frame::Display()
 {
+	// Make a copy of the image (since we might resize it)
+	Magick::Image copy;
+	copy = *image;
+
 	// display the image (if any)
-	if (image->size().width() > 1 && image->size().height() > 1)
-		image->display();
+	if (copy.size().width() > 1 && copy.size().height() > 1)
+	{
+		// Resize image (if needed)
+		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+		{
+			// Calculate correct DAR (display aspect ratio)
+			int new_width = copy.size().width();
+			int new_height = copy.size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+			// Resize image
+			Magick::Geometry new_size(new_width, new_height);
+			new_size.aspect(true);
+			copy.resize(new_size);
+		}
+
+		// Disply image
+		copy.display();
+	}
 }
 
 // Display the wave form
@@ -247,6 +272,19 @@ const Magick::PixelPacket* Frame::GetPixels(unsigned int width, unsigned int hei
 	return small_image->getConstPixels(0,0, small_image->columns(), small_image->rows());
 }
 
+// Set Pixel Aspect Ratio
+void Frame::SetPixelRatio(int num, int den)
+{
+	pixel_ratio.num = num;
+	pixel_ratio.den = den;
+}
+
+// Set Sample Rate
+void Frame::SetSampleRate(int rate)
+{
+	sample_rate = rate;
+}
+
 // Get height of image
 int Frame::GetHeight()
 {
@@ -320,7 +358,7 @@ void Frame::Play()
 	AudioTransportSource transport1;
 	transport1.setSource (my_source,
 			5000, // tells it to buffer this many samples ahead
-			(double) 48000); // sample rate of source
+			(double) sample_rate); // sample rate of source
 	transport1.setPosition (0);
 	transport1.setGain(1.0);
 
