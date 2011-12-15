@@ -5,10 +5,14 @@ using namespace openshot;
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(50), path(path),
-	  is_video_seek(true), check_interlace(false), enable_seek(true) {
+	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false), enable_seek(true) {
 
 	// Open the file (if possible)
 	Open();
+
+	// Check for the correct frames per second (only once)
+	if (info.has_video)
+		CheckFPS();
 
 	// Get Frame 1 (to determine the offset between the PTS and the Frame Number)
 	GetFrame(1);
@@ -48,7 +52,11 @@ void FFmpegReader::Open()
 		throw NoStreamsFound("No video or audio streams found in this file.", path);
 
 	// Init FileInfo struct (clear all values)
-	InitFileInfo();
+	if (!init_settings)
+	{
+		InitFileInfo();
+		init_settings = true;
+	}
 
 	// Is there a video stream?
 	if (videoStream != -1)
@@ -160,8 +168,11 @@ void FFmpegReader::UpdateVideoInfo()
 	info.width = pCodecCtx->width;
 	info.vcodec = pCodecCtx->codec->name;
 	info.video_bit_rate = pFormatCtx->bit_rate;
-	info.fps.num = pStream->r_frame_rate.num;
-	info.fps.den = pStream->r_frame_rate.den;
+	if (!check_fps)
+	{
+		info.fps.num = pStream->r_frame_rate.num;
+		info.fps.den = pStream->r_frame_rate.den;
+	}
 	if (pStream->sample_aspect_ratio.num != 0)
 	{
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
@@ -891,5 +902,90 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			// Stop looping
 			break;
 	}
+}
+
+// Check for the correct frames per second (FPS) value by scanning the 1st few seconds of video packets.
+void FFmpegReader::CheckFPS()
+{
+	check_fps = true;
+	pFrame = avcodec_alloc_frame();
+
+	int first_second_counter = 0;
+	int second_second_counter = 0;
+	int third_second_counter = 0;
+	int forth_second_counter = 0;
+	int fifth_second_counter = 0;
+
+	// Loop through the stream
+	while (true)
+	{
+		// Get the next packet (if any)
+		if (GetNextPacket() < 0)
+			// Break loop when no more packets found
+			break;
+
+		// Video packet
+		if (packet.stream_index == videoStream)
+		{
+			// Check if the AVFrame is finished and set it
+			if (GetAVFrame())
+			{
+				// Update PTS / Frame Offset (if any)
+				UpdatePTSOffset(true);
+
+				// Get PTS of this packet
+				int pts = GetVideoPTS();
+
+				// Apply PTS offset
+				pts += video_pts_offset;
+
+				// Get the video packet start time (in seconds)
+				double video_seconds = double(pts) * info.video_timebase.ToDouble();
+
+				// Increment the correct counter
+				if (video_seconds <= 1.0)
+					first_second_counter++;
+				else if (video_seconds > 1.0 && video_seconds <= 2.0)
+					second_second_counter++;
+				else if (video_seconds > 2.0 && video_seconds <= 3.0)
+					third_second_counter++;
+				else if (video_seconds > 3.0 && video_seconds <= 4.0)
+					forth_second_counter++;
+				else if (video_seconds > 4.0 && video_seconds <= 5.0)
+					fifth_second_counter++;
+				else
+					// Too far
+					break;
+			}
+		}
+	}
+
+//	cout << "FIRST SECOND: " << first_second_counter << endl;
+//	cout << "SECOND SECOND: " << second_second_counter << endl;
+//	cout << "THIRD SECOND: " << third_second_counter << endl;
+//	cout << "FORTH SECOND: " << forth_second_counter << endl;
+//	cout << "FIFTH SECOND: " << fifth_second_counter << endl;
+
+	int sum_fps = first_second_counter + second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
+	int avg_fps = round(sum_fps / 5.0f);
+
+	// Sometimes the FPS is incorrectly detected by FFmpeg.  If the 1st and 2nd seconds counters
+	// agree with each other, we are going to adjust the FPS of this reader instance.  Otherwise, print
+	// a warning message.
+
+	// Get diff from actual frame rate
+	double fps = info.fps.ToDouble();
+	double diff = fps - double(avg_fps);
+
+	// Is difference bigger than 1 frame?
+	if (diff <= -1 || diff >= 1)
+	{
+		// Update FPS for this reader instance
+		info.fps = Fraction(avg_fps, 1);
+		cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << endl;
+	}
+
+	// Seek to frame 1
+	Seek(1);
 }
 

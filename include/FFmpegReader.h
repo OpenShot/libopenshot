@@ -65,6 +65,8 @@ namespace openshot
 		AVPacket packet;
 		AVFrame *pFrame;
 		bool check_interlace;
+		bool check_fps;
+		bool init_settings;
 
 		Cache final_cache;
 		Cache working_cache;
@@ -79,6 +81,9 @@ namespace openshot
 
 		int last_video_frame;
 		int last_audio_frame;
+
+		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
+		void CheckFPS();
 
 		/// Check the current seek position and determine if we need to seek again
 		bool CheckSeek(bool is_video);
