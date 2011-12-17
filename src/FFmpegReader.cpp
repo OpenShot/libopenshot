@@ -717,19 +717,6 @@ void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int wi
 	// Update working cache
 	working_cache.Add(f.number, f);
 
-	// Add interlaced image (if any)
-	if (info.interlaced_frame)
-	{
-		// Update working cache
-		Frame f1 = CreateFrame(current_frame + 1);
-
-		// Add Image data to frame
-		f1.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
-
-		// Update working cache
-		working_cache.Add(f1.number, f1);
-	}
-
 	// Free the RGB image
 	av_free(buffer);
 	av_free(pFrameRGB);
@@ -966,8 +953,8 @@ void FFmpegReader::CheckFPS()
 //	cout << "FORTH SECOND: " << forth_second_counter << endl;
 //	cout << "FIFTH SECOND: " << fifth_second_counter << endl;
 
-	int sum_fps = first_second_counter + second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
-	int avg_fps = round(sum_fps / 5.0f);
+	int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
+	int avg_fps = round(sum_fps / 4.0f);
 
 	// Sometimes the FPS is incorrectly detected by FFmpeg.  If the 1st and 2nd seconds counters
 	// agree with each other, we are going to adjust the FPS of this reader instance.  Otherwise, print
@@ -980,9 +967,23 @@ void FFmpegReader::CheckFPS()
 	// Is difference bigger than 1 frame?
 	if (diff <= -1 || diff >= 1)
 	{
-		// Update FPS for this reader instance
-		info.fps = Fraction(avg_fps, 1);
-		cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << endl;
+		// Compare to half the frame rate (the most common type of issue)
+		double half_fps = Fraction(info.fps.num / 2, info.fps.den).ToDouble();
+		diff = half_fps - double(avg_fps);
+
+		// Is difference bigger than 1 frame?
+		if (diff <= -1 || diff >= 1)
+		{
+			// Update FPS for this reader instance
+			info.fps = Fraction(avg_fps, 1);
+			cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << " (Average FPS)" << endl;
+		}
+		else
+		{
+			// Update FPS for this reader instance (to 1/2 the original framerate)
+			info.fps = Fraction(info.fps.num / 2, info.fps.den);
+			cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << " (1/2 FPS)" << endl;
+		}
 	}
 
 	// Seek to frame 1
