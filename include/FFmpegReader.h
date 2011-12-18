@@ -64,6 +64,7 @@ namespace openshot
 		AVStream *pStream, *aStream;
 		AVPacket packet;
 		AVFrame *pFrame;
+		ReSampleContext *resampleCtx;
 		bool check_interlace;
 		bool check_fps;
 		bool init_settings;
