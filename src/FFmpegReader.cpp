@@ -516,11 +516,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			audio_resample(resampleCtx, (short *)&converted_audio, (short *)&audio_buf, packet_samples);
 
 			// Copy audio samples over original samples
-			memcpy(&audio_buf, (uint8_t *)&converted_audio, packet_samples);
+			memcpy(&audio_buf, &converted_audio, packet_samples * av_get_bits_per_sample_format(SAMPLE_FMT_S16));
 		}
 	}
-
-
 
 	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 	{
@@ -545,7 +543,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			{
 				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
 				channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
-				//cout << channel << "\t" << channel_buffer[position] << endl;
 
 				// Increment audio position
 				position++;
@@ -578,11 +575,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			if (samples > remaining_samples)
 				samples = remaining_samples;
 
+//			cout << "---------------" << last_audio_frame << "---------------" << endl;
+//			cout << "--- channel_filter: " << channel_filter << endl;
+//			cout << "--- starting_sample: " << start << endl;
+//			cout << "--- ending sample: " << (starting_sample + samples) - 1 << endl;
+
 			// Add samples for current channel to the frame
-			cout << "starting_frame_number: " << starting_frame_number << endl;
-			cout << "channel_filter: " << channel_filter << endl;
-			cout << "samples: " << samples << endl;
-			cout << "remaining_samples: " << remaining_samples << endl;
 			f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 			// Update working cache
