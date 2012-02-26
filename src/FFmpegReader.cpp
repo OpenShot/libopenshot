@@ -984,8 +984,13 @@ void FFmpegReader::CheckFPS()
 
 	// Double check that all counters have greater than zero (or give up)
 	if (second_second_counter == 0 || third_second_counter == 0 || forth_second_counter == 0 || fifth_second_counter == 0)
+	{
+		// Seek to frame 1
+		Seek(1);
+
 		// exit with no changes to FPS (not enough data to calculate)
 		return;
+	}
 
 	int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
 	int avg_fps = round(sum_fps / 4.0f);
