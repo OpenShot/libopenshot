@@ -182,7 +182,9 @@ void Frame::DisplayWaveform(bool resize)
 				float value = samples[sample] * 100;
 
 				if (value > 100 || value < -100)
-					cout << "TOO BIG!!! " << value << endl;
+				{
+					cout << "TOO BIG: Sample # " << sample << " on frame " << number << " is TOO BIG: " << samples[sample] << endl;
+				}
 
 				// Append a line segment for each sample
 				if (value != 0.0)

@@ -116,8 +116,8 @@ namespace openshot
 		/// Get the next packet (if any)
 		int GetNextPacket();
 
-		/// Calculate the # of samples per video frame
-		int GetSamplesPerFrame();
+		/// Calculate the # of samples per video frame (for a specific frame number)
+		int GetSamplesPerFrame(int frame_number);
 
 		/// Get the PTS for the current video packet
 		int GetVideoPTS();

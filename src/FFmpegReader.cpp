@@ -557,15 +557,15 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				channel = 0;
 		}
 
-		// Get Samples per frame
-		int samples_per_frame = GetSamplesPerFrame();
-
 		// Loop through samples, and add them to the correct frames
 		int start = starting_sample;
 		int remaining_samples = channel_buffer_size;
-		float *iterate_channel_buffer = channel_buffer;
+		float *iterate_channel_buffer = channel_buffer + 1;	// pointer to channel buffer (increment position by 1)
 		while (remaining_samples > 0)
 		{
+			// Get Samples per frame (for this frame number)
+			int samples_per_frame = GetSamplesPerFrame(starting_frame_number);
+
 			// Create or get frame object
 			Frame f = CreateFrame(starting_frame_number);
 			last_audio_frame = starting_frame_number;
@@ -574,11 +574,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			int samples = samples_per_frame - start;
 			if (samples > remaining_samples)
 				samples = remaining_samples;
-
-//			cout << "---------------" << last_audio_frame << "---------------" << endl;
-//			cout << "--- channel_filter: " << channel_filter << endl;
-//			cout << "--- starting_sample: " << start << endl;
-//			cout << "--- ending sample: " << (starting_sample + samples) - 1 << endl;
 
 			// Add samples for current channel to the frame
 			f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
@@ -843,7 +838,7 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 	double sample_start_percentage = frame - double(whole_frame);
 
 	// Get Samples per frame
-	int samples_per_frame = GetSamplesPerFrame();
+	int samples_per_frame = GetSamplesPerFrame(whole_frame);
 
 	// Calculate the sample # to start on
 	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
@@ -855,11 +850,17 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 	return location;
 }
 
-// Calculate the # of samples per video frame
-int FFmpegReader::GetSamplesPerFrame()
+// Calculate the # of samples per video frame (for a specific frame number)
+int FFmpegReader::GetSamplesPerFrame(int frame_number)
 {
-	// Get the number of samples per video frame (sample rate X reciprocal of frame rate)
-	return round(double(info.sample_rate) / info.fps.ToDouble());
+	// Get the total # of samples for the previous frame, and the current frame (rounded)
+	double previous_samples = round((info.sample_rate * info.video_timebase.ToDouble()) * (frame_number - 1));
+	double total_samples = round((info.sample_rate * info.video_timebase.ToDouble()) * frame_number);
+
+	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
+	// be evenly divided into frames, so each frame can have have different # of samples.
+	double samples_per_frame = total_samples - previous_samples;
+	return samples_per_frame;
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
@@ -872,7 +873,7 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 	else
 	{
 		// Get Samples per frame
-		int samples_per_frame = GetSamplesPerFrame();
+		int samples_per_frame = GetSamplesPerFrame(requested_frame);
 
 		// Create a new frame on the working cache
 		Frame f(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
@@ -980,6 +981,11 @@ void FFmpegReader::CheckFPS()
 //	cout << "THIRD SECOND: " << third_second_counter << endl;
 //	cout << "FORTH SECOND: " << forth_second_counter << endl;
 //	cout << "FIFTH SECOND: " << fifth_second_counter << endl;
+
+	// Double check that all counters have greater than zero (or give up)
+	if (second_second_counter == 0 || third_second_counter == 0 || forth_second_counter == 0 || fifth_second_counter == 0)
+		// exit with no changes to FPS (not enough data to calculate)
+		return;
 
 	int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
 	int avg_fps = round(sum_fps / 4.0f);
