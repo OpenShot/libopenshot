@@ -854,8 +854,9 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 int FFmpegReader::GetSamplesPerFrame(int frame_number)
 {
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double previous_samples = round((info.sample_rate * info.video_timebase.ToDouble()) * (frame_number - 1));
-	double total_samples = round((info.sample_rate * info.video_timebase.ToDouble()) * frame_number);
+	double fps = info.fps.Reciprocal().ToDouble();
+	double previous_samples = round((info.sample_rate * fps) * (frame_number - 1));
+	double total_samples = round((info.sample_rate * fps) * frame_number);
 
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
