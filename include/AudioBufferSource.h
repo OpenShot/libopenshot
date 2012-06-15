@@ -11,7 +11,7 @@
 #define __JUCE_UNITTEST_JUCEHEADER__
 
 #include <iomanip>
-#include "juce.h"
+#include "JuceLibraryCode/JuceHeader.h
 
 using namespace std;
 

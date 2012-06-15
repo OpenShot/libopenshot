@@ -20,14 +20,12 @@
 <folderInfo id="0.458309483." name="/" resourcePath="">
 <toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.860793860" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 <targetPlatform binaryParser="org.eclipse.cdt.core.MachO64" id="org.eclipse.cdt.build.core.prefbase.toolchain.860793860.1850291254" name=""/>
-<builder arguments="" buildPath="${workspace_loc:/OpenShotLibrary/build}" command="make" id="org.eclipse.cdt.build.core.settings.default.builder.1861063610" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+<builder arguments="" buildPath="${workspace_loc:/libopenshot/build}" command="make" id="org.eclipse.cdt.build.core.settings.default.builder.1861063610" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.libs.1656184502" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs">
 <option id="org.eclipse.cdt.build.core.settings.holder.libpaths.140246732" name="Library Paths" superClass="org.eclipse.cdt.build.core.settings.holder.libpaths"/>
 </tool>
 <tool id="org.eclipse.cdt.build.core.settings.holder.1015291342" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
-<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1997837481" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-<listOptionValue builtIn="false" value="/usr/include/ImageMagick"/>
-</option>
+<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1997837481" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.676494018" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
 <tool id="org.eclipse.cdt.build.core.settings.holder.458268777" name="UPC" superClass="org.eclipse.cdt.build.core.settings.holder">
@@ -42,6 +40,7 @@
 <listOptionValue builtIn="false" value="/usr/include/unittest++"/>
 <listOptionValue builtIn="false" value="/usr/local/include/juce"/>
 <listOptionValue builtIn="false" value="/usr/include/SDL"/>
+<listOptionValue builtIn="false" value="/usr/local/include/libopenshot-audio"/>
 </option>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1807071462" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
@@ -322,7 +321,7 @@
 <folderInfo id="0.458309483.953603139." name="/" resourcePath="">
 <toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.2126614311" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
 <targetPlatform binaryParser="org.eclipse.cdt.core.MachO64" id="org.eclipse.cdt.build.core.prefbase.toolchain.2126614311.1786856669" name=""/>
-<builder arguments="" buildPath="${workspace_loc:/OpenShotLibrary/build}" command="make" id="org.eclipse.cdt.build.core.settings.default.builder.1065130298" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+<builder arguments="" buildPath="${workspace_loc:/libopenshot/build}" command="make" id="org.eclipse.cdt.build.core.settings.default.builder.1065130298" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.libs.1171217169" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
 <tool id="org.eclipse.cdt.build.core.settings.holder.1436671119" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.189113030" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
