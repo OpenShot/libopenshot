@@ -1,0 +1,4 @@
+build/
+build/*
+src/juce/Builds/
+src/juce/Builds/*
