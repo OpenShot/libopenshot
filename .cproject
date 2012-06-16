@@ -25,7 +25,7 @@
 <option id="org.eclipse.cdt.build.core.settings.holder.libpaths.140246732" name="Library Paths" superClass="org.eclipse.cdt.build.core.settings.holder.libpaths"/>
 </tool>
 <tool id="org.eclipse.cdt.build.core.settings.holder.1015291342" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
-<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1997837481" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath"/>
+<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1997837481" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths"/>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.676494018" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>
 <tool id="org.eclipse.cdt.build.core.settings.holder.458268777" name="UPC" superClass="org.eclipse.cdt.build.core.settings.holder">

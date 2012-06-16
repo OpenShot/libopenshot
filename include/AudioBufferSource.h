@@ -11,7 +11,7 @@
 #define __JUCE_UNITTEST_JUCEHEADER__
 
 #include <iomanip>
-#include "JuceLibraryCode/JuceHeader.h
+#include "JuceLibraryCode/JuceHeader.h"
 
 using namespace std;
 
@@ -49,13 +49,13 @@ namespace openshot
 		void releaseResources();
 
 		/// Set the next read position of this source
-		void setNextReadPosition (int newPosition);
+		void setNextReadPosition (long long newPosition);
 
 		/// Get the next read position of this source
-		int getNextReadPosition() const;
+		long long getNextReadPosition() const;
 
 		/// Get the total length (in samples) of this audio source
-		int getTotalLength() const;
+		long long getTotalLength() const;
 
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;

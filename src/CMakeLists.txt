@@ -12,13 +12,6 @@ FIND_PACKAGE(FFmpeg REQUIRED)
 # Include FFmpeg headers (needed for compile)
 include_directories(${FFMPEG_INCLUDE_DIR})
 
-################# JACK AUDIO ###################
-# Find Jack Audio libraries
-#FIND_PACKAGE(Jack REQUIRED)
-
-# Include Jack headers (needed for compile)
-#include_directories(${LIBJACK_INCLUDE_DIR})
-
 ################# JUCE AUDIO ###################
 # Find JUCE Audio libraries
 FIND_PACKAGE(Juce REQUIRED)
@@ -33,20 +26,12 @@ FIND_PACKAGE(SDL REQUIRED)
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
 
-################# GTK2 ###################
-# Find GTK2 libraries
-#FIND_PACKAGE(GTK2 COMPONENTS gtk gtkmm)
-
-# Include GTK headers (needed for compile)
-#include_directories(${GTK2_INCLUDE_DIRS})
-
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
 FIND_PACKAGE(OpenMP)
 
 # Add the OpenMP compiler flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-
 
 
 ############### CREATE LIBRARY #################

@@ -14,7 +14,7 @@
 #include <sstream>
 #include <queue>
 #include "Magick++.h"
-#include "juce.h"
+#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"
 #include "Fraction.h"
 

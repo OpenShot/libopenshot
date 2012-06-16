@@ -360,6 +360,7 @@ void Frame::Play()
 	AudioTransportSource transport1;
 	transport1.setSource (my_source,
 			5000, // tells it to buffer this many samples ahead
+			NULL,
 			(double) sample_rate); // sample rate of source
 	transport1.setPosition (0);
 	transport1.setGain(1.0);

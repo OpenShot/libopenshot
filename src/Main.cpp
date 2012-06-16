@@ -32,7 +32,7 @@ int main()
 		for (int frame = 1; frame < 3000; frame++)
 		{
 			Frame f = r.GetFrame(frame);
-			f.Play();
+			//f.Play();
 			f.Display();
 			f.DisplayWaveform(false);
 		}

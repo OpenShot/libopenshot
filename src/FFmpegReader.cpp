@@ -21,15 +21,18 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 
 void FFmpegReader::Open()
 {
+	// Initialize format context
+	pFormatCtx = avformat_alloc_context();
+
 	// Register all formats and codecs
 	av_register_all();
 
 	// Open video file
-	if (av_open_input_file(&pFormatCtx, path.c_str(), NULL, 0, NULL) != 0)
+	if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
 		throw InvalidFile("File could not be opened.", path);
 
 	// Retrieve stream information
-	if (av_find_stream_info(pFormatCtx) < 0)
+	if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
 		throw NoStreamsFound("No streams found in file.", path);
 
 	// Dump information about file onto standard error
@@ -41,11 +44,11 @@ void FFmpegReader::Open()
 	for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++)
 	{
 		// Is this a video stream?
-		if (pFormatCtx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO && videoStream < 0) {
+		if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
 			videoStream = i;
 		}
 		// Is this an audio stream?
-		if (pFormatCtx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO && audioStream < 0) {
+		if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
 			audioStream = i;
 		}
 	}
@@ -75,7 +78,7 @@ void FFmpegReader::Open()
 			throw InvalidCodec("A valid video codec could not be found for this file.", path);
 		}
 		// Open video codec
-		if (avcodec_open(pCodecCtx, pCodec) < 0)
+		if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
 			throw InvalidCodec("A video codec was found, but could not be opened.", path);
 
 		// Update the File Info struct with video details (if a video stream is found)
@@ -98,7 +101,7 @@ void FFmpegReader::Open()
 			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 		}
 		// Open audio codec
-		if (avcodec_open(aCodecCtx, aCodec) < 0)
+		if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
 			throw InvalidCodec("An audio codec was found, but could not be opened.", path);
 
 		// Update the File Info struct with audio details (if an audio stream is found)
@@ -121,14 +124,17 @@ void FFmpegReader::Close()
 		audio_resample_close(resampleCtx);
 
 	// Close the video file
-	av_close_input_file(pFormatCtx);
+	avformat_close_input(&pFormatCtx);
+
+	// Free the format context
+	//avformat_free_context(pFormatCtx);
 }
 
 void FFmpegReader::UpdateAudioInfo()
 {
 	// Set values of FileInfo struct
 	info.has_audio = true;
-	info.file_size = pFormatCtx->file_size;
+	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.acodec = aCodecCtx->codec->name;
 	info.channels = aCodecCtx->channels;
 	info.sample_rate = aCodecCtx->sample_rate;
@@ -166,7 +172,7 @@ void FFmpegReader::UpdateVideoInfo()
 {
 	// Set values of FileInfo struct
 	info.has_video = true;
-	info.file_size = pFormatCtx->file_size;
+	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.height = pCodecCtx->height;
 	info.width = pCodecCtx->width;
 	info.vcodec = pCodecCtx->codec->name;
@@ -369,8 +375,7 @@ bool FFmpegReader::GetAVFrame()
 {
 	// Decode video frame
 	int frameFinished = 0;
-	avcodec_decode_video(pCodecCtx, pFrame, &frameFinished,
-			packet.data, packet.size);
+	avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
 
 	// Detect interlaced frame (only once)
 	if (frameFinished && !check_interlace)
@@ -472,8 +477,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 
 		// decode audio packet into samples (put samples in the audio_buf array)
-		int used = avcodec_decode_audio2(aCodecCtx, audio_buf, &buf_size,
-				packet.data, packet.size);
+		int used = avcodec_decode_audio3(aCodecCtx, audio_buf, &buf_size, &packet);
 
 		if (used < 0) {
 			// Throw exception
@@ -483,7 +487,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		}
 
 		// Calculate total number of samples
-		packet_samples += (buf_size / (av_get_bits_per_sample_format(aCodecCtx->sample_fmt) / 8));
+		packet_samples += (buf_size / av_get_bytes_per_sample(aCodecCtx->sample_fmt));
 
 		// process samples...
 		packet.data += used;
@@ -492,7 +496,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 
 	// Re-sample audio samples (if needed)
-	if(aCodecCtx->sample_fmt != SAMPLE_FMT_S16) {
+	if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
 		// Audio needs to be converted
 		if(!resampleCtx)
 			// Create an audio resample context object (used to convert audio samples)
@@ -501,7 +505,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					info.channels,
 					info.sample_rate,
 					info.sample_rate,
-					SAMPLE_FMT_S16,
+					AV_SAMPLE_FMT_S16,
 					aCodecCtx->sample_fmt,
 					0, 0, 0, 0.0f);
 
@@ -516,7 +520,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			audio_resample(resampleCtx, (short *)&converted_audio, (short *)&audio_buf, packet_samples);
 
 			// Copy audio samples over original samples
-			memcpy(&audio_buf, &converted_audio, packet_samples * av_get_bits_per_sample_format(SAMPLE_FMT_S16));
+			memcpy(&audio_buf, &converted_audio, packet_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 		}
 	}
 
