@@ -337,12 +337,10 @@ void Frame::Play()
 
 	AudioDeviceManager deviceManager;
 	deviceManager.initialise (0, /* number of input channels */
-	        audio->getNumChannels(), /* number of output channels */
+	        2, /* number of output channels */
 	        0, /* no XML settings.. */
 	        true  /* select default device on failure */);
-
-	AudioFormatManager formatManager;
-	formatManager.registerBasicFormats();
+	//deviceManager.playTestSound();
 
 	AudioSourcePlayer audioSourcePlayer;
 	deviceManager.addAudioCallback (&audioSourcePlayer);
@@ -357,13 +355,21 @@ void Frame::Play()
 		my_source->AddAudio(channel, 0, audio->getSampleData(channel), audio->getNumSamples(), 1.0f);
 	}
 
+	// Create TimeSliceThread for audio buffering
+	TimeSliceThread my_thread("Audio buffer thread");
+
+	// Start thread
+	my_thread.startThread();
+
 	AudioTransportSource transport1;
 	transport1.setSource (my_source,
 			5000, // tells it to buffer this many samples ahead
-			NULL,
-			(double) sample_rate); // sample rate of source
+			&my_thread,
+			(double) sample_rate,
+			audio->getNumChannels()); // sample rate of source
 	transport1.setPosition (0);
 	transport1.setGain(1.0);
+
 
 	// Create MIXER
 	MixerAudioSource mixer;
@@ -384,6 +390,7 @@ void Frame::Play()
 	transport1.stop();
     transport1.setSource (0);
     audioSourcePlayer.setSource (0);
+    my_thread.stopThread(500);
     deviceManager.removeAudioCallback (&audioSourcePlayer);
     deviceManager.closeAudioDevice();
     deviceManager.removeAllChangeListeners();

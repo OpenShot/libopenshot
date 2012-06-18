@@ -61,9 +61,6 @@ add_executable(example Main.cpp)
 # Link test executable to the new library
 target_link_libraries(example openshot)
 
-############### EXAMPLES SUB-DIRECTORY ################
-add_subdirectory(examples)
-
 ############### SWIG PYTHON BINDINGS ################
 FIND_PACKAGE(SWIG REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
