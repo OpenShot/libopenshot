@@ -271,9 +271,9 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 	pFrame = avcodec_alloc_frame();
 	bool end_of_stream = false;
 
-	#pragma XXX omp parallel private(i)
+	#pragma omp parallel
 	{
-		#pragma XXX omp master
+		#pragma omp master
 		{
 			// Loop through the stream until the correct frame is found
 			while (true)
@@ -329,9 +329,13 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 
 				// Check if working frames are 'finished'
 				if (!is_seeking)
+					#pragma omp critical (openshot_cache)
 					CheckWorkingFrames(false);
 
 				// Check if requested 'final' frame is available
+				#pragma omp critical (openshot_cache)
+				bool is_cache_found = final_cache.Exists(requested_frame);
+
 				if (final_cache.Exists(requested_frame))
 					break;
 
@@ -441,20 +445,80 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		// Skip to next frame without decoding or caching
 		return;
 
+	// Get a copy of the AVPicture
+	AVPicture copyFrame;
+	avpicture_alloc(&copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
+	av_picture_copy(&copyFrame, (AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 
-	#pragma XXX omp task private(current_frame, copyFrame)
+	// Copy some things local
+	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
+	int height = info.height;
+	int width = info.width;
+	long int video_length = info.video_length;
+	Cache *my_cache = &working_cache;
+
+	#pragma xxx omp task firstprivate(current_frame, copyFrame, my_cache, height, width, video_length, pix_fmt)
 	{
-		AVPicture copyFrame;
-		avpicture_alloc(&copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
-		av_picture_copy(&copyFrame, (AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
+		// PROCESS FRAME
 
-		// Process Frame
-		convert_image(current_frame, &copyFrame, info.width, info.height, pCodecCtx->pix_fmt);
 
-		// Free AVPicture
-		avpicture_free(&copyFrame);
+		AVFrame *pFrameRGB = NULL;
+		int numBytes;
+		uint8_t *buffer = NULL;
+
+		// Allocate an AVFrame structure
+		pFrameRGB = avcodec_alloc_frame();
+		if (pFrameRGB == NULL)
+			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
+
+		// Determine required buffer size and allocate buffer
+		numBytes = avpicture_get_size(PIX_FMT_RGB24, width, height);
+		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+
+		// Assign appropriate parts of buffer to image planes in pFrameRGB
+		// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
+		// of AVPicture
+		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGB24, width, height);
+
+		struct SwsContext *img_convert_ctx = NULL;
+
+		// Convert the image into RGB (for ImageMagick++)
+		if (img_convert_ctx == NULL) {
+			cout << "init img_convert_ctx" << endl;
+			img_convert_ctx = sws_getContext(width, height, pix_fmt, width,
+					height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+			if (img_convert_ctx == NULL) {
+				fprintf(stderr, "Cannot initialize the conversion context!\n");
+				exit(1);
+			}
+		}
+
+		// Resize / Convert to RGB
+		sws_scale(img_convert_ctx, copyFrame.data, copyFrame.linesize, 0,
+				height, pFrameRGB->data, pFrameRGB->linesize);
+
+
+		#pragma omp critical (openshot_cache)
+		{
+			// Create or get frame object
+			Frame f = CreateFrame(current_frame);
+
+			// Add Image data to frame
+			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
+
+			// Update working cache
+			my_cache->Add(f.number, f);
+		}
+
+		// Free the RGB image
+		av_free(buffer);
+		av_free(pFrameRGB);
+
 
 	} // end omp task
+
+	// Free AVPicture
+	avpicture_free(&copyFrame);
 }
 
 // Process an audio packet
@@ -696,57 +760,6 @@ void FFmpegReader::Seek(int requested_frame)
 		avcodec_flush_buffers(pCodecCtx);
 	if (info.has_audio)
 		avcodec_flush_buffers(aCodecCtx);
-}
-
-// Convert image to RGB format
-void FFmpegReader::convert_image(int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt)
-{
-	AVFrame *pFrameRGB = NULL;
-	int numBytes;
-	uint8_t *buffer = NULL;
-
-	// Allocate an AVFrame structure
-	pFrameRGB = avcodec_alloc_frame();
-	if (pFrameRGB == NULL)
-		throw OutOfBoundsFrame("Convert Image Broke!", current_frame, info.video_length);
-
-	// Determine required buffer size and allocate buffer
-	numBytes = avpicture_get_size(PIX_FMT_RGB24, width, height);
-	buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
-
-	// Assign appropriate parts of buffer to image planes in pFrameRGB
-	// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
-	// of AVPicture
-	avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGB24, width, height);
-
-	struct SwsContext *img_convert_ctx = NULL;
-
-	// Convert the image into RGB (for ImageMagick++)
-	if(img_convert_ctx == NULL) {
-	     img_convert_ctx = sws_getContext(width, height, pix_fmt, width, height,
-	                      PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-	     if(img_convert_ctx == NULL) {
-	      fprintf(stderr, "Cannot initialize the conversion context!\n");
-	      exit(1);
-	     }
-	}
-
-	// Resize / Convert to RGB
-	sws_scale(img_convert_ctx, copyFrame->data, copyFrame->linesize,
-	 0, height, pFrameRGB->data, pFrameRGB->linesize);
-
-	// Create or get frame object
-	Frame f = CreateFrame(current_frame);
-
-	// Add Image data to frame
-	f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
-
-	// Update working cache
-	working_cache.Add(f.number, f);
-
-	// Free the RGB image
-	av_free(buffer);
-	av_free(pFrameRGB);
 }
 
 // Get the PTS for the current video packet
