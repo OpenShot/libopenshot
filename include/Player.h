@@ -33,6 +33,9 @@ namespace openshot
 		CallbackPtr callback;
 		void *pythonmethod;
 
+		// draw pixels for SDL
+		void putpixel(SDL_Surface *surface, SDL_Overlay *bmp, int x, int y, Uint32 pixel, int pixel_index);
+
 	public:
 		/// Default constructor
 		Player();
@@ -48,7 +51,6 @@ namespace openshot
 
 		/// Play the video
 		void Play();
-		void putpixel(SDL_Surface *surface, SDL_Overlay *bmp, int x, int y, Uint32 pixel, int pixel_index);
 
 	};
 
