@@ -66,10 +66,12 @@ task lib "OpenShot Library" {
       task website_theme "Choose website theme" {
         effort 1d
         allocate jonathan
+        complete 100
       }
       task website_django "Create initial django project" {
         effort 2d
         allocate jonathan
+        complete 100
       }
   }
 
@@ -79,18 +81,22 @@ task lib "OpenShot Library" {
       task reader_openmp "Complete OpenMP integration" {
         effort 4d
         allocate jonathan
+        complete 0
       }
       task reader_resample_bug "Fix audio resampling bug" {
         effort 3d
         allocate jonathan
+        complete 0
       }
       task reader_refactor_audio "Refactor ProcessAudioPacket method to be simpler" {
         effort 1d
         allocate jonathan
+        complete 0
       }
       task reader_unit_tests "Create unit tests for all public Reader methods" {
         effort 2d
         allocate jonathan
+        complete 0
       }
   }
 
@@ -101,22 +107,27 @@ task lib "OpenShot Library" {
       task writer_design "Design writer public interface" {
         effort 2d
         allocate jonathan
+        complete 0
       }
       task writer_initial "Create initial writer classes & headers" {
         effort 2d
         allocate jonathan
+        complete 0
       }
       task writer_file_or_mem "Build support for file-based or memory-based streams" {
         effort 1d
         allocate jonathan
+        complete 0
       }
       task writer_build "Implement the writer classes and get it all working" {
         effort 7d
         allocate jonathan
+        complete 0
       }
       task writer_unit_tests "Create unit tests for all public Writer methods" {
         effort 2d
         allocate jonathan
+        complete 0
       }
   }
 
@@ -127,10 +138,12 @@ task lib "OpenShot Library" {
       task stream_file_based "Deliver file-based WebM (VP8) video to browser (with Django)" {
         effort 2d
         allocate jonathan
+        complete 0
       }
       task stream_mem_based "Deliver memory-based WebM (VP8) video to browser (with Django)" {
         effort 2d
         allocate jonathan
+        complete 0
       }
 
       task stream_upload "Create form to upload video (with Django)" {
@@ -138,10 +151,12 @@ task lib "OpenShot Library" {
         task stream_upload_encode "Upload & encode video as WebM (with libopenshot)" {
           effort 2d
           allocate jonathan
+          complete 0
         }
         task stream_upload_thumbnail "Update thumbnail image every few seconds (during encode)" {
           effort 2d
           allocate jonathan
+          complete 0
         }
       }
 
@@ -150,14 +165,17 @@ task lib "OpenShot Library" {
         task stream_options_in_out "Trim: IN & OUT" {
           effort 1d
           allocate jonathan
+          complete 0
         }
         task stream_options_effects "Effects: Blur & Grayscale" {
           effort 1d
           allocate jonathan
+          complete 0
         }
         task stream_options_watermark "Watermark image (with gravity)" {
           effort 1d
           allocate jonathan
+          complete 0
         }
       }
 
