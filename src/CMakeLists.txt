@@ -12,9 +12,9 @@ FIND_PACKAGE(FFmpeg REQUIRED)
 # Include FFmpeg headers (needed for compile)
 include_directories(${FFMPEG_INCLUDE_DIR})
 
-################# JUCE AUDIO ###################
-# Find JUCE Audio libraries
-FIND_PACKAGE(Juce REQUIRED)
+################# LIBOPENSHOT-AUDIO ###################
+# Find JUCE-based openshot Audio libraries
+FIND_PACKAGE(OpenShotAudio REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBJUCE_INCLUDE_DIRS})
@@ -32,7 +32,6 @@ FIND_PACKAGE(OpenMP)
 
 # Add the OpenMP compiler flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-
 
 ############### CREATE LIBRARY #################
 # Create shared openshot library

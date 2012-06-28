@@ -11,6 +11,10 @@ MESSAGE("--------------------------------------------------------------")
 message("---- Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
 MESSAGE("--------------------------------------------------------------")
 
+IF (WIN32)
+	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
+ENDIF(WIN32)
+
 ############## PROCESS SUB-DIRECTORIES ##############
 add_subdirectory(src)
 add_subdirectory(tests)

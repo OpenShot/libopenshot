@@ -9,8 +9,7 @@
 find_path(LIBJUCE_BASE_DIR JuceHeader.h
 			PATHS /usr/include/libopenshot-audio/
 			/usr/local/include/libopenshot-audio/
-			$ENV{JUCE_DIR}/include/libopenshot-audio/
-			$ENV{JUCE_DIR}/includes/libopenshot-audio/ )
+			$ENV{JUCE_DIR}/include/libopenshot-audio/ )
 
 # Get a list of all header file paths
 FILE(GLOB_RECURSE JUCE_HEADER_FILES

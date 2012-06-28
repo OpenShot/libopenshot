@@ -5,9 +5,6 @@ FIND_PACKAGE(UnitTest++ REQUIRED)
 # Include UnitTest++ headers (needed for compile)
 include_directories(${UNITTEST++_INCLUDE_DIR})
 
-
-
-
 ################ IMAGE MAGICK ##################
 # Find the ImageMagick++ library
 FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
@@ -22,16 +19,9 @@ FIND_PACKAGE(FFmpeg REQUIRED)
 # Include FFmpeg headers (needed for compile)
 include_directories(${FFMPEG_INCLUDE_DIR})
 
-################# JACK AUDIO ###################
-# Find Jack Audio libraries
-#FIND_PACKAGE(Jack)
-
-# Include Jack headers (needed for compile)
-#include_directories(${LIBJACK_INCLUDE_DIR})
-
-################# JUCE AUDIO ###################
-# Find JUCE Audio libraries
-FIND_PACKAGE(Juce)
+################# LIBOPENSHOT-AUDIO ###################
+# Find JUCE-based openshot Audio libraries
+FIND_PACKAGE(OpenShotAudio REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBJUCE_INCLUDE_DIRS})
@@ -42,14 +32,6 @@ FIND_PACKAGE(SDL REQUIRED)
 
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
-
-################# GTK2 ###################
-# Find GTK2 libraries
-#FIND_PACKAGE(GTK2 COMPONENTS gtk gtkmm)
-#
-# Include GTK headers (needed for compile)
-#include_directories(${GTK2_INCLUDE_DIRS})
-
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (tester)
