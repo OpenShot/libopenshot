@@ -81,7 +81,7 @@ task lib "OpenShot Library" {
       task reader_openmp "Complete OpenMP integration" {
         effort 4d
         allocate jonathan
-        complete 0
+        complete 50
       }
       task reader_resample_bug "Fix audio resampling bug" {
         effort 3d

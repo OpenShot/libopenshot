@@ -445,23 +445,21 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		// Skip to next frame without decoding or caching
 		return;
 
-	// Get a copy of the AVPicture
-	AVPicture copyFrame;
-	avpicture_alloc(&copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
-	av_picture_copy(&copyFrame, (AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
-
 	// Copy some things local
 	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
-	Cache *my_cache = &working_cache;
+	//Cache *my_cache = &working_cache;
 
-	#pragma xxx omp task firstprivate(current_frame, copyFrame, my_cache, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, height, width, video_length, pix_fmt)
 	{
-		// PROCESS FRAME
+		// Get a copy of the AVPicture
+		AVPicture copyFrame;
+		avpicture_alloc(&copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
+		av_picture_copy(&copyFrame, (AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 
-
+		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
 		int numBytes;
 		uint8_t *buffer = NULL;
@@ -503,22 +501,26 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			// Create or get frame object
 			Frame f = CreateFrame(current_frame);
 
+			cout << "Create OMP Frame: " << f.number << endl;
+
 			// Add Image data to frame
 			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 			// Update working cache
-			my_cache->Add(f.number, f);
+			working_cache.Add(f.number, f);
+			working_cache.GetFrame(f.number).Display();
 		}
 
 		// Free the RGB image
 		av_free(buffer);
 		av_free(pFrameRGB);
 
+		// Free AVPicture
+		avpicture_free(&copyFrame);
 
 	} // end omp task
 
-	// Free AVPicture
-	avpicture_free(&copyFrame);
+
 }
 
 // Process an audio packet
@@ -634,30 +636,33 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// Get Samples per frame (for this frame number)
 			int samples_per_frame = GetSamplesPerFrame(starting_frame_number);
 
-			// Create or get frame object
-			Frame f = CreateFrame(starting_frame_number);
-			last_audio_frame = starting_frame_number;
+			#pragma omp critical (openshot_cache)
+			{
+				// Create or get frame object
+				Frame f = CreateFrame(starting_frame_number);
+				last_audio_frame = starting_frame_number;
 
-			// Calculate # of samples to add to this frame
-			int samples = samples_per_frame - start;
-			if (samples > remaining_samples)
-				samples = remaining_samples;
+				// Calculate # of samples to add to this frame
+				int samples = samples_per_frame - start;
+				if (samples > remaining_samples)
+					samples = remaining_samples;
 
-			// Add samples for current channel to the frame
-			f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
+				// Add samples for current channel to the frame
+				f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
-			// Update working cache
-			working_cache.Add(f.number, f);
+				// Update working cache
+				working_cache.Add(f.number, f);
 
-			// Decrement remaining samples
-			remaining_samples -= samples;
+				// Decrement remaining samples
+				remaining_samples -= samples;
 
-			// Increment buffer (to next set of samples)
-			if (remaining_samples > 0)
-				iterate_channel_buffer += samples;
+				// Increment buffer (to next set of samples)
+				if (remaining_samples > 0)
+					iterate_channel_buffer += samples;
 
-			// Increment frame number
-			starting_frame_number++;
+				// Increment frame number
+				starting_frame_number++;
+			}
 
 			// Reset starting sample #
 			start = 0;
