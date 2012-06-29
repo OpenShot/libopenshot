@@ -450,9 +450,9 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
-	//Cache *my_cache = &working_cache;
+	Cache *my_cache = &working_cache;
 
-	#pragma omp task firstprivate(current_frame, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_cache, height, width, video_length, pix_fmt)
 	{
 		// Get a copy of the AVPicture
 		AVPicture copyFrame;
@@ -507,8 +507,8 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 			// Update working cache
-			working_cache.Add(f.number, f);
-			working_cache.GetFrame(f.number).Display();
+			my_cache->Add(f.number, f);
+			my_cache->GetFrame(f.number).Display();
 		}
 
 		// Free the RGB image
