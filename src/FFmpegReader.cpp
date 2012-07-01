@@ -344,9 +344,6 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 		} // end omp master
 	} // end omp parallel
 
-	// Set flag to not get the next packet (since we already got it)
-	//needs_packet = false;
-
 	// Delete packet
 	//av_free_packet(&packet);
 
@@ -438,21 +435,26 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 {
 	// Calculate current frame #
 	int current_frame = ConvertVideoPTStoFrame(GetVideoPTS());
-	last_video_frame = current_frame;
 
 	// Are we close enough to decode the frame?
 	if ((current_frame) < (requested_frame - 20))
+	{
+		// Update last processed video frame
+		last_video_frame = current_frame;
+
 		// Skip to next frame without decoding or caching
 		return;
+	}
 
-	// Copy some things local
+	// Init some things local (for OpenMP)
 	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
 	Cache *my_cache = &working_cache;
+	int *my_last_video_frame = &last_video_frame;
 
-	#pragma omp task firstprivate(current_frame, my_cache, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, height, width, video_length, pix_fmt)
 	{
 		// Get a copy of the AVPicture
 		AVPicture copyFrame;
@@ -501,14 +503,16 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			// Create or get frame object
 			Frame f = CreateFrame(current_frame);
 
-			cout << "Create OMP Frame: " << f.number << endl;
-
 			// Add Image data to frame
 			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 			// Update working cache
+			f.processing = false;
 			my_cache->Add(f.number, f);
-			my_cache->GetFrame(f.number).Display();
+
+			// Update shared variable (last video frame processed)
+			if (*my_last_video_frame < current_frame)
+				*my_last_video_frame = current_frame;
 		}
 
 		// Free the RGB image
@@ -651,6 +655,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 				// Update working cache
+				f.processing = false;
 				working_cache.Add(f.number, f);
 
 				// Decrement remaining samples
@@ -891,8 +896,13 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 {
 	// Check working cache
 	if (working_cache.Exists(requested_frame))
+	{
 		// Return existing frame
-		return working_cache.GetFrame(requested_frame);
+		Frame output = working_cache.GetFrame(requested_frame);
+		output.processing = true;
+
+		return output;
+	}
 	else
 	{
 		// Get Samples per frame
@@ -902,6 +912,7 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 		Frame f(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
 		f.SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 		f.SetSampleRate(info.sample_rate);
+		f.processing = true;
 		working_cache.Add(requested_frame, f);
 
 		// Return new frame
@@ -927,6 +938,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 		// Get the front frame of working cache
 		Frame f = working_cache.GetSmallestFrame();
+		bool is_processing = f.processing;
+
+		// Skip processing frames
+		if (is_processing)
+			break;
 
 		// Check if working frame is final
 		if ((!end_of_stream && f.number <= last_video_frame && f.number < last_audio_frame) || end_of_stream)

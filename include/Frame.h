@@ -38,7 +38,8 @@ namespace openshot
 		int sample_rate;
 
 	public:
-		int number;		///< This is the frame number (starting at 1)
+		int number;			///< This is the frame number (starting at 1)
+		bool processing;	///< This flag is used to determine if a frame is still being processed
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();

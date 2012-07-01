@@ -15,6 +15,7 @@ Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
 	audio = new juce::AudioSampleBuffer(2,1600);
+	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -27,6 +28,7 @@ Frame::Frame(int number, int width, int height, string color)
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
 	audio = new juce::AudioSampleBuffer(2,1600);
+	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -39,6 +41,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
 	audio = new juce::AudioSampleBuffer(2,1600);
+	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -51,6 +54,7 @@ Frame::Frame(int number, int samples, int channels) :
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
 	audio = new juce::AudioSampleBuffer(channels, samples);
+	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -63,6 +67,7 @@ Frame::Frame(int number, int width, int height, string color, int samples, int c
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
 	audio = new juce::AudioSampleBuffer(channels, samples);
+	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();

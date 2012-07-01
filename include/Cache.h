@@ -56,6 +56,9 @@ namespace openshot {
 		/// Clear the cache of all frames
 		void Clear();
 
+		/// Display a list of cached frame numbers
+		void Display();
+
 		/// Display the list of cache and clear the cache (mainly for debugging reasons)
 		void DisplayAndClear();
 

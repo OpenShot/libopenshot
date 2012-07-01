@@ -129,6 +129,21 @@ void Cache::CleanUp()
 	}
 }
 
+
+// Display a list of cached frame numbers
+void Cache::Display()
+{
+	cout << "----- Cache List (" << frames.size() << ") ------" << endl;
+	deque<int>::iterator itr;
+
+	int i = 1;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	{
+		cout << " " << i << ") --- Frame " << *itr << endl;
+		i++;
+	}
+}
+
 // Display the list of cache and clear the cache (mainly for debugging reasons)
 void Cache::DisplayAndClear()
 {
