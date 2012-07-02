@@ -577,7 +577,24 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// decode audio packet into samples (put samples in the audio_buf array)
 			#pragma omp critical (debug)
 			{
-				cout << "FRAME: " << target_frame << endl;
+				cout << "FRAME: " << target_frame << ", Starting Sample: " << starting_sample << ", Thread #: " << omp_get_thread_num() << endl;
+				cout << "&audio_buf: " << &audio_buf << endl;
+				cout << "audio_buf[0]: " << audio_buf[0] << endl;
+				cout << "audio_buf[1]: " << audio_buf[1] << endl;
+				cout << "audio_buf[2]: " << audio_buf[2] << endl;
+				cout << "audio_buf[3]: " << audio_buf[3] << endl;
+				cout << "audio_buf[4]: " << audio_buf[4] << endl;
+				cout << "audio_buf[5]: " << audio_buf[5] << endl;
+				cout << "my_packet.pts: " << my_packet->pts << endl;
+				cout << "&my_packet: " << &my_packet << endl;
+			}
+
+			if (target_frame > 282)
+				sleep(1);
+
+			#pragma omp critical (debug)
+			{
+				cout << "FRAME: " << target_frame << ", Starting Sample: " << starting_sample << ", Thread #: " << omp_get_thread_num() << endl;
 				cout << "&audio_buf: " << &audio_buf << endl;
 				cout << "audio_buf[0]: " << audio_buf[0] << endl;
 				cout << "audio_buf[1]: " << audio_buf[1] << endl;
@@ -594,7 +611,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			if (used < 0) {
 				#pragma omp critical (debug)
 				{
-					cout << "FRAME: " << target_frame << endl;
+					cout << "FRAME: " << target_frame << ", Starting Sample: " << starting_sample << ", Thread #: " << omp_get_thread_num() << endl;
 					cout << "used: " << used << endl;
 					cout << "buf_size: " << buf_size << endl;
 					cout << "my_packet->size: " << my_packet->size << endl;
