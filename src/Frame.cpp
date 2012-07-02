@@ -10,12 +10,12 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
+Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
+				 image_complete(false), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
-	audio = new juce::AudioSampleBuffer(2,1600);
-	processing = false;
+	audio = new juce::AudioSampleBuffer(channels, 1600);
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -23,12 +23,12 @@ Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
+	  image_complete(false), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
-	audio = new juce::AudioSampleBuffer(2,1600);
-	processing = false;
+	audio = new juce::AudioSampleBuffer(channels, 1600);
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -36,12 +36,12 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
+	  image_complete(false), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
-	audio = new juce::AudioSampleBuffer(2,1600);
-	processing = false;
+	audio = new juce::AudioSampleBuffer(channels, 1600);
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -49,12 +49,12 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
+		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
+		image_complete(false), channels(channels)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
 	audio = new juce::AudioSampleBuffer(channels, samples);
-	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -62,12 +62,12 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
+	  image_complete(false), channels(channels)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
 	audio = new juce::AudioSampleBuffer(channels, samples);
-	processing = false;
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -111,6 +111,9 @@ void Frame::DeepCopy(const Frame& other)
 	audio = new juce::AudioSampleBuffer(*(other.audio));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	sample_rate = other.sample_rate;
+	channels = other.channels;
+	image_complete = other.image_complete;
+	channels_complete = other.channels_complete;
 }
 
 // Deallocate image and audio memory
@@ -331,6 +334,82 @@ void Frame::AddAudio(int destChannel, int destStartSample, const float* source, 
 {
 	// Add samples to frame's audio buffer
 	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
+}
+
+// Set if the audio has been completed loaded into the frame
+void Frame::SetAudioComplete(int channel)
+{
+	// Add channel as completed
+	channels_complete[channel] = true;
+}
+
+// Set if the image has been completed loaded into the frame
+void Frame::SetImageComplete()
+{
+	image_complete = true;
+}
+
+// Gets whether the frame has completely loaded all it's audio data (for each channel)
+bool Frame::IsAudioReady(bool has_audio)
+{
+	if (has_audio)
+	{
+		// Do all channels have audio loaded?
+		if (channels_complete.size() == channels)
+		{
+			// yes, all audio is loaded
+			cout << "IsAudioReady: True, count: " << channels_complete.size() << endl;
+			return true;
+		}
+		else
+		{
+			// still waiting on some channel to be loaded
+			cout << "IsAudioReady: False, count: " << channels_complete.size() << endl;
+			return false;
+		}
+	}
+	else
+	{
+		// No audio needed for this frame
+		return true;
+	}
+}
+
+// Gets whether the frame has completed loading it's image and audio data
+bool Frame::IsReady(bool has_video, bool has_audio)
+{
+	if (has_video && has_audio)
+	{
+		// Does the frame have both audio and image data?
+		if (image_complete && IsAudioReady(has_audio))
+			return true;
+		else
+			return false;
+
+	}
+	else if (has_video)
+	{
+		// Does the frame have image data?
+		if (image_complete)
+			return true;
+		else
+			return false;
+
+	}
+	else if (has_audio)
+	{
+		// Does the frame have audio data?
+		if (IsAudioReady(has_audio))
+			return true;
+		else
+			return false;
+
+	}
+	else
+	{
+		// Invalid
+		return false;
+	}
 }
 
 // Play audio samples for this frame

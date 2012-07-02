@@ -36,10 +36,13 @@ namespace openshot
 		juce::AudioSampleBuffer *audio;
 		Fraction pixel_ratio;
 		int sample_rate;
+		int channels;
+
+		map<int, bool> channels_complete;
+		bool image_complete;
 
 	public:
-		int number;			///< This is the frame number (starting at 1)
-		bool processing;	///< This flag is used to determine if a frame is still being processed
+		int number;	///< This is the frame number (starting at 1)
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();
@@ -109,6 +112,18 @@ namespace openshot
 
 		/// Play audio samples for this frame
 		void Play();
+
+		/// Set if the audio has been completely loaded into a channel (for this frame)
+		void SetAudioComplete(int channel);
+
+		/// Set if the image has been completely loaded into the frame
+		void SetImageComplete();
+
+		/// Gets whether the frame has completely loaded all it's audio data (for each channel)
+		bool IsAudioReady(bool has_audio);
+
+		/// Gets whether the frame has completely loaded it's image and audio data
+		bool IsReady(bool has_video, bool has_audio);
 
 	};
 

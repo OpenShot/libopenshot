@@ -62,15 +62,17 @@ namespace openshot
 		AVCodecContext *pCodecCtx, *aCodecCtx;
 		AVCodec *pCodec, *aCodec;
 		AVStream *pStream, *aStream;
-		AVPacket packet;
+		AVPacket *packet;
 		AVFrame *pFrame;
-		ReSampleContext *resampleCtx;
+
 		bool check_interlace;
 		bool check_fps;
 		bool init_settings;
 
 		Cache final_cache;
 		Cache working_cache;
+		map<int, AVPacket*> packets;
+		map<int, AVFrame*> frames;
 
 		bool is_seeking;
 		int seeking_pts;
