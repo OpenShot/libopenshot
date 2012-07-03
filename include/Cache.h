@@ -65,6 +65,9 @@ namespace openshot {
 		/// Count the frames in the queue
 		int Count();
 
+		/// Set maximum frames to a different amount
+		void SetMaxFrames(int max_frames) { max_frames = max_frames; };
+
 	};
 
 }

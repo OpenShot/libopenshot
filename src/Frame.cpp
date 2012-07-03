@@ -354,23 +354,19 @@ bool Frame::IsAudioReady(bool has_audio)
 {
 	if (has_audio)
 	{
+		if (number == 300)
+			cout << "IsAudioReady channels: " << channels_complete.size() << endl;
+
 		// Do all channels have audio loaded?
 		if (channels_complete.size() == channels)
-		{
-			// yes, all audio is loaded
 			return true;
-		}
 		else
-		{
 			// still waiting on some channel to be loaded
 			return false;
-		}
 	}
 	else
-	{
 		// No audio needed for this frame
 		return true;
-	}
 }
 
 // Gets whether the frame has completed loading it's image and audio data

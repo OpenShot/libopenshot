@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(50), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(150), final_cache(150), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) { // , resampleCtx(NULL)
 
@@ -15,7 +15,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	if (info.has_video)
 		CheckFPS();
 
-	// Get Frame 1 (to determine the offset between the PTS and the Frame Number)
+	// Get 1st frame
 	GetFrame(1);
 }
 
@@ -218,6 +218,10 @@ void FFmpegReader::UpdateVideoInfo()
 	info.duration = pStream->duration * info.video_timebase.ToDouble();
 	info.video_length = round(info.duration * info.fps.ToDouble());
 
+	// Override an invalid framerate
+	if (info.fps.ToFloat() > 120.0f)
+		info.has_video = false;
+
 }
 
 Frame FFmpegReader::GetFrame(int requested_frame)
@@ -322,34 +326,36 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 					// Determine related video frame and starting sample # from audio PTS
 					audio_packet_location location = GetAudioPTSLocation(packet->pts);
 
-					cout << "ProcessAudioPacket: frame:" << location.frame << ", sample start: " << location.sample_start << endl;
+					cout << "Audio Location: frame: " << location.frame << ", start: " << location.sample_start << endl;
 
 					// Process Audio Packet
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
 
 				// Check if working frames are 'finished'
-				if (!is_seeking)
-					#pragma omp critical (openshot_cache)
-					CheckWorkingFrames(false);
-
-				// Check if requested 'final' frame is available
+				bool is_cache_found = false;
 				#pragma omp critical (openshot_cache)
-				bool is_cache_found = final_cache.Exists(requested_frame);
+				{
+					if (!is_seeking)
+						CheckWorkingFrames(false);
 
-				if (final_cache.Exists(requested_frame))
+					// Check if requested 'final' frame is available
+					is_cache_found = final_cache.Exists(requested_frame);
+				}
+
+				// Break once the frame is found
+				if (is_cache_found)
 					break;
 
 			} // end while
 
 		} // end omp master
+
+		// Be sure all threads are finished
+		#pragma omp barrier
+
 	} // end omp parallel
 
-	// Delete packet
-	//av_free_packet(&packet);
-
-	// Free the YUV frame
-	//av_free(pFrame);
 
 	// End of stream?  Mark the any other working frames as 'finished'
 	if (end_of_stream)
@@ -362,7 +368,6 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 	else
 		// Return blank frame
 		return CreateFrame(requested_frame);
-
 }
 
 // Get the next packet (if any)
@@ -503,7 +508,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 
 		// Convert the image into RGB (for ImageMagick++)
 		if (img_convert_ctx == NULL) {
-			cout << "init img_convert_ctx" << endl;
 			img_convert_ctx = sws_getContext(width, height, pix_fmt, width,
 					height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 			if (img_convert_ctx == NULL) {
@@ -662,7 +666,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// Loop through samples, and add them to the correct frames
 			int start = starting_sample;
 			int remaining_samples = channel_buffer_size;
-			float *iterate_channel_buffer = channel_buffer + 1;	// pointer to channel buffer (increment position by 1)
+			float *iterate_channel_buffer = channel_buffer;	// pointer to channel buffer
 			while (remaining_samples > 0)
 			{
 				// Get Samples per frame (for this frame number)
@@ -978,6 +982,13 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		Frame f = working_cache.GetSmallestFrame();
 		bool is_ready = f.IsReady(info.has_video, info.has_audio);
 
+		if (f.number == 300)
+		{
+			cout << "CheckWorkingFrames: frame: " << f.number << endl;
+			cout << "f.IsReady(): " << f.IsReady(info.has_video, info.has_audio) << endl;
+			cout << "f.IsAudioReady(): " << f.IsAudioReady(info.has_audio) << endl;
+		}
+
 		// Check if working frame is final
 		if (is_ready || end_of_stream)
 		{
@@ -1004,6 +1015,9 @@ void FFmpegReader::CheckFPS()
 	int third_second_counter = 0;
 	int forth_second_counter = 0;
 	int fifth_second_counter = 0;
+
+	int iterations = 0;
+	int threshold = 500;
 
 	// Loop through the stream
 	while (true)
@@ -1045,15 +1059,22 @@ void FFmpegReader::CheckFPS()
 				else
 					// Too far
 					break;
+
+				// Remove pFrame
+				frames.erase(packet->pts);
 			}
 		}
-	}
 
-//	cout << "FIRST SECOND: " << first_second_counter << endl;
-//	cout << "SECOND SECOND: " << second_second_counter << endl;
-//	cout << "THIRD SECOND: " << third_second_counter << endl;
-//	cout << "FORTH SECOND: " << forth_second_counter << endl;
-//	cout << "FIFTH SECOND: " << fifth_second_counter << endl;
+		// remove packet
+		packets.erase(packet->pts);
+
+		// Increment counters
+		iterations++;
+
+		// Give up (if threshold exceeded)
+		if (iterations > threshold)
+			return;
+	}
 
 	// Double check that all counters have greater than zero (or give up)
 	if (second_second_counter == 0 || third_second_counter == 0 || forth_second_counter == 0 || fifth_second_counter == 0)
