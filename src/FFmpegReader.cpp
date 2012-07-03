@@ -273,6 +273,7 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 {
 	// Allocate video frame
 	bool end_of_stream = false;
+	bool check_seek = false;
 
 	#pragma omp parallel
 	{
@@ -293,7 +294,10 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				if (packet->stream_index == videoStream)
 				{
 					// Check the status of a seek (if any)
-					if (CheckSeek(true))
+					#pragma omp critical (openshot_cache)
+					check_seek = CheckSeek(true);
+
+					if (check_seek)
 						// Jump to the next iteration of this loop
 						continue;
 
@@ -316,7 +320,10 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 					cout << "AUDIO PACKET (PTS: " << packet->pts << ")" << endl;
 
 					// Check the status of a seek (if any)
-					if (CheckSeek(false))
+					#pragma omp critical (openshot_cache)
+					check_seek = CheckSeek(false);
+
+					if (check_seek)
 						// Jump to the next iteration of this loop
 						continue;
 
