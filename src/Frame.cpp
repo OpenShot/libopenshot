@@ -358,13 +358,11 @@ bool Frame::IsAudioReady(bool has_audio)
 		if (channels_complete.size() == channels)
 		{
 			// yes, all audio is loaded
-			cout << "IsAudioReady: True, count: " << channels_complete.size() << endl;
 			return true;
 		}
 		else
 		{
 			// still waiting on some channel to be loaded
-			cout << "IsAudioReady: False, count: " << channels_complete.size() << endl;
 			return false;
 		}
 	}
