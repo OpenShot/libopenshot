@@ -14,14 +14,14 @@ void FrameReady(int number)
 int main()
 {
 
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test1.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/piano.wav");
+	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test1.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
-		openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
+	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/60fps.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
@@ -29,19 +29,27 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		for (int frame = 300; frame <= 500; frame++)
+		for (int repeat = 0; repeat <= 100; repeat++)
 		{
-			Frame f = r.GetFrame(frame);
-			f.Play();
-			f.Display();
-			f.DisplayWaveform(false);
+			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
+			for (int frame = 200; frame <= 400; frame++)
+			{
+				Frame f = r.GetFrame(frame);
+				//f.Play();
+				//f.Display();
+				//f.DisplayWaveform(false);
+			}
+
+			sleep(1);
+
+			// Seek to frame 1
+			r.GetFrame(1);
 		}
 
 		//Player g;
 		//g.SetReader(&r);
 		//g.SetFrameCallback(&FrameReady);
 		//g.Play();
-
 
 		// Get a frame
 		//Frame f = r.GetFrame(300);

@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(150), final_cache(150), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(30), final_cache(30), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) { // , resampleCtx(NULL)
 
@@ -112,9 +112,6 @@ void FFmpegReader::Open()
 
 void FFmpegReader::Close()
 {
-	// Delete packet
-	//av_free_packet(&packet);
-
 	// Close the codec
 	if (info.has_video)
 		avcodec_close(pCodecCtx);
@@ -274,7 +271,10 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 	// Allocate video frame
 	bool end_of_stream = false;
 	bool check_seek = false;
+	bool frame_finished = false;
+	int packet_error = -1;
 
+	//omp_set_num_threads(1);
 	#pragma omp parallel
 	{
 		#pragma omp master
@@ -282,8 +282,11 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 			// Loop through the stream until the correct frame is found
 			while (true)
 			{
+				#pragma omp critical (packet_cache)
+				packet_error = GetNextPacket();
+
 				// Get the next packet (if any)
-				if (GetNextPacket() < 0)
+				if (packet_error < 0)
 				{
 					// Break loop when no more packets found
 					end_of_stream = true;
@@ -301,8 +304,11 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 						// Jump to the next iteration of this loop
 						continue;
 
+					#pragma omp critical (packet_cache)
+					frame_finished = GetAVFrame();
+
 					// Check if the AVFrame is finished and set it
-					if (GetAVFrame())
+					if (frame_finished)
 					{
 						cout << endl << "VIDEO PACKET (PTS: " << GetVideoPTS() << ")" << endl;
 
@@ -354,6 +360,10 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				if (is_cache_found)
 					break;
 
+				// DEBUG
+				cout << "FRAMES: " << frames.size() << endl;
+				cout << "PACKETS: " << packets.size() << endl;
+
 			} // end while
 
 		} // end omp master
@@ -387,10 +397,11 @@ int FFmpegReader::GetNextPacket()
 	{
 		// Add packet to packet cache
 		av_dup_packet(next_packet);
-		packets[next_packet->pts] = next_packet;
+		cout << "Adding next_packet (" << next_packet << ") for PTS: " << next_packet->pts << endl;
+		packets[next_packet] = next_packet;
 
 		// Update current packet pointer
-		packet = packets[next_packet->pts];
+		packet = packets[next_packet];
 	}
 
 	// Return if packet was found (or error number)
@@ -410,8 +421,8 @@ bool FFmpegReader::GetAVFrame()
 	if (frameFinished)
 	{
 		// add to AVFrame cache (if frame finished)
-		frames[packet->pts] = next_frame;
-		pFrame = frames[packet->pts];
+		frames[next_frame] = next_frame;
+		pFrame = frames[next_frame];
 
 		// Detect interlaced frame (only once)
 		if (!check_interlace)
@@ -420,6 +431,14 @@ bool FFmpegReader::GetAVFrame()
 			info.interlaced_frame = pFrame->interlaced_frame;
 			info.top_field_first = pFrame->top_field_first;
 		}
+	}
+	else
+	{
+		// deallocate the frame
+		av_free(next_frame);
+
+		// Remove packet (since this packet is pointless)
+		RemoveAVPacket(packet);
 	}
 
 	// Did we get a video frame?
@@ -478,6 +497,13 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		// Update last processed video frame
 		last_video_frame = current_frame;
 
+		#pragma omp critical (packet_cache)
+		{
+			// Remove frame and packet
+			RemoveAVFrame(pFrame);
+			RemoveAVPacket(packet);
+		}
+
 		// Skip to next frame without decoding or caching
 		return;
 	}
@@ -489,8 +515,9 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	long int video_length = info.video_length;
 	Cache *my_cache = &working_cache;
 	int *my_last_video_frame = &last_video_frame;
+	AVPacket *my_packet = packets[packet];
 
-	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, my_packet, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -549,6 +576,13 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		av_free(buffer);
 		av_free(pFrameRGB);
 
+		#pragma omp critical (packet_cache)
+		{
+			// Remove frame and packet
+			RemoveAVFrame(pFrame);
+			RemoveAVPacket(my_packet);
+		}
+
 	} // end omp task
 
 
@@ -559,13 +593,19 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 {
 	// Are we close enough to decode the frame's audio?
 	if (target_frame < (requested_frame - 20))
+	{
+		#pragma omp critical (packet_cache)
+		// Remove frame and packet
+		RemoveAVPacket(packet);
+
 		// Skip to next frame without decoding or caching
 		return;
+	}
 
 	// Init some local variables (for OpenMP)
 	Cache *my_cache = &working_cache;
 	int *my_last_audio_frame = &last_audio_frame;
-	AVPacket *my_packet = packets[packet->pts];
+	AVPacket *my_packet = packets[packet];
 	int16_t *audio_buf = NULL;
 	int16_t *converted_audio = NULL;
 	float *channel_buffer = NULL;
@@ -721,6 +761,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			iterate_channel_buffer = NULL;
 		}
 
+
+		#pragma omp critical (packet_cache)
+		{
+			// Remove frame and packet
+			RemoveAVPacket(my_packet);
+		}
+
 		#pragma omp critical (openshot_cache)
 		{
 			// Update shared variable (last video frame processed)
@@ -735,6 +782,8 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 // Seek to a specific frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 void FFmpegReader::Seek(int requested_frame)
 {
+	cout << "SEEK TO " << requested_frame << endl;
+
 	// Adjust for a requested frame that is too small or too large
 	if (requested_frame < 1)
 		requested_frame = 1;
@@ -773,12 +822,6 @@ void FFmpegReader::Seek(int requested_frame)
 		seek_target = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
 		//seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
-
-	// If valid stream, rescale timestamp so the av_seek_frame method will understand it
-//	if (stream_index >= 0) {
-//		seek_target = av_rescale_q(seek_target, AV_TIME_BASE_Q,
-//				pFormatCtx->streams[stream_index]->time_base);
-//	}
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
 	if (requested_frame == 1)
@@ -1046,6 +1089,12 @@ void FFmpegReader::CheckFPS()
 				// Get PTS of this packet
 				int pts = GetVideoPTS();
 
+				// Remove pFrame
+				RemoveAVFrame(pFrame);
+
+				// remove packet
+				RemoveAVPacket(packet);
+
 				// Apply PTS offset
 				pts += video_pts_offset;
 
@@ -1066,14 +1115,14 @@ void FFmpegReader::CheckFPS()
 				else
 					// Too far
 					break;
-
-				// Remove pFrame
-				frames.erase(packet->pts);
 			}
+			else
+				// remove packet
+				RemoveAVPacket(packet);
 		}
-
-		// remove packet
-		packets.erase(packet->pts);
+		else
+			// remove packet
+			RemoveAVPacket(packet);
 
 		// Increment counters
 		iterations++;
@@ -1129,4 +1178,38 @@ void FFmpegReader::CheckFPS()
 	// Seek to frame 1
 	Seek(1);
 }
+
+// Remove AVFrame from cache (and deallocate it's memory)
+void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
+{
+	// Remove pFrame (if exists)
+	if (frames.count(remove_frame))
+	{
+		// Free memory
+		av_free(frames[remove_frame]);
+
+		// Remove from cache
+		frames.erase(remove_frame);
+	}
+}
+
+// Remove AVPacket from cache (and deallocate it's memory)
+void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
+{
+	if (packets.count(remove_packet))
+	{
+		// Free memory
+		//AVPacket *remove_packet = packets[PTS];
+		cout << "removing packet (" << remove_packet << ", " << packets[remove_packet] << ") PTS " << packets[remove_packet]->pts << endl;
+
+		// Remove from cache
+		packets.erase(remove_packet);
+
+		delete remove_packet;
+		//av_free_packet(remove_packet);
+
+
+	}
+}
+
 

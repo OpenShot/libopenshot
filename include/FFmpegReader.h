@@ -71,8 +71,8 @@ namespace openshot
 
 		Cache final_cache;
 		Cache working_cache;
-		map<int, AVPacket*> packets;
-		map<int, AVFrame*> frames;
+		map<AVPacket*, AVPacket*> packets;
+		map<AVFrame*, AVFrame*> frames;
 
 		bool is_seeking;
 		int seeking_pts;
@@ -135,6 +135,12 @@ namespace openshot
 
 		/// Read the stream until we find the requested Frame
 		Frame ReadStream(int requested_frame);
+
+		/// Remove AVFrame from cache (and deallocate it's memory)
+		void RemoveAVFrame(AVFrame*);
+
+		/// Remove AVPacket from cache (and deallocate it's memory)
+		void RemoveAVPacket(AVPacket*);
 
 		/// Update PTS Offset (if any)
 		void UpdatePTSOffset(bool is_video);
