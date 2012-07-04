@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(30), final_cache(30), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(130), final_cache(130), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) { // , resampleCtx(NULL)
 
@@ -737,8 +737,8 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					// Decrement remaining samples
 					remaining_samples -= samples;
 
-					// Update working cache
-					if (remaining_samples > 0)
+					// Update working cache (if audio is completed for this frame + channel)
+					if (remaining_samples > 0 || start + samples >= samples_per_frame)
 						// If more samples remain, this frame must all it's audio data now
 						f.SetAudioComplete(channel_filter);
 
@@ -1032,13 +1032,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Get the front frame of working cache
 		Frame f = working_cache.GetSmallestFrame();
 		bool is_ready = f.IsReady(info.has_video, info.has_audio);
-
-		if (f.number == 300)
-		{
-			cout << "CheckWorkingFrames: frame: " << f.number << endl;
-			cout << "f.IsReady(): " << f.IsReady(info.has_video, info.has_audio) << endl;
-			cout << "f.IsAudioReady(): " << f.IsAudioReady(info.has_audio) << endl;
-		}
 
 		// Check if working frame is final
 		if (is_ready || end_of_stream)

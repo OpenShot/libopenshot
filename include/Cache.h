@@ -27,6 +27,7 @@ namespace openshot {
 		int max_frames;				///< This is the max number of frames to cache
 		map<int, Frame> frames;		///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+		int current_frame;			///< This is the last requested frame (used to dynamically adjust the max_frames)
 
 		/// Clean up cached frames that exceed the number in our max_frames variable
 		void CleanUp();
@@ -41,7 +42,7 @@ namespace openshot {
 		/// Add a Frame to the cache
 		void Add(int frame_number, Frame frame);
 
-		/// Check for the existance of a frame in the cache
+		/// Check for the existence of a frame in the cache
 		bool Exists(int frame_number);
 
 		/// Get a frame from the cache
@@ -67,6 +68,9 @@ namespace openshot {
 
 		/// Set maximum frames to a different amount
 		void SetMaxFrames(int max_frames) { max_frames = max_frames; };
+
+		/// Gets the maximum frames value
+		int GetMaxFrames() { return max_frames; };
 
 	};
 

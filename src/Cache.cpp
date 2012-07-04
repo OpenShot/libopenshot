@@ -52,6 +52,9 @@ Frame Cache::GetFrame(int frame_number)
 	// Does frame exists in cache?
 	if (Exists(frame_number))
 	{
+		// Set current frame
+		current_frame = frame_number;
+
 		// return the Frame object
 		return frames[frame_number];
 	}
