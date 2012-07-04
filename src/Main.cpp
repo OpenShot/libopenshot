@@ -17,9 +17,9 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
@@ -32,15 +32,13 @@ int main()
 		for (int repeat = 0; repeat <= 100; repeat++)
 		{
 			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
-			for (int frame = 200; frame <= 400; frame++)
+			for (int frame = 1; frame <= 100; frame++)
 			{
 				Frame f = r.GetFrame(frame);
 				//f.Play();
 				//f.Display();
 				//f.DisplayWaveform(false);
 			}
-
-			sleep(1);
 
 			// Seek to frame 1
 			r.GetFrame(1);

@@ -339,8 +339,6 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 					// Determine related video frame and starting sample # from audio PTS
 					audio_packet_location location = GetAudioPTSLocation(packet->pts);
 
-					cout << "Audio Location: frame: " << location.frame << ", start: " << location.sample_start << endl;
-
 					// Process Audio Packet
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
@@ -359,10 +357,6 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				// Break once the frame is found
 				if (is_cache_found)
 					break;
-
-				// DEBUG
-				cout << "FRAMES: " << frames.size() << endl;
-				cout << "PACKETS: " << packets.size() << endl;
 
 			} // end while
 
@@ -396,8 +390,6 @@ int FFmpegReader::GetNextPacket()
 	if (found_packet >= 0)
 	{
 		// Add packet to packet cache
-		av_dup_packet(next_packet);
-		cout << "Adding next_packet (" << next_packet << ") for PTS: " << next_packet->pts << endl;
 		packets[next_packet] = next_packet;
 
 		// Update current packet pointer
@@ -516,8 +508,9 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	Cache *my_cache = &working_cache;
 	int *my_last_video_frame = &last_video_frame;
 	AVPacket *my_packet = packets[packet];
+	AVFrame *my_frame = frames[pFrame];
 
-	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, my_packet, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -551,8 +544,11 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		}
 
 		// Resize / Convert to RGB
-		sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
+		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
 				height, pFrameRGB->data, pFrameRGB->linesize);
+
+		// Deallocate swscontext
+		sws_freeContext(img_convert_ctx);
 
 
 		#pragma omp critical (openshot_cache)
@@ -579,7 +575,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		#pragma omp critical (packet_cache)
 		{
 			// Remove frame and packet
-			RemoveAVFrame(pFrame);
+			RemoveAVFrame(my_frame);
 			RemoveAVPacket(my_packet);
 		}
 
@@ -595,7 +591,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	if (target_frame < (requested_frame - 20))
 	{
 		#pragma omp critical (packet_cache)
-		// Remove frame and packet
+		// Remove packet
 		RemoveAVPacket(packet);
 
 		// Skip to next frame without decoding or caching
@@ -613,7 +609,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, audio_buf, converted_audio, channel_buffer, resampleCtx, my_last_audio_frame, starting_sample)
 	{
-
 		// Allocate audio buffer
 		audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
@@ -642,6 +637,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// process samples...
 			my_packet->data += used;
 			my_packet->size -= used;
+		}
+
+		#pragma omp critical (packet_cache)
+		{
+			// Remove packet
+			av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3()
+			RemoveAVPacket(my_packet);
 		}
 
 		// Re-sample audio samples (if needed)
@@ -761,12 +763,11 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			iterate_channel_buffer = NULL;
 		}
 
-
-		#pragma omp critical (packet_cache)
-		{
-			// Remove frame and packet
-			RemoveAVPacket(my_packet);
-		}
+		// Clean up some arrays
+		delete audio_buf;
+		audio_buf = NULL;
+		delete converted_audio;
+		converted_audio = 0;
 
 		#pragma omp critical (openshot_cache)
 		{
@@ -1196,18 +1197,14 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
 // Remove AVPacket from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 {
+	// Remove packet (if any)
 	if (packets.count(remove_packet))
 	{
-		// Free memory
-		//AVPacket *remove_packet = packets[PTS];
-		cout << "removing packet (" << remove_packet << ", " << packets[remove_packet] << ") PTS " << packets[remove_packet]->pts << endl;
-
 		// Remove from cache
 		packets.erase(remove_packet);
 
-		delete remove_packet;
-		//av_free_packet(remove_packet);
-
+		// deallocate memory for packet
+		av_free_packet(remove_packet);
 
 	}
 }
