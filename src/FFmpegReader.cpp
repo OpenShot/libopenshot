@@ -612,8 +612,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	int16_t *converted_audio = NULL;
 	float *channel_buffer = NULL;
 	ReSampleContext *resampleCtx = NULL;
+	int pts = my_packet->pts;
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, audio_buf, converted_audio, channel_buffer, resampleCtx, my_last_audio_frame, starting_sample)
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, resampleCtx, my_last_audio_frame, starting_sample)
 	{
 		// Allocate audio buffer
 		audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -743,10 +744,25 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					// Decrement remaining samples
 					remaining_samples -= samples;
 
+					// DEBUG CODE
+					if (f.number == 3)
+					{
+						cout << "Frame 3: AddAudio (start: " << start << ", samples: " << samples << ", channel: " << channel_filter << ")" << endl;
+						cout << "remaining_samples: " << remaining_samples << endl;
+						cout << "samples_per_frame: " << samples_per_frame << endl;
+						cout << "start + samples: : " << start + samples << endl;
+						cout << "packet.pts: " << pts << endl;
+					}
+
 					// Update working cache (if audio is completed for this frame + channel)
 					if (remaining_samples > 0 || start + samples >= samples_per_frame)
+					{
+						if (f.number == 3)
+							cout << "SET AUDIO COMPLETE - Channel: " << channel_filter << endl;
+
 						// If more samples remain, this frame must all it's audio data now
 						f.SetAudioComplete(channel_filter);
+					}
 
 					// Add or update cache
 					my_cache->Add(f.number, f);
@@ -1042,6 +1058,12 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Check if working frame is final
 		if (is_ready || end_of_stream)
 		{
+			// DEBUG
+			if (f.number == 3)
+			{
+				cout << "Moving frame 3 to FINAL CACHE" << endl;
+			}
+
 			// Move frame to final cache
 			final_cache.Add(f.number, f);
 

@@ -32,7 +32,7 @@ int main()
 		for (int repeat = 0; repeat <= 100; repeat++)
 		{
 			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
-			for (int frame = 300; frame <= 400; frame++)
+			for (int frame = 1; frame <= 400; frame++)
 			{
 				Frame f = r.GetFrame(frame);
 				//f.Play();
