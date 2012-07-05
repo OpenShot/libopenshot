@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(130), final_cache(130), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(30), final_cache(30), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) { // , resampleCtx(NULL)
 
@@ -374,8 +374,14 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 
 	// Return requested frame (if found)
 	if (final_cache.Exists(requested_frame))
+	{
+		// Set cache's current frame
+		working_cache.SetCurrentFrame(requested_frame);
+		final_cache.SetCurrentFrame(requested_frame);
+
 		// Return prepared frame
 		return final_cache.GetFrame(requested_frame);
+	}
 	else
 		// Return blank frame
 		return CreateFrame(requested_frame);

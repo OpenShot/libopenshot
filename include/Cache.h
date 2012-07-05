@@ -20,23 +20,26 @@ namespace openshot {
 	 * recently accessed frames.
 	 *
 	 * Due to the high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
-	 * it critical to keep these Frames cached for performance reasons.
+	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
+	 * is required.  You can set the max number of previous frames (relative to the current frame) to cache.  Frames that
+	 * come after the current frame are allowed to increase as much as needed (a requirement of the file readers).  A call
+	 * to GetFrame() sets the current frame of the cache.
 	 */
 	class Cache {
 	private:
-		int max_frames;				///< This is the max number of frames to cache
+		int max_frames;				///< This is the max number of "previous" frames to cache
 		map<int, Frame> frames;		///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 		int current_frame;			///< This is the last requested frame (used to dynamically adjust the max_frames)
 
-		/// Clean up cached frames that exceed the number in our max_frames variable
+		/// Clean up cached frames that exceed the max number of previous frames
 		void CleanUp();
 
 	public:
-		/// Default constructor, max frames to cache is 20
+		/// Default constructor, max previous frames to cache is 20
 		Cache();
 
-		/// Constructor that sets the max frames to cache
+		/// Constructor that sets the max previous frames to cache
 		Cache(int max_frames);
 
 		/// Add a Frame to the cache
@@ -66,8 +69,14 @@ namespace openshot {
 		/// Count the frames in the queue
 		int Count();
 
+		/// Set current frame number (used to determine which previous frames to delete)
+		void SetCurrentFrame(int frame_number) { current_frame = frame_number; CleanUp(); };
+
+		/// Get the current frame number (used to determine which previous frames to delete)
+		int GetCurrentFrame() { return current_frame; };
+
 		/// Set maximum frames to a different amount
-		void SetMaxFrames(int max_frames) { max_frames = max_frames; };
+		void SetMaxFrames(int number_of_frames) { max_frames = number_of_frames; };
 
 		/// Gets the maximum frames value
 		int GetMaxFrames() { return max_frames; };

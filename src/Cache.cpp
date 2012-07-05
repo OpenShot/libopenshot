@@ -10,10 +10,10 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor, max frames to cache is 20
-Cache::Cache() : max_frames(20) { };
+Cache::Cache() : max_frames(20), current_frame(0) { };
 
 // Constructor that sets the max frames to cache
-Cache::Cache(int max_frames) : max_frames(max_frames) { };
+Cache::Cache(int max_frames) : max_frames(max_frames), current_frame(0) { };
 
 // Add a Frame to the cache
 void Cache::Add(int frame_number, Frame frame)
@@ -52,9 +52,6 @@ Frame Cache::GetFrame(int frame_number)
 	// Does frame exists in cache?
 	if (Exists(frame_number))
 	{
-		// Set current frame
-		current_frame = frame_number;
-
 		// return the Frame object
 		return frames[frame_number];
 	}
@@ -86,19 +83,19 @@ void Cache::Remove(int frame_number)
 	Frame f = GetFrame(frame_number);
 
 	// Loop through frame numbers
-	 deque<int>::iterator itr;
-	 for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-	 {
-		 if (*itr == frame_number)
-		 {
-			 // erase frame number
-			 frame_numbers.erase(itr);
-			 break;
-		 }
-	 }
+	deque<int>::iterator itr;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	{
+		if (*itr == frame_number)
+		{
+			// erase frame number
+			frame_numbers.erase(itr);
+			break;
+		}
+	}
 
-	 // Remove frame from map
-	 frames.erase(frame_number);
+	// Remove frame from map
+	frames.erase(frame_number);
 }
 
 // Clear the cache of all frames
@@ -121,14 +118,39 @@ int Cache::Count()
 // Clean up cached frames that exceed the number in our max_frames variable
 void Cache::CleanUp()
 {
-	// check against max size
-	if (frame_numbers.size() > max_frames)
-	{
-		// Remove the oldest frame
-		int frame_to_remove = frame_numbers.back();
+	// Count previous frames (relative to the current frame), and determine the smallest frame number
+	// Loop through frame numbers
+	deque<int>::iterator itr;
+	int previous_frames = 0;
+	int smallest_frame = -1;
+	for (itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr) {
+		if (*itr < current_frame)
+			previous_frames++;
 
-		// Remove frame_number and frame
-		Remove(frame_to_remove);
+		if (*itr < smallest_frame || smallest_frame == -1)
+			smallest_frame = *itr;
+	}
+
+	// check against max size
+	if (previous_frames > max_frames) {
+		// Get the difference
+		int diff = previous_frames - max_frames;
+		int removed_count = 0;
+
+		// Loop through frames and remove the oldest
+		for (int x = smallest_frame; x < current_frame; x++) {
+
+			// Does frame exist?
+			if (Exists(x)) {
+				// Remove the frame, increment count
+				Remove(x);
+				removed_count++;
+			}
+
+			// Break after the correct # has been removed
+			if (removed_count == diff)
+				break;
+		}
 	}
 }
 
@@ -165,7 +187,6 @@ void Cache::DisplayAndClear()
 		i++;
 	}
 }
-
 
 
 
