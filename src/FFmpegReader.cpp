@@ -3,10 +3,10 @@
 using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
-	: last_video_frame(0), last_audio_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
+	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(30), final_cache(30), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
-	  enable_seek(true) { // , resampleCtx(NULL)
+	  enable_seek(true) {
 
 	// Open the file (if possible)
 	Open();
@@ -243,7 +243,7 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 			throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
 		// Are we within 20 frames of the requested frame?
-		int diff = requested_frame - last_video_frame;
+		int diff = requested_frame - last_frame;
 		if (abs(diff) >= 0 && abs(diff) <= 19)
 		{
 			// Continue walking the stream
@@ -492,9 +492,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	// Are we close enough to decode the frame?
 	if ((current_frame) < (requested_frame - 20))
 	{
-		// Update last processed video frame
-		last_video_frame = current_frame;
-
 		#pragma omp critical (packet_cache)
 		{
 			// Remove frame and packet
@@ -512,7 +509,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	int width = info.width;
 	long int video_length = info.video_length;
 	Cache *my_cache = &working_cache;
-	int *my_last_video_frame = &last_video_frame;
 	AVPacket *my_packet = packets[packet];
 	AVFrame *my_frame = frames[pFrame];
 
@@ -520,7 +516,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	#pragma omp critical (processing_list)
 	processing_video_frames[current_frame] = current_frame;
 
-	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -571,10 +567,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 
 			// Update working cache
 			my_cache->Add(f.number, f);
-
-			// Update shared variable (last video frame processed)
-			if (*my_last_video_frame < current_frame)
-				*my_last_video_frame = current_frame;
 		}
 
 		// Free the RGB image
@@ -613,7 +605,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 	// Init some local variables (for OpenMP)
 	Cache *my_cache = &working_cache;
-	int *my_last_audio_frame = &last_audio_frame;
 	AVPacket *my_packet = packets[packet];
 	int16_t *audio_buf = NULL;
 	int16_t *converted_audio = NULL;
@@ -621,7 +612,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	ReSampleContext *resampleCtx = NULL;
 	int pts = my_packet->pts;
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, resampleCtx, my_last_audio_frame, starting_sample)
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, resampleCtx, starting_sample)
 	{
 		// Allocate audio buffer
 		audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -782,13 +773,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		delete converted_audio;
 		converted_audio = 0;
 
-		#pragma omp critical (openshot_cache)
-		{
-			// Update shared variable (last video frame processed)
-			if (*my_last_audio_frame < (starting_frame_number - 1))
-				*my_last_audio_frame = (starting_frame_number - 1);
-		}
-
 		// Add video frame to list of processing video frames
 		#pragma omp critical (processing_list)
 		{
@@ -815,9 +799,8 @@ void FFmpegReader::Seek(int requested_frame)
 	// Clear working cache (since we are seeking to another location in the file)
 	working_cache.Clear();
 
-	// Reset the last frame variables
-	last_video_frame = 0;
-	last_audio_frame = 0;
+	// Reset the last frame variable
+	last_frame = 0;
 
 	// Set seeking flags
 	int64_t seek_target = 0;
@@ -1042,8 +1025,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 	int smallest_audio_frame = 1;
 	#pragma omp critical (processing_list)
 	{
-		smallest_video_frame = GetSmallestVideoFrame() - 8; // requires that at least 8 frames bigger have already been processed
-		smallest_audio_frame = GetSmallestAudioFrame() - 8; // requires that at least 8 frames bigger have already been processed
+		smallest_video_frame = GetSmallestVideoFrame() - 8; // Adjust to be sure the frame is completed
+		smallest_audio_frame = GetSmallestAudioFrame() - 8; // Adjust to be sure the frame is completed
 
 		// Adjust for video only, or audio only
 		if (!info.has_video)
@@ -1070,6 +1053,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 			// Remove frame from working cache
 			working_cache.Remove(f.number);
+
+			// Update last frame processed
+			last_frame = f.number;
+			cout << ">> last_frame: " << last_frame << endl;
 		}
 		else
 			// Stop looping

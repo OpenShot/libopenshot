@@ -32,7 +32,7 @@ void FileReaderBase::InitFileInfo()
 
 // Display file information
 void FileReaderBase::DisplayInfo() {
-	cout << fixed << setprecision(2) << cout << boolalpha;
+	cout << fixed << setprecision(2) << boolalpha;
 	cout << "----------------------------" << endl;
 	cout << "----- File Information -----" << endl;
 	cout << "----------------------------" << endl;
