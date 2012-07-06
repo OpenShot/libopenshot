@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(30), final_cache(30), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(10), final_cache(10), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) {
 
@@ -396,6 +396,7 @@ int FFmpegReader::GetNextPacket()
 	if (found_packet >= 0)
 	{
 		// Add packet to packet cache
+		av_dup_packet(next_packet);
 		packets[next_packet] = next_packet;
 
 		// Update current packet pointer
@@ -726,6 +727,11 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				// Get Samples per frame (for this frame number)
 				int samples_per_frame = GetSamplesPerFrame(starting_frame_number);
 
+				// Calculate # of samples to add to this frame
+				int samples = samples_per_frame - start;
+				if (samples > remaining_samples)
+					samples = remaining_samples;
+
 				// Add video frame to list of processing video frames
 				#pragma omp critical (processing_list)
 				processing_audio_frames[starting_frame_number] = starting_frame_number;
@@ -735,27 +741,22 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					// Create or get frame object
 					Frame f = CreateFrame(starting_frame_number);
 
-					// Calculate # of samples to add to this frame
-					int samples = samples_per_frame - start;
-					if (samples > remaining_samples)
-						samples = remaining_samples;
-
 					// Add samples for current channel to the frame
 					f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
-					// Decrement remaining samples
-					remaining_samples -= samples;
-
 					// Add or update cache
 					my_cache->Add(f.number, f);
-
-					// Increment buffer (to next set of samples)
-					if (remaining_samples > 0)
-						iterate_channel_buffer += samples;
-
-					// Increment frame number
-					starting_frame_number++;
 				}
+
+				// Decrement remaining samples
+				remaining_samples -= samples;
+
+				// Increment buffer (to next set of samples)
+				if (remaining_samples > 0)
+					iterate_channel_buffer += samples;
+
+				// Increment frame number
+				starting_frame_number++;
 
 				// Reset starting sample #
 				start = 0;
@@ -815,7 +816,6 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
-		//seek_target = ((double)seeking_pts * info.video_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 	else if (info.has_audio)
 	{
@@ -825,7 +825,6 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seek_target = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
-		//seek_target = ((double)seeking_pts * info.audio_timebase.ToDouble()) * (double)AV_TIME_BASE;
 	}
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
@@ -1045,8 +1044,13 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Get the front frame of working cache
 		Frame f = working_cache.GetSmallestFrame();
 
+		bool is_video_ready = (smallest_video_frame <= 0 || f.number < smallest_video_frame);
+		bool is_audio_ready = (smallest_audio_frame <= 0 || f.number < smallest_audio_frame);
+
+		cout << "CheckWorkingFrames: f.number: " << f.number << ", smallest_video_frame: " << smallest_video_frame << ", smallest_audio_frame: " << smallest_audio_frame << ", end_of_stream: " << end_of_stream << ", is_video_ready: " << is_video_ready << ", is_audio_ready: " << is_audio_ready << endl;
+
 		// Check if working frame is final
-		if ((!end_of_stream && f.number < smallest_video_frame && f.number < smallest_audio_frame) || end_of_stream)
+		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream)
 		{
 			// Move frame to final cache
 			final_cache.Add(f.number, f);
@@ -1223,7 +1227,7 @@ int FFmpegReader::GetSmallestVideoFrame()
 {
 	// Loop through frame numbers
 	map<int, int>::iterator itr;
-	int smallest_frame = -1;
+	int smallest_frame = 0;
 	for(itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)
@@ -1239,7 +1243,7 @@ int FFmpegReader::GetSmallestAudioFrame()
 {
 	// Loop through frame numbers
 	map<int, int>::iterator itr;
-	int smallest_frame = -1;
+	int smallest_frame = 0;
 	for(itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)
