@@ -13,7 +13,6 @@ void FrameReady(int number)
 
 int main()
 {
-
 	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/piano.wav");

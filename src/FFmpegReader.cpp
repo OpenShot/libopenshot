@@ -516,6 +516,10 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	AVPacket *my_packet = packets[packet];
 	AVFrame *my_frame = frames[pFrame];
 
+	// Add video frame to list of processing video frames
+	#pragma omp critical (processing_list)
+	processing_video_frames[current_frame] = current_frame;
+
 	#pragma omp task firstprivate(current_frame, my_last_video_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
@@ -566,7 +570,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 			// Update working cache
-			f.SetImageComplete();
 			my_cache->Add(f.number, f);
 
 			// Update shared variable (last video frame processed)
@@ -584,6 +587,10 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			RemoveAVFrame(my_frame);
 			RemoveAVPacket(my_packet);
 		}
+
+		// Remove video frame from list of processing video frames
+		#pragma omp critical (processing_list)
+		processing_video_frames.erase(current_frame);
 
 	} // end omp task
 
@@ -728,6 +735,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				// Get Samples per frame (for this frame number)
 				int samples_per_frame = GetSamplesPerFrame(starting_frame_number);
 
+				// Add video frame to list of processing video frames
+				#pragma omp critical (processing_list)
+				processing_audio_frames[starting_frame_number] = starting_frame_number;
+
 				#pragma omp critical (openshot_cache)
 				{
 					// Create or get frame object
@@ -743,26 +754,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 					// Decrement remaining samples
 					remaining_samples -= samples;
-
-					// DEBUG CODE
-					if (f.number == 3)
-					{
-						cout << "Frame 3: AddAudio (start: " << start << ", samples: " << samples << ", channel: " << channel_filter << ")" << endl;
-						cout << "remaining_samples: " << remaining_samples << endl;
-						cout << "samples_per_frame: " << samples_per_frame << endl;
-						cout << "start + samples: : " << start + samples << endl;
-						cout << "packet.pts: " << pts << endl;
-					}
-
-					// Update working cache (if audio is completed for this frame + channel)
-					if (remaining_samples > 0 || start + samples >= samples_per_frame)
-					{
-						if (f.number == 3)
-							cout << "SET AUDIO COMPLETE - Channel: " << channel_filter << endl;
-
-						// If more samples remain, this frame must all it's audio data now
-						f.SetAudioComplete(channel_filter);
-					}
 
 					// Add or update cache
 					my_cache->Add(f.number, f);
@@ -796,6 +787,14 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// Update shared variable (last video frame processed)
 			if (*my_last_audio_frame < (starting_frame_number - 1))
 				*my_last_audio_frame = (starting_frame_number - 1);
+		}
+
+		// Add video frame to list of processing video frames
+		#pragma omp critical (processing_list)
+		{
+			// Update all frames as completed
+			for (int f = target_frame; f < starting_frame_number; f++)
+				processing_audio_frames.erase(f);
 		}
 	}
 }
@@ -1038,11 +1037,20 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 // Check the working queue, and move finished frames to the finished queue
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
-	// Adjust for video only, or audio only
-	if (!info.has_video)
-		last_video_frame = last_audio_frame;
-	if (!info.has_audio)
-		last_audio_frame = last_video_frame;
+	// Get the smallest processing video and audio frame numbers
+	int smallest_video_frame = 1;
+	int smallest_audio_frame = 1;
+	#pragma omp critical (processing_list)
+	{
+		smallest_video_frame = GetSmallestVideoFrame() - 8; // requires that at least 8 frames bigger have already been processed
+		smallest_audio_frame = GetSmallestAudioFrame() - 8; // requires that at least 8 frames bigger have already been processed
+
+		// Adjust for video only, or audio only
+		if (!info.has_video)
+			smallest_video_frame = smallest_audio_frame;
+		if (!info.has_audio)
+			smallest_audio_frame = smallest_video_frame;
+	}
 
 	// Loop through all working queue frames
 	while (true)
@@ -1053,17 +1061,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 		// Get the front frame of working cache
 		Frame f = working_cache.GetSmallestFrame();
-		bool is_ready = f.IsReady(info.has_video, info.has_audio);
 
 		// Check if working frame is final
-		if (is_ready || end_of_stream)
+		if ((!end_of_stream && f.number < smallest_video_frame && f.number < smallest_audio_frame) || end_of_stream)
 		{
-			// DEBUG
-			if (f.number == 3)
-			{
-				cout << "Moving frame 3 to FINAL CACHE" << endl;
-			}
-
 			// Move frame to final cache
 			final_cache.Add(f.number, f);
 
@@ -1228,6 +1229,38 @@ void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 		av_free_packet(remove_packet);
 
 	}
+}
+
+/// Get the smallest video frame that is still being processed
+int FFmpegReader::GetSmallestVideoFrame()
+{
+	// Loop through frame numbers
+	map<int, int>::iterator itr;
+	int smallest_frame = -1;
+	for(itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr)
+	{
+		if (itr->first < smallest_frame || smallest_frame == -1)
+			smallest_frame = itr->first;
+	}
+
+	// Return frame number
+	return smallest_frame;
+}
+
+/// Get the smallest audio frame that is still being processed
+int FFmpegReader::GetSmallestAudioFrame()
+{
+	// Loop through frame numbers
+	map<int, int>::iterator itr;
+	int smallest_frame = -1;
+	for(itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr)
+	{
+		if (itr->first < smallest_frame || smallest_frame == -1)
+			smallest_frame = itr->first;
+	}
+
+	// Return frame number
+	return smallest_frame;
 }
 
 

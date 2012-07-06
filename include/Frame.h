@@ -113,18 +113,6 @@ namespace openshot
 		/// Play audio samples for this frame
 		void Play();
 
-		/// Set if the audio has been completely loaded into a channel (for this frame)
-		void SetAudioComplete(int channel);
-
-		/// Set if the image has been completely loaded into the frame
-		void SetImageComplete();
-
-		/// Gets whether the frame has completely loaded all it's audio data (for each channel)
-		bool IsAudioReady(bool has_audio);
-
-		/// Gets whether the frame has completely loaded it's image and audio data
-		bool IsReady(bool has_video, bool has_audio);
-
 	};
 
 }

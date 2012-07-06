@@ -73,6 +73,8 @@ namespace openshot
 		Cache working_cache;
 		map<AVPacket*, AVPacket*> packets;
 		map<AVFrame*, AVFrame*> frames;
+		map<int, int> processing_video_frames;
+		map<int, int> processing_audio_frames;
 
 		bool is_seeking;
 		int seeking_pts;
@@ -117,6 +119,12 @@ namespace openshot
 
 		/// Get the next packet (if any)
 		int GetNextPacket();
+
+		/// Get the smallest video frame that is still being processed
+		int GetSmallestVideoFrame();
+
+		/// Get the smallest audio frame that is still being processed
+		int GetSmallestAudioFrame();
 
 		/// Calculate the # of samples per video frame (for a specific frame number)
 		int GetSamplesPerFrame(int frame_number);
