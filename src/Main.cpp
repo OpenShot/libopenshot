@@ -18,9 +18,9 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
-	//	openshot::FFmpegReader r("/home/jonathan/Music/lonely island/B004YRCAIU_(disc_1)_02_-_Mama_[Explicit].mp3");
+		openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/60fps.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
@@ -28,13 +28,12 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		for (int repeat = 0; repeat <= 100; repeat++)
+		for (int repeat = 0; repeat <= 10; repeat++)
 		{
 			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
 			for (int frame = 1; frame <= 400; frame++)
 			{
 				Frame f = r.GetFrame(frame);
-				cout << "MAIN: f.number: " << f.number << endl;
 				//f.Play();
 				//f.Display();
 				//f.DisplayWaveform(false);

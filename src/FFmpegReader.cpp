@@ -35,9 +35,6 @@ void FFmpegReader::Open()
 	if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
 		throw NoStreamsFound("No streams found in file.", path);
 
-	// Dump information about file onto standard error
-	//dump_format(pFormatCtx, 0, path.c_str(), 0);
-
 	videoStream = -1;
 	audioStream = -1;
 	// Loop through each stream, and identify the video and audio stream index
@@ -117,14 +114,9 @@ void FFmpegReader::Close()
 		avcodec_close(pCodecCtx);
 	if (info.has_audio)
 		avcodec_close(aCodecCtx);
-	//if (resampleCtx)
-	//	audio_resample_close(resampleCtx);
 
 	// Close the video file
 	avformat_close_input(&pFormatCtx);
-
-	// Free the format context
-	//avformat_free_context(pFormatCtx);
 }
 
 void FFmpegReader::UpdateAudioInfo()
@@ -396,7 +388,6 @@ int FFmpegReader::GetNextPacket()
 	if (found_packet >= 0)
 	{
 		// Add packet to packet cache
-		av_dup_packet(next_packet);
 		packets[next_packet] = next_packet;
 
 		// Update current packet pointer
@@ -803,6 +794,10 @@ void FFmpegReader::Seek(int requested_frame)
 	// Reset the last frame variable
 	last_frame = 0;
 
+	// Reset the current frame for the cache
+	working_cache.SetCurrentFrame(requested_frame);
+	final_cache.SetCurrentFrame(requested_frame);
+
 	// Set seeking flags
 	int64_t seek_target = 0;
 
@@ -1047,8 +1042,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		bool is_video_ready = (smallest_video_frame <= 0 || f.number < smallest_video_frame);
 		bool is_audio_ready = (smallest_audio_frame <= 0 || f.number < smallest_audio_frame);
 
-		cout << "CheckWorkingFrames: f.number: " << f.number << ", smallest_video_frame: " << smallest_video_frame << ", smallest_audio_frame: " << smallest_audio_frame << ", end_of_stream: " << end_of_stream << ", is_video_ready: " << is_video_ready << ", is_audio_ready: " << is_audio_ready << endl;
-
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream)
 		{
@@ -1060,7 +1053,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 			// Update last frame processed
 			last_frame = f.number;
-			cout << ">> last_frame: " << last_frame << endl;
 		}
 		else
 			// Stop looping
