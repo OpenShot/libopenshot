@@ -77,6 +77,15 @@ namespace openshot
 		/// Display the wave form
 		void DisplayWaveform(bool resize);
 
+		/// Get an array of sample data
+		float* GetAudioSamples(int channel);
+
+		/// Get number of audio channels
+		int GetAudioChannelsCount();
+
+		/// Get number of audio channels
+		int GetAudioSamplesCount();
+
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
 

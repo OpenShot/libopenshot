@@ -243,6 +243,25 @@ void Frame::DisplayWaveform(bool resize)
 	wave_image.display();
 }
 
+// Get an array of sample data
+float* Frame::GetAudioSamples(int channel)
+{
+	// return JUCE audio data for this channel
+	return audio->getSampleData(channel);
+}
+
+// Get number of audio channels
+int Frame::GetAudioChannelsCount()
+{
+	return audio->getNumChannels();
+}
+
+// Get number of audio samples
+int Frame::GetAudioSamplesCount()
+{
+	return audio->getNumSamples();
+}
+
 // Get pixel data (as packets)
 const Magick::PixelPacket* Frame::GetPixels()
 {
