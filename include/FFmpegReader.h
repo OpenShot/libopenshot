@@ -60,7 +60,6 @@ namespace openshot
 		AVFormatContext *pFormatCtx;
 		int i, videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
-		AVCodec *pCodec, *aCodec;
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
 		AVFrame *pFrame;

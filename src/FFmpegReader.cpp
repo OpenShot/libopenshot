@@ -8,12 +8,15 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
 	  enable_seek(true) {
 
+	// Initialize FFMpeg, and register all formats and codecs
+	av_register_all();
+
 	// Open the file (if possible)
 	Open();
 
 	// Check for the correct frames per second (only once)
-	if (info.has_video)
-		CheckFPS();
+	//if (info.has_video)
+	//	CheckFPS();
 
 	// Get 1st frame
 	GetFrame(1);
@@ -22,10 +25,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 void FFmpegReader::Open()
 {
 	// Initialize format context
-	pFormatCtx = avformat_alloc_context();
-
-	// Register all formats and codecs
-	av_register_all();
+	pFormatCtx = NULL;
 
 	// Open video file
 	if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
@@ -70,7 +70,7 @@ void FFmpegReader::Open()
 		pCodecCtx = pFormatCtx->streams[videoStream]->codec;
 
 		// Find the decoder for the video stream
-		pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
+		AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
 		if (pCodec == NULL) {
 			throw InvalidCodec("A valid video codec could not be found for this file.", path);
 		}
@@ -93,7 +93,7 @@ void FFmpegReader::Open()
 		aCodecCtx = pFormatCtx->streams[audioStream]->codec;
 
 		// Find the decoder for the audio stream
-		aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
+		AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
 		if (aCodec == NULL) {
 			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 		}
@@ -111,12 +111,23 @@ void FFmpegReader::Close()
 {
 	// Close the codec
 	if (info.has_video)
+	{
+		avcodec_flush_buffers(pCodecCtx);
 		avcodec_close(pCodecCtx);
+	}
 	if (info.has_audio)
+	{
+		avcodec_flush_buffers(aCodecCtx);
 		avcodec_close(aCodecCtx);
+	}
+
+	// Clear cache
+	working_cache.Clear();
+	final_cache.Clear();
 
 	// Close the video file
 	avformat_close_input(&pFormatCtx);
+	av_freep(&pFormatCtx);
 }
 
 void FFmpegReader::UpdateAudioInfo()
@@ -209,7 +220,13 @@ void FFmpegReader::UpdateVideoInfo()
 
 	// Override an invalid framerate
 	if (info.fps.ToFloat() > 120.0f)
-		info.has_video = false;
+	{
+		// Set a few important default video settings (so audio can be divided into frames)
+		info.fps.num = 30;
+		info.fps.den = 1;
+		info.video_timebase.num = 1;
+		info.video_timebase.den = 30;
+	}
 
 }
 
@@ -392,6 +409,11 @@ int FFmpegReader::GetNextPacket()
 
 		// Update current packet pointer
 		packet = packets[next_packet];
+	}else
+	{
+		// Free packet, since it's unused
+		av_free_packet(next_packet);
+		av_freep(next_packet);
 	}
 
 	// Return if packet was found (or error number)
@@ -601,10 +623,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	int16_t *audio_buf = NULL;
 	int16_t *converted_audio = NULL;
 	float *channel_buffer = NULL;
-	ReSampleContext *resampleCtx = NULL;
 	int pts = my_packet->pts;
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, resampleCtx, starting_sample)
+	// Add audio frame to list of processing audio frames
+	#pragma omp critical (processing_list)
+	processing_audio_frames[target_frame] = target_frame;
+
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, starting_sample)
 	{
 		// Allocate audio buffer
 		audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -647,7 +672,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
-			resampleCtx = av_audio_resample_init(
+			ReSampleContext *resampleCtx = av_audio_resample_init(
 					info.channels,
 					info.channels,
 					info.sample_rate,
@@ -723,7 +748,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				if (samples > remaining_samples)
 					samples = remaining_samples;
 
-				// Add video frame to list of processing video frames
+				// Add audio frame to list of processing audio frames
 				#pragma omp critical (processing_list)
 				processing_audio_frames[starting_frame_number] = starting_frame_number;
 
@@ -754,15 +779,15 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			}
 
 			// clear channel buffer
-			delete channel_buffer;
+			delete[] channel_buffer;
 			channel_buffer = NULL;
 			iterate_channel_buffer = NULL;
 		}
 
 		// Clean up some arrays
-		delete audio_buf;
+		delete[] audio_buf;
 		audio_buf = NULL;
-		delete converted_audio;
+		delete[] converted_audio;
 		converted_audio = 0;
 
 		// Add video frame to list of processing video frames
@@ -773,6 +798,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				processing_audio_frames.erase(f);
 		}
 	}
+
 }
 
 
@@ -811,6 +837,9 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
+
+		// Flush video buffer
+		avcodec_flush_buffers(pCodecCtx);
 	}
 	else if (info.has_audio)
 	{
@@ -820,6 +849,9 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Calculate seek target
 		seek_target = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
+
+		// Flush audio buffer
+		avcodec_flush_buffers(aCodecCtx);
 	}
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
@@ -857,11 +889,7 @@ void FFmpegReader::Seek(int requested_frame)
 		}
 	}
 
-	// Flush buffers
-	if (info.has_video)
-		avcodec_flush_buffers(pCodecCtx);
-	if (info.has_audio)
-		avcodec_flush_buffers(aCodecCtx);
+
 }
 
 // Get the PTS for the current video packet
@@ -1135,7 +1163,7 @@ void FFmpegReader::CheckFPS()
 
 		// Give up (if threshold exceeded)
 		if (iterations > threshold)
-			return;
+			break;
 	}
 
 	// Double check that all counters have greater than zero (or give up)
@@ -1219,7 +1247,7 @@ int FFmpegReader::GetSmallestVideoFrame()
 {
 	// Loop through frame numbers
 	map<int, int>::iterator itr;
-	int smallest_frame = 0;
+	int smallest_frame = -1;
 	for(itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)
@@ -1235,7 +1263,7 @@ int FFmpegReader::GetSmallestAudioFrame()
 {
 	// Loop through frame numbers
 	map<int, int>::iterator itr;
-	int smallest_frame = 0;
+	int smallest_frame = -1;
 	for(itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)

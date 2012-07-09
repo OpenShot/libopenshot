@@ -38,9 +38,6 @@ namespace openshot
 		int sample_rate;
 		int channels;
 
-		map<int, bool> channels_complete;
-		bool image_complete;
-
 	public:
 		int number;	///< This is the frame number (starting at 1)
 

@@ -10,8 +10,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
-				 image_complete(false), channels(2)
+Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
@@ -23,8 +22,7 @@ Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
-	  image_complete(false), channels(2)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -36,8 +34,7 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
-	  image_complete(false), channels(2)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
@@ -49,8 +46,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
-		image_complete(false), channels(channels)
+		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
@@ -62,8 +58,7 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000),
-	  image_complete(false), channels(channels)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
@@ -112,8 +107,6 @@ void Frame::DeepCopy(const Frame& other)
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	sample_rate = other.sample_rate;
 	channels = other.channels;
-	image_complete = other.image_complete;
-	channels_complete = other.channels_complete;
 }
 
 // Deallocate image and audio memory
