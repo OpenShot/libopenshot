@@ -32,5 +32,41 @@ TEST(FFmpegReader_Check_Audio_File)
 	CHECK_CLOSE(0.0f, samples[200], 0.00001);
 	CHECK_CLOSE(0.164062f, samples[230], 0.00001);
 	CHECK_CLOSE(-0.164062f, samples[266], 0.00001);
+
+	// Close reader
+	r.Close();
 }
 
+TEST(FFmpegReader_Check_Video_File)
+{
+	// Create a reader
+	FFmpegReader r("../../src/examples/test.mp4");
+
+	// Get frame 1
+	Frame f = r.GetFrame(1);
+
+	// Get the image data
+	const Magick::PixelPacket* pixels = f.GetPixels(10);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(5397, pixels[112].red);
+	CHECK_EQUAL(0, pixels[112].blue);
+	CHECK_EQUAL(49087, pixels[112].green);
+	CHECK_EQUAL(0, pixels[112].opacity);
+
+	// Get frame 1
+	f = r.GetFrame(2);
+
+	// Get the next frame
+	pixels = f.GetPixels(10);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(0, pixels[112].red);
+	CHECK_EQUAL(48316, pixels[112].blue);
+	CHECK_EQUAL(24672, pixels[112].green);
+	CHECK_EQUAL(0, pixels[112].opacity);
+
+	// Close reader
+	r.Close();
+
+}
