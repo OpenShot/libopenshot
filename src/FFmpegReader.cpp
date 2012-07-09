@@ -413,7 +413,7 @@ int FFmpegReader::GetNextPacket()
 	{
 		// Free packet, since it's unused
 		av_free_packet(next_packet);
-		av_freep(next_packet);
+		delete next_packet;
 	}
 
 	// Return if packet was found (or error number)
@@ -824,36 +824,6 @@ void FFmpegReader::Seek(int requested_frame)
 	working_cache.SetCurrentFrame(requested_frame);
 	final_cache.SetCurrentFrame(requested_frame);
 
-	// Set seeking flags
-	int64_t seek_target = 0;
-
-	// Find a valid stream index
-	int stream_index = -1;
-	if (info.has_video)
-	{
-		// VIDEO SEEK
-		is_video_seek = true;
-		stream_index = info.video_stream_index;
-
-		// Calculate seek target
-		seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
-
-		// Flush video buffer
-		avcodec_flush_buffers(pCodecCtx);
-	}
-	else if (info.has_audio)
-	{
-		// AUDIO SEEK
-		is_video_seek = false;
-		stream_index = info.audio_stream_index;
-
-		// Calculate seek target
-		seek_target = ConvertFrameToAudioPTS(requested_frame - 3); // Seek a few frames prior to the requested frame (to avoid missing some samples)
-
-		// Flush audio buffer
-		avcodec_flush_buffers(aCodecCtx);
-	}
-
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
 	if (requested_frame == 1)
 	{
@@ -868,10 +838,43 @@ void FFmpegReader::Seek(int requested_frame)
 	else
 	{
 		// Seek to nearest key-frame (aka, i-frame)
-		if (av_seek_frame(pFormatCtx, stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-			fprintf(stderr, "%s: error while seeking\n", pFormatCtx->filename);
+		bool seek_worked = true;
+		int64_t seek_target = 0;
+
+		// Seek video stream (if any)
+		if (info.has_video && av_seek_frame(pFormatCtx, info.video_stream_index, ConvertFrameToVideoPTS(requested_frame - 3), AVSEEK_FLAG_BACKWARD) < 0) {
+			seek_worked = false;
+			fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
+		} else
+		{
+			// VIDEO SEEK
+			is_video_seek = true;
+
+			// Set seek target
+			seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
+
+			// Flush video buffer
+			avcodec_flush_buffers(pCodecCtx);
 		}
-		else
+
+		// Seek audio stream (if not already seeked... and if an audio stream is found)
+		if (!seek_worked && info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, ConvertFrameToAudioPTS(requested_frame - 3), AVSEEK_FLAG_BACKWARD) < 0) {
+			seek_worked = false;
+			fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
+		} else
+		{
+			// AUDIO SEEK
+			is_video_seek = false;
+
+			// Set seek target
+			seek_target = ConvertFrameToAudioPTS(requested_frame - 3);
+
+			// Flush audio buffer
+			avcodec_flush_buffers(aCodecCtx);
+		}
+
+		// Was the seek successful?
+		if (seek_worked)
 		{
 			// If not already seeking, set flags
 			if (!is_seeking)
@@ -1067,11 +1070,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Get the front frame of working cache
 		Frame f = working_cache.GetSmallestFrame();
 
-		bool is_video_ready = (smallest_video_frame <= 0 || f.number < smallest_video_frame);
-		bool is_audio_ready = (smallest_audio_frame <= 0 || f.number < smallest_audio_frame);
+		bool is_video_ready = (f.number < smallest_video_frame);
+		bool is_audio_ready = (f.number < smallest_audio_frame);
 
 		// Check if working frame is final
-		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream)
+		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || working_cache.Count() >= 200)
 		{
 			// Move frame to final cache
 			final_cache.Add(f.number, f);

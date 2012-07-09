@@ -13,9 +13,9 @@ void FrameReady(int number)
 
 int main()
 {
-	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/test1.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
+	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test1.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/piano.wav");
 		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
