@@ -91,12 +91,12 @@ task lib "OpenShot Library" {
       task reader_refactor_audio "Refactor ProcessAudioPacket method to be simpler" {
         effort 1d
         allocate jonathan
-        complete 0
+        complete 100
       }
       task reader_unit_tests "Create unit tests for all public Reader methods" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 100
       }
   }
 
