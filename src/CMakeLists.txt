@@ -41,6 +41,7 @@ add_library(openshot SHARED
 			Coordinate.cpp
 			FFmpegReader.cpp
 			FileReaderBase.cpp
+			FileWriterBase.cpp
 			Fraction.cpp
 			Frame.cpp
 			FrameMapper.cpp

@@ -15,8 +15,8 @@ int main()
 {
 	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test1.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/piano.wav");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
@@ -31,7 +31,7 @@ int main()
 		for (int repeat = 0; repeat <= 10; repeat++)
 		{
 			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
-			for (int frame = 300; frame <= 400; frame++)
+			for (int frame = 1; frame <= 400; frame++)
 			{
 				Frame f = r.GetFrame(frame);
 				f.Play();
