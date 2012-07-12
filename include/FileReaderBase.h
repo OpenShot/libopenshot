@@ -23,7 +23,7 @@ namespace openshot
 	 * about the streams. Derived classes of FileReaderBase should call the InitFileInfo() method to initialize the
 	 * default values of this struct.
 	 */
-	struct FileInfo
+	struct ReaderInfo
 	{
 		bool has_video;	///< Determines if this file has a video stream
 		bool has_audio;	///< Determines if this file has an audio stream
@@ -61,7 +61,7 @@ namespace openshot
 	{
 	public:
 		/// Information about the current media file
-		FileInfo info;
+		ReaderInfo info;
 
 		/// This method is required for all derived classes of FileReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
@@ -71,8 +71,8 @@ namespace openshot
 		/// @param[in] number The frame number that is requested.
 		virtual Frame GetFrame(int number) = 0;
 
-		/// Initialize the values of the FileInfo struct.  It is important for derived classes to call
-		/// this method, or the FileInfo struct values will not be initialized.
+		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
+		/// this method, or the ReaderInfo struct values will not be initialized.
 		void InitFileInfo();
 
 		/// Display file information in the standard output stream (stdout)

@@ -62,13 +62,12 @@ namespace openshot
 		/// Information about the current media file
 		WriterInfo info;
 
-		/// This method is required for all derived classes of FileReaderBase, and return the
-		/// openshot::Frame object, which contains the image and audio information for that
-		/// frame of video.
-		///
-		/// @returns The requested frame of video
-		/// @param[in] number The frame number that is requested.
-		virtual void WriteFrame(Frame frame);
+		/// This method is required for all derived classes of FileWriterBase
+		virtual void WriteFrame(Frame frame) = 0;
+
+		/// Initialize the values of the WriterInfo struct.  It is important for derived classes to call
+		/// this method, or the WriterInfo struct values will not be initialized.
+		void InitFileInfo();
 
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();

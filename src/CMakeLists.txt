@@ -39,9 +39,10 @@ add_library(openshot SHARED
 			AudioBufferSource.cpp
 			Cache.cpp
 			Coordinate.cpp
-			FFmpegReader.cpp
 			FileReaderBase.cpp
 			FileWriterBase.cpp
+			FFmpegReader.cpp
+			FFmpegWriter.cpp
 			Fraction.cpp
 			Frame.cpp
 			FrameMapper.cpp

@@ -5,8 +5,10 @@ using namespace openshot;
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(10), final_cache(10), path(path),
-	  is_video_seek(true), check_interlace(false), check_fps(false), init_settings(false),
-	  enable_seek(true) {
+	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true) {
+
+	// Init FileInfo struct (clear all values)
+	InitFileInfo();
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
@@ -51,13 +53,6 @@ void FFmpegReader::Open()
 	}
 	if (videoStream == -1 && audioStream == -1)
 		throw NoStreamsFound("No video or audio streams found in this file.", path);
-
-	// Init FileInfo struct (clear all values)
-	if (!init_settings)
-	{
-		InitFileInfo();
-		init_settings = true;
-	}
 
 	// Is there a video stream?
 	if (videoStream != -1)

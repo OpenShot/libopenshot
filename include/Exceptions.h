@@ -74,6 +74,16 @@ namespace openshot {
 		virtual ~NoStreamsFound() throw () {}
 	};
 
+	/// Exception when no valid format is found for a file
+	class InvalidFormat : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidFormat(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidFormat() throw () {}
+	};
+
 	/// Exception when no valid codec is found for a file
 	class InvalidCodec : public BaseException
 	{

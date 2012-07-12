@@ -2,6 +2,34 @@
 
 using namespace openshot;
 
+// Initialize the values of the FileInfo struct
+void FileWriterBase::InitFileInfo()
+{
+	info.has_video = false;
+	info.has_audio = false;
+	info.duration = 0.0;
+	info.file_size = 0;
+	info.height = 0;
+	info.width = 0;
+	info.pixel_format = -1;
+	info.fps = Fraction();
+	info.video_bit_rate = 0;
+	info.pixel_ratio = Fraction();
+	info.display_ratio = Fraction();
+	info.vcodec = "";
+	info.video_length = 0;
+	info.video_stream_index = -1;
+	info.video_timebase = Fraction();
+	info.interlaced_frame = false;
+	info.top_field_first = true;
+	info.acodec = "";
+	info.audio_bit_rate = 0;
+	info.sample_rate = 0;
+	info.channels = 0;
+	info.audio_stream_index = -1;
+	info.audio_timebase = Fraction();
+}
+
 // Display file information
 void FileWriterBase::DisplayInfo() {
 	cout << fixed << setprecision(2) << boolalpha;

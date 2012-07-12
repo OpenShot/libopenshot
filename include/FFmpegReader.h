@@ -1,5 +1,5 @@
-#ifndef OPENSHOT_FFMPEG_READER_BASE_H
-#define OPENSHOT_FFMPEG_READER_BASE_H
+#ifndef OPENSHOT_FFMPEG_READER_H
+#define OPENSHOT_FFMPEG_READER_H
 
 /**
  * \file
@@ -66,7 +66,6 @@ namespace openshot
 
 		bool check_interlace;
 		bool check_fps;
-		bool init_settings;
 
 		Cache final_cache;
 		Cache working_cache;
