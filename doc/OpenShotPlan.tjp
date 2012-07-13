@@ -107,12 +107,12 @@ task lib "OpenShot Library" {
       task writer_design "Design writer public interface" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 100
       }
       task writer_initial "Create initial writer classes & headers" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 100
       }
       task writer_file_or_mem "Build support for file-based or memory-based streams" {
         effort 1d

@@ -174,7 +174,7 @@ namespace openshot
 		/// Get an openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video
-		/// @param[in] number The frame number that is requested.
+		/// @param[requested_frame] number The frame number that is requested.
 		Frame GetFrame(int requested_frame);
 	};
 
