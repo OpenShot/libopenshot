@@ -1,4 +1,5 @@
 
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <queue>
@@ -13,9 +14,9 @@ void FrameReady(int number)
 
 int main()
 {
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Apps/libopenshot/src/examples/test1.mp4");
-		openshot::FFmpegReader r("/home/jonathan/apps/libopenshot/src/examples/piano.wav");
+	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
+	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
+		openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
@@ -28,39 +29,34 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		for (int repeat = 0; repeat <= 10; repeat++)
-		{
-			cout << "----------- REPEAT READER " << repeat << " ---------------" << endl;
-			for (int frame = 1; frame <= 400; frame++)
-			{
-				Frame f = r.GetFrame(frame);
-				f.Play();
-				f.Display();
-				f.DisplayWaveform(false);
-			}
+		// Create a writer
+		FFmpegWriter w("/home/jonathan/output.mp4");
+		w.DisplayInfo();
 
-			cout << "SLEEPING..." << endl;
-			sleep(3);
+		// Set options
+		w.SetAudioOptions("libfaac", 44100, 2, 64000);
+
+		// Write header
+		w.WriteHeader();
+
+		for (int frame = 1; frame <= 10; frame++)
+		{
+			Frame f = r.GetFrame(frame);
+
+			// Write frame
+			cout << "Write frame " << f.number << endl;
+			w.WriteFrame(&f);
 		}
 
-		//Player g;
-		//g.SetReader(&r);
-		//g.SetFrameCallback(&FrameReady);
-		//g.Play();
+		// Write Footer
+		w.WriteTrailer();
 
-		// Get a frame
-		//Frame f = r.GetFrame(300);
-//		f = r.GetFrame(301);
-//		f = r.GetFrame(302);
-//		f = r.GetFrame(303);
-//		f.Display();
-//		f.DisplayWaveform(false);
-//		f.Play();
-
+		// Close writer & reader
+		w.Close();
 		r.Close();
 
-		cout << "Successfully executed Main.cpp!" << endl;
 
+		cout << "Successfully executed Main.cpp!" << endl;
 
 	return 0;
 }

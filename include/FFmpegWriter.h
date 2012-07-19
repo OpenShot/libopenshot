@@ -54,13 +54,42 @@ namespace openshot
 	private:
 		string path;
 
+	    AVOutputFormat *fmt;
+	    AVFormatContext *oc;
+	    AVStream *audio_st, *video_st;
+	    double audio_pts, video_pts;
+
+		/// Add an audio output stream
+		AVStream* add_audio_stream(AVFormatContext *oc);
+
+		/// Add a video output stream
+		AVStream* add_video_stream(AVFormatContext *oc);
+
+		/// Auto detect format (from path)
+		void auto_detect_format();
+
+		/// Close the audio codec
+		void close_audio(AVFormatContext *oc, AVStream *st);
+
+		/// Close the video codec
+		void close_video(AVFormatContext *oc, AVStream *st);
+
+		/// initialize streams
+		void initialize_streams();
+
+		/// open audio codec
+		void open_audio(AVFormatContext *oc, AVStream *st);
+
+		/// open video codec
+		void open_video(AVFormatContext *oc, AVStream *st);
+
 	public:
 
 		/// Constructor for FFmpegWriter. Throws one of the following exceptions.
 		FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec);
 
 		/// Set video export options
-		void SetVideoOptions(string codec, Fraction fps, int width, int height, Fraction display_ratio,
+		void SetVideoOptions(string codec, Fraction fps, int width, int height,
 				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// Set audio export options
@@ -73,7 +102,7 @@ namespace openshot
 		void WriteHeader();
 
 		/// Write a single frame
-		void WriteFrame(Frame frame);
+		void WriteFrame(Frame* frame);
 
 		/// Write a block of frames from a reader
 		void WriteFrame(FileReaderBase* reader, int start, int length);

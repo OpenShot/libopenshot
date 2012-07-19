@@ -63,7 +63,7 @@ namespace openshot
 		WriterInfo info;
 
 		/// This method is required for all derived classes of FileWriterBase
-		virtual void WriteFrame(Frame frame) = 0;
+		virtual void WriteFrame(Frame* frame) = 0;
 
 		/// Initialize the values of the WriterInfo struct.  It is important for derived classes to call
 		/// this method, or the WriterInfo struct values will not be initialized.
