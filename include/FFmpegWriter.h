@@ -60,10 +60,10 @@ namespace openshot
 	    double audio_pts, video_pts;
 
 		/// Add an audio output stream
-		AVStream* add_audio_stream(AVFormatContext *oc);
+		AVStream* add_audio_stream();
 
 		/// Add a video output stream
-		AVStream* add_video_stream(AVFormatContext *oc);
+		AVStream* add_video_stream();
 
 		/// Auto detect format (from path)
 		void auto_detect_format();

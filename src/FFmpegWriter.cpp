@@ -33,6 +33,10 @@ FFmpegWriter::FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, Invali
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
 
+	// Disable audio & video (so they can be independently enabled)
+	info.has_audio = false;
+	info.has_video = false;
+
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
 
@@ -80,11 +84,14 @@ void FFmpegWriter::initialize_streams()
     video_st = NULL;
     audio_st = NULL;
     if (fmt->video_codec != CODEC_ID_NONE) {
-        //video_st = add_video_stream(oc);
+        video_st = add_video_stream();
     }
     if (fmt->audio_codec != CODEC_ID_NONE) {
-        audio_st = add_audio_stream(oc);
+        audio_st = add_audio_stream();
     }
+
+	// output debug info
+	av_dump_format(oc, 0, path.c_str(), 1);
 }
 
 // Set video export options
@@ -140,6 +147,9 @@ void FFmpegWriter::SetVideoOptions(string codec, Fraction fps, int width, int he
 	// Set the ratio based on the reduced fraction
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
+
+	// Enable video
+	info.has_video = true;
 }
 
 // Set audio export options
@@ -166,6 +176,9 @@ void FFmpegWriter::SetAudioOptions(string codec, int sample_rate, int channels, 
 		info.channels = channels;
 	if (bit_rate > 999)
 		info.audio_bit_rate = bit_rate;
+
+	// Enable audio
+	info.has_audio = true;
 }
 
 // Set custom options (some codecs accept additional params)
@@ -177,16 +190,19 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, double value)
 // Write the file header (after the options are set)
 void FFmpegWriter::WriteHeader()
 {
-	// initialize the streams
+	if (!info.has_audio && !info.has_video)
+	{
+		cout << "No video or audio options have been set for " << path << endl;
+		exit(1);
+	}
+
+	// initialize the streams (i.e. add the streams)
 	initialize_streams();
 
-	// output debug info
-	av_dump_format(oc, 0, path.c_str(), 1);
-
     // Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
-    //if (video_st)
-    //    open_video(oc, video_st);
-    if (audio_st)
+    if (info.has_video && video_st)
+        open_video(oc, video_st);
+    if (info.has_audio && audio_st)
         open_audio(oc, audio_st);
 
     // Open the output file, if needed
@@ -272,7 +288,7 @@ void FFmpegWriter::Close()
 }
 
 // Add an audio output stream
-AVStream* FFmpegWriter::add_audio_stream(AVFormatContext *oc)
+AVStream* FFmpegWriter::add_audio_stream()
 {
     AVCodecContext *c;
     AVStream *st;
@@ -308,7 +324,7 @@ AVStream* FFmpegWriter::add_audio_stream(AVFormatContext *oc)
 }
 
 // Add a video output stream
-AVStream* FFmpegWriter::add_video_stream(AVFormatContext *oc)
+AVStream* FFmpegWriter::add_video_stream()
 {
     AVCodecContext *c;
     AVStream *st;
