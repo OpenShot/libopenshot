@@ -27,7 +27,7 @@
 
 using namespace openshot;
 
-FFmpegWriter::FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec) :
+FFmpegWriter::FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), audio_pts(0), video_pts(0)
 {
 	// Init FileInfo struct (clear all values)
@@ -49,32 +49,25 @@ void FFmpegWriter::auto_detect_format()
 {
 	// Auto detect the output format from the name. default is mpeg.
 	fmt = av_guess_format(NULL, path.c_str(), NULL);
-	if (!fmt) {
-		printf("Could not deduce output format from file extension: using MPEG.\n");
-		fmt = av_guess_format("mpeg", NULL, NULL);
-	}
-	if (!fmt) {
-		fprintf(stderr, "Could not find suitable output format\n");
-		exit(1);
-	}
+	if (!fmt)
+		throw InvalidFormat("Could not deduce output format from file extension.", path);
 
     // Allocate the output media context
     oc = avformat_alloc_context();
-    if (!oc) {
-        fprintf(stderr, "Memory error\n");
-        exit(1);
-    }
+    if (!oc)
+    	throw OutOfMemory("Could not allocate memory for AVFormatContext.", path);
+
+    // Set the AVOutputFormat for the current AVFormatContext
     oc->oformat = fmt;
 
     // Update codec names
-    if (fmt->video_codec != CODEC_ID_NONE) {
+    if (fmt->video_codec != CODEC_ID_NONE)
     	// Update video codec name
         info.vcodec = avcodec_find_encoder(fmt->video_codec)->name;
-    }
-    if (fmt->audio_codec != CODEC_ID_NONE) {
+
+    if (fmt->audio_codec != CODEC_ID_NONE)
     	// Update audio codec name
         info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
-    }
 }
 
 // initialize streams
@@ -95,7 +88,7 @@ void FFmpegWriter::initialize_streams()
 }
 
 // Set video export options
-void FFmpegWriter::SetVideoOptions(string codec, Fraction fps, int width, int height,
+void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
 		Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate)
 {
 	// Set the video options
@@ -148,12 +141,12 @@ void FFmpegWriter::SetVideoOptions(string codec, Fraction fps, int width, int he
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	// Enable video
-	info.has_video = true;
+	// Enable / Disable video
+	info.has_video = has_video;
 }
 
 // Set audio export options
-void FFmpegWriter::SetAudioOptions(string codec, int sample_rate, int channels, int bit_rate)
+void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -177,8 +170,8 @@ void FFmpegWriter::SetAudioOptions(string codec, int sample_rate, int channels, 
 	if (bit_rate > 999)
 		info.audio_bit_rate = bit_rate;
 
-	// Enable audio
-	info.has_audio = true;
+	// Enable / Disable audio
+	info.has_audio = has_audio;
 }
 
 // Set custom options (some codecs accept additional params)
@@ -191,10 +184,7 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, double value)
 void FFmpegWriter::WriteHeader()
 {
 	if (!info.has_audio && !info.has_video)
-	{
-		cout << "No video or audio options have been set for " << path << endl;
-		exit(1);
-	}
+		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
 	// initialize the streams (i.e. add the streams)
 	initialize_streams();
@@ -207,10 +197,8 @@ void FFmpegWriter::WriteHeader()
 
     // Open the output file, if needed
     if (!(fmt->flags & AVFMT_NOFILE)) {
-        if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0) {
-            fprintf(stderr, "Could not open '%s'\n", path);
-            exit(1);
-        }
+        if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0)
+        	throw InvalidFile("Could not open or write file.", path);
     }
 
     // Write the stream header, if any
@@ -301,10 +289,8 @@ AVStream* FFmpegWriter::add_audio_stream()
 	}
 
     st = avformat_new_stream(oc, codec);
-    if (!st) {
-        fprintf(stderr, "Could not alloc stream\n");
-        exit(1);
-    }
+    if (!st)
+    	throw OutOfMemory("Could not allocate memory for the audio stream.", path);
 
     c = st->codec;
     c->codec_id = codec->id;
@@ -336,10 +322,8 @@ AVStream* FFmpegWriter::add_video_stream()
 	}
 
 	st = avformat_new_stream(oc, codec);
-    if (!st) {
-        fprintf(stderr, "Could not alloc stream\n");
-        exit(1);
-    }
+    if (!st)
+    	throw OutOfMemory("Could not allocate memory for the video stream.", path);
 
     c = st->codec;
     c->codec_id = codec->id;
@@ -387,16 +371,12 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 
     /* find the audio encoder */
     codec = avcodec_find_encoder(c->codec_id);
-    if (!codec) {
-        fprintf(stderr, "codec not found\n");
-        exit(1);
-    }
+    if (!codec)
+    	throw InvalidCodec("Could not find codec", path);
 
     /* open it */
-    if (avcodec_open2(c, codec, NULL) < 0) {
-        fprintf(stderr, "could not open codec\n");
-        exit(1);
-    }
+    if (avcodec_open2(c, codec, NULL) < 0)
+    	throw InvalidCodec("Could not open codec", path);
 }
 
 // open video codec
@@ -409,15 +389,11 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 
     /* find the video encoder */
     codec = avcodec_find_encoder(c->codec_id);
-    if (!codec) {
-        fprintf(stderr, "codec not found\n");
-        exit(1);
-    }
+    if (!codec)
+    	throw InvalidCodec("Could not find codec", path);
 
     /* open the codec */
-    if (avcodec_open2(c, codec, NULL) < 0) {
-        fprintf(stderr, "could not open codec\n");
-        exit(1);
-    }
+    if (avcodec_open2(c, codec, NULL) < 0)
+    	throw InvalidCodec("Could not open codec", path);
 }
 

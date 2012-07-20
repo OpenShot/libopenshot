@@ -30,11 +30,11 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.mp4");
+		FFmpegWriter w("/home/jonathan/output.flac");
 		w.DisplayInfo();
 
 		// Set options
-		w.SetAudioOptions("libfaac", 44100, 2, 64000);
+		w.SetAudioOptions(true, "flac", 44100, 2, 64000);
 
 		// Write header
 		w.WriteHeader();

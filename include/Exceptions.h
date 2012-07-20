@@ -32,6 +32,67 @@ namespace openshot {
 		}
 	};
 
+	/// Exception when decoding audio packet
+	class ErrorDecodingAudio : public BaseException
+	{
+	public:
+		string file_path;
+		int frame_number;
+		ErrorDecodingAudio(string message, int frame_number)
+			: BaseException(message), frame_number(frame_number) { }
+		virtual ~ErrorDecodingAudio() throw () {}
+	};
+
+	/// Exception when no valid codec is found for a file
+	class InvalidCodec : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidCodec(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidCodec() throw () {}
+	};
+
+	/// Exception for files that can not be found or opened
+	class InvalidFile : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidFile(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidFile() throw () {}
+	};
+
+	/// Exception when no valid format is found for a file
+	class InvalidFormat : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidFormat(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidFormat() throw () {}
+	};
+
+	/// Exception when invalid encoding options are used
+	class InvalidOptions : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidOptions(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidOptions() throw () {}
+	};
+
+	/// Exception when no streams are found in the file
+	class NoStreamsFound : public BaseException
+	{
+	public:
+		string file_path;
+		NoStreamsFound(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~NoStreamsFound() throw () {}
+	};
+
 	/// Exception for frames that are out of bounds.
 	class OutOfBoundsFrame : public BaseException
 	{
@@ -54,55 +115,14 @@ namespace openshot {
 		virtual ~OutOfBoundsPoint() throw () {}
 	};
 
-	/// Exception for files that can not be found or opened
-	class InvalidFile : public BaseException
+	/// Exception when memory could not be allocated
+	class OutOfMemory : public BaseException
 	{
 	public:
 		string file_path;
-		InvalidFile(string message, string file_path)
+		OutOfMemory(string message, string file_path)
 			: BaseException(message), file_path(file_path) { }
-		virtual ~InvalidFile() throw () {}
-	};
-
-	/// Exception when no streams are found in the file
-	class NoStreamsFound : public BaseException
-	{
-	public:
-		string file_path;
-		NoStreamsFound(string message, string file_path)
-			: BaseException(message), file_path(file_path) { }
-		virtual ~NoStreamsFound() throw () {}
-	};
-
-	/// Exception when no valid format is found for a file
-	class InvalidFormat : public BaseException
-	{
-	public:
-		string file_path;
-		InvalidFormat(string message, string file_path)
-			: BaseException(message), file_path(file_path) { }
-		virtual ~InvalidFormat() throw () {}
-	};
-
-	/// Exception when no valid codec is found for a file
-	class InvalidCodec : public BaseException
-	{
-	public:
-		string file_path;
-		InvalidCodec(string message, string file_path)
-			: BaseException(message), file_path(file_path) { }
-		virtual ~InvalidCodec() throw () {}
-	};
-
-	/// Exception when decoding audio packet
-	class ErrorDecodingAudio : public BaseException
-	{
-	public:
-		string file_path;
-		int frame_number;
-		ErrorDecodingAudio(string message, int frame_number)
-			: BaseException(message), frame_number(frame_number) { }
-		virtual ~ErrorDecodingAudio() throw () {}
+		virtual ~OutOfMemory() throw () {}
 	};
 
 }

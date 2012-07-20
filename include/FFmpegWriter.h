@@ -86,14 +86,14 @@ namespace openshot
 	public:
 
 		/// Constructor for FFmpegWriter. Throws one of the following exceptions.
-		FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec);
+		FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
 
 		/// Set video export options
-		void SetVideoOptions(string codec, Fraction fps, int width, int height,
+		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
 				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// Set audio export options
-		void SetAudioOptions(string codec, int sample_rate, int channels, int bit_rate);
+		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
 
 		/// Set custom options (some codecs accept additional params)
 		void SetOption(Stream_Type stream, string name, double value);
