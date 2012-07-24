@@ -43,6 +43,17 @@ namespace openshot {
 		virtual ~ErrorDecodingAudio() throw () {}
 	};
 
+	/// Exception when encoding audio packet
+	class ErrorEncodingAudio : public BaseException
+	{
+	public:
+		string file_path;
+		int frame_number;
+		ErrorEncodingAudio(string message, int frame_number)
+			: BaseException(message), frame_number(frame_number) { }
+		virtual ~ErrorEncodingAudio() throw () {}
+	};
+
 	/// Exception when no valid codec is found for a file
 	class InvalidCodec : public BaseException
 	{

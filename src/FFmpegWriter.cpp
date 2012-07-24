@@ -28,7 +28,9 @@
 using namespace openshot;
 
 FFmpegWriter::FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
-		path(path), audio_pts(0), video_pts(0)
+		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0),
+		samples(NULL), audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
+		audio_buf(NULL), converted_audio(NULL)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -67,7 +69,7 @@ void FFmpegWriter::auto_detect_format()
 
     if (fmt->audio_codec != CODEC_ID_NONE)
     	// Update audio codec name
-        info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
+    	info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
 }
 
 // initialize streams
@@ -76,12 +78,13 @@ void FFmpegWriter::initialize_streams()
     // Add the audio and video streams using the default format codecs and initialize the codecs
     video_st = NULL;
     audio_st = NULL;
-    if (fmt->video_codec != CODEC_ID_NONE) {
+    if (fmt->video_codec != CODEC_ID_NONE)
+    	// Add video stream
         video_st = add_video_stream();
-    }
-    if (fmt->audio_codec != CODEC_ID_NONE) {
-        audio_st = add_audio_stream();
-    }
+
+    if (fmt->audio_codec != CODEC_ID_NONE)
+        // Add audio stream
+    	audio_st = add_audio_stream();
 
 	// output debug info
 	av_dump_format(oc, 0, path.c_str(), 1);
@@ -215,7 +218,15 @@ void FFmpegWriter::WriteFrame(Frame* frame)
 // Write a block of frames from a reader
 void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 {
+	// Loop through each frame (and encoded it)
+	for (int number = start; number <= length; number++)
+	{
+		// Get the frame
+		Frame f = reader->GetFrame(number);
 
+		// Encode frame
+		WriteFrame(&f);
+	}
 }
 
 // Write the file trailer (after all frames are written)
@@ -247,8 +258,8 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 {
     avcodec_close(st->codec);
 
-    //av_free(samples);
-    //av_free(audio_outbuf);
+    delete[] samples;
+    delete[] audio_outbuf;
 }
 
 // Close the writer
@@ -288,6 +299,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 	}
 
+	// Create a new audio stream
     st = avformat_new_stream(oc, codec);
     if (!st)
     	throw OutOfMemory("Could not allocate memory for the audio stream.", path);
@@ -296,8 +308,8 @@ AVStream* FFmpegWriter::add_audio_stream()
     c->codec_id = codec->id;
     c->codec_type = AVMEDIA_TYPE_AUDIO;
 
-    /* put sample parameters */
-    c->sample_fmt = AV_SAMPLE_FMT_S16;
+    // Set the sample parameters
+    c->sample_fmt = AV_SAMPLE_FMT_FLT;
     c->bit_rate = info.audio_bit_rate;
     c->sample_rate = info.sample_rate;
     c->channels = info.channels;
@@ -321,6 +333,7 @@ AVStream* FFmpegWriter::add_video_stream()
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 	}
 
+	// Create a new stream
 	st = avformat_new_stream(oc, codec);
     if (!st)
     	throw OutOfMemory("Could not allocate memory for the video stream.", path);
@@ -369,14 +382,49 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 
     c = st->codec;
 
-    /* find the audio encoder */
+    // Find the audio encoder
     codec = avcodec_find_encoder(c->codec_id);
     if (!codec)
     	throw InvalidCodec("Could not find codec", path);
 
-    /* open it */
+    // Open the codec
     if (avcodec_open2(c, codec, NULL) < 0)
     	throw InvalidCodec("Could not open codec", path);
+
+
+    // Set audio output buffer (used to store the encoded audio)
+    audio_outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+    audio_outbuf = new uint8_t[audio_outbuf_size];
+
+    // Calculate the size of the input frame (i..e how many samples per packet), and the output buffer
+    // TODO: Ugly hack for PCM codecs (will be removed ASAP with new PCM support to compute the input frame size in samples
+    if (c->frame_size <= 1) {
+    	// No frame size found... so calculate
+        audio_input_frame_size = audio_outbuf_size / c->channels;
+
+        switch(st->codec->codec_id) {
+        case CODEC_ID_PCM_S16LE:
+        case CODEC_ID_PCM_S16BE:
+        case CODEC_ID_PCM_U16LE:
+        case CODEC_ID_PCM_U16BE:
+            audio_input_frame_size >>= 1;
+            break;
+        default:
+            break;
+        }
+    } else {
+    	// Set frame size based on the codec
+        audio_input_frame_size = c->frame_size;
+    }
+
+    // Allocate array for samples
+    samples = new float[audio_input_frame_size * 2 * c->channels];
+
+	// Allocate audio buffer
+	audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
+	// create a new array (to hold the re-sampled audio)
+	converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 }
 
 // open video codec
@@ -397,3 +445,108 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
     	throw InvalidCodec("Could not open codec", path);
 }
 
+// write audio frame
+void FFmpegWriter::write_audio_packet(Frame* frame)
+{
+    AVCodecContext *c;
+    AVPacket pkt;
+    av_init_packet(&pkt);
+
+    c = audio_st->codec;
+
+    // Get the audio details from this frame
+    int samples_in_frame = frame->GetAudioSamplesCount();
+    int channels_in_frame = frame->GetAudioChannelsCount();
+    int total_frame_samples = samples_in_frame * channels_in_frame;
+    int remaining_frame_samples = total_frame_samples;
+
+    // Get audio sample array
+    float* frame_samples = frame->GetAudioSamples();
+    int samples_position = 0;
+
+
+    // Loop until no more samples
+    while (remaining_frame_samples > 0)
+    {
+        // Get remaining samples needed for this packet
+        int remaining_packet_samples = audio_input_frame_size - audio_input_position;
+
+        // Get the difference
+        int diff = remaining_frame_samples - remaining_packet_samples;
+        if (diff < 0)
+        	// max samples needed is this
+        	diff = remaining_frame_samples;
+        else if (diff > remaining_packet_samples)
+        	// max samples needed is this
+        	diff = remaining_packet_samples;
+
+        // Copy samples into input buffer
+        memcpy(samples, frame_samples, diff);
+
+        // Decrement / Increment counters
+        remaining_packet_samples -= diff;
+        remaining_frame_samples -= diff;
+        samples_position += diff;
+        audio_input_position += diff;
+
+        // Increment array pointer
+        frame_samples += diff;
+
+        // Do we have enough samples to proceed?
+        if (audio_input_position < audio_input_frame_size)
+        	// Not enough samples to encode... so wait until the next frame
+        	break;
+
+		// Re-sample audio samples (if needed)
+		if(c->sample_fmt != AV_SAMPLE_FMT_FLT) {
+			// Audio needs to be converted
+			// Create an audio resample context object (used to convert audio samples)
+			ReSampleContext *resampleCtx = av_audio_resample_init(
+					info.channels,
+					frame->GetAudioChannelsCount(),
+					info.sample_rate,
+					frame->GetAudioSamplesRate(),
+					c->sample_fmt,
+					AV_SAMPLE_FMT_FLT,
+					0, 0, 0, 0.0f);
+
+			if (!resampleCtx)
+				throw InvalidCodec("Failed to convert audio samples for encoding.", path);
+			else
+			{
+				// Re-sample audio
+				audio_resample(resampleCtx, (short *)converted_audio, (short *)samples, audio_input_frame_size);
+
+				// Copy audio samples over original samples
+				memcpy(samples, converted_audio, audio_input_frame_size * av_get_bytes_per_sample(c->sample_fmt));
+
+				// Close context
+				audio_resample_close(resampleCtx);
+			}
+		}
+
+
+        // Set packet properties
+        pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *)samples);
+
+        if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+            pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
+        pkt.flags |= AV_PKT_FLAG_KEY;
+        pkt.stream_index = audio_st->index;
+        pkt.data = audio_outbuf;
+
+        /* write the compressed frame in the media file */
+        if (av_interleaved_write_frame(oc, &pkt) != 0)
+        	throw ErrorEncodingAudio("Error while writing audio frame", frame->number);
+
+        // Reset position
+        audio_input_position = 0;
+    }
+
+}
+
+// write video frame
+void FFmpegWriter::write_video_packet(Frame* frame)
+{
+
+}

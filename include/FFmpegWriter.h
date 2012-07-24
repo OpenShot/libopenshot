@@ -58,6 +58,15 @@ namespace openshot
 	    AVFormatContext *oc;
 	    AVStream *audio_st, *video_st;
 	    double audio_pts, video_pts;
+	    float *samples;
+	    uint8_t *audio_outbuf;
+
+		int16_t *audio_buf;
+		int16_t *converted_audio;
+
+	    int audio_outbuf_size;
+	    int audio_input_frame_size;
+	    int audio_input_position;
 
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
@@ -82,6 +91,12 @@ namespace openshot
 
 		/// open video codec
 		void open_video(AVFormatContext *oc, AVStream *st);
+
+		/// write audio frame
+		void write_audio_packet(Frame* frame);
+
+		/// write video frame
+		void write_video_packet(Frame* frame);
 
 	public:
 

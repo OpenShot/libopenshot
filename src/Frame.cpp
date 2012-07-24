@@ -250,6 +250,29 @@ float* Frame::GetAudioSamples(int channel)
 	return audio->getSampleData(channel);
 }
 
+// Get an array of sample data (all channels interleaved together)
+float* Frame::GetAudioSamples()
+{
+	float *output = new float[audio->getNumChannels() * audio->getNumSamples()];
+	int position = 0;
+
+	// Loop through samples in each channel (combining them)
+	for (int sample = 0; sample < audio->getNumSamples(); sample++)
+	{
+		for (int channel = 0; channel < audio->getNumChannels(); channel++)
+		{
+			// Add sample to output array
+			output[position] = audio->getSampleData(channel)[sample];
+
+			// increment position
+			position++;
+		}
+	}
+
+	// return combined array
+	return output;
+}
+
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
@@ -260,6 +283,12 @@ int Frame::GetAudioChannelsCount()
 int Frame::GetAudioSamplesCount()
 {
 	return audio->getNumSamples();
+}
+
+// Get the audio sample rate
+int Frame::GetAudioSamplesRate()
+{
+	return sample_rate;
 }
 
 // Get pixel data (as packets)

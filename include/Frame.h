@@ -80,11 +80,17 @@ namespace openshot
 		/// Get an array of sample data
 		float* GetAudioSamples(int channel);
 
+		/// Get an array of sample data (all channels interleaved together)
+		float* GetAudioSamples();
+
 		/// Get number of audio channels
 		int GetAudioChannelsCount();
 
 		/// Get number of audio channels
 		int GetAudioSamplesCount();
+
+		/// Get the audio sample rate
+		int GetAudioSamplesRate();
 
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
