@@ -58,7 +58,7 @@ namespace openshot
 	    AVFormatContext *oc;
 	    AVStream *audio_st, *video_st;
 	    double audio_pts, video_pts;
-	    float *samples;
+	    int16_t *samples;
 	    uint8_t *audio_outbuf;
 
 		int16_t *audio_buf;

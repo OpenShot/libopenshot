@@ -39,7 +39,7 @@ int main()
 		// Write header
 		w.WriteHeader();
 
-		for (int frame = 1; frame <= 10; frame++)
+		for (int frame = 1; frame <= 120; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 
