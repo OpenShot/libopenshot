@@ -79,11 +79,11 @@ void FFmpegWriter::initialize_streams()
 	// Add the audio and video streams using the default format codecs and initialize the codecs
 	video_st = NULL;
 	audio_st = NULL;
-	if (fmt->video_codec != CODEC_ID_NONE)
+	if (fmt->video_codec != CODEC_ID_NONE && info.has_video)
 		// Add video stream
 		video_st = add_video_stream();
 
-	if (fmt->audio_codec != CODEC_ID_NONE)
+	if (fmt->audio_codec != CODEC_ID_NONE && info.has_audio)
 		// Add audio stream
 		audio_st = add_audio_stream();
 
@@ -309,8 +309,47 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 	// Set the sample parameters
 	c->bit_rate = info.audio_bit_rate;
-	c->sample_rate = info.sample_rate;
 	c->channels = info.channels;
+
+	// Check for valid timebase
+	if (c->time_base.den == 0 || c->time_base.num == 0)
+	{
+		c->time_base.num = 1;
+		c->time_base.den = 90000;
+	}
+
+	// Set valid sample rate (or throw error)
+	if (codec->supported_samplerates) {
+		int i;
+	    for (i = 0; codec->supported_samplerates[i] != 0; i++)
+	        if (info.sample_rate == codec->supported_samplerates[i])
+	        {
+	        	// Set the valid sample rate
+	        	c->sample_rate = info.sample_rate;
+	            break;
+	        }
+	    if (codec->supported_samplerates[i] == 0)
+	    	throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
+	} else
+		// Set sample rate
+		c->sample_rate = info.sample_rate;
+
+	// Set a valid number of channels (or throw error)
+	int channel_layout = info.channels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+	if (codec->channel_layouts) {
+		int i;
+		for (i = 0; codec->channel_layouts[i] != 0; i++)
+			if (channel_layout == codec->channel_layouts[i])
+			{
+				// Set valid channel layout
+				c->channel_layout = channel_layout;
+				break;
+			}
+		if (codec->channel_layouts[i] == 0)
+			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+	} else
+		// Set valid channel layout
+		c->channel_layout = channel_layout;
 
 	// Choose a valid sample_fmt
 	if (codec->sample_fmts) {

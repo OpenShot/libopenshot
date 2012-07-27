@@ -54,6 +54,16 @@ namespace openshot {
 		virtual ~ErrorEncodingAudio() throw () {}
 	};
 
+	/// Exception when an invalid # of audio channels are detected
+	class InvalidChannels : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidChannels(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidChannels() throw () {}
+	};
+
 	/// Exception when no valid codec is found for a file
 	class InvalidCodec : public BaseException
 	{
@@ -92,6 +102,16 @@ namespace openshot {
 		InvalidOptions(string message, string file_path)
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidOptions() throw () {}
+	};
+
+	/// Exception when invalid sample rate is detected during encoding
+	class InvalidSampleRate : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidSampleRate(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidSampleRate() throw () {}
 	};
 
 	/// Exception when no streams are found in the file
