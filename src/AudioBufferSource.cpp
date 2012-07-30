@@ -4,32 +4,17 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor
-AudioBufferSource::AudioBufferSource(int samples, int channels)
+AudioBufferSource::AudioBufferSource(AudioSampleBuffer *audio_buffer)
 		: position(0), start(0), repeat(false)
 {
 	// Create new buffer
-	buffer = new AudioSampleBuffer(channels, samples);
-	buffer->clear();
-
-//	AudioFormatManager formatManager;
-//	formatManager.registerBasicFormats();
-//
-//	File file ("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
-//	AudioFormatReader* reader = formatManager.createReaderFor (file);
-//	if (reader != 0)
-//	{
-//		buffer = new AudioSampleBuffer(reader->numChannels, reader->lengthInSamples);
-//		buffer->readFromAudioReader(reader, 0, reader->lengthInSamples, 0, true, true);
-//		float* firstChannelSamples = buffer->getSampleData(0, 0);
-//	}
+	buffer = audio_buffer;
 }
 
 // Destructor
 AudioBufferSource::~AudioBufferSource()
 {
 	// Clear and delete the buffer
-	buffer->clear();
-	delete buffer;
 	buffer = NULL;
 };
 
@@ -84,11 +69,7 @@ void AudioBufferSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 void AudioBufferSource::prepareToPlay(int, double) { };
 
 // Release all resources
-void AudioBufferSource::releaseResources()
-{
-	// Clear the buffer
-	buffer->clear();
-};
+void AudioBufferSource::releaseResources() { };
 
 // Set the next read position of this source
 void AudioBufferSource::setNextReadPosition (long long newPosition)
@@ -125,11 +106,4 @@ void AudioBufferSource::setLooping (bool shouldLoop)
 	// Set the repeat flag
 	repeat = shouldLoop;
 };
-
-// Add audio samples to a specific channel
-void AudioBufferSource::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
-{
-	// Add samples to frame's audio buffer
-	buffer->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
-}
 

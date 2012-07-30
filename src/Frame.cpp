@@ -286,14 +286,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 		// YES, RESAMPLE AUDIO
 
 		// Get the frame's audio source
-		AudioBufferSource my_source(num_of_samples, num_of_channels);
-
-		// Add audio to AudioBufferSource
-		for (int channel = 0; channel < num_of_channels; channel++)
-		{
-			// Add audio for each channel
-			my_source.AddAudio(channel, 0, audio->getSampleData(channel), num_of_samples, 1.0f);
-		}
+		AudioBufferSource my_source(audio);
 
 		// Create resample source
 		ResamplingAudioSource resample_source(&my_source, false, num_of_channels);
@@ -483,14 +476,7 @@ void Frame::Play()
 	deviceManager.addAudioCallback (&audioSourcePlayer);
 
 	ScopedPointer<AudioBufferSource> my_source;
-	my_source = new AudioBufferSource(audio->getNumSamples(), audio->getNumChannels());
-
-	// Add audio to AudioBufferSource
-	for (int channel = 0; channel < audio->getNumChannels(); channel++)
-	{
-		// Add audio for each channel
-		my_source->AddAudio(channel, 0, audio->getSampleData(channel), audio->getNumSamples(), 1.0f);
-	}
+	my_source = new AudioBufferSource(audio);
 
 	// Create TimeSliceThread for audio buffering
 	TimeSliceThread my_thread("Audio buffer thread");

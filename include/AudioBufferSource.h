@@ -34,7 +34,7 @@ namespace openshot
 
 	public:
 		/// Default constructor
-		AudioBufferSource(int samples, int channels);
+		AudioBufferSource(AudioSampleBuffer *buffer);
 
 		/// Destructor
 		~AudioBufferSource();
@@ -62,9 +62,6 @@ namespace openshot
 
 		/// Set if this audio source should repeat when it reaches the end
 		void setLooping (bool shouldLoop);
-
-		/// Add audio samples to a specific channel
-		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
 	};
 
 }

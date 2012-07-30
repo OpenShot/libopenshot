@@ -42,7 +42,7 @@ int main()
 		for (int frame = 1; frame <= 120; frame++)
 		{
 			Frame f = r.GetFrame(frame);
-			//f.DisplayWaveform(false);
+			//f.Play();
 
 			// Write frame
 			cout << "Write frame " << f.number << endl;
