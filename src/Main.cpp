@@ -30,11 +30,11 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.mp3");
+		FFmpegWriter w("/home/jonathan/output.flac");
 		w.DisplayInfo();
 
 		// Set options
-		w.SetAudioOptions(true, "libmp3lame", 44100, 2, 64000);
+		w.SetAudioOptions(true, "flac", 44100, 2, 64000);
 
 		// Write header
 		w.WriteHeader();
@@ -42,6 +42,7 @@ int main()
 		for (int frame = 1; frame <= 120; frame++)
 		{
 			Frame f = r.GetFrame(frame);
+			//f.DisplayWaveform(false);
 
 			// Write frame
 			cout << "Write frame " << f.number << endl;

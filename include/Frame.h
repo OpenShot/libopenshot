@@ -80,8 +80,8 @@ namespace openshot
 		/// Get an array of sample data
 		float* GetAudioSamples(int channel);
 
-		/// Get an array of sample data (all channels interleaved together)
-		float* GetAudioSamples();
+		/// Get an array of sample data (all channels interleaved together), using any sample rate
+		float* GetInterleavedAudioSamples(int new_sample_rate, int* sample_count);
 
 		/// Get number of audio channels
 		int GetAudioChannelsCount();

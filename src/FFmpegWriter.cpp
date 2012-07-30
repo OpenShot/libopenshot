@@ -314,8 +314,8 @@ AVStream* FFmpegWriter::add_audio_stream()
 	// Check for valid timebase
 	if (c->time_base.den == 0 || c->time_base.num == 0)
 	{
-		c->time_base.num = 1;
-		c->time_base.den = 90000;
+		c->time_base.num = st->time_base.num;
+		c->time_base.den = st->time_base.den;
 	}
 
 	// Set valid sample rate (or throw error)
@@ -334,6 +334,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
 
+
 	// Set a valid number of channels (or throw error)
 	int channel_layout = info.channels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
 	if (codec->channel_layouts) {
@@ -350,6 +351,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 	} else
 		// Set valid channel layout
 		c->channel_layout = channel_layout;
+
 
 	// Choose a valid sample_fmt
 	if (codec->sample_fmts) {
@@ -504,22 +506,31 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 	c = audio_st->codec;
 
 	// Get the audio details from this frame
-	int sample_rate_in_frame = frame->GetAudioSamplesRate();
-	int samples_in_frame = frame->GetAudioSamplesCount();
+	int sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
+	int samples_in_frame = frame->GetAudioSamplesCount(); // this is updated if resampling happens
 	int channels_in_frame = frame->GetAudioChannelsCount();
-	int total_frame_samples = samples_in_frame * channels_in_frame;
-	int remaining_frame_samples = total_frame_samples;
 
 	// Get audio sample array
-	float* frame_samples_float = frame->GetAudioSamples();
+	float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, &samples_in_frame);
 	int16_t* frame_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 	int samples_position = 0;
+
+	// Calculate total samples
+	int total_frame_samples = samples_in_frame * channels_in_frame;
+	int remaining_frame_samples = total_frame_samples;
 
 	// Translate audio sample values back to 16 bit integers
 	for (int s = 0; s < total_frame_samples; s++)
 	{
 		// Translate sample value and copy into buffer
 		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
+
+//		// DEBUG
+//		if (frame->number == 1)
+//		{
+//			cout << frame_samples[s] << endl;
+//		}
+
 	}
 
 	// Re-sample audio samples (if needed)
@@ -530,7 +541,7 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		ReSampleContext *resampleCtx = av_audio_resample_init(
 				info.channels, channels_in_frame,
 				info.sample_rate, sample_rate_in_frame,
-				c->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
+				c->sample_fmt, AV_SAMPLE_FMT_S16, 16, 10, 0, 0.0f);
 
 		if (!resampleCtx)
 			throw InvalidCodec("Failed to convert audio samples for encoding.", path);
@@ -539,6 +550,14 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 			total_frame_samples = audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
 			remaining_frame_samples = total_frame_samples;
 
+			// DEBUG
+//			cout << endl << endl << endl << "END OF RESAMPLE DATA:" << endl;
+//			if (frame->number == 1)
+//			{
+//				for (int s = total_frame_samples - 10; s < (total_frame_samples + 200); s++)
+//					cout << converted_audio[s] << endl;
+//			}
+
 			// Copy audio samples over original samples
 			memcpy(frame_samples, converted_audio, total_frame_samples * av_get_bytes_per_sample(c->sample_fmt));
 
@@ -546,6 +565,14 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 			audio_resample_close(resampleCtx);
 		}
 	}
+
+//	// DEBUG
+//	cout << endl << endl << endl << "AFTER RESCALE" << endl;
+//	if (frame->number == 1)
+//	{
+//		for (int s = 0; s < total_frame_samples; s++)
+//			cout << frame_samples[s] << endl;
+//	}
 
 	// Loop until no more samples
 	while (remaining_frame_samples > 0) {
@@ -567,7 +594,7 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 
 
 		// Copy samples into input buffer (and convert to 16 bit int)
-		for (int s = 0; s <= diff; s++)
+		for (int s = 0; s < diff; s++)
 		{
 			// Translate sample value and copy into buffer
 			samples[audio_input_position] = frame_samples[samples_position];
@@ -577,7 +604,24 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 			samples_position++;
 			remaining_frame_samples--;
 			remaining_packet_samples--;
+
+			// DEBUG
+//			if (frame->number == 1 && s > 2800)
+//			{
+//				cout << frame_samples[s] << endl;
+//			}
+//			if (frame->number == 2 && s < 100)
+//			{
+//				cout << frame_samples[s] << endl;
+//			}
 		}
+
+
+//		if (frame->number == 2 || frame->number == 3)
+//		{
+//			for (int z = 0; z < diff; z++)
+//				cout << frame_samples[z] << endl;
+//		}
 
 
 		// Do we have enough samples to proceed?
@@ -586,11 +630,6 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 			break;
 
 		cout << "NOW ENCODE FILE!" << endl;
-//		if (frame->number == 5)
-//		{
-//			for (int z = 0; z < audio_input_frame_size; z++)
-//				cout << samples[z] << endl;
-//		}
 
 		// Set packet properties
 		pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
@@ -600,6 +639,8 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = audio_st->index;
 		pkt.data = audio_outbuf;
+
+		cout << "Final encode: frame " << frame->number << ", pkt.pts: " << pkt.pts << endl;
 
 		/* write the compressed frame in the media file */
 		if (av_interleaved_write_frame(oc, &pkt) != 0)

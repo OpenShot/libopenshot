@@ -757,6 +757,17 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 					// Add or update cache
 					my_cache->Add(f.number, f);
+
+					// DEBUG
+//					for (int s = start; s<samples; s++)
+//						if (f.number == 1 && s > 500)
+//						{
+//							cout << iterate_channel_buffer[s] << endl;
+//						}
+//						else if (f.number == 2 && s < 34)
+//						{
+//							cout << iterate_channel_buffer[s] << endl;
+//						}
 				}
 
 				// Decrement remaining samples

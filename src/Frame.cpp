@@ -250,24 +250,112 @@ float* Frame::GetAudioSamples(int channel)
 	return audio->getSampleData(channel);
 }
 
-// Get an array of sample data (all channels interleaved together)
-float* Frame::GetAudioSamples()
+// Get an array of sample data (all channels interleaved together), using any sample rate
+float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 {
-	float *output = new float[audio->getNumChannels() * audio->getNumSamples()];
+	float *output = NULL;
+	AudioSampleBuffer *buffer = audio;
+	int num_of_channels = audio->getNumChannels();
+	int num_of_samples = audio->getNumSamples();
+
+
+	// DEBUG
+	cout << "output size 1: " << (num_of_channels * num_of_samples) << endl;
+	cout << "buffer channels 1: " << buffer->getNumChannels() << endl;
+	cout << "buffer samples 1: " << buffer->getNumSamples() << endl;
+	cout << "--------------" << endl;
+
+//	// Loop through samples in each channel (combining them)
+//	if (number == 1)
+//	{
+//		cout << "BEFORE RESAMPLE" << endl << endl;
+//		for (int sample = 0; sample < num_of_samples; sample++)
+//		{
+//			for (int channel = 0; channel < num_of_channels; channel++)
+//			{
+//				// Add sample to output array
+//				cout << buffer->getSampleData(channel)[sample] << endl;
+//			}
+//		}
+//	}
+
+
+	// Resample to new sample rate (if needed)
+	if (new_sample_rate != sample_rate)
+	{
+		// YES, RESAMPLE AUDIO
+
+		// Get the frame's audio source
+		AudioBufferSource my_source(num_of_samples, num_of_channels);
+
+		// Add audio to AudioBufferSource
+		for (int channel = 0; channel < num_of_channels; channel++)
+		{
+			// Add audio for each channel
+			my_source.AddAudio(channel, 0, audio->getSampleData(channel), num_of_samples, 1.0f);
+		}
+
+		// Create resample source
+		ResamplingAudioSource resample_source(&my_source, false, num_of_channels);
+
+		// Set the sample ratio (original to new sample rate)
+		double source_ratio = double(sample_rate) / double(new_sample_rate);
+		double dest_ratio = double(new_sample_rate) / double(sample_rate);
+		int new_num_of_samples = num_of_samples * dest_ratio;
+		resample_source.setResamplingRatio(dest_ratio);
+
+		// Prepare to resample
+		resample_source.prepareToPlay(num_of_samples, new_sample_rate);
+
+		// Create a buffer for the newly resampled data
+		AudioSampleBuffer resampled_buffer(num_of_channels, new_num_of_samples);
+		resampled_buffer.clear();
+		const AudioSourceChannelInfo resample_callback_buffer = {&resampled_buffer, 0, new_num_of_samples};
+		resample_callback_buffer.clearActiveBufferRegion();
+
+		// Resample the current frame's audio buffer (info the temp callback buffer)
+		resample_source.getNextAudioBlock(resample_callback_buffer);
+
+		// Update buffer pointer to this newly resampled buffer
+		buffer = &resampled_buffer;
+
+		// Update num_of_samples
+		num_of_samples = new_num_of_samples;
+
+	}
+
+
+	// DEBUG
+	cout << "output size 2: " << (num_of_channels * num_of_samples) << endl;
+	cout << "buffer channels 2: " << buffer->getNumChannels() << endl;
+	cout << "buffer samples 2: " << buffer->getNumSamples() << endl;
+
+
+	// INTERLEAVE all samples together (channel 1 + channel 2 + channel 1 + channel 2, etc...)
+	output = new float[num_of_channels * num_of_samples];
 	int position = 0;
 
 	// Loop through samples in each channel (combining them)
-	for (int sample = 0; sample < audio->getNumSamples(); sample++)
+	for (int sample = 0; sample < num_of_samples; sample++)
 	{
-		for (int channel = 0; channel < audio->getNumChannels(); channel++)
+		for (int channel = 0; channel < num_of_channels; channel++)
 		{
 			// Add sample to output array
-			output[position] = audio->getSampleData(channel)[sample];
+			//cout << position << ", " << channel << ", " << sample << endl;
+			output[position] = buffer->getSampleData(channel)[sample];
+
+			if (number == 1)
+			{
+				cout << buffer->getSampleData(channel)[sample] << endl;
+			}
 
 			// increment position
 			position++;
 		}
 	}
+
+	// Update sample count (since it might have changed due to resampling)
+	*sample_count = num_of_samples;
 
 	// return combined array
 	return output;
