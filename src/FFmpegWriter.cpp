@@ -336,21 +336,21 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 
 	// Set a valid number of channels (or throw error)
-	int channel_layout = info.channels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
-	if (codec->channel_layouts) {
-		int i;
-		for (i = 0; codec->channel_layouts[i] != 0; i++)
-			if (channel_layout == codec->channel_layouts[i])
-			{
-				// Set valid channel layout
-				c->channel_layout = channel_layout;
-				break;
-			}
-		if (codec->channel_layouts[i] == 0)
-			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
-	} else
-		// Set valid channel layout
-		c->channel_layout = channel_layout;
+//	int channel_layout = info.channels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+//	if (codec->channel_layouts) {
+//		int i;
+//		for (i = 0; codec->channel_layouts[i] != 0; i++)
+//			if (channel_layout == codec->channel_layouts[i])
+//			{
+//				// Set valid channel layout
+//				c->channel_layout = channel_layout;
+//				break;
+//			}
+//		if (codec->channel_layouts[i] == 0)
+//			throw InvalidChannels("An invalid channel layout was detected (i.e. MONO / STEREO).", path);
+//	} else
+//		// Set valid channel layout
+//		c->channel_layout = channel_layout;
 
 
 	// Choose a valid sample_fmt
@@ -451,7 +451,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	// TODO: Ugly hack for PCM codecs (will be removed ASAP with new PCM support to compute the input frame size in samples
 	if (c->frame_size <= 1) {
 		// No frame size found... so calculate
-		audio_input_frame_size = 10000;
+		audio_input_frame_size = 50000 / info.channels;
 
 		switch (st->codec->codec_id) {
 		case CODEC_ID_PCM_S16LE:
@@ -526,6 +526,11 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
 	}
 
+	//	DEBUG CODE
+//	if (frame->number == 1)
+//		for (int s = 0; s < total_frame_samples; s++)
+//				cout << frame_samples[s] << endl;
+
 	// Re-sample audio samples (into additinal channels or changing the sample format / number format)
 	// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
 	if (c->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
@@ -535,14 +540,24 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		ReSampleContext *resampleCtx = av_audio_resample_init(
 				info.channels, channels_in_frame,
 				info.sample_rate, sample_rate_in_frame,
-				c->sample_fmt, AV_SAMPLE_FMT_S16, 16, 10, 0, 0.0f);
+				c->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
 
 		if (!resampleCtx)
 			throw InvalidCodec("Failed to convert audio samples for encoding.", path);
 		else {
 			// Re-sample audio
 			total_frame_samples = audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
+			total_frame_samples /= 2;
 			remaining_frame_samples = total_frame_samples;
+
+			//	DEBUG CODE
+			long int *temp = (long int*) converted_audio;
+			if (frame->number == 2)
+				for (int s = 0; s < total_frame_samples; s++)
+				{
+					long int value = temp[s];
+					cout << (int)value << endl;
+				}
 
 			// Copy audio samples over original samples
 			memcpy(frame_samples, converted_audio, total_frame_samples * av_get_bytes_per_sample(c->sample_fmt));

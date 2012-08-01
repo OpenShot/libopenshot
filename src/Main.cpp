@@ -30,11 +30,11 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.flac");
+		FFmpegWriter w("/home/jonathan/output.mp3");
 		w.DisplayInfo();
 
 		// Set options
-		w.SetAudioOptions(true, "flac", 44100, 2, 64000);
+		w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
 
 		// Write header
 		w.WriteHeader();
