@@ -30,11 +30,11 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.mp3");
+		FFmpegWriter w("/home/jonathan/output.webm");
 		w.DisplayInfo();
 
 		// Set options
-		w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
+		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 
 		// Write header
 		w.WriteHeader();
@@ -42,7 +42,6 @@ int main()
 		for (int frame = 1; frame <= 120; frame++)
 		{
 			Frame f = r.GetFrame(frame);
-			//f.Play();
 
 			// Write frame
 			cout << "Write frame " << f.number << endl;

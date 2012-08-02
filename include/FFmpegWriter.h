@@ -66,6 +66,7 @@ namespace openshot
 
 	    int audio_outbuf_size;
 	    int audio_input_frame_size;
+	    int initial_audio_input_frame_size;
 	    int audio_input_position;
 
 		/// Add an audio output stream
