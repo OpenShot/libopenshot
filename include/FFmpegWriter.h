@@ -18,6 +18,7 @@
 
 extern "C" {
 	#include <libavcodec/avcodec.h>
+	#include <libavcodec/opt.h>
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
 }
@@ -75,6 +76,9 @@ namespace openshot
 		/// Add a video output stream
 		AVStream* add_video_stream();
 
+		/// Allocate an AVFrame object
+		AVFrame* allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size);
+
 		/// Auto detect format (from path)
 		void auto_detect_format();
 
@@ -112,7 +116,7 @@ namespace openshot
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
 
 		/// Set custom options (some codecs accept additional params)
-		void SetOption(Stream_Type stream, string name, double value);
+		void SetOption(Stream_Type stream, string name, string value);
 
 		/// Write the file header (after the options are set)
 		void WriteHeader();

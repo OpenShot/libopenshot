@@ -178,8 +178,21 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 }
 
 // Set custom options (some codecs accept additional params)
-void FFmpegWriter::SetOption(Stream_Type stream, string name, double value)
+void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 {
+	// Declare codec context
+	AVCodecContext *c;
+
+	if (stream == VIDEO_STREAM)
+		c = video_st->codec;
+	else
+		c = audio_st->codec;
+
+	// Find AVOption
+	const AVOption *option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
+
+	// Set AVOption
+	av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
 
 }
 
@@ -189,7 +202,7 @@ void FFmpegWriter::WriteHeader()
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
-	// initialize the streams (i.e. add the streams)
+	// Initialize the streams (i.e. add the streams)
 	initialize_streams();
 
 	// Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
@@ -213,7 +226,11 @@ void FFmpegWriter::WriteHeader()
 void FFmpegWriter::WriteFrame(Frame* frame)
 {
 	// Encode and add the frame to the output file
-	write_audio_packet(frame);
+	if (info.has_video && video_st)
+		write_video_packet(frame);
+
+	if (info.has_audio && audio_st)
+		write_audio_packet(frame);
 }
 
 // Write a block of frames from a reader
@@ -658,8 +675,151 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 
 }
 
+// Allocate an AVFrame object
+AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size)
+{
+	// Create an RGB AVFrame
+	AVFrame *new_av_frame = NULL;
+	uint8_t *new_buffer = NULL;
+
+	// Allocate an AVFrame structure
+	new_av_frame = avcodec_alloc_frame();
+	if (new_av_frame == NULL)
+		throw OutOfBoundsFrame("Could not allocate AVFrame", -1, -1);
+
+	// Determine required buffer size and allocate buffer
+	*buffer_size = avpicture_get_size(pix_fmt, width, height);
+	new_buffer = (uint8_t *) av_malloc(*buffer_size * sizeof(uint8_t));
+
+	// Attach buffer to AVFrame
+	avpicture_fill((AVPicture *)new_av_frame, new_buffer, pix_fmt, width, height);
+
+	// return AVFrame
+	return new_av_frame;
+}
+
 // write video frame
 void FFmpegWriter::write_video_packet(Frame* frame)
 {
+	// Get the codec
+	AVCodecContext *c;
+	c = video_st->codec;
 
+	// Allocate an RGB frame & final output frame
+	int bytes_source = 0;
+	int bytes_final = 0;
+	AVFrame *frame_source = allocate_avframe(PIX_FMT_RGB24, frame->GetWidth(), frame->GetHeight(), &bytes_source);
+	AVFrame *frame_final = allocate_avframe(c->pix_fmt, info.width, info.height, &bytes_final);
+
+
+
+
+	// Get a list of pixels from the frame.  Each pixel is represented by
+	// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
+	const Magick::PixelPacket *pixel_packets = frame->GetPixels();
+
+	// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
+	// colors around to match FFmpeg's order (RGB).  They appear to be in RBG by default.
+	for (int packet = 0, row = 0; row < bytes_source; packet++, row+=3)
+	{
+		// Update buffer (which is already linked to the AVFrame: pFrameRGB)
+		frame_source->data[0][row] = pixel_packets[packet].red;
+		frame_source->data[0][row+1] = pixel_packets[packet].green;
+		frame_source->data[0][row+2] = pixel_packets[packet].blue;
+	}
+
+
+
+	// RESIZE IMAGE (IF NEEDED)
+	struct SwsContext *img_convert_ctx = NULL;
+
+	// Convert the image into RGB (for ImageMagick++)
+	img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+	if (img_convert_ctx == NULL) {
+		fprintf(stderr, "Cannot initialize the conversion context!\n");
+		exit(1);
+	}
+
+	// Resize / Convert to RGB
+	sws_scale(img_convert_ctx, frame_source->data, frame_source->linesize, 0,
+			frame->GetHeight(), frame_final->data, frame_final->linesize);
+
+	// Deallocate swscontext
+	sws_freeContext(img_convert_ctx);
+
+
+
+
+	// DEBUG CODE
+	if (frame->number < 4)
+	{
+		FILE *pFile;
+		char szFilename[32];
+		int y;
+
+		// Open file
+		sprintf(szFilename, "frame%d.ppm", frame->number);
+		pFile = fopen(szFilename, "wb");
+
+		// Write header
+		fprintf(pFile, "P6\n%d %d\n255\n", info.width, info.height);
+
+		// Write pixel data
+		for (y = 0; y < info.height; y++)
+			fwrite(frame_final->data[0] + y * frame_final->linesize[0], 1, info.width * 3, pFile);
+
+		// Close file
+		fclose(pFile);
+	}
+
+
+
+
+	// Encode Picture and Write Frame
+	int ret = 0;
+	int video_outbuf_size = 200000;
+	uint8_t *video_outbuf = new uint8_t[200000];
+
+	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+		// Raw video case.
+		AVPacket pkt;
+		av_init_packet(&pkt);
+
+		pkt.flags |= AV_PKT_FLAG_KEY;
+		pkt.stream_index= video_st->index;
+		pkt.data= (uint8_t *)frame_final;
+		pkt.size= sizeof(AVPicture);
+
+		ret = av_interleaved_write_frame(oc, &pkt);
+
+	} else {
+
+		/* encode the image */
+		int out_size = avcodec_encode_video(c, video_outbuf, video_outbuf_size, frame_final);
+
+		/* if zero size, it means the image was buffered */
+		if (out_size > 0) {
+			AVPacket pkt;
+			av_init_packet(&pkt);
+
+			if (c->coded_frame->pts != AV_NOPTS_VALUE)
+				pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
+			if(c->coded_frame->key_frame)
+				pkt.flags |= AV_PKT_FLAG_KEY;
+			pkt.stream_index= video_st->index;
+			pkt.data= video_outbuf;
+			pkt.size= out_size;
+
+			/* write the compressed frame in the media file */
+			ret = av_interleaved_write_frame(oc, &pkt);
+
+		} else {
+			ret = 0;
+		}
+	}
+
+	if (ret != 0) {
+		fprintf(stderr, "Error while writing video frame\n");
+		exit(1);
+	}
 }
