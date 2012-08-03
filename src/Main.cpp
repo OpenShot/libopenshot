@@ -30,7 +30,7 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.webm");
+		FFmpegWriter w("/home/jonathan/output.ogg");
 		w.DisplayInfo();
 
 		// Set options

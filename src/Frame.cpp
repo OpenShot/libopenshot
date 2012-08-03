@@ -279,7 +279,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 		// Set the sample ratio (original to new sample rate)
 		double source_ratio = double(sample_rate) / double(new_sample_rate);
 		double dest_ratio = double(new_sample_rate) / double(sample_rate);
-		int new_num_of_samples = num_of_samples * dest_ratio;
+		int new_num_of_samples = round(num_of_samples * dest_ratio);
 		resample_source.setResamplingRatio(source_ratio);
 
 		// Prepare to resample
@@ -290,7 +290,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 		const AudioSourceChannelInfo resample_callback_buffer = {resampled_buffer, 0, new_num_of_samples};
 		resample_callback_buffer.clearActiveBufferRegion();
 
-		// Resample the current frame's audio buffer (info the temp callback buffer)
+		// Resample the current frame's audio buffer (into the temp callback buffer)
 		resample_source.getNextAudioBlock(resample_callback_buffer);
 
 		// Update buffer pointer to this newly resampled buffer
