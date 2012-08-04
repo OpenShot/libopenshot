@@ -54,6 +54,17 @@ namespace openshot {
 		virtual ~ErrorEncodingAudio() throw () {}
 	};
 
+	/// Exception when encoding audio packet
+	class ErrorEncodingVideo : public BaseException
+	{
+	public:
+		string file_path;
+		int frame_number;
+		ErrorEncodingVideo(string message, int frame_number)
+			: BaseException(message), frame_number(frame_number) { }
+		virtual ~ErrorEncodingVideo() throw () {}
+	};
+
 	/// Exception when an invalid # of audio channels are detected
 	class InvalidChannels : public BaseException
 	{
@@ -154,6 +165,16 @@ namespace openshot {
 		OutOfMemory(string message, string file_path)
 			: BaseException(message), file_path(file_path) { }
 		virtual ~OutOfMemory() throw () {}
+	};
+
+	/// Exception when resample fails
+	class ResampleError : public BaseException
+	{
+	public:
+		string file_path;
+		ResampleError(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~ResampleError() throw () {}
 	};
 
 }

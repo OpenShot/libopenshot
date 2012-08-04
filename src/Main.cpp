@@ -34,16 +34,19 @@ int main()
 		w.DisplayInfo();
 
 		// Set options
-		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 300, 240, Fraction(1,1), false, false, 384000);
+		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 350, 200, Fraction(1,1), false, false, 384000);
 		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 
 		// Write header
 		w.WriteHeader();
 
+		// Output stream info
+		w.OutputStreamInfo();
+
 		// Set Options
 		//w.SetOption(VIDEO_STREAM, "quality", "good");
 
-		for (int frame = 300; frame <= 324; frame++)
+		for (int frame = 1; frame <= 1000; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 

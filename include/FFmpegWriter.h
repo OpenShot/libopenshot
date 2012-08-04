@@ -61,8 +61,6 @@ namespace openshot
 	    double audio_pts, video_pts;
 	    int16_t *samples;
 	    uint8_t *audio_outbuf;
-
-		int16_t *audio_buf;
 		int16_t *converted_audio;
 
 	    int audio_outbuf_size;
@@ -108,12 +106,18 @@ namespace openshot
 		/// Constructor for FFmpegWriter. Throws one of the following exceptions.
 		FFmpegWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
 
-		/// Set video export options
-		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
-				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		/// Close the writer
+		void Close();
+
+		/// Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
+		void OutputStreamInfo();
 
 		/// Set audio export options
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
+
+		/// Set video export options
+		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
+				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// Set custom options (some codecs accept additional params)
 		void SetOption(Stream_Type stream, string name, string value);
@@ -129,9 +133,6 @@ namespace openshot
 
 		/// Write the file trailer (after all frames are written)
 		void WriteTrailer();
-
-		/// Close the writer
-		void Close();
 
 	};
 
