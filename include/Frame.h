@@ -116,8 +116,8 @@ namespace openshot
 		/// Get height of image
 		int GetWidth();
 
-		/// Save the frame image
-		void Save();
+		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
+		void Save(string path, float scale);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);

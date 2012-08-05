@@ -380,13 +380,41 @@ int Frame::GetWidth()
 	return image->columns();
 }
 
-// Save the frame image
-void Frame::Save()
+// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
+void Frame::Save(string path, float scale)
 {
+	// Make a copy of the image (since we might resize it)
+	Magick::Image copy;
+	copy = *image;
+
+	// display the image (if any)
+	if (copy.size().width() > 1 && copy.size().height() > 1)
+	{
+		// Resize image (if needed)
+		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+		{
+			// Calculate correct DAR (display aspect ratio)
+			int new_width = copy.size().width();
+			int new_height = copy.size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+			// Resize image
+			Magick::Geometry new_size(new_width, new_height);
+			new_size.aspect(true);
+			copy.resize(new_size);
+		}
+	}
+
+	// scale image if needed
+	if (abs(scale) > 1.001 || abs(scale) < 0.999)
+	{
+		// Resize image
+		Magick::Geometry new_size(copy.size().width() * scale, copy.size().height() * scale);
+		new_size.aspect(true);
+		copy.resize(new_size);
+	}
+
 	// save the image
-	stringstream file;
-	file << "frame" << number << ".png";
-	image->write(file.str());
+	copy.write(path);
 }
 
 // Add (or replace) pixel data to the frame
