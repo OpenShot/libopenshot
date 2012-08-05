@@ -8,7 +8,9 @@
  */
 
 /// Do not include the juce unittest headers, because it collides with unittest++
-#define __JUCE_UNITTEST_JUCEHEADER__
+#ifndef __JUCE_UNITTEST_JUCEHEADER__
+	#define __JUCE_UNITTEST_JUCEHEADER__
+#endif
 
 #include <iomanip>
 #include <sstream>
@@ -16,6 +18,7 @@
 #include "Magick++.h"
 #include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"
+#include "AudioResampler.h"
 #include "Fraction.h"
 
 using namespace std;
@@ -81,7 +84,7 @@ namespace openshot
 		float* GetAudioSamples(int channel);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
-		float* GetInterleavedAudioSamples(int new_sample_rate, int* sample_count);
+		float* GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
 
 		/// Get number of audio channels
 		int GetAudioChannelsCount();

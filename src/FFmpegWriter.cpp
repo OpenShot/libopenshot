@@ -30,7 +30,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		converted_audio(NULL), initial_audio_input_frame_size(0)
+		converted_audio(NULL), initial_audio_input_frame_size(0), resampler(NULL)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -285,6 +285,8 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 	delete[] samples;
 	delete[] audio_outbuf;
 	delete[] converted_audio;
+
+	delete resampler;
 }
 
 // Close the writer
@@ -526,13 +528,17 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 	AVCodecContext *c;
 	c = audio_st->codec;
 
+	// Create a resampler (only once)
+	if (!resampler)
+		resampler = new AudioResampler();
+
 	// Get the audio details from this frame
 	int sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
 	int samples_in_frame = frame->GetAudioSamplesCount(); // this is updated if resampling happens
 	int channels_in_frame = frame->GetAudioChannelsCount();
 
 	// Get audio sample array
-	float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, &samples_in_frame);
+	float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, resampler, &samples_in_frame);
 	int16_t* frame_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 	int samples_position = 0;
 
@@ -560,7 +566,7 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 			throw ResampleError("Failed to resample & convert audio samples for encoding.", path);
 		else {
 			// FFmpeg audio resample & sample format conversion
-			total_frame_samples = audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
+			audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
 
 			// Update total frames & input frame size (due to bigger or smaller data types)
 			total_frame_samples *= (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));

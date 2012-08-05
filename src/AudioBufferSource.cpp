@@ -62,48 +62,53 @@ void AudioBufferSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 		}
 
 	}
-
 }
 
 // Prepare to play this audio source
-void AudioBufferSource::prepareToPlay(int, double) { };
+void AudioBufferSource::prepareToPlay(int, double) { }
 
 // Release all resources
-void AudioBufferSource::releaseResources() { };
+void AudioBufferSource::releaseResources() { }
 
 // Set the next read position of this source
 void AudioBufferSource::setNextReadPosition (long long newPosition)
 {
 	// set position (if the new position is in range)
-	if (newPosition > 0 && newPosition < buffer->getNumSamples())
+	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
 		position = newPosition;
-};
+}
 
 // Get the next read position of this source
 long long AudioBufferSource::getNextReadPosition() const
 {
 	// return the next read position
 	return position;
-};
+}
 
 // Get the total length (in samples) of this audio source
 long long AudioBufferSource::getTotalLength() const
 {
 	// Get the length
 	return buffer->getNumSamples();
-};
+}
 
 // Determines if this audio source should repeat when it reaches the end
 bool AudioBufferSource::isLooping() const
 {
 	// return if this source is looping
 	return repeat;
-};
+}
 
 // Set if this audio source should repeat when it reaches the end
 void AudioBufferSource::setLooping (bool shouldLoop)
 {
 	// Set the repeat flag
 	repeat = shouldLoop;
-};
+}
 
+// Update the internal buffer used by this source
+void AudioBufferSource::setBuffer (AudioSampleBuffer *audio_buffer)
+{
+	buffer = audio_buffer;
+	setNextReadPosition(0);
+}

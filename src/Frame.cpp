@@ -251,7 +251,7 @@ float* Frame::GetAudioSamples(int channel)
 }
 
 // Get an array of sample data (all channels interleaved together), using any sample rate
-float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
+float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
 	AudioSampleBuffer *buffer = audio;
@@ -269,35 +269,13 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 	if (new_sample_rate != sample_rate)
 	{
 		// YES, RESAMPLE AUDIO
+		resampler->SetBuffer(audio, sample_rate, new_sample_rate);
 
-		// Get the frame's audio source
-		AudioBufferSource my_source(audio);
-
-		// Create resample source
-		ResamplingAudioSource resample_source(&my_source, false, num_of_channels);
-
-		// Set the sample ratio (original to new sample rate)
-		double source_ratio = double(sample_rate) / double(new_sample_rate);
-		double dest_ratio = double(new_sample_rate) / double(sample_rate);
-		int new_num_of_samples = round(num_of_samples * dest_ratio);
-		resample_source.setResamplingRatio(source_ratio);
-
-		// Prepare to resample
-		resample_source.prepareToPlay(num_of_samples, new_sample_rate);
-
-		// Create a buffer for the newly resampled data
-		resampled_buffer = new AudioSampleBuffer(num_of_channels, new_num_of_samples);
-		const AudioSourceChannelInfo resample_callback_buffer = {resampled_buffer, 0, new_num_of_samples};
-		resample_callback_buffer.clearActiveBufferRegion();
-
-		// Resample the current frame's audio buffer (into the temp callback buffer)
-		resample_source.getNextAudioBlock(resample_callback_buffer);
-
-		// Update buffer pointer to this newly resampled buffer
-		buffer = resampled_buffer;
+		// Resample data, and return new buffer pointer
+		buffer = resampler->GetResampledBuffer();
 
 		// Update num_of_samples
-		num_of_samples = new_num_of_samples;
+		num_of_samples = buffer->getNumSamples();
 	}
 
 	// INTERLEAVE all samples together (channel 1 + channel 2 + channel 1 + channel 2, etc...)
@@ -317,9 +295,6 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, int* sample_count)
 			position++;
 		}
 	}
-
-	// Clean up
-	delete resampled_buffer;
 
 	// Update sample count (since it might have changed due to resampling)
 	*sample_count = num_of_samples;

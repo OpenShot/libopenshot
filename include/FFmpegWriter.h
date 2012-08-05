@@ -68,6 +68,8 @@ namespace openshot
 	    int initial_audio_input_frame_size;
 	    int audio_input_position;
 
+	    AudioResampler *resampler;
+
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
 

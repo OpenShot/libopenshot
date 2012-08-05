@@ -37,6 +37,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 # Create shared openshot library
 add_library(openshot SHARED
 			AudioBufferSource.cpp
+			AudioResampler.cpp
 			Cache.cpp
 			Coordinate.cpp
 			FileReaderBase.cpp

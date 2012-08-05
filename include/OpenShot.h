@@ -25,6 +25,8 @@
  * you can use it on your next video editing application.
  */
 
+#include "AudioBufferSource.h"
+#include "AudioResampler.h"
 #include "Cache.h"
 #include "Coordinate.h"
 #include "Exceptions.h"

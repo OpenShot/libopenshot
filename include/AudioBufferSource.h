@@ -34,7 +34,7 @@ namespace openshot
 
 	public:
 		/// Default constructor
-		AudioBufferSource(AudioSampleBuffer *buffer);
+		AudioBufferSource(AudioSampleBuffer *audio_buffer);
 
 		/// Destructor
 		~AudioBufferSource();
@@ -62,6 +62,9 @@ namespace openshot
 
 		/// Set if this audio source should repeat when it reaches the end
 		void setLooping (bool shouldLoop);
+
+		/// Update the internal buffer used by this source
+		void setBuffer (AudioSampleBuffer *audio_buffer);
 	};
 
 }

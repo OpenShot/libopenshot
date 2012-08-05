@@ -16,8 +16,8 @@ int main()
 {
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
-	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("../../src/examples/piano.wav");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
@@ -30,11 +30,11 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.webm");
+		FFmpegWriter w("/home/jonathan/output.ogg");
 		w.DisplayInfo();
 
 		// Set options
-		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 350, 200, Fraction(1,1), false, false, 384000);
+		//w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 350, 200, Fraction(1,1), false, false, 384000);
 		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 
 		// Write header
@@ -46,7 +46,7 @@ int main()
 		// Set Options
 		//w.SetOption(VIDEO_STREAM, "quality", "good");
 
-		for (int frame = 1; frame <= 1000; frame++)
+		for (int frame = 1; frame <= 120; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 
