@@ -626,7 +626,7 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		int averror = av_interleaved_write_frame(oc, &pkt);
 		if (averror != 0)
 		{
-			string error_description = av_err2str(averror);
+			//string error_description = av_err2str(averror);
 			throw ErrorEncodingAudio("Error while writing audio frame", frame->number);
 		}
 
@@ -726,7 +726,7 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 		int averror = av_interleaved_write_frame(oc, &pkt);
 		if (averror != 0)
 		{
-			string error_description = av_err2str(averror);
+			//string error_description = av_err2str(averror);
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
 
@@ -755,7 +755,7 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 			int averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
-				string error_description = av_err2str(averror);
+				//string error_description = av_err2str(averror);
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
 
