@@ -78,7 +78,8 @@ SWIG_ADD_MODULE(openshot python openshot.i)
 SWIG_LINK_LIBRARIES(openshot ${PYTHON_LIBRARIES} openshot)
 
 ############### INSTALL HEADERS & LIBRARY ################
-INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/include DESTINATION include/libopenshot FILES_MATCHING PATTERN "*.h")
+file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
+INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION share/python/libopenshot)
 
 IF (UNIX)
