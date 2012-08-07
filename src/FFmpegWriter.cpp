@@ -617,7 +617,7 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
 
 		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
-			pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
+			pkt.pts = c->coded_frame->pts;
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = audio_st->index;
 		pkt.data = audio_outbuf;
@@ -744,7 +744,7 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 			av_init_packet(&pkt);
 
 			if (c->coded_frame->pts != AV_NOPTS_VALUE)
-				pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
+				pkt.pts= c->coded_frame->pts;
 			if(c->coded_frame->key_frame)
 				pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.stream_index= video_st->index;
