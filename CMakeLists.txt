@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 project(openshot)
 set(PROJECT_VERSION 1.3.0)
 MESSAGE("--------------------------------------------------------------")
-message("---- Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
+MESSAGE("---- Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
 MESSAGE("--------------------------------------------------------------")
 
 IF (WIN32)
@@ -23,3 +23,6 @@ add_subdirectory(tests)
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
+
+file(GLOB_RECURSE doc_files ${CMAKE_CURRENT_BINARY_DIR}/doc/html/*.*)
+INSTALL(FILES ${doc_files} DESTINATION share/doc/libopenshot)
