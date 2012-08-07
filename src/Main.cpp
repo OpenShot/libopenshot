@@ -17,9 +17,9 @@ int main()
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
@@ -46,7 +46,7 @@ int main()
 		// Set Options
 		//w.SetOption(VIDEO_STREAM, "quality", "good");
 
-		for (int frame = 1; frame <= 500; frame++)
+		for (int frame = 1; frame <= 300; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 
