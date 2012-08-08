@@ -6,7 +6,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################### SETUP PROJECT ###################
 project(openshot)
-set(PROJECT_VERSION 1.3.0)
+set(PROJECT_VERSION 0.1.2)
+set(SO_VERSION 0.1.0)
 MESSAGE("--------------------------------------------------------------")
 MESSAGE("---- Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
 MESSAGE("--------------------------------------------------------------")

@@ -51,6 +51,12 @@ add_library(openshot SHARED
 			KeyFrame.cpp
 			Player.cpp
 			Point.cpp)
+			
+# Set SONAME and other library properties
+set_target_properties(openshot
+			PROPERTIES
+			VERSION ${PROJECT_VERSION}
+			SOVERSION ${SO_VERSION})
 
 # Link all referenced libraries
 target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY}) #${GTK2_LIBRARIES}
