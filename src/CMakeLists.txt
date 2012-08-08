@@ -81,6 +81,7 @@ SWIG_LINK_LIBRARIES(openshot ${PYTHON_LIBRARIES} openshot)
 file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
 INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION share/python/libopenshot)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/cmake/Python/__init__.py DESTINATION share/python/libopenshot)
 
 IF (UNIX)
 	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libopenshot.so DESTINATION lib)
