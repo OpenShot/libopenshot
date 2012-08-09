@@ -91,19 +91,23 @@ INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 # Library
 INSTALL(TARGETS openshot DESTINATION lib)
 
+# TEST Install
+INSTALL(TARGETS _openshot DESTINATION lib)
+
+
 # Python bindings
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION share/python/libopenshot)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/cmake/Python/__init__.py DESTINATION share/python/libopenshot)
 
 # Python swig library (not sure if there is a better way to do this)
-IF (UNIX)
-	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python/libopenshot)
-ELSE (UNIX)
-	IF (WIN32)
-		INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.dll DESTINATION share/python/libopenshot)
-	ELSE (WIN32)
-		IF (APPLE)
-			INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python)
-		ENDIF(APPLE)
-	ENDIF(WIN32)
-ENDIF(UNIX)
+#IF (UNIX)
+#	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python/libopenshot)
+#ELSE (UNIX)
+#	IF (WIN32)
+#		INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.dll DESTINATION share/python/libopenshot)
+#	ELSE (WIN32)
+#		IF (APPLE)
+#			INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python)
+#		ENDIF(APPLE)
+#	ENDIF(WIN32)
+#ENDIF(UNIX)
