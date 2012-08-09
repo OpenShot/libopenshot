@@ -88,26 +88,12 @@ SWIG_LINK_LIBRARIES(openshot ${PYTHON_LIBRARIES} openshot)
 file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
 INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 
-# Library
+# Install primary library
 INSTALL(TARGETS openshot DESTINATION lib)
 
-# TEST Install
-INSTALL(TARGETS _openshot DESTINATION lib)
+# Install Swig python library
+INSTALL(TARGETS _openshot DESTINATION share/pyshared/libopenshot)
 
-
-# Python bindings
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION share/python/libopenshot)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/cmake/Python/__init__.py DESTINATION share/python/libopenshot)
-
-# Python swig library (not sure if there is a better way to do this)
-#IF (UNIX)
-#	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python/libopenshot)
-#ELSE (UNIX)
-#	IF (WIN32)
-#		INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.dll DESTINATION share/python/libopenshot)
-#	ELSE (WIN32)
-#		IF (APPLE)
-#			INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION share/python)
-#		ENDIF(APPLE)
-#	ENDIF(WIN32)
-#ENDIF(UNIX)
+# Install Python bindings
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION share/pyshared/libopenshot)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/cmake/Python/__init__.py DESTINATION share/pyshared/libopenshot)
