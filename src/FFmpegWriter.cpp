@@ -195,7 +195,7 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 		option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
 
 	// Was option found?
-	if (option || (name == "g" || name == "qmin" || name == "qmax"))
+	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision"))
 	{
 		// Check for specific named options
 		if (name == "g")
@@ -203,12 +203,20 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 			convert >> c->gop_size;
 
 		else if (name == "qmin")
-			// minimum video quantizer scale
+			// minimum quantizer
 			convert >> c->qmin;
 
 		else if (name == "qmax")
-			// maximum video quantizer scale
+			// maximum quantizer
 			convert >> c->qmax;
+
+		else if (name == "max_b_frames")
+			// maximum number of B-frames between non-B-frames
+			convert >> c->max_b_frames;
+
+		else if (name == "mb_decision")
+			// macroblock decision mode
+			convert >> c->mb_decision;
 
 		else
 			// Set AVOption
@@ -219,8 +227,8 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 
 }
 
-// Write the file header (after the options are set)
-void FFmpegWriter::WriteHeader()
+// Prepare & initialize streams and open codecs
+void FFmpegWriter::PrepareStreams()
 {
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
@@ -233,6 +241,13 @@ void FFmpegWriter::WriteHeader()
 		open_video(oc, video_st);
 	if (info.has_audio && audio_st)
 		open_audio(oc, audio_st);
+}
+
+// Write the file header (after the options are set)
+void FFmpegWriter::WriteHeader()
+{
+	if (!info.has_audio && !info.has_video)
+		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
 	// Open the output file, if needed
 	if (!(fmt->flags & AVFMT_NOFILE)) {

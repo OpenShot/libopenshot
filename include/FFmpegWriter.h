@@ -124,6 +124,9 @@ namespace openshot
 		/// Set custom options (some codecs accept additional params)
 		void SetOption(Stream_Type stream, string name, string value);
 
+		/// Prepare & initialize streams and open codecs
+		void PrepareStreams();
+
 		/// Write the file header (after the options are set)
 		void WriteHeader();
 

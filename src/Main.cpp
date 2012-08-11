@@ -37,11 +37,16 @@ int main()
 		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 384000);
 		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 
+		// Prepare Streams
+		w.PrepareStreams();
+
 		// Set Options
-//		w.SetOption(VIDEO_STREAM, "quality", "good");
-//		w.SetOption(VIDEO_STREAM, "g", "120");
-//		w.SetOption(VIDEO_STREAM, "qmin", "10");
-//		w.SetOption(VIDEO_STREAM, "qmax", "42");
+		w.SetOption(VIDEO_STREAM, "quality", "good");
+		w.SetOption(VIDEO_STREAM, "g", "5");
+		w.SetOption(VIDEO_STREAM, "qmin", "10");
+		w.SetOption(VIDEO_STREAM, "qmax", "42");
+		//w.SetOption(VIDEO_STREAM, "max_b_frames", "2");
+		//w.SetOption(VIDEO_STREAM, "mb_decision", "2");
 
 		// Write header
 		w.WriteHeader();
