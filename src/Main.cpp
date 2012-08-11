@@ -30,12 +30,18 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.mp3");
+		FFmpegWriter w("/home/jonathan/output.webm");
 		w.DisplayInfo();
 
 		// Set options
-		//w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 720, 480, Fraction(1,1), false, false, 384000);
-		w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
+		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 384000);
+		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
+
+		// Set Options
+//		w.SetOption(VIDEO_STREAM, "quality", "good");
+//		w.SetOption(VIDEO_STREAM, "g", "120");
+//		w.SetOption(VIDEO_STREAM, "qmin", "10");
+//		w.SetOption(VIDEO_STREAM, "qmax", "42");
 
 		// Write header
 		w.WriteHeader();
@@ -43,10 +49,7 @@ int main()
 		// Output stream info
 		w.OutputStreamInfo();
 
-		// Set Options
-		//w.SetOption(VIDEO_STREAM, "quality", "good");
-
-		for (int frame = 1; frame <= 300; frame++)
+		for (int frame = 1; frame <= 500; frame++)
 		{
 			Frame f = r.GetFrame(frame);
 

@@ -179,6 +179,7 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 {
 	// Declare codec context
 	AVCodecContext *c = NULL;
+	stringstream convert(value);
 
 	if (info.has_video && stream == VIDEO_STREAM)
 		c = video_st->codec;
@@ -194,9 +195,25 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 		option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
 
 	// Was option found?
-	if (option)
-		// Set AVOption
-		av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
+	if (option || (name == "g" || name == "qmin" || name == "qmax"))
+	{
+		// Check for specific named options
+		if (name == "g")
+			// Set gop_size
+			convert >> c->gop_size;
+
+		else if (name == "qmin")
+			// minimum video quantizer scale
+			convert >> c->qmin;
+
+		else if (name == "qmax")
+			// maximum video quantizer scale
+			convert >> c->qmax;
+
+		else
+			// Set AVOption
+			av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
+	}
 	else
 		throw InvalidOptions("The option is not valid for this codec.", path);
 
