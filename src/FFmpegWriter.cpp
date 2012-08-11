@@ -195,7 +195,8 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 		option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
 
 	// Was option found?
-	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision"))
+	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
+			       name == "level" || name == "profile"))
 	{
 		// Check for specific named options
 		if (name == "g")
@@ -217,6 +218,14 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 		else if (name == "mb_decision")
 			// macroblock decision mode
 			convert >> c->mb_decision;
+
+		else if (name == "level")
+			// set codec level
+			convert >> c->level;
+
+		else if (name == "profile")
+			// set codec profile
+			convert >> c->profile;
 
 		else
 			// Set AVOption

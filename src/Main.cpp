@@ -41,10 +41,13 @@ int main()
 		w.PrepareStreams();
 
 		// Set Options
-		w.SetOption(VIDEO_STREAM, "quality", "good");
-		w.SetOption(VIDEO_STREAM, "g", "5");
+		//w.SetOption(VIDEO_STREAM, "quality", "good");
+		w.SetOption(VIDEO_STREAM, "g", "120");
 		w.SetOption(VIDEO_STREAM, "qmin", "10");
 		w.SetOption(VIDEO_STREAM, "qmax", "42");
+		w.SetOption(VIDEO_STREAM, "profile", "0");
+		w.SetOption(VIDEO_STREAM, "level", "216");
+		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
 		//w.SetOption(VIDEO_STREAM, "max_b_frames", "2");
 		//w.SetOption(VIDEO_STREAM, "mb_decision", "2");
 
