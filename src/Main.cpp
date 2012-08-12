@@ -62,9 +62,12 @@ int main()
 		// Output stream info
 		w.OutputStreamInfo();
 
-		for (int frame = 1; frame <= 500; frame++)
+		for (int frame = 300; frame <= 450; frame++)
 		{
 			Frame f = r.GetFrame(frame);
+
+			// Apply effect
+			f.AddEffect("oilPaint");
 
 			// Write frame
 			cout << "Write frame " << f.number << endl;

@@ -435,6 +435,19 @@ void Frame::AddAudio(int destChannel, int destStartSample, const float* source, 
 	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
 }
 
+// Experimental method to add effects to this frame
+void Frame::AddEffect(string name)
+{
+	if (name == "negate")
+		image->negate(false);
+	else if (name == "flip")
+		image->flip();
+	else if (name == "oilPaint")
+		image->oilPaint(3.0);
+	else if (name == "swirl")
+		image->swirl(30.0);
+}
+
 // Play audio samples for this frame
 void Frame::Play()
 {

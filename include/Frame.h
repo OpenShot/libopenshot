@@ -68,6 +68,15 @@ namespace openshot
 		/// Assignment operator
 		Frame& operator= (const Frame& other);
 
+		/// Add (or replace) pixel data to the frame
+		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
+
+		/// Add audio samples to a specific channel
+		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
+
+		/// Experimental method to add effects to this frame
+		void AddEffect(string name);
+
 		/// Copy data and pointers from another Frame instance
 		void DeepCopy(const Frame& other);
 
@@ -104,12 +113,6 @@ namespace openshot
 		/// Get pixel data (for a resized image)
 		const Magick::PixelPacket* GetPixels(unsigned int width, unsigned int height, int frame);
 
-		/// Set Pixel Aspect Ratio
-		void SetPixelRatio(int num, int den);
-
-		/// Set Sample Rate, used for playback (Play() method)
-		void SetSampleRate(int sample_rate);
-
 		/// Get height of image
 		int GetHeight();
 
@@ -119,15 +122,14 @@ namespace openshot
 		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 		void Save(string path, float scale);
 
-		/// Add (or replace) pixel data to the frame
-		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
+		/// Set Pixel Aspect Ratio
+		void SetPixelRatio(int num, int den);
 
-		/// Add audio samples to a specific channel
-		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
+		/// Set Sample Rate, used for playback (Play() method)
+		void SetSampleRate(int sample_rate);
 
 		/// Play audio samples for this frame
 		void Play();
-
 	};
 
 }
