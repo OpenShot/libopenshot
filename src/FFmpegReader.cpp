@@ -139,11 +139,12 @@ void FFmpegReader::UpdateAudioInfo()
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
 
-	// Timebase of audio stream
-	info.duration = aStream->duration * info.audio_timebase.ToDouble();
+	// Get timebase of audio stream (if valid)
+	if (aStream->duration > 0.0f)
+		info.duration = aStream->duration * info.audio_timebase.ToDouble();
 
 	// Check for an invalid video length
-	if (info.has_video && info.video_length == 0)
+	if (info.has_video && info.video_length <= 0)
 	{
 		// Calculate the video length from the audio duration
 		info.video_length = info.duration * info.fps.ToDouble();
@@ -211,6 +212,12 @@ void FFmpegReader::UpdateVideoInfo()
 
 	// Set the duration in seconds, and video length (# of frames)
 	info.duration = pStream->duration * info.video_timebase.ToDouble();
+
+	// Check for valid duration
+	if (info.duration <= 0.0f && pFormatCtx->duration >= 0)
+		// Use the format's duration
+		info.duration = pFormatCtx->duration / AV_TIME_BASE;
+
 	info.video_length = round(info.duration * info.fps.ToDouble());
 
 	// Override an invalid framerate
