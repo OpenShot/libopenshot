@@ -196,7 +196,7 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
-			       name == "level" || name == "profile"))
+			       name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate"  || name == "rc_max_rate"))
 	{
 		// Check for specific named options
 		if (name == "g")
@@ -204,28 +204,40 @@ void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
 			convert >> c->gop_size;
 
 		else if (name == "qmin")
-			// minimum quantizer
+			// Minimum quantizer
 			convert >> c->qmin;
 
 		else if (name == "qmax")
-			// maximum quantizer
+			// Maximum quantizer
 			convert >> c->qmax;
 
 		else if (name == "max_b_frames")
-			// maximum number of B-frames between non-B-frames
+			// Maximum number of B-frames between non-B-frames
 			convert >> c->max_b_frames;
 
 		else if (name == "mb_decision")
-			// macroblock decision mode
+			// Macroblock decision mode
 			convert >> c->mb_decision;
 
 		else if (name == "level")
-			// set codec level
+			// Set codec level
 			convert >> c->level;
 
 		else if (name == "profile")
-			// set codec profile
+			// Set codec profile
 			convert >> c->profile;
+
+		else if (name == "slices")
+			// Indicates number of picture subdivisions
+			convert >> c->slices;
+
+		else if (name == "rc_min_rate")
+			// Minimum bitrate
+			convert >> c->rc_min_rate;
+
+		else if (name == "rc_max_rate")
+			// Maximum bitrate
+			convert >> c->rc_max_rate;
 
 		else
 			// Set AVOption
@@ -471,8 +483,8 @@ AVStream* FFmpegWriter::add_video_stream()
 	 of which frame timestamps are represented. for fixed-fps content,
 	 timebase should be 1/framerate and timestamp increments should be
 	 identically 1. */
-	c->time_base.den = info.video_timebase.den;
 	c->time_base.num = info.video_timebase.num;
+	c->time_base.den = info.video_timebase.den;
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
 	c->pix_fmt = PIX_FMT_YUV420P;
 	if (c->codec_id == CODEC_ID_MPEG2VIDEO) {
@@ -658,7 +670,8 @@ void FFmpegWriter::write_audio_packet(Frame* frame)
 		pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
 
 		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
-			pkt.pts = c->coded_frame->pts;
+			// Set the correct rescaled timestamp
+			pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = audio_st->index;
 		pkt.data = audio_outbuf;
@@ -784,8 +797,9 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 			AVPacket pkt;
 			av_init_packet(&pkt);
 
-			if (c->coded_frame->pts != AV_NOPTS_VALUE)
-				pkt.pts= c->coded_frame->pts;
+			if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+				// Set the correct rescaled timestamp
+				pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
 			if(c->coded_frame->key_frame)
 				pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.stream_index= video_st->index;
