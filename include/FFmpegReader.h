@@ -67,6 +67,10 @@ namespace openshot
 		bool check_interlace;
 		bool check_fps;
 
+		int num_of_rescalers;
+		int rescaler_position;
+		vector<SwsContext*> image_rescalers;
+
 		Cache final_cache;
 		Cache working_cache;
 		map<AVPacket*, AVPacket*> packets;
@@ -105,7 +109,7 @@ namespace openshot
 		int ConvertVideoPTStoFrame(int pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		Frame CreateFrame(int requested_frame);
+		Frame* CreateFrame(int requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
 		audio_packet_location GetAudioPTSLocation(int pts);
@@ -128,6 +132,9 @@ namespace openshot
 		/// Get the PTS for the current video packet
 		int GetVideoPTS();
 
+		/// Init a collection of software rescalers (thread safe)
+		void InitScalers();
+
 		/// Open File - which is called by the constructor automatically
 		void Open();
 
@@ -138,13 +145,16 @@ namespace openshot
 		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		Frame ReadStream(int requested_frame);
+		Frame* ReadStream(int requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
 		void RemoveAVFrame(AVFrame*);
 
 		/// Remove AVPacket from cache (and deallocate it's memory)
 		void RemoveAVPacket(AVPacket*);
+
+		/// Remove & deallocate all software scalers
+		void RemoveScalers();
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 		void Seek(int requested_frame);
@@ -175,7 +185,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame GetFrame(int requested_frame);
+		Frame* GetFrame(int requested_frame);
 	};
 
 }

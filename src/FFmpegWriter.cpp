@@ -30,7 +30,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		converted_audio(NULL), initial_audio_input_frame_size(0), resampler(NULL)
+		converted_audio(NULL), initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -299,10 +299,10 @@ void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 	for (int number = start; number <= length; number++)
 	{
 		// Get the frame
-		Frame f = reader->GetFrame(number);
+		Frame *f = reader->GetFrame(number);
 
 		// Encode frame
-		WriteFrame(&f);
+		WriteFrame(f);
 	}
 }
 
@@ -320,6 +320,9 @@ void FFmpegWriter::WriteTrailer()
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
 	avcodec_close(st->codec);
+
+	// Deallocate swscontext
+	sws_freeContext(img_convert_ctx);
 
 	//av_free(picture->data[0]);
 	//av_free(picture);
@@ -747,19 +750,15 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 
 
 	// Resize image and convet pixel format to correct output format (for example: RGB to YUV420P)
-	SwsContext *img_convert_ctx = NULL;
-
-	// Init the software scaler from FFMpeg
-	img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+	if (!img_convert_ctx)
+		// Init the software scaler from FFMpeg
+		img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 	if (img_convert_ctx == NULL)
 		throw OutOfMemory("Could not allocate SwsContext.", path);
 
 	// Resize & convert pixel format
 	sws_scale(img_convert_ctx, frame_source->data, frame_source->linesize, 0,
 			frame->GetHeight(), frame_final->data, frame_final->linesize);
-
-	// Deallocate swscontext
-	sws_freeContext(img_convert_ctx);
 
 
 	// Encode Picture and Write Frame

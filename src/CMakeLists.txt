@@ -33,6 +33,9 @@ FIND_PACKAGE(OpenMP)
 # Add the OpenMP compiler flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
+###############  PROFILING  #################
+#set(PROFILER "/usr/lib/libprofiler.so")
+
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED
@@ -59,7 +62,7 @@ set_target_properties(openshot
 			SOVERSION ${SO_VERSION})
 
 # Link all referenced libraries
-target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY}) #${GTK2_LIBRARIES}
+target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY} ${PROFILER})
 
 
 ############### TEST EXECUTABLE ################
@@ -67,7 +70,7 @@ target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LI
 add_executable(example Main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(example openshot)
+target_link_libraries(example openshot ${PROFILER} )
 
 ############### SWIG PYTHON BINDINGS ################
 FIND_PACKAGE(SWIG REQUIRED)

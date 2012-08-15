@@ -28,7 +28,7 @@ namespace openshot {
 	class Cache {
 	private:
 		int max_frames;				///< This is the max number of "previous" frames to cache
-		map<int, Frame> frames;		///< This map holds the frame number and Frame objects
+		map<int, Frame*> frames;		///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 		int current_frame;			///< This is the last requested frame (used to dynamically adjust the max_frames)
 
@@ -43,19 +43,22 @@ namespace openshot {
 		Cache(int max_frames);
 
 		/// Add a Frame to the cache
-		void Add(int frame_number, Frame frame);
+		void Add(int frame_number, Frame* frame);
 
 		/// Check for the existence of a frame in the cache
 		bool Exists(int frame_number);
 
 		/// Get a frame from the cache
-		Frame GetFrame(int frame_number);
+		Frame* GetFrame(int frame_number);
 
 		/// Get the smallest frame number
-		Frame GetSmallestFrame();
+		Frame* GetSmallestFrame();
 
 		/// Remove a specific frame
 		void Remove(int frame_number);
+
+		/// Remove a specific frame
+		void Remove(int frame_number, bool delete_data);
 
 		/// Clear the cache of all frames
 		void Clear();

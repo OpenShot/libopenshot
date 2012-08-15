@@ -25,11 +25,11 @@ void Player::SetFrameCallback(CallbackPtr p_callback, void *p_pythonmethod)
 //	double *Pixels = new double[100];
 //	for (int i = 0; i < 100; i++)
 //		Pixels[i] = i + 100;
-	Frame f = reader->GetFrame(300);
+	Frame *f = reader->GetFrame(300);
 
 	// invoke method pointer 10 times
 	for (int i = 0; i < 30; i++)
-		callback(i, f.GetWidth(), f.GetHeight(), f.GetPixels(), pythonmethod);
+		callback(i, f->GetWidth(), f->GetHeight(), f->GetPixels(), pythonmethod);
 };
 
 // Manually invoke function (if any)
@@ -41,11 +41,11 @@ void Player::Push()
 //	double *Pixels = new double[100];
 //	for (int i = 0; i < 100; i++)
 //		Pixels[i] = i + 200;
-	Frame f = reader->GetFrame(500);
+	Frame *f = reader->GetFrame(500);
 
 	// manually invoke method
 	for (int i = 30; i < 20; i++)
-		callback(i, f.GetWidth(), f.GetHeight(), f.GetPixels(), pythonmethod);
+		callback(i, f->GetWidth(), f->GetHeight(), f->GetPixels(), pythonmethod);
 }
 
 // Play the video
@@ -79,7 +79,7 @@ cout << "START PREPARING SURFACES..." << endl;
 for (int stuff = 0; stuff < number_of_cycles; stuff++)
 {
 	// Get pointer to pixels of image.
-	Frame f = reader->GetFrame(300 + stuff);
+	Frame *f = reader->GetFrame(300 + stuff);
 
 	// Create YUV Overlay
 	SDL_Overlay *bmp;
@@ -88,7 +88,7 @@ for (int stuff = 0; stuff < number_of_cycles; stuff++)
 
 	// Get pixels for resized frame (for reduced color needed by YUV420p)
 	int divider = 2;
-	const Magick::PixelPacket *reduced_color = f.GetPixels(reader->info.width / divider, reader->info.height / divider, f.number);
+	const Magick::PixelPacket *reduced_color = f->GetPixels(reader->info.width / divider, reader->info.height / divider, f->number);
 	int number_of_colors = (reader->info.width / divider) * (reader->info.height / divider);
 
 	int pixel_index = 0;
@@ -97,7 +97,7 @@ for (int stuff = 0; stuff < number_of_cycles; stuff++)
 	for (int row = 0; row < screen->h; row++) {
 		// Get array of pixels for this row
 		//cout << "row: " << row << endl;
-		const Magick::PixelPacket *imagepixels = f.GetPixels(row);
+		const Magick::PixelPacket *imagepixels = f->GetPixels(row);
 
 		// Loop through pixels on this row
 		for (int column = 0; column < screen->w; column++) {

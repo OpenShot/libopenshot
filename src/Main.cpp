@@ -14,12 +14,32 @@ void FrameReady(int number)
 
 int main()
 {
+//	Cache c;
+//	// Loop 30 times
+//	for (int i = 0; i < 30; i++)
+//	{
+//		// Add blank frame to the cache
+//		Frame *f = new Frame();
+//		c.Add(i, f);
+//
+//
+//		if (i == 27 || i == 28)
+//			c.Remove(i);
+//		else
+//			c.SetCurrentFrame(i);
+//
+//	}
+//	cout << c.Count() << endl;
+//	c.Clear();
+//	cout << c.Count() << endl;
+
+
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
-		openshot::FFmpegReader r("../../src/examples/piano.wav");
+	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
@@ -32,15 +52,15 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.webm");
-		w.DisplayInfo();
+		//FFmpegWriter w("/home/jonathan/output.webm");
+		//w.DisplayInfo();
 
 		// Set options
-		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
+		//w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 		//w.SetVideoOptions(true, "libvpx", Fraction(25, 1), 640, 360, Fraction(1,1), false, false, 2000000);
 
 		// Prepare Streams
-		w.PrepareStreams();
+		//w.PrepareStreams();
 
 		// Set Options
 //		w.SetOption(VIDEO_STREAM, "quality", "good");
@@ -59,28 +79,28 @@ int main()
 //		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
 
 		// Write header
-		w.WriteHeader();
+		//w.WriteHeader();
 
 		// Output stream info
-		w.OutputStreamInfo();
+		//w.OutputStreamInfo();
 
-		for (int frame = 1; frame <= 120; frame++)
+		for (int frame = 1; frame <= 1000; frame++)
 		{
-			Frame f = r.GetFrame(frame);
+			Frame *f = r.GetFrame(frame);
 
 			// Apply effect
-			//f.AddEffect("oilPaint");
+			//f->AddEffect("flip");
 
 			// Write frame
-			cout << "Write frame " << f.number << endl;
-			w.WriteFrame(&f);
+			cout << "Write frame " << f->number << endl;
+			//w.WriteFrame(f);
 		}
 
 		// Write Footer
-		w.WriteTrailer();
+		//w.WriteTrailer();
 
 		// Close writer & reader
-		w.Close();
+		//w.Close();
 		r.Close();
 
 

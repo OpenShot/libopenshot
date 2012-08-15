@@ -16,14 +16,14 @@ TEST(FFmpegReader_Check_Audio_File)
 	FFmpegReader r("../../src/examples/piano.wav");
 
 	// Get frame 1
-	Frame f = r.GetFrame(1);
+	Frame *f = r.GetFrame(1);
 
 	// Get the number of channels and samples
-	float *samples = f.GetAudioSamples(0);
+	float *samples = f->GetAudioSamples(0);
 
 	// Check audio properties
-	CHECK_EQUAL(2, f.GetAudioChannelsCount());
-	CHECK_EQUAL(267, f.GetAudioSamplesCount());
+	CHECK_EQUAL(2, f->GetAudioChannelsCount());
+	CHECK_EQUAL(267, f->GetAudioSamplesCount());
 
 	// Check actual sample values (to be sure the waveform is correct)
 	CHECK_CLOSE(0.0f, samples[0], 0.00001);
@@ -43,10 +43,10 @@ TEST(FFmpegReader_Check_Video_File)
 	FFmpegReader r("../../src/examples/test.mp4");
 
 	// Get frame 1
-	Frame f = r.GetFrame(1);
+	Frame *f = r.GetFrame(1);
 
 	// Get the image data
-	const Magick::PixelPacket* pixels = f.GetPixels(10);
+	const Magick::PixelPacket* pixels = f->GetPixels(10);
 
 	// Check image properties on scanline 10, pixel 112
 	CHECK_EQUAL(5397, pixels[112].red);
@@ -58,7 +58,7 @@ TEST(FFmpegReader_Check_Video_File)
 	f = r.GetFrame(2);
 
 	// Get the next frame
-	pixels = f.GetPixels(10);
+	pixels = f->GetPixels(10);
 
 	// Check image properties on scanline 10, pixel 112
 	CHECK_EQUAL(0, pixels[112].red);

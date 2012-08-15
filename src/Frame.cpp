@@ -13,7 +13,7 @@ using namespace openshot;
 Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(300,200), Magick::Color("red"));
+	image = new Magick::Image(Magick::Geometry(1,1), Magick::Color("red"));
 	audio = new juce::AudioSampleBuffer(channels, 1600);
 
 	// initialize the audio samples to zero (silence)
@@ -25,7 +25,7 @@ Frame::Frame(int number, int width, int height, string color)
 	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
+	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
 	audio = new juce::AudioSampleBuffer(channels, 1600);
 
 	// initialize the audio samples to zero (silence)
@@ -49,7 +49,7 @@ Frame::Frame(int number, int samples, int channels) :
 		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(300, 200), Magick::Color("white"));
+	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white"));
 	audio = new juce::AudioSampleBuffer(channels, samples);
 
 	// initialize the audio samples to zero (silence)
@@ -61,7 +61,7 @@ Frame::Frame(int number, int width, int height, string color, int samples, int c
 	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
+	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
 	audio = new juce::AudioSampleBuffer(channels, samples);
 
 	// initialize the audio samples to zero (silence)
@@ -100,7 +100,6 @@ Frame& Frame::operator= (const Frame& other)
 // Copy data and pointers from another Frame instance
 void Frame::DeepCopy(const Frame& other)
 {
-	// ignore copy if objects are the same
 	number = other.number;
 	image = new Magick::Image(*(other.image));
 	audio = new juce::AudioSampleBuffer(*(other.audio));
@@ -115,7 +114,6 @@ void Frame::DeletePointers()
 	// deallocate image memory
 	delete image;
 	image = NULL;
-	// deallocate audio memory
 	delete audio;
 	audio = NULL;
 }

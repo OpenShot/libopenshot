@@ -5,7 +5,8 @@ using namespace openshot;
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(10), final_cache(10), path(path),
-	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true) {
+	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
+	  rescaler_position(0), num_of_rescalers(32) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -16,12 +17,37 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	// Open the file (if possible)
 	Open();
 
-	// Check for the correct frames per second (only once)
-	//if (info.has_video)
-	//	CheckFPS();
+	// Init rescalers (if video stream detected)
+	if (info.has_video)
+		InitScalers();
 
 	// Get 1st frame
 	GetFrame(1);
+}
+
+// Init a collection of software rescalers (thread safe)
+void FFmpegReader::InitScalers()
+{
+	// Init software rescalers vector (many of them, one for each thread)
+	for (int x = 0; x < num_of_rescalers; x++)
+	{
+		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, info.width,
+				info.height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+		// Add rescaler to vector
+		image_rescalers.push_back(img_convert_ctx);
+	}
+}
+
+// Remove & deallocate all software scalers
+void FFmpegReader::RemoveScalers()
+{
+	// Close all rescalers
+	for (int x = 0; x < num_of_rescalers; x++)
+		sws_freeContext(image_rescalers[x]);
+
+	// Clear vector
+	image_rescalers.clear();
 }
 
 void FFmpegReader::Open()
@@ -115,6 +141,10 @@ void FFmpegReader::Close()
 		avcodec_flush_buffers(aCodecCtx);
 		avcodec_close(aCodecCtx);
 	}
+
+	// Clear image scalers
+	if (info.has_video)
+		RemoveScalers();
 
 	// Clear cache
 	working_cache.Clear();
@@ -232,12 +262,11 @@ void FFmpegReader::UpdateVideoInfo()
 
 }
 
-Frame FFmpegReader::GetFrame(int requested_frame)
+Frame* FFmpegReader::GetFrame(int requested_frame)
 {
 	// Check the cache for this frame
 	if (final_cache.Exists(requested_frame))
 	{
-		cout << "Cached Frame!" << endl;
 		// Return the cached frame
 		return final_cache.GetFrame(requested_frame);
 	}
@@ -258,7 +287,6 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 		if (abs(diff) >= 0 && abs(diff) <= 19)
 		{
 			// Continue walking the stream
-			cout << " >> CLOSE, SO WALK THE STREAM" << endl;
 			return ReadStream(requested_frame);
 		}
 		else
@@ -277,7 +305,7 @@ Frame FFmpegReader::GetFrame(int requested_frame)
 }
 
 // Read the stream until we find the requested Frame
-Frame FFmpegReader::ReadStream(int requested_frame)
+Frame* FFmpegReader::ReadStream(int requested_frame)
 {
 	// Allocate video frame
 	bool end_of_stream = false;
@@ -308,8 +336,11 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				if (packet->stream_index == videoStream)
 				{
 					// Check the status of a seek (if any)
-					#pragma omp critical (openshot_cache)
-					check_seek = CheckSeek(true);
+					if (is_seeking)
+						#pragma omp critical (openshot_cache)
+						check_seek = CheckSeek(true);
+					else
+						check_seek = false;
 
 					if (check_seek)
 						// Jump to the next iteration of this loop
@@ -321,8 +352,6 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 					// Check if the AVFrame is finished and set it
 					if (frame_finished)
 					{
-						cout << endl << "VIDEO PACKET (PTS: " << GetVideoPTS() << ")" << endl;
-
 						// Update PTS / Frame Offset (if any)
 						UpdatePTSOffset(true);
 
@@ -334,11 +363,12 @@ Frame FFmpegReader::ReadStream(int requested_frame)
 				// Audio packet
 				else if (packet->stream_index == audioStream)
 				{
-					cout << "AUDIO PACKET (PTS: " << packet->pts << ")" << endl;
-
 					// Check the status of a seek (if any)
-					#pragma omp critical (openshot_cache)
-					check_seek = CheckSeek(false);
+					if (is_seeking)
+						#pragma omp critical (openshot_cache)
+						check_seek = CheckSeek(false);
+					else
+						check_seek = false;
 
 					if (check_seek)
 						// Jump to the next iteration of this loop
@@ -528,11 +558,17 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	AVPacket *my_packet = packets[packet];
 	AVFrame *my_frame = frames[pFrame];
 
+	// Get a unique rescaler (for this thread)
+	SwsContext *img_convert_ctx = image_rescalers[rescaler_position];
+	rescaler_position++;
+	if (rescaler_position == num_of_rescalers)
+		rescaler_position = 0;
+
 	// Add video frame to list of processing video frames
 	#pragma omp critical (processing_list)
 	processing_video_frames[current_frame] = current_frame;
 
-	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -553,37 +589,21 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		// of AVPicture
 		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGB24, width, height);
 
-		struct SwsContext *img_convert_ctx = NULL;
-
-		// Convert the image into RGB (for ImageMagick++)
-		if (img_convert_ctx == NULL) {
-			img_convert_ctx = sws_getContext(width, height, pix_fmt, width,
-					height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-			if (img_convert_ctx == NULL) {
-				fprintf(stderr, "Cannot initialize the conversion context!\n");
-				exit(1);
-			}
-		}
-
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
 				height, pFrameRGB->data, pFrameRGB->linesize);
 
-		// Deallocate swscontext
-		sws_freeContext(img_convert_ctx);
+		Frame *f = NULL;
+		#pragma omp critical (openshot_cache)
+			// Create or get frame object
+			f = CreateFrame(current_frame);
 
+		// Add Image data to frame
+		f->AddImage(width, height, "RGB", Magick::CharPixel, buffer);
 
 		#pragma omp critical (openshot_cache)
-		{
-			// Create or get frame object
-			Frame f = CreateFrame(current_frame);
-
-			// Add Image data to frame
-			f.AddImage(width, height, "RGB", Magick::CharPixel, buffer);
-
 			// Update working cache
-			my_cache->Add(f.number, f);
-		}
+			my_cache->Add(f->number, f);
 
 		// Free the RGB image
 		av_free(buffer);
@@ -754,28 +774,17 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				#pragma omp critical (processing_list)
 				processing_audio_frames[starting_frame_number] = starting_frame_number;
 
+				Frame *f = NULL;
 				#pragma omp critical (openshot_cache)
-				{
 					// Create or get frame object
-					Frame f = CreateFrame(starting_frame_number);
+					f = CreateFrame(starting_frame_number);
 
-					// Add samples for current channel to the frame
-					f.AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
+				// Add samples for current channel to the frame
+				f->AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
+				#pragma omp critical (openshot_cache)
 					// Add or update cache
-					my_cache->Add(f.number, f);
-
-					// DEBUG
-//					for (int s = start; s<samples; s++)
-//						if (f.number == 1 && s > 500)
-//						{
-//							cout << iterate_channel_buffer[s] << endl;
-//						}
-//						else if (f.number == 2 && s < 34)
-//						{
-//							cout << iterate_channel_buffer[s] << endl;
-//						}
-				}
+					my_cache->Add(f->number, f);
 
 				// Decrement remaining samples
 				remaining_samples -= samples;
@@ -1028,13 +1037,13 @@ int FFmpegReader::GetSamplesPerFrame(int frame_number)
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
-Frame FFmpegReader::CreateFrame(int requested_frame)
+Frame* FFmpegReader::CreateFrame(int requested_frame)
 {
 	// Check working cache
 	if (working_cache.Exists(requested_frame))
 	{
 		// Return existing frame
-		Frame output = working_cache.GetFrame(requested_frame);
+		Frame* output = working_cache.GetFrame(requested_frame);
 
 		return output;
 	}
@@ -1044,9 +1053,9 @@ Frame FFmpegReader::CreateFrame(int requested_frame)
 		int samples_per_frame = GetSamplesPerFrame(requested_frame);
 
 		// Create a new frame on the working cache
-		Frame f(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
-		f.SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
-		f.SetSampleRate(info.sample_rate);
+		Frame *f = new Frame(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
+		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
+		f->SetSampleRate(info.sample_rate);
 
 		working_cache.Add(requested_frame, f);
 
@@ -1081,22 +1090,22 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			break;
 
 		// Get the front frame of working cache
-		Frame f = working_cache.GetSmallestFrame();
+		Frame *f = working_cache.GetSmallestFrame();
 
-		bool is_video_ready = (f.number < smallest_video_frame);
-		bool is_audio_ready = (f.number < smallest_audio_frame);
+		bool is_video_ready = (f->number < smallest_video_frame);
+		bool is_audio_ready = (f->number < smallest_audio_frame);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || working_cache.Count() >= 200)
 		{
 			// Move frame to final cache
-			final_cache.Add(f.number, f);
+			final_cache.Add(f->number, f);
 
 			// Remove frame from working cache
-			working_cache.Remove(f.number);
+			working_cache.Remove(f->number, false);
 
 			// Update last frame processed
-			last_frame = f.number;
+			last_frame = f->number;
 		}
 		else
 			// Stop looping

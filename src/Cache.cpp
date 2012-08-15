@@ -16,7 +16,7 @@ Cache::Cache() : max_frames(20), current_frame(0) { };
 Cache::Cache(int max_frames) : max_frames(max_frames), current_frame(0) { };
 
 // Add a Frame to the cache
-void Cache::Add(int frame_number, Frame frame)
+void Cache::Add(int frame_number, Frame *frame)
 {
 	// Only add frame if it does not exist in the cache
 	if (!frames.count(frame_number))
@@ -24,9 +24,6 @@ void Cache::Add(int frame_number, Frame frame)
 		// Add frame to queue and map
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
-
-		// Clean up older frames (that exceed the max frames)
-		CleanUp();
 	}
 	else
 	{
@@ -47,7 +44,7 @@ bool Cache::Exists(int frame_number)
 }
 
 // Get a frame from the cache
-Frame Cache::GetFrame(int frame_number)
+Frame* Cache::GetFrame(int frame_number)
 {
 	// Does frame exists in cache?
 	if (Exists(frame_number))
@@ -61,7 +58,7 @@ Frame Cache::GetFrame(int frame_number)
 }
 
 // Get the smallest frame number
-Frame Cache::GetSmallestFrame()
+Frame* Cache::GetSmallestFrame()
 {
 	// Loop through frame numbers
 	 deque<int>::iterator itr;
@@ -77,10 +74,10 @@ Frame Cache::GetSmallestFrame()
 }
 
 // Remove a specific frame
-void Cache::Remove(int frame_number)
+void Cache::Remove(int frame_number, bool delete_data)
 {
 	// Get the frame (or throw exception)
-	Frame f = GetFrame(frame_number);
+	Frame *f = GetFrame(frame_number);
 
 	// Loop through frame numbers
 	deque<int>::iterator itr;
@@ -94,17 +91,35 @@ void Cache::Remove(int frame_number)
 		}
 	}
 
+	// Deallocate frame (if requested)
+	if (delete_data)
+		delete frames[frame_number];
+
 	// Remove frame from map
 	frames.erase(frame_number);
+}
+
+// Remove a specific frame
+void Cache::Remove(int frame_number)
+{
+	// Remove and delete frame data
+	Remove(frame_number, true);
 }
 
 // Clear the cache of all frames
 void Cache::Clear()
 {
-	// clear map
-	frames.clear();
+	deque<int>::iterator itr;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	{
+		// Deallocate frame
+		delete frames[*itr];
 
-	// pop each of the frames from the queue... which emptys the queue
+		// Remove frame from map
+		frames.erase(*itr);
+	}
+
+	// pop each of the frames from the queue... which empties the queue
 	while(!frame_numbers.empty()) frame_numbers.pop_back();
 }
 

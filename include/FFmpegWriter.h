@@ -59,6 +59,7 @@ namespace openshot
 	    AVOutputFormat *fmt;
 	    AVFormatContext *oc;
 	    AVStream *audio_st, *video_st;
+	    SwsContext *img_convert_ctx;
 	    double audio_pts, video_pts;
 	    int16_t *samples;
 	    uint8_t *audio_outbuf;
