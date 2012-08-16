@@ -52,55 +52,57 @@ int main()
 		r.DisplayInfo();
 
 		// Create a writer
-		//FFmpegWriter w("/home/jonathan/output.webm");
-		//w.DisplayInfo();
+		FFmpegWriter w("/home/jonathan/output.webm");
+		w.DisplayInfo();
 
 		// Set options
-		//w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
-		//w.SetVideoOptions(true, "libvpx", Fraction(25, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
+		w.SetVideoOptions(true, "libvpx", Fraction(25, 1), 640, 360, Fraction(1,1), false, false, 2000000);
 
 		// Prepare Streams
-		//w.PrepareStreams();
+		w.PrepareStreams();
 
 		// Set Options
-//		w.SetOption(VIDEO_STREAM, "quality", "good");
-//		w.SetOption(VIDEO_STREAM, "g", "120");
-//		w.SetOption(VIDEO_STREAM, "qmin", "11");
-//		w.SetOption(VIDEO_STREAM, "qmax", "51");
-//		w.SetOption(VIDEO_STREAM, "profile", "0");
-//		w.SetOption(VIDEO_STREAM, "speed", "0");
-//		w.SetOption(VIDEO_STREAM, "level", "216");
-//		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
-//		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
-//		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
-//		w.SetOption(VIDEO_STREAM, "slices", "4");
-//		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
-//		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
-//		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
+		w.SetOption(VIDEO_STREAM, "quality", "good");
+		w.SetOption(VIDEO_STREAM, "g", "120");
+		w.SetOption(VIDEO_STREAM, "qmin", "11");
+		w.SetOption(VIDEO_STREAM, "qmax", "51");
+		w.SetOption(VIDEO_STREAM, "profile", "0");
+		w.SetOption(VIDEO_STREAM, "speed", "0");
+		w.SetOption(VIDEO_STREAM, "level", "216");
+		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
+		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
+		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
+		w.SetOption(VIDEO_STREAM, "slices", "4");
+		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
+		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
+		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
 
 		// Write header
-		//w.WriteHeader();
+		w.WriteHeader();
 
 		// Output stream info
-		//w.OutputStreamInfo();
+		w.OutputStreamInfo();
+
+		Frame *f = r.GetFrame(300);
 
 		for (int frame = 1; frame <= 1000; frame++)
 		{
-			Frame *f = r.GetFrame(frame);
+			//Frame *f = r.GetFrame(frame);
 
 			// Apply effect
 			//f->AddEffect("flip");
 
 			// Write frame
 			cout << "Write frame " << f->number << endl;
-			//w.WriteFrame(f);
+			w.WriteFrame(f);
 		}
 
 		// Write Footer
-		//w.WriteTrailer();
+		w.WriteTrailer();
 
 		// Close writer & reader
-		//w.Close();
+		w.Close();
 		r.Close();
 
 
