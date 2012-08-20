@@ -69,8 +69,11 @@ namespace openshot
 	    int audio_input_frame_size;
 	    int initial_audio_input_frame_size;
 	    int audio_input_position;
-
 	    AudioResampler *resampler;
+
+	    deque<Frame*> queued_frames;
+	    deque<Frame*> processed_frames;
+	    map<Frame*, AVFrame*> av_frames;
 
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
@@ -99,11 +102,16 @@ namespace openshot
 		/// open video codec
 		void open_video(AVFormatContext *oc, AVStream *st);
 
+		/// process video frame
+		void process_video_packet(Frame* frame);
+
 		/// write audio frame
 		void write_audio_packet(Frame* frame);
 
 		/// write video frame
-		void write_video_packet(Frame* frame);
+		void write_video_packet(Frame* frame, AVFrame* frame_final);
+
+
 
 	public:
 
@@ -132,11 +140,14 @@ namespace openshot
 		/// Write the file header (after the options are set)
 		void WriteHeader();
 
-		/// Write a single frame
-		void WriteFrame(Frame* frame);
+		/// Add a frame to the stack waiting to be encoded.
+		void AddFrame(Frame* frame);
+
+		/// Write all frames on the stack to the video file.
+		void WriteFrames();
 
 		/// Write a block of frames from a reader
-		void WriteFrame(FileReaderBase* reader, int start, int length);
+		//void WriteFrame(FileReaderBase* reader, int start, int length);
 
 		/// Write the file trailer (after all frames are written)
 		void WriteTrailer();

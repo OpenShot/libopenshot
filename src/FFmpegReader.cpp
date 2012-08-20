@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(10), final_cache(10), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(12), final_cache(12), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
 	  rescaler_position(0), num_of_rescalers(32) {
 

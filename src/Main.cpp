@@ -14,25 +14,6 @@ void FrameReady(int number)
 
 int main()
 {
-//	Cache c;
-//	// Loop 30 times
-//	for (int i = 0; i < 30; i++)
-//	{
-//		// Add blank frame to the cache
-//		Frame *f = new Frame();
-//		c.Add(i, f);
-//
-//
-//		if (i == 27 || i == 28)
-//			c.Remove(i);
-//		else
-//			c.SetCurrentFrame(i);
-//
-//	}
-//	cout << c.Count() << endl;
-//	c.Clear();
-//	cout << c.Count() << endl;
-
 
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
@@ -84,19 +65,29 @@ int main()
 		// Output stream info
 		w.OutputStreamInfo();
 
-		Frame *f = r.GetFrame(300);
+		//Frame *f = r.GetFrame(300);
 
-		for (int frame = 1; frame <= 1000; frame++)
+		for (int frame = 1; frame <= 500; frame++)
 		{
-			//Frame *f = r.GetFrame(frame);
+			Frame *f = r.GetFrame(frame);
 
 			// Apply effect
 			//f->AddEffect("flip");
 
 			// Write frame
-			cout << "Write frame " << f->number << endl;
-			w.WriteFrame(f);
+			cout << "queue frame " << f->number << endl;
+			w.AddFrame(f);
+
+			if (frame % 12 == 0)
+			{
+				cout << "-- Writing frames --" << endl;
+				w.WriteFrames();
+			}
 		}
+
+		// Write remaining frames
+		w.WriteFrames();
+		w.WriteFrames();
 
 		// Write Footer
 		w.WriteTrailer();

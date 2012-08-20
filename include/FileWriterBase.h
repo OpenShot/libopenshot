@@ -62,8 +62,13 @@ namespace openshot
 		/// Information about the current media file
 		WriterInfo info;
 
-		/// This method is required for all derived classes of FileWriterBase
-		virtual void WriteFrame(Frame* frame) = 0;
+		/// This method is required for all derived classes of FileWriterBase.  Add a frame to the stack
+		/// waiting to be encoded.
+		virtual void AddFrame(Frame* frame) = 0;
+
+		/// This method is required for all derived classes of FileWriterBase.  Write all frames on the
+		/// stack.
+		virtual void WriteFrames() = 0;
 
 		/// Initialize the values of the WriterInfo struct.  It is important for derived classes to call
 		/// this method, or the WriterInfo struct values will not be initialized.

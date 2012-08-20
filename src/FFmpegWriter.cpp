@@ -281,30 +281,89 @@ void FFmpegWriter::WriteHeader()
 	avformat_write_header(oc, NULL);
 }
 
-// Write a single frame
-void FFmpegWriter::WriteFrame(Frame* frame)
+// Add a frame to the queue waiting to be encoded.
+void FFmpegWriter::AddFrame(Frame* frame)
 {
-	// Encode and add the frame to the output file
-	if (info.has_video && video_st)
-		write_video_packet(frame);
+	// Add frame pointer to "queue", waiting to be processed the next
+	// time the WriteFrames() method is called.
+	queued_frames.push_back(frame);
+}
 
-	if (info.has_audio && audio_st)
-		write_audio_packet(frame);
+// Write all frames in the queue to the video file.
+void FFmpegWriter::WriteFrames()
+{
+	//omp_set_num_threads(1);
+	#pragma omp parallel
+	{
+		#pragma omp master
+		{
+			// Loop through each queued frame
+			while (!queued_frames.empty())
+			{
+				// Get front frame (from the queue)
+				Frame *frame = queued_frames.front();
+
+				// Add to processed queue
+				processed_frames.push_back(frame);
+
+				// Encode and add the frame to the output file
+				if (info.has_video && video_st)
+					process_video_packet(frame);
+
+				if (info.has_audio && audio_st)
+					write_audio_packet(frame);
+
+
+				// Remove front item
+				queued_frames.pop_front();
+
+			} // end while
+
+		} // end omp master
+
+		// Be sure all threads are finished
+		#pragma omp barrier
+
+	} // end omp parallel
+
+
+	// Loop back through the frames (in order), and write them to the video file
+	while (!processed_frames.empty())
+	{
+		// Get front frame (from the queue)
+		Frame *frame = processed_frames.front();
+
+		if (info.has_video && video_st)
+		{
+			// Get AVFrame
+			AVFrame *frame_final = av_frames[frame];
+
+			// Write frame to video file
+			write_video_packet(frame, frame_final);
+
+			// Remove AVFrame
+			av_frames.erase(frame);
+		}
+
+		// Remove front item
+		processed_frames.pop_front();
+	}
+
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
-{
-	// Loop through each frame (and encoded it)
-	for (int number = start; number <= length; number++)
-	{
-		// Get the frame
-		Frame *f = reader->GetFrame(number);
-
-		// Encode frame
-		WriteFrame(f);
-	}
-}
+//void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+//{
+//	// Loop through each frame (and encoded it)
+//	for (int number = start; number <= length; number++)
+//	{
+//		// Get the frame
+//		Frame *f = reader->GetFrame(number);
+//
+//		// Encode frame
+//		WriteFrame(f);
+//	}
+//}
 
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer()
@@ -723,42 +782,73 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 	return new_av_frame;
 }
 
-// write video frame
-void FFmpegWriter::write_video_packet(Frame* frame)
+// process video frame
+void FFmpegWriter::process_video_packet(Frame* frame)
 {
 	// Get the codec
 	AVCodecContext *c;
 	c = video_st->codec;
 
-	// Allocate an RGB frame & final output frame
-	int bytes_source = 0;
-	int bytes_final = 0;
-	AVFrame *frame_source = allocate_avframe(PIX_FMT_RGB24, frame->GetWidth(), frame->GetHeight(), &bytes_source);
-	AVFrame *frame_final = allocate_avframe(c->pix_fmt, info.width, info.height, &bytes_final);
-
-	// Get a list of pixels from the frame.
-	const Magick::PixelPacket *pixel_packets = frame->GetPixels();
-
-	// Fill the AVFrame with RGB image data
-	for (int packet = 0, row = 0; row < bytes_source; packet++, row+=3)
+	// Initialize the software scaler (if needed)
+	SwsContext *scaler = img_convert_ctx;
+	#pragma omp critical (image_scaler)
 	{
-		// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-		frame_source->data[0][row] = pixel_packets[packet].red;
-		frame_source->data[0][row+1] = pixel_packets[packet].green;
-		frame_source->data[0][row+2] = pixel_packets[packet].blue;
+		if (!scaler)
+			// Init the software scaler from FFMpeg
+			scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+		if (scaler == NULL)
+			throw OutOfMemory("Could not allocate SwsContext.", path);
 	}
 
+	#pragma omp task firstprivate(frame, c, scaler)
+	{
 
-	// Resize image and convet pixel format to correct output format (for example: RGB to YUV420P)
-	if (!img_convert_ctx)
-		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-	if (img_convert_ctx == NULL)
-		throw OutOfMemory("Could not allocate SwsContext.", path);
+		// Allocate an RGB frame & final output frame
+		int bytes_source = 0;
+		int bytes_final = 0;
+		AVFrame *frame_source = allocate_avframe(PIX_FMT_RGB24, frame->GetWidth(), frame->GetHeight(), &bytes_source);
+		AVFrame *frame_final = allocate_avframe(c->pix_fmt, info.width, info.height, &bytes_final);
 
-	// Resize & convert pixel format
-	sws_scale(img_convert_ctx, frame_source->data, frame_source->linesize, 0,
-			frame->GetHeight(), frame_final->data, frame_final->linesize);
+		// Get a list of pixels from the frame.
+		const Magick::PixelPacket *pixel_packets = frame->GetPixels();
+
+		// Fill the AVFrame with RGB image data
+		for (int packet = 0, row = 0; row < bytes_source; packet++, row+=3)
+		{
+			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
+			frame_source->data[0][row] = pixel_packets[packet].red;
+			frame_source->data[0][row+1] = pixel_packets[packet].green;
+			frame_source->data[0][row+2] = pixel_packets[packet].blue;
+		}
+
+//		SwsContext *scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+//		if (scaler == NULL)
+//			throw OutOfMemory("Could not allocate SwsContext.", path);
+
+		// Resize & convert pixel format
+		#pragma omp critical (image_scaler)
+		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
+				frame->GetHeight(), frame_final->data, frame_final->linesize);
+
+		// Add resized AVFrame to av_frames map
+		#pragma omp critical (av_frames)
+		av_frames[frame] = frame_final;
+
+		// Deallocate memory
+		av_free(frame_source->data[0]);
+		av_free(frame_source);
+
+	} // end task
+
+
+}
+
+// write video frame
+void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
+{
+	// Get the codec
+	AVCodecContext *c;
+	c = video_st->codec;
 
 
 	// Encode Picture and Write Frame
@@ -819,11 +909,10 @@ void FFmpegWriter::write_video_packet(Frame* frame)
 	}
 
 	// Deallocate memory
-	av_free(frame_source->data[0]);
-	av_free(frame_source);
 	av_free(frame_final->data[0]);
 	av_free(frame_final);
 	delete[] video_outbuf;
+
 }
 
 // Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
