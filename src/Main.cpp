@@ -65,7 +65,7 @@ int main()
 		// Output stream info
 		w.OutputStreamInfo();
 
-		//Frame *f = r.GetFrame(300);
+		//Frame *f = r.GetFrame(1);
 
 		for (int frame = 1; frame <= 500; frame++)
 		{
@@ -75,7 +75,7 @@ int main()
 			//f->AddEffect("flip");
 
 			// Write frame
-			cout << "queue frame " << f->number << endl;
+			cout << "queue frame " << frame << endl;
 			w.AddFrame(f);
 
 			if (frame % 12 == 0)

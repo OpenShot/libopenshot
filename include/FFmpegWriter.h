@@ -63,7 +63,6 @@ namespace openshot
 	    double audio_pts, video_pts;
 	    int16_t *samples;
 	    uint8_t *audio_outbuf;
-		int16_t *converted_audio;
 
 	    int audio_outbuf_size;
 	    int audio_input_frame_size;
@@ -71,9 +70,14 @@ namespace openshot
 	    int audio_input_position;
 	    AudioResampler *resampler;
 
+	    deque<Frame*> audio_frames;
 	    deque<Frame*> queued_frames;
 	    deque<Frame*> processed_frames;
+	    deque<Frame*> deallocate_frames;
 	    map<Frame*, AVFrame*> av_frames;
+
+	    /// Add an AVFrame to the cache
+	    void add_avframe(Frame* frame, AVFrame* av_frame);
 
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
@@ -105,8 +109,8 @@ namespace openshot
 		/// process video frame
 		void process_video_packet(Frame* frame);
 
-		/// write audio frame
-		void write_audio_packet(Frame* frame);
+		/// write all queued frames' audio to the video file
+		void write_audio_packets();
 
 		/// write video frame
 		void write_video_packet(Frame* frame, AVFrame* frame_final);

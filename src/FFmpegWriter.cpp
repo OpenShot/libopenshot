@@ -30,7 +30,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		converted_audio(NULL), initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL)
+		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -286,7 +286,11 @@ void FFmpegWriter::AddFrame(Frame* frame)
 {
 	// Add frame pointer to "queue", waiting to be processed the next
 	// time the WriteFrames() method is called.
-	queued_frames.push_back(frame);
+	if (info.has_video && video_st)
+		queued_frames.push_back(frame);
+
+	if (info.has_audio && audio_st)
+		audio_frames.push_back(frame);
 }
 
 // Write all frames in the queue to the video file.
@@ -297,7 +301,11 @@ void FFmpegWriter::WriteFrames()
 	{
 		#pragma omp master
 		{
-			// Loop through each queued frame
+			// Process all audio frames (in a separate thread)
+			if (info.has_audio && audio_st && !audio_frames.empty())
+				write_audio_packets();
+
+			// Loop through each queued image frame
 			while (!queued_frames.empty())
 			{
 				// Get front frame (from the queue)
@@ -309,10 +317,6 @@ void FFmpegWriter::WriteFrames()
 				// Encode and add the frame to the output file
 				if (info.has_video && video_st)
 					process_video_packet(frame);
-
-				if (info.has_audio && audio_st)
-					write_audio_packet(frame);
-
 
 				// Remove front item
 				queued_frames.pop_front();
@@ -335,18 +339,41 @@ void FFmpegWriter::WriteFrames()
 
 		if (info.has_video && video_st)
 		{
+			// Add to deallocate queue (so we can remove the AVFrames when we are done)
+			deallocate_frames.push_back(frame);
+
 			// Get AVFrame
 			AVFrame *frame_final = av_frames[frame];
 
 			// Write frame to video file
 			write_video_packet(frame, frame_final);
-
-			// Remove AVFrame
-			av_frames.erase(frame);
 		}
 
 		// Remove front item
 		processed_frames.pop_front();
+	}
+
+	// Loop through, and deallocate AVFrames
+	while (!deallocate_frames.empty())
+	{
+		// Get front frame (from the queue)
+		Frame *frame = deallocate_frames.front();
+
+		// Does this frame's AVFrame still exist
+		if (av_frames.count(frame))
+		{
+			// Get AVFrame
+			AVFrame *av_frame = av_frames[frame];
+
+			// deallocate AVFrame
+			av_free(av_frame->data[0]);
+			av_free(av_frame);
+
+			av_frames.erase(frame);
+		}
+
+		// Remove front item
+		deallocate_frames.pop_front();
 	}
 
 }
@@ -399,7 +426,6 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 
 	delete[] samples;
 	delete[] audio_outbuf;
-	delete[] converted_audio;
 
 	delete resampler;
 }
@@ -426,6 +452,21 @@ void FFmpegWriter::Close()
 
 	// Free the stream
 	av_free(oc);
+}
+
+// Add an AVFrame to the cache
+void FFmpegWriter::add_avframe(Frame* frame, AVFrame* av_frame)
+{
+	// Add AVFrame to map (if it does not already exist)
+	if (!av_frames.count(frame))
+		// Add
+		av_frames[frame] = av_frame;
+	else
+	{
+		// Do not add, and deallocate this AVFrame
+		av_free(av_frame->data[0]);
+		av_free(av_frame);
+	}
 }
 
 // Add an audio output stream
@@ -614,8 +655,6 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 	audio_outbuf = new uint8_t[audio_outbuf_size];
 
-	// create a new array (to hold the re-sampled audio)
-	converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 }
 
 // open video codec
@@ -636,127 +675,165 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 		throw InvalidCodec("Could not open codec", path);
 }
 
-// write audio frame
-void FFmpegWriter::write_audio_packet(Frame* frame)
+// write all queued frames' audio to the video file
+void FFmpegWriter::write_audio_packets()
 {
 	// Get the codec
 	AVCodecContext *c;
 	c = audio_st->codec;
 
 	// Create a resampler (only once)
-	if (!resampler)
-		resampler = new AudioResampler();
+	AudioResampler *new_sampler = resampler;
+	if (!new_sampler)
+		new_sampler = new AudioResampler();
 
-	// Get the audio details from this frame
-	int sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
-	int samples_in_frame = frame->GetAudioSamplesCount(); // this is updated if resampling happens
-	int channels_in_frame = frame->GetAudioChannelsCount();
+	#pragma omp task firstprivate(c, new_sampler)
+	{
+		// Init audio buffers / variables
+		int total_frame_samples = 0;
+		int frame_position = 0;
+		int channels_in_frame = 0;
+		int sample_rate_in_frame = 0;
+		int samples_in_frame = 0;
 
-	// Get audio sample array
-	float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, resampler, &samples_in_frame);
-	int16_t* frame_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-	int samples_position = 0;
+		// Create a new array (to hold all S16 audio samples, for the current queued frames
+		int16_t* frame_samples = new int16_t[(audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	// Calculate total samples
-	int total_frame_samples = samples_in_frame * channels_in_frame;
-	int remaining_frame_samples = total_frame_samples;
+		// create a new array (to hold all the re-sampled audio, for the current queued frames)
+		int16_t* converted_audio = new int16_t[(audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	// Translate audio sample values back to 16 bit integers
-	for (int s = 0; s < total_frame_samples; s++)
-		// Translate sample value and copy into buffer
-		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
-
-	// Re-sample audio samples (into additinal channels or changing the sample format / number format)
-	// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
-	if (c->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
-
-		// Audio needs to be converted
-		// Create an audio resample context object (used to convert audio samples)
-		ReSampleContext *resampleCtx = av_audio_resample_init(
-				info.channels, channels_in_frame,
-				info.sample_rate, sample_rate_in_frame,
-				c->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
-
-		if (!resampleCtx)
-			throw ResampleError("Failed to resample & convert audio samples for encoding.", path);
-		else {
-			// FFmpeg audio resample & sample format conversion
-			audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
-
-			// Update total frames & input frame size (due to bigger or smaller data types)
-			total_frame_samples *= (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
-			audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
-
-			// Set remaining samples
-			remaining_frame_samples = total_frame_samples;
-
-			// Copy audio samples over original samples
-			memcpy(frame_samples, converted_audio, total_frame_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
-
-			// Close context
-			audio_resample_close(resampleCtx);
-		}
-	}
-
-	// Loop until no more samples
-	while (remaining_frame_samples > 0) {
-		// Get remaining samples needed for this packet
-		int remaining_packet_samples = audio_input_frame_size - audio_input_position;
-
-		// Determine how many samples we need
-		int diff = 0;
-		if (remaining_frame_samples >= remaining_packet_samples)
-			diff = remaining_packet_samples;
-		else if (remaining_frame_samples < remaining_packet_samples)
-			diff = remaining_frame_samples;
-
-		// Copy frame samples into the packet samples array
-		memcpy(samples + audio_input_position, frame_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
-
-		// Increment counters
-		audio_input_position += diff;
-		samples_position += diff;
-		remaining_frame_samples -= diff;
-		remaining_packet_samples -= diff;
-
-		// Do we have enough samples to proceed?
-		if (audio_input_position < audio_input_frame_size)
-			// Not enough samples to encode... so wait until the next frame
-			break;
-
-		// Init the packet
-		AVPacket pkt;
-		av_init_packet(&pkt);
-
-		// Encode audio data
-		pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
-
-		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
-			// Set the correct rescaled timestamp
-			pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
-		pkt.flags |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = audio_st->index;
-		pkt.data = audio_outbuf;
-
-		/* write the compressed frame in the media file */
-		int averror = av_interleaved_write_frame(oc, &pkt);
-		if (averror != 0)
+		// Loop through each queued audio frame
+		while (!audio_frames.empty())
 		{
-			//string error_description = av_err2str(averror);
-			throw ErrorEncodingAudio("Error while writing audio frame", frame->number);
+			// Get front frame (from the queue)
+			Frame *frame = audio_frames.front();
+
+
+			// Get the audio details from this frame
+			sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
+			samples_in_frame = frame->GetAudioSamplesCount(); // this is updated if resampling happens
+			channels_in_frame = frame->GetAudioChannelsCount();
+
+			// Get audio sample array
+			float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, new_sampler, &samples_in_frame);
+
+			// Calculate total samples
+			total_frame_samples = samples_in_frame * channels_in_frame;
+
+			// Translate audio sample values back to 16 bit integers
+			for (int s = 0; s < total_frame_samples; s++, frame_position++)
+				// Translate sample value and copy into buffer
+				frame_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
+
+			// Deallocate float array
+			delete[] frame_samples_float;
+
+			// Remove front item
+			audio_frames.pop_front();
+
+		} // end while
+
+
+		// Update total samples (since we've combined all queued frames)
+		total_frame_samples = frame_position;
+		int remaining_frame_samples = total_frame_samples;
+		int samples_position = 0;
+
+
+		// Re-sample audio samples (into additinal channels or changing the sample format / number format)
+		// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
+		if (c->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
+
+			// Audio needs to be converted
+			// Create an audio resample context object (used to convert audio samples)
+			ReSampleContext *resampleCtx = av_audio_resample_init(
+					info.channels, channels_in_frame,
+					info.sample_rate, sample_rate_in_frame,
+					c->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
+
+			if (!resampleCtx)
+				throw ResampleError("Failed to resample & convert audio samples for encoding.", path);
+			else {
+				// FFmpeg audio resample & sample format conversion
+				audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
+
+				// Update total frames & input frame size (due to bigger or smaller data types)
+				total_frame_samples *= (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+				audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+
+				// Set remaining samples
+				remaining_frame_samples = total_frame_samples;
+
+				// Copy audio samples over original samples
+				memcpy(frame_samples, converted_audio, total_frame_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+
+				// Close context
+				audio_resample_close(resampleCtx);
+			}
 		}
 
-		// deallocate memory for packet
-		av_free_packet(&pkt);
+		// Loop until no more samples
+		while (remaining_frame_samples > 0) {
+			// Get remaining samples needed for this packet
+			int remaining_packet_samples = audio_input_frame_size - audio_input_position;
 
-		// Reset position
-		audio_input_position = 0;
-	}
+			// Determine how many samples we need
+			int diff = 0;
+			if (remaining_frame_samples >= remaining_packet_samples)
+				diff = remaining_packet_samples;
+			else if (remaining_frame_samples < remaining_packet_samples)
+				diff = remaining_frame_samples;
 
-	// Delete arrays
-	delete[] frame_samples;
-	delete[] frame_samples_float;
+			// Copy frame samples into the packet samples array
+			memcpy(samples + audio_input_position, frame_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
+			// Increment counters
+			audio_input_position += diff;
+			samples_position += diff;
+			remaining_frame_samples -= diff;
+			remaining_packet_samples -= diff;
+
+			// Do we have enough samples to proceed?
+			if (audio_input_position < audio_input_frame_size)
+				// Not enough samples to encode... so wait until the next frame
+				break;
+
+			// Init the packet
+			AVPacket pkt;
+			av_init_packet(&pkt);
+
+			// Encode audio data
+			pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
+
+			if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+				// Set the correct rescaled timestamp
+				pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
+			pkt.flags |= AV_PKT_FLAG_KEY;
+			pkt.stream_index = audio_st->index;
+			pkt.data = audio_outbuf;
+
+			/* write the compressed frame in the media file */
+			int averror = 0;
+			#pragma omp critical (output_context)
+			averror = av_interleaved_write_frame(oc, &pkt);
+			if (averror != 0)
+			{
+				//string error_description = av_err2str(averror);
+				throw ErrorEncodingAudio("Error while writing audio frame", -1);
+			}
+
+			// deallocate memory for packet
+			av_free_packet(&pkt);
+
+			// Reset position
+			audio_input_position = 0;
+		}
+
+		// Delete arrays
+		delete[] frame_samples;
+		delete[] converted_audio;
+
+	} // end task
 }
 
 // Allocate an AVFrame object
@@ -791,18 +868,14 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 
 	// Initialize the software scaler (if needed)
 	SwsContext *scaler = img_convert_ctx;
-	#pragma omp critical (image_scaler)
-	{
-		if (!scaler)
-			// Init the software scaler from FFMpeg
-			scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-		if (scaler == NULL)
-			throw OutOfMemory("Could not allocate SwsContext.", path);
-	}
+	if (!scaler)
+		// Init the software scaler from FFMpeg
+		scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+	if (scaler == NULL)
+		throw OutOfMemory("Could not allocate SwsContext.", path);
 
 	#pragma omp task firstprivate(frame, c, scaler)
 	{
-
 		// Allocate an RGB frame & final output frame
 		int bytes_source = 0;
 		int bytes_final = 0;
@@ -821,25 +894,20 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 			frame_source->data[0][row+2] = pixel_packets[packet].blue;
 		}
 
-//		SwsContext *scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-//		if (scaler == NULL)
-//			throw OutOfMemory("Could not allocate SwsContext.", path);
-
 		// Resize & convert pixel format
 		#pragma omp critical (image_scaler)
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
 				frame->GetHeight(), frame_final->data, frame_final->linesize);
 
 		// Add resized AVFrame to av_frames map
-		#pragma omp critical (av_frames)
-		av_frames[frame] = frame_final;
+		#pragma omp critical (av_frames_section)
+		add_avframe(frame, frame_final);
 
 		// Deallocate memory
 		av_free(frame_source->data[0]);
 		av_free(frame_source);
 
 	} // end task
-
 
 }
 
@@ -866,7 +934,9 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 		pkt.size= sizeof(AVPicture);
 
 		/* write the compressed frame in the media file */
-		int averror = av_interleaved_write_frame(oc, &pkt);
+		int averror = 0;
+		#pragma omp critical (output_context)
+		averror = av_interleaved_write_frame(oc, &pkt);
 		if (averror != 0)
 		{
 			//string error_description = av_err2str(averror);
@@ -896,7 +966,9 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 			pkt.size= out_size;
 
 			/* write the compressed frame in the media file */
-			int averror = av_interleaved_write_frame(oc, &pkt);
+			int averror = 0;
+			#pragma omp critical (output_context)
+			averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
 				//string error_description = av_err2str(averror);
@@ -909,8 +981,6 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 	}
 
 	// Deallocate memory
-	av_free(frame_final->data[0]);
-	av_free(frame_final);
 	delete[] video_outbuf;
 
 }
