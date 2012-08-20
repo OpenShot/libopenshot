@@ -294,6 +294,13 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 		}
 	}
 
+	// Clear resampled buffer (if any)
+	if (resampled_buffer)
+	{
+		resampled_buffer->clear();
+		delete resampled_buffer;
+	}
+
 	// Update sample count (since it might have changed due to resampling)
 	*sample_count = num_of_samples;
 
@@ -322,14 +329,14 @@ int Frame::GetAudioSamplesRate()
 // Get pixel data (as packets)
 const Magick::PixelPacket* Frame::GetPixels()
 {
-	// Return arry of pixel packets
+	// Return array of pixel packets
 	return image->getConstPixels(0,0, image->columns(), image->rows());
 }
 
 // Get pixel data (for only a single scan-line)
 const Magick::PixelPacket* Frame::GetPixels(int row)
 {
-	// Return arry of pixel packets
+	// Return array of pixel packets
 	return image->getConstPixels(0,row, image->columns(), 1);
 }
 
@@ -343,9 +350,9 @@ const Magick::PixelPacket* Frame::GetPixels(unsigned int width, unsigned int hei
 	small_image->colorize(255, 0, 0, Magick::Color(0,0,255));
 	small_image->blur(5.0, 5.0);
 
-	stringstream file;
-	file << "frame" << frame << ".png";
-	small_image->write(file.str());
+//	stringstream file;
+//	file << "frame" << frame << ".png";
+//	small_image->write(file.str());
 
 	// Return arry of pixel packets
 	return small_image->getConstPixels(0,0, small_image->columns(), small_image->rows());

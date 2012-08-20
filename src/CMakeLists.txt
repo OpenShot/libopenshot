@@ -34,7 +34,8 @@ FIND_PACKAGE(OpenMP)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib/libprofiler.so")
+set(PROFILER "/usr/lib/libprofiler.so")
+#set(PROFILER "/usr/lib/libtcmalloc.so")
 
 ############### CREATE LIBRARY #################
 # Create shared openshot library

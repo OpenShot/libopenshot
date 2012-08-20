@@ -55,6 +55,7 @@ namespace openshot
 	{
 	private:
 		string path;
+		int cache_size;
 
 	    AVOutputFormat *fmt;
 	    AVFormatContext *oc;
@@ -115,7 +116,8 @@ namespace openshot
 		/// write video frame
 		void write_video_packet(Frame* frame, AVFrame* frame_final);
 
-
+		/// write all queued frames
+		void write_queued_frames();
 
 	public:
 
@@ -125,11 +127,17 @@ namespace openshot
 		/// Close the writer
 		void Close();
 
+		/// Get the cache size (number of frames to queue before writing)
+		int GetCacheSize() { return cache_size; };
+
 		/// Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
 		void OutputStreamInfo();
 
 		/// Set audio export options
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
+
+		/// Set the cache size (number of frames to queue before writing)
+		int SetCacheSize(int new_size) { cache_size = new_size; };
 
 		/// Set video export options
 		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
@@ -145,13 +153,10 @@ namespace openshot
 		void WriteHeader();
 
 		/// Add a frame to the stack waiting to be encoded.
-		void AddFrame(Frame* frame);
-
-		/// Write all frames on the stack to the video file.
-		void WriteFrames();
+		void WriteFrame(Frame* frame);
 
 		/// Write a block of frames from a reader
-		//void WriteFrame(FileReaderBase* reader, int start, int length);
+		void WriteFrame(FileReaderBase* reader, int start, int length);
 
 		/// Write the file trailer (after all frames are written)
 		void WriteTrailer();

@@ -30,7 +30,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL)
+		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(12)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -282,7 +282,7 @@ void FFmpegWriter::WriteHeader()
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::AddFrame(Frame* frame)
+void FFmpegWriter::WriteFrame(Frame* frame)
 {
 	// Add frame pointer to "queue", waiting to be processed the next
 	// time the WriteFrames() method is called.
@@ -291,10 +291,15 @@ void FFmpegWriter::AddFrame(Frame* frame)
 
 	if (info.has_audio && audio_st)
 		audio_frames.push_back(frame);
+
+	// Write the frames once it reaches the correct cache size
+	if (queued_frames.size() == cache_size)
+		// Write frames to video file
+		write_queued_frames();
 }
 
 // Write all frames in the queue to the video file.
-void FFmpegWriter::WriteFrames()
+void FFmpegWriter::write_queued_frames()
 {
 	//omp_set_num_threads(1);
 	#pragma omp parallel
@@ -342,11 +347,15 @@ void FFmpegWriter::WriteFrames()
 			// Add to deallocate queue (so we can remove the AVFrames when we are done)
 			deallocate_frames.push_back(frame);
 
-			// Get AVFrame
-			AVFrame *frame_final = av_frames[frame];
+			// Does this frame's AVFrame still exist
+			if (av_frames.count(frame))
+			{
+				// Get AVFrame
+				AVFrame *frame_final = av_frames[frame];
 
-			// Write frame to video file
-			write_video_packet(frame, frame_final);
+				// Write frame to video file
+				write_video_packet(frame, frame_final);
+			}
 		}
 
 		// Remove front item
@@ -379,22 +388,25 @@ void FFmpegWriter::WriteFrames()
 }
 
 // Write a block of frames from a reader
-//void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
-//{
-//	// Loop through each frame (and encoded it)
-//	for (int number = start; number <= length; number++)
-//	{
-//		// Get the frame
-//		Frame *f = reader->GetFrame(number);
-//
-//		// Encode frame
-//		WriteFrame(f);
-//	}
-//}
+void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+{
+	// Loop through each frame (and encoded it)
+	for (int number = start; number <= length; number++)
+	{
+		// Get the frame
+		Frame *f = reader->GetFrame(number);
+
+		// Encode frame
+		WriteFrame(f);
+	}
+}
 
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer()
 {
+	// Write any remaining queued frames to video file
+	write_queued_frames();
+
 	/* write the trailer, if any.  the trailer must be written
 	 * before you close the CodecContexts open when you wrote the
 	 * header; otherwise write_trailer may try to use memory that
@@ -459,8 +471,10 @@ void FFmpegWriter::add_avframe(Frame* frame, AVFrame* av_frame)
 {
 	// Add AVFrame to map (if it does not already exist)
 	if (!av_frames.count(frame))
-		// Add
+	{
+		// Add av_frame
 		av_frames[frame] = av_frame;
+	}
 	else
 	{
 		// Do not add, and deallocate this AVFrame
@@ -683,9 +697,9 @@ void FFmpegWriter::write_audio_packets()
 	c = audio_st->codec;
 
 	// Create a resampler (only once)
+	if (!resampler)
+		resampler = new AudioResampler();
 	AudioResampler *new_sampler = resampler;
-	if (!new_sampler)
-		new_sampler = new AudioResampler();
 
 	#pragma omp task firstprivate(c, new_sampler)
 	{
@@ -715,6 +729,7 @@ void FFmpegWriter::write_audio_packets()
 			channels_in_frame = frame->GetAudioChannelsCount();
 
 			// Get audio sample array
+			//float* frame_samples_float = new float(total_frame_samples);
 			float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, new_sampler, &samples_in_frame);
 
 			// Calculate total samples
@@ -867,12 +882,12 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 	c = video_st->codec;
 
 	// Initialize the software scaler (if needed)
-	SwsContext *scaler = img_convert_ctx;
-	if (!scaler)
+	if (!img_convert_ctx)
 		// Init the software scaler from FFMpeg
-		scaler = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-	if (scaler == NULL)
+		img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+	if (img_convert_ctx == NULL)
 		throw OutOfMemory("Could not allocate SwsContext.", path);
+	SwsContext *scaler = img_convert_ctx;
 
 	#pragma omp task firstprivate(frame, c, scaler)
 	{

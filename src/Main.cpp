@@ -20,9 +20,9 @@ int main()
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/00001.mts");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
@@ -38,7 +38,7 @@ int main()
 
 		// Set options
 		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
-		w.SetVideoOptions(true, "libvpx", Fraction(25, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
 
 		// Prepare Streams
 		w.PrepareStreams();
@@ -67,7 +67,7 @@ int main()
 
 		//Frame *f = r.GetFrame(1);
 
-		for (int frame = 1; frame <= 500; frame++)
+		for (int frame = 1; frame <= 1000; frame++)
 		{
 			Frame *f = r.GetFrame(frame);
 
@@ -76,18 +76,9 @@ int main()
 
 			// Write frame
 			cout << "queue frame " << frame << endl;
-			w.AddFrame(f);
+			w.WriteFrame(f);
 
-			if (frame % 12 == 0)
-			{
-				cout << "-- Writing frames --" << endl;
-				w.WriteFrames();
-			}
 		}
-
-		// Write remaining frames
-		w.WriteFrames();
-		w.WriteFrames();
 
 		// Write Footer
 		w.WriteTrailer();
