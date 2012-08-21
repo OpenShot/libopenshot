@@ -647,48 +647,47 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	#pragma omp critical (processing_list)
 	processing_audio_frames[target_frame] = target_frame;
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, starting_sample)
+
+
+	// Allocate audio buffer
+	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
+	// create a new array (to hold the re-sampled audio)
+	int16_t *converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
+	int packet_samples = 0;
+	while (my_packet->size > 0) {
+		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
+		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+		int used = avcodec_decode_audio3(aCodecCtx, audio_buf, &buf_size, my_packet);
+
+		if (used < 0) {
+			// Throw exception
+			my_packet->size = 0;
+			throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
+		}
+
+		// Calculate total number of samples
+		packet_samples += (buf_size / av_get_bytes_per_sample(aCodecCtx->sample_fmt));
+
+		// process samples...
+		my_packet->data += used;
+		my_packet->size -= used;
+	}
+
+	#pragma omp critical (packet_cache)
 	{
-		// Allocate audio buffer
-		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+		// Remove packet
+		av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3()
+		RemoveAVPacket(my_packet);
+	}
 
-		// create a new array (to hold the re-sampled audio)
-		int16_t *converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-		int packet_samples = 0;
-		while (my_packet->size > 0) {
-			// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-			int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 
-			int used = -1;
-			#pragma omp critical (audio_codec)
-			used = avcodec_decode_audio3(aCodecCtx, audio_buf, &buf_size, my_packet);
-
-			if (used < 0) {
-				// Throw exception
-				throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
-				my_packet->size = 0;
-				break;
-			}
-
-			// Calculate total number of samples
-			packet_samples += (buf_size / av_get_bytes_per_sample(aCodecCtx->sample_fmt));
-
-			// process samples...
-			my_packet->data += used;
-			my_packet->size -= used;
-		}
-
-		#pragma omp critical (packet_cache)
-		{
-			// Remove packet
-			av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3()
-			RemoveAVPacket(my_packet);
-		}
-
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf, converted_audio)
+	{
 		// Re-sample audio samples (if needed)
 		if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
-
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
 			ReSampleContext *resampleCtx = av_audio_resample_init(
@@ -714,12 +713,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				audio_resample_close(resampleCtx);
 			}
 		}
-
-
-		// DEBUG
-		//for (int s = 0; s < packet_samples; s++)
-		//	audio_buf[s] = s;
-
 
 		int starting_frame_number = -1;
 		for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
@@ -822,7 +815,8 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			for (int f = target_frame; f < starting_frame_number; f++)
 				processing_audio_frames.erase(f);
 		}
-	}
+
+	} // end task
 
 }
 
