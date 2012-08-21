@@ -642,22 +642,18 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Init some local variables (for OpenMP)
 	Cache *my_cache = &working_cache;
 	AVPacket *my_packet = packets[packet];
-	int16_t *audio_buf = NULL;
-	int16_t *converted_audio = NULL;
-	float *channel_buffer = NULL;
-	int pts = my_packet->pts;
 
 	// Add audio frame to list of processing audio frames
 	#pragma omp critical (processing_list)
 	processing_audio_frames[target_frame] = target_frame;
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, pts, audio_buf, converted_audio, channel_buffer, starting_sample)
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, my_packet, starting_sample)
 	{
 		// Allocate audio buffer
-		audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		// create a new array (to hold the re-sampled audio)
-		converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t *converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		int packet_samples = 0;
 		while (my_packet->size > 0) {
@@ -692,6 +688,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 		// Re-sample audio samples (if needed)
 		if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
+
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
 			ReSampleContext *resampleCtx = av_audio_resample_init(
@@ -718,13 +715,19 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			}
 		}
 
+
+		// DEBUG
+		//for (int s = 0; s < packet_samples; s++)
+		//	audio_buf[s] = s;
+
+
 		int starting_frame_number = -1;
 		for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 		{
 			// Array of floats (to hold samples for each channel)
 			starting_frame_number = target_frame;
 			int channel_buffer_size = (packet_samples / info.channels) + 1;
-			channel_buffer = new float[channel_buffer_size];
+			float *channel_buffer = new float[channel_buffer_size];
 
 			// Init buffer array
 			for (int z = 0; z < channel_buffer_size; z++)
@@ -810,7 +813,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		delete[] audio_buf;
 		audio_buf = NULL;
 		delete[] converted_audio;
-		converted_audio = 0;
+		converted_audio = NULL;
 
 		// Add video frame to list of processing video frames
 		#pragma omp critical (processing_list)
@@ -1053,7 +1056,7 @@ Frame* FFmpegReader::CreateFrame(int requested_frame)
 		int samples_per_frame = GetSamplesPerFrame(requested_frame);
 
 		// Create a new frame on the working cache
-		Frame *f = new Frame(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels);
+		Frame *f = new Frame(requested_frame, 1, 1, "#000000", samples_per_frame, info.channels);
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 		f->SetSampleRate(info.sample_rate);
 

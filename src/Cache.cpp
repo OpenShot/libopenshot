@@ -25,12 +25,6 @@ void Cache::Add(int frame_number, Frame *frame)
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
 	}
-	else
-	{
-		// Frame already exists... so just update the cache
-		frames.erase(frame_number);
-		frames[frame_number] = frame;
-	}
 }
 
 // Check for the existance of a frame in the cache
