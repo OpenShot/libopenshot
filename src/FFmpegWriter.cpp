@@ -293,7 +293,7 @@ void FFmpegWriter::WriteFrame(Frame* frame)
 		audio_frames.push_back(frame);
 
 	// Write the frames once it reaches the correct cache size
-	if (queued_frames.size() == cache_size)
+	if (queued_frames.size() == cache_size || audio_frames.size() == cache_size)
 		// Write frames to video file
 		write_queued_frames();
 }
@@ -721,7 +721,6 @@ void FFmpegWriter::write_audio_packets()
 		{
 			// Get front frame (from the queue)
 			Frame *frame = audio_frames.front();
-
 
 			// Get the audio details from this frame
 			sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
