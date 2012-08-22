@@ -10,7 +10,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
+Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(1,1), Magick::Color("red"));
@@ -22,7 +22,7 @@ Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
@@ -34,7 +34,7 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(width, height, map, type, pixels);
@@ -46,7 +46,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
+		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels), wave_image(NULL)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white"));
@@ -58,7 +58,7 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels)
+	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels), wave_image(NULL)
 {
 	// Init the image magic and audio buffer
 	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
@@ -146,99 +146,139 @@ void Frame::Display()
 	}
 }
 
-// Display the wave form
-void Frame::DisplayWaveform(bool resize)
+// Get an audio waveform image
+Magick::Image* Frame::GetWaveform(int width, int height)
 {
-	// Create blank image
-	Magick::Image wave_image;
+	// Clear any existing waveform image
+	ClearWaveform();
 
 	// Init a list of lines
 	list<Magick::Drawable> lines;
 	lines.push_back(Magick::DrawableFillColor("#0070ff"));
 	lines.push_back(Magick::DrawablePointSize(16));
 
-	// Calculate the width of an image based on the # of samples
-	int width = audio->getNumSamples();
+	// Calculate 1/2 the width of an image based on the # of samples
+	int total_samples = audio->getNumSamples();
 
-	if (width > 0)
+	// Determine how many samples can be skipped (to speed things up)
+	int step = 1;
+	if (total_samples > width)
+		// Set the # of samples to move forward for each pixel we draw
+		step = round((float) total_samples / (float) width) + 1;
+
+	if (total_samples > 0)
 	{
 		// If samples are present...
-		int height = 200 * audio->getNumChannels();
+		int new_height = 200 * audio->getNumChannels();
 		int height_padding = 20 * (audio->getNumChannels() - 1);
-		int total_height = height + height_padding;
-		wave_image = Magick::Image(Magick::Geometry(width, total_height), Magick::Color("#000000"));
+		int total_height = new_height + height_padding;
+		int total_width = 0;
 
 		// Loop through each audio channel
 		int Y = 100;
 		for (int channel = 0; channel < audio->getNumChannels(); channel++)
 		{
+			int X = 0;
+
+			// Change stroke and color
+			lines.push_back(Magick::DrawableStrokeColor("#0070ff"));
+			lines.push_back(Magick::DrawableStrokeWidth(1));
+
 			// Get audio for this channel
 			float *samples = audio->getSampleData(channel);
 
-			for (int sample = 0; sample < audio->getNumSamples(); sample++)
+			for (int sample = 0; sample < audio->getNumSamples(); sample+=step, X++)
 			{
 				// Sample value (scaled to -100 to 100)
 				float value = samples[sample] * 100;
 
-				if (value > 100 || value < -100)
-				{
-					cout << "TOO BIG: Sample # " << sample << " on frame " << number << " is TOO BIG: " << samples[sample] << endl;
-				}
-
 				// Append a line segment for each sample
 				if (value != 0.0)
-				{
 					// LINE
-					lines.push_back(Magick::DrawableStrokeColor("#0070ff"));
-					lines.push_back(Magick::DrawableStrokeWidth(1));
-					lines.push_back(Magick::DrawableLine(sample,Y, sample,Y-value)); // sample=X coordinate, Y=100 is the middle
-				}
+					lines.push_back(Magick::DrawableLine(X,Y, X,Y-value)); // sample=X coordinate, Y=100 is the middle
 				else
-				{
 					// DOT
-					lines.push_back(Magick::DrawableFillColor("#0070ff"));
-					lines.push_back(Magick::DrawableStrokeWidth(1));
-					lines.push_back(Magick::DrawablePoint(sample,Y));
-				}
+					lines.push_back(Magick::DrawablePoint(X,Y));
 			}
 
 			// Add Channel Label
-			stringstream label;
-			label << "Channel " << channel;
-			lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
-			lines.push_back(Magick::DrawableFillColor("#ffffff"));
-			lines.push_back(Magick::DrawableStrokeWidth(0.1));
-			lines.push_back(Magick::DrawableText(5, Y - 5, label.str()));
+//			stringstream label;
+//			label << "Channel " << channel;
+//			lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
+//			lines.push_back(Magick::DrawableFillColor("#ffffff"));
+//			lines.push_back(Magick::DrawableStrokeWidth(0.1));
+//			lines.push_back(Magick::DrawableText(5, Y - 5, label.str()));
 
 			// Increment Y
 			Y += (200 + height_padding);
+			total_width = X;
 		}
 
+		// Create image
+		wave_image = new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("#000000"));
+
 		// Draw the waveform
-		wave_image.draw(lines);
+		wave_image->draw(lines);
 
 		// Resize Image (if requested)
-		if (resize)
-			// Resize to 60%
-			wave_image.resize(Magick::Geometry(width * 0.6, total_height * 0.6));
+		if (width != total_width || height != total_height)
+		{
+			Magick::Geometry new_size(width, height);
+			new_size.aspect(true);
+			wave_image->resize(new_size);
+		}
+
 	}
 	else
 	{
 		// No audio samples present
-		wave_image = Magick::Image(Magick::Geometry(720, 480), Magick::Color("#000000"));
+		wave_image = new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000"));
 
 		// Add Channel Label
 		lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
 		lines.push_back(Magick::DrawableFillColor("#ffffff"));
 		lines.push_back(Magick::DrawableStrokeWidth(0.1));
-		lines.push_back(Magick::DrawableText(265, 240, "No Audio Samples Found"));
+		lines.push_back(Magick::DrawableText((width / 2) - 100, height / 2, "No Audio Samples Found"));
 
 		// Draw the waveform
-		wave_image.draw(lines);
+		wave_image->draw(lines);
 	}
 
+	// Return new image
+	return wave_image;
+}
+
+// Clear the waveform image (and deallocate it's memory)
+void Frame::ClearWaveform()
+{
+	if (wave_image)
+	{
+		delete wave_image;
+		wave_image = NULL;
+	}
+}
+
+// Get an audio waveform image pixels
+const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
+{
+	// Get audio wave form image
+	Magick::Image *wave_image = GetWaveform(width, height);
+
+	// Return array of pixel packets
+	return wave_image->getConstPixels(0,0, wave_image->columns(), wave_image->rows());
+}
+
+// Display the wave form
+void Frame::DisplayWaveform()
+{
+	// Get audio wave form image
+	Magick::Image *wave_image = GetWaveform(720, 480);
+
 	// Display Image
-	wave_image.display();
+	wave_image->display();
+
+	// Deallocate waveform image
+	ClearWaveform();
 }
 
 // Get an array of sample data

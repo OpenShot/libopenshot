@@ -28,6 +28,7 @@ void FileWriterBase::InitFileInfo()
 	info.channels = 0;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
+	info.visualize = false;
 }
 
 // Display file information
@@ -65,6 +66,7 @@ void FileWriterBase::DisplayInfo() {
 	cout << "--> # of Channels: " << info.channels << endl;
 	cout << "--> Audio Stream Index: " << info.audio_stream_index << endl;
 	cout << "--> Audio Timebase: " << info.audio_timebase.ToDouble() << " (" << info.audio_timebase.num << "/" << info.audio_timebase.den << ")" << endl;
+	cout << "--> Visualize Waveform: " << info.visualize << endl;
 	cout << "----------------------------" << endl;
 }
 

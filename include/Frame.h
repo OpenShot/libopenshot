@@ -36,6 +36,7 @@ namespace openshot
 	private:
 		Magick::Image *image;
 		Magick::Image *small_image;
+		Magick::Image *wave_image;
 		juce::AudioSampleBuffer *audio;
 		Fraction pixel_ratio;
 		int sample_rate;
@@ -77,6 +78,9 @@ namespace openshot
 		/// Experimental method to add effects to this frame
 		void AddEffect(string name);
 
+		/// Clear the waveform image (and deallocate it's memory)
+		void ClearWaveform();
+
 		/// Copy data and pointers from another Frame instance
 		void DeepCopy(const Frame& other);
 
@@ -87,7 +91,7 @@ namespace openshot
 		void Display();
 
 		/// Display the wave form
-		void DisplayWaveform(bool resize);
+		void DisplayWaveform();
 
 		/// Get an array of sample data
 		float* GetAudioSamples(int channel);
@@ -115,6 +119,12 @@ namespace openshot
 
 		/// Get height of image
 		int GetHeight();
+
+		/// Get an audio waveform image
+		Magick::Image* GetWaveform(int width, int height);
+
+		/// Get an audio waveform image pixels
+		const Magick::PixelPacket* GetWaveformPixels(int width, int height);
 
 		/// Get height of image
 		int GetWidth();

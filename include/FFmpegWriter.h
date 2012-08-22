@@ -134,7 +134,7 @@ namespace openshot
 		void OutputStreamInfo();
 
 		/// Set audio export options
-		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
+		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate, bool visualize);
 
 		/// Set the cache size (number of frames to queue before writing)
 		int SetCacheSize(int new_size) { cache_size = new_size; };

@@ -146,7 +146,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 }
 
 // Set audio export options
-void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate)
+void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate, bool visualize)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -172,6 +172,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 
 	// Enable / Disable audio
 	info.has_audio = has_audio;
+	info.visualize = visualize;
 }
 
 // Set custom options (some codecs accept additional params)
@@ -880,38 +881,59 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 	AVCodecContext *c;
 	c = video_st->codec;
 
+	int source_image_width = frame->GetWidth();
+	int source_image_height = frame->GetHeight();
+
+	// If visualizing waveform (replace image with waveform image)
+	if (info.visualize)
+	{
+		source_image_width = info.width;
+		source_image_height = info.height;
+	}
+
 	// Initialize the software scaler (if needed)
 	if (!img_convert_ctx)
 		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(frame->GetWidth(), frame->GetHeight(), PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(source_image_width, source_image_height, PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 	if (img_convert_ctx == NULL)
 		throw OutOfMemory("Could not allocate SwsContext.", path);
 	SwsContext *scaler = img_convert_ctx;
 
-	#pragma omp task firstprivate(frame, c, scaler)
+	#pragma task firstprivate(frame, c, scaler, source_image_width, source_image_height)
 	{
 		// Allocate an RGB frame & final output frame
 		int bytes_source = 0;
 		int bytes_final = 0;
-		AVFrame *frame_source = allocate_avframe(PIX_FMT_RGB24, frame->GetWidth(), frame->GetHeight(), &bytes_source);
+		AVFrame *frame_source = NULL;
+		const Magick::PixelPacket *pixel_packets = NULL;
+
+		// If visualizing waveform (replace image with waveform image)
+		if (!info.visualize)
+			// Get a list of pixels from source image
+			pixel_packets = frame->GetPixels();
+		else
+			// Get a list of pixels from waveform image
+			pixel_packets = frame->GetWaveformPixels(source_image_width, source_image_height);
+
+		// Init AVFrame for source image & final (converted image)
+		frame_source = allocate_avframe(PIX_FMT_RGB24, source_image_width, source_image_height, &bytes_source);
 		AVFrame *frame_final = allocate_avframe(c->pix_fmt, info.width, info.height, &bytes_final);
 
-		// Get a list of pixels from the frame.
-		const Magick::PixelPacket *pixel_packets = frame->GetPixels();
-
 		// Fill the AVFrame with RGB image data
-		for (int packet = 0, row = 0; row < bytes_source; packet++, row+=3)
+		int source_total_pixels = source_image_width * source_image_height;
+		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=3)
 		{
 			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-			frame_source->data[0][row] = pixel_packets[packet].red;
-			frame_source->data[0][row+1] = pixel_packets[packet].green;
-			frame_source->data[0][row+2] = pixel_packets[packet].blue;
+			// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
+			frame_source->data[0][row] = pixel_packets[packet].red >> 8;
+			frame_source->data[0][row+1] = pixel_packets[packet].green >> 8;
+			frame_source->data[0][row+2] = pixel_packets[packet].blue >> 8;
 		}
 
 		// Resize & convert pixel format
 		#pragma omp critical (image_scaler)
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
-				frame->GetHeight(), frame_final->data, frame_final->linesize);
+				source_image_height, frame_final->data, frame_final->linesize);
 
 		// Add resized AVFrame to av_frames map
 		#pragma omp critical (av_frames_section)
@@ -920,6 +942,10 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 		// Deallocate memory
 		av_free(frame_source->data[0]);
 		av_free(frame_source);
+
+		if (info.visualize)
+			// Deallocate the waveform's image (if needed)
+			frame->ClearWaveform();
 
 	} // end task
 
