@@ -652,9 +652,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	// create a new array (to hold the re-sampled audio)
-	int16_t *converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-
 	int packet_samples = 0;
 	while (my_packet->size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
@@ -684,10 +681,17 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf, converted_audio)
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
 	{
+
+		// create a new array (to hold the re-sampled audio)
+		int16_t *converted_audio = NULL;
+
 		// Re-sample audio samples (if needed)
 		if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
+			// Init resample buffer
+			converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
 			ReSampleContext *resampleCtx = av_audio_resample_init(
@@ -708,6 +712,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 				// Copy audio samples over original samples
 				memcpy(audio_buf, converted_audio, packet_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+
+				// Deallocate resample buffer
+				delete[] converted_audio;
+				converted_audio = NULL;
 
 				// Close context
 				audio_resample_close(resampleCtx);
@@ -805,8 +813,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		// Clean up some arrays
 		delete[] audio_buf;
 		audio_buf = NULL;
-		delete[] converted_audio;
-		converted_audio = NULL;
 
 		// Add video frame to list of processing video frames
 		#pragma omp critical (processing_list)
