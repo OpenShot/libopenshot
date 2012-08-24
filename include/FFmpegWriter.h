@@ -60,10 +60,16 @@ namespace openshot
 	    AVOutputFormat *fmt;
 	    AVFormatContext *oc;
 	    AVStream *audio_st, *video_st;
+	    AVCodecContext *video_codec;
+	    AVCodecContext *audio_codec;
 	    SwsContext *img_convert_ctx;
 	    double audio_pts, video_pts;
 	    int16_t *samples;
 	    uint8_t *audio_outbuf;
+
+	    int num_of_rescalers;
+		int rescaler_position;
+		vector<SwsContext*> image_rescalers;
 
 	    int audio_outbuf_size;
 	    int audio_input_frame_size;
@@ -130,8 +136,17 @@ namespace openshot
 		/// Get the cache size (number of frames to queue before writing)
 		int GetCacheSize() { return cache_size; };
 
+		/// Init a collection of software rescalers (thread safe)
+		void InitScalers(int source_width, int source_height);
+
 		/// Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
 		void OutputStreamInfo();
+
+		/// Prepare & initialize streams and open codecs
+		void PrepareStreams();
+
+		/// Remove & deallocate all software scalers
+		void RemoveScalers();
 
 		/// Set audio export options
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate, bool visualize);
@@ -145,9 +160,6 @@ namespace openshot
 
 		/// Set custom options (some codecs accept additional params)
 		void SetOption(Stream_Type stream, string name, string value);
-
-		/// Prepare & initialize streams and open codecs
-		void PrepareStreams();
 
 		/// Write the file header (after the options are set)
 		void WriteHeader();

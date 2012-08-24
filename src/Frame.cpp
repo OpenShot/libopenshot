@@ -225,7 +225,7 @@ Magick::Image* Frame::GetWaveform(int width, int height)
 		{
 			Magick::Geometry new_size(width, height);
 			new_size.aspect(true);
-			wave_image->resize(new_size);
+			wave_image->scale(new_size);
 		}
 
 	}

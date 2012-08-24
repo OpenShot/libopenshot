@@ -30,7 +30,8 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(12)
+		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(12),
+		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -419,23 +420,14 @@ void FFmpegWriter::WriteTrailer()
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
 	avcodec_close(st->codec);
-
-	// Deallocate swscontext
-	sws_freeContext(img_convert_ctx);
-
-	//av_free(picture->data[0]);
-	//av_free(picture);
-	//if (tmp_picture) {
-	//    av_free(tmp_picture->data[0]);
-	//    av_free(tmp_picture);
-	//}
-	//av_free(video_outbuf);
+	video_codec = NULL;
 }
 
 // Close the audio codec
 void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 {
 	avcodec_close(st->codec);
+	audio_codec = NULL;
 
 	delete[] samples;
 	delete[] audio_outbuf;
@@ -451,6 +443,10 @@ void FFmpegWriter::Close()
 		close_video(oc, video_st);
 	if (audio_st)
 		close_audio(oc, audio_st);
+
+	// Deallocate image scalers
+	if (image_rescalers.size() > 0)
+		RemoveScalers();
 
 	// Free the streams
 	for (int i = 0; i < oc->nb_streams; i++) {
@@ -625,23 +621,21 @@ AVStream* FFmpegWriter::add_video_stream()
 // open audio codec
 void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 {
-	AVCodecContext *c;
 	AVCodec *codec;
-
-	c = st->codec;
+	audio_codec = st->codec;
 
 	// Find the audio encoder
-	codec = avcodec_find_encoder(c->codec_id);
+	codec = avcodec_find_encoder(audio_codec->codec_id);
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
 	// Open the codec
-	if (avcodec_open2(c, codec, NULL) < 0)
+	if (avcodec_open2(audio_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
 
 	// Calculate the size of the input frame (i..e how many samples per packet), and the output buffer
 	// TODO: Ugly hack for PCM codecs (will be removed ASAP with new PCM support to compute the input frame size in samples
-	if (c->frame_size <= 1) {
+	if (audio_codec->frame_size <= 1) {
 		// No frame size found... so calculate
 		audio_input_frame_size = 50000 / info.channels;
 
@@ -657,7 +651,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 		}
 	} else {
 		// Set frame size based on the codec
-		audio_input_frame_size = c->frame_size * info.channels;
+		audio_input_frame_size = audio_codec->frame_size * info.channels;
 	}
 
 	// Set the initial frame size (since it might change during resampling)
@@ -676,33 +670,27 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 {
 	AVCodec *codec;
-	AVCodecContext *c;
-
-	c = st->codec;
+	video_codec = st->codec;
 
 	/* find the video encoder */
-	codec = avcodec_find_encoder(c->codec_id);
+	codec = avcodec_find_encoder(video_codec->codec_id);
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
 	/* open the codec */
-	if (avcodec_open2(c, codec, NULL) < 0)
+	if (avcodec_open2(video_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
 }
 
 // write all queued frames' audio to the video file
 void FFmpegWriter::write_audio_packets()
 {
-	// Get the codec
-	AVCodecContext *c;
-	c = audio_st->codec;
-
 	// Create a resampler (only once)
 	if (!resampler)
 		resampler = new AudioResampler();
 	AudioResampler *new_sampler = resampler;
 
-	#pragma omp task firstprivate(c, new_sampler)
+	#pragma omp task firstprivate(new_sampler)
 	{
 		// Init audio buffers / variables
 		int total_frame_samples = 0;
@@ -757,14 +745,14 @@ void FFmpegWriter::write_audio_packets()
 
 		// Re-sample audio samples (into additinal channels or changing the sample format / number format)
 		// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
-		if (c->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
+		if (audio_codec->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
 
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
 			ReSampleContext *resampleCtx = av_audio_resample_init(
 					info.channels, channels_in_frame,
 					info.sample_rate, sample_rate_in_frame,
-					c->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
+					audio_codec->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
 
 			if (!resampleCtx)
 				throw ResampleError("Failed to resample & convert audio samples for encoding.", path);
@@ -773,8 +761,8 @@ void FFmpegWriter::write_audio_packets()
 				audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
 
 				// Update total frames & input frame size (due to bigger or smaller data types)
-				total_frame_samples *= (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
-				audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(c->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+				total_frame_samples *= (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+				audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
 				// Set remaining samples
 				remaining_frame_samples = total_frame_samples;
@@ -818,11 +806,11 @@ void FFmpegWriter::write_audio_packets()
 			av_init_packet(&pkt);
 
 			// Encode audio data
-			pkt.size = avcodec_encode_audio(c, audio_outbuf, audio_outbuf_size, (short *) samples);
+			pkt.size = avcodec_encode_audio(audio_codec, audio_outbuf, audio_outbuf_size, (short *) samples);
 
-			if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+			if (audio_codec->coded_frame && audio_codec->coded_frame->pts != AV_NOPTS_VALUE)
 				// Set the correct rescaled timestamp
-				pkt.pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st->time_base);
+				pkt.pts = av_rescale_q(audio_codec->coded_frame->pts, audio_codec->time_base, audio_st->time_base);
 			pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.stream_index = audio_st->index;
 			pkt.data = audio_outbuf;
@@ -877,13 +865,9 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 // process video frame
 void FFmpegWriter::process_video_packet(Frame* frame)
 {
-	// Get the codec
-	AVCodecContext *c;
-	c = video_st->codec;
-
+	// Determine the height & width of the source image
 	int source_image_width = frame->GetWidth();
 	int source_image_height = frame->GetHeight();
-
 	// If visualizing waveform (replace image with waveform image)
 	if (info.visualize)
 	{
@@ -891,15 +875,17 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 		source_image_height = info.height;
 	}
 
-	// Initialize the software scaler (if needed)
-	if (!img_convert_ctx)
-		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(source_image_width, source_image_height, PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-	if (img_convert_ctx == NULL)
-		throw OutOfMemory("Could not allocate SwsContext.", path);
-	SwsContext *scaler = img_convert_ctx;
+	// Init rescalers (if not initialized yet)
+	if (image_rescalers.size() == 0)
+		InitScalers(source_image_width, source_image_height);
 
-	#pragma task firstprivate(frame, c, scaler, source_image_width, source_image_height)
+	// Get a unique rescaler (for this thread)
+	SwsContext *scaler = image_rescalers[rescaler_position];
+	rescaler_position++;
+	if (rescaler_position == num_of_rescalers)
+		rescaler_position = 0;
+
+	#pragma task firstprivate(frame, scaler, source_image_width, source_image_height)
 	{
 		// Allocate an RGB frame & final output frame
 		int bytes_source = 0;
@@ -917,7 +903,7 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 
 		// Init AVFrame for source image & final (converted image)
 		frame_source = allocate_avframe(PIX_FMT_RGB24, source_image_width, source_image_height, &bytes_source);
-		AVFrame *frame_final = allocate_avframe(c->pix_fmt, info.width, info.height, &bytes_final);
+		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final);
 
 		// Fill the AVFrame with RGB image data
 		int source_total_pixels = source_image_width * source_image_height;
@@ -931,7 +917,6 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 		}
 
 		// Resize & convert pixel format
-		#pragma omp critical (image_scaler)
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
 				source_image_height, frame_final->data, frame_final->linesize);
 
@@ -954,11 +939,6 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 // write video frame
 void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 {
-	// Get the codec
-	AVCodecContext *c;
-	c = video_st->codec;
-
-
 	// Encode Picture and Write Frame
 	int video_outbuf_size = 200000;
 	uint8_t *video_outbuf = new uint8_t[200000];
@@ -989,17 +969,17 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 	} else {
 
 		/* encode the image */
-		int out_size = avcodec_encode_video(c, video_outbuf, video_outbuf_size, frame_final);
+		int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
 
 		/* if zero size, it means the image was buffered */
 		if (out_size > 0) {
 			AVPacket pkt;
 			av_init_packet(&pkt);
 
-			if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+			if (video_codec->coded_frame && video_codec->coded_frame->pts != AV_NOPTS_VALUE)
 				// Set the correct rescaled timestamp
-				pkt.pts= av_rescale_q(c->coded_frame->pts, c->time_base, video_st->time_base);
-			if(c->coded_frame->key_frame)
+				pkt.pts= av_rescale_q(video_codec->coded_frame->pts, video_codec->time_base, video_st->time_base);
+			if(video_codec->coded_frame->key_frame)
 				pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.stream_index= video_st->index;
 			pkt.data= video_outbuf;
@@ -1030,4 +1010,33 @@ void FFmpegWriter::OutputStreamInfo()
 {
 	// output debug info
 	av_dump_format(oc, 0, path.c_str(), 1);
+}
+
+// Init a collection of software rescalers (thread safe)
+void FFmpegWriter::InitScalers(int source_width, int source_height)
+{
+	// Get the codec
+	AVCodecContext *c;
+	c = video_st->codec;
+
+	// Init software rescalers vector (many of them, one for each thread)
+	for (int x = 0; x < num_of_rescalers; x++)
+	{
+		// Init the software scaler from FFMpeg
+		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+		// Add rescaler to vector
+		image_rescalers.push_back(img_convert_ctx);
+	}
+}
+
+// Remove & deallocate all software scalers
+void FFmpegWriter::RemoveScalers()
+{
+	// Close all rescalers
+	for (int x = 0; x < num_of_rescalers; x++)
+		sws_freeContext(image_rescalers[x]);
+
+	// Clear vector
+	image_rescalers.clear();
 }
