@@ -266,10 +266,9 @@ Frame* FFmpegReader::GetFrame(int requested_frame)
 {
 	// Check the cache for this frame
 	if (final_cache.Exists(requested_frame))
-	{
 		// Return the cached frame
 		return final_cache.GetFrame(requested_frame);
-	}
+
 	else
 	{
 		// Frame is not in cache
@@ -312,6 +311,10 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 	bool check_seek = false;
 	bool frame_finished = false;
 	int packet_error = -1;
+
+	// Minimum number of packets to process (for performance reasons)
+	int packets_processed = 0;
+	int minimum_packets = 12;
 
 	//omp_set_num_threads(1);
 	#pragma omp parallel
@@ -384,6 +387,9 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
 
+				// Count processed packets
+				packets_processed++;
+
 				// Check if working frames are 'finished'
 				bool is_cache_found = false;
 				#pragma omp critical (openshot_cache)
@@ -396,7 +402,7 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 				}
 
 				// Break once the frame is found
-				if (is_cache_found)
+				if (is_cache_found && packets_processed >= minimum_packets)
 					break;
 
 			} // end while
