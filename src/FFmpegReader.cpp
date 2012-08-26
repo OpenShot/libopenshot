@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(12), final_cache(12), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(12), final_cache(24), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
 	  rescaler_position(0), num_of_rescalers(32) {
 
@@ -313,8 +313,8 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 	int packet_error = -1;
 
 	// Minimum number of packets to process (for performance reasons)
-	int packets_processed = 0;
-	int minimum_packets = 12;
+	int frames_processed = 0;
+	int minimum_frames = 8;
 
 	//omp_set_num_threads(1);
 	#pragma omp parallel
@@ -387,9 +387,6 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
 
-				// Count processed packets
-				packets_processed++;
-
 				// Check if working frames are 'finished'
 				bool is_cache_found = false;
 				#pragma omp critical (openshot_cache)
@@ -399,10 +396,13 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 
 					// Check if requested 'final' frame is available
 					is_cache_found = final_cache.Exists(requested_frame);
+
+					// Increment frames processed
+					frames_processed++;
 				}
 
 				// Break once the frame is found
-				if (is_cache_found && packets_processed >= minimum_packets)
+				if (is_cache_found && frames_processed >= minimum_frames)
 					break;
 
 			} // end while
