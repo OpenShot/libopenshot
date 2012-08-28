@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(12),
-		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL)
+		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -289,34 +289,61 @@ void FFmpegWriter::WriteFrame(Frame* frame)
 	// Add frame pointer to "queue", waiting to be processed the next
 	// time the WriteFrames() method is called.
 	if (info.has_video && video_st)
-		queued_frames.push_back(frame);
+		spooled_video_frames.push_back(frame);
 
 	if (info.has_audio && audio_st)
-		audio_frames.push_back(frame);
+		spooled_audio_frames.push_back(frame);
 
 	// Write the frames once it reaches the correct cache size
-	if (queued_frames.size() == cache_size || audio_frames.size() == cache_size)
-		// Write frames to video file
-		write_queued_frames();
+	if (spooled_video_frames.size() == cache_size || spooled_audio_frames.size() == cache_size)
+	{
+		// Is writer currently writing?
+		if (!is_writing)
+			// Write frames to video file
+			write_queued_frames();
+
+		else
+		{
+			// YES, WRITING... so wait until it finishes, before writing again
+			while (is_writing)
+				usleep(250 * 1000); // sleep for 250 milliseconds
+
+			// Write frames to video file
+			write_queued_frames();
+		}
+
+	}
+
 }
 
 // Write all frames in the queue to the video file.
 void FFmpegWriter::write_queued_frames()
 {
+	// Flip writing flag
+	is_writing = true;
+
+	// Transfer spool to queue
+	queued_video_frames = spooled_video_frames;
+	queued_audio_frames = spooled_audio_frames;
+
+	// Empty spool
+	spooled_video_frames.clear();
+	spooled_audio_frames.clear();
+
 	//omp_set_num_threads(1);
 	#pragma omp parallel
 	{
-		#pragma omp master
+		#pragma omp single
 		{
 			// Process all audio frames (in a separate thread)
-			if (info.has_audio && audio_st && !audio_frames.empty())
+			if (info.has_audio && audio_st && !queued_audio_frames.empty())
 				write_audio_packets();
 
 			// Loop through each queued image frame
-			while (!queued_frames.empty())
+			while (!queued_video_frames.empty())
 			{
 				// Get front frame (from the queue)
-				Frame *frame = queued_frames.front();
+				Frame *frame = queued_video_frames.front();
 
 				// Add to processed queue
 				processed_frames.push_back(frame);
@@ -326,66 +353,67 @@ void FFmpegWriter::write_queued_frames()
 					process_video_packet(frame);
 
 				// Remove front item
-				queued_frames.pop_front();
+				queued_video_frames.pop_front();
 
 			} // end while
+		} // end omp single
 
-		} // end omp master
-
-		// Be sure all threads are finished
-		#pragma omp barrier
-
-	} // end omp parallel
-
-
-	// Loop back through the frames (in order), and write them to the video file
-	while (!processed_frames.empty())
-	{
-		// Get front frame (from the queue)
-		Frame *frame = processed_frames.front();
-
-		if (info.has_video && video_st)
+		#pragma omp single
 		{
-			// Add to deallocate queue (so we can remove the AVFrames when we are done)
-			deallocate_frames.push_back(frame);
-
-			// Does this frame's AVFrame still exist
-			if (av_frames.count(frame))
+			// Loop back through the frames (in order), and write them to the video file
+			while (!processed_frames.empty())
 			{
-				// Get AVFrame
-				AVFrame *frame_final = av_frames[frame];
+				// Get front frame (from the queue)
+				Frame *frame = processed_frames.front();
 
-				// Write frame to video file
-				write_video_packet(frame, frame_final);
+				if (info.has_video && video_st)
+				{
+					// Add to deallocate queue (so we can remove the AVFrames when we are done)
+					deallocate_frames.push_back(frame);
+
+					// Does this frame's AVFrame still exist
+					if (av_frames.count(frame))
+					{
+						// Get AVFrame
+						AVFrame *frame_final = av_frames[frame];
+
+						// Write frame to video file
+						write_video_packet(frame, frame_final);
+					}
+				}
+
+				// Remove front item
+				processed_frames.pop_front();
 			}
-		}
 
-		// Remove front item
-		processed_frames.pop_front();
-	}
+			// Loop through, and deallocate AVFrames
+			while (!deallocate_frames.empty())
+			{
+				// Get front frame (from the queue)
+				Frame *frame = deallocate_frames.front();
 
-	// Loop through, and deallocate AVFrames
-	while (!deallocate_frames.empty())
-	{
-		// Get front frame (from the queue)
-		Frame *frame = deallocate_frames.front();
+				// Does this frame's AVFrame still exist
+				if (av_frames.count(frame))
+				{
+					// Get AVFrame
+					AVFrame *av_frame = av_frames[frame];
 
-		// Does this frame's AVFrame still exist
-		if (av_frames.count(frame))
-		{
-			// Get AVFrame
-			AVFrame *av_frame = av_frames[frame];
+					// deallocate AVFrame
+					av_free(av_frame->data[0]);
+					av_free(av_frame);
 
-			// deallocate AVFrame
-			av_free(av_frame->data[0]);
-			av_free(av_frame);
+					av_frames.erase(frame);
+				}
 
-			av_frames.erase(frame);
-		}
+				// Remove front item
+				deallocate_frames.pop_front();
+			}
 
-		// Remove front item
-		deallocate_frames.pop_front();
-	}
+			// Done writing
+			is_writing = false;
+
+		} // end omp single
+	} // end omp parallel
 
 }
 
@@ -406,6 +434,10 @@ void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer()
 {
+	// YES, WRITING... so wait until it finishes, before writing again
+	while (is_writing)
+		usleep(250 * 1000); // sleep for 250 milliseconds
+
 	// Write any remaining queued frames to video file
 	write_queued_frames();
 
@@ -700,16 +732,16 @@ void FFmpegWriter::write_audio_packets()
 		int samples_in_frame = 0;
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
-		int16_t* frame_samples = new int16_t[(audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t* frame_samples = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		// create a new array (to hold all the re-sampled audio, for the current queued frames)
-		int16_t* converted_audio = new int16_t[(audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t* converted_audio = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		// Loop through each queued audio frame
-		while (!audio_frames.empty())
+		while (!queued_audio_frames.empty())
 		{
 			// Get front frame (from the queue)
-			Frame *frame = audio_frames.front();
+			Frame *frame = queued_audio_frames.front();
 
 			// Get the audio details from this frame
 			sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
@@ -732,7 +764,7 @@ void FFmpegWriter::write_audio_packets()
 			delete[] frame_samples_float;
 
 			// Remove front item
-			audio_frames.pop_front();
+			queued_audio_frames.pop_front();
 
 		} // end while
 
@@ -817,7 +849,6 @@ void FFmpegWriter::write_audio_packets()
 
 			/* write the compressed frame in the media file */
 			int averror = 0;
-			#pragma omp critical (output_context)
 			averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
@@ -885,7 +916,7 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 	if (rescaler_position == num_of_rescalers)
 		rescaler_position = 0;
 
-	#pragma task firstprivate(frame, scaler, source_image_width, source_image_height)
+	#pragma omp task firstprivate(frame, scaler, source_image_width, source_image_height)
 	{
 		// Allocate an RGB frame & final output frame
 		int bytes_source = 0;
@@ -955,7 +986,6 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 
 		/* write the compressed frame in the media file */
 		int averror = 0;
-		#pragma omp critical (output_context)
 		averror = av_interleaved_write_frame(oc, &pkt);
 		if (averror != 0)
 		{
@@ -987,7 +1017,6 @@ void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
 
 			/* write the compressed frame in the media file */
 			int averror = 0;
-			#pragma omp critical (output_context)
 			averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{

@@ -319,7 +319,7 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 	//omp_set_num_threads(1);
 	#pragma omp parallel
 	{
-		#pragma omp master
+		#pragma omp single
 		{
 			// Loop through the stream until the correct frame is found
 			while (true)
@@ -407,11 +407,7 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 
 			} // end while
 
-		} // end omp master
-
-		// Be sure all threads are finished
-		#pragma omp barrier
-
+		} // end omp single
 	} // end omp parallel
 
 

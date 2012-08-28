@@ -56,6 +56,7 @@ namespace openshot
 	private:
 		string path;
 		int cache_size;
+		bool is_writing;
 
 	    AVOutputFormat *fmt;
 	    AVFormatContext *oc;
@@ -77,10 +78,15 @@ namespace openshot
 	    int audio_input_position;
 	    AudioResampler *resampler;
 
-	    deque<Frame*> audio_frames;
-	    deque<Frame*> queued_frames;
+	    deque<Frame*> spooled_audio_frames;
+	    deque<Frame*> spooled_video_frames;
+
+	    deque<Frame*> queued_audio_frames;
+	    deque<Frame*> queued_video_frames;
+
 	    deque<Frame*> processed_frames;
 	    deque<Frame*> deallocate_frames;
+
 	    map<Frame*, AVFrame*> av_frames;
 
 	    /// Add an AVFrame to the cache
