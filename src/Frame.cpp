@@ -502,6 +502,22 @@ void Frame::AddEffect(string name)
 		image->swirl(30.0);
 }
 
+// Experimental method to add overlay images to this frame
+void Frame::AddOverlay(Frame* frame)
+{
+	// Get overlay image (if any)
+	Magick::Image* overlay = frame->GetImage();
+
+	// Composite image onto this image
+	image->composite(*overlay, Magick::SouthEastGravity, Magick::OverCompositeOp);
+}
+
+// Get pointer to Magick++ image object
+Magick::Image* Frame::GetImage()
+{
+	return image;
+}
+
 // Play audio samples for this frame
 void Frame::Play()
 {

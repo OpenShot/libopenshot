@@ -14,11 +14,9 @@ void FrameReady(int number)
 
 int main()
 {
-	openshot::ImageReader i("/home/jonathan/Documents/OpenShot Art/icon.png");
-	openshot::Frame* f = i.GetFrame(1);
+	openshot::ImageReader i("/home/jonathan/Apps/videcho_site/media/logos/watermark3.png");
+	openshot::Frame* overlay = i.GetFrame(1);
 	i.DisplayInfo();
-	f->Display();
-	i.Close();
 
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
@@ -72,9 +70,10 @@ int main()
 
 		//Frame *f = r.GetFrame(1);
 
-		for (int frame = 1; frame <= 1000; frame++)
+		for (int frame = 1; frame <= 300; frame++)
 		{
 			Frame *f = r.GetFrame(frame);
+			f->AddOverlay(overlay);
 
 			//if (f->number == 307 || f->number == 308 || f->number == 309 || f->number == 310)
 			//f->DisplayWaveform();
@@ -93,6 +92,7 @@ int main()
 		// Close writer & reader
 		w.Close();
 		r.Close();
+		i.Close();
 
 
 		cout << "Successfully executed Main.cpp!" << endl;

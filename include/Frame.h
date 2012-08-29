@@ -81,6 +81,9 @@ namespace openshot
 		/// Experimental method to add effects to this frame
 		void AddEffect(string name);
 
+		/// Experimental method to add overlay images to this frame
+		void AddOverlay(Frame* frame);
+
 		/// Clear the waveform image (and deallocate it's memory)
 		void ClearWaveform();
 
@@ -110,6 +113,9 @@ namespace openshot
 
 		/// Get the audio sample rate
 		int GetAudioSamplesRate();
+
+		/// Get pointer to Magick++ image object
+		Magick::Image* GetImage();
 
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
