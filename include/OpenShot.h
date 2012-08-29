@@ -38,6 +38,7 @@
 #include "Frame.h"
 #include "FrameMapper.h"
 #include "FrameRate.h"
+#include "ImageReader.h"
 #include "KeyFrame.h"
 #include "Player.h"
 #include "Point.h"

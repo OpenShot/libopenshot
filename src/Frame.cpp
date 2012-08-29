@@ -458,11 +458,28 @@ void Frame::Save(string path, float scale)
 void Frame::AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 {
 	// Deallocate image memory
-	delete image;
-	image = NULL;
+	if (image)
+	{
+		delete image;
+		image = NULL;
+	}
 
 	// Create new image object, and fill with pixel data
 	image = new Magick::Image(width, height, map, type, pixels);
+}
+
+// Add (or replace) pixel data to the frame
+void Frame::AddImage(Magick::Image* new_image)
+{
+	// Deallocate image memory
+	if (image)
+	{
+		delete image;
+		image = NULL;
+	}
+
+	// assign image data
+	image = new_image;
 }
 
 // Add audio samples to a specific channel

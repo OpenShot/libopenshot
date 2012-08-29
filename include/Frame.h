@@ -72,6 +72,9 @@ namespace openshot
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
+		/// Add (or replace) pixel data to the frame
+		void AddImage(Magick::Image* new_image);
+
 		/// Add audio samples to a specific channel
 		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
 

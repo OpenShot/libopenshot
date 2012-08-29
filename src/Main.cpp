@@ -14,6 +14,11 @@ void FrameReady(int number)
 
 int main()
 {
+	openshot::ImageReader i("/home/jonathan/Documents/OpenShot Art/icon.png");
+	openshot::Frame* f = i.GetFrame(1);
+	i.DisplayInfo();
+	f->Display();
+	i.Close();
 
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");

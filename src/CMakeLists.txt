@@ -53,6 +53,7 @@ add_library(openshot SHARED
 			FrameMapper.cpp
 			FrameRate.cpp
 			KeyFrame.cpp
+			ImageReader.cpp
 			Player.cpp
 			Point.cpp)
 			
