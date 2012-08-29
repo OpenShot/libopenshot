@@ -90,6 +90,9 @@ void FFmpegReader::Open()
 		pStream = pFormatCtx->streams[videoStream];
 		pCodecCtx = pFormatCtx->streams[videoStream]->codec;
 
+		// Set number of threads equal to number of processors + 1
+		pCodecCtx->thread_count = omp_get_num_procs() + 1;
+
 		// Find the decoder for the video stream
 		AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
 		if (pCodec == NULL) {
@@ -112,6 +115,9 @@ void FFmpegReader::Open()
 		// Get a pointer to the codec context for the audio stream
 		aStream = pFormatCtx->streams[audioStream];
 		aCodecCtx = pFormatCtx->streams[audioStream]->codec;
+
+		// Set number of threads equal to number of processors + 1
+		aCodecCtx->thread_count = omp_get_num_procs() + 1;
 
 		// Find the decoder for the audio stream
 		AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);

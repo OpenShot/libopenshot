@@ -30,7 +30,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(12),
+		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8),
 		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false)
 {
 
@@ -656,6 +656,9 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	AVCodec *codec;
 	audio_codec = st->codec;
 
+	// Set number of threads equal to number of processors + 1
+	audio_codec->thread_count = omp_get_num_procs() + 1;
+
 	// Find the audio encoder
 	codec = avcodec_find_encoder(audio_codec->codec_id);
 	if (!codec)
@@ -703,6 +706,9 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 {
 	AVCodec *codec;
 	video_codec = st->codec;
+
+	// Set number of threads equal to number of processors + 1
+	video_codec->thread_count = omp_get_num_procs() + 1;
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder(video_codec->codec_id);
