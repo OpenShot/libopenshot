@@ -14,18 +14,18 @@ void FrameReady(int number)
 
 int main()
 {
-	openshot::ImageReader i("/home/jonathan/Apps/videcho_site/media/logos/watermark3.png");
-	openshot::Frame* overlay = i.GetFrame(1);
-	i.DisplayInfo();
+	//openshot::ImageReader i("/home/jonathan/Apps/videcho_site/media/logos/watermark3.png");
+	//openshot::Frame* overlay = i.GetFrame(1);
+	//i.DisplayInfo();
 
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
@@ -70,10 +70,10 @@ int main()
 
 		//Frame *f = r.GetFrame(1);
 
-		for (int frame = 1; frame <= 300; frame++)
+		for (int frame = 1; frame <= 1000; frame++)
 		{
 			Frame *f = r.GetFrame(frame);
-			f->AddOverlay(overlay);
+			//f->AddOverlay(overlay);
 
 			//if (f->number == 307 || f->number == 308 || f->number == 309 || f->number == 310)
 			//f->DisplayWaveform();
@@ -92,7 +92,7 @@ int main()
 		// Close writer & reader
 		w.Close();
 		r.Close();
-		i.Close();
+		//i.Close();
 
 
 		cout << "Successfully executed Main.cpp!" << endl;
