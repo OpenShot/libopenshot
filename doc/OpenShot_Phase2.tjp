@@ -5,7 +5,7 @@
  * description of the various syntax elements. You can find more
  * information about TaskJuggler at http://www.taskjuggler.org!
  */
-project yourID "OpenShot Library" "1.0" 2012-06-20 - 2012-10-08 {
+project yourID "OpenShot Library" "1.0" 2012-09-24 - 2013-3-01 {
   # Hide the clock time. Only show the date.
   timeformat "%Y-%m-%d"
   # The currency for all money values is EUR.
@@ -53,8 +53,8 @@ resource dev "Developers" {
 # work and have resources allocated to them. Many attributes of tasks
 # are inherited from the enclosing task. This saves you a lot of
 # writing.
-task lib "OpenShot Library" {
-  start 2012-06-20
+task lib "OpenShot Library - Phase 2" {
+  start 2012-09-24
 
   # All work related costs will be booked to this account unless the
   # sub tasks specifies it differently.
@@ -63,124 +63,148 @@ task lib "OpenShot Library" {
   task site "Website"
   {
       priority 600
-      task website_theme "Choose website theme" {
-        effort 1d
-        allocate jonathan
-        complete 100
-      }
-      task website_django "Create initial django project" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
-  }
-
-  task reader "Reader"
-  {
-      priority 500
-      task reader_openmp "Complete OpenMP integration" {
-        effort 4d
-        allocate jonathan
-        complete 90
-      }
-      task reader_resample_bug "Fix audio resampling bug" {
+      task website_home "Home" {
         effort 3d
         allocate jonathan
-        complete 100
+        complete 0
       }
-      task reader_refactor_audio "Refactor ProcessAudioPacket method to be simpler" {
+
+      task website_member_home "Member Home" {
+        effort 2d
+        allocate jonathan
+        complete 0
+      }
+
+      task website_upload "Upload Video" {
+        effort 2d
+        allocate jonathan
+        complete 0
+      }
+
+      task website_play "Play Video" {
+        effort 2d
+        allocate jonathan
+        complete 0
+      }
+
+      task video_editor "Video Editor" {
+
+          priority 650
+          task video_editor_mockup "HTML5 Video Editor Mock-up" {
+            effort 5d
+            allocate jonathan
+            complete 0
+          }
+
+          priority 640
+          task video_editor_thumbnails "Generate Multiple Thumbnails" {
+            effort 2d
+            allocate jonathan
+            complete 0
+          }
+
+          priority 630
+          task video_editor_seekbar "Slider/Seekbar with Thumbnails" {
+            effort 3d
+            allocate jonathan
+            complete 0
+          }
+
+          priority 630
+          task video_editor_fullscreen "Double-click Fullscreen" {
+            effort 1d
+            allocate jonathan
+            complete 0
+          }
+
+          priority 610
+          task video_editor_trim "Multiple Trim Sliders (Left and Right)" {
+            effort 3d
+            allocate jonathan
+            complete 0
+          }
+
+      }
+
+      task website_search_results "Search Results" {
+        effort 2d
+        allocate jonathan
+        complete 0
+      }
+
+      task website_signup "Signup" {
+        effort 3d
+        allocate jonathan
+        complete 0
+      }
+
+      task website_login "Login" {
         effort 1d
         allocate jonathan
-        complete 100
+        complete 0
       }
-      task reader_unit_tests "Create unit tests for all public Reader methods" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
-  }
 
-  task writer "Writer"
-  {
-      priority 400
-
-      task writer_design "Design writer public interface" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
-      task writer_initial "Create initial writer classes & headers" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
-      task writer_file_or_mem "Build support for file-based or memory-based streams" {
+      task website_support "Support/Contact" {
         effort 1d
         allocate jonathan
-        complete 100
+        complete 0
       }
-      task writer_build "Implement the writer classes and get it all working" {
-        effort 7d
-        allocate jonathan
-        complete 100
-      }
-      task writer_unit_tests "Create unit tests for all public Writer methods" {
+
+      task website_blog "Blog" {
         effort 2d
         allocate jonathan
         complete 0
       }
   }
 
-  task stream "Stream Video"
+
+  priority 400
+  task reader "Library"
   {
-      priority 300
 
-      task stream_file_based "Deliver file-based WebM (VP8) video to browser (with Django)" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
-      task stream_mem_based "Deliver memory-based WebM (VP8) video to browser (with Django)" {
-        effort 2d
-        allocate jonathan
-        complete 100
-      }
+    priority 480
+    task library_framerate "Implement Framerate Mapper" {
+      effort 2d
+      allocate jonathan
+      complete 0
+    }
 
-      task stream_upload "Create form to upload video (with Django)" {
+    priority 400
+    task library_timeline_classes "Create Timeline Classes" {
 
-        task stream_upload_encode "Upload & encode video as WebM (with libopenshot)" {
-          effort 2d
-          allocate jonathan
-          complete 100
-        }
-        task stream_upload_thumbnail "Update thumbnail image every few seconds (during encode)" {
+        priority 470
+        task library_timeline_layers "Implement Layers" {
           effort 2d
           allocate jonathan
           complete 0
         }
-      }
-
-      task stream_options "Create form to set video options (with Django)" {
-
-        task stream_options_in_out "Trim: IN & OUT" {
-          effort 1d
-          allocate jonathan
-          complete 100
-        }
-        task stream_options_effects "Effects: Blur & Grayscale" {
-          effort 1d
-          allocate jonathan
-          complete 100
-        }
-        task stream_options_watermark "Watermark image (with gravity)" {
+        priority 460
+        task library_timeline_trimming "Implement Trimming" {
           effort 1d
           allocate jonathan
           complete 0
         }
-      }
+        priority 450
+        task library_timeline_fading "Implement Fading" {
+          effort 2d
+          allocate jonathan
+          complete 0
+        }
+        priority 440
+        task library_timeline_curve_time "Implement Curve-based Speed & Direction" {
+          effort 3d
+          allocate jonathan
+          complete 0
+        }
+        priority 430
+        task library_timeline_json "JSON Serializer (read & write)" {
+          effort 5d
+          allocate jonathan
+          complete 0
+        }
 
+    }
   }
-
 
 }
 
