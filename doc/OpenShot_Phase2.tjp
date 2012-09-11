@@ -5,7 +5,7 @@
  * description of the various syntax elements. You can find more
  * information about TaskJuggler at http://www.taskjuggler.org!
  */
-project yourID "OpenShot Library" "1.0" 2012-09-24 - 2013-3-01 {
+project yourID "OpenShot Library" "1.0" 2012-09-24 - 2012-11-31 {
   # Hide the clock time. Only show the date.
   timeformat "%Y-%m-%d"
   # The currency for all money values is EUR.
@@ -38,7 +38,7 @@ account rev "Payments" revenue
 # The daily default rate of all resources. This can be overriden for each
 # resource. We specify this, so that we can do a good calculation of
 # the costs of the project.
-rate 300.0
+rate 250.0
 
 # Put your resource definitions here:
 resource dev "Developers" {
@@ -62,90 +62,97 @@ task lib "OpenShot Library - Phase 2" {
 
   task site "Website"
   {
-      priority 600
-      task website_home "Home" {
-        effort 3d
-        allocate jonathan
-        complete 0
-      }
-
-      task website_member_home "Member Home" {
-        effort 2d
-        allocate jonathan
-        complete 0
-      }
-
-      task website_upload "Upload Video" {
-        effort 2d
-        allocate jonathan
-        complete 0
-      }
-
-      task website_play "Play Video" {
-        effort 2d
-        allocate jonathan
-        complete 0
-      }
 
       task video_editor "Video Editor" {
 
-          priority 650
+          priority 790
           task video_editor_mockup "HTML5 Video Editor Mock-up" {
             effort 5d
             allocate jonathan
             complete 0
           }
 
-          priority 640
-          task video_editor_thumbnails "Generate Multiple Thumbnails" {
-            effort 2d
-            allocate jonathan
-            complete 0
-          }
-
-          priority 630
+          priority 730
           task video_editor_seekbar "Slider/Seekbar with Thumbnails" {
-            effort 3d
+            effort 5d
             allocate jonathan
             complete 0
           }
 
-          priority 630
+          priority 720
           task video_editor_fullscreen "Double-click Fullscreen" {
             effort 1d
             allocate jonathan
             complete 0
           }
 
-          priority 610
+          priority 710
           task video_editor_trim "Multiple Trim Sliders (Left and Right)" {
             effort 3d
             allocate jonathan
             complete 0
           }
 
+          priority 705
+          task video_editor_render "Render Final Video (edited)" {
+            effort 2d
+            allocate jonathan
+            complete 0
+          }
+
+        }
+
+      priority 650
+      task website_home "Home" {
+        effort 1d
+        allocate jonathan
+        complete 0
       }
 
-      task website_search_results "Search Results" {
+      priority 640
+      task website_signup "Signup" {
         effort 2d
         allocate jonathan
         complete 0
       }
 
-      task website_signup "Signup" {
-        effort 3d
-        allocate jonathan
-        complete 0
-      }
-
+      priority 630
       task website_login "Login" {
         effort 1d
         allocate jonathan
         complete 0
       }
 
-      task website_support "Support/Contact" {
+      priority 620
+      task website_member_home "Member Home" {
         effort 1d
+        allocate jonathan
+        complete 0
+      }
+
+      priority 610
+      task website_upload "Upload & Transcode Video" {
+        effort 4d
+        allocate jonathan
+        complete 0
+      }
+
+      priority 602
+      task website_play "Play Video" {
+        effort 2d
+        allocate jonathan
+        complete 0
+      }
+
+      priority 600
+      task website_search_download "Download Video (edited)" {
+        effort 1d
+        allocate jonathan
+        complete 0
+      }
+
+      task website_search_results "Search Results" {
+        effort 3d
         allocate jonathan
         complete 0
       }
@@ -158,47 +165,51 @@ task lib "OpenShot Library - Phase 2" {
   }
 
 
-  priority 400
   task reader "Library"
   {
 
-    priority 480
+    priority 880
     task library_framerate "Implement Framerate Mapper" {
       effort 2d
       allocate jonathan
       complete 0
     }
 
-    priority 400
     task library_timeline_classes "Create Timeline Classes" {
 
-        priority 470
+        priority 870
         task library_timeline_layers "Implement Layers" {
           effort 2d
           allocate jonathan
           complete 0
         }
-        priority 460
+        priority 865
         task library_timeline_trimming "Implement Trimming" {
           effort 1d
           allocate jonathan
           complete 0
         }
-        priority 450
+        priority 860
         task library_timeline_fading "Implement Fading" {
           effort 2d
           allocate jonathan
           complete 0
         }
-        priority 440
+        priority 858
+        task library_timeline_transitions "Implement Transitions" {
+          effort 3d
+          allocate jonathan
+          complete 0
+        }
+        priority 855
         task library_timeline_curve_time "Implement Curve-based Speed & Direction" {
           effort 3d
           allocate jonathan
           complete 0
         }
-        priority 430
+        priority 850
         task library_timeline_json "JSON Serializer (read & write)" {
-          effort 5d
+          effort 3d
           allocate jonathan
           complete 0
         }
@@ -211,7 +222,7 @@ task lib "OpenShot Library - Phase 2" {
 
 # A traditional Gantt Chart for the TaskJugglerUI
 taskreport "Gantt Chart" {
-  headline "Project Gantt Chart"
+  headline "Phase 2 Schedule"
   columns hierarchindex, name, start, end, effort, duration, chart
   # For this report we like to have the abbreviated weekday in front
   # of the date. %a is the tag for this.
