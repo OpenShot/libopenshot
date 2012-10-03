@@ -33,6 +33,15 @@ void Keyframe::ReorderPoints() {
 	}
 }
 
+// Constructor which sets the default point & coordinate at X=0
+Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f) {
+	// Init the factorial table, needed by bezier curves
+	CreateFactorialTable();
+
+	// Add initial point
+	AddPoint(Point(value));
+}
+
 /// Keyframe constructor
 Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f) {
 	// Init the factorial table, needed by bezier curves

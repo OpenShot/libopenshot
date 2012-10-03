@@ -9,6 +9,16 @@
 using namespace std;
 using namespace openshot;
 
+// Constructor which creates a single coordinate at X=0
+Point::Point(float y) :
+	interpolation(BEZIER), handle_type(AUTO) {
+	// set new coorinate
+	co = Coordinate(0, y);
+
+	// set handles
+	Initialize_Handles();
+}
+
 Point::Point(float x, float y) :
 	interpolation(BEZIER), handle_type(AUTO) {
 	// set new coorinate

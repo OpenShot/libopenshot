@@ -43,6 +43,7 @@ add_library(openshot SHARED
 			AudioBufferSource.cpp
 			AudioResampler.cpp
 			Cache.cpp
+			Clip.cpp
 			Coordinate.cpp
 			FileReaderBase.cpp
 			FileWriterBase.cpp
@@ -55,7 +56,8 @@ add_library(openshot SHARED
 			KeyFrame.cpp
 			ImageReader.cpp
 			Player.cpp
-			Point.cpp)
+			Point.cpp
+			Timeline.cpp)
 			
 # Set SONAME and other library properties
 set_target_properties(openshot

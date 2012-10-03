@@ -10,7 +10,7 @@
 namespace openshot {
 
 	/**
-	 * \brief The class represents a fraction
+	 * \brief This class represents a fraction
 	 *
 	 * Fractions are often used in video editing to represent ratios and rates, for example:
 	 * pixel ratios, frames per second, timebase, and other common ratios.  Fractions are preferred

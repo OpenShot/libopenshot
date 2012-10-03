@@ -70,6 +70,9 @@ namespace openshot {
 		/// Default constructor for the Keyframe class
 		Keyframe();
 
+		/// Constructor which sets the default point & coordinate at X=0
+		Keyframe(float value);
+
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 

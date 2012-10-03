@@ -6,6 +6,7 @@
 %{
 
 #include "../include/Cache.h"
+#include "../include/Clip.h"
 #include "../include/Coordinate.h"
 #include "../include/Exceptions.h"
 #include "../include/FileReaderBase.h"
@@ -20,6 +21,7 @@
 #include "../include/Player.h"
 #include "../include/Point.h"
 #include "../include/KeyFrame.h"
+#include "../include/Timeline.h"
 %}
 
 /* Use standard exception handling  */
@@ -89,6 +91,7 @@
 %}
 
 %include "../include/Cache.h"
+%include "../include/Clip.h"
 %include "../include/Coordinate.h"
 %include "../include/Exceptions.h"
 %include "../include/FileReaderBase.h"
@@ -103,6 +106,7 @@
 %include "../include/Player.h"
 %include "../include/Point.h"
 %include "../include/KeyFrame.h"
+%include "../include/Timeline.h"
 
 
 

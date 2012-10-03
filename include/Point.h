@@ -59,6 +59,9 @@ namespace openshot
 		Interpolation_Type interpolation;	///< This is the interpolation mode
 		Handle_Type handle_type; 			///< This is the handle mode
 
+		/// Constructor which creates a single coordinate at X=0
+		Point(float y);
+
 		/// Constructor which also creates a Point and sets the X and Y of the Point.
 		Point(float x, float y);
 

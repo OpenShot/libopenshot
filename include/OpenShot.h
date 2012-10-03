@@ -28,6 +28,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Cache.h"
+#include "Clip.h"
 #include "Coordinate.h"
 #include "Exceptions.h"
 #include "FileReaderBase.h"
@@ -42,6 +43,7 @@
 #include "KeyFrame.h"
 #include "Player.h"
 #include "Point.h"
+#include "Timeline.h"
 
 
 #endif
