@@ -67,22 +67,42 @@ Clip::Clip(string path)
 	// Init all default settings
 	init_settings();
 
-	// Try each type of reader (until one works)
-	try
-	{
-		file_reader = new ImageReader(path);
-		cout << "READER FOUND: ImageReader" << endl;
+	// Get file extension (and convert to lower case)
+	string ext = get_file_extension(path);
+	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-	} catch(...) {
+	// Determine if common video formats
+	if (ext=="avi" || ext=="mov" || ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" || ext=="ogg" || ext=="wmv" || ext=="webm" || ext=="vob")
+	{
 		try
 		{
+			// Open common video format
 			file_reader = new FFmpegReader(path);
 			cout << "READER FOUND: FFmpegReader" << endl;
+		} catch(...) { }
+	}
 
-		} catch(BaseException ex) {
-			// let exception bubble up
-			cout << "READER NOT FOUND" << endl;
-			throw ex;
+	// If no video found, try each reader
+	if (!file_reader)
+	{
+		try
+		{
+			// Try an image reader
+			file_reader = new ImageReader(path);
+			cout << "READER FOUND: ImageReader" << endl;
+
+		} catch(...) {
+			try
+			{
+				// Try a video reader
+				file_reader = new FFmpegReader(path);
+				cout << "READER FOUND: FFmpegReader" << endl;
+
+			} catch(BaseException ex) {
+				// No Reader Found, Throw an exception
+				cout << "READER NOT FOUND" << endl;
+				throw ex;
+			}
 		}
 	}
 
@@ -102,4 +122,11 @@ void Clip::MapFrames(Framerate fps, Pulldown_Method pulldown)
 		// Create and Set FrameMapper object
 		frame_map = new FrameMapper(file_reader->info.video_length, original_fps, fps, pulldown);
 	}
+}
+
+// Get file extension
+string Clip::get_file_extension(string path)
+{
+	// return last part of path
+	return path.substr(path.find_last_of(".") + 1);
 }

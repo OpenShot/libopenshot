@@ -74,6 +74,9 @@ namespace openshot {
 		// Internal frame mapper (to map between different frame rates)
 		FrameMapper* frame_map;
 
+		/// Get file extension
+		string get_file_extension(string path);
+
 		/// Init default settings for a clip
 		void init_settings();
 

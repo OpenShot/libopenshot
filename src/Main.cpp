@@ -14,6 +14,12 @@ void FrameReady(int number)
 
 int main()
 {
+	// Create a clip
+	Clip c("/home/jonathan/Pictures/afriscot_megaman.png");
+	cout << "Position: " << c.Position() << endl;
+	cout << "Start: " << c.Start() << endl;
+	cout << "End: " << c.End() << endl;
+
 	//openshot::ImageReader i("/home/jonathan/Apps/videcho_site/media/logos/watermark3.png");
 	//openshot::Frame* overlay = i.GetFrame(1);
 	//i.DisplayInfo();
@@ -35,62 +41,62 @@ int main()
 		// Display debug info
 		r.DisplayInfo();
 
-		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.webm");
-		w.DisplayInfo();
-
-		// Set options
-		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
-
-		// Prepare Streams
-		w.PrepareStreams();
-
-		// Set Options
-//		w.SetOption(VIDEO_STREAM, "quality", "good");
-//		w.SetOption(VIDEO_STREAM, "g", "120");
-//		w.SetOption(VIDEO_STREAM, "qmin", "11");
-//		w.SetOption(VIDEO_STREAM, "qmax", "51");
-//		w.SetOption(VIDEO_STREAM, "profile", "0");
-//		w.SetOption(VIDEO_STREAM, "speed", "0");
-//		w.SetOption(VIDEO_STREAM, "level", "216");
-//		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
-//		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
-//		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
-//		w.SetOption(VIDEO_STREAM, "slices", "4");
-//		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
-//		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
-//		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
-
-		// Write header
-		w.WriteHeader();
-
-		// Output stream info
-		w.OutputStreamInfo();
-
-		//Frame *f = r.GetFrame(1);
-
-		for (int frame = 1; frame <= 1000; frame++)
-		{
-			Frame *f = r.GetFrame(frame);
-			//f->AddOverlay(overlay);
-
-			//if (f->number == 307 || f->number == 308 || f->number == 309 || f->number == 310)
-			//f->DisplayWaveform();
-
-			// Apply effect
-			//f->AddEffect("flip");
-
-			// Write frame
-			cout << "queue frame " << frame << endl;
-			w.WriteFrame(f);
-		}
-
-		// Write Footer
-		w.WriteTrailer();
-
-		// Close writer & reader
-		w.Close();
+//		// Create a writer
+//		FFmpegWriter w("/home/jonathan/output.webm");
+//		w.DisplayInfo();
+//
+//		// Set options
+//		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+//		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+//
+//		// Prepare Streams
+//		w.PrepareStreams();
+//
+//		// Set Options
+////		w.SetOption(VIDEO_STREAM, "quality", "good");
+////		w.SetOption(VIDEO_STREAM, "g", "120");
+////		w.SetOption(VIDEO_STREAM, "qmin", "11");
+////		w.SetOption(VIDEO_STREAM, "qmax", "51");
+////		w.SetOption(VIDEO_STREAM, "profile", "0");
+////		w.SetOption(VIDEO_STREAM, "speed", "0");
+////		w.SetOption(VIDEO_STREAM, "level", "216");
+////		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
+////		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
+////		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
+////		w.SetOption(VIDEO_STREAM, "slices", "4");
+////		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
+////		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
+////		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
+//
+//		// Write header
+//		w.WriteHeader();
+//
+//		// Output stream info
+//		w.OutputStreamInfo();
+//
+//		//Frame *f = r.GetFrame(1);
+//
+//		for (int frame = 1; frame <= 1000; frame++)
+//		{
+//			Frame *f = r.GetFrame(frame);
+//			//f->AddOverlay(overlay);
+//
+//			//if (f->number == 307 || f->number == 308 || f->number == 309 || f->number == 310)
+//			//f->DisplayWaveform();
+//
+//			// Apply effect
+//			//f->AddEffect("flip");
+//
+//			// Write frame
+//			cout << "queue frame " << frame << endl;
+//			w.WriteFrame(f);
+//		}
+//
+//		// Write Footer
+//		w.WriteTrailer();
+//
+//		// Close writer & reader
+//		w.Close();
 		r.Close();
 		//i.Close();
 
