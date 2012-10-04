@@ -231,7 +231,12 @@ void Keyframe::Process() {
 
 	// fill in all values between 0 and 1st point's co.X
 	Point p1 = Points[0];
-	for (int x = 0; x < p1.co.X; x++)
+	if (Points.size() > 1)
+		// Fill in previous X values (before 1st point)
+		for (int x = 0; x < p1.co.X; x++)
+			Values.push_back(Coordinate(Values.size(), p1.co.Y));
+	else
+		// Add a single value (since we only have 1 point)
 		Values.push_back(Coordinate(Values.size(), p1.co.Y));
 
 	// Loop through each pair of points (1 less than the max points).  Each
