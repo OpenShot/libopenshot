@@ -8,6 +8,7 @@
  */
 
 #include "FFmpegReader.h"
+#include "FrameRate.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
 #include "KeyFrame.h"
@@ -22,15 +23,15 @@ namespace openshot {
 	 */
 	enum GravityType
 	{
-		TOP_LEFT,
-		TOP,
-		TOP_RIGHT,
-		LEFT,
-		CENTER,
-		RIGHT,
-		BOTTOM_LEFT,
-		BOTTOM,
-		BOTTOM_RIGHT
+		GRAVITY_TOP_LEFT,
+		GRAVITY_TOP,
+		GRAVITY_TOP_RIGHT,
+		GRAVITY_LEFT,
+		GRAVITY_CENTER,
+		GRAVITY_RIGHT,
+		GRAVITY_BOTTOM_LEFT,
+		GRAVITY_BOTTOM,
+		GRAVITY_BOTTOM_RIGHT
 	};
 
 	/**
@@ -38,10 +39,10 @@ namespace openshot {
 	 */
 	enum ScaleType
 	{
-		CROP,
-		FIT,
-		STRETCH,
-		NONE
+		SCALE_CROP,
+		SCALE_FIT,
+		SCALE_STRETCH,
+		SCALE_NONE
 	};
 
 	/**
@@ -49,8 +50,8 @@ namespace openshot {
 	 */
 	enum AnchorType
 	{
-		CANVAS,
-		VIEWPORT
+		ANCHOR_CANVAS,
+		ANCHOR_VIEWPORT
 	};
 
 	/**
@@ -67,10 +68,19 @@ namespace openshot {
 		float start; ///<The position in seconds to start playing (used to trim the beginning of a clip)
 		float end; ///<The position in seconds to end playing (used to trim the ending of a clip)
 
+		// File Reader object
+		FileReaderBase* file_reader;
+
+		// Internal frame mapper (to map between different frame rates)
+		FrameMapper* frame_map;
+
 		/// Init default settings for a clip
 		void init_settings();
 
 	public:
+		GravityType gravity; ///<The gravity of a clip determines where it snaps to it's parent
+		ScaleType scale; ///<The scale determines how a clip should be resized to fit it's parent
+		AnchorType anchor; ///<The anchor determines what parent a clip should snap to
 
 		/// Default Constructor
 		Clip();
@@ -78,15 +88,8 @@ namespace openshot {
 		/// Constructor with filepath
 		Clip(string path);
 
-		// File Reader object
-		FileReaderBase* file_reader;
-
-		// Frame mapping object
-		FrameMapper* frame_map;
-
-		GravityType gravity; ///<The gravity of a clip determines where it snaps to it's parent
-		ScaleType scale; ///<The scale determines how a clip should be resized to fit it's parent
-		AnchorType anchor; ///<The anchor determines what parent a clip should snap to
+		/// Map frame rate of this clip to a different frame rate
+		void MapFrames(Framerate fps, Pulldown_Method pulldown);
 
 		/// Get basic properties
 		float Position() { return position; } ///<Get position on timeline
