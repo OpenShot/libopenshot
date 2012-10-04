@@ -65,6 +65,9 @@ namespace openshot
 		/// Constructor which also creates a Point and sets the X and Y of the Point.
 		Point(float x, float y);
 
+		/// Constructor which also creates a Point and sets the X,Y, and interpolation of the Point.
+		Point(float x, float y, Interpolation_Type interpolation);
+
 		// Constructor which takes a coordinate
 		Point(Coordinate co);
 

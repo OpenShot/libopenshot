@@ -76,6 +76,9 @@ namespace openshot {
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
+		/// Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
+		void AddPoint(float x, float y);
+
 		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
 		void SetHandles(Point current);
 
@@ -83,7 +86,7 @@ namespace openshot {
 		int FindIndex(Point p) throw(OutOfBoundsPoint);
 
 		/// Get the value at a specific index
-		Coordinate GetValue(int index);
+		float GetValue(int index);
 
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);

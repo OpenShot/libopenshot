@@ -89,16 +89,16 @@ namespace openshot {
 		AnchorType anchor; ///<The anchor determines what parent a clip should snap to
 
 		/// Get basic properties
-		float get_position() { return position; } ///<Get position on timeline
-		int get_layer() { return layer; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
-		float get_start() { return start; } ///<Get start position of clip (trim start of video)
-		float get_end() { return end; } ///<Get end position of clip (trim end of video)
+		float Position() { return position; } ///<Get position on timeline
+		int Layer() { return layer; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
+		float Start() { return start; } ///<Get start position of clip (trim start of video)
+		float End() { return end; } ///<Get end position of clip (trim end of video)
 
 		/// Set basic properties
-		void set_position(float value) { position = value; } ///<Get position on timeline
-		void set_layer(int value) { layer = value; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
-		void set_start(float value) { start = value; } ///<Get start position of clip (trim start of video)
-		void set_end(float value) { end = value; } ///<Get end position of clip (trim end of video)
+		void Position(float value) { position = value; } ///<Get position on timeline
+		void Layer(int value) { layer = value; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
+		void Start(float value) { start = value; } ///<Get start position of clip (trim start of video)
+		void End(float value) { end = value; } ///<Get end position of clip (trim end of video)
 
 		// Scale and Location curves
 		Keyframe scale_x; ///<Curve representing the horizontal scaling in percent (0 to 100)

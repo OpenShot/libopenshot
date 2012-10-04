@@ -9,9 +9,9 @@
 using namespace std;
 using namespace openshot;
 
-/// Because points can be added in any order, we need to reorder them
-/// in ascending order based on the point.co.X value.  This simplifies
-/// processing the curve, due to all the points going from left to right.
+// Because points can be added in any order, we need to reorder them
+// in ascending order based on the point.co.X value.  This simplifies
+// processing the curve, due to all the points going from left to right.
 void Keyframe::ReorderPoints() {
 	// Loop through all coordinates, and sort them by the X attribute
 	for (int x = 0; x < Points.size(); x++) {
@@ -42,14 +42,14 @@ Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f) {
 	AddPoint(Point(value));
 }
 
-/// Keyframe constructor
+// Keyframe constructor
 Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 }
 
-/// Add a new point on the key-frame.  Each point has a primary coordinate,
-/// a left handle, and a right handle.
+// Add a new point on the key-frame.  Each point has a primary coordinate,
+// a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {
 	// Add point at correct spot
 	Points.push_back(p);
@@ -64,8 +64,18 @@ void Keyframe::AddPoint(Point p) {
 	Process();
 }
 
-/// Set the handles, used for smooth curves.  The handles are based
-/// on the surrounding points.
+// Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
+void Keyframe::AddPoint(float x, float y)
+{
+	// Create a point
+	Point new_point(x, y, BEZIER);
+
+	// Add the point
+	AddPoint(new_point);
+}
+
+// Set the handles, used for smooth curves.  The handles are based
+// on the surrounding points.
 void Keyframe::SetHandles(Point current)
 {
 	// Lookup the index of this point
@@ -124,21 +134,21 @@ int Keyframe::FindIndex(Point p) throw(OutOfBoundsPoint) {
 }
 
 // Get the value at a specific index
-Coordinate Keyframe::GetValue(int index)
+float Keyframe::GetValue(int index)
 {
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
-		return Values[index];
+		return Values[index].Y;
 	else if (index < 0 && Values.size() > 0)
 		// Return the minimum value
-		return Coordinate(index, Values[0].Y);
+		return Values[0].Y;
 	else if (index >= Values.size() && Values.size() > 0)
 		// return the maximum value
-		return Coordinate(index, Values[Values.size() - 1].Y);
+		return Values[Values.size() - 1].Y;
 	else
 		// return a blank coordinate (0,0)
-		return Coordinate(0,0);
+		return 0.0;
 }
 
 // Get a point at a specific index

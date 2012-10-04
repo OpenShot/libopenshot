@@ -28,6 +28,16 @@ Point::Point(float x, float y) :
 	Initialize_Handles();
 }
 
+// Constructor which also creates a Point and sets the X,Y, and interpolation of the Point.
+Point::Point(float x, float y, Interpolation_Type interpolation) :
+	handle_type(AUTO), interpolation(interpolation) {
+	// set new coorinate
+	co = Coordinate(x, y);
+
+	// set handles
+	Initialize_Handles();
+}
+
 Point::Point(Coordinate co) :
 	co(co), interpolation(BEZIER), handle_type(AUTO) {
 	// set handles

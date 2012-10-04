@@ -6,10 +6,10 @@ using namespace openshot;
 void Clip::init_settings()
 {
 	// Init clip settings
-	set_position(0.0);
-	set_layer(0);
-	set_start(0.0);
-	set_end(0.0);
+	Position(0.0);
+	Layer(0);
+	Start(0.0);
+	End(0.0);
 	gravity = CENTER;
 	scale = FIT;
 	anchor = CANVAS;

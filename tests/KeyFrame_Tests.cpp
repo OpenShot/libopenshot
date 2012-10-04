@@ -61,13 +61,13 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	kf.AddPoint(openshot::Point(Coordinate(50, 4), BEZIER));
 
 	// Spot check values from the curve
-	CHECK_CLOSE(1.0f, kf.GetValue(-1).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(0).Y, 0.0001);
-	CHECK_CLOSE(1.00023f, kf.GetValue(1).Y, 0.0001);
-	CHECK_CLOSE(1.18398f, kf.GetValue(9).Y, 0.0001);
-	CHECK_CLOSE(1.99988f, kf.GetValue(20).Y, 0.0001);
-	CHECK_CLOSE(3.75424f, kf.GetValue(40).Y, 0.0001);
-	CHECK_CLOSE(4.0f, kf.GetValue(50).Y, 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
+	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(1.18398f, kf.GetValue(9), 0.0001);
+	CHECK_CLOSE(1.99988f, kf.GetValue(20), 0.0001);
+	CHECK_CLOSE(3.75424f, kf.GetValue(40), 0.0001);
+	CHECK_CLOSE(4.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 51);
 }
@@ -84,14 +84,14 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	kf.AddPoint(openshot::Point(Coordinate(200, 3), BEZIER));
 
 	// Spot check values from the curve
-	CHECK_CLOSE(kf.GetValue(-1).Y, 1.0f, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(0).Y, 0.0001);
-	CHECK_CLOSE(1.00023f, kf.GetValue(1).Y, 0.0001);
-	CHECK_CLOSE(2.69174f, kf.GetValue(27).Y, 0.0001);
-	CHECK_CLOSE(7.46386f, kf.GetValue(77).Y, 0.0001);
-	CHECK_CLOSE(4.22691f, kf.GetValue(127).Y, 0.0001);
-	CHECK_CLOSE(1.73193f, kf.GetValue(177).Y, 0.0001);
-	CHECK_CLOSE(3.0f, kf.GetValue(200).Y, 0.0001);
+	CHECK_CLOSE(kf.GetValue(-1), 1.0f, 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
+	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(2.69174f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.46386f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.22691f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.73193f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 201);
 }
@@ -108,14 +108,14 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	kf.AddPoint(openshot::Point(Coordinate(200, 3), BEZIER));
 
 	// Spot check values from the curve
-	CHECK_CLOSE(1.0f, kf.GetValue(-1).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(0).Y, 0.0001);
-	CHECK_CLOSE(1.0009f, kf.GetValue(1).Y, 0.0001);
-	CHECK_CLOSE(2.64678f, kf.GetValue(27).Y, 0.0001);
-	CHECK_CLOSE(7.37597f, kf.GetValue(77).Y, 0.0001);
-	CHECK_CLOSE(4.37339f, kf.GetValue(127).Y, 0.0001);
-	CHECK_CLOSE(1.68798f, kf.GetValue(177).Y, 0.0001);
-	CHECK_CLOSE(3.0f, kf.GetValue(200).Y, 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
+	CHECK_CLOSE(1.0009f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(2.64678f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.37597f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.37339f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.68798f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 201);
 }
@@ -130,13 +130,13 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), LINEAR));
 
 	// Spot check values from the curve
-	CHECK_CLOSE(1.0f, kf.GetValue(-1).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(0).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(1).Y, 0.0001);
-	CHECK_CLOSE(3.33333f, kf.GetValue(9).Y, 0.0001);
-	CHECK_CLOSE(6.54167f, kf.GetValue(20).Y, 0.0001);
-	CHECK_CLOSE(4.4f, kf.GetValue(40).Y, 0.0001);
-	CHECK_CLOSE(2.0f, kf.GetValue(50).Y, 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(3.33333f, kf.GetValue(9), 0.0001);
+	CHECK_CLOSE(6.54167f, kf.GetValue(20), 0.0001);
+	CHECK_CLOSE(4.4f, kf.GetValue(40), 0.0001);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 51);
 }
@@ -151,14 +151,14 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), CONSTANT));
 
 	// Spot check values from the curve
-	CHECK_CLOSE(1.0f, kf.GetValue(-1).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(0).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(1).Y, 0.0001);
-	CHECK_CLOSE(1.0f, kf.GetValue(24).Y, 0.0001);
-	CHECK_CLOSE(8.0f, kf.GetValue(25).Y, 0.0001);
-	CHECK_CLOSE(8.0f, kf.GetValue(40).Y, 0.0001);
-	CHECK_CLOSE(8.0f, kf.GetValue(49).Y, 0.0001);
-	CHECK_CLOSE(2.0f, kf.GetValue(50).Y, 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(24), 0.0001);
+	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.0001);
+	CHECK_CLOSE(8.0f, kf.GetValue(40), 0.0001);
+	CHECK_CLOSE(8.0f, kf.GetValue(49), 0.0001);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 51);
 }
