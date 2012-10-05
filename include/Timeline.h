@@ -7,14 +7,23 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+#include <list>
+#include "Clip.h"
 #include "FileReaderBase.h"
 #include "Frame.h"
+#include "FrameRate.h"
 #include "KeyFrame.h"
 
 using namespace std;
 using namespace openshot;
 
 namespace openshot {
+
+	/// Comparison method for sorting clip pointers (by Position)
+	struct compare_clip_pointers{
+		bool operator()( Clip* lhs, Clip* rhs){
+		return lhs->Position() < rhs->Position();
+	}};
 
 	/**
 	 * \brief This class represents a timeline
@@ -26,19 +35,30 @@ namespace openshot {
 	 */
 	class Timeline : public FileReaderBase {
 	private:
-		int width; ///<Width of the canvas
-		int height; ///<Height of the canvas
+		int width; ///<Width of the canvas and viewport
+		int height; ///<Height of the canvas and viewport
+		Framerate fps; ///<Frames per second of the timeline
+		list<Clip*> clips; ///<List of clips on this timeline
+
+		/// Calculate time of a frame number, based on a framerate
+		float calculate_time(int number, Framerate rate);
 
 	public:
 
-		/// Default Constructor for the timeline (which sets the canvas width and height)
-		Timeline(int width, int height);
+		/// Default Constructor for the timeline (which sets the canvas width and height and FPS)
+		Timeline(int width, int height, Framerate fps);
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
 		Frame* GetFrame(int requested_frame);
+
+		/// Add an openshot::Clip to the timeline
+		void AddClip(Clip* clip);
+
+		/// Sort clips by position on the timeline
+		void SortClips();
 
 		/// Get the width of canvas and viewport
 		int Width() { return width; }

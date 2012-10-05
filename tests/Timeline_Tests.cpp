@@ -7,14 +7,15 @@ using namespace openshot;
 TEST(Timeline_Constructor)
 {
 	// Create a default fraction (should be 1/1)
-	Timeline t1(640, 480);
+	Framerate fps(30000,1000);
+	Timeline t1(640, 480, fps);
 
 	// Check values
 	CHECK_EQUAL(640, t1.Width());
 	CHECK_EQUAL(480, t1.Height());
 
 	// Create a default fraction (should be 1/1)
-	Timeline t2(300, 240);
+	Timeline t2(300, 240, fps);
 
 	// Check values
 	CHECK_EQUAL(300, t2.Width());
@@ -24,7 +25,8 @@ TEST(Timeline_Constructor)
 TEST(Timeline_Width_and_Height_Functions)
 {
 	// Create a default fraction (should be 1/1)
-	Timeline t1(640, 480);
+	Framerate fps(30000,1000);
+	Timeline t1(640, 480, fps);
 
 	// Check values
 	CHECK_EQUAL(640, t1.Width());

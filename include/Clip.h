@@ -91,6 +91,12 @@ namespace openshot {
 		/// Constructor with filepath
 		Clip(string path);
 
+		// Compare a clip using the Position() property
+		bool operator< ( Clip& a) { return (Position() < a.Position()); }
+		bool operator<= ( Clip& a) { return (Position() <= a.Position()); }
+		bool operator> ( Clip& a) { return (Position() > a.Position()); }
+		bool operator>= ( Clip& a) { return (Position() >= a.Position()); }
+
 		/// Map frame rate of this clip to a different frame rate
 		void MapFrames(Framerate fps, Pulldown_Method pulldown);
 
