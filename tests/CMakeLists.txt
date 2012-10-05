@@ -38,6 +38,7 @@ include_directories(${SDL_INCLUDE_DIR})
 add_executable(tester
 			   tests.cpp
 			   Cache_Tests.cpp
+			   Clip_Tests.cpp
 			   Coordinate_Tests.cpp
 			   FileReaderBase_Tests.cpp
 			   FFmpegReader_Tests.cpp
@@ -45,7 +46,8 @@ add_executable(tester
 			   FrameMapper_Tests.cpp
 			   FrameRate_Tests.cpp
 			   KeyFrame_Tests.cpp
-			   Point_Tests.cpp)
+			   Point_Tests.cpp
+			   Timeline_Tests.cpp)
 
 # Link libraries to the new executable
 target_link_libraries(tester openshot ${UNITTEST++_LIBRARY})

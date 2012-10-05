@@ -7,6 +7,8 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+#include "FileReaderBase.h"
+#include "Frame.h"
 #include "KeyFrame.h"
 
 using namespace std;
@@ -22,21 +24,38 @@ namespace openshot {
 	 * video output will be rendered.  It has a collection of layers and clips, that arrange,
 	 * sequence, and generate the final video output.
 	 */
-	class Timeline {
+	class Timeline : public FileReaderBase {
 	private:
-		int canvas_width; ///<Width of the canvas
-		int canvas_height; ///<Height of the canvas
-
-		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
-		Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
-		Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
+		int width; ///<Width of the canvas
+		int height; ///<Height of the canvas
 
 	public:
 
 		/// Default Constructor for the timeline (which sets the canvas width and height)
 		Timeline(int width, int height);
 
+		/// Get an openshot::Frame object for a specific frame number of this timeline.
+		///
+		/// @returns The requested frame (containing the image)
+		/// @param[requested_frame] number The frame number that is requested.
+		Frame* GetFrame(int requested_frame);
 
+		/// Get the width of canvas and viewport
+		int Width() { return width; }
+
+		/// Get the height of canvas and viewport
+		int Height() { return height; }
+
+		/// Set the width of canvas and viewport
+		void Width(int new_width) { width = new_width; }
+
+		/// Set the height of canvas and viewport
+		void Height(int new_height) { height = new_height; }
+
+		// Curves for the viewport
+		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
+		Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
+		Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
 	};
 
 

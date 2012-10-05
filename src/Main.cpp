@@ -15,10 +15,12 @@ void FrameReady(int number)
 int main()
 {
 	// Create a clip
-	Clip c("/home/jonathan/Pictures/afriscot_megaman.png");
+	Clip c("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 	cout << "Position: " << c.Position() << endl;
 	cout << "Start: " << c.Start() << endl;
 	cout << "End: " << c.End() << endl;
+
+	return 0;
 
 	//openshot::ImageReader i("/home/jonathan/Apps/videcho_site/media/logos/watermark3.png");
 	//openshot::Frame* overlay = i.GetFrame(1);
