@@ -63,6 +63,7 @@ namespace openshot
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
 		AVFrame *pFrame;
+		bool is_open;
 
 		bool check_interlace;
 		bool check_fps;
@@ -135,9 +136,6 @@ namespace openshot
 		/// Init a collection of software rescalers (thread safe)
 		void InitScalers();
 
-		/// Open File - which is called by the constructor automatically
-		void Open();
-
 		/// Process a video packet
 		void ProcessVideoPacket(int requested_frame);
 
@@ -186,6 +184,9 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param[requested_frame] number The frame number that is requested.
 		Frame* GetFrame(int requested_frame);
+
+		/// Open File - which is called by the constructor automatically
+		void Open();
 	};
 
 }

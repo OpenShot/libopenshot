@@ -6,7 +6,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(12), final_cache(24), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
-	  rescaler_position(0), num_of_rescalers(32) {
+	  rescaler_position(0), num_of_rescalers(32), is_open(false) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -16,10 +16,6 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 
 	// Open the file (if possible)
 	Open();
-
-	// Init rescalers (if video stream detected)
-	if (info.has_video)
-		InitScalers();
 
 	// Get 1st frame
 	GetFrame(1);
@@ -52,113 +48,128 @@ void FFmpegReader::RemoveScalers()
 
 void FFmpegReader::Open()
 {
-	// Initialize format context
-	pFormatCtx = NULL;
-
-	// Open video file
-	if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
-		throw InvalidFile("File could not be opened.", path);
-
-	// Retrieve stream information
-	if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
-		throw NoStreamsFound("No streams found in file.", path);
-
-	videoStream = -1;
-	audioStream = -1;
-	// Loop through each stream, and identify the video and audio stream index
-	for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++)
+	// Open reader if not already open
+	if (!is_open)
 	{
-		// Is this a video stream?
-		if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
-			videoStream = i;
+		// Initialize format context
+		pFormatCtx = NULL;
+
+		// Open video file
+		if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
+			throw InvalidFile("File could not be opened.", path);
+
+		// Retrieve stream information
+		if (avformat_find_stream_info(pFormatCtx, NULL) < 0)
+			throw NoStreamsFound("No streams found in file.", path);
+
+		videoStream = -1;
+		audioStream = -1;
+		// Loop through each stream, and identify the video and audio stream index
+		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++)
+		{
+			// Is this a video stream?
+			if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
+				videoStream = i;
+			}
+			// Is this an audio stream?
+			if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
+				audioStream = i;
+			}
 		}
-		// Is this an audio stream?
-		if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
-			audioStream = i;
+		if (videoStream == -1 && audioStream == -1)
+			throw NoStreamsFound("No video or audio streams found in this file.", path);
+
+		// Is there a video stream?
+		if (videoStream != -1)
+		{
+			// Set the stream index
+			info.video_stream_index = videoStream;
+
+			// Set the codec and codec context pointers
+			pStream = pFormatCtx->streams[videoStream];
+			pCodecCtx = pFormatCtx->streams[videoStream]->codec;
+
+			// Set number of threads equal to number of processors + 1
+			pCodecCtx->thread_count = omp_get_num_procs();
+
+			// Find the decoder for the video stream
+			AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
+			if (pCodec == NULL) {
+				throw InvalidCodec("A valid video codec could not be found for this file.", path);
+			}
+			// Open video codec
+			if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+				throw InvalidCodec("A video codec was found, but could not be opened.", path);
+
+			// Update the File Info struct with video details (if a video stream is found)
+			UpdateVideoInfo();
+
+			// Init rescalers (if video stream detected)
+			InitScalers();
 		}
+
+		// Is there an audio stream?
+		if (audioStream != -1)
+		{
+			// Set the stream index
+			info.audio_stream_index = audioStream;
+
+			// Get a pointer to the codec context for the audio stream
+			aStream = pFormatCtx->streams[audioStream];
+			aCodecCtx = pFormatCtx->streams[audioStream]->codec;
+
+			// Set number of threads equal to number of processors + 1
+			aCodecCtx->thread_count = omp_get_num_procs();
+
+			// Find the decoder for the audio stream
+			AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
+			if (aCodec == NULL) {
+				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
+			}
+			// Open audio codec
+			if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
+				throw InvalidCodec("An audio codec was found, but could not be opened.", path);
+
+			// Update the File Info struct with audio details (if an audio stream is found)
+			UpdateAudioInfo();
+		}
+
+		// Mark as "open"
+		is_open = true;
 	}
-	if (videoStream == -1 && audioStream == -1)
-		throw NoStreamsFound("No video or audio streams found in this file.", path);
-
-	// Is there a video stream?
-	if (videoStream != -1)
-	{
-		// Set the stream index
-		info.video_stream_index = videoStream;
-
-		// Set the codec and codec context pointers
-		pStream = pFormatCtx->streams[videoStream];
-		pCodecCtx = pFormatCtx->streams[videoStream]->codec;
-
-		// Set number of threads equal to number of processors + 1
-		pCodecCtx->thread_count = omp_get_num_procs();
-
-		// Find the decoder for the video stream
-		AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
-		if (pCodec == NULL) {
-			throw InvalidCodec("A valid video codec could not be found for this file.", path);
-		}
-		// Open video codec
-		if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
-			throw InvalidCodec("A video codec was found, but could not be opened.", path);
-
-		// Update the File Info struct with video details (if a video stream is found)
-		UpdateVideoInfo();
-	}
-
-	// Is there an audio stream?
-	if (audioStream != -1)
-	{
-		// Set the stream index
-		info.audio_stream_index = audioStream;
-
-		// Get a pointer to the codec context for the audio stream
-		aStream = pFormatCtx->streams[audioStream];
-		aCodecCtx = pFormatCtx->streams[audioStream]->codec;
-
-		// Set number of threads equal to number of processors + 1
-		aCodecCtx->thread_count = omp_get_num_procs();
-
-		// Find the decoder for the audio stream
-		AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
-		if (aCodec == NULL) {
-			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
-		}
-		// Open audio codec
-		if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
-			throw InvalidCodec("An audio codec was found, but could not be opened.", path);
-
-		// Update the File Info struct with audio details (if an audio stream is found)
-		UpdateAudioInfo();
-	}
-
 }
 
 void FFmpegReader::Close()
 {
-	// Close the codec
-	if (info.has_video)
+	// Close all objects, if reader is 'open'
+	if (is_open)
 	{
-		avcodec_flush_buffers(pCodecCtx);
-		avcodec_close(pCodecCtx);
+		// Close the codec
+		if (info.has_video)
+		{
+			// Clear image scalers
+			RemoveScalers();
+
+			avcodec_flush_buffers(pCodecCtx);
+			avcodec_close(pCodecCtx);
+		}
+		if (info.has_audio)
+		{
+			avcodec_flush_buffers(aCodecCtx);
+			avcodec_close(aCodecCtx);
+		}
+
+		// Clear cache
+		working_cache.Clear();
+		final_cache.Clear();
+
+		// Close the video file
+		avformat_close_input(&pFormatCtx);
+		av_freep(&pFormatCtx);
+
+		// Mark as "closed"
+		is_open = false;
 	}
-	if (info.has_audio)
-	{
-		avcodec_flush_buffers(aCodecCtx);
-		avcodec_close(aCodecCtx);
-	}
-
-	// Clear image scalers
-	if (info.has_video)
-		RemoveScalers();
-
-	// Clear cache
-	working_cache.Clear();
-	final_cache.Clear();
-
-	// Close the video file
-	avformat_close_input(&pFormatCtx);
-	av_freep(&pFormatCtx);
 }
 
 void FFmpegReader::UpdateAudioInfo()
