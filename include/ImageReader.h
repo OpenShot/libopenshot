@@ -34,9 +34,6 @@ namespace openshot
 		string path;
 		Frame* image_frame;
 
-		/// Open File - which is called by the constructor automatically
-		void Open();
-
 	public:
 
 		/// Constructor for ImageReader.  This automatically opens the media file and loads
@@ -52,6 +49,9 @@ namespace openshot
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
 		Frame* GetFrame(int requested_frame) throw(InvalidFile);
+
+		/// Open File - which is called by the constructor automatically
+		void Open();
 	};
 
 }

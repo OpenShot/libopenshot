@@ -63,6 +63,12 @@ namespace openshot
 		/// Information about the current media file
 		ReaderInfo info;
 
+		/// Close the reader (and any resources it was consuming)
+		virtual void Close() = 0;
+
+		/// Display file information in the standard output stream (stdout)
+		void DisplayInfo();
+
 		/// This method is required for all derived classes of FileReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.
@@ -75,8 +81,8 @@ namespace openshot
 		/// this method, or the ReaderInfo struct values will not be initialized.
 		void InitFileInfo();
 
-		/// Display file information in the standard output stream (stdout)
-		void DisplayInfo();
+		/// Open the reader (and start consuming resources, such as images or video files)
+		virtual void Open() = 0;
 	};
 
 }

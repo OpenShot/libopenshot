@@ -110,6 +110,29 @@ Clip::Clip(string path)
 	End(file_reader->info.duration);
 }
 
+// Open the internal reader
+void Clip::Open()
+{
+	if (file_reader)
+		file_reader->Open();
+}
+
+// Close the internal reader
+void Clip::Close()
+{
+	if (file_reader)
+		file_reader->Close();
+}
+
+// Get an openshot::Frame object for a specific frame number of this reader.
+Frame* Clip::GetFrame(int requested_frame)
+{
+	// Adjust out of bounds frame number
+	if (requested_frame < 1)
+		requested_frame = 1;
+
+}
+
 // Map frame rate of this clip to a different frame rate
 void Clip::MapFrames(Framerate fps, Pulldown_Method pulldown)
 {

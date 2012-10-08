@@ -14,6 +14,8 @@ TEST(FileReaderBase_Derived_Class)
 	public:
 		TestReader() { InitFileInfo(); };
 		Frame* GetFrame(int number) { Frame *f = new Frame(); return f; }
+		void Close() { };
+		void Open() { };
 	};
 
 	// Create an instance of the derived class

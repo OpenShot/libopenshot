@@ -39,6 +39,18 @@ void Timeline::SortClips()
 	clips.sort(compare_clip_pointers());
 }
 
+// Close the reader (and any resources it was consuming)
+void Timeline::Close()
+{
+
+}
+
+// Open the reader (and start consuming resources)
+void Timeline::Open()
+{
+
+}
+
 // Get an openshot::Frame object for a specific frame number of this reader.
 Frame* Timeline::GetFrame(int requested_frame)
 {

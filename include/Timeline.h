@@ -54,6 +54,12 @@ namespace openshot {
 		/// @param[requested_frame] number The frame number that is requested.
 		Frame* GetFrame(int requested_frame);
 
+		/// Close the reader (and any resources it was consuming)
+		void Close();
+
+		/// Open the reader (and start consuming resources)
+		void Open();
+
 		/// Add an openshot::Clip to the timeline
 		void AddClip(Clip* clip);
 

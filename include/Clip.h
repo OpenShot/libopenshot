@@ -85,20 +85,33 @@ namespace openshot {
 		ScaleType scale; ///<The scale determines how a clip should be resized to fit it's parent
 		AnchorType anchor; ///<The anchor determines what parent a clip should snap to
 
-		/// Default Constructor
-		Clip();
-
-		/// Constructor with filepath
-		Clip(string path);
-
 		// Compare a clip using the Position() property
 		bool operator< ( Clip& a) { return (Position() < a.Position()); }
 		bool operator<= ( Clip& a) { return (Position() <= a.Position()); }
 		bool operator> ( Clip& a) { return (Position() > a.Position()); }
 		bool operator>= ( Clip& a) { return (Position() >= a.Position()); }
 
+		/// Default Constructor
+		Clip();
+
+		/// Constructor with filepath
+		Clip(string path);
+
+		/// Close the internal reader
+		void Close();
+
+		/// Get an openshot::Frame object for a specific frame number of this timeline.
+		///
+		/// @returns The requested frame (containing the image)
+		/// @param[requested_frame] number The frame number that is requested.
+		Frame* GetFrame(int requested_frame);
+
 		/// Map frame rate of this clip to a different frame rate
 		void MapFrames(Framerate fps, Pulldown_Method pulldown);
+
+		/// Open the internal reader
+		void Open();
+
 
 		/// Get basic properties
 		float Position() { return position; } ///<Get position on timeline
