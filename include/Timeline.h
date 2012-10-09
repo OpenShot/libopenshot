@@ -39,9 +39,13 @@ namespace openshot {
 		int height; ///<Height of the canvas and viewport
 		Framerate fps; ///<Frames per second of the timeline
 		list<Clip*> clips; ///<List of clips on this timeline
+		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);
+
+		/// Update the list of 'opened' clips
+		void update_open_clips(Clip *clip, bool is_open);
 
 	public:
 

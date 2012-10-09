@@ -14,50 +14,31 @@ void FrameReady(int number)
 
 int main()
 {
-//	// Create timeline
-//	Framerate fps(30000,1000);
-//	Timeline t(640, 480, fps);
-//
-//	// Add some clips
-//	Clip c1;
-//	c1.Position(10.0);
-//
-//	Clip c2;
-//	c2.Position(0.0);
-//
-//	Clip c3;
-//	c3.Position(2.5);
-//
-//	Clip c4;
-//	c4.Position(40.4);
-//
-//	Clip c5;
-//	c5.Position(0.1);
-//
-//	t.AddClip(&c4);
-//	t.AddClip(&c2);
-//	t.AddClip(&c3);
-//	t.AddClip(&c1);
-//	t.AddClip(&c5);
-//
-//	t.GetFrame(1);
-//
-//	c1.Position(50.0);
-//	c2.Position(42.0);
-//	c3.Position(33.0);
-//	c4.Position(63.0);
-//	c5.Position(13.0);
-//
-//	t.SortClips();
-//	t.GetFrame(1);
-//
-//	// Create a clip
-//	Clip c("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-//	cout << "Position: " << c.Position() << endl;
-//	cout << "Start: " << c.Start() << endl;
-//	cout << "End: " << c.End() << endl;
-//
-//	return 0;
+	// Create timeline
+	Framerate fps(30000,1000);
+	Timeline t(640, 480, fps);
+
+	// Add some clips
+	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	c1.Position(10.0);
+
+	Clip c2("../../src/examples/test.mp4");
+	c2.Position(0.0);
+
+	Clip c3("../../src/examples/piano.wav");
+	c3.Position(2.5);
+
+	// Add clips
+	t.AddClip(&c1);
+	t.AddClip(&c2);
+	t.AddClip(&c3);
+
+	// Request frames
+	for (int x=0; x<330; x++)
+		t.GetFrame(x);
+
+	cout << "Successfully Finished Timeline DEMO" << endl;
+	return 0;
 
 
 

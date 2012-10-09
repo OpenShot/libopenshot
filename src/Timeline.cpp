@@ -32,6 +32,34 @@ float Timeline::calculate_time(int number, Framerate rate)
 	return float(number - 1) / raw_fps;
 }
 
+// Update the list of 'opened' clips
+void Timeline::update_open_clips(Clip *clip, bool is_open)
+{
+	// is clip already in list?
+	bool clip_found = open_clips.count(clip);
+
+	if (clip_found && !is_open)
+	{
+		// Remove clip from 'opened' list, because it's closed now
+		open_clips.erase(clip);
+
+		// Close the clip's reader
+		clip->Close();
+
+		cout << "-- Remove clip " << clip << " from opened clips map" << endl;
+	}
+	else if (!clip_found && is_open)
+	{
+		// Add clip to 'opened' list, because it's missing
+		open_clips[clip] = clip;
+
+		// Open the clip's reader
+		clip->Open();
+
+		cout << "-- Add clip " << clip << " to opened clips map" << endl;
+	}
+}
+
 // Sort clips by position on the timeline
 void Timeline::SortClips()
 {
@@ -68,7 +96,12 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 		// Get clip object from the iterator
 		Clip *clip = (*clip_itr);
 
-		cout << clip->Position() << endl;
+		// Does clip intersect the current requested time
+		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Reader()->info.duration >= requested_time);
+
+		// Open or Close this clip, based on if it's intersecting or not
+		update_open_clips(clip, does_clip_intersect);
 	}
+
 
 }
