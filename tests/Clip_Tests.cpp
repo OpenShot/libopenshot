@@ -23,6 +23,7 @@ TEST(Clip_Constructor)
 {
 	// Create a empty clip
 	Clip c1("../../src/examples/piano.wav");
+	c1.Open();
 
 	// Check basic settings
 	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);
@@ -38,6 +39,7 @@ TEST(Clip_Basic_Gettings_and_Setters)
 {
 	// Create a empty clip
 	Clip c1;
+	c1.Open();
 
 	// Check basic settings
 	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);

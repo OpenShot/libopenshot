@@ -167,6 +167,16 @@ namespace openshot {
 		virtual ~OutOfMemory() throw () {}
 	};
 
+	/// Exception when a reader is closed, and a frame is requested
+	class ReaderClosed : public BaseException
+	{
+	public:
+		string file_path;
+		ReaderClosed(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~ReaderClosed() throw () {}
+	};
+
 	/// Exception when resample fails
 	class ResampleError : public BaseException
 	{

@@ -52,7 +52,7 @@ void Timeline::Open()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-Frame* Timeline::GetFrame(int requested_frame)
+Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)

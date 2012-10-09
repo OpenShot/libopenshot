@@ -2,7 +2,7 @@
 
 using namespace openshot;
 
-FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
+FFmpegReader::FFmpegReader(string path)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(12), final_cache(24), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
@@ -13,12 +13,6 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
-
-	// Open the file (if possible)
-	Open();
-
-	// Get 1st frame
-	GetFrame(1);
 }
 
 // Init a collection of software rescalers (thread safe)
@@ -46,7 +40,7 @@ void FFmpegReader::RemoveScalers()
 	image_rescalers.clear();
 }
 
-void FFmpegReader::Open()
+void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -136,6 +130,9 @@ void FFmpegReader::Open()
 
 		// Mark as "open"
 		is_open = true;
+
+		// Get 1st frame
+		GetFrame(1);
 	}
 }
 
@@ -279,8 +276,12 @@ void FFmpegReader::UpdateVideoInfo()
 
 }
 
-Frame* FFmpegReader::GetFrame(int requested_frame)
+Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
+
 	// Check the cache for this frame
 	if (final_cache.Exists(requested_frame))
 		// Return the cached frame

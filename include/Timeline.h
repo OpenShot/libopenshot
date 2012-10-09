@@ -52,7 +52,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame);
+		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Close the reader (and any resources it was consuming)
 		void Close();

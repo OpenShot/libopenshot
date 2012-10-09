@@ -61,6 +61,13 @@ Clip::Clip()
 	init_settings();
 }
 
+// Constructor with reader
+Clip::Clip(FileReaderBase* reader)
+{
+	// set reader pointer
+	file_reader = reader;
+}
+
 // Constructor with filepath
 Clip::Clip(string path)
 {
@@ -72,7 +79,8 @@ Clip::Clip(string path)
 	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
-	if (ext=="avi" || ext=="mov" || ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" || ext=="ogg" || ext=="wmv" || ext=="webm" || ext=="vob")
+	if (ext=="avi" || ext=="mov" || ext=="mkv" ||  ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" ||
+		ext=="ogg" || ext=="wav" || ext=="wmv" || ext=="webm" || ext=="vob")
 	{
 		try
 		{
@@ -106,15 +114,32 @@ Clip::Clip(string path)
 		}
 	}
 
-	// Set some clip properties from the file reader
-	End(file_reader->info.duration);
+}
+
+/// Set the current reader
+void Clip::Reader(FileReaderBase* reader)
+{
+	// set reader pointer
+	file_reader = reader;
+}
+
+/// Get the current reader
+FileReaderBase* Clip::Reader()
+{
+	return file_reader;
 }
 
 // Open the internal reader
-void Clip::Open()
+void Clip::Open() throw(InvalidFile)
 {
 	if (file_reader)
+	{
+		// Open the reader
 		file_reader->Open();
+
+		// Set some clip properties from the file reader
+		End(file_reader->info.duration);
+	}
 }
 
 // Close the internal reader
@@ -125,7 +150,7 @@ void Clip::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-Frame* Clip::GetFrame(int requested_frame)
+Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)

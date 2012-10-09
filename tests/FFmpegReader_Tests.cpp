@@ -6,14 +6,27 @@ using namespace openshot;
 
 TEST(FFmpegReader_Invalid_Path)
 {
+	// Create reader with invalid path
+	FFmpegReader r("");
+
 	// Check invalid path
-	CHECK_THROW(FFmpegReader r(""), InvalidFile);
+	CHECK_THROW(r.Open(), InvalidFile);
+}
+
+TEST(FFmpegReader_GetFrame_Before_Opening)
+{
+	// Create a reader
+	FFmpegReader r("../../src/examples/piano.wav");
+
+	// Check invalid path
+	CHECK_THROW(r.GetFrame(1), ReaderClosed);
 }
 
 TEST(FFmpegReader_Check_Audio_File)
 {
 	// Create a reader
 	FFmpegReader r("../../src/examples/piano.wav");
+	r.Open();
 
 	// Get frame 1
 	Frame *f = r.GetFrame(1);
@@ -41,6 +54,7 @@ TEST(FFmpegReader_Check_Video_File)
 {
 	// Create a reader
 	FFmpegReader r("../../src/examples/test.mp4");
+	r.Open();
 
 	// Get frame 1
 	Frame *f = r.GetFrame(1);

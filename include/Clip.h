@@ -94,8 +94,11 @@ namespace openshot {
 		/// Default Constructor
 		Clip();
 
-		/// Constructor with filepath
+		/// Constructor with filepath (reader is automatically created... by guessing file extensions)
 		Clip(string path);
+
+		/// Constructor with reader
+		Clip(FileReaderBase* reader);
 
 		/// Close the internal reader
 		void Close();
@@ -104,14 +107,19 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame);
+		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Map frame rate of this clip to a different frame rate
 		void MapFrames(Framerate fps, Pulldown_Method pulldown);
 
 		/// Open the internal reader
-		void Open();
+		void Open() throw(InvalidFile);
 
+		/// Set the current reader
+		void Reader(FileReaderBase* reader);
+
+		/// Get the current reader
+		FileReaderBase* Reader();
 
 		/// Get basic properties
 		float Position() { return position; } ///<Get position on timeline
