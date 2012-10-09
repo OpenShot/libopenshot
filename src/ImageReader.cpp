@@ -6,6 +6,10 @@ ImageReader::ImageReader(string path) : path(path), is_open(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	Open();
+	Close();
 }
 
 // Open image file
@@ -60,9 +64,6 @@ void ImageReader::Open() throw(InvalidFile)
 
 		// Mark as "open"
 		is_open = true;
-
-		// Get 1st frame
-		GetFrame(1);
 	}
 }
 

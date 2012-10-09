@@ -19,14 +19,14 @@ int main()
 	Timeline t(640, 480, fps);
 
 	// Add some clips
-	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	c1.Position(10.0);
+	Clip c1("../../src/examples/test.mp4");
+	c1.Position(0.0);
 
-	Clip c2("../../src/examples/test.mp4");
+	Clip c2("../../src/examples/test1.mp4");
 	c2.Position(0.0);
 
 	Clip c3("../../src/examples/piano.wav");
-	c3.Position(2.5);
+	c3.Position(0.25);
 
 	// Add clips
 	t.AddClip(&c1);

@@ -13,6 +13,10 @@ FFmpegReader::FFmpegReader(string path)
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	Open();
+	Close();
 }
 
 // Init a collection of software rescalers (thread safe)
@@ -130,9 +134,6 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 
 		// Mark as "open"
 		is_open = true;
-
-		// Get 1st frame
-		GetFrame(1);
 	}
 }
 
