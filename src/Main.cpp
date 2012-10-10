@@ -14,18 +14,23 @@ void FrameReady(int number)
 
 int main()
 {
+	//openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+
 	// Create timeline
-	Framerate fps(24,1);
-	Timeline t(640, 360, fps);
+	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
-	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	c1.Position(0.0);
-	//c1.time.AddPoint(800, 300);
-	//c1.time.AddPoint(1600, 1);
+	c1.time.AddPoint(800, 300);
+	c1.time.AddPoint(1600, 1);
 
 	// Add clips
 	t.AddClip(&c1);
+
+
+	t.GetFrame(300)->Display();
+	t.GetFrame(310)->Display();
 
 
 	// Create a writer
@@ -50,7 +55,7 @@ int main()
 		Frame *f = t.GetFrame(frame);
 
 		// Write frame
-		cout << "queue frame " << frame << endl;
+		cout << "queue frame " << frame << " (" << f << ")" << endl;
 		w.WriteFrame(f);
 	}
 
@@ -59,11 +64,6 @@ int main()
 
 	// Close writer & reader
 	w.Close();
-
-
-	// Request frames
-	for (int x=1; x<=100; x++)
-		t.GetFrame(x);
 
 	// Close timeline
 	t.Close();

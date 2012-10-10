@@ -117,9 +117,10 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 		if (does_clip_intersect)
 		{
 			// Display the clip (DEBUG)
-			//clip->GetFrame(requested_frame)->Display();
+			return clip->GetFrame(requested_frame);
 		}
 	}
 
-
+	// No clips found
+	return NULL;
 }

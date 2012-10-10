@@ -167,6 +167,7 @@ void FFmpegReader::Close()
 
 		// Mark as "closed"
 		is_open = false;
+		last_frame = 0;
 	}
 }
 
@@ -299,6 +300,11 @@ Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed)
 		if (info.has_video && info.video_length == 0)
 			// Invalid duration of video file
 			throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
+
+		// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
+		if (last_frame == 0 && requested_frame != 1)
+			// Get first frame
+			ReadStream(1);
 
 		// Are we within 20 frames of the requested frame?
 		int diff = requested_frame - last_frame;
