@@ -156,6 +156,20 @@ Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	if (requested_frame < 1)
 		requested_frame = 1;
 
+	// Get mapped frame number (or just return the same number).  This is used to change framerates.
+	int frame_number = get_framerate_mapped_frame(requested_frame);
+
+	// Get time mapped frame number (used to increase speed, change direction, etc...)
+	frame_number = get_time_mapped_frame(frame_number);
+
+	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
+	Frame *frame = file_reader->GetFrame(frame_number);
+
+	// Apply basic image processing (scale, rotation, etc...)
+	apply_basic_image_processing(frame, frame_number);
+
+	// Return processed 'frame'
+	return frame;
 }
 
 // Map frame rate of this clip to a different frame rate
@@ -177,4 +191,47 @@ string Clip::get_file_extension(string path)
 {
 	// return last part of path
 	return path.substr(path.find_last_of(".") + 1);
+}
+
+// Get the new frame number, based on the Framemapper, or return the number passed in
+int Clip::get_framerate_mapped_frame(int original_frame_number)
+{
+	// Check for a frame mapper (which is optinal)
+	if (frame_map)
+	{
+		// Get new frame number
+		return frame_map->GetFrame(original_frame_number).Odd.Frame;
+
+	} else
+		// return passed in parameter
+		return original_frame_number;
+}
+
+// Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)
+int Clip::get_time_mapped_frame(int original_frame_number)
+{
+	// Check for a valid time map curve
+	if (time.Values.size() > 1)
+	{
+		// Get new frame number
+		return time.GetValue(original_frame_number);
+
+	} else
+		// return passed in parameter
+		return original_frame_number;
+}
+
+// Apply basic image processing (scale, rotate, move, etc...)
+void Clip::apply_basic_image_processing(Frame* frame, int frame_number)
+{
+	// Get values
+	float rotation_value = rotation.GetValue(frame_number);
+	//float scale_x_value = scale_x.GetValue(frame_number);
+	//float scale_y_value = scale_y.GetValue(frame_number);
+
+	cout << "rotation_value: " << rotation_value << endl;
+
+	// rotate frame
+	if (rotation_value != 0)
+		frame->Rotate(rotation_value);
 }

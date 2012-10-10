@@ -502,6 +502,12 @@ void Frame::AddEffect(string name)
 		image->swirl(30.0);
 }
 
+// Rotate the image
+void Frame::Rotate(float degrees)
+{
+	image->rotate(degrees);
+}
+
 // Experimental method to add overlay images to this frame
 void Frame::AddOverlay(Frame* frame)
 {

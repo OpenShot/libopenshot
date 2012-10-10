@@ -74,8 +74,17 @@ namespace openshot {
 		// Internal frame mapper (to map between different frame rates)
 		FrameMapper* frame_map;
 
+		/// Apply basic image processing (scale, rotate, move, etc...)
+		void apply_basic_image_processing(Frame* frame, int frame_number);
+
 		/// Get file extension
 		string get_file_extension(string path);
+
+		/// Get the new frame number, based on the Framemapper, or return the number passed in
+		int get_framerate_mapped_frame(int original_frame_number);
+
+		/// Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)
+		int get_time_mapped_frame(int original_frame_number);
 
 		/// Init default settings for a clip
 		void init_settings();

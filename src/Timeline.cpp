@@ -112,6 +112,13 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, does_clip_intersect);
+
+		// Clip is visible
+		if (does_clip_intersect)
+		{
+			// Display the clip (DEBUG)
+			clip->GetFrame(requested_frame)->Display();
+		}
 	}
 
 

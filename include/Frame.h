@@ -138,6 +138,9 @@ namespace openshot
 		/// Get height of image
 		int GetWidth();
 
+		/// Rotate the image
+		void Rotate(float degrees);
+
 		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 		void Save(string path, float scale);
 
