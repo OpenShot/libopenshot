@@ -20,18 +20,26 @@ int main()
 
 	// Add some clips
 	Clip c1("../../src/examples/test.mp4");
+	c1.Layer(2);
 	c1.Position(0.0);
 
 	Clip c2("../../src/examples/test1.mp4");
+	c2.Layer(1);
 	c2.Position(0.0);
 
 	Clip c3("../../src/examples/piano.wav");
-	c3.Position(0.25);
+	c3.Layer(3);
+	c3.Position(0.0);
+
+	Clip c4("../../src/examples/piano.wav");
+	c4.Layer(1);
+	c4.Position(0.0);
 
 	// Add clips
 	t.AddClip(&c1);
 	t.AddClip(&c2);
 	t.AddClip(&c3);
+	t.AddClip(&c4);
 
 	// Request frames
 	for (int x=0; x<133; x++)

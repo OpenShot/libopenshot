@@ -19,10 +19,10 @@ using namespace openshot;
 
 namespace openshot {
 
-	/// Comparison method for sorting clip pointers (by Position)
+	/// Comparison method for sorting clip pointers (by Position and Layer)
 	struct compare_clip_pointers{
 		bool operator()( Clip* lhs, Clip* rhs){
-		return lhs->Position() < rhs->Position();
+		return lhs->Position() <= rhs->Position() && lhs->Layer() < rhs->Layer();
 	}};
 
 	/**
