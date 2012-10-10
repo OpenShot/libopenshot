@@ -70,7 +70,16 @@ void Timeline::SortClips()
 // Close the reader (and any resources it was consuming)
 void Timeline::Close()
 {
+	// Close all open clips
+	list<Clip*>::iterator clip_itr;
+	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *clip = (*clip_itr);
 
+		// Open or Close this clip, based on if it's intersecting or not
+		update_open_clips(clip, false);
+	}
 }
 
 // Open the reader (and start consuming resources)

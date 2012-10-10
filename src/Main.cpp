@@ -34,8 +34,11 @@ int main()
 	t.AddClip(&c3);
 
 	// Request frames
-	for (int x=0; x<330; x++)
+	for (int x=0; x<133; x++)
 		t.GetFrame(x);
+
+	// Close timeline
+	t.Close();
 
 	cout << "Successfully Finished Timeline DEMO" << endl;
 	return 0;
