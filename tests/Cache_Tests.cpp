@@ -9,16 +9,16 @@ TEST(Cache_Default_Constructor)
 	// Create cache object
 	Cache c;
 
-	// Loop 30 times
-	for (int i = 0; i < 30; i++)
+	// Loop 50 times
+	for (int i = 0; i < 50; i++)
 	{
 		// Add blank frame to the cache
 		Frame *f = new Frame();
 		c.Add(i, f);
 	}
 
-	CHECK_EQUAL(30, c.Count()); // Cache should still have all 30 items, because the current frame is 0
-	CHECK_EQUAL(20, c.GetMaxFrames()); // Max frames should default to 20
+	CHECK_EQUAL(50, c.Count()); // Cache should have all frames, with no limit
+	CHECK_EQUAL(-1, c.GetMaxFrames()); // Max frames should default to -1
 }
 
 TEST(Cache_Max_Frames_Constructor)
@@ -293,7 +293,7 @@ TEST(Cache_Set_Max_Frames)
 		c.Add(i, f);
 	}
 
-	CHECK_EQUAL(20, c.GetMaxFrames()); // Cache defaults max frames to 20
+	CHECK_EQUAL(-1, c.GetMaxFrames()); // Cache defaults max frames to -1, unlimited frames
 
 	// Set max frames
 	c.SetMaxFrames(10);

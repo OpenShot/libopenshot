@@ -22,15 +22,11 @@ int main()
 	// Add some clips
 	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	c1.Position(0.0);
-	c1.time.AddPoint(800, 300);
-	c1.time.AddPoint(1600, 1);
+	c1.time.AddPoint(600, 1240);
+	//c1.time.AddPoint(1240, 1);
 
 	// Add clips
 	t.AddClip(&c1);
-
-
-	t.GetFrame(300)->Display();
-	t.GetFrame(310)->Display();
 
 
 	// Create a writer
@@ -50,7 +46,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 1600; frame++)
+	for (int frame = 1; frame <= 1247; frame++)
 	{
 		Frame *f = t.GetFrame(frame);
 

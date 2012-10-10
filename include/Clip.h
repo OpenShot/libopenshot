@@ -74,6 +74,9 @@ namespace openshot {
 		// Internal frame mapper (to map between different frame rates)
 		FrameMapper* frame_map;
 
+		/// Adjust frame number minimum value
+		int adjust_frame_number_minimum(int frame_number);
+
 		/// Apply basic image processing (scale, rotate, move, etc...)
 		void apply_basic_image_processing(Frame* frame, int frame_number);
 

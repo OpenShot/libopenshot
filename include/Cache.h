@@ -36,7 +36,7 @@ namespace openshot {
 		void CleanUp();
 
 	public:
-		/// Default constructor, max previous frames to cache is 20
+		/// Default constructor, no max frames
 		Cache();
 
 		/// Constructor that sets the max previous frames to cache

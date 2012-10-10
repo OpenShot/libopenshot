@@ -153,14 +153,15 @@ void Clip::Close()
 Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
-	if (requested_frame < 1)
-		requested_frame = 1;
+	requested_frame = adjust_frame_number_minimum(requested_frame);
 
 	// Get mapped frame number (or just return the same number).  This is used to change framerates.
 	int frame_number = get_framerate_mapped_frame(requested_frame);
 
 	// Get time mapped frame number (used to increase speed, change direction, etc...)
-	frame_number = get_time_mapped_frame(frame_number);
+	frame_number = adjust_frame_number_minimum(get_time_mapped_frame(frame_number));
+
+	cout << "requested_frame: " << frame_number << endl;
 
 	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 	Frame *frame = file_reader->GetFrame(frame_number);
@@ -232,4 +233,15 @@ void Clip::apply_basic_image_processing(Frame* frame, int frame_number)
 	// rotate frame
 	if (rotation_value != 0)
 		frame->Rotate(rotation_value);
+}
+
+// Adjust frame number minimum value
+int Clip::adjust_frame_number_minimum(int frame_number)
+{
+	// Never return a frame number 0 or below
+	if (frame_number < 1)
+		return 1;
+	else
+		return frame_number;
+
 }

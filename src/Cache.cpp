@@ -9,8 +9,8 @@
 using namespace std;
 using namespace openshot;
 
-// Default constructor, max frames to cache is 20
-Cache::Cache() : max_frames(20), current_frame(0) { };
+// Default constructor, no max frames
+Cache::Cache() : max_frames(-1), current_frame(0) { };
 
 // Constructor that sets the max frames to cache
 Cache::Cache(int max_frames) : max_frames(max_frames), current_frame(0) { };
@@ -127,38 +127,41 @@ int Cache::Count()
 // Clean up cached frames that exceed the number in our max_frames variable
 void Cache::CleanUp()
 {
-	// Count previous frames (relative to the current frame), and determine the smallest frame number
-	// Loop through frame numbers
-	deque<int>::iterator itr;
-	int previous_frames = 0;
-	int smallest_frame = -1;
-	for (itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr) {
-		if (*itr < current_frame)
-			previous_frames++;
+	if (max_frames > 0)
+	{
+		// Count previous frames (relative to the current frame), and determine the smallest frame number
+		// Loop through frame numbers
+		deque<int>::iterator itr;
+		int previous_frames = 0;
+		int smallest_frame = -1;
+		for (itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr) {
+			if (*itr < current_frame)
+				previous_frames++;
 
-		if (*itr < smallest_frame || smallest_frame == -1)
-			smallest_frame = *itr;
-	}
+			if (*itr < smallest_frame || smallest_frame == -1)
+				smallest_frame = *itr;
+		}
 
-	// check against max size
-	if (previous_frames > max_frames) {
-		// Get the difference
-		int diff = previous_frames - max_frames;
-		int removed_count = 0;
+		// check against max size
+		if (previous_frames > max_frames) {
+			// Get the difference
+			int diff = previous_frames - max_frames;
+			int removed_count = 0;
 
-		// Loop through frames and remove the oldest
-		for (int x = smallest_frame; x < current_frame; x++) {
+			// Loop through frames and remove the oldest
+			for (int x = smallest_frame; x < current_frame; x++) {
 
-			// Does frame exist?
-			if (Exists(x)) {
-				// Remove the frame, increment count
-				Remove(x);
-				removed_count++;
+				// Does frame exist?
+				if (Exists(x)) {
+					// Remove the frame, increment count
+					Remove(x);
+					removed_count++;
+				}
+
+				// Break after the correct # has been removed
+				if (removed_count == diff)
+					break;
 			}
-
-			// Break after the correct # has been removed
-			if (removed_count == diff)
-				break;
 		}
 	}
 }

@@ -98,7 +98,7 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 	// Calculate time of frame
 	float requested_time = calculate_time(requested_frame, fps);
 
-	cout << "requested_frame: " << requested_frame << ", requested_time: " << requested_time << endl;
+	//cout << "requested_frame: " << requested_frame << ", requested_time: " << requested_time << endl;
 
 	// Find Clips at this time
 	list<Clip*>::iterator clip_itr;
