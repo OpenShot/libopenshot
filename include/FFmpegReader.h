@@ -174,7 +174,7 @@ namespace openshot
 
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		FFmpegReader(string path);
+		FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec);
 
 		/// Close File
 		void Close();

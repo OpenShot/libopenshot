@@ -52,32 +52,26 @@ namespace openshot {
 		/// Default Constructor for the timeline (which sets the canvas width and height and FPS)
 		Timeline(int width, int height, Framerate fps);
 
+		/// Add an openshot::Clip to the timeline
+		void AddClip(Clip* clip);
+
+		/// Close the reader (and any resources it was consuming)
+		void Close();
+
+		/// Get the framerate of this timeline
+		Framerate FrameRate() { return fps; };
+
+		/// Set the framerate for this timeline
+		void FrameRate(Framerate new_fps) { fps = new_fps; };
+
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
 		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
 
-		/// Close the reader (and any resources it was consuming)
-		void Close();
-
-		/// Open the reader (and start consuming resources)
-		void Open();
-
-		/// Add an openshot::Clip to the timeline
-		void AddClip(Clip* clip);
-
-		/// Sort clips by position on the timeline
-		void SortClips();
-
-		/// Get the width of canvas and viewport
-		int Width() { return width; }
-
 		/// Get the height of canvas and viewport
 		int Height() { return height; }
-
-		/// Set the width of canvas and viewport
-		void Width(int new_width) { width = new_width; }
 
 		/// Set the height of canvas and viewport
 		void Height(int new_height) { height = new_height; }
@@ -86,6 +80,19 @@ namespace openshot {
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
 		Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
 		Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
+
+		/// Open the reader (and start consuming resources)
+		void Open();
+
+		/// Sort clips by position on the timeline
+		void SortClips();
+
+		/// Get the width of canvas and viewport
+		int Width() { return width; }
+
+		/// Set the width of canvas and viewport
+		void Width(int new_width) { width = new_width; }
+
 	};
 
 

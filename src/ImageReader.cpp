@@ -2,7 +2,7 @@
 
 using namespace openshot;
 
-ImageReader::ImageReader(string path) : path(path), is_open(false)
+ImageReader::ImageReader(string path) throw(InvalidFile) : path(path), is_open(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();

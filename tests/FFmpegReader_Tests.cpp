@@ -6,11 +6,8 @@ using namespace openshot;
 
 TEST(FFmpegReader_Invalid_Path)
 {
-	// Create reader with invalid path
-	FFmpegReader r("");
-
 	// Check invalid path
-	CHECK_THROW(r.Open(), InvalidFile);
+	CHECK_THROW(FFmpegReader(""), InvalidFile);
 }
 
 TEST(FFmpegReader_GetFrame_Before_Opening)

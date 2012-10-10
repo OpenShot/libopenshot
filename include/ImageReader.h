@@ -39,7 +39,7 @@ namespace openshot
 
 		/// Constructor for ImageReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		ImageReader(string path);
+		ImageReader(string path) throw(InvalidFile);
 
 		/// Close File
 		void Close();

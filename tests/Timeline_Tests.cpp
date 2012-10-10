@@ -46,3 +46,20 @@ TEST(Timeline_Width_and_Height_Functions)
 	CHECK_EQUAL(600, t1.Width());
 	CHECK_EQUAL(400, t1.Height());
 }
+
+TEST(Timeline_Framerate)
+{
+	// Create a default fraction (should be 1/1)
+	Framerate fps(24,1);
+	Timeline t1(640, 480, fps);
+
+	// Check values
+	CHECK_CLOSE(24.0f, t1.FrameRate().GetFPS(), 0.00001);
+
+	// Set width
+	t1.FrameRate(Framerate(30000,1001));
+
+	// Check values
+	CHECK_CLOSE(29.97002f, t1.FrameRate().GetFPS(), 0.00001);
+
+}
