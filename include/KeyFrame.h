@@ -79,6 +79,9 @@ namespace openshot {
 		/// Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
 		void AddPoint(float x, float y);
 
+		/// Add a new point on the key-frame, with a specific interpolation type
+		void AddPoint(float x, float y, Interpolation_Type interpolate);
+
 		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
 		void SetHandles(Point current);
 

@@ -83,6 +83,7 @@ namespace openshot
 		int seeking_pts;
 		int seeking_frame;
 		bool is_video_seek;
+		int seek_count;
 
 		int audio_pts_offset;
 		int video_pts_offset;
@@ -155,7 +156,7 @@ namespace openshot
 		void RemoveScalers();
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-		void Seek(int requested_frame);
+		void Seek(int requested_frame) throw(TooManySeeks);
 
 		/// Update PTS Offset (if any)
 		void UpdatePTSOffset(bool is_video);
@@ -183,7 +184,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
+		Frame* GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
 
 		/// Open File - which is called by the constructor automatically
 		void Open() throw(InvalidFile, NoStreamsFound, InvalidCodec);

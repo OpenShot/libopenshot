@@ -187,6 +187,16 @@ namespace openshot {
 		virtual ~ResampleError() throw () {}
 	};
 
+	/// Exception when too many seek attempts happen
+	class TooManySeeks : public BaseException
+	{
+	public:
+		string file_path;
+		TooManySeeks(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~TooManySeeks() throw () {}
+	};
+
 }
 
 #endif

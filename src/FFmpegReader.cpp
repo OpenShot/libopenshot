@@ -3,8 +3,8 @@
 using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
-	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(24), final_cache(24), path(path),
+	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(-1), final_cache(24), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
 	  rescaler_position(0), num_of_rescalers(32), is_open(false) {
 
@@ -278,7 +278,7 @@ void FFmpegReader::UpdateVideoInfo()
 
 }
 
-Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed)
+Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -306,20 +306,30 @@ Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed)
 			// Get first frame
 			ReadStream(1);
 
-		// Are we within 20 frames of the requested frame?
+		// Reset seek count
+		seek_count = 0;
+
+		// Are we within 30 frames of the requested frame?
 		int diff = requested_frame - last_frame;
-		if (abs(diff) >= 0 && abs(diff) <= 19)
+		if (diff >= 1 && diff <= 30)
 		{
 			// Continue walking the stream
 			return ReadStream(requested_frame);
 		}
 		else
 		{
-			// Greater than 20 frames away, we need to seek to the nearest key frame
+			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
 			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM" << endl;
 			if (enable_seek)
 				// Only seek if enabled
 				Seek(requested_frame);
+
+			else if (!enable_seek && diff < 0)
+			{
+				// Start over, since we can't seek, and the requested frame is smaller than our position
+				Close();
+				Open();
+			}
 
 			// Then continue walking the stream
 			return ReadStream(requested_frame);
@@ -539,11 +549,13 @@ bool FFmpegReader::CheckSeek(bool is_video)
 				cout << "Woops!  Need to seek backwards further..." << endl;
 
 				// Seek again... to the nearest Keyframe
-				Seek(seeking_frame - 10);
+				Seek(seeking_frame - 5);
 			}
 			else
 			{
 				// SEEK WORKED!
+				cout << "Seek worked, and we are now on current frame: " << ConvertVideoPTStoFrame(current_pts) << ", seeking frame: " << ConvertVideoPTStoFrame(seeking_pts) << endl;
+
 				// Seek worked, and we are "before" the requested frame
 				is_seeking = false;
 				seeking_pts = 0;
@@ -856,7 +868,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 
 // Seek to a specific frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-void FFmpegReader::Seek(int requested_frame)
+void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 {
 	cout << "SEEK TO " << requested_frame << endl;
 
@@ -872,9 +884,16 @@ void FFmpegReader::Seek(int requested_frame)
 	// Reset the last frame variable
 	last_frame = 0;
 
+	// Increment seek count
+	seek_count++;
+
 	// Reset the current frame for the cache
 	working_cache.SetCurrentFrame(requested_frame);
 	final_cache.SetCurrentFrame(requested_frame);
+
+	// too many seeks
+	if (seek_count > 10)
+		throw TooManySeeks("Too many seek attempts... something seems wrong.", path);
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
 	if (requested_frame == 1)
@@ -885,16 +904,17 @@ void FFmpegReader::Seek(int requested_frame)
 
 		// Not actually seeking, so clear these flags
 		is_seeking = false;
+		seeking_frame = 1;
 		seeking_pts = ConvertFrameToVideoPTS(1);
 	}
 	else
 	{
 		// Seek to nearest key-frame (aka, i-frame)
 		bool seek_worked = true;
-		int64_t seek_target = 0;
 
 		// Seek video stream (if any)
-		if (info.has_video && av_seek_frame(pFormatCtx, info.video_stream_index, ConvertFrameToVideoPTS(requested_frame - 3), AVSEEK_FLAG_BACKWARD) < 0) {
+		int64_t seek_target = ConvertFrameToVideoPTS(requested_frame - 10);
+		if (info.has_video && av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 			seek_worked = false;
 			fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
 		} else
@@ -902,24 +922,19 @@ void FFmpegReader::Seek(int requested_frame)
 			// VIDEO SEEK
 			is_video_seek = true;
 
-			// Set seek target
-			seek_target = ConvertFrameToVideoPTS(requested_frame - 3);
-
 			// Flush video buffer
 			avcodec_flush_buffers(pCodecCtx);
 		}
 
 		// Seek audio stream (if not already seeked... and if an audio stream is found)
-		if (!seek_worked && info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, ConvertFrameToAudioPTS(requested_frame - 3), AVSEEK_FLAG_BACKWARD) < 0) {
+		seek_target = ConvertFrameToAudioPTS(requested_frame - 10);
+		if (!seek_worked && info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 			seek_worked = false;
 			fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
 		} else
 		{
 			// AUDIO SEEK
 			is_video_seek = false;
-
-			// Set seek target
-			seek_target = ConvertFrameToAudioPTS(requested_frame - 3);
 
 			// Flush audio buffer
 			avcodec_flush_buffers(aCodecCtx);
@@ -928,19 +943,17 @@ void FFmpegReader::Seek(int requested_frame)
 		// Was the seek successful?
 		if (seek_worked)
 		{
-			// If not already seeking, set flags
-			if (!is_seeking)
-			{
-				// init seek flags
-				is_seeking = true;
-				seeking_frame = requested_frame;
-				seeking_pts = seek_target;
-			}
-			else
-			{
-				// update seek frame number
-				seeking_frame = requested_frame;
-			}
+			// init seek flags
+			is_seeking = true;
+			seeking_pts = seek_target;
+			seeking_frame = requested_frame;
+		}
+		else
+		{
+			// seek failed
+			is_seeking = false;
+			seeking_pts = 0;
+			seeking_frame = 0;
 		}
 	}
 

@@ -74,6 +74,16 @@ void Keyframe::AddPoint(float x, float y)
 	AddPoint(new_point);
 }
 
+// Add a new point on the key-frame, with a specific interpolation type
+void Keyframe::AddPoint(float x, float y, Interpolation_Type interpolate)
+{
+	// Create a point
+	Point new_point(x, y, interpolate);
+
+	// Add the point
+	AddPoint(new_point);
+}
+
 // Set the handles, used for smooth curves.  The handles are based
 // on the surrounding points.
 void Keyframe::SetHandles(Point current)

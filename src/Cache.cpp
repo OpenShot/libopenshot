@@ -127,41 +127,17 @@ int Cache::Count()
 // Clean up cached frames that exceed the number in our max_frames variable
 void Cache::CleanUp()
 {
+	// Do we auto clean up?
 	if (max_frames > 0)
 	{
-		// Count previous frames (relative to the current frame), and determine the smallest frame number
-		// Loop through frame numbers
-		deque<int>::iterator itr;
-		int previous_frames = 0;
-		int smallest_frame = -1;
-		for (itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr) {
-			if (*itr < current_frame)
-				previous_frames++;
-
-			if (*itr < smallest_frame || smallest_frame == -1)
-				smallest_frame = *itr;
-		}
-
 		// check against max size
-		if (previous_frames > max_frames) {
-			// Get the difference
-			int diff = previous_frames - max_frames;
-			int removed_count = 0;
+		if (frame_numbers.size() > max_frames)
+		{
+			// Remove the oldest frame
+			int frame_to_remove = frame_numbers.back();
 
-			// Loop through frames and remove the oldest
-			for (int x = smallest_frame; x < current_frame; x++) {
-
-				// Does frame exist?
-				if (Exists(x)) {
-					// Remove the frame, increment count
-					Remove(x);
-					removed_count++;
-				}
-
-				// Break after the correct # has been removed
-				if (removed_count == diff)
-					break;
-			}
+			// Remove frame_number and frame
+			Remove(frame_to_remove);
 		}
 	}
 }
