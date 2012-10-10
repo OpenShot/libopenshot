@@ -229,8 +229,6 @@ void Clip::apply_basic_image_processing(Frame* frame, int frame_number)
 	//float scale_x_value = scale_x.GetValue(frame_number);
 	//float scale_y_value = scale_y.GetValue(frame_number);
 
-	cout << "rotation_value: " << rotation_value << endl;
-
 	// rotate frame
 	if (rotation_value != 0)
 		frame->Rotate(rotation_value);

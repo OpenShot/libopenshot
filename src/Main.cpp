@@ -15,17 +15,51 @@ void FrameReady(int number)
 int main()
 {
 	// Create timeline
-	Framerate fps(30000,1000);
-	Timeline t(640, 480, fps);
+	Framerate fps(24,1);
+	Timeline t(640, 360, fps);
 
 	// Add some clips
-	Clip c1("../../src/examples/test.mp4");
-	c1.Layer(2);
+	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	c1.Position(0.0);
-	c1.rotation.AddPoint(60, 360);
+	//c1.time.AddPoint(800, 300);
+	//c1.time.AddPoint(1600, 1);
 
 	// Add clips
 	t.AddClip(&c1);
+
+
+	// Create a writer
+	FFmpegWriter w("/home/jonathan/output.webm");
+	w.DisplayInfo();
+
+	// Set options
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+
+	// Prepare Streams
+	w.PrepareStreams();
+
+	// Write header
+	w.WriteHeader();
+
+	// Output stream info
+	w.OutputStreamInfo();
+
+	for (int frame = 1; frame <= 1600; frame++)
+	{
+		Frame *f = t.GetFrame(frame);
+
+		// Write frame
+		cout << "queue frame " << frame << endl;
+		w.WriteFrame(f);
+	}
+
+	// Write Footer
+	w.WriteTrailer();
+
+	// Close writer & reader
+	w.Close();
+
 
 	// Request frames
 	for (int x=1; x<=100; x++)
@@ -36,6 +70,32 @@ int main()
 
 	cout << "Successfully Finished Timeline DEMO" << endl;
 	return 0;
+
+
+
+
+	// Create timeline
+//	Framerate fps(30000,1000);
+//	Timeline t(640, 480, fps);
+//
+//	// Add some clips
+//	Clip c1("../../src/examples/test.mp4");
+//	c1.Layer(2);
+//	c1.Position(0.0);
+//	c1.rotation.AddPoint(60, 360);
+//
+//	// Add clips
+//	t.AddClip(&c1);
+//
+//	// Request frames
+//	for (int x=1; x<=100; x++)
+//		t.GetFrame(x);
+//
+//	// Close timeline
+//	t.Close();
+//
+//	cout << "Successfully Finished Timeline DEMO" << endl;
+//	return 0;
 
 
 
