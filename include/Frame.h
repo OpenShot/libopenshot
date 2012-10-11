@@ -114,6 +114,9 @@ namespace openshot
 		/// Get the audio sample rate
 		int GetAudioSamplesRate();
 
+		/// Get the size in bytes of this frame (rough estimate)
+		int64 GetBytes();
+
 		/// Get pointer to Magick++ image object
 		Magick::Image* GetImage();
 

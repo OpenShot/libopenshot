@@ -10,10 +10,10 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor, no max frames
-Cache::Cache() : max_frames(-1), current_frame(0) { };
+Cache::Cache() : max_bytes(0), total_bytes(0) { };
 
 // Constructor that sets the max frames to cache
-Cache::Cache(int max_frames) : max_frames(max_frames), current_frame(0) { };
+Cache::Cache(int64 max_bytes) : max_bytes(max_bytes), total_bytes(0) { };
 
 // Add a Frame to the cache
 void Cache::Add(int frame_number, Frame *frame)
@@ -24,6 +24,12 @@ void Cache::Add(int frame_number, Frame *frame)
 		// Add frame to queue and map
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
+
+		// Increment total bytes (of cache)
+		total_bytes += frame->GetBytes();
+
+		// Clean up old frames
+		CleanUp();
 	}
 }
 
@@ -73,6 +79,9 @@ void Cache::Remove(int frame_number, bool delete_data)
 	// Get the frame (or throw exception)
 	Frame *f = GetFrame(frame_number);
 
+	// Decrement the total bytes (for this cache)
+	total_bytes -= f->GetBytes();
+
 	// Loop through frame numbers
 	deque<int>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
@@ -115,6 +124,9 @@ void Cache::Clear()
 
 	// pop each of the frames from the queue... which empties the queue
 	while(!frame_numbers.empty()) frame_numbers.pop_back();
+
+	// Reset total bytes (of cache)
+	total_bytes = 0;
 }
 
 // Count the frames in the queue
@@ -124,14 +136,14 @@ int Cache::Count()
 	return frames.size();
 }
 
-// Clean up cached frames that exceed the number in our max_frames variable
+// Clean up cached frames that exceed the number in our max_bytes variable
 void Cache::CleanUp()
 {
 	// Do we auto clean up?
-	if (max_frames > 0)
+	if (max_bytes > 0)
 	{
-		// check against max size
-		if (frame_numbers.size() > max_frames)
+		// check against max bytes
+		while (total_bytes > max_bytes)
 		{
 			// Remove the oldest frame
 			int frame_to_remove = frame_numbers.back();
@@ -174,6 +186,9 @@ void Cache::DisplayAndClear()
 		// increment counter
 		i++;
 	}
+
+	// Reset total bytes
+	total_bytes = 0;
 }
 
 

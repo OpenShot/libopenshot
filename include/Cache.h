@@ -21,26 +21,24 @@ namespace openshot {
 	 *
 	 * Due to the high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
 	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
-	 * is required.  You can set the max number of previous frames (relative to the current frame) to cache.  Frames that
-	 * come after the current frame are allowed to increase as much as needed (a requirement of the file readers).  A call
-	 * to GetFrame() sets the current frame of the cache.
+	 * is required.  You can set the max number of bytes to cache.
 	 */
 	class Cache {
 	private:
-		int max_frames;				///< This is the max number of "previous" frames to cache
-		map<int, Frame*> frames;		///< This map holds the frame number and Frame objects
+		int64 total_bytes;			///< This is the current total bytes (that are in this cache)
+		int64 max_bytes;			///< This is the max number of bytes to cache (0 = no limit)
+		map<int, Frame*> frames;	///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
-		int current_frame;			///< This is the last requested frame (used to dynamically adjust the max_frames)
 
-		/// Clean up cached frames that exceed the max number of previous frames
+		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
 
 	public:
-		/// Default constructor, no max frames
+		/// Default constructor, no max bytes
 		Cache();
 
-		/// Constructor that sets the max previous frames to cache
-		Cache(int max_frames);
+		/// Constructor that sets the max bytes to cache
+		Cache(int64 max_bytes);
 
 		/// Add a Frame to the cache
 		void Add(int frame_number, Frame* frame);
@@ -72,17 +70,11 @@ namespace openshot {
 		/// Count the frames in the queue
 		int Count();
 
-		/// Set current frame number (used to determine which previous frames to delete)
-		void SetCurrentFrame(int frame_number) { current_frame = frame_number; CleanUp(); };
+		/// Set maximum bytes to a different amount
+		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 
-		/// Get the current frame number (used to determine which previous frames to delete)
-		int GetCurrentFrame() { return current_frame; };
-
-		/// Set maximum frames to a different amount
-		void SetMaxFrames(int number_of_frames) { max_frames = number_of_frames; };
-
-		/// Gets the maximum frames value
-		int GetMaxFrames() { return max_frames; };
+		/// Gets the maximum bytes value
+		int64 GetMaxBytes() { return max_bytes; };
 
 	};
 

@@ -18,49 +18,37 @@ TEST(Cache_Default_Constructor)
 	}
 
 	CHECK_EQUAL(50, c.Count()); // Cache should have all frames, with no limit
-	CHECK_EQUAL(-1, c.GetMaxFrames()); // Max frames should default to -1
+	CHECK_EQUAL(0, c.GetMaxBytes()); // Max frames should default to 0
 }
 
-TEST(Cache_Max_Frames_Constructor)
+TEST(Cache_Max_Bytes_Constructor)
 {
 	// Create cache object (with a max of 5 previous items)
-	Cache c(5);
+	Cache c(250 * 1024);
 
 	// Loop 20 times
 	for (int i = 20; i > 0; i--)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		Frame *f = new Frame(i, 320, 240, "#000000");
 		c.Add(i, f);
 	}
 
-	// Cache should have all 20 (since current frame is 0)
+	// Cache should have all 20
 	CHECK_EQUAL(20, c.Count());
-
-	// Set current frame to 15
-	c.SetCurrentFrame(15);
-
-	// Since current frame is 15, only 5 previous items are allowed (i.e. frame 10 to 20)
-	CHECK_EQUAL(11, c.Count());
 
 	// Add 10 frames again
-	for (int i = 9; i > 0; i--)
+	for (int i = 30; i > 20; i--)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		Frame *f = new Frame(i, 320, 240, "#000000");
 		c.Add(i, f);
 	}
 
-	// Count should be 20, since adding frames does not clean up old ones
+	// Count should be 20, since we're more frames than can be cached.
 	CHECK_EQUAL(20, c.Count());
 
-	// Set current frame to 15, which should clean up many older frames
-	c.SetCurrentFrame(15);
-
-	// Count should be 11, since we've cleaned up again
-	CHECK_EQUAL(11, c.Count());
-
-	// Check which 10 items the cache kept
+	// Check which items the cache kept
 	CHECK_EQUAL(false, c.Exists(1));
 	CHECK_EQUAL(false, c.Exists(5));
 	CHECK_EQUAL(false, c.Exists(9));
@@ -69,39 +57,12 @@ TEST(Cache_Max_Frames_Constructor)
 	CHECK_EQUAL(true, c.Exists(15));
 	CHECK_EQUAL(true, c.Exists(19));
 	CHECK_EQUAL(true, c.Exists(20));
-
-	// Since we're not adding any new frames, the count should decrease by 1
-	c.SetCurrentFrame(16);
-	CHECK_EQUAL(10, c.Count());
-
-	// Since we're not adding any new frames, the count should decrease by 1
-	c.SetCurrentFrame(17);
-	CHECK_EQUAL(9, c.Count());
-
-	// Since we're not adding any new frames, the count should decrease by 1
-	c.SetCurrentFrame(18);
-	CHECK_EQUAL(8, c.Count());
-
-	// Increase frames to 50
-	for (int i = 1; i <= 50; i++)
-	{
-		// Add blank frame to the cache
-		Frame *f = new Frame();
-		c.Add(i, f);
-	}
-
-	// Set current frame, which cleans up old frames
-	c.SetCurrentFrame(18);
-
-	// Count should be 38 (5 previous to 18 + all frames after 18)
-	CHECK_EQUAL(38, c.Count());
-
 }
 
 TEST(Cache_Clear)
 {
-	// Create cache object (with a max of 10 previous items)
-	Cache c(10);
+	// Create cache object
+	Cache c(250 * 1024);
 
 	// Loop 10 times
 	for (int i = 0; i < 10; i++)
@@ -123,8 +84,8 @@ TEST(Cache_Clear)
 
 TEST(Cache_Add_Duplicate_Frames)
 {
-	// Create cache object (with a max of 10 items)
-	Cache c(10);
+	// Create cache object
+	Cache c(250 * 1024);
 
 	// Loop 10 times
 	for (int i = 0; i < 10; i++)
@@ -140,8 +101,8 @@ TEST(Cache_Add_Duplicate_Frames)
 
 TEST(Cache_Check_If_Frame_Exists)
 {
-	// Create cache object (with a max of 5 items)
-	Cache c(5);
+	// Create cache object
+	Cache c(250 * 1024);
 
 	// Loop 5 times
 	for (int i = 1; i < 6; i++)
@@ -163,8 +124,8 @@ TEST(Cache_Check_If_Frame_Exists)
 
 TEST(Cache_GetFrame)
 {
-	// Create cache object (with a max of 10 items)
-	Cache c(10);
+	// Create cache object
+	Cache c(250 * 1024);
 
 	// Create 3 frames
 	Frame red(1, 300, 300, "red");
@@ -189,7 +150,7 @@ TEST(Cache_GetFrame)
 TEST(Cache_GetSmallest)
 {
 	// Create cache object (with a max of 10 items)
-	Cache c(10);
+	Cache c(250 * 1024);
 
 	// Create 3 frames
 	Frame blue(2, 400, 400, "blue");
@@ -217,7 +178,7 @@ TEST(Cache_GetSmallest)
 TEST(Cache_Remove)
 {
 	// Create cache object (with a max of 10 items)
-	Cache c(10);
+	Cache c(250 * 1024);
 
 	// Create 3 frames
 	Frame red(1, 300, 300, "red");
@@ -254,7 +215,7 @@ TEST(Cache_Remove)
 	CHECK_EQUAL(1, c.Count());
 }
 
-TEST(Cache_Current_Frame)
+TEST(Cache_Set_Max_Bytes)
 {
 	// Create cache object
 	Cache c;
@@ -267,40 +228,14 @@ TEST(Cache_Current_Frame)
 		c.Add(i, f);
 	}
 
-	CHECK_EQUAL(0, c.GetCurrentFrame()); // Cache defaults current frame is 0
-
-	// Set current frame
-	c.SetCurrentFrame(10);
-
-	CHECK_EQUAL(10, c.GetCurrentFrame()); // Cache should now be on frame 10
-
-	// Set current frame
-	c.SetCurrentFrame(20);
-
-	CHECK_EQUAL(20, c.GetCurrentFrame()); // Cache should now be on frame 20
-}
-
-TEST(Cache_Set_Max_Frames)
-{
-	// Create cache object
-	Cache c;
-
-	// Loop 20 times
-	for (int i = 0; i < 20; i++)
-	{
-		// Add blank frame to the cache
-		Frame *f = new Frame();
-		c.Add(i, f);
-	}
-
-	CHECK_EQUAL(-1, c.GetMaxFrames()); // Cache defaults max frames to -1, unlimited frames
+	CHECK_EQUAL(0, c.GetMaxBytes()); // Cache defaults max frames to -1, unlimited frames
 
 	// Set max frames
-	c.SetMaxFrames(10);
-	CHECK_EQUAL(10, c.GetMaxFrames());
+	c.SetMaxBytes(8 * 1024);
+	CHECK_EQUAL(8 * 1024, c.GetMaxBytes());
 
 	// Set max frames
-	c.SetMaxFrames(30);
-	CHECK_EQUAL(30, c.GetMaxFrames());
+	c.SetMaxBytes(4 * 1024);
+	CHECK_EQUAL(4 * 1024, c.GetMaxBytes());
 }
 

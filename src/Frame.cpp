@@ -358,6 +358,19 @@ int Frame::GetAudioSamplesRate()
 	return sample_rate;
 }
 
+// Get the size in bytes of this frame (rough estimate)
+int64 Frame::GetBytes()
+{
+	int64 total_bytes = 0;
+	if (image)
+		total_bytes += image->fileSize();
+	if (audio)
+		total_bytes += (audio->getNumSamples() * audio->getNumChannels() * sizeof(float));
+
+	// return size of this frame
+	return total_bytes;
+}
+
 // Get pixel data (as packets)
 const Magick::PixelPacket* Frame::GetPixels()
 {

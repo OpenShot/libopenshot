@@ -14,16 +14,14 @@ void FrameReady(int number)
 
 int main()
 {
-	//openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-
 	// Create timeline
 	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
 	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	c1.Position(0.0);
-	c1.time.AddPoint(1, 1240);
-	c1.time.AddPoint(1240, 1, LINEAR);
+	c1.time.AddPoint(1, 400);
+	c1.time.AddPoint(200, 200, LINEAR);
 
 	// Add clips
 	t.AddClip(&c1);
@@ -46,7 +44,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 100; frame++)
+	for (int frame = 1; frame <= 200; frame++)
 	{
 		Frame *f = t.GetFrame(frame);
 
