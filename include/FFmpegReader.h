@@ -62,7 +62,7 @@ namespace openshot
 		AVCodecContext *pCodecCtx, *aCodecCtx;
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
-		AVFrame *pFrame;
+		AVPicture *pFrame;
 		bool is_open;
 
 		bool check_interlace;
@@ -75,7 +75,7 @@ namespace openshot
 		Cache final_cache;
 		Cache working_cache;
 		map<AVPacket*, AVPacket*> packets;
-		map<AVFrame*, AVFrame*> frames;
+		map<AVPicture*, AVPicture*> frames;
 		map<int, int> processing_video_frames;
 		map<int, int> processing_audio_frames;
 
@@ -147,7 +147,7 @@ namespace openshot
 		Frame* ReadStream(int requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
-		void RemoveAVFrame(AVFrame*);
+		void RemoveAVFrame(AVPicture*);
 
 		/// Remove AVPacket from cache (and deallocate it's memory)
 		void RemoveAVPacket(AVPacket*);

@@ -18,10 +18,12 @@ int main()
 	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
-	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	c1.Position(0.0);
-	c1.time.AddPoint(1, 400);
-	c1.time.AddPoint(200, 200, LINEAR);
+	c1.time.AddPoint(1, 700);
+	c1.time.AddPoint(100, 800, LINEAR);
+	c1.time.AddPoint(124, 700);
+	c1.time.AddPoint(324, 800);
 
 	// Add clips
 	t.AddClip(&c1);
@@ -44,9 +46,10 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 200; frame++)
+	for (int frame = 1; frame <= 324; frame++)
 	{
 		Frame *f = t.GetFrame(frame);
+		f->AddOverlayNumber(0);
 
 		// Write frame
 		cout << "queue frame " << frame << " (" << f << ")" << endl;
@@ -102,18 +105,19 @@ int main()
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
-		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Music/Army of Lovers/Crucified/Army of Lovers - Crucified [Single Version].mp3");
 	//	openshot::FFmpegReader r("/home/jonathan/Documents/OpenShot Art/test.jpeg");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/60fps.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
 
-		// Display debug info
-		r.DisplayInfo();
-
+//		// Display debug info
+//		r.Open();
+//		r.DisplayInfo();
+//
 //		// Create a writer
 //		FFmpegWriter w("/home/jonathan/output.webm");
 //		w.DisplayInfo();
@@ -149,16 +153,12 @@ int main()
 //
 //		//Frame *f = r.GetFrame(1);
 //
-//		for (int frame = 1; frame <= 1000; frame++)
+//		//for (int frame = 800; frame >= 600; frame--)
+//		for (int frame = 1; frame <= 200; frame++)
 //		{
 //			Frame *f = r.GetFrame(frame);
-//			//f->AddOverlay(overlay);
-//
-//			//if (f->number == 307 || f->number == 308 || f->number == 309 || f->number == 310)
-//			//f->DisplayWaveform();
-//
-//			// Apply effect
-//			//f->AddEffect("flip");
+//			f->AddOverlayNumber(0);
+//			//f->Display();
 //
 //			// Write frame
 //			cout << "queue frame " << frame << endl;
@@ -170,8 +170,7 @@ int main()
 //
 //		// Close writer & reader
 //		w.Close();
-		r.Close();
-		//i.Close();
+//		r.Close();
 
 
 		cout << "Successfully executed Main.cpp!" << endl;

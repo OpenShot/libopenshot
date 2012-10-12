@@ -78,6 +78,7 @@ namespace openshot
 	    int audio_input_position;
 	    AudioResampler *resampler;
 
+	    Frame* last_frame;
 	    deque<Frame*> spooled_audio_frames;
 	    deque<Frame*> spooled_video_frames;
 

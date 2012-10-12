@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8),
-		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false)
+		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), last_frame(NULL)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -311,9 +311,10 @@ void FFmpegWriter::WriteFrame(Frame* frame)
 			// Write frames to video file
 			write_queued_frames();
 		}
-
 	}
 
+	// Keep track of the last frame added
+	last_frame = frame;
 }
 
 // Write all frames in the queue to the video file.
@@ -434,14 +435,24 @@ void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer()
 {
-	// YES, WRITING... so wait until it finishes, before writing again
-	while (is_writing)
-		usleep(250 * 1000); // sleep for 250 milliseconds
+	// Experimental: Repeat last frame many times, to pad
+	// the end of the video, to ensure the codec does not
+	// ignore the final frames.
+	if (last_frame)
+	{
+		// Create black frame
+		Frame *padding_frame = new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount());
+		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
+
+		// Add the black frame many times
+		for (int p = 0; p < 25; p++)
+			WriteFrame(padding_frame);
+	}
 
 	// Write any remaining queued frames to video file
 	write_queued_frames();
 
-	/* write the trailer, if any.  the trailer must be written
+	/* write the trailer, if any. The trailer must be written
 	 * before you close the CodecContexts open when you wrote the
 	 * header; otherwise write_trailer may try to use memory that
 	 * was freed on av_codec_close() */

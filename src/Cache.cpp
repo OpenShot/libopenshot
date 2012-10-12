@@ -169,27 +169,6 @@ void Cache::Display()
 	}
 }
 
-// Display the list of cache and clear the cache (mainly for debugging reasons)
-void Cache::DisplayAndClear()
-{
-	cout << "----- Cache List (" << frames.size() << ") ------" << endl;
-	int i = 1;
-	while(!frame_numbers.empty())
-	{
-		// Print the frame number
-		int frame_number = frame_numbers.back();
-		cout << " " << i << ") --- Frame " << frame_number << endl;
-
-		// Remove this frame
-		Remove(frame_number);
-
-		// increment counter
-		i++;
-	}
-
-	// Reset total bytes
-	total_bytes = 0;
-}
 
 
 

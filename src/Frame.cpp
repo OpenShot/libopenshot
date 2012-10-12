@@ -467,6 +467,20 @@ void Frame::Save(string path, float scale)
 	copy.write(path);
 }
 
+// Add (or replace) pixel data to the frame (based on a solid color)
+void Frame::AddColor(int width, int height, string color)
+{
+	// Deallocate image memory
+	if (image)
+	{
+		delete image;
+		image = NULL;
+	}
+
+	// Create new image object, and fill with pixel data
+	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
+}
+
 // Add (or replace) pixel data to the frame
 void Frame::AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 {
@@ -529,6 +543,28 @@ void Frame::AddOverlay(Frame* frame)
 
 	// Composite image onto this image
 	image->composite(*overlay, Magick::SouthEastGravity, Magick::OverCompositeOp);
+}
+
+// Experimental method to add the frame number on top of the image
+void Frame::AddOverlayNumber(int overlay_number)
+{
+	stringstream label;
+	if (overlay_number > 0)
+		label << overlay_number;
+	else
+		label << number;
+
+	// Drawable text
+	list<Magick::Drawable> lines;
+
+	lines.push_back(Magick::DrawableGravity(Magick::NorthWestGravity));
+	lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
+	lines.push_back(Magick::DrawableFillColor("#ffffff"));
+	lines.push_back(Magick::DrawableStrokeWidth(0.1));
+	lines.push_back(Magick::DrawablePointSize(24));
+	lines.push_back(Magick::DrawableText(5, 5, label.str()));
+
+	image->draw(lines);
 }
 
 // Get pointer to Magick++ image object

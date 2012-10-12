@@ -69,6 +69,9 @@ namespace openshot
 		/// Assignment operator
 		Frame& operator= (const Frame& other);
 
+		/// Add (or replace) pixel data to the frame (based on a solid color)
+		void AddColor(int width, int height, string color);
+
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
@@ -83,6 +86,9 @@ namespace openshot
 
 		/// Experimental method to add overlay images to this frame
 		void AddOverlay(Frame* frame);
+
+		/// Experimental method to add the frame number on top of the image
+		void AddOverlayNumber(int overlay_number);
 
 		/// Clear the waveform image (and deallocate it's memory)
 		void ClearWaveform();

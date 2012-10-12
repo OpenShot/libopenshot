@@ -4,7 +4,7 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(0), final_cache(24), path(path),
+	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(0), final_cache(8200 * 1024), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
 	  rescaler_position(0), num_of_rescalers(32), is_open(false) {
 
@@ -497,16 +497,22 @@ bool FFmpegReader::GetAVFrame()
 	// is frame finished
 	if (frameFinished)
 	{
+		// AVFrames are clobbered on the each call to avcodec_decode_video, so we
+		// must make a copy of the image data before this method is called again.
+		AVPicture *copyFrame = new AVPicture();
+		avpicture_alloc(copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
+		av_picture_copy(copyFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width, info.height);
+
 		// add to AVFrame cache (if frame finished)
-		frames[next_frame] = next_frame;
-		pFrame = frames[next_frame];
+		frames[copyFrame] = copyFrame;
+		pFrame = frames[copyFrame];
 
 		// Detect interlaced frame (only once)
 		if (!check_interlace)
 		{
 			check_interlace = true;
-			info.interlaced_frame = pFrame->interlaced_frame;
-			info.top_field_first = pFrame->top_field_first;
+			info.interlaced_frame = next_frame->interlaced_frame;
+			info.top_field_first = next_frame->top_field_first;
 		}
 	}
 	else
@@ -545,7 +551,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 				cout << "Woops!  Need to seek backwards further..." << endl;
 
 				// Seek again... to the nearest Keyframe
-				Seek(seeking_frame - 5);
+				Seek(seeking_frame - 10);
 			}
 			else
 			{
@@ -591,9 +597,9 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	long int video_length = info.video_length;
 	Cache *my_cache = &working_cache;
 	AVPacket *my_packet = packets[packet];
-	AVFrame *my_frame = frames[pFrame];
+	AVPicture *my_frame = frames[pFrame];
 
-	// Get a unique rescaler (for this thread)
+	// Get a scaling context
 	SwsContext *img_convert_ctx = image_rescalers[rescaler_position];
 	rescaler_position++;
 	if (rescaler_position == num_of_rescalers)
@@ -913,9 +919,6 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		{
 			// VIDEO SEEK
 			is_video_seek = true;
-
-			// Flush video buffer
-			avcodec_flush_buffers(pCodecCtx);
 		}
 
 		// Seek audio stream (if not already seeked... and if an audio stream is found)
@@ -926,15 +929,19 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		} else
 		{
 			// AUDIO SEEK
+			seek_worked = true;
 			is_video_seek = false;
-
-			// Flush audio buffer
-			avcodec_flush_buffers(aCodecCtx);
 		}
 
 		// Was the seek successful?
 		if (seek_worked)
 		{
+			// Flush audio buffer
+			avcodec_flush_buffers(aCodecCtx);
+
+			// Flush video buffer
+			avcodec_flush_buffers(pCodecCtx);
+
 			// init seek flags
 			is_seeking = true;
 			seeking_pts = seek_target;
@@ -1152,7 +1159,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 void FFmpegReader::CheckFPS()
 {
 	check_fps = true;
-	pFrame = avcodec_alloc_frame();
+	avpicture_alloc(pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 
 	int first_second_counter = 0;
 	int second_second_counter = 0;
@@ -1274,7 +1281,7 @@ void FFmpegReader::CheckFPS()
 }
 
 // Remove AVFrame from cache (and deallocate it's memory)
-void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
+void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
 {
 	// Remove pFrame (if exists)
 	if (frames.count(remove_frame))

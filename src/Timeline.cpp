@@ -45,8 +45,6 @@ void Timeline::update_open_clips(Clip *clip, bool is_open)
 
 		// Close the clip's reader
 		clip->Close();
-
-		cout << "-- Remove clip " << clip << " from opened clips map" << endl;
 	}
 	else if (!clip_found && is_open)
 	{
@@ -55,8 +53,6 @@ void Timeline::update_open_clips(Clip *clip, bool is_open)
 
 		// Open the clip's reader
 		clip->Open();
-
-		cout << "-- Add clip " << clip << " to opened clips map" << endl;
 	}
 }
 
@@ -97,8 +93,6 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 
 	// Calculate time of frame
 	float requested_time = calculate_time(requested_frame, fps);
-
-	//cout << "requested_frame: " << requested_frame << ", requested_time: " << requested_time << endl;
 
 	// Find Clips at this time
 	list<Clip*>::iterator clip_itr;

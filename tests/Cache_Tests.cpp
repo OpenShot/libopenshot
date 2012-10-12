@@ -27,7 +27,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	Cache c(250 * 1024);
 
 	// Loop 20 times
-	for (int i = 20; i > 0; i--)
+	for (int i = 30; i > 0; i--)
 	{
 		// Add blank frame to the cache
 		Frame *f = new Frame(i, 320, 240, "#000000");
@@ -38,7 +38,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	CHECK_EQUAL(20, c.Count());
 
 	// Add 10 frames again
-	for (int i = 30; i > 20; i--)
+	for (int i = 10; i > 0; i--)
 	{
 		// Add blank frame to the cache
 		Frame *f = new Frame(i, 320, 240, "#000000");
@@ -49,14 +49,13 @@ TEST(Cache_Max_Bytes_Constructor)
 	CHECK_EQUAL(20, c.Count());
 
 	// Check which items the cache kept
-	CHECK_EQUAL(false, c.Exists(1));
-	CHECK_EQUAL(false, c.Exists(5));
-	CHECK_EQUAL(false, c.Exists(9));
+	CHECK_EQUAL(true, c.Exists(1));
 	CHECK_EQUAL(true, c.Exists(10));
 	CHECK_EQUAL(true, c.Exists(11));
-	CHECK_EQUAL(true, c.Exists(15));
 	CHECK_EQUAL(true, c.Exists(19));
 	CHECK_EQUAL(true, c.Exists(20));
+	CHECK_EQUAL(false, c.Exists(21));
+	CHECK_EQUAL(false, c.Exists(30));
 }
 
 TEST(Cache_Clear)

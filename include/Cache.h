@@ -64,9 +64,6 @@ namespace openshot {
 		/// Display a list of cached frame numbers
 		void Display();
 
-		/// Display the list of cache and clear the cache (mainly for debugging reasons)
-		void DisplayAndClear();
-
 		/// Count the frames in the queue
 		int Count();
 

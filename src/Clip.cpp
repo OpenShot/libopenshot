@@ -161,8 +161,6 @@ Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	// Get time mapped frame number (used to increase speed, change direction, etc...)
 	frame_number = adjust_frame_number_minimum(get_time_mapped_frame(frame_number));
 
-	cout << "Requested frame: " << frame_number << endl;
-
 	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 	Frame *frame = file_reader->GetFrame(frame_number);
 
