@@ -18,8 +18,11 @@ Cache::Cache(int64 max_bytes) : max_bytes(max_bytes), total_bytes(0) { };
 // Add a Frame to the cache
 void Cache::Add(int frame_number, Frame *frame)
 {
-	// Only add frame if it does not exist in the cache
-	if (!frames.count(frame_number))
+	// Remove frame if it already exists
+	if (Exists(frame_number))
+		// Move frame to front of queue
+		MoveToFront(frame_number);
+	else
 	{
 		// Add frame to queue and map
 		frames[frame_number] = frame;
@@ -49,6 +52,9 @@ Frame* Cache::GetFrame(int frame_number)
 	// Does frame exists in cache?
 	if (Exists(frame_number))
 	{
+		// move it to the front of the cache
+		MoveToFront(frame_number);
+
 		// return the Frame object
 		return frames[frame_number];
 	}
@@ -107,6 +113,32 @@ void Cache::Remove(int frame_number)
 {
 	// Remove and delete frame data
 	Remove(frame_number, true);
+}
+
+// Move frame to front of queue (so it lasts longer)
+void Cache::MoveToFront(int frame_number)
+{
+	// Does frame exists in cache?
+	if (Exists(frame_number))
+	{
+		// Loop through frame numbers
+		deque<int>::iterator itr;
+		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+		{
+			if (*itr == frame_number)
+			{
+				// erase frame number
+				frame_numbers.erase(itr);
+
+				// add frame number to 'front' of queue
+				frame_numbers.push_front(frame_number);
+				break;
+			}
+		}
+	}
+	else
+		// throw an exception for the missing frame
+		throw OutOfBoundsFrame("Frame not found in the cache", frame_number, -1);
 }
 
 // Clear the cache of all frames

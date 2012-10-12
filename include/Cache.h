@@ -43,14 +43,32 @@ namespace openshot {
 		/// Add a Frame to the cache
 		void Add(int frame_number, Frame* frame);
 
+		/// Clear the cache of all frames
+		void Clear();
+
+		/// Count the frames in the queue
+		int Count();
+
+		/// Display a list of cached frame numbers
+		void Display();
+
 		/// Check for the existence of a frame in the cache
 		bool Exists(int frame_number);
 
 		/// Get a frame from the cache
 		Frame* GetFrame(int frame_number);
 
+		/// Gets the maximum bytes value
+		int64 GetBytes() { return total_bytes; };
+
+		/// Gets the maximum bytes value
+		int64 GetMaxBytes() { return max_bytes; };
+
 		/// Get the smallest frame number
 		Frame* GetSmallestFrame();
+
+		/// Move frame to front of queue (so it lasts longer)
+		void MoveToFront(int frame_number);
 
 		/// Remove a specific frame
 		void Remove(int frame_number);
@@ -58,20 +76,9 @@ namespace openshot {
 		/// Remove a specific frame
 		void Remove(int frame_number, bool delete_data);
 
-		/// Clear the cache of all frames
-		void Clear();
-
-		/// Display a list of cached frame numbers
-		void Display();
-
-		/// Count the frames in the queue
-		int Count();
-
 		/// Set maximum bytes to a different amount
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 
-		/// Gets the maximum bytes value
-		int64 GetMaxBytes() { return max_bytes; };
 
 	};
 

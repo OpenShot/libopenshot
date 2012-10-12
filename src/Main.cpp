@@ -18,12 +18,14 @@ int main()
 	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
-	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	c1.Position(0.0);
-	c1.time.AddPoint(1, 700);
-	c1.time.AddPoint(100, 800, LINEAR);
-	c1.time.AddPoint(124, 700);
-	c1.time.AddPoint(324, 800);
+
+	//c1.time.AddPoint(500, 500, LINEAR);
+	c1.time.AddPoint(1, 300);
+	c1.time.AddPoint(200, 500, LINEAR);
+	c1.time.AddPoint(400, 100);
+	c1.time.AddPoint(500, 500);
 
 	// Add clips
 	t.AddClip(&c1);
@@ -46,7 +48,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 324; frame++)
+	for (int frame = 1; frame <= 500; frame++)
 	{
 		Frame *f = t.GetFrame(frame);
 		f->AddOverlayNumber(0);
