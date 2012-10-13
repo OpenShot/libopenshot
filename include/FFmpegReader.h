@@ -177,8 +177,11 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec);
 
-		/// Close File
+		/// Close File & clear cache
 		void Close();
+
+		/// Close File
+		void Close(bool clear_cache);
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.
 		///

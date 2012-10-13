@@ -18,7 +18,7 @@ int main()
 	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
-	Clip c1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	c1.Position(0.0);
 
 	//c1.time.AddPoint(500, 500, LINEAR);

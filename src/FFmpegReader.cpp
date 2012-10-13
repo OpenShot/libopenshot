@@ -139,6 +139,12 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 
 void FFmpegReader::Close()
 {
+	// Close reader and clear cache
+	Close(true);
+}
+
+void FFmpegReader::Close(bool clear_cache)
+{
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
@@ -157,9 +163,12 @@ void FFmpegReader::Close()
 			avcodec_close(aCodecCtx);
 		}
 
-		// Clear cache
+		// Clear final cache (based on the parameter)
+		if (clear_cache)
+			final_cache.Clear();
+
+		// Always clear temp cache
 		working_cache.Clear();
-		final_cache.Clear();
 
 		// Close the video file
 		avformat_close_input(&pFormatCtx);
@@ -327,7 +336,7 @@ Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySe
 			else if (!enable_seek && diff < 0)
 			{
 				// Start over, since we can't seek, and the requested frame is smaller than our position
-				Close();
+				Close(false);
 				Open();
 			}
 
@@ -888,11 +897,11 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		throw TooManySeeks("Too many seek attempts... something seems wrong.", path);
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 10;
+	int buffer_amount = 5;
 	if (requested_frame - buffer_amount <= 1)
 	{
 		// Close and re-open file (basically seeking to frame 1)
-		Close();
+		Close(false); // do not clear cache
 		Open();
 
 		// Not actually seeking, so clear these flags
