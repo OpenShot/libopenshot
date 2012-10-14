@@ -461,10 +461,8 @@ Frame* FFmpegReader::ReadStream(int requested_frame)
 
 	// Return requested frame (if found)
 	if (final_cache.Exists(requested_frame))
-	{
 		// Return prepared frame
 		return final_cache.GetFrame(requested_frame);
-	}
 	else
 		// Return blank frame
 		return CreateFrame(requested_frame);
@@ -941,10 +939,12 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		if (seek_worked)
 		{
 			// Flush audio buffer
-			avcodec_flush_buffers(aCodecCtx);
+			if (info.has_audio)
+				avcodec_flush_buffers(aCodecCtx);
 
 			// Flush video buffer
-			avcodec_flush_buffers(pCodecCtx);
+			if (info.has_video)
+				avcodec_flush_buffers(pCodecCtx);
 
 			// init seek flags
 			is_seeking = true;

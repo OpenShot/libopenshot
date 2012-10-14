@@ -106,6 +106,9 @@ void Frame::DeepCopy(const Frame& other)
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	sample_rate = other.sample_rate;
 	channels = other.channels;
+
+	if (other.wave_image)
+		wave_image = new Magick::Image(*(other.wave_image));
 }
 
 // Deallocate image and audio memory
@@ -116,6 +119,8 @@ void Frame::DeletePointers()
 	image = NULL;
 	delete audio;
 	audio = NULL;
+	delete wave_image;
+	wave_image = NULL;
 }
 
 // Display the frame image to the screen (primarily used for debugging reasons)
@@ -272,7 +277,7 @@ const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
 void Frame::DisplayWaveform()
 {
 	// Get audio wave form image
-	Magick::Image *wave_image = GetWaveform(720, 480);
+	GetWaveform(720, 480);
 
 	// Display Image
 	wave_image->display();
@@ -383,24 +388,6 @@ const Magick::PixelPacket* Frame::GetPixels(int row)
 {
 	// Return array of pixel packets
 	return image->getConstPixels(0,row, image->columns(), 1);
-}
-
-// Get pixel data (for a resized image)
-const Magick::PixelPacket* Frame::GetPixels(unsigned int width, unsigned int height, int frame)
-{
-	// Create a new resized image
-	//Magick::Image newImage = *image;
-	small_image = new Magick::Image(*(image));
-	small_image->resize(Magick::Geometry(width, height));
-	small_image->colorize(255, 0, 0, Magick::Color(0,0,255));
-	small_image->blur(5.0, 5.0);
-
-//	stringstream file;
-//	file << "frame" << frame << ".png";
-//	small_image->write(file.str());
-
-	// Return arry of pixel packets
-	return small_image->getConstPixels(0,0, small_image->columns(), small_image->rows());
 }
 
 // Set Pixel Aspect Ratio

@@ -35,7 +35,6 @@ namespace openshot
 	{
 	private:
 		Magick::Image *image;
-		Magick::Image *small_image;
 		Magick::Image *wave_image;
 		juce::AudioSampleBuffer *audio;
 		Fraction pixel_ratio;
@@ -131,9 +130,6 @@ namespace openshot
 
 		/// Get pixel data (for only a single scan-line)
 		const Magick::PixelPacket* GetPixels(int row);
-
-		/// Get pixel data (for a resized image)
-		const Magick::PixelPacket* GetPixels(unsigned int width, unsigned int height, int frame);
 
 		/// Get height of image
 		int GetHeight();

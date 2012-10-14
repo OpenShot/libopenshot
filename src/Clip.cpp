@@ -149,6 +149,26 @@ void Clip::Close()
 		file_reader->Close();
 }
 
+// Get end position of clip (trim end of video), which can be affected by the time curve.
+float Clip::End()
+{
+	// Determine the FPS fo this clip
+	float fps = 24.0;
+	if (frame_map)
+		// frame mapper
+		fps = frame_map->TargetFPS().GetFPS();
+	else if (file_reader)
+		// file reader
+		fps = file_reader->info.fps.ToFloat();
+
+	// if a time curve is present, use it's length
+	if (time.Points.size() > 1)
+		return float(time.Values.size()) / fps;
+	else
+		// just use the duration (as detected by the reader)
+		return end;
+}
+
 // Get an openshot::Frame object for a specific frame number of this reader.
 Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {

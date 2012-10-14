@@ -27,3 +27,9 @@ int Framerate::GetRoundedFPS() {
 float Framerate::GetFPS() {
 	return (float) m_numerator / m_denominator;
 }
+
+// Return a Fraction of the framerate
+Fraction Framerate::GetFraction()
+{
+	return Fraction(m_numerator, m_denominator);
+}

@@ -106,6 +106,18 @@ namespace openshot
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
+		/// Get the target framerate
+		Framerate TargetFPS() { return m_target; };
+
+		/// Get the source framerate
+		Framerate SourceFPS() { return m_original; };
+
+		/// Set the target framerate
+		void TargetFPS(Framerate new_fps) { m_target = new_fps; };
+
+		/// Set the source framerate
+		void SourceFPS(Framerate new_fps) { m_original = new_fps; };
+
 		/**
 		 * \brief Re-map time to slow down, speed up, or reverse a clip based on a Keyframe.
 		 *

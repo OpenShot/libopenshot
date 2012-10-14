@@ -10,6 +10,7 @@
 #include <list>
 #include "Clip.h"
 #include "FileReaderBase.h"
+#include "Fraction.h"
 #include "Frame.h"
 #include "FrameRate.h"
 #include "KeyFrame.h"

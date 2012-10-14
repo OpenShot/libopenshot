@@ -137,7 +137,7 @@ namespace openshot {
 		float Position() { return position; } ///<Get position on timeline
 		int Layer() { return layer; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
 		float Start() { return start; } ///<Get start position of clip (trim start of video)
-		float End() { return end; } ///<Get end position of clip (trim end of video)
+		float End(); ///<Get end position of clip (trim end of video), which can be affected by the time curve.
 
 		/// Set basic properties
 		void Position(float value) { position = value; } ///<Get position on timeline

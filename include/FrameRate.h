@@ -8,6 +8,7 @@
  */
 
 #include <math.h>
+#include "Fraction.h"
 
 namespace openshot
 {
@@ -43,6 +44,9 @@ namespace openshot
 
 		/// Return a float of the frame rate (for example 30000/1001 returns 29.97...)
 		float GetFPS();
+
+		/// Return a Fraction of the framerate
+		Fraction GetFraction();
 	};
 }
 

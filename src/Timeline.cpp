@@ -15,6 +15,10 @@ Timeline::Timeline(int width, int height, Framerate fps) :
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
+	// All clips must be converted to the frame rate of this timeline,
+	// so assign the same frame rate to each clip.
+	clip->Reader()->info.fps = fps.GetFraction();
+
 	// Add clip to list
 	clips.push_back(clip);
 
@@ -102,7 +106,7 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 		Clip *clip = (*clip_itr);
 
 		// Does clip intersect the current requested time
-		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Reader()->info.duration >= requested_time);
+		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->End() >= requested_time);
 
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, does_clip_intersect);
@@ -112,7 +116,8 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 		{
 			// Display the clip (DEBUG)
 			return clip->GetFrame(requested_frame);
-		}
+		} else
+			cout << "FRAME NOT IN CLIP DURATION: frame: " << requested_frame << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
 	}
 
 	// No clips found
