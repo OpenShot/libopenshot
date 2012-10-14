@@ -89,7 +89,7 @@ void Timeline::Open()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
@@ -121,5 +121,5 @@ Frame* Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 	}
 
 	// No clips found
-	return NULL;
+	return tr1::shared_ptr<Frame>();
 }

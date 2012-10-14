@@ -287,7 +287,7 @@ void FFmpegReader::UpdateVideoInfo()
 
 }
 
-Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
+tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -348,7 +348,7 @@ Frame* FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySe
 }
 
 // Read the stream until we find the requested Frame
-Frame* FFmpegReader::ReadStream(int requested_frame)
+tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 {
 	// Allocate video frame
 	bool end_of_stream = false;
@@ -635,7 +635,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
 				height, pFrameRGB->data, pFrameRGB->linesize);
 
-		Frame *f = NULL;
+		tr1::shared_ptr<Frame> f;
 		#pragma omp critical (openshot_cache)
 			// Create or get frame object
 			f = CreateFrame(current_frame);
@@ -820,7 +820,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				#pragma omp critical (processing_list)
 				processing_audio_frames[starting_frame_number] = starting_frame_number;
 
-				Frame *f = NULL;
+				tr1::shared_ptr<Frame> f;
 				#pragma omp critical (openshot_cache)
 					// Create or get frame object
 					f = CreateFrame(starting_frame_number);
@@ -1081,13 +1081,13 @@ int FFmpegReader::GetSamplesPerFrame(int frame_number)
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
-Frame* FFmpegReader::CreateFrame(int requested_frame)
+tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 {
 	// Check working cache
 	if (working_cache.Exists(requested_frame))
 	{
 		// Return existing frame
-		Frame* output = working_cache.GetFrame(requested_frame);
+		tr1::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
 
 		return output;
 	}
@@ -1097,7 +1097,7 @@ Frame* FFmpegReader::CreateFrame(int requested_frame)
 		int samples_per_frame = GetSamplesPerFrame(requested_frame);
 
 		// Create a new frame on the working cache
-		Frame *f = new Frame(requested_frame, 1, 1, "#000000", samples_per_frame, info.channels);
+		tr1::shared_ptr<Frame> f(new Frame(requested_frame, 1, 1, "#000000", samples_per_frame, info.channels));
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 		f->SetSampleRate(info.sample_rate);
 
@@ -1134,7 +1134,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			break;
 
 		// Get the front frame of working cache
-		Frame *f = working_cache.GetSmallestFrame();
+		tr1::shared_ptr<Frame> f(working_cache.GetSmallestFrame());
 
 		bool is_video_ready = (f->number < smallest_video_frame);
 		bool is_audio_ready = (f->number < smallest_audio_frame);

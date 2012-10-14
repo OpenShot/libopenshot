@@ -9,6 +9,7 @@
 
 #include <map>
 #include <deque>
+#include <tr1/memory>
 #include "Frame.h"
 #include "Exceptions.h"
 
@@ -27,7 +28,7 @@ namespace openshot {
 	private:
 		int64 total_bytes;			///< This is the current total bytes (that are in this cache)
 		int64 max_bytes;			///< This is the max number of bytes to cache (0 = no limit)
-		map<int, Frame*> frames;	///< This map holds the frame number and Frame objects
+		map<int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
 		/// Clean up cached frames that exceed the max number of bytes
@@ -41,7 +42,7 @@ namespace openshot {
 		Cache(int64 max_bytes);
 
 		/// Add a Frame to the cache
-		void Add(int frame_number, Frame* frame);
+		void Add(int frame_number, tr1::shared_ptr<Frame> frame);
 
 		/// Clear the cache of all frames
 		void Clear();
@@ -56,7 +57,7 @@ namespace openshot {
 		bool Exists(int frame_number);
 
 		/// Get a frame from the cache
-		Frame* GetFrame(int frame_number);
+		tr1::shared_ptr<Frame> GetFrame(int frame_number);
 
 		/// Gets the maximum bytes value
 		int64 GetBytes() { return total_bytes; };
@@ -65,7 +66,7 @@ namespace openshot {
 		int64 GetMaxBytes() { return max_bytes; };
 
 		/// Get the smallest frame number
-		Frame* GetSmallestFrame();
+		tr1::shared_ptr<Frame> GetSmallestFrame();
 
 		/// Move frame to front of queue (so it lasts longer)
 		void MoveToFront(int frame_number);

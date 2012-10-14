@@ -8,6 +8,7 @@
  */
 
 #include <list>
+#include <tr1/memory>
 #include "Clip.h"
 #include "FileReaderBase.h"
 #include "Fraction.h"
@@ -69,7 +70,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Get the height of canvas and viewport
 		int Height() { return height; }

@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <tr1/memory>
 #include "Fraction.h"
 #include "Frame.h"
 
@@ -75,7 +76,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
-		virtual Frame* GetFrame(int number) = 0;
+		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
 
 		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
 		/// this method, or the ReaderInfo struct values will not be initialized.

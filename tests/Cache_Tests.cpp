@@ -13,7 +13,7 @@ TEST(Cache_Default_Constructor)
 	for (int i = 0; i < 50; i++)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		tr1::shared_ptr<Frame> f(new Frame());
 		c.Add(i, f);
 	}
 
@@ -30,7 +30,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	for (int i = 30; i > 0; i--)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame(i, 320, 240, "#000000");
+		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
 		c.Add(i, f);
 	}
 
@@ -41,7 +41,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	for (int i = 10; i > 0; i--)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame(i, 320, 240, "#000000");
+		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
 		c.Add(i, f);
 	}
 
@@ -67,7 +67,7 @@ TEST(Cache_Clear)
 	for (int i = 0; i < 10; i++)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		tr1::shared_ptr<Frame> f(new Frame());
 		c.Add(i, f);
 	}
 
@@ -90,7 +90,7 @@ TEST(Cache_Add_Duplicate_Frames)
 	for (int i = 0; i < 10; i++)
 	{
 		// Add blank frame to the cache (each frame is #1)
-		Frame *f = new Frame();
+		tr1::shared_ptr<Frame> f(new Frame());
 		c.Add(1, f);
 	}
 
@@ -107,7 +107,7 @@ TEST(Cache_Check_If_Frame_Exists)
 	for (int i = 1; i < 6; i++)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		tr1::shared_ptr<Frame> f(new Frame());
 		c.Add(i, f);
 	}
 
@@ -132,9 +132,9 @@ TEST(Cache_GetFrame)
 	Frame green(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, &red);
-	c.Add(blue.number, &blue);
-	c.Add(green.number, &green);
+	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
+	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
+	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
 
 	// Get frames
 	CHECK_THROW(c.GetFrame(0), OutOfBoundsFrame);
@@ -157,9 +157,9 @@ TEST(Cache_GetSmallest)
 	Frame green(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, &red);
-	c.Add(blue.number, &blue);
-	c.Add(green.number, &green);
+	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
+	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
+	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
 
 	// Check if frame 1 is the front
 	CHECK_EQUAL(1, c.GetSmallestFrame()->number);
@@ -185,9 +185,9 @@ TEST(Cache_Remove)
 	Frame green(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, &red);
-	c.Add(blue.number, &blue);
-	c.Add(green.number, &green);
+	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
+	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
+	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
 
 	// Check if count is 3
 	CHECK_EQUAL(3, c.Count());
@@ -223,7 +223,7 @@ TEST(Cache_Set_Max_Bytes)
 	for (int i = 0; i < 20; i++)
 	{
 		// Add blank frame to the cache
-		Frame *f = new Frame();
+		tr1::shared_ptr<Frame> f(new Frame());
 		c.Add(i, f);
 	}
 

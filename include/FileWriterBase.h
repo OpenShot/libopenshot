@@ -65,7 +65,7 @@ namespace openshot
 		WriterInfo info;
 
 		/// This method is required for all derived classes of FileWriterBase.  Write a Frame to the video file.
-		virtual void WriteFrame(Frame* frame) = 0;
+		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) = 0;
 
 		/// This method is required for all derived classes of FileWriterBase.  Write a block of frames from a reader.
 		virtual void WriteFrame(FileReaderBase* reader, int start, int length) = 0;

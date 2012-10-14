@@ -25,7 +25,7 @@ void Player::SetFrameCallback(CallbackPtr p_callback, void *p_pythonmethod)
 //	double *Pixels = new double[100];
 //	for (int i = 0; i < 100; i++)
 //		Pixels[i] = i + 100;
-	Frame *f = reader->GetFrame(300);
+	tr1::shared_ptr<Frame> f = reader->GetFrame(300);
 
 	// invoke method pointer 10 times
 	for (int i = 0; i < 30; i++)
@@ -41,7 +41,7 @@ void Player::Push()
 //	double *Pixels = new double[100];
 //	for (int i = 0; i < 100; i++)
 //		Pixels[i] = i + 200;
-	Frame *f = reader->GetFrame(500);
+	tr1::shared_ptr<Frame> f = reader->GetFrame(500);
 
 	// manually invoke method
 	for (int i = 30; i < 20; i++)

@@ -78,20 +78,20 @@ namespace openshot
 	    int audio_input_position;
 	    AudioResampler *resampler;
 
-	    Frame* last_frame;
-	    deque<Frame*> spooled_audio_frames;
-	    deque<Frame*> spooled_video_frames;
+	    tr1::shared_ptr<Frame> last_frame;
+	    deque<tr1::shared_ptr<Frame> > spooled_audio_frames;
+	    deque<tr1::shared_ptr<Frame> > spooled_video_frames;
 
-	    deque<Frame*> queued_audio_frames;
-	    deque<Frame*> queued_video_frames;
+	    deque<tr1::shared_ptr<Frame> > queued_audio_frames;
+	    deque<tr1::shared_ptr<Frame> > queued_video_frames;
 
-	    deque<Frame*> processed_frames;
-	    deque<Frame*> deallocate_frames;
+	    deque<tr1::shared_ptr<Frame> > processed_frames;
+	    deque<tr1::shared_ptr<Frame> > deallocate_frames;
 
-	    map<Frame*, AVFrame*> av_frames;
+	    map<tr1::shared_ptr<Frame>, AVFrame*> av_frames;
 
 	    /// Add an AVFrame to the cache
-	    void add_avframe(Frame* frame, AVFrame* av_frame);
+	    void add_avframe(tr1::shared_ptr<Frame> frame, AVFrame* av_frame);
 
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
@@ -121,13 +121,13 @@ namespace openshot
 		void open_video(AVFormatContext *oc, AVStream *st);
 
 		/// process video frame
-		void process_video_packet(Frame* frame);
+		void process_video_packet(tr1::shared_ptr<Frame> frame);
 
 		/// write all queued frames' audio to the video file
 		void write_audio_packets();
 
 		/// write video frame
-		void write_video_packet(Frame* frame, AVFrame* frame_final);
+		void write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final);
 
 		/// write all queued frames
 		void write_queued_frames();
@@ -172,7 +172,7 @@ namespace openshot
 		void WriteHeader();
 
 		/// Add a frame to the stack waiting to be encoded.
-		void WriteFrame(Frame* frame);
+		void WriteFrame(tr1::shared_ptr<Frame> frame);
 
 		/// Write a block of frames from a reader
 		void WriteFrame(FileReaderBase* reader, int start, int length);

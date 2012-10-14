@@ -13,7 +13,7 @@ TEST(FileReaderBase_Derived_Class)
 	{
 	public:
 		TestReader() { InitFileInfo(); };
-		Frame* GetFrame(int number) { Frame *f = new Frame(); return f; }
+		tr1::shared_ptr<Frame> GetFrame(int number) { tr1::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
 	};

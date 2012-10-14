@@ -31,7 +31,7 @@ void ImageReader::Open() throw(InvalidFile)
 		}
 
 		// Create or get frame object
-		image_frame = new Frame(1, source->size().width(), source->size().height(), "#000000", 0, 2);
+		image_frame = tr1::shared_ptr<Frame>(new Frame(1, source->size().width(), source->size().height(), "#000000", 0, 2));
 
 		// Add Image data to frame
 		image_frame->AddImage(source);
@@ -74,7 +74,7 @@ void ImageReader::Close()
 	if (is_open)
 	{
 		// Deallocate frame
-		delete image_frame;
+		image_frame.reset();
 
 		// Mark as "closed"
 		is_open = false;
@@ -82,7 +82,7 @@ void ImageReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-Frame* ImageReader::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)

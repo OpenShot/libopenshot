@@ -170,7 +170,7 @@ float Clip::End()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
 	requested_frame = adjust_frame_number_minimum(requested_frame);
@@ -182,7 +182,7 @@ Frame* Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	frame_number = adjust_frame_number_minimum(get_time_mapped_frame(frame_number));
 
 	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-	Frame *frame = file_reader->GetFrame(frame_number);
+	tr1::shared_ptr<Frame> frame = file_reader->GetFrame(frame_number);
 
 	// Apply basic image processing (scale, rotation, etc...)
 	apply_basic_image_processing(frame, frame_number);
@@ -241,7 +241,7 @@ int Clip::get_time_mapped_frame(int original_frame_number)
 }
 
 // Apply basic image processing (scale, rotate, move, etc...)
-void Clip::apply_basic_image_processing(Frame* frame, int frame_number)
+void Clip::apply_basic_image_processing(tr1::shared_ptr<Frame> frame, int frame_number)
 {
 	// Get values
 	float rotation_value = rotation.GetValue(frame_number);

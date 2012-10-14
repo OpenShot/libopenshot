@@ -16,7 +16,7 @@ Cache::Cache() : max_bytes(0), total_bytes(0) { };
 Cache::Cache(int64 max_bytes) : max_bytes(max_bytes), total_bytes(0) { };
 
 // Add a Frame to the cache
-void Cache::Add(int frame_number, Frame *frame)
+void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 {
 	// Remove frame if it already exists
 	if (Exists(frame_number))
@@ -47,7 +47,7 @@ bool Cache::Exists(int frame_number)
 }
 
 // Get a frame from the cache
-Frame* Cache::GetFrame(int frame_number)
+tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
 {
 	// Does frame exists in cache?
 	if (Exists(frame_number))
@@ -64,7 +64,7 @@ Frame* Cache::GetFrame(int frame_number)
 }
 
 // Get the smallest frame number
-Frame* Cache::GetSmallestFrame()
+tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {
 	// Loop through frame numbers
 	 deque<int>::iterator itr;
@@ -83,7 +83,7 @@ Frame* Cache::GetSmallestFrame()
 void Cache::Remove(int frame_number, bool delete_data)
 {
 	// Get the frame (or throw exception)
-	Frame *f = GetFrame(frame_number);
+	tr1::shared_ptr<Frame> f = GetFrame(frame_number);
 
 	// Decrement the total bytes (for this cache)
 	total_bytes -= f->GetBytes();
@@ -102,7 +102,7 @@ void Cache::Remove(int frame_number, bool delete_data)
 
 	// Deallocate frame (if requested)
 	if (delete_data)
-		delete frames[frame_number];
+		frames[frame_number].reset();
 
 	// Remove frame from map
 	frames.erase(frame_number);
@@ -148,7 +148,7 @@ void Cache::Clear()
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	{
 		// Deallocate frame
-		delete frames[*itr];
+		frames[*itr].reset();
 
 		// Remove frame from map
 		frames.erase(*itr);

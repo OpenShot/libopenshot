@@ -26,7 +26,7 @@ TEST(FFmpegReader_Check_Audio_File)
 	r.Open();
 
 	// Get frame 1
-	Frame *f = r.GetFrame(1);
+	tr1::shared_ptr<Frame> f = r.GetFrame(1);
 
 	// Get the number of channels and samples
 	float *samples = f->GetAudioSamples(0);
@@ -54,7 +54,7 @@ TEST(FFmpegReader_Check_Video_File)
 	r.Open();
 
 	// Get frame 1
-	Frame *f = r.GetFrame(1);
+	tr1::shared_ptr<Frame> f = r.GetFrame(1);
 
 	// Get the image data
 	const Magick::PixelPacket* pixels = f->GetPixels(10);

@@ -25,6 +25,7 @@ extern "C" {
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
+#include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
@@ -111,7 +112,7 @@ namespace openshot
 		int ConvertVideoPTStoFrame(int pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		Frame* CreateFrame(int requested_frame);
+		tr1::shared_ptr<Frame> CreateFrame(int requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
 		audio_packet_location GetAudioPTSLocation(int pts);
@@ -144,7 +145,7 @@ namespace openshot
 		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		Frame* ReadStream(int requested_frame);
+		tr1::shared_ptr<Frame> ReadStream(int requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
 		void RemoveAVFrame(AVPicture*);
@@ -187,7 +188,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
 
 		/// Open File - which is called by the constructor automatically
 		void Open() throw(InvalidFile, NoStreamsFound, InvalidCodec);

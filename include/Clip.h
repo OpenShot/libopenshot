@@ -7,6 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+#include <tr1/memory>
 #include "FFmpegReader.h"
 #include "FrameRate.h"
 #include "FrameMapper.h"
@@ -78,7 +79,7 @@ namespace openshot {
 		int adjust_frame_number_minimum(int frame_number);
 
 		/// Apply basic image processing (scale, rotate, move, etc...)
-		void apply_basic_image_processing(Frame* frame, int frame_number);
+		void apply_basic_image_processing(tr1::shared_ptr<Frame> frame, int frame_number);
 
 		/// Get file extension
 		string get_file_extension(string path);
@@ -119,7 +120,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Map frame rate of this clip to a different frame rate
 		void MapFrames(Framerate fps, Pulldown_Method pulldown);

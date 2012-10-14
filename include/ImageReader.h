@@ -14,10 +14,10 @@
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
+#include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
-
 
 using namespace std;
 
@@ -32,7 +32,7 @@ namespace openshot
 	{
 	private:
 		string path;
-		Frame* image_frame;
+		tr1::shared_ptr<Frame> image_frame;
 		bool is_open;
 
 	public:
@@ -49,7 +49,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
-		Frame* GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Open File - which is called by the constructor automatically
 		void Open() throw(InvalidFile);

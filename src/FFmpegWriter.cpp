@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8),
-		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), last_frame(NULL)
+		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -284,7 +284,7 @@ void FFmpegWriter::WriteHeader()
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(Frame* frame)
+void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 {
 	// Add frame pointer to "queue", waiting to be processed the next
 	// time the WriteFrames() method is called.
@@ -344,7 +344,7 @@ void FFmpegWriter::write_queued_frames()
 			while (!queued_video_frames.empty())
 			{
 				// Get front frame (from the queue)
-				Frame *frame = queued_video_frames.front();
+				tr1::shared_ptr<Frame> frame = queued_video_frames.front();
 
 				// Add to processed queue
 				processed_frames.push_back(frame);
@@ -365,7 +365,7 @@ void FFmpegWriter::write_queued_frames()
 			while (!processed_frames.empty())
 			{
 				// Get front frame (from the queue)
-				Frame *frame = processed_frames.front();
+				tr1::shared_ptr<Frame> frame = processed_frames.front();
 
 				if (info.has_video && video_st)
 				{
@@ -391,7 +391,7 @@ void FFmpegWriter::write_queued_frames()
 			while (!deallocate_frames.empty())
 			{
 				// Get front frame (from the queue)
-				Frame *frame = deallocate_frames.front();
+				tr1::shared_ptr<Frame> frame = deallocate_frames.front();
 
 				// Does this frame's AVFrame still exist
 				if (av_frames.count(frame))
@@ -425,7 +425,7 @@ void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 	for (int number = start; number <= length; number++)
 	{
 		// Get the frame
-		Frame *f = reader->GetFrame(number);
+		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);
@@ -441,7 +441,7 @@ void FFmpegWriter::WriteTrailer()
 	if (last_frame)
 	{
 		// Create black frame
-		Frame *padding_frame = new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount());
+		tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
 		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
 
 		// Add the black frame many times
@@ -507,7 +507,7 @@ void FFmpegWriter::Close()
 }
 
 // Add an AVFrame to the cache
-void FFmpegWriter::add_avframe(Frame* frame, AVFrame* av_frame)
+void FFmpegWriter::add_avframe(tr1::shared_ptr<Frame> frame, AVFrame* av_frame)
 {
 	// Add AVFrame to map (if it does not already exist)
 	if (!av_frames.count(frame))
@@ -758,7 +758,7 @@ void FFmpegWriter::write_audio_packets()
 		while (!queued_audio_frames.empty())
 		{
 			// Get front frame (from the queue)
-			Frame *frame = queued_audio_frames.front();
+			tr1::shared_ptr<Frame> frame = queued_audio_frames.front();
 
 			// Get the audio details from this frame
 			sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
@@ -911,7 +911,7 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 }
 
 // process video frame
-void FFmpegWriter::process_video_packet(Frame* frame)
+void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 {
 	// Determine the height & width of the source image
 	int source_image_width = frame->GetWidth();
@@ -985,7 +985,7 @@ void FFmpegWriter::process_video_packet(Frame* frame)
 }
 
 // write video frame
-void FFmpegWriter::write_video_packet(Frame* frame, AVFrame* frame_final)
+void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
 	// Encode Picture and Write Frame
 	int video_outbuf_size = 200000;
