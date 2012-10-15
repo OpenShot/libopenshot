@@ -61,13 +61,11 @@ namespace openshot
 	 */
 	struct SampleRange
 	{
-		int starting_frame;
-		int starting_sample;
+		int frame_start;
+		int sample_start;
 
-		int ending_frame;
-		int ending_sample;
-
-		SampleRange() : starting_frame(0), starting_sample(0), ending_frame(0), ending_sample(0) { };
+		int frame_end;
+		int sample_end;
 	};
 
 	/**
@@ -105,10 +103,10 @@ namespace openshot
 		vector<Field> fields;		// List of all fields
 		vector<MappedFrame> frames;	// List of all frames
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
-		Framerate m_original;		// The original frame rate
-		Framerate m_target;			// The target frame rate
-		Pulldown_Method m_pulldown;	// The pull-down technique
-		FileReaderBase *m_reader;	// The source video reader
+		Framerate original;		// The original frame rate
+		Framerate target;			// The target frame rate
+		Pulldown_Method pulldown;	// The pull-down technique
+		FileReaderBase *reader;	// The source video reader
 
 		// Internal methods used by init
 		void AddField(int frame);
@@ -120,6 +118,9 @@ namespace openshot
 		// whether the frame rate is increasing or decreasing.
 		void Init();
 
+		/// Calculate the # of samples per video frame (for a specific frame number)
+		int GetSamplesPerFrame(int frame_number, Fraction rate);
+
 	public:
 		/// Default constructor for FrameMapper class
 		FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown);
@@ -128,16 +129,16 @@ namespace openshot
 		MappedFrame GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
 		/// Get the target framerate
-		Framerate TargetFPS() { return m_target; };
+		Framerate TargetFPS() { return target; };
 
 		/// Get the source framerate
-		Framerate SourceFPS() { return m_original; };
+		Framerate SourceFPS() { return original; };
 
 		/// Set the target framerate
-		void TargetFPS(Framerate new_fps) { m_target = new_fps; };
+		void TargetFPS(Framerate new_fps) { target = new_fps; };
 
 		/// Set the source framerate
-		void SourceFPS(Framerate new_fps) { m_original = new_fps; };
+		void SourceFPS(Framerate new_fps) { original = new_fps; };
 
 		/**
 		 * \brief Re-map time to slow down, speed up, or reverse a clip based on a Keyframe.

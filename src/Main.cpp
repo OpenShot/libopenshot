@@ -16,6 +16,15 @@ void FrameReady(int number)
 
 int main()
 {
+
+	openshot::FFmpegReader r1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r1.Open();
+	FrameMapper map(&r1, Framerate(24,1), PULLDOWN_NONE);
+	map.PrintMapping();
+
+	return 0;
+
+
 	// Create timeline
 	Timeline t(640, 360, Framerate(24,1));
 
