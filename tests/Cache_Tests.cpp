@@ -127,14 +127,14 @@ TEST(Cache_GetFrame)
 	Cache c(250 * 1024);
 
 	// Create 3 frames
-	Frame red(1, 300, 300, "red");
-	Frame blue(2, 400, 400, "blue");
-	Frame green(3, 500, 500, "green");
+	Frame *red = new Frame(1, 300, 300, "red");
+	Frame *blue = new Frame(2, 400, 400, "blue");
+	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
-	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
-	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
+	c.Add(red->number, tr1::shared_ptr<Frame>(red));
+	c.Add(blue->number, tr1::shared_ptr<Frame>(blue));
+	c.Add(green->number, tr1::shared_ptr<Frame>(green));
 
 	// Get frames
 	CHECK_THROW(c.GetFrame(0), OutOfBoundsFrame);
@@ -152,14 +152,14 @@ TEST(Cache_GetSmallest)
 	Cache c(250 * 1024);
 
 	// Create 3 frames
-	Frame blue(2, 400, 400, "blue");
-	Frame red(1, 300, 300, "red");
-	Frame green(3, 500, 500, "green");
+	Frame *red = new Frame(1, 300, 300, "red");
+	Frame *blue = new Frame(2, 400, 400, "blue");
+	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
-	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
-	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
+	c.Add(red->number, tr1::shared_ptr<Frame>(red));
+	c.Add(blue->number, tr1::shared_ptr<Frame>(blue));
+	c.Add(green->number, tr1::shared_ptr<Frame>(green));
 
 	// Check if frame 1 is the front
 	CHECK_EQUAL(1, c.GetSmallestFrame()->number);
@@ -180,14 +180,14 @@ TEST(Cache_Remove)
 	Cache c(250 * 1024);
 
 	// Create 3 frames
-	Frame red(1, 300, 300, "red");
-	Frame blue(2, 400, 400, "blue");
-	Frame green(3, 500, 500, "green");
+	Frame *red = new Frame(1, 300, 300, "red");
+	Frame *blue = new Frame(2, 400, 400, "blue");
+	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(red.number, tr1::shared_ptr<Frame>(&red));
-	c.Add(blue.number, tr1::shared_ptr<Frame>(&blue));
-	c.Add(green.number, tr1::shared_ptr<Frame>(&green));
+	c.Add(red->number, tr1::shared_ptr<Frame>(red));
+	c.Add(blue->number, tr1::shared_ptr<Frame>(blue));
+	c.Add(green->number, tr1::shared_ptr<Frame>(green));
 
 	// Check if count is 3
 	CHECK_EQUAL(3, c.Count());
@@ -237,4 +237,3 @@ TEST(Cache_Set_Max_Bytes)
 	c.SetMaxBytes(4 * 1024);
 	CHECK_EQUAL(4 * 1024, c.GetMaxBytes());
 }
-
