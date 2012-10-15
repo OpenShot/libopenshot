@@ -9,13 +9,18 @@
 using namespace std;
 using namespace openshot;
 
-FrameMapper::FrameMapper(int Length, Framerate original, Framerate target, Pulldown_Method pulldown)
+FrameMapper::FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown)
 {
 	// init position
-	m_length = Length;
-	m_original = original;
 	m_target = target;
 	m_pulldown = pulldown;
+	m_reader = reader;
+
+	// Set the original frame rate from the reader
+	m_original = Framerate(m_reader->info.fps.num, m_reader->info.fps.den);
+
+	// Set length from reader
+	m_length = m_reader->info.video_length;
 
 	// Used to toggle odd / even fields
 	field_toggle = true;

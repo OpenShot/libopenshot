@@ -201,7 +201,7 @@ void Clip::MapFrames(Framerate fps, Pulldown_Method pulldown)
 		Framerate original_fps(file_reader->info.fps.num, file_reader->info.fps.den);
 
 		// Create and Set FrameMapper object
-		frame_map = new FrameMapper(file_reader->info.video_length, original_fps, fps, pulldown);
+		frame_map = new FrameMapper(file_reader, fps, pulldown);
 	}
 }
 

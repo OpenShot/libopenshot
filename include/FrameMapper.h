@@ -11,6 +11,7 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+#include "../include/FileReaderBase.h"
 #include "../include/FrameRate.h"
 #include "../include/Exceptions.h"
 #include "../include/KeyFrame.h"
@@ -53,6 +54,23 @@ namespace openshot
 	};
 
 	/**
+	 * \brief This struct holds a the range of samples needed by this frame
+	 *
+	 * When frame rate is changed, the audio needs to be redistributed among the remaining
+	 * frames.  This struct holds the range samples needed by the this frame.
+	 */
+	struct SampleRange
+	{
+		int starting_frame;
+		int starting_sample;
+
+		int ending_frame;
+		int ending_sample;
+
+		SampleRange() : starting_frame(0), starting_sample(0), ending_frame(0), ending_sample(0) { };
+	};
+
+	/**
 	 * \brief This struct holds two fields which together make up a complete video frame.
 	 *
 	 * These fields can point at different original frame numbers, for example the odd lines from
@@ -62,7 +80,9 @@ namespace openshot
 	{
 		Field Odd;
 		Field Even;
+		SampleRange Samples;
 	};
+
 
 	/**
 	 * \brief This class creates a mapping between 2 different frame rates, applying a specific pull-down technique.
@@ -88,6 +108,7 @@ namespace openshot
 		Framerate m_original;		// The original frame rate
 		Framerate m_target;			// The target frame rate
 		Pulldown_Method m_pulldown;	// The pull-down technique
+		FileReaderBase *m_reader;	// The source video reader
 
 		// Internal methods used by init
 		void AddField(int frame);
@@ -101,7 +122,7 @@ namespace openshot
 
 	public:
 		/// Default constructor for FrameMapper class
-		FrameMapper(int Length, Framerate original, Framerate target, Pulldown_Method pulldown);
+		FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown);
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
