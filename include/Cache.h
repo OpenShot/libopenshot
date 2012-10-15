@@ -74,9 +74,6 @@ namespace openshot {
 		/// Remove a specific frame
 		void Remove(int frame_number);
 
-		/// Remove a specific frame
-		void Remove(int frame_number, bool delete_data);
-
 		/// Set maximum bytes to a different amount
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 

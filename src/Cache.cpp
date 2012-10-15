@@ -80,7 +80,7 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 }
 
 // Remove a specific frame
-void Cache::Remove(int frame_number, bool delete_data)
+void Cache::Remove(int frame_number)
 {
 	// Get the frame (or throw exception)
 	tr1::shared_ptr<Frame> f = GetFrame(frame_number);
@@ -100,19 +100,8 @@ void Cache::Remove(int frame_number, bool delete_data)
 		}
 	}
 
-	// Deallocate frame (if requested)
-	if (delete_data)
-		frames[frame_number].reset();
-
 	// Remove frame from map
 	frames.erase(frame_number);
-}
-
-// Remove a specific frame
-void Cache::Remove(int frame_number)
-{
-	// Remove and delete frame data
-	Remove(frame_number, true);
 }
 
 // Move frame to front of queue (so it lasts longer)
@@ -146,13 +135,8 @@ void Cache::Clear()
 {
 	deque<int>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-	{
-		// Deallocate frame
-		frames[*itr].reset();
-
 		// Remove frame from map
 		frames.erase(*itr);
-	}
 
 	// pop each of the frames from the queue... which empties the queue
 	while(!frame_numbers.empty()) frame_numbers.pop_back();

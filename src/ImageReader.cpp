@@ -73,9 +73,6 @@ void ImageReader::Close()
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
-		// Deallocate frame
-		image_frame.reset();
-
 		// Mark as "closed"
 		is_open = false;
 	}

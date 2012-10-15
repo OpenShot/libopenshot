@@ -16,9 +16,6 @@ void FrameReady(int number)
 
 int main()
 {
-	shared_ptr<Frame> f(new Frame(1,2,2));
-
-
 	// Create timeline
 	Timeline t(640, 360, Framerate(24,1));
 
@@ -118,10 +115,10 @@ int main()
 
 	//	openshot::FFmpegReader r("../../src/examples/test.mp4");
 	//	openshot::FFmpegReader r("../../src/examples/test1.mp4");
-		openshot::FFmpegReader r("../../src/examples/piano.wav");
+	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
@@ -140,7 +137,7 @@ int main()
 //
 //		// Set options
 //		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-//		//w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+//		w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
 //
 //		// Prepare Streams
 //		w.PrepareStreams();
@@ -170,10 +167,10 @@ int main()
 //		//Frame *f = r.GetFrame(1);
 //
 //		//for (int frame = 131; frame >= 1; frame--)
-//		for (int frame = 1; frame <= 131; frame++)
+//		for (int frame = 1; frame <= 2000; frame++)
 //		{
 //			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
-//			//f->AddOverlayNumber(0);
+//			f->AddOverlayNumber(0);
 //			//f->Display();
 //
 //			// Write frame

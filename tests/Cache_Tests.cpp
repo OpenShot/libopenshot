@@ -168,7 +168,7 @@ TEST(Cache_GetSmallest)
 	CHECK_EQUAL(1, c.GetSmallestFrame()->number);
 
 	// Erase frame 1
-	c.Remove(1, false);
+	c.Remove(1);
 
 	// Check if frame 2 is the front
 	CHECK_EQUAL(2, c.GetSmallestFrame()->number);
@@ -196,7 +196,7 @@ TEST(Cache_Remove)
 	CHECK_EQUAL(true, c.Exists(2));
 
 	// Remove frame 2
-	c.Remove(2, false);
+	c.Remove(2);
 
 	// Check if frame 2 exists
 	CHECK_EQUAL(false, c.Exists(2));
@@ -205,7 +205,7 @@ TEST(Cache_Remove)
 	CHECK_EQUAL(2, c.Count());
 
 	// Remove frame 1
-	c.Remove(1, false);
+	c.Remove(1);
 
 	// Check if frame 1 exists
 	CHECK_EQUAL(false, c.Exists(1));
