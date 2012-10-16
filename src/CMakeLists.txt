@@ -45,6 +45,7 @@ add_library(openshot SHARED
 			Cache.cpp
 			Clip.cpp
 			Coordinate.cpp
+			DummyReader.cpp
 			FileReaderBase.cpp
 			FileWriterBase.cpp
 			FFmpegReader.cpp

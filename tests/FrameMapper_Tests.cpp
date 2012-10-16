@@ -7,7 +7,7 @@ using namespace openshot;
 TEST(FrameMapper_Get_Valid_Frame)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 24 fps and 29.97 fps using classic pulldown
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
@@ -28,7 +28,7 @@ TEST(FrameMapper_Get_Valid_Frame)
 TEST(FrameMapper_Invalid_Frame_Too_Small)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
@@ -41,7 +41,7 @@ TEST(FrameMapper_Invalid_Frame_Too_Small)
 TEST(FrameMapper_Invalid_Frame_Too_Large)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 4.0);
 
 	// Create mapping 24 fps and 29.97 fps
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
@@ -53,7 +53,7 @@ TEST(FrameMapper_Invalid_Frame_Too_Large)
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
@@ -70,7 +70,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_ADVANCED);
@@ -90,7 +90,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
 	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_NONE);
@@ -107,7 +107,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
 	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_CLASSIC);
@@ -127,7 +127,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
 	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_ADVANCED);
@@ -147,7 +147,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
 	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_NONE);
@@ -164,7 +164,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 TEST(FrameMapper_MapTime)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	DummyReader r(Framerate(24, 1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 24 fps
 	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_NONE);

@@ -17,9 +17,9 @@ void FrameReady(int number)
 int main()
 {
 
-	openshot::FFmpegReader r1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	openshot::FFmpegReader r1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	r1.Open();
-	FrameMapper map(&r1, Framerate(24,1), PULLDOWN_NONE);
+	FrameMapper map(&r1, Framerate(2,1), PULLDOWN_NONE);
 	map.PrintMapping();
 
 	return 0;

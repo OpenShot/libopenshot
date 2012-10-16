@@ -30,6 +30,7 @@
 #include "Cache.h"
 #include "Clip.h"
 #include "Coordinate.h"
+#include "DummyReader.h"
 #include "Exceptions.h"
 #include "FileReaderBase.h"
 #include "FileWriterBase.h"
