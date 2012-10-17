@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <sstream>
 #include <queue>
+#include <tr1/memory>
 #include "Magick++.h"
 #include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"
@@ -34,9 +35,9 @@ namespace openshot
 	class Frame
 	{
 	private:
-		Magick::Image *image;
-		Magick::Image *wave_image;
-		juce::AudioSampleBuffer *audio;
+		tr1::shared_ptr<Magick::Image> image;
+		tr1::shared_ptr<Magick::Image> wave_image;
+		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
 		Fraction pixel_ratio;
 		int sample_rate;
 		int channels;
@@ -59,9 +60,6 @@ namespace openshot
 		/// Constructor - image & audio
 		Frame(int number, int width, int height, string color, int samples, int channels);
 
-		/// Destructor
-		~Frame();
-
 		/// Copy constructor
 		Frame ( const Frame &other );
 
@@ -75,7 +73,7 @@ namespace openshot
 		void AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
 		/// Add (or replace) pixel data to the frame
-		void AddImage(Magick::Image* new_image);
+		void AddImage(tr1::shared_ptr<Magick::Image> new_image);
 
 		/// Add audio samples to a specific channel
 		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
@@ -94,9 +92,6 @@ namespace openshot
 
 		/// Copy data and pointers from another Frame instance
 		void DeepCopy(const Frame& other);
-
-		/// Deallocate image and audio memory
-		void DeletePointers();
 
 		/// Display the frame image to the screen (primarily used for debugging reasons)
 		void Display();
@@ -123,7 +118,7 @@ namespace openshot
 		int64 GetBytes();
 
 		/// Get pointer to Magick++ image object
-		Magick::Image* GetImage();
+		tr1::shared_ptr<Magick::Image> GetImage();
 
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
@@ -135,7 +130,7 @@ namespace openshot
 		int GetHeight();
 
 		/// Get an audio waveform image
-		Magick::Image* GetWaveform(int width, int height);
+		tr1::shared_ptr<Magick::Image> GetWaveform(int width, int height);
 
 		/// Get an audio waveform image pixels
 		const Magick::PixelPacket* GetWaveformPixels(int width, int height);

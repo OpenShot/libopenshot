@@ -10,13 +10,22 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown) :
-		reader(reader), target(target), pulldown(pulldown)
+		reader(reader), target(target), pulldown(pulldown), final_cache(820 * 1024)
 {
+
+	// Init FileInfo struct (clear all values)
+	InitFileInfo();
+
 	// Set the original frame rate from the reader
 	original = Framerate(reader->info.fps.num, reader->info.fps.den);
 
-	// Set length from reader
-	m_length = reader->info.video_length;
+	// Set all info struct members equal to the internal reader
+	info = reader->info;
+	info.fps.num = target.GetFraction().num;
+	info.fps.den = target.GetFraction().den;
+	info.video_timebase.num = target.GetFraction().den;
+	info.video_timebase.den = target.GetFraction().num;
+	info.video_length = round(info.duration * info.fps.ToDouble());
 
 	// Used to toggle odd / even fields
 	field_toggle = true;
@@ -67,7 +76,7 @@ void FrameMapper::Init()
 
 	// Loop through all fields in the original video file
 	int frame = 1;
-	int number_of_fields = m_length * 2;
+	int number_of_fields = info.video_length * 2;
 	for (int field = 1; field <= number_of_fields; field++)
 	{
 
@@ -91,7 +100,7 @@ void FrameMapper::Init()
 				// Add both extra fields in the middle 'together' (i.e. 2:3:3:2 technique)
 				AddField(frame); // add field for current frame
 
-				if (frame + 1 <= m_length)
+				if (frame + 1 <= info.video_length)
 					// add field for next frame (if the next frame exists)
 					AddField(Field(frame + 1, field_toggle));
 			}
@@ -183,7 +192,7 @@ void FrameMapper::Init()
 			}
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, GetSamplesPerFrame(frame_number, target.GetFraction())};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
@@ -212,7 +221,7 @@ void FrameMapper::Init()
 	fields.clear();
 }
 
-MappedFrame FrameMapper::GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
+MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
 {
 	// Check if frame number is valid
 	if(TargetFrameNumber < 1 || TargetFrameNumber > frames.size())
@@ -222,6 +231,73 @@ MappedFrame FrameMapper::GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
 
 	// Return frame
 	return frames[TargetFrameNumber - 1];
+}
+
+// Get an openshot::Frame object for a specific frame number of this reader.
+tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderClosed)
+{
+	// Check final cache, and just return the frame (if it's available)
+	if (final_cache.Exists(requested_frame))
+		return final_cache.GetFrame(requested_frame);
+
+	// Get the mapped frame
+	MappedFrame mapped = GetMappedFrame(requested_frame);
+
+	// Init some basic properties about this frame
+	int samples_in_frame = GetSamplesPerFrame(requested_frame, target.GetFraction());
+
+	// Create a new frame
+	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
+
+	// Copy the image from the odd field (TODO: make this copy each field from the correct frames)
+	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage());
+
+	// Copy the samples
+	int samples_copied = 0;
+	int starting_frame = mapped.Samples.frame_start;
+	while (samples_copied < mapped.Samples.total)
+	{
+		// init number of samples to copy this iteration
+		int number_to_copy = 0;
+
+		// Loop through each channel
+		for (int channel = 0; channel < info.channels; channel++)
+		{
+			// number of original samples on this frame
+			tr1::shared_ptr<Frame> original_frame = reader->GetFrame(starting_frame);
+			int original_samples = original_frame->GetAudioSamplesCount();
+
+			if (starting_frame == mapped.Samples.frame_start)
+			{
+				// Starting frame (take the ending samples)
+				number_to_copy = (original_samples - mapped.Samples.sample_start) + 1;
+				cout << "Fixing to copy audio: frame: " << starting_frame << ", channel: " << channel << ", original_samples: " << original_samples << ", sample_start: " << mapped.Samples.sample_start << ", number_to_copy: " << number_to_copy << ", first value: " << original_frame->GetAudioSamples(channel)[0] << endl;
+				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, 10, 1.0);
+			}
+			else if (starting_frame > mapped.Samples.frame_start && starting_frame < mapped.Samples.frame_end)
+			{
+				// Middle frame (take all samples)
+				number_to_copy = original_samples;
+				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+			}
+			else
+			{
+				// Ending frame (take the beginning samples)
+				number_to_copy = mapped.Samples.sample_end;
+				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+			}
+		}
+
+		// increment frame
+		samples_copied += number_to_copy;
+		starting_frame++;
+	}
+
+	// Add frame to final cache
+	final_cache.Add(frame->number, frame);
+
+	// Return processed 'frame'
+	return final_cache.GetFrame(frame->number);
 }
 
 void FrameMapper::MapTime(Keyframe new_time) throw(OutOfBoundsFrame)
@@ -304,4 +380,21 @@ void FrameMapper::PrintMapping()
 		cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
 	}
 
+}
+
+// Open the internal reader
+void FrameMapper::Open() throw(InvalidFile)
+{
+	if (reader)
+	{
+		// Open the reader
+		reader->Open();
+	}
+}
+
+// Close the internal reader
+void FrameMapper::Close()
+{
+	if (reader)
+		reader->Close();
 }

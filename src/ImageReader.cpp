@@ -34,7 +34,7 @@ void ImageReader::Open() throw(InvalidFile)
 		image_frame = tr1::shared_ptr<Frame>(new Frame(1, source->size().width(), source->size().height(), "#000000", 0, 2));
 
 		// Add Image data to frame
-		image_frame->AddImage(source);
+		image_frame->AddImage(tr1::shared_ptr<Magick::Image>(source));
 
 		// Update image properties
 		info.has_audio = false;

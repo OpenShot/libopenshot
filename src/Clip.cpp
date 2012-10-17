@@ -50,7 +50,6 @@ void Clip::init_settings()
 	perspective_c4_y = Keyframe(-1.0);
 
 	// Default pointers
-	frame_map = NULL;
 	file_reader = NULL;
 }
 
@@ -154,10 +153,7 @@ float Clip::End()
 {
 	// Determine the FPS fo this clip
 	float fps = 24.0;
-	if (frame_map)
-		// frame mapper
-		fps = frame_map->TargetFPS().GetFPS();
-	else if (file_reader)
+	if (file_reader)
 		// file reader
 		fps = file_reader->info.fps.ToFloat();
 
@@ -175,11 +171,8 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	// Adjust out of bounds frame number
 	requested_frame = adjust_frame_number_minimum(requested_frame);
 
-	// Get mapped frame number (or just return the same number).  This is used to change framerates.
-	int frame_number = get_framerate_mapped_frame(requested_frame);
-
 	// Get time mapped frame number (used to increase speed, change direction, etc...)
-	frame_number = adjust_frame_number_minimum(get_time_mapped_frame(frame_number));
+	int frame_number = adjust_frame_number_minimum(get_time_mapped_frame(requested_frame));
 
 	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 	tr1::shared_ptr<Frame> frame = file_reader->GetFrame(frame_number);
@@ -191,39 +184,11 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	return frame;
 }
 
-// Map frame rate of this clip to a different frame rate
-void Clip::MapFrames(Framerate fps, Pulldown_Method pulldown)
-{
-	// Check for a valid file reader (required to re-map it's frame rate)
-	if (file_reader)
-	{
-		// Get original framerate
-		Framerate original_fps(file_reader->info.fps.num, file_reader->info.fps.den);
-
-		// Create and Set FrameMapper object
-		frame_map = new FrameMapper(file_reader, fps, pulldown);
-	}
-}
-
 // Get file extension
 string Clip::get_file_extension(string path)
 {
 	// return last part of path
 	return path.substr(path.find_last_of(".") + 1);
-}
-
-// Get the new frame number, based on the Framemapper, or return the number passed in
-int Clip::get_framerate_mapped_frame(int original_frame_number)
-{
-	// Check for a frame mapper (which is optinal)
-	if (frame_map)
-	{
-		// Get new frame number
-		return frame_map->GetFrame(original_frame_number).Odd.Frame;
-
-	} else
-		// return passed in parameter
-		return original_frame_number;
 }
 
 // Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)

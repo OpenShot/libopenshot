@@ -10,11 +10,11 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
+Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(1,1), Magick::Color("red"));
-	audio = new juce::AudioSampleBuffer(channels, 1600);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -22,11 +22,11 @@ Frame::Frame() : number(1), image(0), audio(0), pixel_ratio(1,1), sample_rate(48
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
-	audio = new juce::AudioSampleBuffer(channels, 1600);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -34,11 +34,11 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(2), wave_image(NULL)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(width, height, map, type, pixels);
-	audio = new juce::AudioSampleBuffer(channels, 1600);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -46,11 +46,11 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels), wave_image(NULL)
+		number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white"));
-	audio = new juce::AudioSampleBuffer(channels, samples);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -58,22 +58,16 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), image(0), audio(0), pixel_ratio(1,1), sample_rate(48000), channels(channels), wave_image(NULL)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels)
 {
 	// Init the image magic and audio buffer
-	image = new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color));
-	audio = new juce::AudioSampleBuffer(channels, samples);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
 };
 
-// Destructor
-Frame::~Frame()
-{
-	// deallocate image and audio memory
-	DeletePointers();
-}
 
 // Copy constructor
 Frame::Frame ( const Frame &other )
@@ -86,9 +80,6 @@ Frame::Frame ( const Frame &other )
 Frame& Frame::operator= (const Frame& other)
 {
 	if (this != &other) {
-		// deallocate image and audio memory
-		DeletePointers();
-
 		// copy pointers and data
 		DeepCopy(other);
 	}
@@ -101,26 +92,14 @@ Frame& Frame::operator= (const Frame& other)
 void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
-	image = new Magick::Image(*(other.image));
-	audio = new juce::AudioSampleBuffer(*(other.audio));
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.image)));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	sample_rate = other.sample_rate;
 	channels = other.channels;
 
 	if (other.wave_image)
-		wave_image = new Magick::Image(*(other.wave_image));
-}
-
-// Deallocate image and audio memory
-void Frame::DeletePointers()
-{
-	// deallocate image memory
-	delete image;
-	image = NULL;
-	delete audio;
-	audio = NULL;
-	delete wave_image;
-	wave_image = NULL;
+		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.wave_image)));
 }
 
 // Display the frame image to the screen (primarily used for debugging reasons)
@@ -152,7 +131,7 @@ void Frame::Display()
 }
 
 // Get an audio waveform image
-Magick::Image* Frame::GetWaveform(int width, int height)
+tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height)
 {
 	// Clear any existing waveform image
 	ClearWaveform();
@@ -220,7 +199,7 @@ Magick::Image* Frame::GetWaveform(int width, int height)
 		}
 
 		// Create image
-		wave_image = new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("#000000"));
+		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("#000000")));
 
 		// Draw the waveform
 		wave_image->draw(lines);
@@ -237,7 +216,7 @@ Magick::Image* Frame::GetWaveform(int width, int height)
 	else
 	{
 		// No audio samples present
-		wave_image = new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000"));
+		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000")));
 
 		// Add Channel Label
 		lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
@@ -257,17 +236,14 @@ Magick::Image* Frame::GetWaveform(int width, int height)
 void Frame::ClearWaveform()
 {
 	if (wave_image)
-	{
-		delete wave_image;
-		wave_image = NULL;
-	}
+		wave_image.reset();
 }
 
 // Get an audio waveform image pixels
 const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
 {
 	// Get audio wave form image
-	Magick::Image *wave_image = GetWaveform(width, height);
+	tr1::shared_ptr<Magick::Image> wave_image = GetWaveform(width, height);
 
 	// Return array of pixel packets
 	return wave_image->getConstPixels(0,0, wave_image->columns(), wave_image->rows());
@@ -297,7 +273,7 @@ float* Frame::GetAudioSamples(int channel)
 float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
-	AudioSampleBuffer *buffer = audio;
+	AudioSampleBuffer *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = audio->getNumSamples();
 
@@ -311,7 +287,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 	if (new_sample_rate != sample_rate)
 	{
 		// YES, RESAMPLE AUDIO
-		resampler->SetBuffer(audio, sample_rate, new_sample_rate);
+		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
 
 		// Resample data, and return new buffer pointer
 		buffer = resampler->GetResampledBuffer();
@@ -457,41 +433,20 @@ void Frame::Save(string path, float scale)
 // Add (or replace) pixel data to the frame (based on a solid color)
 void Frame::AddColor(int width, int height, string color)
 {
-	// Deallocate image memory
-	if (image)
-	{
-		delete image;
-		image = NULL;
-	}
-
 	// Create new image object, and fill with pixel data
-	image = new Magick::Image(Magick::Geometry(width, height), Magick::Color(color));
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color(color)));
 }
 
 // Add (or replace) pixel data to the frame
 void Frame::AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 {
-	// Deallocate image memory
-	if (image)
-	{
-		delete image;
-		image = NULL;
-	}
-
 	// Create new image object, and fill with pixel data
-	image = new Magick::Image(width, height, map, type, pixels);
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(Magick::Image* new_image)
+void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 {
-	// Deallocate image memory
-	if (image)
-	{
-		delete image;
-		image = NULL;
-	}
-
 	// assign image data
 	image = new_image;
 }
@@ -526,7 +481,7 @@ void Frame::Rotate(float degrees)
 void Frame::AddOverlay(Frame* frame)
 {
 	// Get overlay image (if any)
-	Magick::Image* overlay = frame->GetImage();
+	tr1::shared_ptr<Magick::Image> overlay = frame->GetImage();
 
 	// Composite image onto this image
 	image->composite(*overlay, Magick::SouthEastGravity, Magick::OverCompositeOp);
@@ -555,7 +510,7 @@ void Frame::AddOverlayNumber(int overlay_number)
 }
 
 // Get pointer to Magick++ image object
-Magick::Image* Frame::GetImage()
+tr1::shared_ptr<Magick::Image> Frame::GetImage()
 {
 	return image;
 }
@@ -578,7 +533,7 @@ void Frame::Play()
 	deviceManager.addAudioCallback (&audioSourcePlayer);
 
 	ScopedPointer<AudioBufferSource> my_source;
-	my_source = new AudioBufferSource(audio);
+	my_source = new AudioBufferSource(audio.get());
 
 	// Create TimeSliceThread for audio buffering
 	TimeSliceThread my_thread("Audio buffer thread");

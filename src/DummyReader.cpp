@@ -24,7 +24,7 @@ void DummyReader::Open() throw(InvalidFile)
 		image_frame = tr1::shared_ptr<Frame>(new Frame(1, width, height, "#000000", sample_rate, channels));
 
 		// Add Image data to frame
-		image_frame->AddImage(new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000")));
+		image_frame->AddImage(tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000"))));
 
 		// Update image properties
 		info.has_audio = false;

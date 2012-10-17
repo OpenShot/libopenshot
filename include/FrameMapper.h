@@ -11,7 +11,10 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+#include <tr1/memory>
+#include "../include/Cache.h"
 #include "../include/FileReaderBase.h"
+#include "../include/Frame.h"
 #include "../include/FrameRate.h"
 #include "../include/Exceptions.h"
 #include "../include/KeyFrame.h"
@@ -66,6 +69,8 @@ namespace openshot
 
 		int frame_end;
 		int sample_end;
+
+		int total;
 	};
 
 	/**
@@ -97,9 +102,8 @@ namespace openshot
 	 * assert(frame2.Odd.Frame == 2);
 	 * \endcode
 	 */
-	class FrameMapper {
+	class FrameMapper : public FileReaderBase {
 	private:
-		int m_length;				// Length in frames of a video file
 		vector<Field> fields;		// List of all fields
 		vector<MappedFrame> frames;	// List of all frames
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
@@ -107,6 +111,7 @@ namespace openshot
 		Framerate target;			// The target frame rate
 		Pulldown_Method pulldown;	// The pull-down technique
 		FileReaderBase *reader;	// The source video reader
+		Cache final_cache; // Cache of actual Frame objects
 
 		// Internal methods used by init
 		void AddField(int frame);
@@ -125,8 +130,19 @@ namespace openshot
 		/// Default constructor for FrameMapper class
 		FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown);
 
+		/// Close the internal reader
+		void Close();
+
 		/// Get a frame based on the target frame rate and the new frame number of a frame
-		MappedFrame GetFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
+		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
+
+		/// This method is required for all derived classes of FileReaderBase, and return the
+		/// openshot::Frame object, which contains the image and audio information for that
+		/// frame of video.
+		///
+		/// @returns The requested frame of video
+		/// @param[in] number The frame number that is requested.
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Get the target framerate
 		Framerate TargetFPS() { return target; };
@@ -180,6 +196,9 @@ namespace openshot
 		 * \endcode
 		 */
 		void MapTime(Keyframe new_time) throw(OutOfBoundsFrame);
+
+		/// Open the internal reader
+		void Open() throw(InvalidFile);
 
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();

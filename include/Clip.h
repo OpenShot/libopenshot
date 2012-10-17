@@ -72,9 +72,6 @@ namespace openshot {
 		// File Reader object
 		FileReaderBase* file_reader;
 
-		// Internal frame mapper (to map between different frame rates)
-		FrameMapper* frame_map;
-
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
 
@@ -83,9 +80,6 @@ namespace openshot {
 
 		/// Get file extension
 		string get_file_extension(string path);
-
-		/// Get the new frame number, based on the Framemapper, or return the number passed in
-		int get_framerate_mapped_frame(int original_frame_number);
 
 		/// Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)
 		int get_time_mapped_frame(int original_frame_number);
@@ -121,9 +115,6 @@ namespace openshot {
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
-
-		/// Map frame rate of this clip to a different frame rate
-		void MapFrames(Framerate fps, Pulldown_Method pulldown);
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile);
