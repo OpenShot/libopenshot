@@ -250,7 +250,10 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
 
 	// Copy the image from the odd field (TODO: make this copy each field from the correct frames)
-	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage());
+	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage(), true);
+	if (mapped.Odd.Frame != mapped.Even.Frame)
+		// Add even lines (if different than the previous image)
+		frame->AddImage(reader->GetFrame(mapped.Even.Frame)->GetImage(), false);
 
 	// Copy the samples
 	int samples_copied = 0;
@@ -258,6 +261,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	while (samples_copied < mapped.Samples.total)
 	{
 		// init number of samples to copy this iteration
+		int remaining_samples = mapped.Samples.total - samples_copied;
 		int number_to_copy = 0;
 
 		// Loop through each channel
@@ -270,20 +274,31 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 			if (starting_frame == mapped.Samples.frame_start)
 			{
 				// Starting frame (take the ending samples)
-				number_to_copy = (original_samples - mapped.Samples.sample_start) + 1;
-				cout << "Fixing to copy audio: frame: " << starting_frame << ", channel: " << channel << ", original_samples: " << original_samples << ", sample_start: " << mapped.Samples.sample_start << ", number_to_copy: " << number_to_copy << ", first value: " << original_frame->GetAudioSamples(channel)[0] << endl;
-				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, 10, 1.0);
+				number_to_copy = original_samples - mapped.Samples.sample_start;
+				if (number_to_copy > remaining_samples)
+					number_to_copy = remaining_samples;
+
+				// Add samples to new frame
+				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, number_to_copy, 1.0);
 			}
 			else if (starting_frame > mapped.Samples.frame_start && starting_frame < mapped.Samples.frame_end)
 			{
 				// Middle frame (take all samples)
 				number_to_copy = original_samples;
+				if (number_to_copy > remaining_samples)
+					number_to_copy = remaining_samples;
+
+				// Add samples to new frame
 				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 			}
 			else
 			{
 				// Ending frame (take the beginning samples)
 				number_to_copy = mapped.Samples.sample_end;
+				if (number_to_copy > remaining_samples)
+					number_to_copy = remaining_samples;
+
+				// Add samples to new frame
 				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 			}
 		}

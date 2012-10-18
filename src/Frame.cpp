@@ -451,6 +451,36 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 	image = new_image;
 }
 
+// Add (or replace) pixel data to the frame (for only the odd or even lines)
+void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lines)
+{
+	// Replace image (if needed)
+	if (image->columns() == 1)
+		image = new_image;
+
+	// Loop through each odd or even line, and copy it to the image
+	int starting_row = 0;
+	if (!only_odd_lines)
+		// even rows
+		starting_row = 1;
+
+	// Replace some rows of pixels
+	for (int row = starting_row; row < new_image->rows(); row += 2)
+	{
+		// Get row of pixels from original image
+		Magick::PixelPacket* row_pixels = image->getPixels(0, row, image->columns(), 1);
+		const Magick::PixelPacket* new_row_pixels = new_image->getConstPixels(0, row, image->columns(), 1);
+
+		// Copy pixels
+		for (int col = 0; col < image->columns(); col++)
+			row_pixels[col] = new_row_pixels[col];
+
+		// Replace them with updated pixels
+		image->syncPixels();
+	}
+
+}
+
 // Add audio samples to a specific channel
 void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {

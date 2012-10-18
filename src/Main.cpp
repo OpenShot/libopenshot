@@ -137,7 +137,7 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
 
 
-		openshot::FrameMapper r(&r1, Framerate(30,1), PULLDOWN_NONE);
+		openshot::FrameMapper r(&r1, Framerate(30,1), PULLDOWN_CLASSIC);
 
 		// Display debug info
 		r.Open();
@@ -179,7 +179,7 @@ int main()
 		//Frame *f = r.GetFrame(1);
 
 		//for (int frame = 131; frame >= 1; frame--)
-		for (int frame = 1; frame <= 2000; frame++)
+		for (int frame = 1; frame <= 500; frame++)
 		{
 			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
 			//f->AddOverlayNumber(0);

@@ -75,6 +75,9 @@ namespace openshot
 		/// Add (or replace) pixel data to the frame
 		void AddImage(tr1::shared_ptr<Magick::Image> new_image);
 
+		/// Add (or replace) pixel data to the frame (for only the odd or even lines)
+		void AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lines);
+
 		/// Add audio samples to a specific channel
 		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
 
