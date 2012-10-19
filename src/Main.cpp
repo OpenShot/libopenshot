@@ -17,6 +17,17 @@ void FrameReady(int number)
 int main()
 {
 
+
+	Keyframe time;
+	time.AddPoint(1, 300);
+	time.AddPoint(200, 500, LINEAR);
+	time.AddPoint(400, 100);
+	time.AddPoint(500, 500);
+	time.PrintValues();
+
+	return 0;
+
+
 //	openshot::FFmpegReader r1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 //	r1.Open();
 //	FrameMapper map(&r1, Framerate(30,1), PULLDOWN_NONE);

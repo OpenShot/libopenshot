@@ -91,6 +91,9 @@ namespace openshot {
 		/// Get the value at a specific index
 		float GetValue(int index);
 
+		/// Get the rounded INT value at a specific index
+		int GetInt(int index);
+
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);
 

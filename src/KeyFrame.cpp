@@ -161,6 +161,24 @@ float Keyframe::GetValue(int index)
 		return 0.0;
 }
 
+// Get the rounded INT value at a specific index
+int Keyframe::GetInt(int index)
+{
+	// Is index a valid point?
+	if (index >= 0 && index < Values.size())
+		// Return value
+		return int(round(Values[index].Y));
+	else if (index < 0 && Values.size() > 0)
+		// Return the minimum value
+		return int(round(Values[0].Y));
+	else if (index >= Values.size() && Values.size() > 0)
+		// return the maximum value
+		return int(round(Values[Values.size() - 1].Y));
+	else
+		// return a blank coordinate (0,0)
+		return 0;
+}
+
 // Get a point at a specific index
 Point& Keyframe::GetPoint(int index) throw(OutOfBoundsPoint) {
 	// Is index a valid point?
@@ -237,7 +255,7 @@ void Keyframe::PrintValues() {
 
 	for (int x = 0; x < Values.size(); x++) {
 		Coordinate c = Values[x];
-		cout << c.X << "\t" << c.Y << endl;
+		cout << c.X << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << endl;
 	}
 }
 
@@ -249,11 +267,11 @@ void Keyframe::Process() {
 	// Clear all values
 	Values.clear();
 
-	// fill in all values between 0 and 1st point's co.X
+	// fill in all values between 1 and 1st point's co.X
 	Point p1 = Points[0];
 	if (Points.size() > 1)
 		// Fill in previous X values (before 1st point)
-		for (int x = 0; x < p1.co.X; x++)
+		for (int x = 1; x < p1.co.X; x++)
 			Values.push_back(Coordinate(Values.size(), p1.co.Y));
 	else
 		// Add a single value (since we only have 1 point)
@@ -268,6 +286,66 @@ void Keyframe::Process() {
 
 		// process segment p1,p2
 		ProcessSegment(x, p1, p2);
+	}
+
+	// Loop through each Value, and set the direction of the coordinate.  This is used
+	// when time mapping, to determine what direction the audio waveforms play.
+	bool increasing = true;
+	int repeat_count = 1;
+	int last_value = 0;
+	for (vector<Coordinate>::iterator it = Values.begin(); it != Values.end(); it++) {
+		int current_value = int(round((*it).Y));
+		int next_value = int(round((*it).Y));
+		int prev_value = int(round((*it).Y));
+		if (it + 1 != Values.end())
+			next_value = int(round((*(it + 1)).Y));
+		if (it - 1 >= Values.begin())
+			prev_value = int(round((*(it - 1)).Y));
+
+		// Loop forward and look for the next unique value (to determine direction)
+		for (vector<Coordinate>::iterator direction_it = it + 1; direction_it != Values.end(); direction_it++) {
+			int next = int(round((*direction_it).Y));
+			// Detect direction
+			if (current_value < next)
+			{
+				increasing = true;
+				break;
+			}
+			else if (current_value > next)
+			{
+				increasing = false;
+				break;
+			}
+		}
+
+		// Set direction
+		(*it).increasing = increasing;
+
+		// Detect repeated Y value
+		if (current_value == last_value)
+			// repeated, so increment count
+			repeat_count++;
+		else
+			// reset repeat counter
+			repeat_count = 1;
+
+		// Detect how many 'more' times it's repeated
+		int additional_repeats = 0;
+		for (vector<Coordinate>::iterator repeat_it = it + 1; repeat_it != Values.end(); repeat_it++) {
+			int next = int(round((*repeat_it).Y));
+			if (next == current_value)
+				// repeated, so increment count
+				additional_repeats++;
+			else
+				break; // stop looping
+		}
+
+		// Set repeat fraction
+		(*it).repeated.num = repeat_count;
+		(*it).repeated.den = repeat_count + additional_repeats;
+
+		// track the last value
+		last_value = current_value;
 	}
 }
 

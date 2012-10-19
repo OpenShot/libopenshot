@@ -214,9 +214,9 @@ void Clip::apply_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_numbe
 		int previous_value = time.GetValue(frame_number - 1);
 		int next_value = time.GetValue(frame_number + 1);
 
-		// walk the curve backwards (until direction can be determined)
+		// walk the curve (for 30 X coordinates), and try and detect direction
 		bool reverse = false;
-		for (int index = frame_number; index > 0; index--)
+		for (int index = frame_number; index < frame_number + 30; index++)
 		{
 			if (time.GetValue(index) > new_frame_number)
 			{
