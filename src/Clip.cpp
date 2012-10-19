@@ -51,6 +51,7 @@ void Clip::init_settings()
 
 	// Default pointers
 	file_reader = NULL;
+	resampler = NULL;
 }
 
 // Default Constructor for a clip
@@ -171,14 +172,19 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	// Adjust out of bounds frame number
 	requested_frame = adjust_frame_number_minimum(requested_frame);
 
-	// Get time mapped frame number (used to increase speed, change direction, etc...)
-	int frame_number = adjust_frame_number_minimum(get_time_mapped_frame(requested_frame));
+	// Is a time map detected
+	int new_frame_number = requested_frame;
+	if (time.Values.size() > 1)
+		new_frame_number = time.GetValue(requested_frame);
 
 	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-	tr1::shared_ptr<Frame> frame = file_reader->GetFrame(frame_number);
+	tr1::shared_ptr<Frame> frame = file_reader->GetFrame(new_frame_number);
+
+	// Get time mapped frame number (used to increase speed, change direction, etc...)
+	apply_time_mapped_frame(frame, requested_frame);
 
 	// Apply basic image processing (scale, rotation, etc...)
-	apply_basic_image_processing(frame, frame_number);
+	apply_basic_image_processing(frame, new_frame_number);
 
 	// Return processed 'frame'
 	return frame;
@@ -191,18 +197,60 @@ string Clip::get_file_extension(string path)
 	return path.substr(path.find_last_of(".") + 1);
 }
 
-// Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)
-int Clip::get_time_mapped_frame(int original_frame_number)
+// Adjust the audio and image of a time mapped frame
+void Clip::apply_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
 	// Check for a valid time map curve
 	if (time.Values.size() > 1)
 	{
-		// Get new frame number
-		return time.GetValue(original_frame_number);
+		// Create a resampler (only once)
+		if (!resampler)
+			resampler = new AudioResampler();
 
-	} else
-		// return passed in parameter
-		return original_frame_number;
+		// Get new frame number
+		int new_frame_number = time.GetValue(frame_number);
+
+		// Get previous and next values (if any)
+		int previous_value = time.GetValue(frame_number - 1);
+		int next_value = time.GetValue(frame_number + 1);
+
+		// walk the curve backwards (until direction can be determined)
+		bool reverse = false;
+		for (int index = frame_number; index > 0; index--)
+		{
+			if (time.GetValue(index) > new_frame_number)
+			{
+				// reverse time
+				reverse = true;
+				break;
+			}
+			else if (time.GetValue(index) < new_frame_number)
+				// forward time
+				break;
+		}
+
+		// difference between previous frame and current frame
+		int previous_diff = abs(new_frame_number - previous_value);
+
+		// Are we repeating frames or skipping frames?
+		if ((previous_value == new_frame_number && frame_number > 0) ||
+			(next_value == new_frame_number && frame_number < time.Values.size()))
+		{
+			// Slow down audio (to make it fit on more frames)
+
+
+
+		}
+		else if (previous_diff > 0 && previous_diff <= 30 && frame_number > 0)
+		{
+			// Speed up audio (to make it fit on less frames)
+
+
+		}
+
+
+
+	}
 }
 
 // Apply basic image processing (scale, rotate, move, etc...)

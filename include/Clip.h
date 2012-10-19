@@ -69,6 +69,9 @@ namespace openshot {
 		float start; ///<The position in seconds to start playing (used to trim the beginning of a clip)
 		float end; ///<The position in seconds to end playing (used to trim the ending of a clip)
 
+		// Audio resampler (if time mapping)
+		AudioResampler *resampler;
+
 		// File Reader object
 		FileReaderBase* file_reader;
 
@@ -81,8 +84,8 @@ namespace openshot {
 		/// Get file extension
 		string get_file_extension(string path);
 
-		/// Get the new frame number, based on a time map curve (used to increase speed, change direction, etc...)
-		int get_time_mapped_frame(int original_frame_number);
+		/// Adjust the audio and image of a time mapped frame
+		void apply_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number);
 
 		/// Init default settings for a clip
 		void init_settings();
