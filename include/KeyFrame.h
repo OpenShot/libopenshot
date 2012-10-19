@@ -38,6 +38,7 @@ namespace openshot {
 	 */
 	class Keyframe {
 	private:
+		bool needs_update;
 		double FactorialLookup[4];
 
 		/*

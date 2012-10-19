@@ -34,7 +34,7 @@ void Keyframe::ReorderPoints() {
 }
 
 // Constructor which sets the default point & coordinate at X=0
-Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f) {
+Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f), needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 
@@ -43,7 +43,7 @@ Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f) {
 }
 
 // Keyframe constructor
-Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f) {
+Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f), needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 }
@@ -51,6 +51,9 @@ Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f) {
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {
+	// mark as dirty
+	needs_update = true;
+
 	// Add point at correct spot
 	Points.push_back(p);
 
@@ -59,9 +62,6 @@ void Keyframe::AddPoint(Point p) {
 
 	// Set Handles (used for smooth curves).
 	SetHandles(p);
-
-	// Process all points in Key-frame
-	Process();
 }
 
 // Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
@@ -88,6 +88,9 @@ void Keyframe::AddPoint(float x, float y, Interpolation_Type interpolate)
 // on the surrounding points.
 void Keyframe::SetHandles(Point current)
 {
+	// mark as dirty
+	needs_update = true;
+
 	// Lookup the index of this point
 	int index = FindIndex(current);
 	Point *Current_Point = &Points[index];
@@ -146,6 +149,10 @@ int Keyframe::FindIndex(Point p) throw(OutOfBoundsPoint) {
 // Get the value at a specific index
 float Keyframe::GetValue(int index)
 {
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
@@ -164,6 +171,10 @@ float Keyframe::GetValue(int index)
 // Get the rounded INT value at a specific index
 int Keyframe::GetInt(int index)
 {
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
@@ -191,6 +202,9 @@ Point& Keyframe::GetPoint(int index) throw(OutOfBoundsPoint) {
 
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
+	// mark as dirty
+	needs_update = true;
+
 	// loop through points, and find a matching coordinate
 	for (int x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -200,10 +214,6 @@ void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
 		if (p.co.X == existing_point.co.X && p.co.Y == existing_point.co.Y) {
 			// Remove the matching point, and break out of loop
 			Points.erase(Points.begin() + x);
-
-			// Process points
-			Process();
-
 			break;
 		}
 	}
@@ -214,14 +224,14 @@ void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
 
 // Remove a point by index
 void Keyframe::RemovePoint(int index) throw(OutOfBoundsPoint) {
+	// mark as dirty
+	needs_update = true;
+
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 	{
 		// Remove a specific point by index
 		Points.erase(Points.begin() + index);
-
-		// Process points
-		Process();
 	}
 	else
 		// Invalid index
@@ -229,6 +239,9 @@ void Keyframe::RemovePoint(int index) throw(OutOfBoundsPoint) {
 }
 
 void Keyframe::UpdatePoint(int index, Point p) {
+	// mark as dirty
+	needs_update = true;
+
 	// Remove matching point
 	RemovePoint(index);
 
@@ -237,12 +250,13 @@ void Keyframe::UpdatePoint(int index, Point p) {
 
 	// Reorder points
 	ReorderPoints();
-
-	// Process points
-	Process();
 }
 
 void Keyframe::PrintPoints() {
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
 	int x = 0;
 	for (vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
 		cout << it->co.X << "\t" << it->co.Y << endl;
@@ -251,6 +265,10 @@ void Keyframe::PrintPoints() {
 }
 
 void Keyframe::PrintValues() {
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
 	cout << " PRINT ALL VALUES " << endl;
 
 	for (int x = 0; x < Values.size(); x++) {
@@ -260,6 +278,13 @@ void Keyframe::PrintValues() {
 }
 
 void Keyframe::Process() {
+	// only process if needed
+	if (!needs_update)
+		return;
+	else
+		// reset flag
+		needs_update = false;
+
 	// do not process if no points are found
 	if (Points.size() == 0)
 		return;
@@ -271,7 +296,7 @@ void Keyframe::Process() {
 	Point p1 = Points[0];
 	if (Points.size() > 1)
 		// Fill in previous X values (before 1st point)
-		for (int x = 1; x < p1.co.X; x++)
+		for (int x = 0; x < p1.co.X; x++)
 			Values.push_back(Coordinate(Values.size(), p1.co.Y));
 	else
 		// Add a single value (since we only have 1 point)
