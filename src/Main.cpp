@@ -16,11 +16,9 @@ void FrameReady(int number)
 
 int main()
 {
-
-
 	Keyframe time;
-	time.AddPoint(1, 300);
-	time.AddPoint(200, 500, LINEAR);
+	//time.AddPoint(1, 300);
+	time.AddPoint(1, 500, LINEAR);
 	time.AddPoint(400, 100);
 	time.AddPoint(500, 500);
 	time.PrintValues();

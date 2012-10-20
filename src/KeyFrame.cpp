@@ -257,10 +257,9 @@ void Keyframe::PrintPoints() {
 	if (needs_update)
 		Process();
 
-	int x = 0;
 	for (vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
-		cout << it->co.X << "\t" << it->co.Y << endl;
-		x++;
+		Point p = *it;
+		cout << p.co.X << "\t" << p.co.Y << endl;
 	}
 }
 
@@ -271,9 +270,9 @@ void Keyframe::PrintValues() {
 
 	cout << " PRINT ALL VALUES " << endl;
 
-	for (int x = 0; x < Values.size(); x++) {
-		Coordinate c = Values[x];
-		cout << c.X << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << endl;
+	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
+		Coordinate c = *it;
+		cout << int(round(c.X)) << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << endl;
 	}
 }
 
@@ -318,7 +317,7 @@ void Keyframe::Process() {
 	bool increasing = true;
 	int repeat_count = 1;
 	int last_value = 0;
-	for (vector<Coordinate>::iterator it = Values.begin(); it != Values.end(); it++) {
+	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		int current_value = int(round((*it).Y));
 		int next_value = int(round((*it).Y));
 		int prev_value = int(round((*it).Y));
