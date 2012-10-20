@@ -190,6 +190,50 @@ int Keyframe::GetInt(int index)
 		return 0;
 }
 
+// Get the direction of the curve at a specific index (increasing or decreasing)
+bool Keyframe::IsIncreasing(int index)
+{
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
+	// Is index a valid point?
+	if (index >= 0 && index < Values.size())
+		// Return value
+		return int(round(Values[index].increasing));
+	else if (index < 0 && Values.size() > 0)
+		// Return the minimum value
+		return int(round(Values[0].increasing));
+	else if (index >= Values.size() && Values.size() > 0)
+		// return the maximum value
+		return int(round(Values[Values.size() - 1].increasing));
+	else
+		// return a blank coordinate (0,0)
+		return true;
+}
+
+// Get the fraction that represents how many times this value is repeated in the curve
+Fraction Keyframe::GetRepeatFraction(int index)
+{
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
+	// Is index a valid point?
+	if (index >= 0 && index < Values.size())
+		// Return value
+		return Values[index].repeated;
+	else if (index < 0 && Values.size() > 0)
+		// Return the minimum value
+		return Values[0].repeated;
+	else if (index >= Values.size() && Values.size() > 0)
+		// return the maximum value
+		return Values[Values.size() - 1].repeated;
+	else
+		// return a blank coordinate (0,0)
+		return Fraction(1,1);
+}
+
 // Get a point at a specific index
 Point& Keyframe::GetPoint(int index) throw(OutOfBoundsPoint) {
 	// Is index a valid point?

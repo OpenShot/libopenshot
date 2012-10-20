@@ -162,3 +162,33 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 51);
 }
+
+TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 500);
+	kf.AddPoint(400, 100);
+	kf.AddPoint(500, 500);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetInt(1), 500);
+	CHECK_EQUAL(kf.IsIncreasing(1), false);
+	CHECK_EQUAL(kf.GetRepeatFraction(1).num, 1);
+	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 10);
+
+	CHECK_EQUAL(kf.GetInt(24), 497);
+	CHECK_EQUAL(kf.IsIncreasing(24), false);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 2);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 4);
+
+	CHECK_EQUAL(kf.GetInt(390), 101);
+	CHECK_EQUAL(kf.IsIncreasing(390), false);
+	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 8);
+	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 8);
+
+	CHECK_EQUAL(kf.GetInt(391), 100);
+	CHECK_EQUAL(kf.IsIncreasing(391), true);
+	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 1);
+	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 12);
+}

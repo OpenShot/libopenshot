@@ -208,26 +208,11 @@ void Clip::apply_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_numbe
 			resampler = new AudioResampler();
 
 		// Get new frame number
-		int new_frame_number = time.GetValue(frame_number);
+		int new_frame_number = time.GetInt(frame_number);
 
 		// Get previous and next values (if any)
 		int previous_value = time.GetValue(frame_number - 1);
 		int next_value = time.GetValue(frame_number + 1);
-
-		// walk the curve (for 100 X coordinates), and try and detect direction
-		bool reverse = false;
-		for (int index = frame_number; index < frame_number + 100; index++)
-		{
-			if (time.GetValue(index) > new_frame_number)
-			{
-				// reverse time
-				reverse = true;
-				break;
-			}
-			else if (time.GetValue(index) < new_frame_number)
-				// forward time
-				break;
-		}
 
 		// difference between previous frame and current frame
 		int previous_diff = abs(new_frame_number - previous_value);

@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <vector>
 #include "Exceptions.h"
+#include "Fraction.h"
 #include "Coordinate.h"
 #include "Point.h"
 
@@ -94,6 +95,12 @@ namespace openshot {
 
 		/// Get the rounded INT value at a specific index
 		int GetInt(int index);
+
+		/// Get the direction of the curve at a specific index (increasing or decreasing)
+		bool IsIncreasing(int index);
+
+		/// Get the fraction that represents how many times this value is repeated in the curve
+		Fraction GetRepeatFraction(int index);
 
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);
