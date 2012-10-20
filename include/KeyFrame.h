@@ -102,6 +102,9 @@ namespace openshot {
 		/// Get the fraction that represents how many times this value is repeated in the curve
 		Fraction GetRepeatFraction(int index);
 
+		/// Get the change in Y value (from the previous Y value)
+		float GetDelta(int index);
+
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);
 

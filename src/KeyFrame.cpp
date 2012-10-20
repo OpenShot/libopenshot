@@ -234,6 +234,28 @@ Fraction Keyframe::GetRepeatFraction(int index)
 		return Fraction(1,1);
 }
 
+// Get the change in Y value (from the previous Y value)
+float Keyframe::GetDelta(int index)
+{
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
+	// Is index a valid point?
+	if (index >= 0 && index < Values.size())
+		// Return value
+		return Values[index].delta;
+	else if (index < 0 && Values.size() > 0)
+		// Return the minimum value
+		return Values[0].delta;
+	else if (index >= Values.size() && Values.size() > 0)
+		// return the maximum value
+		return Values[Values.size() - 1].delta;
+	else
+		// return a blank coordinate (0,0)
+		return 0.0;
+}
+
 // Get a point at a specific index
 Point& Keyframe::GetPoint(int index) throw(OutOfBoundsPoint) {
 	// Is index a valid point?
@@ -312,11 +334,11 @@ void Keyframe::PrintValues() {
 	if (needs_update)
 		Process();
 
-	cout << " PRINT ALL VALUES " << endl;
+	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)" << endl;
 
 	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
-		cout << int(round(c.X)) << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << endl;
+		cout << int(round(c.X)) << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << "\t" << c.delta << endl;
 	}
 }
 
@@ -411,6 +433,9 @@ void Keyframe::Process() {
 		// Set repeat fraction
 		(*it).repeated.num = repeat_count;
 		(*it).repeated.den = repeat_count + additional_repeats;
+
+		// Set delta (i.e. different from previous unique Y value)
+		(*it).delta = current_value - last_value;
 
 		// track the last value
 		last_value = current_value;

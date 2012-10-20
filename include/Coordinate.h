@@ -32,6 +32,7 @@ namespace openshot {
 		float Y; ///< The Y value of the coordinate
 		bool increasing; ///< Is the Y value increasing or decreasing?
 		Fraction repeated; ///< Fraction of repeated Y values (for example, 1/3 would be the first Y value of 3 repeated values)
+		float delta; ///< This difference in Y value (from the previous unique Y value)
 
 		/// The default constructor, which defaults to (0,0)
 		Coordinate();
