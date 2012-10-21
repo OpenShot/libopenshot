@@ -266,6 +266,16 @@ Point& Keyframe::GetPoint(int index) throw(OutOfBoundsPoint) {
 		throw OutOfBoundsPoint("Invalid point requested", index, Points.size());
 }
 
+// Get the number of values (i.e. coordinates on the X axis)
+int Keyframe::GetLength() {
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
+	// return the size of the Values vector
+	return Values.size();
+}
+
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
 	// mark as dirty

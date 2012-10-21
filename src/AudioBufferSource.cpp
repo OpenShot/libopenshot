@@ -5,11 +5,8 @@ using namespace openshot;
 
 // Default constructor
 AudioBufferSource::AudioBufferSource(AudioSampleBuffer *audio_buffer)
-		: position(0), start(0), repeat(false)
-{
-	// Create new buffer
-	buffer = audio_buffer;
-}
+		: position(0), start(0), repeat(false), buffer(audio_buffer)
+{ }
 
 // Destructor
 AudioBufferSource::~AudioBufferSource()

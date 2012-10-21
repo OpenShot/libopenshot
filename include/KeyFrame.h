@@ -108,6 +108,9 @@ namespace openshot {
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);
 
+		// Get the number of values (i.e. coordinates on the X axis)
+		int GetLength();
+
 		/**
 		 * \brief Calculate all of the values for this keyframe.
 		 *

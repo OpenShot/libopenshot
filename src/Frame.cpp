@@ -277,12 +277,6 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = audio->getNumSamples();
 
-//	DEBUG CODE
-//	if (number == 1)
-//		for (int s = 0; s < num_of_samples; s++)
-//			for (int c = 0; c < num_of_channels; c++)
-//				cout << buffer->getSampleData(c)[s] << endl;
-
 	// Resample to new sample rate (if needed)
 	if (new_sample_rate != sample_rate)
 	{
@@ -484,6 +478,9 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lin
 // Add audio samples to a specific channel
 void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
+	// Always clear the range of samples first
+	audio->clear(destChannel, destStartSample, numSamples);
+
 	// Add samples to frame's audio buffer
 	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
 }

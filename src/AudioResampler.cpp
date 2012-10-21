@@ -9,11 +9,21 @@
 using namespace std;
 using namespace openshot;
 
-// Default constructor, max frames to cache is 20
-AudioResampler::AudioResampler() : resample_source(NULL), buffer_source(NULL), num_of_samples(0),
-		new_num_of_samples(0), dest_ratio(0), source_ratio(0), resampled_buffer(NULL), isPrepared(false)
+// Default constructor, max frames to cache is 20 // resample_source(NULL), buffer_source(NULL), num_of_samples(0), new_num_of_samples(0), dest_ratio(0), source_ratio(0), resampled_buffer(NULL), isPrepared(false)
+AudioResampler::AudioResampler()
 {
+	resample_source = NULL;
+	buffer_source = NULL;
+	num_of_samples = 0;
+	new_num_of_samples = 0;
+	dest_ratio = 0;
+	source_ratio = 0;
+	resampled_buffer = NULL;
+	isPrepared = false;
+
 	// Init buffer source
+	buffer = new AudioSampleBuffer(2, 1);
+	buffer->clear();
 	buffer_source = new AudioBufferSource(buffer);
 
 	// Init resampling source
@@ -21,6 +31,7 @@ AudioResampler::AudioResampler() : resample_source(NULL), buffer_source(NULL), n
 
 	// Init resampled buffer
 	resampled_buffer = new AudioSampleBuffer(2, 1);
+	resampled_buffer->clear();
 
 	// Init callback buffer
 	resample_callback_buffer.buffer = resampled_buffer;
@@ -32,9 +43,12 @@ AudioResampler::AudioResampler() : resample_source(NULL), buffer_source(NULL), n
 AudioResampler::~AudioResampler()
 {
 	// Clean up
-	delete buffer_source;
-	delete resample_source;
-	delete resampled_buffer;
+	if (buffer_source)
+		delete buffer_source;
+	if (resample_source)
+		delete resample_source;
+	if (resampled_buffer)
+		delete resampled_buffer;
 }
 
 // Sets the audio buffer and updates the key settings
@@ -45,13 +59,23 @@ int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate,
 	if (new_sample_rate <= 0)
 		new_sample_rate == 44100;
 
+	// Set the sample ratio (the ratio of sample rate change)
+	source_ratio = sample_rate / new_sample_rate;
+
+	// Call SetBuffer with ratio
+	SetBuffer(new_buffer, source_ratio);
+}
+
+// Sets the audio buffer and key settings
+int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double ratio)
+{
 	// Update buffer & buffer source
 	buffer = new_buffer;
 	buffer_source->setBuffer(buffer);
 
 	// Set the sample ratio (the ratio of sample rate change)
-	source_ratio = sample_rate / new_sample_rate;
-	dest_ratio = new_sample_rate / sample_rate;
+	source_ratio = ratio;
+	dest_ratio = 1.0 / ratio;
 	num_of_samples = buffer->getNumSamples();
 	new_num_of_samples = round(num_of_samples * dest_ratio) - 1;
 
@@ -62,7 +86,7 @@ int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate,
 	if (!isPrepared)
 	{
 		// Prepare to play the audio sources (and set the # of samples per chunk to a little more than expected)
-		resample_source->prepareToPlay(num_of_samples + 10, new_sample_rate);
+		resample_source->prepareToPlay(num_of_samples + 10, 0);
 		isPrepared = true;
 	}
 

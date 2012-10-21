@@ -47,6 +47,9 @@ namespace openshot {
 		/// Sets the audio buffer and key settings
 		int SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
 
+		/// Sets the audio buffer and key settings
+		int SetBuffer(AudioSampleBuffer *new_buffer, double ratio);
+
 		/// Get the resampled audio buffer
 		AudioSampleBuffer* GetResampledBuffer();
 	};

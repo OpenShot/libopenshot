@@ -7,12 +7,19 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+/// Do not include the juce unittest headers, because it collides with unittest++
+#ifndef __JUCE_UNITTEST_JUCEHEADER__
+	#define __JUCE_UNITTEST_JUCEHEADER__
+#endif
+
 #include <tr1/memory>
 #include "FFmpegReader.h"
 #include "FrameRate.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
 #include "KeyFrame.h"
+#include "JuceLibraryCode/JuceHeader.h"
+#include "AudioResampler.h"
 
 using namespace std;
 using namespace openshot;
@@ -85,10 +92,16 @@ namespace openshot {
 		string get_file_extension(string path);
 
 		/// Adjust the audio and image of a time mapped frame
-		void apply_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number);
+		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number);
+
+		/// Calculate the # of samples per video frame (for a specific frame number)
+		int GetSamplesPerFrame(int frame_number, Fraction rate);
 
 		/// Init default settings for a clip
 		void init_settings();
+
+		/// Reverse an audio buffer
+		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
 		GravityType gravity; ///<The gravity of a clip determines where it snaps to it's parent

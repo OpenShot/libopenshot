@@ -16,14 +16,14 @@ void FrameReady(int number)
 
 int main()
 {
-	Keyframe time;
-	//time.AddPoint(1, 300);
-	time.AddPoint(1, 500, LINEAR);
-	time.AddPoint(400, 100);
-	time.AddPoint(500, 500);
-	time.PrintValues();
-
-	return 0;
+//	Keyframe time;
+//	//time.AddPoint(1, 300);
+//	time.AddPoint(1, 500, LINEAR);
+//	time.AddPoint(400, 100);
+//	time.AddPoint(500, 500);
+//	time.PrintValues();
+//
+//	return 0;
 
 
 //	openshot::FFmpegReader r1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
@@ -34,70 +34,67 @@ int main()
 //	return 0;
 
 
-//	// Create timeline
-//	Timeline t(640, 360, Framerate(24,1));
-//
-//	// Add some clips
-//	Clip c1("/home/jonathan/Videos/sintel-1024-stereo.mp4");
-//	c1.Position(0.0);
-//
-////	c1.time.AddPoint(1, 50);
-////	c1.time.AddPoint(100, 1);
-////	c1.time.AddPoint(200, 90);
-////	c1.time.PrintValues();
-//
-//	//c1.time.AddPoint(500, 500, LINEAR);
-//	c1.time.AddPoint(1, 300);
-//	c1.time.AddPoint(200, 500, LINEAR);
+	// Create timeline
+	Timeline t(640, 360, Framerate(24,1));
+
+	// Add some clips
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
+	c1.Position(0.0);
+
+	c1.time.AddPoint(1, 500, LINEAR);
+	c1.time.AddPoint(500, 1, LINEAR);
+//	c1.time.AddPoint(1, 500, LINEAR);
 //	c1.time.AddPoint(400, 100);
 //	c1.time.AddPoint(500, 500);
-//
-//	// Add clips
-//	t.AddClip(&c1);
-//
-//
-//	// Create a writer
-//	FFmpegWriter w("/home/jonathan/output.webm");
-//	w.DisplayInfo();
-//
-//	// Set options
-//	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-//	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
-//
-//	// Prepare Streams
-//	w.PrepareStreams();
-//
-//	// Write header
-//	w.WriteHeader();
-//
-//	// Output stream info
-//	w.OutputStreamInfo();
-//
-//	for (int frame = 1; frame <= 500; frame++)
-//	{
-//		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
-//		if (f)
-//		{
-//			//f->AddOverlayNumber(0);
-//
-//			// Write frame
-//			//cout << "queue frame " << frame << endl;
-//			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
-//			w.WriteFrame(f);
-//		}
-//	}
-//
-//	// Write Footer
-//	w.WriteTrailer();
-//
-//	// Close writer & reader
-//	w.Close();
-//
-//	// Close timeline
-//	t.Close();
-//
-//	cout << "Successfully Finished Timeline DEMO" << endl;
-//	return 0;
+	c1.time.PrintValues();
+
+	// Add clips
+	t.AddClip(&c1);
+
+
+	// Create a writer
+	FFmpegWriter w("/home/jonathan/output.mp3");
+	w.DisplayInfo();
+
+	// Set options
+	w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
+	//w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+	//w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+
+	// Prepare Streams
+	w.PrepareStreams();
+
+	// Write header
+	w.WriteHeader();
+
+	// Output stream info
+	w.OutputStreamInfo();
+
+	for (int frame = 1; frame <= 500; frame++)
+	{
+		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
+		if (f)
+		{
+			//f->AddOverlayNumber(0);
+
+			// Write frame
+			//cout << "queue frame " << frame << endl;
+			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
+			w.WriteFrame(f);
+		}
+	}
+
+	// Write Footer
+	w.WriteTrailer();
+
+	// Close writer & reader
+	w.Close();
+
+	// Close timeline
+	t.Close();
+
+	cout << "Successfully Finished Timeline DEMO" << endl;
+	return 0;
 
 
 
@@ -146,65 +143,65 @@ int main()
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/asdf.wdf");
 
 
-		openshot::FrameMapper r(&r1, Framerate(30,1), PULLDOWN_CLASSIC);
-
-		// Display debug info
-		r.Open();
-		r.DisplayInfo();
-
-		// Create a writer
-		FFmpegWriter w("/home/jonathan/output.webm");
-		w.DisplayInfo();
-
-		// Set options
-		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-		w.SetVideoOptions(true, "libvpx", Fraction(30, 1), 640, 360, Fraction(1,1), false, false, 2000000);
-
-		// Prepare Streams
-		w.PrepareStreams();
-
-		// Set Options
-//		w.SetOption(VIDEO_STREAM, "quality", "good");
-//		w.SetOption(VIDEO_STREAM, "g", "120");
-//		w.SetOption(VIDEO_STREAM, "qmin", "11");
-//		w.SetOption(VIDEO_STREAM, "qmax", "51");
-//		w.SetOption(VIDEO_STREAM, "profile", "0");
-//		w.SetOption(VIDEO_STREAM, "speed", "0");
-//		w.SetOption(VIDEO_STREAM, "level", "216");
-//		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
-//		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
-//		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
-//		w.SetOption(VIDEO_STREAM, "slices", "4");
-//		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
-//		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
-//		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
-
-		// Write header
-		w.WriteHeader();
-
-		// Output stream info
-		w.OutputStreamInfo();
-
-		//Frame *f = r.GetFrame(1);
-
-		//for (int frame = 131; frame >= 1; frame--)
-		for (int frame = 1; frame <= 500; frame++)
-		{
-			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
-			//f->AddOverlayNumber(0);
-			//f->Display();
-
-			// Write frame
-			cout << "queue frame " << frame << endl;
-			w.WriteFrame(f);
-		}
-
-		// Write Footer
-		w.WriteTrailer();
-
-		// Close writer & reader
-		w.Close();
-		r.Close();
+//		openshot::FrameMapper r(&r1, Framerate(30,1), PULLDOWN_CLASSIC);
+//
+//		// Display debug info
+//		r.Open();
+//		r.DisplayInfo();
+//
+//		// Create a writer
+//		FFmpegWriter w("/home/jonathan/output.webm");
+//		w.DisplayInfo();
+//
+//		// Set options
+//		w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+//		w.SetVideoOptions(true, "libvpx", Fraction(30, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+//
+//		// Prepare Streams
+//		w.PrepareStreams();
+//
+//		// Set Options
+////		w.SetOption(VIDEO_STREAM, "quality", "good");
+////		w.SetOption(VIDEO_STREAM, "g", "120");
+////		w.SetOption(VIDEO_STREAM, "qmin", "11");
+////		w.SetOption(VIDEO_STREAM, "qmax", "51");
+////		w.SetOption(VIDEO_STREAM, "profile", "0");
+////		w.SetOption(VIDEO_STREAM, "speed", "0");
+////		w.SetOption(VIDEO_STREAM, "level", "216");
+////		w.SetOption(VIDEO_STREAM, "rc_lookahead", "16");
+////		w.SetOption(VIDEO_STREAM, "rc_min_rate", "100000");
+////		w.SetOption(VIDEO_STREAM, "rc_max_rate", "24000000");
+////		w.SetOption(VIDEO_STREAM, "slices", "4");
+////		w.SetOption(VIDEO_STREAM, "arnr_max_frames", "7");
+////		w.SetOption(VIDEO_STREAM, "arnr_strength", "5");
+////		w.SetOption(VIDEO_STREAM, "arnr_type", "3");
+//
+//		// Write header
+//		w.WriteHeader();
+//
+//		// Output stream info
+//		w.OutputStreamInfo();
+//
+//		//Frame *f = r.GetFrame(1);
+//
+//		//for (int frame = 131; frame >= 1; frame--)
+//		for (int frame = 1; frame <= 500; frame++)
+//		{
+//			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
+//			//f->AddOverlayNumber(0);
+//			//f->Display();
+//
+//			// Write frame
+//			cout << "queue frame " << frame << endl;
+//			w.WriteFrame(f);
+//		}
+//
+//		// Write Footer
+//		w.WriteTrailer();
+//
+//		// Close writer & reader
+//		w.Close();
+//		r.Close();
 
 
 		cout << "Successfully executed Main.cpp!" << endl;
