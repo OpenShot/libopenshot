@@ -41,11 +41,16 @@ int main()
 	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
 	c1.Position(0.0);
 
-	c1.time.AddPoint(1, 500, LINEAR);
-	c1.time.AddPoint(500, 1, LINEAR);
+	// LINEAR Reverse
+	//c1.time.AddPoint(1, 500, LINEAR);
+	//c1.time.AddPoint(500, 1, LINEAR);
+
+
 //	c1.time.AddPoint(1, 500, LINEAR);
-//	c1.time.AddPoint(400, 100);
-//	c1.time.AddPoint(500, 500);
+//	c1.time.AddPoint(500, 1, LINEAR);
+	c1.time.AddPoint(1, 500, LINEAR);
+	c1.time.AddPoint(200, 200);
+	c1.time.AddPoint(500, 500, LINEAR);
 	c1.time.PrintValues();
 
 	// Add clips
@@ -76,6 +81,8 @@ int main()
 		if (f)
 		{
 			//f->AddOverlayNumber(0);
+			//if (frame >= 1 && frame <= 22)
+			//	f->DisplayWaveform();
 
 			// Write frame
 			//cout << "queue frame " << frame << endl;

@@ -78,6 +78,7 @@ namespace openshot {
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
+		AudioSampleBuffer *audio_cache;
 
 		// File Reader object
 		FileReaderBase* file_reader;
