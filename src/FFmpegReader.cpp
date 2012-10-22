@@ -6,7 +6,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(0), final_cache(820 * 1024), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
-	  rescaler_position(0), num_of_rescalers(32), is_open(false) {
+	  rescaler_position(0), num_of_rescalers(32), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -601,6 +601,10 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	#pragma omp critical (processing_list)
 	processing_video_frames[current_frame] = current_frame;
 
+	// Track 1st video packet after a successful seek
+	if (!seek_video_frame_found)
+		seek_video_frame_found = current_frame;
+
 	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
@@ -680,7 +684,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	#pragma omp critical (processing_list)
 	processing_audio_frames[target_frame] = target_frame;
 
-
+	// Track 1st audio packet after a successful seek
+	if (!seek_audio_frame_found)
+		seek_audio_frame_found = target_frame;
 
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -897,6 +903,8 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		is_seeking = false;
 		seeking_frame = 1;
 		seeking_pts = ConvertFrameToVideoPTS(1);
+		seek_audio_frame_found = -1; // used to detect which frames to throw away after a seek
+		seek_video_frame_found = -1; // used to detect which frames to throw away after a seek
 	}
 	else
 	{
@@ -941,6 +949,8 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 			is_seeking = true;
 			seeking_pts = seek_target;
 			seeking_frame = requested_frame;
+			seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
+			seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
 		}
 		else
 		{
@@ -1133,14 +1143,26 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || working_cache.Count() >= 200)
 		{
-			// Move frame to final cache
-			final_cache.Add(f->number, f);
+			// Sometimes a seek gets partial frames, and we need to remove them
+			bool seek_trash = false;
+			if ((info.has_audio && seek_audio_frame_found != 0 && seek_audio_frame_found >= f->number) ||
+			   (info.has_video && seek_video_frame_found != 0 && seek_video_frame_found >= f->number))
+			   seek_trash = true;
 
-			// Remove frame from working cache
-			working_cache.Remove(f->number);
+			if (!seek_trash)
+			{
+				// Move frame to final cache
+				final_cache.Add(f->number, f);
 
-			// Update last frame processed
-			last_frame = f->number;
+				// Remove frame from working cache
+				working_cache.Remove(f->number);
+
+				// Update last frame processed
+				last_frame = f->number;
+			} else {
+				// Seek trash, so delete the frame from the working cache, and never add it to the final cache.
+				working_cache.Remove(f->number);
+			}
 		}
 		else
 			// Stop looping

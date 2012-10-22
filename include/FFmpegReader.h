@@ -85,6 +85,8 @@ namespace openshot
 		int seeking_frame;
 		bool is_video_seek;
 		int seek_count;
+		int seek_audio_frame_found;
+		int seek_video_frame_found;
 
 		int audio_pts_offset;
 		int video_pts_offset;
