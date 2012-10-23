@@ -396,7 +396,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			}
 
 			// Resample audio to be X times faster (where X is the delta of the repeat fraction)
-			resampler->SetBuffer(samples, float(number_of_samples) / float(start));
+			resampler->SetBuffer(samples, float(start) / float(number_of_samples));
 
 			// Resample data, and return new buffer pointer
 			AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
