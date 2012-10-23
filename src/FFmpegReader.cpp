@@ -6,7 +6,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(0), final_cache(820 * 1024), path(path),
 	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
-	  rescaler_position(0), num_of_rescalers(32), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0) {
+	  rescaler_position(0), num_of_rescalers(32), is_open(false), seek_audio_frame_found(-1), seek_video_frame_found(-1) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();

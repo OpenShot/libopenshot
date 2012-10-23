@@ -38,25 +38,32 @@ int main()
 	Timeline t(640, 360, Framerate(24,1));
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
 	c1.Position(0.0);
 
 	// LINEAR Reverse
 	//c1.time.AddPoint(1, 500, LINEAR);
 	//c1.time.AddPoint(500, 1, LINEAR);
 
-	// LINEAR Fast Reverse (sounds wavy, due to periodic repeated frames)
+	// LINEAR Slow Reverse (sounds wavy, due to periodic repeated frames)
 	//c1.time.AddPoint(1, 500, LINEAR);
 	//c1.time.AddPoint(500, 100, LINEAR);
 
-	// LINEAR Slow Reverse (sounds wavy, due to periodic repeated frames)
+	// LINEAR Fast Reverse (sounds wavy, due to periodic repeated frames)
 	//c1.time.AddPoint(1, 600, LINEAR);
 	//c1.time.AddPoint(500, 1, LINEAR);
 
 	// BEZIER Reverse
-	c1.time.AddPoint(1, 500);
-	c1.time.AddPoint(300, 1);
-	c1.time.AddPoint(500, 500);
+	openshot::Point p1(1,500);
+	p1.handle_left = Coordinate(1,500);
+	p1.handle_right = Coordinate(250,500);
+
+	openshot::Point p2(500,100);
+	p1.handle_left = Coordinate(500,350);
+	p1.handle_right = Coordinate(500,100);
+
+	c1.time.AddPoint(p1);
+	c1.time.AddPoint(p2);
 
 //	c1.time.AddPoint(1, 500, LINEAR);
 //	c1.time.AddPoint(500, 1, LINEAR);
