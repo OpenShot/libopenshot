@@ -987,10 +987,6 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 // write video frame
 void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
-	// Encode Picture and Write Frame
-	int video_outbuf_size = 200000;
-	uint8_t *video_outbuf = new uint8_t[200000];
-
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 		// Raw video case.
 		AVPacket pkt;
@@ -1015,40 +1011,37 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 	} else {
 
+		AVPacket pkt;
+		av_init_packet(&pkt);
+		pkt.data = NULL;
+		pkt.size = 0;
+
 		/* encode the image */
-		int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
+		int got_packet_ptr = 0;
+		int error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 
 		/* if zero size, it means the image was buffered */
-		if (out_size > 0) {
-			AVPacket pkt;
-			av_init_packet(&pkt);
+		if (error_code == 0 && got_packet_ptr) {
 
-			if (video_codec->coded_frame && video_codec->coded_frame->pts != AV_NOPTS_VALUE)
-				// Set the correct rescaled timestamp
-				pkt.pts= av_rescale_q(video_codec->coded_frame->pts, video_codec->time_base, video_st->time_base);
-			if(video_codec->coded_frame->key_frame)
-				pkt.flags |= AV_PKT_FLAG_KEY;
-			pkt.stream_index= video_st->index;
-			pkt.data= video_outbuf;
-			pkt.size= out_size;
+			// set the timestamp
+			if (pkt.pts != AV_NOPTS_VALUE)
+				pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
+			if (pkt.dts != AV_NOPTS_VALUE)
+				pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
+			pkt.pts = pkt.dts = AV_NOPTS_VALUE;
 
 			/* write the compressed frame in the media file */
-			int averror = 0;
-			averror = av_interleaved_write_frame(oc, &pkt);
+			int averror = av_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
 				//string error_description = av_err2str(averror);
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
-
-			// Deallocate packet
-			av_free_packet(&pkt);
 		}
+
+		// Deallocate packet
+		av_free_packet(&pkt);
 	}
-
-	// Deallocate memory
-	delete[] video_outbuf;
-
 }
 
 // Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)

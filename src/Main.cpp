@@ -46,8 +46,12 @@ int main()
 	//c1.time.AddPoint(500, 1, LINEAR);
 
 	// LINEAR Slow Reverse (sounds wavy, due to periodic repeated frames)
+	//c1.time.AddPoint(1, 500, LINEAR);
+	//c1.time.AddPoint(500, 100, LINEAR);
+
+	// LINEAR Slow Reverse X2 (smooth)
 	c1.time.AddPoint(1, 500, LINEAR);
-	c1.time.AddPoint(500, 100, LINEAR);
+	c1.time.AddPoint(500, 250, LINEAR);
 
 	// LINEAR Fast Reverse (sounds wavy, due to periodic repeated frames)
 	//c1.time.AddPoint(1, 600, LINEAR);
@@ -81,13 +85,13 @@ int main()
 
 
 	// Create a writer
-	FFmpegWriter w("/home/jonathan/output.mp3");
+	FFmpegWriter w("/home/jonathan/output.webm");
 	w.DisplayInfo();
 
 	// Set options
-	w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
-	//w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-	//w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
+	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 640, 360, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
