@@ -57,6 +57,7 @@ namespace openshot
 		string path;
 		int cache_size;
 		bool is_writing;
+		int64 write_frame_count;
 
 	    AVOutputFormat *fmt;
 	    AVFormatContext *oc;

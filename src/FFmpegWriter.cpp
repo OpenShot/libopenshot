@@ -30,8 +30,8 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8),
-		num_of_rescalers(32), rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false)
+		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
+		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_frame_count(0)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -501,6 +501,9 @@ void FFmpegWriter::Close()
 		/* close the output file */
 		avio_close(oc->pb);
 	}
+
+	// Reset frame counter
+	write_frame_count = 0;
 
 	// Free the stream
 	av_free(oc);
@@ -1032,6 +1035,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 			/* write the compressed frame in the media file */
 			int averror = av_write_frame(oc, &pkt);
+			//int averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
 				//string error_description = av_err2str(averror);
