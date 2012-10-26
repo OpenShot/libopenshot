@@ -158,8 +158,8 @@ void Cache::CleanUp()
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
-		// check against max bytes
-		while (total_bytes > max_bytes)
+		// check against max bytes (and always leave at least 1 frame in the cache)
+		while (total_bytes > max_bytes && frame_numbers.size() > 1)
 		{
 			// Remove the oldest frame
 			int frame_to_remove = frame_numbers.back();

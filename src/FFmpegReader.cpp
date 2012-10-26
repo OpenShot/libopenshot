@@ -4,15 +4,20 @@ using namespace openshot;
 
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
-	  audio_pts_offset(99999), video_pts_offset(99999), working_cache(0), final_cache(820 * 1024), path(path),
-	  is_video_seek(true), check_interlace(false), check_fps(false), enable_seek(true),
-	  rescaler_position(0), num_of_rescalers(32), is_open(false), seek_audio_frame_found(-1), seek_video_frame_found(-1) {
+	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
+	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
+	  seek_audio_frame_found(-1), seek_video_frame_found(-1) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
+
+	// Init cache
+	int64 bytes = 720 * 1280 * 4 + (44100 * 2 * 4);
+	working_cache = Cache(0);
+	final_cache = Cache(15 * bytes);  // 15 frames X 720 video, 4 colors of chars, 2 audio channels of 4 byte floats
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -1098,7 +1103,7 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 		int samples_per_frame = GetSamplesPerFrame(requested_frame);
 
 		// Create a new frame on the working cache
-		tr1::shared_ptr<Frame> f(new Frame(requested_frame, 1, 1, "#000000", samples_per_frame, info.channels));
+		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels));
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 		f->SetSampleRate(info.sample_rate);
 

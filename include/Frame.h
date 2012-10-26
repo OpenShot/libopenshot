@@ -41,6 +41,8 @@ namespace openshot
 		Fraction pixel_ratio;
 		int sample_rate;
 		int channels;
+		int width;
+		int height;
 
 	public:
 		int number;	///< This is the frame number (starting at 1)

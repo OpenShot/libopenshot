@@ -10,7 +10,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2)
+Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2), width(1), height(1)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
@@ -22,7 +22,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2)
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -34,7 +34,7 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
@@ -46,7 +46,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels)
+		number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels), width(1), height(1)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
@@ -58,7 +58,7 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels)
+	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -338,7 +338,7 @@ int64 Frame::GetBytes()
 {
 	int64 total_bytes = 0;
 	if (image)
-		total_bytes += image->fileSize();
+		total_bytes += (width * height * sizeof(char) * 4);
 	if (audio)
 		total_bytes += (audio->getNumSamples() * audio->getNumChannels() * sizeof(float));
 
@@ -429,6 +429,10 @@ void Frame::AddColor(int width, int height, string color)
 {
 	// Create new image object, and fill with pixel data
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color(color)));
+
+	// Update height and width
+	width = image->columns();
+	height = image->rows();
 }
 
 // Add (or replace) pixel data to the frame
@@ -436,6 +440,10 @@ void Frame::AddImage(int width, int height, const string map, const Magick::Stor
 {
 	// Create new image object, and fill with pixel data
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
+
+	// Update height and width
+	width = image->columns();
+	height = image->rows();
 }
 
 // Add (or replace) pixel data to the frame
@@ -443,6 +451,10 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 {
 	// assign image data
 	image = new_image;
+
+	// Update height and width
+	width = image->columns();
+	height = image->rows();
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
@@ -473,6 +485,9 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lin
 		image->syncPixels();
 	}
 
+	// Update height and width
+	width = image->columns();
+	height = image->rows();
 }
 
 // Add audio samples to a specific channel
