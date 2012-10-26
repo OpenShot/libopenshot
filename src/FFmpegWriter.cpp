@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
-		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_frame_count(0)
+		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -445,8 +445,11 @@ void FFmpegWriter::WriteTrailer()
 		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
 
 		// Add the black frame many times
-		for (int p = 0; p < 25; p++)
-			WriteFrame(padding_frame);
+		//for (int p = 0; p < 25; p++)
+		//	WriteFrame(padding_frame);
+
+		// Flush remaining packets
+		av_write_frame(oc, NULL);
 	}
 
 	// Write any remaining queued frames to video file
@@ -502,8 +505,9 @@ void FFmpegWriter::Close()
 		avio_close(oc->pb);
 	}
 
-	// Reset frame counter
-	write_frame_count = 0;
+	// Reset frame counters
+	write_video_count = 0;
+	write_audio_count = 0;
 
 	// Free the stream
 	av_free(oc);
@@ -857,6 +861,9 @@ void FFmpegWriter::write_audio_packets()
 			AVPacket pkt;
 			av_init_packet(&pkt);
 
+			// Increment counter, and set AVFrame PTS
+			write_audio_count++;
+
 			// Encode audio data
 			pkt.size = avcodec_encode_audio(audio_codec, audio_outbuf, audio_outbuf_size, (short *) samples);
 
@@ -872,7 +879,8 @@ void FFmpegWriter::write_audio_packets()
 			averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
-				//string error_description = av_err2str(averror);
+				string error_description = av_err2str(averror);
+				cout << "error: " << averror << ": " << error_description << endl;
 				throw ErrorEncodingAudio("Error while writing audio frame", -1);
 			}
 
@@ -1019,6 +1027,12 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.data = NULL;
 		pkt.size = 0;
 
+		// Increment video write counter
+		write_video_count++;
+
+		// Assign the initial AVFrame PTS from the frame counter
+		frame_final->pts = write_video_count;
+
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
@@ -1029,16 +1043,21 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			// set the timestamp
 			if (pkt.pts != AV_NOPTS_VALUE)
 				pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
-			if (pkt.dts != AV_NOPTS_VALUE)
-				pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
-			pkt.pts = pkt.dts = AV_NOPTS_VALUE;
+			//if (pkt.dts != AV_NOPTS_VALUE)
+			//	pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
+			//pkt.pts = pkt.dts = AV_NOPTS_VALUE;
+
+//			pkt.stream_index = video_st->index;
+//			pkt.pts = av_rescale_q(write_video_count, video_codec->time_base, video_st->time_base);
+//			pkt.dts = AV_NOPTS_VALUE;
 
 			/* write the compressed frame in the media file */
-			int averror = av_write_frame(oc, &pkt);
-			//int averror = av_interleaved_write_frame(oc, &pkt);
+			//int averror = av_write_frame(oc, &pkt);
+			int averror = av_interleaved_write_frame(oc, &pkt);
 			if (averror != 0)
 			{
-				//string error_description = av_err2str(averror);
+				string error_description = av_err2str(averror);
+				cout << "error: " << averror << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
 		}
