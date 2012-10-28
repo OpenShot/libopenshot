@@ -113,6 +113,9 @@ namespace openshot
 		/// Close the video codec
 		void close_video(AVFormatContext *oc, AVStream *st);
 
+		/// Flush encoders
+		void flush_encoders();
+
 		/// initialize streams
 		void initialize_streams();
 
@@ -126,7 +129,7 @@ namespace openshot
 		void process_video_packet(tr1::shared_ptr<Frame> frame);
 
 		/// write all queued frames' audio to the video file
-		void write_audio_packets();
+		void write_audio_packets(bool final);
 
 		/// write video frame
 		void write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final);

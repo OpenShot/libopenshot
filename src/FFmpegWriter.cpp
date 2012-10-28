@@ -338,7 +338,7 @@ void FFmpegWriter::write_queued_frames()
 		{
 			// Process all audio frames (in a separate thread)
 			if (info.has_audio && audio_st && !queued_audio_frames.empty())
-				write_audio_packets();
+				write_audio_packets(false);
 
 			// Loop through each queued image frame
 			while (!queued_video_frames.empty())
@@ -435,32 +435,155 @@ void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 // Write the file trailer (after all frames are written)
 void FFmpegWriter::WriteTrailer()
 {
+	// Write any remaining queued frames to video file
+	write_queued_frames();
+
+	// Process final audio frame (if any)
+	if (info.has_audio && audio_st)
+		write_audio_packets(true);
+
 	// Experimental: Repeat last frame many times, to pad
 	// the end of the video, to ensure the codec does not
 	// ignore the final frames.
-	if (last_frame)
-	{
-		// Flush remaining packets
-		//av_write_frame(oc, NULL);
-		av_interleaved_write_frame(oc, NULL);
+//	if (last_frame)
+//	{
+//		// Create black frame
+//		tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
+//		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
+//
+//		// Add the black frame many times
+//		for (int p = 0; p < 100; p++)
+//			WriteFrame(padding_frame);
+//
+//		// Write these blank frames
+//		write_queued_frames();
+//	}
 
-		// Create black frame
-		//tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
-		//padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
+	// Flush encoders (who sometimes hold on to frames)
+	flush_encoders();
 
-		// Add the black frame many times
-		//for (int p = 0; p < 25; p++)
-		//	WriteFrame(padding_frame);
-	}
-
-	// Write any remaining queued frames to video file
-	write_queued_frames();
+	// Flush packets
+	//av_interleaved_write_frame(oc, NULL);
 
 	/* write the trailer, if any. The trailer must be written
 	 * before you close the CodecContexts open when you wrote the
 	 * header; otherwise write_trailer may try to use memory that
 	 * was freed on av_codec_close() */
 	av_write_trailer(oc);
+}
+
+// Flush encoders
+void FFmpegWriter::flush_encoders()
+{
+    if (info.has_audio && audio_codec && audio_st->codec->codec_type == AVMEDIA_TYPE_AUDIO && audio_codec->frame_size <= 1)
+        return;
+    if (info.has_video && video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && video_codec->codec->id == CODEC_ID_RAWVIDEO)
+        return;
+
+    int stop_encoding = 1;
+
+    // FLUSH VIDEO ENCODER
+    if (info.has_video)
+		for (;;) {
+
+			cout << "Flushing VIDEO buffer!" << endl;
+
+			// Increment PTS (in frames and scaled to the codec's timebase)
+			write_video_count += av_rescale_q(1, AVRational{info.fps.den, info.fps.num}, video_codec->time_base);
+
+			AVPacket pkt;
+			av_init_packet(&pkt);
+			pkt.data = NULL;
+			pkt.size = 0;
+
+			/* encode the image */
+			int got_packet = 0;
+			int error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
+			if (error_code < 0) {
+				string error_description = av_err2str(error_code);
+				cout << "error: " << error_code << ": " << error_description << endl;
+				throw ErrorEncodingVideo("Error while flushing video frame", -1);
+			}
+			if (!got_packet) {
+				stop_encoding = 1;
+				break;
+			}
+
+			// Override PTS (in frames and scaled to the codec's timebase)
+			//pkt.pts = write_video_count;
+
+			// set the timestamp
+			if (pkt.pts != AV_NOPTS_VALUE)
+				pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
+			if (pkt.dts != AV_NOPTS_VALUE)
+				pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
+			if (pkt.duration > 0)
+				pkt.duration = av_rescale_q(pkt.duration, video_codec->time_base, video_st->time_base);
+			pkt.stream_index = video_st->index;
+
+			// Write packet
+			int averror = av_interleaved_write_frame(oc, &pkt);
+			if (averror != 0) {
+				string error_description = av_err2str(averror);
+				cout << "error: " << averror << ": " << error_description << endl;
+				throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
+			}
+		}
+
+    // FLUSH AUDIO ENCODER
+    if (info.has_audio)
+		for (;;) {
+
+			cout << "Flushing AUDIO buffer!" << endl;
+
+			// Increment PTS (in samples and scaled to the codec's timebase)
+			write_audio_count += av_rescale_q(audio_codec->frame_size / av_get_bytes_per_sample(audio_codec->sample_fmt), AVRational{1, info.sample_rate}, audio_codec->time_base);
+
+			AVPacket pkt;
+			av_init_packet(&pkt);
+			pkt.data = NULL;
+			pkt.size = 0;
+			pkt.pts = pkt.dts = write_audio_count;
+
+			/* encode the image */
+			int got_packet = 0;
+			int error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
+			if (error_code < 0) {
+				string error_description = av_err2str(error_code);
+				cout << "error: " << error_code << ": " << error_description << endl;
+				throw ErrorEncodingAudio("Error while flushing audio frame", -1);
+			}
+			if (!got_packet) {
+				stop_encoding = 1;
+				break;
+			}
+
+			// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
+			// but it fixes lots of PTS related issues when I do this.
+			pkt.pts = pkt.dts = write_audio_count;
+
+			// Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
+			if (pkt.pts != AV_NOPTS_VALUE)
+				pkt.pts = av_rescale_q(pkt.pts, audio_codec->time_base, audio_st->time_base);
+			if (pkt.dts != AV_NOPTS_VALUE)
+				pkt.dts = av_rescale_q(pkt.dts, audio_codec->time_base, audio_st->time_base);
+			if (pkt.duration > 0)
+				pkt.duration = av_rescale_q(pkt.duration, audio_codec->time_base, audio_st->time_base);
+
+			// set stream
+			pkt.stream_index = audio_st->index;
+			pkt.flags |= AV_PKT_FLAG_KEY;
+
+			// Write packet
+			int averror = av_write_frame(oc, &pkt);
+			if (averror != 0) {
+				string error_description = av_err2str(averror);
+				cout << "error: " << averror << ": " << error_description << endl;
+				throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
+			}
+		}
+
+
 }
 
 // Close the video codec
@@ -746,7 +869,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 }
 
 // write all queued frames' audio to the video file
-void FFmpegWriter::write_audio_packets()
+void FFmpegWriter::write_audio_packets(bool final)
 {
 	// Create a resampler (only once)
 	if (!resampler)
@@ -804,10 +927,9 @@ void FFmpegWriter::write_audio_packets()
 		int remaining_frame_samples = total_frame_samples;
 		int samples_position = 0;
 
-
 		// Re-sample audio samples (into additional channels or changing the sample format / number format)
 		// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
-		if (audio_codec->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
+		if (!final && (audio_codec->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame)) {
 
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
@@ -838,7 +960,7 @@ void FFmpegWriter::write_audio_packets()
 		}
 
 		// Loop until no more samples
-		while (remaining_frame_samples > 0) {
+		while (remaining_frame_samples > 0 || final) {
 			// Get remaining samples needed for this packet
 			int remaining_packet_samples = audio_input_frame_size - audio_input_position;
 
@@ -850,7 +972,8 @@ void FFmpegWriter::write_audio_packets()
 				diff = remaining_frame_samples;
 
 			// Copy frame samples into the packet samples array
-			memcpy(samples + audio_input_position, frame_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+			if (!final)
+				memcpy(samples + audio_input_position, frame_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
 			// Increment counters
 			audio_input_position += diff;
@@ -859,20 +982,19 @@ void FFmpegWriter::write_audio_packets()
 			remaining_packet_samples -= diff;
 
 			// Do we have enough samples to proceed?
-			if (audio_input_position < audio_input_frame_size)
+			if (audio_input_position < audio_input_frame_size && !final)
 				// Not enough samples to encode... so wait until the next frame
 				break;
 
-
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_codec->frame_size, AVRational{1, info.sample_rate}, audio_codec->time_base);
+			write_audio_count += av_rescale_q(audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt), AVRational{1, info.sample_rate}, audio_codec->time_base);
 
 			// Create AVFrame (and fill it with samples)
 			AVFrame *frame_final = avcodec_alloc_frame();
-			frame_final->nb_samples = audio_codec->frame_size;
+			frame_final->nb_samples = audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
-					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt) * audio_codec->channels, 0);
+					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 0);
 
 			// Init the packet
 			AVPacket pkt;
@@ -928,6 +1050,7 @@ void FFmpegWriter::write_audio_packets()
 
 			// Reset position
 			audio_input_position = 0;
+			final = false;
 		}
 
 		// Delete arrays
@@ -1083,6 +1206,10 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
+
+			// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
+			// but it fixes lots of PTS related issues when I do this.
+			//pkt.pts = pkt.dts = write_video_count;
 
 			// set the timestamp
 			if (pkt.pts != AV_NOPTS_VALUE)

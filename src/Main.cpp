@@ -214,7 +214,7 @@ int main()
 		//Frame *f = r.GetFrame(1);
 
 		//for (int frame = 131; frame >= 1; frame--)
-		for (int frame = 1; frame <= 300; frame++)
+		for (int frame = 1; frame <= 352; frame++)
 		{
 			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
 			//f->AddOverlayNumber(0);
