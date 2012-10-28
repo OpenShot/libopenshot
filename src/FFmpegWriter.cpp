@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
-		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0)
+		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(1), write_audio_count(1)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -440,16 +440,17 @@ void FFmpegWriter::WriteTrailer()
 	// ignore the final frames.
 	if (last_frame)
 	{
+		// Flush remaining packets
+		//av_write_frame(oc, NULL);
+		av_interleaved_write_frame(oc, NULL);
+
 		// Create black frame
-		tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
-		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
+		//tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
+		//padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
 
 		// Add the black frame many times
 		//for (int p = 0; p < 25; p++)
 		//	WriteFrame(padding_frame);
-
-		// Flush remaining packets
-		av_write_frame(oc, NULL);
 	}
 
 	// Write any remaining queued frames to video file
@@ -506,8 +507,8 @@ void FFmpegWriter::Close()
 	}
 
 	// Reset frame counters
-	write_video_count = 0;
-	write_audio_count = 0;
+	write_video_count = 1;
+	write_audio_count = 1;
 
 	// Free the stream
 	av_free(oc);
@@ -546,6 +547,9 @@ AVStream* FFmpegWriter::add_audio_stream()
 	if (!st)
 		throw OutOfMemory("Could not allocate memory for the audio stream.", path);
 
+	// Set default values
+    avcodec_get_context_defaults3(st->codec, codec);
+
 	c = st->codec;
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -555,11 +559,11 @@ AVStream* FFmpegWriter::add_audio_stream()
 	c->channels = info.channels;
 
 	// Check for valid timebase
-	if (c->time_base.den == 0 || c->time_base.num == 0)
-	{
-		c->time_base.num = st->time_base.num;
-		c->time_base.den = st->time_base.den;
-	}
+//	if (c->time_base.den == 0 || c->time_base.num == 0)
+//	{
+//		c->time_base.num = st->time_base.num;
+//		c->time_base.den = st->time_base.den;
+//	}
 
 	// Set valid sample rate (or throw error)
 	if (codec->supported_samplerates) {
@@ -631,6 +635,9 @@ AVStream* FFmpegWriter::add_video_stream()
 	st = avformat_new_stream(oc, codec);
 	if (!st)
 		throw OutOfMemory("Could not allocate memory for the video stream.", path);
+
+	// Set default values
+    avcodec_get_context_defaults3(st->codec, codec);
 
 	c = st->codec;
 	c->codec_id = codec->id;
@@ -773,7 +780,6 @@ void FFmpegWriter::write_audio_packets()
 			channels_in_frame = frame->GetAudioChannelsCount();
 
 			// Get audio sample array
-			//float* frame_samples_float = new float(total_frame_samples);
 			float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, new_sampler, &samples_in_frame);
 
 			// Calculate total samples
@@ -799,7 +805,7 @@ void FFmpegWriter::write_audio_packets()
 		int samples_position = 0;
 
 
-		// Re-sample audio samples (into additinal channels or changing the sample format / number format)
+		// Re-sample audio samples (into additional channels or changing the sample format / number format)
 		// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
 		if (audio_codec->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame) {
 
@@ -857,32 +863,65 @@ void FFmpegWriter::write_audio_packets()
 				// Not enough samples to encode... so wait until the next frame
 				break;
 
+
+			// Increment PTS (in samples and scaled to the codec's timebase)
+			write_audio_count += av_rescale_q(audio_codec->frame_size, AVRational{1, info.sample_rate}, audio_codec->time_base);
+
+			// Create AVFrame (and fill it with samples)
+			AVFrame *frame_final = avcodec_alloc_frame();
+			frame_final->nb_samples = audio_codec->frame_size;
+			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
+			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
+					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt) * audio_codec->channels, 0);
+
 			// Init the packet
 			AVPacket pkt;
 			av_init_packet(&pkt);
+			pkt.data = NULL;
+			pkt.size = 0;
 
-			// Increment counter, and set AVFrame PTS
-			write_audio_count++;
+			// Set the packet's PTS prior to encoding
+			pkt.pts = pkt.dts = write_audio_count;
 
-			// Encode audio data
-			pkt.size = avcodec_encode_audio(audio_codec, audio_outbuf, audio_outbuf_size, (short *) samples);
+			/* encode the audio samples */
+			int got_packet_ptr = 0;
+			int error_code = avcodec_encode_audio2(audio_codec, &pkt, frame_final, &got_packet_ptr);
 
-			if (audio_codec->coded_frame && audio_codec->coded_frame->pts != AV_NOPTS_VALUE)
-				// Set the correct rescaled timestamp
-				pkt.pts = av_rescale_q(audio_codec->coded_frame->pts, audio_codec->time_base, audio_st->time_base);
-			pkt.flags |= AV_PKT_FLAG_KEY;
-			pkt.stream_index = audio_st->index;
-			pkt.data = audio_outbuf;
+			/* if zero size, it means the image was buffered */
+			if (error_code == 0 && got_packet_ptr) {
 
-			/* write the compressed frame in the media file */
-			int averror = 0;
-			averror = av_interleaved_write_frame(oc, &pkt);
-			if (averror != 0)
-			{
-				string error_description = av_err2str(averror);
-				cout << "error: " << averror << ": " << error_description << endl;
-				throw ErrorEncodingAudio("Error while writing audio frame", -1);
+				// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
+				// but it fixes lots of PTS related issues when I do this.
+				pkt.pts = pkt.dts = write_audio_count;
+
+				// Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
+				if (pkt.pts != AV_NOPTS_VALUE)
+					pkt.pts = av_rescale_q(pkt.pts, audio_codec->time_base, audio_st->time_base);
+				if (pkt.dts != AV_NOPTS_VALUE)
+					pkt.dts = av_rescale_q(pkt.dts, audio_codec->time_base, audio_st->time_base);
+				if (pkt.duration > 0)
+					pkt.duration = av_rescale_q(pkt.duration, audio_codec->time_base, audio_st->time_base);
+
+				// set stream
+				pkt.stream_index = audio_st->index;
+				pkt.flags |= AV_PKT_FLAG_KEY;
+
+				/* write the compressed frame in the media file */
+				int averror = av_interleaved_write_frame(oc, &pkt);
+				if (averror != 0)
+				{
+					string error_description = av_err2str(averror);
+					cout << "error: " << averror << ": " << error_description << endl;
+					throw ErrorEncodingAudio("Error while writing compressed audio frame", write_audio_count);
+				}
 			}
+
+			if (error_code < 0)
+				cout << "Error encoding audio: " << error_code << endl;
+
+			// deallocate AVFrame
+			//av_free(frame_final->data[0]);
+			av_free(frame_final);
 
 			// deallocate memory for packet
 			av_free_packet(&pkt);
@@ -1008,6 +1047,10 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.data= (uint8_t *)frame_final;
 		pkt.size= sizeof(AVPicture);
 
+		// Increment PTS (1 per frame)
+		write_video_count += 1;
+		pkt.pts = write_video_count;
+
 		/* write the compressed frame in the media file */
 		int averror = 0;
 		averror = av_interleaved_write_frame(oc, &pkt);
@@ -1026,9 +1069,10 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		av_init_packet(&pkt);
 		pkt.data = NULL;
 		pkt.size = 0;
+		pkt.pts = pkt.dts = AV_NOPTS_VALUE;
 
-		// Increment video write counter
-		write_video_count++;
+		// Increment PTS (in frames and scaled to the codec's timebase)
+		write_video_count += av_rescale_q(1, AVRational{info.fps.den, info.fps.num}, video_codec->time_base);
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
@@ -1043,13 +1087,11 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			// set the timestamp
 			if (pkt.pts != AV_NOPTS_VALUE)
 				pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
-			//if (pkt.dts != AV_NOPTS_VALUE)
-			//	pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
-			//pkt.pts = pkt.dts = AV_NOPTS_VALUE;
-
-//			pkt.stream_index = video_st->index;
-//			pkt.pts = av_rescale_q(write_video_count, video_codec->time_base, video_st->time_base);
-//			pkt.dts = AV_NOPTS_VALUE;
+			if (pkt.dts != AV_NOPTS_VALUE)
+				pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
+			if (pkt.duration > 0)
+				pkt.duration = av_rescale_q(pkt.duration, video_codec->time_base, video_st->time_base);
+			pkt.stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
 			//int averror = av_write_frame(oc, &pkt);

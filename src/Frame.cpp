@@ -243,7 +243,7 @@ void Frame::ClearWaveform()
 const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
 {
 	// Get audio wave form image
-	tr1::shared_ptr<Magick::Image> wave_image = GetWaveform(width, height);
+	wave_image = GetWaveform(width, height);
 
 	// Return array of pixel packets
 	return wave_image->getConstPixels(0,0, wave_image->columns(), wave_image->rows());
