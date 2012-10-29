@@ -490,6 +490,33 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lin
 	height = image->rows();
 }
 
+// Composite a new image on top of the existing image
+void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
+{
+	// Replace image (if needed)
+	if (image->columns() == 1)
+		image = new_image;
+	else
+	{
+		// Calculate opacity of new image
+		int new_opacity = 65535.0f * (1.0 - alpha);
+		if (new_opacity < 0)
+			new_opacity = 0; // completely invisible
+		else if (new_opacity > 65535)
+			new_opacity = 65535;
+
+		// Set opacity
+		new_image->opacity(new_opacity);
+
+		// Composite image on top of current image
+		image->composite(*new_image.get(), 0, 0, Magick::DissolveCompositeOp);
+	}
+
+	// Update height and width
+	width = image->columns();
+	height = image->rows();
+}
+
 // Add audio samples to a specific channel
 void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {

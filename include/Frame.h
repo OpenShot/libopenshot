@@ -83,6 +83,9 @@ namespace openshot
 		/// Add audio samples to a specific channel
 		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
 
+		/// Composite a new image on top of the existing image
+		void AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha);
+
 		/// Experimental method to add effects to this frame
 		void AddEffect(string name);
 

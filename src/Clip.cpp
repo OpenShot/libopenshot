@@ -302,11 +302,6 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			// Get the length of the resampled buffer
 			resampled_buffer_size = audio_cache->getNumSamples();
 
-//			if (frame_number == 15)
-//				for (int channel = 0; channel < channels; channel++)
-//					for (int s = 0; s < resampled_buffer_size; s++)
-//						cout << s << "\t" << audio_cache->getSampleData(channel, s)[0] << endl;
-
 			// Just take the samples we need for the requested frame
 			int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
 			if (start > 0)
@@ -325,6 +320,13 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 			// Clean up
 			buffer = NULL;
+
+
+			// Determine next unique frame (after these repeating frames)
+			int next_unique_frame = time.GetInt(frame_number + (time.GetRepeatFraction(frame_number).den - time.GetRepeatFraction(frame_number).num) + 1);
+			if (next_unique_frame != new_frame_number)
+				// Overlay the next frame on top of this frame (to create a smoother slow motion effect)
+				new_frame->AddImage(file_reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
 
 		}
 		else if (abs(delta) > 1 && abs(delta) < 100)
