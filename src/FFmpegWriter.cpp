@@ -31,7 +31,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
-		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(1), write_audio_count(1)
+		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0)
 {
 
 	// Init FileInfo struct (clear all values)
@@ -630,8 +630,8 @@ void FFmpegWriter::Close()
 	}
 
 	// Reset frame counters
-	write_video_count = 1;
-	write_audio_count = 1;
+	write_video_count = 0;
+	write_audio_count = 0;
 
 	// Free the stream
 	av_free(oc);
