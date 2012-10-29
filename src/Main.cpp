@@ -149,7 +149,7 @@ int main()
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-		openshot::FFmpegReader r("/home/jonathan/Desktop/test2.flv");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-1080p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
@@ -182,9 +182,9 @@ int main()
 		//w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
 		w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
 
-		//w.SetVideoOptions(true, "libvpx", Fraction(25,1), 320, 240, Fraction(1,1), false, false, 2000000);
-		w.SetVideoOptions(true, "libx264", Fraction(25,1), 320, 240, Fraction(1,1), false, false, 2000000);
-		//w.SetVideoOptions(true, "libtheora", Fraction(25,1), 320, 240, Fraction(1,1), false, false, 2000000);
+		//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 320, 240, Fraction(1,1), false, false, 2000000);
+		w.SetVideoOptions(true, "libx264", Fraction(24,1), 320, 240, Fraction(1,1), false, false, 2000000);
+		//w.SetVideoOptions(true, "libtheora", Fraction(24,1), 320, 240, Fraction(1,1), false, false, 2000000);
 
 		// Prepare Streams
 		w.PrepareStreams();
@@ -214,7 +214,7 @@ int main()
 		//Frame *f = r.GetFrame(1);
 
 		//for (int frame = 131; frame >= 1; frame--)
-		for (int frame = 1; frame <= 352; frame++)
+		for (int frame = 1; frame <= 400; frame++)
 		{
 			tr1::shared_ptr<Frame> f = r.GetFrame(frame);
 			//f->AddOverlayNumber(0);

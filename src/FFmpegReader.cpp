@@ -17,7 +17,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	// Init cache
 	int64 bytes = 720 * 1280 * 4 + (44100 * 2 * 4);
 	working_cache = Cache(0);
-	final_cache = Cache(15 * bytes);  // 15 frames X 720 video, 4 colors of chars, 2 audio channels of 4 byte floats
+	final_cache = Cache(20 * bytes);  // 20 frames X 720 video, 4 colors of chars, 2 audio channels of 4 byte floats
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
