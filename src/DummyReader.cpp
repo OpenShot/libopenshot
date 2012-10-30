@@ -41,6 +41,9 @@ void DummyReader::Open() throw(InvalidFile)
 		info.video_timebase.num = fps.GetFraction().den;
 		info.video_timebase.den = fps.GetFraction().num;
 		info.video_length = round(info.duration * info.fps.ToDouble());
+		info.acodec = "raw";
+		info.channels = channels;
+		info.sample_rate = sample_rate;
 
 		// Calculate the DAR (display aspect ratio)
 		Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);

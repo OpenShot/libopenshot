@@ -16,6 +16,17 @@ void FrameReady(int number)
 
 int main()
 {
+	// Create a reader
+	DummyReader r1(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+
+	// Map frames
+	FrameMapper mapping(&r1, Framerate(60, 1), PULLDOWN_CLASSIC);
+	mapping.PrintMapping();
+
+	return 0;
+
+
+
 	// Create timeline
 	Timeline t(640, 360, Framerate(24,1));
 

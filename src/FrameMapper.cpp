@@ -74,9 +74,13 @@ void FrameMapper::Init()
 	fields.clear();
 	frames.clear();
 
-	// Loop through all fields in the original video file
+	// Calculate # of fields to map
 	int frame = 1;
-	int number_of_fields = info.video_length * 2;
+	int number_of_fields = reader->info.video_length * 2;
+//	if (reader->info.video_length * 2 > number_of_fields)
+//		number_of_fields = reader->info.video_length * 2;
+
+	// Loop through all fields in the original video file
 	for (int field = 1; field <= number_of_fields; field++)
 	{
 
