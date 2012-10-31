@@ -183,11 +183,17 @@ namespace openshot
 		/// Close File
 		void Close();
 
-		/// Get an openshot::Frame object for a specific frame number of this reader.
+		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video
 		/// @param[requested_frame] number The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
+
+		/// Get an openshot::Frame object for a specific frame number of this reader.
+		///
+		/// @returns The requested frame of video
+		/// @param[requested_frame] number The frame number that is requested.
+		Frame* GetFrameObject(int requested_frame) throw(ReaderClosed, TooManySeeks);
 
 		/// Open File - which is called by the constructor automatically
 		void Open() throw(InvalidFile, NoStreamsFound, InvalidCodec);
