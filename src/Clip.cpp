@@ -439,13 +439,13 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		cout << "samples: "<< samples << endl;
 		delete samples;
 		samples = NULL;
+
 	} else
 		// Use original frame
-		new_frame = frame;
+		return frame;
 
 	// Return new time mapped frame
 	return new_frame;
-
 }
 
 // Apply basic image processing (scale, rotate, move, etc...)

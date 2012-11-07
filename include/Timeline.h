@@ -9,6 +9,7 @@
 
 #include <list>
 #include <tr1/memory>
+#include "Magick++.h"
 #include "Clip.h"
 #include "FileReaderBase.h"
 #include "Fraction.h"
@@ -40,11 +41,19 @@ namespace openshot {
 		int width; ///<Width of the canvas and viewport
 		int height; ///<Height of the canvas and viewport
 		Framerate fps; ///<Frames per second of the timeline
+		int sample_rate; ///<Sample rate of timeline
+		int channels; ///<Channels in timeline
 		list<Clip*> clips; ///<List of clips on this timeline
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);
+
+		/// Calculate the # of samples per video frame (for a specific frame number)
+		int GetSamplesPerFrame(int frame_number);
+
+		/// Process a new layer of video or audio
+		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number);
 
 		/// Update the list of 'opened' clips
 		void update_open_clips(Clip *clip, bool is_open);
@@ -52,7 +61,7 @@ namespace openshot {
 	public:
 
 		/// Default Constructor for the timeline (which sets the canvas width and height and FPS)
-		Timeline(int width, int height, Framerate fps);
+		Timeline(int width, int height, Framerate fps, int sample_rate, int channels);
 
 		/// Add an openshot::Clip to the timeline
 		void AddClip(Clip* clip);

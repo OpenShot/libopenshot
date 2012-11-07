@@ -16,23 +16,23 @@ void FrameReady(int number)
 
 int main()
 {
-	// Create a reader
-	DummyReader r1(Framerate(24,1), 720, 480, 22000, 2, 5.0);
-
-	// Map frames
-	FrameMapper mapping(&r1, Framerate(60, 1), PULLDOWN_CLASSIC);
-	mapping.PrintMapping();
-
-	return 0;
+//	// Create a reader
+//	DummyReader r1(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+//
+//	// Map frames
+//	FrameMapper mapping(&r1, Framerate(60, 1), PULLDOWN_CLASSIC);
+//	mapping.PrintMapping();
+//
+//	return 0;
 
 
 
 	// Create timeline
-	Timeline t(640, 360, Framerate(24,1));
+	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
-	c1.Position(0.0);
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	c1.Position(1.0);
 
 	// LINEAR Reverse
 	//c1.time.AddPoint(1, 500, LINEAR);
@@ -47,8 +47,8 @@ int main()
 	//c1.time.AddPoint(500, 250, LINEAR);
 
 	// LINEAR Slow Reverse X4 (smooth)
-	c1.time.AddPoint(1, 500, LINEAR);
-	c1.time.AddPoint(750, 250, LINEAR);
+	//c1.time.AddPoint(1, 500, LINEAR);
+	//c1.time.AddPoint(750, 250, LINEAR);
 
 	// LINEAR Fast Reverse (sounds wavy, due to periodic repeated frames)
 	//c1.time.AddPoint(1, 600, LINEAR);
@@ -75,7 +75,7 @@ int main()
 //	c1.time.AddPoint(1, 500, LINEAR);
 //	c1.time.AddPoint(200, 200);
 //	c1.time.AddPoint(500, 500, LINEAR);
-	c1.time.PrintValues();
+//	c1.time.PrintValues();
 
 	// Add clips
 	t.AddClip(&c1);
@@ -99,17 +99,12 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 100; frame++)
+	for (int frame = 1; frame <= 30; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
 		{
-			//f->AddOverlayNumber(0);
-			//if (frame >= 1 && frame <= 22)
-			//	f->DisplayWaveform();
-
 			// Write frame
-			//cout << "queue frame " << frame << endl;
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
 			w.WriteFrame(f);
 		}

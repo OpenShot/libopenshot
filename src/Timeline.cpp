@@ -3,8 +3,8 @@
 using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
-Timeline::Timeline(int width, int height, Framerate fps) :
-		width(width), height(height), fps(fps)
+Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int channels) :
+		width(width), height(height), fps(fps), sample_rate(sample_rate), channels(channels)
 {
 	// Init viewport size (curve based, because it can be animated)
 	viewport_scale = Keyframe(100.0);
@@ -34,6 +34,32 @@ float Timeline::calculate_time(int number, Framerate rate)
 
 	// Return the time (in seconds) of this frame
 	return float(number - 1) / raw_fps;
+}
+
+// Process a new layer of video or audio
+void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number)
+{
+	// Get the clip's frame & image
+	tr1::shared_ptr<Frame> source_frame = source_clip->GetFrame(clip_frame_number);
+	tr1::shared_ptr<Magick::Image> source_image = source_frame->GetImage();
+
+	// Replace image (needed if this is the 1st layer)
+	if (new_frame->GetImage()->columns() == 1)
+		new_frame->AddColor(width, height, "#000000");
+
+	// Apply image effects
+	source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
+	source_image->opacity(1 - source_clip->alpha.GetValue(clip_frame_number));
+
+	// Copy audio from source frame
+	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
+		new_frame->AddAudio(channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0f);
+
+	// Composite images together
+	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
+	new_image->composite(*source_image.get(), source_clip->location_x.GetInt(clip_frame_number), source_clip->location_y.GetInt(clip_frame_number), Magick::InCompositeOp);
+
+
 }
 
 // Update the list of 'opened' clips
@@ -88,12 +114,30 @@ void Timeline::Open()
 
 }
 
+// Calculate the # of samples per video frame (for a specific frame number)
+int Timeline::GetSamplesPerFrame(int frame_number)
+{
+	// Get the total # of samples for the previous frame, and the current frame (rounded)
+	double fps_value = fps.GetFraction().Reciprocal().ToDouble();
+	double previous_samples = round((sample_rate * fps_value) * (frame_number - 1));
+	double total_samples = round((sample_rate * fps_value) * frame_number);
+
+	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
+	// be evenly divided into frames, so each frame can have have different # of samples.
+	double samples_per_frame = total_samples - previous_samples;
+	return samples_per_frame;
+}
+
+
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
+
+	// Create blank frame (which will become the requested frame)
+	tr1::shared_ptr<Frame> new_frame = tr1::shared_ptr<Frame>(new Frame(requested_frame, width, height, "#000000", GetSamplesPerFrame(requested_frame), channels));
 
 	// Calculate time of frame
 	float requested_time = calculate_time(requested_frame, fps);
@@ -114,12 +158,22 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		// Clip is visible
 		if (does_clip_intersect)
 		{
-			// Display the clip (DEBUG)
-			return clip->GetFrame(requested_frame);
+			// Determine the frame needed for this clip (based on the position on the timeline)
+			float time_diff = (requested_time - clip->Position()) + clip->Start();
+			int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
+			cout << "CLIP #: " << clip_frame_number << endl;
+
+			// Add clip's frame as layer
+			add_layer(new_frame, clip, clip_frame_number);
+
 		} else
 			cout << "FRAME NOT IN CLIP DURATION: frame: " << requested_frame << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
 	}
 
+	// Check for empty frame image (and fill with color)
+	if (new_frame->GetImage()->columns() == 1)
+		new_frame->AddColor(width, height, "#000000");
+
 	// No clips found
-	return tr1::shared_ptr<Frame>();
+	return new_frame;
 }
