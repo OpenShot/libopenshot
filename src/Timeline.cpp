@@ -48,8 +48,15 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		new_frame->AddColor(width, height, "#000000");
 
 	// Apply image effects
-	source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
-	source_image->opacity(1 - source_clip->alpha.GetValue(clip_frame_number));
+	if (source_clip->rotation.GetValue(clip_frame_number) != 0)
+		source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
+	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
+	{
+		// Calculate opacity of new image
+		int new_opacity = 65535.0f * source_clip->alpha.GetValue(clip_frame_number);
+		if (new_opacity < 0) new_opacity = 0; // completely invisible
+		source_image->opacity(new_opacity);
+	}
 
 	// Copy audio from source frame
 	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
@@ -57,9 +64,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	// Composite images together
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), source_clip->location_x.GetInt(clip_frame_number), source_clip->location_y.GetInt(clip_frame_number), Magick::InCompositeOp);
-
-
+	new_image->composite(*source_image.get(), source_clip->location_x.GetInt(clip_frame_number), source_clip->location_y.GetInt(clip_frame_number), Magick::BlendCompositeOp);
 }
 
 // Update the list of 'opened' clips
@@ -137,7 +142,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		requested_frame = 1;
 
 	// Create blank frame (which will become the requested frame)
-	tr1::shared_ptr<Frame> new_frame = tr1::shared_ptr<Frame>(new Frame(requested_frame, width, height, "#000000", GetSamplesPerFrame(requested_frame), channels));
+	tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(requested_frame, width, height, "#000000", GetSamplesPerFrame(requested_frame), channels)));
 
 	// Calculate time of frame
 	float requested_time = calculate_time(requested_frame, fps);
@@ -150,7 +155,8 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		Clip *clip = (*clip_itr);
 
 		// Does clip intersect the current requested time
-		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->End() >= requested_time);
+		float clip_duration = clip->End() - clip->Start();
+		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
 
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, does_clip_intersect);
@@ -161,7 +167,6 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 			// Determine the frame needed for this clip (based on the position on the timeline)
 			float time_diff = (requested_time - clip->Position()) + clip->Start();
 			int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
-			cout << "CLIP #: " << clip_frame_number << endl;
 
 			// Add clip's frame as layer
 			add_layer(new_frame, clip, clip_frame_number);

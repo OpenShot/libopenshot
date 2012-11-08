@@ -19,30 +19,26 @@ void ImageReader::Open() throw(InvalidFile)
 	if (!is_open)
 	{
 		// Attempt to open file
-		Magick::Image* source = NULL;
 		try
 		{
 			// load image
-			source = new Magick::Image(path);
+			image = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
+
+			// Give image a transparent background color
+			image->backgroundColor(Magick::Color("none"));
 		}
 		catch (Magick::Exception e) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path);
 		}
 
-		// Create or get frame object
-		image_frame = tr1::shared_ptr<Frame>(new Frame(1, source->size().width(), source->size().height(), "#000000", 0, 2));
-
-		// Add Image data to frame
-		image_frame->AddImage(tr1::shared_ptr<Magick::Image>(source));
-
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
-		info.file_size = source->fileSize();
-		info.vcodec = source->format();
-		info.width = source->size().width();
-		info.height = source->size().height();
+		info.file_size = image->fileSize();
+		info.vcodec = image->format();
+		info.width = image->size().width();
+		info.height = image->size().height();
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
 		info.duration = 60 * 60 * 24; // 24 hour duration
@@ -85,10 +81,16 @@ tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderCl
 	if (!is_open)
 		throw ReaderClosed("The ImageReader is closed.  Call Open() before calling this method.", path);
 
-	if (image_frame)
+	if (image)
 	{
-		// Always return same frame (regardless of which frame number was requested)
-		image_frame->number = requested_frame;
+		// Create or get frame object
+		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+
+		// Add Image data to frame
+		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+		image_frame->AddImage(copy_image);
+
+		// return frame object
 		return image_frame;
 	}
 	else

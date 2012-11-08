@@ -32,7 +32,7 @@ namespace openshot
 	{
 	private:
 		string path;
-		tr1::shared_ptr<Frame> image_frame;
+		tr1::shared_ptr<Magick::Image> image;
 		bool is_open;
 
 	public:

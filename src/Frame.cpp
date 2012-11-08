@@ -430,6 +430,9 @@ void Frame::AddColor(int width, int height, string color)
 	// Create new image object, and fill with pixel data
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color(color)));
 
+	// Give image a transparent background color
+	image->backgroundColor(Magick::Color("none"));
+
 	// Update height and width
 	width = image->columns();
 	height = image->rows();
@@ -440,6 +443,9 @@ void Frame::AddImage(int width, int height, const string map, const Magick::Stor
 {
 	// Create new image object, and fill with pixel data
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
+
+	// Give image a transparent background color
+	image->backgroundColor(Magick::Color("none"));
 
 	// Update height and width
 	width = image->columns();
@@ -520,6 +526,10 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 // Add audio samples to a specific channel
 void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
+	// Extend audio buffer (if needed)
+	if (destStartSample + numSamples > audio->getNumSamples())
+		audio->setSize(audio->getNumChannels(), destStartSample + numSamples, true, true, false);
+
 	// Always clear the range of samples first
 	audio->clear(destChannel, destStartSample, numSamples);
 

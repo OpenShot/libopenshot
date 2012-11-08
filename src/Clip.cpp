@@ -23,7 +23,7 @@ void Clip::init_settings()
 	location_y = Keyframe(0.0);
 
 	// Init alpha & rotation
-	alpha = Keyframe(100.0);
+	alpha = Keyframe(0.0);
 	rotation = Keyframe(0.0);
 
 	// Init time & volume
@@ -143,7 +143,8 @@ void Clip::Open() throw(InvalidFile)
 		file_reader->Open();
 
 		// Set some clip properties from the file reader
-		End(file_reader->info.duration);
+		if (end == 0)
+			End(file_reader->info.duration);
 	}
 }
 
@@ -157,15 +158,17 @@ void Clip::Close()
 // Get end position of clip (trim end of video), which can be affected by the time curve.
 float Clip::End()
 {
-	// Determine the FPS fo this clip
-	float fps = 24.0;
-	if (file_reader)
-		// file reader
-		fps = file_reader->info.fps.ToFloat();
-
 	// if a time curve is present, use it's length
 	if (time.Points.size() > 1)
+	{
+		// Determine the FPS fo this clip
+		float fps = 24.0;
+		if (file_reader)
+			// file reader
+			fps = file_reader->info.fps.ToFloat();
+
 		return float(time.GetLength()) / fps;
+	}
 	else
 		// just use the duration (as detected by the reader)
 		return end;
@@ -233,7 +236,6 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 // Adjust the audio and image of a time mapped frame
 tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
-	cout << "TIME MAPPER: " << frame_number << endl;
 	tr1::shared_ptr<Frame> new_frame;
 
 	// Check for a valid time map curve

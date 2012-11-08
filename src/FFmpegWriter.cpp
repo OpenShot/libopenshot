@@ -442,23 +442,6 @@ void FFmpegWriter::WriteTrailer()
 	if (info.has_audio && audio_st)
 		write_audio_packets(true);
 
-	// Experimental: Repeat last frame many times, to pad
-	// the end of the video, to ensure the codec does not
-	// ignore the final frames.
-//	if (last_frame)
-//	{
-//		// Create black frame
-//		tr1::shared_ptr<Frame> padding_frame(new Frame(999999, last_frame->GetWidth(), last_frame->GetHeight(), "#000000", last_frame->GetAudioSamplesCount(), last_frame->GetAudioChannelsCount()));
-//		padding_frame->AddColor(last_frame->GetWidth(), last_frame->GetHeight(), "#000000");
-//
-//		// Add the black frame many times
-//		for (int p = 0; p < 100; p++)
-//			WriteFrame(padding_frame);
-//
-//		// Write these blank frames
-//		write_queued_frames();
-//	}
-
 	// Flush encoders (who sometimes hold on to frames)
 	flush_encoders();
 

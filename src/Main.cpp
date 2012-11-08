@@ -31,8 +31,33 @@ int main()
 	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
+	Clip c2(new ImageReader("/home/jonathan/Apps/videcho_site/media/logos/watermark.png"));
 	c1.Position(1.0);
+	c2.Position(1.0);
+	c2.Layer(1);
+
+	c1.rotation.AddPoint(1, 1);
+	c1.rotation.AddPoint(300, 360);
+
+	c1.alpha.AddPoint(1, 0);
+	c1.alpha.AddPoint(300, 1);
+
+	c2.alpha.AddPoint(1, 1);
+	c2.alpha.AddPoint(30, 0);
+	c2.alpha.AddPoint(100, 0, LINEAR);
+	c2.alpha.AddPoint(150, 1);
+	c2.End(6.25);
+
+	c2.location_x.AddPoint(1, 0);
+	c2.location_x.AddPoint(300, 530);
+
+	c2.location_y.AddPoint(1, 0);
+	c2.location_y.AddPoint(300, 300);
+
+	c2.rotation.AddPoint(60, 0, LINEAR);
+	c2.rotation.AddPoint(150, 360);
+
 
 	// LINEAR Reverse
 	//c1.time.AddPoint(1, 500, LINEAR);
@@ -79,6 +104,7 @@ int main()
 
 	// Add clips
 	t.AddClip(&c1);
+	t.AddClip(&c2);
 
 
 	// Create a writer
@@ -99,7 +125,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 30; frame++)
+	for (int frame = 1; frame <= 300; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
@@ -159,7 +185,7 @@ int main()
 	//	openshot::FFmpegReader r("../../src/examples/piano.wav");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/big-buck-bunny_trailer.webm");
 
-		openshot::FFmpegReader r("/home/jonathan/Desktop/test2.flv");
+		openshot::FFmpegReader r("/home/jonathan/Videos/sintel-1024-stereo.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/OpenShot_Now_In_3d.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//	openshot::FFmpegReader r("/home/jonathan/Aptana Studio Workspace/OpenShotLibrary/src/examples/piano.wav");
