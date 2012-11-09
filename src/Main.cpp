@@ -31,8 +31,8 @@ int main()
 	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
-	Clip c2(new ImageReader("/home/jonathan/Apps/videcho_site/media/logos/watermark.png"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c2(new ImageReader("/home/jonathan/apps/videcho_site/media/logos/watermark.png"));
 	c1.Position(1.0);
 	c2.Position(1.0);
 	c2.Layer(1);
@@ -40,8 +40,8 @@ int main()
 	c1.rotation.AddPoint(1, 1);
 	c1.rotation.AddPoint(300, 360);
 
-	c1.alpha.AddPoint(1, 0);
-	c1.alpha.AddPoint(300, 1);
+	//c1.alpha.AddPoint(1, 0);
+	//c1.alpha.AddPoint(300, 1);
 
 	c2.alpha.AddPoint(1, 1);
 	c2.alpha.AddPoint(30, 0);
@@ -55,7 +55,7 @@ int main()
 	c2.location_y.AddPoint(1, 0);
 	c2.location_y.AddPoint(300, 300);
 
-	c2.rotation.AddPoint(60, 0, LINEAR);
+	c2.rotation.AddPoint(60, 1, LINEAR);
 	c2.rotation.AddPoint(150, 360);
 
 

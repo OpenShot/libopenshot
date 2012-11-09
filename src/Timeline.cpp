@@ -48,8 +48,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		new_frame->AddColor(width, height, "#000000");
 
 	// Apply image effects
-	if (source_clip->rotation.GetValue(clip_frame_number) != 0)
-		source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
+	//if (source_clip->rotation.GetValue(clip_frame_number) != 0)
+	//	source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
 	{
 		// Calculate opacity of new image
@@ -62,9 +62,28 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 		new_frame->AddAudio(channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0f);
 
+	// Location, Rotation, and Scale
+	float r = source_clip->rotation.GetValue(clip_frame_number);
+	float x = source_clip->location_x.GetValue(clip_frame_number);
+	float y = source_clip->location_y.GetValue(clip_frame_number);
+	float sx = source_clip->scale_x.GetValue(clip_frame_number);
+	float sy = source_clip->scale_y.GetValue(clip_frame_number);
+
+	cout << "r: " << r << endl;
+	cout << "x: " << x << endl;
+	cout << "y: " << y << endl;
+
+	// X,Y     Scale     Angle  NewX,NewY
+	double distort_args[7] = { source_image->columns()/2,source_image->rows()/2,  sx,sy,  r,  x,y };
+	//source_image->size(Magick::Geometry(round(x + source_image->columns()), round(y + source_image->rows()), 0,0,false,false));
+	source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, true);
+
+	if (clip_frame_number == 100)
+		source_image->display();
+
 	// Composite images together
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), source_clip->location_x.GetInt(clip_frame_number), source_clip->location_y.GetInt(clip_frame_number), Magick::BlendCompositeOp);
+	new_image->composite(*source_image.get(), 0, 0, Magick::BlendCompositeOp);
 }
 
 // Update the list of 'opened' clips

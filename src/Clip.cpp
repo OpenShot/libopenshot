@@ -15,8 +15,8 @@ void Clip::init_settings()
 	anchor = ANCHOR_CANVAS;
 
 	// Init scale curves
-	scale_x = Keyframe(100.0);
-	scale_y = Keyframe(100.0);
+	scale_x = Keyframe(1.0);
+	scale_y = Keyframe(1.0);
 
 	// Init location curves
 	location_x = Keyframe(0.0);
