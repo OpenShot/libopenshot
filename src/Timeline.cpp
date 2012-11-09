@@ -69,17 +69,14 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	float sx = source_clip->scale_x.GetValue(clip_frame_number);
 	float sy = source_clip->scale_y.GetValue(clip_frame_number);
 
-	cout << "r: " << r << endl;
-	cout << "x: " << x << endl;
-	cout << "y: " << y << endl;
+	// Resize source canvas the same size as timeline canvas
+	Magick::Geometry source_original_size = source_image->size();
+	source_image->size(Magick::Geometry(width, height, 0,0,false,false));
 
+	// Set the location (X,Y), rotation, and X-Scale, Y-Scale of the source image
 	// X,Y     Scale     Angle  NewX,NewY
-	double distort_args[7] = { source_image->columns()/2,source_image->rows()/2,  sx,sy,  r,  x,y };
-	//source_image->size(Magick::Geometry(round(x + source_image->columns()), round(y + source_image->rows()), 0,0,false,false));
-	source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, true);
-
-	if (clip_frame_number == 100)
-		source_image->display();
+	double distort_args[7] = {source_original_size.width()/2,source_original_size.height()/2,  sx,sy,  r,  x,y };
+	source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
 
 	// Composite images together
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
