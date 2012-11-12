@@ -69,28 +69,28 @@ task lib "OpenShot Library - Phase 2" {
           task video_editor_mockup "HTML5 Video Editor Mock-up" {
             effort 5d
             allocate jonathan
-            complete 0
+            complete 100
           }
 
           priority 730
           task video_editor_seekbar "Slider/Seekbar with Thumbnails" {
             effort 5d
             allocate jonathan
-            complete 0
+            complete 100
           }
 
           priority 720
           task video_editor_fullscreen "Double-click Fullscreen" {
             effort 1d
             allocate jonathan
-            complete 0
+            complete 100
           }
 
           priority 710
           task video_editor_trim "Multiple Trim Sliders (Left and Right)" {
             effort 3d
             allocate jonathan
-            complete 0
+            complete 100
           }
 
           priority 705
@@ -106,42 +106,42 @@ task lib "OpenShot Library - Phase 2" {
       task website_home "Home" {
         effort 1d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 640
       task website_signup "Signup" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 630
       task website_login "Login" {
         effort 1d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 620
       task website_member_home "Member Home" {
         effort 1d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 610
       task website_upload "Upload & Transcode Video" {
         effort 4d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 602
       task website_play "Play Video" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 100
       }
 
       priority 600
@@ -160,7 +160,7 @@ task lib "OpenShot Library - Phase 2" {
       task website_blog "Blog" {
         effort 2d
         allocate jonathan
-        complete 0
+        complete 25
       }
   }
 
@@ -172,7 +172,7 @@ task lib "OpenShot Library - Phase 2" {
     task library_framerate "Implement Framerate Mapper" {
       effort 2d
       allocate jonathan
-      complete 0
+      complete 75
     }
 
     task library_timeline_classes "Create Timeline Classes" {
@@ -181,19 +181,19 @@ task lib "OpenShot Library - Phase 2" {
         task library_timeline_layers "Implement Layers" {
           effort 2d
           allocate jonathan
-          complete 0
+          complete 100
         }
         priority 865
         task library_timeline_trimming "Implement Trimming" {
           effort 1d
           allocate jonathan
-          complete 0
+          complete 100
         }
         priority 860
         task library_timeline_fading "Implement Fading" {
           effort 2d
           allocate jonathan
-          complete 0
+          complete 100
         }
         priority 858
         task library_timeline_transitions "Implement Transitions" {
@@ -205,7 +205,7 @@ task lib "OpenShot Library - Phase 2" {
         task library_timeline_curve_time "Implement Curve-based Speed & Direction" {
           effort 3d
           allocate jonathan
-          complete 0
+          complete 100
         }
         priority 850
         task library_timeline_json "JSON Serializer (read & write)" {
