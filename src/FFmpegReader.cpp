@@ -367,6 +367,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	int minimum_frames = 8;
 
 	//omp_set_num_threads(1);
+	omp_set_nested(true);
 	#pragma omp parallel
 	{
 		#pragma omp single

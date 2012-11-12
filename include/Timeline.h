@@ -8,8 +8,10 @@
  */
 
 #include <list>
+#include <omp.h>
 #include <tr1/memory>
 #include "Magick++.h"
+#include "Cache.h"
 #include "Clip.h"
 #include "FileReaderBase.h"
 #include "Fraction.h"
@@ -45,6 +47,7 @@ namespace openshot {
 		int channels; ///<Channels in timeline
 		list<Clip*> clips; ///<List of clips on this timeline
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
+		Cache final_cache; ///<Final cache of timeline frames
 
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);

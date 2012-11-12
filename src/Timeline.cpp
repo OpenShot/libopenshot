@@ -10,6 +10,10 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 	viewport_scale = Keyframe(100.0);
 	viewport_x = Keyframe(0.0);
 	viewport_y = Keyframe(0.0);
+
+	// Init cache
+	int64 bytes = height * width * 4 + (44100 * 2 * 4);
+	final_cache = Cache(20 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
 }
 
 // Add an openshot::Clip to the timeline
@@ -40,13 +44,15 @@ float Timeline::calculate_time(int number, Framerate rate)
 void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number)
 {
 	// Get the clip's frame & image
-	tr1::shared_ptr<Frame> source_frame = source_clip->GetFrame(clip_frame_number);
+	tr1::shared_ptr<Frame> source_frame;
+	#pragma omp critical (reader_lock)
+		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 	tr1::shared_ptr<Magick::Image> source_image = source_frame->GetImage();
+
 
 	// Get some basic image properties
 	int source_width = source_image->columns();
 	int source_height = source_image->rows();
-
 
 	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 	if (new_frame->GetImage()->columns() == 1)
@@ -62,7 +68,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Calculate & set opacity of new image
 		int new_opacity = 65535.0f * source_clip->alpha.GetValue(clip_frame_number);
 		if (new_opacity < 0) new_opacity = 0; // completely invisible
-		source_image->opacity(new_opacity);
+		//source_image->opacity(new_opacity);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -130,9 +136,12 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
-	source_image->borderColor(Magick::Color("none"));
-	source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
-	source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+	if (source_width != width || source_height != height)
+	{
+		source_image->borderColor(Magick::Color("none"));
+		source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
+		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+	}
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
@@ -142,12 +151,15 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
 
 	// origin X,Y     Scale     Angle  NewX,NewY
-	double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
-	source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
+	if (source_width != width || source_height != height || round(r) != 0 || round(x) != 0 || round(y) != 0 || round(sx) != 1 || round(sy) != 1)
+	{
+		double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
+		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
+	}
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), 0, 0, Magick::BlendCompositeOp);
+	new_image->composite(*source_image.get(), 0, 0, Magick::OverCompositeOp);
 }
 
 // Update the list of 'opened' clips
@@ -224,44 +236,76 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	if (requested_frame < 1)
 		requested_frame = 1;
 
-	// Create blank frame (which will become the requested frame)
-	tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(requested_frame, width, height, "#000000", GetSamplesPerFrame(requested_frame), channels)));
-
-	// Calculate time of frame
-	float requested_time = calculate_time(requested_frame, fps);
-
-	// Find Clips at this time
-	list<Clip*>::iterator clip_itr;
-	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	// Check cache
+	if (final_cache.Exists(requested_frame))
+		return final_cache.GetFrame(requested_frame);
+	else
 	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
+		// Minimum number of packets to process (for performance reasons)
+		int minimum_frames = 8;
 
-		// Does clip intersect the current requested time
-		float clip_duration = clip->End() - clip->Start();
-		bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
-
-		// Open or Close this clip, based on if it's intersecting or not
-		update_open_clips(clip, does_clip_intersect);
-
-		// Clip is visible
-		if (does_clip_intersect)
+		//omp_set_num_threads(1);
+		omp_set_nested(true);
+		#pragma omp parallel
 		{
-			// Determine the frame needed for this clip (based on the position on the timeline)
-			float time_diff = (requested_time - clip->Position()) + clip->Start();
-			int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
+			#pragma omp single
+			{
+				// Loop through all requested frames
+				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+				{
+					#pragma xxx omp task firstprivate(frame_number)
+					{
+						// Create blank frame (which will become the requested frame)
+						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
 
-			// Add clip's frame as layer
-			add_layer(new_frame, clip, clip_frame_number);
+						// Calculate time of frame
+						float requested_time = calculate_time(frame_number, fps);
 
-		} else
-			cout << "FRAME NOT IN CLIP DURATION: frame: " << requested_frame << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
+						// Find Clips at this time
+						list<Clip*>::iterator clip_itr;
+						for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+						{
+							// Get clip object from the iterator
+							Clip *clip = (*clip_itr);
+
+							// Does clip intersect the current requested time
+							float clip_duration = clip->End() - clip->Start();
+							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
+
+							// Open or Close this clip, based on if it's intersecting or not
+							#pragma omp critical (reader_lock)
+							update_open_clips(clip, does_clip_intersect);
+
+							// Clip is visible
+							if (does_clip_intersect)
+							{
+								// Determine the frame needed for this clip (based on the position on the timeline)
+								float time_diff = (requested_time - clip->Position()) + clip->Start();
+								int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
+
+								// Add clip's frame as layer
+								add_layer(new_frame, clip, clip_frame_number);
+
+							} else
+								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
+
+							// Check for empty frame image (and fill with color)
+							if (new_frame->GetImage()->columns() == 1)
+								new_frame->AddColor(width, height, "#000000");
+
+							// Add final frame to cache
+							#pragma omp critical (timeline_cache)
+							final_cache.Add(frame_number, new_frame);
+
+						} // end clip loop
+
+					} // end omp task
+				} // end frame loop
+
+			} // end omp single
+		} // end omp parallel
+
+		// Return frame (or blank frame)
+		return final_cache.GetFrame(requested_frame);
 	}
-
-	// Check for empty frame image (and fill with color)
-	if (new_frame->GetImage()->columns() == 1)
-		new_frame->AddColor(width, height, "#000000");
-
-	// No clips found
-	return new_frame;
 }

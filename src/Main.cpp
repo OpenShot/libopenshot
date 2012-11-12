@@ -31,9 +31,9 @@ int main()
 	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
-	//Clip c2(new ImageReader("/home/jonathan/Desktop/watermark.svg"));
-	Clip c2(new ImageReader("/home/jonathan/Desktop/icon.png"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c2(new ImageReader("/home/jonathan/Desktop/logo1.png"));
+	//Clip c2(new ImageReader("/home/jonathan/Desktop/icon.png"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
@@ -42,12 +42,12 @@ int main()
 
 	c2.Position(0.0);
 	c2.Layer(1);
-	c2.gravity = GRAVITY_BOTTOM_RIGHT;
+	c2.gravity = GRAVITY_LEFT;
 	c2.scale = SCALE_NONE;
 	c2.End(20);
 
-	//c1.rotation.AddPoint(1, 1);
-	//c1.rotation.AddPoint(300, 360);
+	c2.rotation.AddPoint(1, 1);
+	c2.rotation.AddPoint(300, 360);
 
 	//c2.scale_x.AddPoint(1, 1);
 	//c2.scale_x.AddPoint(300, 3.5);
@@ -64,13 +64,13 @@ int main()
 	//c1.alpha.AddPoint(1, 1);
 	//c1.alpha.AddPoint(30, 0);
 
-	//c2.alpha.AddPoint(1, 1);
-	//c2.alpha.AddPoint(30, 0);
+	c2.alpha.AddPoint(1, 0);
+	c2.alpha.AddPoint(300, 1);
 	//c2.alpha.AddPoint(100, 0, LINEAR);
 	//c2.alpha.AddPoint(150, 1);
 
 	c2.location_x.AddPoint(1, 0);
-	c2.location_x.AddPoint(300, -1.0);
+	c2.location_x.AddPoint(300, 1.0);
 
 	//c2.location_y.AddPoint(1, 0);
 	//c2.location_y.AddPoint(300, 1);
