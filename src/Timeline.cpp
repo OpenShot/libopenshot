@@ -43,42 +43,109 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	tr1::shared_ptr<Frame> source_frame = source_clip->GetFrame(clip_frame_number);
 	tr1::shared_ptr<Magick::Image> source_image = source_frame->GetImage();
 
-	// Replace image (needed if this is the 1st layer)
+	// Get some basic image properties
+	int source_width = source_image->columns();
+	int source_height = source_image->rows();
+
+
+	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 	if (new_frame->GetImage()->columns() == 1)
 		new_frame->AddColor(width, height, "#000000");
 
-	// Apply image effects
-	//if (source_clip->rotation.GetValue(clip_frame_number) != 0)
-	//	source_image->rotate(source_clip->rotation.GetValue(clip_frame_number));
+	/* COPY AUDIO */
+	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
+		new_frame->AddAudio(channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0f);
+
+	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
 	{
-		// Calculate opacity of new image
+		// Calculate & set opacity of new image
 		int new_opacity = 65535.0f * source_clip->alpha.GetValue(clip_frame_number);
 		if (new_opacity < 0) new_opacity = 0; // completely invisible
 		source_image->opacity(new_opacity);
 	}
 
-	// Copy audio from source frame
-	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
-		new_frame->AddAudio(channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0f);
+	/* RESIZE SOURCE IMAGE - based on scale type */
+	Magick::Geometry new_size(width, height);
+	switch (source_clip->scale)
+	{
+	case (SCALE_FIT):
+		new_size.aspect(false); // respect aspect ratio
+		source_image->resize(new_size);
+		source_width = source_image->size().width();
+		source_height = source_image->size().height();
+		break;
+	case (SCALE_STRETCH):
+		new_size.aspect(true); // ignore aspect ratio
+		source_image->resize(new_size);
+		source_width = source_image->size().width();
+		source_height = source_image->size().height();
+		break;
+	case (SCALE_CROP):
+		Magick::Geometry width_size(width, round(width / (float(source_width) / float(source_height))));
+		Magick::Geometry height_size(round(height / (float(source_height) / float(source_width))), height);
+		new_size.aspect(false); // respect aspect ratio
+		if (width_size.width() >= width && width_size.height() >= height)
+			source_image->resize(width_size); // width is larger, so resize to it
+		else
+			source_image->resize(height_size); // height is larger, so resize to it
+		source_width = source_image->size().width();
+		source_height = source_image->size().height();
+		break;
+	}
 
-	// Location, Rotation, and Scale
-	float r = source_clip->rotation.GetValue(clip_frame_number);
-	float x = source_clip->location_x.GetValue(clip_frame_number);
-	float y = source_clip->location_y.GetValue(clip_frame_number);
-	float sx = source_clip->scale_x.GetValue(clip_frame_number);
-	float sy = source_clip->scale_y.GetValue(clip_frame_number);
+	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
+	float x = 0.0; // left
+	float y = 0.0; // top
+	switch (source_clip->gravity)
+	{
+	case (GRAVITY_TOP):
+		x = (width - source_width) / 2.0; // center
+		break;
+	case (GRAVITY_TOP_RIGHT):
+		x = width - source_width; // right
+		break;
+	case (GRAVITY_LEFT):
+		y = (height - source_height) / 2.0; // center
+		break;
+	case (GRAVITY_CENTER):
+		x = (width - source_width) / 2.0; // center
+		y = (height - source_height) / 2.0; // center
+		break;
+	case (GRAVITY_RIGHT):
+		x = width - source_width; // right
+		y = (height - source_height) / 2.0; // center
+		break;
+	case (GRAVITY_BOTTOM_LEFT):
+		y = (height - source_height); // bottom
+		break;
+	case (GRAVITY_BOTTOM):
+		x = (width - source_width) / 2.0; // center
+		y = (height - source_height); // bottom
+		break;
+	case (GRAVITY_BOTTOM_RIGHT):
+		x = width - source_width; // right
+		y = (height - source_height); // bottom
+		break;
+	}
 
-	// Resize source canvas the same size as timeline canvas
-	Magick::Geometry source_original_size = source_image->size();
-	source_image->size(Magick::Geometry(width, height, 0,0,false,false));
+	/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
+	source_image->borderColor(Magick::Color("none"));
+	source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
+	source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
 
-	// Set the location (X,Y), rotation, and X-Scale, Y-Scale of the source image
-	// X,Y     Scale     Angle  NewX,NewY
-	double distort_args[7] = {source_original_size.width()/2,source_original_size.height()/2,  sx,sy,  r,  x,y };
+	/* LOCATION, ROTATION, AND SCALE */
+	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
+	x += width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
+	y += height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
+	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
+	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
+
+	// origin X,Y     Scale     Angle  NewX,NewY
+	double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
 	source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
 
-	// Composite images together
+	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
 	new_image->composite(*source_image.get(), 0, 0, Magick::BlendCompositeOp);
 }

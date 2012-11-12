@@ -205,10 +205,10 @@ void FFmpegReader::UpdateAudioInfo()
 	if (!info.has_video)
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
-		info.fps.num = 30;
+		info.fps.num = 24;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
-		info.video_timebase.den = 30;
+		info.video_timebase.den = 24;
 		info.video_length = info.duration * info.fps.ToDouble();
 
 	}
