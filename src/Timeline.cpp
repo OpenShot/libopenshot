@@ -65,10 +65,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
 	{
-		// Calculate & set opacity of new image
-		int new_opacity = 65535.0f * source_clip->alpha.GetValue(clip_frame_number);
-		if (new_opacity < 0) new_opacity = 0; // completely invisible
-		//source_image->opacity(new_opacity);
+		float alpha = 1.0 - source_clip->alpha.GetValue(clip_frame_number);
+		source_image->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, alpha);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -253,7 +251,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma xxx omp task firstprivate(frame_number)
+					#pragma omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));

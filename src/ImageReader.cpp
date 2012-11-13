@@ -88,6 +88,7 @@ tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderCl
 
 		// Add Image data to frame
 		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+		copy_image->modifyImage(); // actually copy the image data to this object
 		image_frame->AddImage(copy_image);
 
 		// return frame object
