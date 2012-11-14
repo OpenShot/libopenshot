@@ -147,17 +147,28 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	y += height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
 	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
 	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
+	bool is_x_animated = source_clip->location_x.Points.size() > 2;
+	bool is_y_animated = source_clip->location_y.Points.size() > 2;
 
-	// origin X,Y     Scale     Angle  NewX,NewY
-	if (source_width != width || source_height != height || round(r) != 0 || round(x) != 0 || round(y) != 0 || round(sx) != 1 || round(sy) != 1)
+	int offset_x = 0;
+	int offset_y = 0;
+	if ((round(x) != 0 || round(y) != 0) && (round(r) == 0 && round(sx) == 1 && round(sy) == 1 && !is_x_animated && !is_y_animated))
 	{
+		// If only X and Y are different, and no animation is being used (just set the offset for speed)
+		offset_x = round(x);
+		offset_y = round(y);
+
+	} else if (round(r) != 0 || round(x) != 0 || round(y) != 0 || round(sx) != 1 || round(sy) != 1)
+	{
+		// Use the distort operator, which is very CPU intensive
+		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
 		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
 	}
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), 0, 0, Magick::OverCompositeOp);
+	new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
 }
 
 // Update the list of 'opened' clips
