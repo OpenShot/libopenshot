@@ -5,13 +5,14 @@
 
 %{
 
+#include "../include/FileReaderBase.h"
+#include "../include/FileWriterBase.h"
+
 #include "../include/Cache.h"
 #include "../include/Clip.h"
 #include "../include/Coordinate.h"
 #include "../include/DummyReader.h"
 #include "../include/Exceptions.h"
-#include "../include/FileReaderBase.h"
-#include "../include/FileWriterBase.h"
 #include "../include/FFmpegReader.h"
 #include "../include/FFmpegWriter.h"
 #include "../include/Fraction.h"
@@ -91,13 +92,14 @@
 
 %}
 
+%include "../include/FileReaderBase.h"
+%include "../include/FileWriterBase.h"
+
 %include "../include/Cache.h"
 %include "../include/Clip.h"
 %include "../include/Coordinate.h"
 %include "../include/DummyReader.h"
 %include "../include/Exceptions.h"
-%include "../include/FileReaderBase.h"
-%include "../include/FileWriterBase.h"
 %include "../include/FFmpegReader.h"
 %include "../include/FFmpegWriter.h"
 %include "../include/Fraction.h"

@@ -7,6 +7,8 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+#include "FileReaderBase.h"
+
 #include <cmath>
 #include <ctime>
 #include <iostream>
@@ -16,7 +18,6 @@
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
-#include "FileReaderBase.h"
 #include "FrameRate.h"
 
 using namespace std;
