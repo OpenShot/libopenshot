@@ -18,10 +18,16 @@
 
 extern "C" {
 	#include <libavcodec/avcodec.h>
-	#include <libavutil/opt.h>
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
 	#include <libavutil/mathematics.h>
+
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
+	#include <libavutil/opt.h>
+#else
+	#include <libavcodec/opt.h>
+#endif
+
 }
 #include <cmath>
 #include <ctime>

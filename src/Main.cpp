@@ -27,30 +27,30 @@ int main()
 //	return 0;
 
 
-	//omp_set_num_threads(1);
-	//omp_set_nested(true);
-	//#pragma omp parallel
-	//{
-		//#pragma omp single
-		//{
-			cout << "Start reading JPEGS" << endl;
-			for (int x = 0; x <= 500; x++)
-			{
-				//#pragma omp task firstprivate(x)
-				//{
-					cout << x << endl;
-					ImageReader r("/home/jonathan/Desktop/TEMP/1.jpg");
-					tr1::shared_ptr<Frame> f(r.GetFrame(1));
-					//f->Save("/home/jonathan/Desktop/TEMP/1.jpg", 1.0);
-					r.Close();
-				//} // end omp task
-
-			} // end for loop
-
-		//} // end omp single
-	//} // end omp parallel
-	cout << "Done reading JPEGS" << endl;
-	return 0;
+//	//omp_set_num_threads(1);
+//	//omp_set_nested(true);
+//	//#pragma omp parallel
+//	//{
+//		//#pragma omp single
+//		//{
+//			cout << "Start reading JPEGS" << endl;
+//			for (int x = 0; x <= 500; x++)
+//			{
+//				//#pragma omp task firstprivate(x)
+//				//{
+//					cout << x << endl;
+//					ImageReader r("/home/jonathan/Desktop/TEMP/1.jpg");
+//					tr1::shared_ptr<Frame> f(r.GetFrame(1));
+//					//f->Save("/home/jonathan/Desktop/TEMP/1.jpg", 1.0);
+//					r.Close();
+//				//} // end omp task
+//
+//			} // end for loop
+//
+//		//} // end omp single
+//	//} // end omp parallel
+//	cout << "Done reading JPEGS" << endl;
+//	return 0;
 
 
 	// Create timeline
@@ -80,8 +80,8 @@ int main()
 	c3.Layer(3);
 	c3.End(20);
 	c3.gravity = GRAVITY_CENTER;
-	//c3.scale_x.AddPoint(1, 0.1);
-	//c3.scale_x.AddPoint(300, 2.0);
+	c3.scale_x.AddPoint(1, 0.1);
+	c3.scale_x.AddPoint(300, 2.0);
 	//c3.scale_y.AddPoint(1, 0.1);
 	//c3.scale_y.AddPoint(300, 2.0);
 
@@ -182,7 +182,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 80; frame++)
+	for (int frame = 1; frame <= 300; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)

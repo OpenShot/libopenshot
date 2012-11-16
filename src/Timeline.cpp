@@ -134,12 +134,12 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
-//	if (source_width != width || source_height != height)
-//	{
-//		source_image->borderColor(Magick::Color("none"));
-//		source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
-//		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
-//	}
+	if (source_width != width || source_height != height)
+	{
+		source_image->borderColor(Magick::Color("none"));
+		source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
+		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+	}
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
@@ -164,9 +164,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
 		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
-
-		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
-		source_image->display();
 	}
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */

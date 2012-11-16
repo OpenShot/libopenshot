@@ -464,6 +464,7 @@ void FFmpegWriter::flush_encoders()
     if (info.has_video && video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && video_codec->codec->id == CODEC_ID_RAWVIDEO)
         return;
 
+    int error_code = 0;
     int stop_encoding = 1;
 
     // FLUSH VIDEO ENCODER
@@ -473,7 +474,7 @@ void FFmpegWriter::flush_encoders()
 			cout << "Flushing VIDEO buffer!" << endl;
 
 			// Increment PTS (in frames and scaled to the codec's timebase)
-			write_video_count += av_rescale_q(1, AVRational{info.fps.den, info.fps.num}, video_codec->time_base);
+			write_video_count += av_rescale_q(1, (AVRational){info.fps.den, info.fps.num}, video_codec->time_base);
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -482,9 +483,14 @@ void FFmpegWriter::flush_encoders()
 
 			/* encode the image */
 			int got_packet = 0;
-			int error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
+			error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				string error_description = av_err2str(error_code);
+				string error_description = "Unknown";
+
+				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					error_description = av_err2str(error_code);
+				#endif
+
 				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while flushing video frame", -1);
 			}
@@ -506,10 +512,15 @@ void FFmpegWriter::flush_encoders()
 			pkt.stream_index = video_st->index;
 
 			// Write packet
-			int averror = av_interleaved_write_frame(oc, &pkt);
-			if (averror != 0) {
-				string error_description = av_err2str(averror);
-				cout << "error: " << averror << ": " << error_description << endl;
+			error_code = av_interleaved_write_frame(oc, &pkt);
+			if (error_code != 0) {
+				string error_description = "Unknown";
+
+				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					error_description = av_err2str(error_code);
+				#endif
+
+				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
 			}
 		}
@@ -521,7 +532,7 @@ void FFmpegWriter::flush_encoders()
 			cout << "Flushing AUDIO buffer!" << endl;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_codec->frame_size / av_get_bytes_per_sample(audio_codec->sample_fmt), AVRational{1, info.sample_rate}, audio_codec->time_base);
+			write_audio_count += av_rescale_q(audio_codec->frame_size / av_get_bytes_per_sample(audio_codec->sample_fmt), (AVRational){1, info.sample_rate}, audio_codec->time_base);
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -531,9 +542,14 @@ void FFmpegWriter::flush_encoders()
 
 			/* encode the image */
 			int got_packet = 0;
-			int error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
+			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				string error_description = av_err2str(error_code);
+				string error_description = "Unknown";
+
+				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					error_description = av_err2str(error_code);
+				#endif
+
 				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingAudio("Error while flushing audio frame", -1);
 			}
@@ -559,10 +575,15 @@ void FFmpegWriter::flush_encoders()
 			pkt.flags |= AV_PKT_FLAG_KEY;
 
 			// Write packet
-			int averror = av_write_frame(oc, &pkt);
-			if (averror != 0) {
-				string error_description = av_err2str(averror);
-				cout << "error: " << averror << ": " << error_description << endl;
+			error_code = av_write_frame(oc, &pkt);
+			if (error_code != 0) {
+				string error_description = "Unknown";
+
+				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					error_description = av_err2str(error_code);
+				#endif
+
+				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
 			}
 		}
@@ -971,7 +992,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				break;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt), AVRational{1, info.sample_rate}, audio_codec->time_base);
+			write_audio_count += av_rescale_q(audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt), (AVRational){1, info.sample_rate}, audio_codec->time_base);
 
 			// Create AVFrame (and fill it with samples)
 			AVFrame *frame_final = avcodec_alloc_frame();
@@ -1013,11 +1034,16 @@ void FFmpegWriter::write_audio_packets(bool final)
 				pkt.flags |= AV_PKT_FLAG_KEY;
 
 				/* write the compressed frame in the media file */
-				int averror = av_interleaved_write_frame(oc, &pkt);
-				if (averror != 0)
+				int error_code = av_interleaved_write_frame(oc, &pkt);
+				if (error_code != 0)
 				{
-					string error_description = av_err2str(averror);
-					cout << "error: " << averror << ": " << error_description << endl;
+					string error_description = "Unknown";
+
+					#if LIBAVFORMAT_VERSION_MAJOR >= 53
+						error_description = av_err2str(error_code);
+					#endif
+
+					cout << "error: " << error_code << ": " << error_description << endl;
 					throw ErrorEncodingAudio("Error while writing compressed audio frame", write_audio_count);
 				}
 			}
@@ -1159,11 +1185,15 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.pts = write_video_count;
 
 		/* write the compressed frame in the media file */
-		int averror = 0;
-		averror = av_interleaved_write_frame(oc, &pkt);
-		if (averror != 0)
+		int error_code = av_interleaved_write_frame(oc, &pkt);
+		if (error_code != 0)
 		{
-			//string error_description = av_err2str(averror);
+			string error_description = "Unknown";
+
+			#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				error_description = av_err2str(error_code);
+			#endif
+
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
 
@@ -1179,7 +1209,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.pts = pkt.dts = AV_NOPTS_VALUE;
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
-		write_video_count += av_rescale_q(1, AVRational{info.fps.den, info.fps.num}, video_codec->time_base);
+		write_video_count += av_rescale_q(1, (AVRational){info.fps.den, info.fps.num}, video_codec->time_base);
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
@@ -1206,11 +1236,16 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 			/* write the compressed frame in the media file */
 			//int averror = av_write_frame(oc, &pkt);
-			int averror = av_interleaved_write_frame(oc, &pkt);
-			if (averror != 0)
+			int error_code = av_interleaved_write_frame(oc, &pkt);
+			if (error_code != 0)
 			{
-				string error_description = av_err2str(averror);
-				cout << "error: " << averror << ": " << error_description << endl;
+				string error_description = "Unknown";
+
+				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					error_description = av_err2str(error_code);
+				#endif
+
+				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
 		}
