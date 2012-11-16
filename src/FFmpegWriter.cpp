@@ -446,9 +446,6 @@ void FFmpegWriter::WriteTrailer()
 	// Flush encoders (who sometimes hold on to frames)
 	flush_encoders();
 
-	// Flush packets
-	//av_interleaved_write_frame(oc, NULL);
-
 	/* write the trailer, if any. The trailer must be written
 	 * before you close the CodecContexts open when you wrote the
 	 * header; otherwise write_trailer may try to use memory that
@@ -1235,7 +1232,6 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			pkt.stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
-			//int averror = av_write_frame(oc, &pkt);
 			int error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0)
 			{
