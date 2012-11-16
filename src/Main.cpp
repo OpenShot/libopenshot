@@ -5,6 +5,7 @@
 #include <queue>
 #include <tr1/memory>
 #include "../include/OpenShot.h"
+#include <omp.h>
 
 using namespace openshot;
 using namespace tr1;
@@ -25,6 +26,31 @@ int main()
 //
 //	return 0;
 
+
+	//omp_set_num_threads(1);
+	//omp_set_nested(true);
+	//#pragma omp parallel
+	//{
+		//#pragma omp single
+		//{
+			cout << "Start reading JPEGS" << endl;
+			for (int x = 0; x <= 500; x++)
+			{
+				//#pragma omp task firstprivate(x)
+				//{
+					cout << x << endl;
+					ImageReader r("/home/jonathan/Desktop/TEMP/1.jpg");
+					tr1::shared_ptr<Frame> f(r.GetFrame(1));
+					//f->Save("/home/jonathan/Desktop/TEMP/1.jpg", 1.0);
+					r.Close();
+				//} // end omp task
+
+			} // end for loop
+
+		//} // end omp single
+	//} // end omp parallel
+	cout << "Done reading JPEGS" << endl;
+	return 0;
 
 
 	// Create timeline
