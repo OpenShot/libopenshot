@@ -49,14 +49,17 @@ namespace openshot {
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		Cache final_cache; ///<Final cache of timeline frames
 
+		/// Process a new layer of video or audio
+		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number);
+
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);
 
 		/// Calculate the # of samples per video frame (for a specific frame number)
 		int GetSamplesPerFrame(int frame_number);
 
-		/// Process a new layer of video or audio
-		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number);
+		/// Compare 2 floating point numbers for equality
+		bool isEqual(double a, double b);
 
 		/// Update the list of 'opened' clips
 		void update_open_clips(Clip *clip, bool is_open);

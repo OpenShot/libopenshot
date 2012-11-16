@@ -159,8 +159,8 @@ int main()
 //	c1.time.PrintValues();
 
 	// Add clips
-	t.AddClip(&c1);
-	t.AddClip(&c2);
+	//t.AddClip(&c1);
+	//t.AddClip(&c2);
 	t.AddClip(&c3);
 
 

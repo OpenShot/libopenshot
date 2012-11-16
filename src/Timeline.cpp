@@ -152,14 +152,16 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	int offset_x = 0;
 	int offset_y = 0;
-	if ((round(x) != 0 || round(y) != 0) && (round(r) == 0 && round(sx) == 1 && round(sy) == 1 && !is_x_animated && !is_y_animated))
+	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
+		cout << "SIMPLE" << endl;
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
 		offset_x = round(x);
 		offset_y = round(y);
 
-	} else if (round(r) != 0 || round(x) != 0 || round(y) != 0 || round(sx) != 1 || round(sy) != 1)
+	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
+		cout << "COMPLEX" << endl;
 		// Use the distort operator, which is very CPU intensive
 		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
@@ -237,6 +239,11 @@ int Timeline::GetSamplesPerFrame(int frame_number)
 	return samples_per_frame;
 }
 
+// Compare 2 floating point numbers for equality
+bool Timeline::isEqual(double a, double b)
+{
+	return fabs(a - b) < 0.000001;
+}
 
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
@@ -262,7 +269,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma xxx omp task firstprivate(frame_number)
+					#pragma omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
