@@ -484,7 +484,7 @@ void FFmpegWriter::flush_encoders()
 			if (error_code < 0) {
 				string error_description = "Unknown";
 
-				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				#ifdef av_err2str
 					error_description = av_err2str(error_code);
 				#endif
 
@@ -513,7 +513,7 @@ void FFmpegWriter::flush_encoders()
 			if (error_code != 0) {
 				string error_description = "Unknown";
 
-				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				#ifdef av_err2str
 					error_description = av_err2str(error_code);
 				#endif
 
@@ -543,7 +543,7 @@ void FFmpegWriter::flush_encoders()
 			if (error_code < 0) {
 				string error_description = "Unknown";
 
-				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				#ifdef av_err2str
 					error_description = av_err2str(error_code);
 				#endif
 
@@ -576,7 +576,7 @@ void FFmpegWriter::flush_encoders()
 			if (error_code != 0) {
 				string error_description = "Unknown";
 
-				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				#ifdef av_err2str
 					error_description = av_err2str(error_code);
 				#endif
 
@@ -1044,7 +1044,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				{
 					string error_description = "Unknown";
 
-					#if LIBAVFORMAT_VERSION_MAJOR >= 53
+					#ifdef av_err2str
 						error_description = av_err2str(error_code);
 					#endif
 
@@ -1195,7 +1195,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		{
 			string error_description = "Unknown";
 
-			#if LIBAVFORMAT_VERSION_MAJOR >= 53
+			#ifdef av_err2str
 				error_description = av_err2str(error_code);
 			#endif
 
@@ -1273,7 +1273,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			{
 				string error_description = "Unknown";
 
-				#if LIBAVFORMAT_VERSION_MAJOR >= 53
+				#ifdef av_err2str
 					error_description = av_err2str(error_code);
 				#endif
 
