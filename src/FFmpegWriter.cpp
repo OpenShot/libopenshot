@@ -1225,7 +1225,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = 0;
-		#if LIBAVFORMAT_VERSION_MAJOR >= 53
+		#if LIBAVFORMAT_VERSION_MAJOR >= 54
 			// Newer versions of FFMpeg
 			error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 
