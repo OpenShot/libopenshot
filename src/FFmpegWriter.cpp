@@ -1037,7 +1037,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			frame_final->nb_samples = audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
-					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 0);
+					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 1);
 
 			// Init the packet
 			AVPacket pkt;
