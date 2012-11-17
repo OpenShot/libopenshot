@@ -57,9 +57,9 @@ int main()
 	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
-	Clip c2(new ImageReader("/home/jonathan/Desktop/logo.png"));
-	Clip c3(new ImageReader("/home/jonathan/Desktop/big_logo.png"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
+	Clip c2(new ImageReader("/home/jonathan/Desktop/logo1.png"));
+	Clip c3(new ImageReader("/home/jonathan/Desktop/logo1.png"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
@@ -80,8 +80,8 @@ int main()
 	c3.Layer(3);
 	c3.End(20);
 	c3.gravity = GRAVITY_CENTER;
-	c3.scale_x.AddPoint(1, 0.1);
-	c3.scale_x.AddPoint(300, 2.0);
+	//c3.scale_x.AddPoint(1, 0.1);
+	//c3.scale_x.AddPoint(300, 2.0);
 	//c3.scale_y.AddPoint(1, 0.1);
 	//c3.scale_y.AddPoint(300, 2.0);
 

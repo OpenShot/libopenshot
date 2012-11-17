@@ -677,7 +677,11 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 	c = st->codec;
 	c->codec_id = codec->id;
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
+#else
+	c->codec_type = CODEC_TYPE_AUDIO;
+#endif
 
 	// Set the sample parameters
 	c->bit_rate = info.audio_bit_rate;
@@ -766,7 +770,11 @@ AVStream* FFmpegWriter::add_video_stream()
 
 	c = st->codec;
 	c->codec_id = codec->id;
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
+#else
+	c->codec_type = CODEC_TYPE_VIDEO;
+#endif
 
 	/* put sample parameters */
 	c->bit_rate = info.video_bit_rate;
@@ -1177,8 +1185,8 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.data= (uint8_t *)frame_final;
 		pkt.size= sizeof(AVPicture);
 
-		// Increment PTS (1 per frame)
-		write_video_count += 1;
+		// Increment PTS (in frames and scaled to the codec's timebase)
+		write_video_count += av_rescale_q(1, (AVRational){info.fps.den, info.fps.num}, video_codec->time_base);
 		pkt.pts = write_video_count;
 
 		/* write the compressed frame in the media file */
@@ -1205,6 +1213,9 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		pkt.size = 0;
 		pkt.pts = pkt.dts = AV_NOPTS_VALUE;
 
+		// Pointer for video buffer (if using old FFmpeg version)
+		uint8_t *video_outbuf = NULL;
+
 		// Increment PTS (in frames and scaled to the codec's timebase)
 		write_video_count += av_rescale_q(1, (AVRational){info.fps.den, info.fps.num}, video_codec->time_base);
 
@@ -1213,7 +1224,32 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 		/* encode the image */
 		int got_packet_ptr = 0;
-		int error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
+		int error_code = 0;
+		#if LIBAVFORMAT_VERSION_MAJOR >= 53
+			// Newer versions of FFMpeg
+			error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
+
+		#else
+			// Older versions of FFmpeg (much sloppier)
+
+			// Encode Picture and Write Frame
+			int video_outbuf_size = 200000;
+			video_outbuf = new uint8_t[200000];
+
+			/* encode the image */
+			int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
+
+			/* if zero size, it means the image was buffered */
+			if (out_size > 0) {
+				if(video_codec->coded_frame->key_frame)
+					pkt.flags |= AV_PKT_FLAG_KEY;
+				pkt.data= video_outbuf;
+				pkt.size= out_size;
+
+				// got data back (so encode this frame)
+				got_packet_ptr = 1;
+			}
+		#endif
 
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
@@ -1245,6 +1281,10 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
 		}
+
+		// Deallocate memory (if needed)
+		if (video_outbuf)
+			delete[] video_outbuf;
 
 		// Deallocate packet
 		av_free_packet(&pkt);
