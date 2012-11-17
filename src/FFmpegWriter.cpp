@@ -33,7 +33,6 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0)
 {
-
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
 
@@ -478,9 +477,39 @@ void FFmpegWriter::flush_encoders()
 			pkt.data = NULL;
 			pkt.size = 0;
 
+			// Pointer for video buffer (if using old FFmpeg version)
+			uint8_t *video_outbuf = NULL;
+
 			/* encode the image */
 			int got_packet = 0;
+			int error_code = 0;
+
+			#if LIBAVFORMAT_VERSION_MAJOR >= 54
+				// Newer versions of FFMpeg
 			error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
+
+			#else
+				// Older versions of FFmpeg (much sloppier)
+
+				// Encode Picture and Write Frame
+				int video_outbuf_size = 0;
+				//video_outbuf = new uint8_t[200000];
+
+				/* encode the image */
+				int out_size = avcodec_encode_video(video_codec, NULL, video_outbuf_size, NULL);
+
+				/* if zero size, it means the image was buffered */
+				if (out_size > 0) {
+					if(video_codec->coded_frame->key_frame)
+						pkt.flags |= AV_PKT_FLAG_KEY;
+					pkt.data= video_outbuf;
+					pkt.size= out_size;
+
+					// got data back (so encode this frame)
+					got_packet = 1;
+				}
+			#endif
+
 			if (error_code < 0) {
 				string error_description = "Unknown";
 
@@ -520,6 +549,10 @@ void FFmpegWriter::flush_encoders()
 				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
 			}
+
+			// Deallocate memory (if needed)
+			if (video_outbuf)
+				delete[] video_outbuf;
 		}
 
     // FLUSH AUDIO ENCODER

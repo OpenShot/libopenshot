@@ -159,9 +159,9 @@ int main()
 //	c1.time.PrintValues();
 
 	// Add clips
-	//t.AddClip(&c1);
+	t.AddClip(&c1);
 	//t.AddClip(&c2);
-	t.AddClip(&c3);
+	//t.AddClip(&c3);
 
 
 	// Create a writer
@@ -182,7 +182,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 300; frame++)
+	for (int frame = 1; frame <= 180; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
