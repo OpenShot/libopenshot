@@ -57,7 +57,7 @@ int main()
 	Timeline t(640, 360, Framerate(24,1), 44100, 2);
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1024-stereo.mp4"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
 	Clip c2(new ImageReader("/home/jonathan/Desktop/logo1.png"));
 	Clip c3(new ImageReader("/home/jonathan/Desktop/logo1.png"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));

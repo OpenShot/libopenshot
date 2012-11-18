@@ -517,8 +517,8 @@ void FFmpegWriter::flush_encoders()
 					error_description = av_err2str(error_code);
 				#endif
 
-				cout << "error: " << error_code << ": " << error_description << endl;
-				throw ErrorEncodingVideo("Error while flushing video frame", -1);
+				cout << "error encoding video: " << error_code << ": " << error_description << endl;
+				//throw ErrorEncodingVideo("Error while flushing video frame", -1);
 			}
 			if (!got_packet) {
 				stop_encoding = 1;
@@ -546,8 +546,8 @@ void FFmpegWriter::flush_encoders()
 					error_description = av_err2str(error_code);
 				#endif
 
-				cout << "error: " << error_code << ": " << error_description << endl;
-				throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
+				cout << "error writing video: " << error_code << ": " << error_description << endl;
+				//throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
 			}
 
 			// Deallocate memory (if needed)
@@ -580,8 +580,8 @@ void FFmpegWriter::flush_encoders()
 					error_description = av_err2str(error_code);
 				#endif
 
-				cout << "error: " << error_code << ": " << error_description << endl;
-				throw ErrorEncodingAudio("Error while flushing audio frame", -1);
+				cout << "error encoding audio: " << error_code << ": " << error_description << endl;
+				//throw ErrorEncodingAudio("Error while flushing audio frame", -1);
 			}
 			if (!got_packet) {
 				stop_encoding = 1;
@@ -613,8 +613,8 @@ void FFmpegWriter::flush_encoders()
 					error_description = av_err2str(error_code);
 				#endif
 
-				cout << "error: " << error_code << ": " << error_description << endl;
-				throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
+				cout << "error writing audio: " << error_code << ": " << error_description << endl;
+				//throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
 			}
 		}
 
@@ -719,13 +719,6 @@ AVStream* FFmpegWriter::add_audio_stream()
 	// Set the sample parameters
 	c->bit_rate = info.audio_bit_rate;
 	c->channels = info.channels;
-
-	// Check for valid timebase
-//	if (c->time_base.den == 0 || c->time_base.num == 0)
-//	{
-//		c->time_base.num = st->time_base.num;
-//		c->time_base.den = st->time_base.den;
-//	}
 
 	// Set valid sample rate (or throw error)
 	if (codec->supported_samplerates) {
