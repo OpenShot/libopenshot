@@ -6,7 +6,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
-	  seek_audio_frame_found(-1), seek_video_frame_found(-1) {
+	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), counter(0), previous_audio_pts(0), total_samples(0) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -137,6 +137,10 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 			UpdateAudioInfo();
 		}
 
+		// Init previous audio location to zero
+		previous_packet_location.frame = -1;
+		previous_packet_location.sample_start = 0;
+
 		// Mark as "open"
 		is_open = true;
 	}
@@ -161,6 +165,10 @@ void FFmpegReader::Close()
 			avcodec_flush_buffers(aCodecCtx);
 			avcodec_close(aCodecCtx);
 		}
+
+		// Close audio resample context
+		if (resampleCtx)
+			audio_resample_close(resampleCtx);
 
 		// Clear final cache
 		final_cache.Clear();
@@ -189,6 +197,9 @@ void FFmpegReader::UpdateAudioInfo()
 	// Set audio timebase
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
+
+	cout << "aStream->time_base: " << aStream->time_base.num << "/" << aStream->time_base.den << endl;
+	cout << "aCodecCtx->time_base: " << aCodecCtx->time_base.num << "/" << aCodecCtx->time_base.den << endl;
 
 	// Get timebase of audio stream (if valid)
 	if (aStream->duration > 0.0f)
@@ -707,6 +718,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
+	//if (packet->pts == 4378 || packet->pts == 4402)
+	//	cout << "ProcessAudioPacket: pts: " << packet->pts << ", my_packet->size: " << my_packet->size << endl;
+
+	// DEBUG COUNTER
+	counter++;
+
 	int packet_samples = 0;
 	while (my_packet->size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
@@ -726,6 +743,44 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		my_packet->data += used;
 		my_packet->size -= used;
 	}
+
+	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
+	int pts_remaining_samples = packet_samples / info.channels;
+	while (pts_remaining_samples)
+	{
+		// Get Samples per frame (for this frame number)
+		int samples_per_frame = GetSamplesPerFrame(previous_packet_location.frame);
+
+		// Calculate # of samples to add to this frame
+		int samples = samples_per_frame - previous_packet_location.sample_start;
+		if (samples > pts_remaining_samples)
+			samples = pts_remaining_samples;
+
+		// Decrement remaining samples
+		pts_remaining_samples -= samples;
+
+		if (pts_remaining_samples > 0) {
+			// next frame
+			previous_packet_location.frame++;
+			previous_packet_location.sample_start = 0;
+		} else {
+			// Increment sample start
+			previous_packet_location.sample_start += samples;
+		}
+
+	}
+
+	// DEBUG
+	total_samples += packet_samples;
+	cout << "packet: " << counter << ", PTS: " << packet->pts << ", PTS Diff: " << (packet->pts - previous_audio_pts) << ", samples: " << packet_samples << ", total: " << total_samples << endl;
+	previous_audio_pts = packet->pts;
+//	if (packet->pts >= 4378 && packet->pts <= 4500)
+//	{
+//		cout << "ProcessAudioPacket: pts: " << packet->pts << ", packet_samples: " << packet_samples << endl;
+//		cout << "first samples for pts: " << packet->pts << ", " << audio_buf[0] << ", " << audio_buf[1] << ", " << audio_buf[2] << ", " << audio_buf[3] << ", " << audio_buf[4] << ", " << audio_buf[5] << endl;
+//		cout << "last samples for pts: " << packet->pts << ", " << audio_buf[2045] << ", " << audio_buf[2046] << ", " << audio_buf[2047] << ", " << audio_buf[2048] << ", " << audio_buf[2049] << ", " << audio_buf[2050] << endl;
+//	}
+
 
 	#pragma omp critical (packet_cache)
 	{
@@ -749,14 +804,15 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
-			ReSampleContext *resampleCtx = av_audio_resample_init(
-					info.channels,
-					info.channels,
-					info.sample_rate,
-					info.sample_rate,
-					AV_SAMPLE_FMT_S16,
-					aCodecCtx->sample_fmt,
-					0, 0, 0, 0.0f);
+			if (!resampleCtx)
+				resampleCtx = av_audio_resample_init(
+						info.channels,
+						info.channels,
+						info.sample_rate,
+						info.sample_rate,
+						AV_SAMPLE_FMT_S16,
+						aCodecCtx->sample_fmt,
+						0, 0, 0, 0.0f);
 
 			if (!resampleCtx)
 				throw InvalidCodec("Failed to convert audio samples to 16 bit (SAMPLE_FMT_S16).", path);
@@ -771,9 +827,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				// Deallocate resample buffer
 				delete[] converted_audio;
 				converted_audio = NULL;
-
-				// Close context
-				audio_resample_close(resampleCtx);
 			}
 		}
 
@@ -1078,6 +1131,20 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 
 	// Prepare final audio packet location
 	audio_packet_location location = {whole_frame, sample_start};
+
+	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
+	int diff_previous_packet = abs(location.sample_start - previous_packet_location.sample_start);
+	if (location.frame == previous_packet_location.frame && diff_previous_packet >= 0 && diff_previous_packet <= 100)
+	{
+		if (location.frame >= 175 && location.frame < 220)
+			cout << "GAP DETECTED!!! Changing frame " << location.frame << ", sample start: " << location.sample_start << " to " << previous_packet_location.sample_start + 1 << endl;
+
+		// Update sample start, to prevent gaps in audio
+		location.sample_start = previous_packet_location.sample_start + 1;
+	}
+
+	// Set previous location
+	previous_packet_location = location;
 
 	// Return the associated video frame and starting sample #
 	return location;

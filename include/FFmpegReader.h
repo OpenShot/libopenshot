@@ -69,9 +69,16 @@ namespace openshot
 		bool check_interlace;
 		bool check_fps;
 
+		// DEBUG STUFF
+		int counter;
+		int previous_audio_pts;
+		int total_samples;
+		audio_packet_location previous_packet_location;
+
 		int num_of_rescalers;
 		int rescaler_position;
 		vector<SwsContext*> image_rescalers;
+		ReSampleContext *resampleCtx;
 
 		Cache final_cache;
 		Cache working_cache;
