@@ -191,9 +191,6 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 	// Get time mapped frame number (used to increase speed, change direction, etc...)
 	tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
 
-	// Apply basic image processing (scale, rotation, etc...)
-	//apply_basic_image_processing(new_frame, new_frame_number);
-
 	// Return processed 'frame'
 	return new_frame;
 }
@@ -448,19 +445,6 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 	// Return new time mapped frame
 	return new_frame;
-}
-
-// Apply basic image processing (scale, rotate, move, etc...)
-void Clip::apply_basic_image_processing(tr1::shared_ptr<Frame> frame, int frame_number)
-{
-	// Get values
-	float rotation_value = rotation.GetValue(frame_number);
-	//float scale_x_value = scale_x.GetValue(frame_number);
-	//float scale_y_value = scale_y.GetValue(frame_number);
-
-	// rotate frame
-	if (rotation_value != 0)
-		frame->Rotate(rotation_value);
 }
 
 // Adjust frame number minimum value

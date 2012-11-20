@@ -26,6 +26,10 @@ FrameMapper::FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Meth
 	info.video_timebase.num = target.GetFraction().den;
 	info.video_timebase.den = target.GetFraction().num;
 	info.video_length = round(info.duration * info.fps.ToDouble());
+	info.sample_rate = reader->info.sample_rate;
+	info.channels = reader->info.channels;
+	info.width = reader->info.width;
+	info.height = reader->info.height;
 
 	// Used to toggle odd / even fields
 	field_toggle = true;
@@ -252,6 +256,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 	// Create a new frame
 	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
+	frame->SetSampleRate(info.sample_rate);
 
 	// Copy the image from the odd field (TODO: make this copy each field from the correct frames)
 	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage(), true);

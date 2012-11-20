@@ -69,12 +69,6 @@ namespace openshot
 		bool check_interlace;
 		bool check_fps;
 
-		// DEBUG STUFF
-		int counter;
-		int previous_audio_pts;
-		int total_samples;
-		audio_packet_location previous_packet_location;
-
 		int num_of_rescalers;
 		int rescaler_position;
 		vector<SwsContext*> image_rescalers;
@@ -86,6 +80,7 @@ namespace openshot
 		map<AVPicture*, AVPicture*> frames;
 		map<int, int> processing_video_frames;
 		map<int, int> processing_audio_frames;
+		audio_packet_location previous_packet_location;
 
 		bool is_seeking;
 		int seeking_pts;

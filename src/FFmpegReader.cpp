@@ -6,7 +6,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
-	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), counter(0), previous_audio_pts(0), total_samples(0) {
+	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -718,12 +718,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	//if (packet->pts == 4378 || packet->pts == 4402)
-	//	cout << "ProcessAudioPacket: pts: " << packet->pts << ", my_packet->size: " << my_packet->size << endl;
-
-	// DEBUG COUNTER
-	counter++;
-
 	int packet_samples = 0;
 	while (my_packet->size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
@@ -745,7 +739,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	}
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
-	int pts_remaining_samples = packet_samples / info.channels;
+	int pts_remaining_samples = round(packet_samples / info.channels);
 	while (pts_remaining_samples)
 	{
 		// Get Samples per frame (for this frame number)
@@ -770,26 +764,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 	}
 
-	// DEBUG
-	total_samples += packet_samples;
-	cout << "packet: " << counter << ", PTS: " << packet->pts << ", PTS Diff: " << (packet->pts - previous_audio_pts) << ", samples: " << packet_samples << ", total: " << total_samples << endl;
-	previous_audio_pts = packet->pts;
-//	if (packet->pts >= 4378 && packet->pts <= 4500)
-//	{
-//		cout << "ProcessAudioPacket: pts: " << packet->pts << ", packet_samples: " << packet_samples << endl;
-//		cout << "first samples for pts: " << packet->pts << ", " << audio_buf[0] << ", " << audio_buf[1] << ", " << audio_buf[2] << ", " << audio_buf[3] << ", " << audio_buf[4] << ", " << audio_buf[5] << endl;
-//		cout << "last samples for pts: " << packet->pts << ", " << audio_buf[2045] << ", " << audio_buf[2046] << ", " << audio_buf[2047] << ", " << audio_buf[2048] << ", " << audio_buf[2049] << ", " << audio_buf[2050] << endl;
-//	}
-
-
 	#pragma omp critical (packet_cache)
 	{
 		// Remove packet
 		av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3()
 		RemoveAVPacket(my_packet);
 	}
-
-
 
 	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
 	{
@@ -835,7 +815,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		{
 			// Array of floats (to hold samples for each channel)
 			starting_frame_number = target_frame;
-			int channel_buffer_size = (packet_samples / info.channels) + 1;
+			int channel_buffer_size = round(packet_samples / info.channels);
 			float *channel_buffer = new float[channel_buffer_size];
 
 			// Init buffer array
@@ -1136,11 +1116,20 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 	int diff_previous_packet = abs(location.sample_start - previous_packet_location.sample_start);
 	if (location.frame == previous_packet_location.frame && diff_previous_packet >= 0 && diff_previous_packet <= 100)
 	{
-		if (location.frame >= 175 && location.frame < 220)
-			cout << "GAP DETECTED!!! Changing frame " << location.frame << ", sample start: " << location.sample_start << " to " << previous_packet_location.sample_start + 1 << endl;
+		int orig_frame = location.frame;
+		int orig_start = location.sample_start;
 
 		// Update sample start, to prevent gaps in audio
-		location.sample_start = previous_packet_location.sample_start + 1;
+		if (previous_packet_location.sample_start + 1 <= samples_per_frame)
+			location.sample_start = previous_packet_location.sample_start + 1;
+		else
+		{
+			// set to next frame (since we exceeded the # of samples on a frame)
+			location.sample_start = 0;
+			location.frame++;
+		}
+
+		//cout << "GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
 	}
 
 	// Set previous location

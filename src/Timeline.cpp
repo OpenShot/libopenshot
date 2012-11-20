@@ -14,6 +14,15 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 	// Init cache
 	int64 bytes = height * width * 4 + (44100 * 2 * 4);
 	final_cache = Cache(20 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
+
+	// Init FileInfo struct (clear all values)
+	InitFileInfo();
+	info.width = width;
+	info.height = height;
+	info.fps = fps.GetFraction();
+	info.sample_rate = sample_rate;
+	info.channels = channels;
+	info.video_timebase = fps.GetFraction().Reciprocal();
 }
 
 // Add an openshot::Clip to the timeline
@@ -48,7 +57,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	#pragma omp critical (reader_lock)
 		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 	tr1::shared_ptr<Magick::Image> source_image = source_frame->GetImage();
-
 
 	// Get some basic image properties
 	int source_width = source_image->columns();
@@ -273,6 +281,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
+						new_frame->SetSampleRate(info.sample_rate);
 
 						// Calculate time of frame
 						float requested_time = calculate_time(frame_number, fps);

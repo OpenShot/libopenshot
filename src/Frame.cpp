@@ -526,9 +526,6 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 // Add audio samples to a specific channel
 void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
-	if (number >= 181 && number < 220)
-		cout << "AddAudio for frame: " << number << ", destChannel: " << destChannel << ", destStartSample: " << destStartSample << ", numSamples: " << numSamples << ", ending sample: " << (destStartSample + numSamples) << endl;
-
 	// Extend audio buffer (if needed)
 	if (destStartSample + numSamples > audio->getNumSamples())
 		audio->setSize(audio->getNumChannels(), destStartSample + numSamples, true, true, false);

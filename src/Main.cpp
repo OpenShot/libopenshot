@@ -54,7 +54,7 @@ int main()
 
 
 	// Create timeline
-	Timeline t(620, 348, Framerate(24,1), 44100, 2);
+	Timeline t(624, 348, Framerate(24,1), 44100, 2);
 
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
@@ -173,7 +173,7 @@ int main()
 	// Set options
 	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
 	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
-	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 620, 348, Fraction(1,1), false, false, 2000000);
+	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 624, 348, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -184,7 +184,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 300; frame++)
+	for (int frame = 1; frame <= 600; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
