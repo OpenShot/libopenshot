@@ -286,10 +286,10 @@ void FFmpegReader::UpdateVideoInfo()
 	if (info.fps.ToFloat() > 120.0f)
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
-		info.fps.num = 30;
+		info.fps.num = 24;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
-		info.video_timebase.den = 30;
+		info.video_timebase.den = 24;
 	}
 
 }
@@ -739,7 +739,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	}
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
-	int pts_remaining_samples = round(packet_samples / info.channels);
+	int pts_remaining_samples = round(packet_samples / info.channels) - 1; // Adjust for zero based array
 	while (pts_remaining_samples)
 	{
 		// Get Samples per frame (for this frame number)

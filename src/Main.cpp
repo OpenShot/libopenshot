@@ -58,8 +58,8 @@ int main()
 
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
-	//Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
-	Clip c1(new FFmpegReader("/home/jonathan/sintel.webm"));
+	Clip c1(new FFmpegReader("/home/jonathan/Music/lonely island/B004YRCAIU_(disc_1)_02_-_Mama_[Explicit].mp3"));
+	//Clip c1(new FFmpegReader("/home/jonathan/sintel.webm"));
 	Clip c2(new ImageReader("/home/jonathan/Desktop/logo1.png"));
 	Clip c3(new ImageReader("/home/jonathan/Desktop/logo1.png"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
@@ -172,7 +172,7 @@ int main()
 
 	// Set options
 	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
-	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, false);
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, true);
 	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 624, 348, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
@@ -189,7 +189,7 @@ int main()
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
 		{
-			//if (frame >= 181 && frame < 220)
+			//if (frame >= 20)
 			//	f->DisplayWaveform();
 
 			// Write frame
