@@ -30,6 +30,12 @@ namespace openshot {
 		return lhs->Position() <= rhs->Position() && lhs->Layer() < rhs->Layer();
 	}};
 
+	struct Color{
+		Keyframe red; ///<Curve representing the red value (0 - 65536)
+		Keyframe blue; ///<Curve representing the red value (0 - 65536)
+		Keyframe green; ///<Curve representing the red value (0 - 65536)
+	};
+
 	/**
 	 * \brief This class represents a timeline
 	 *
@@ -50,7 +56,7 @@ namespace openshot {
 		Cache final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
-		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number);
+		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number);
 
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);
@@ -97,6 +103,9 @@ namespace openshot {
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
 		Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
 		Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
+
+		// Background color
+		Color color; ///<Background color of timeline canvas
 
 		/// Open the reader (and start consuming resources)
 		void Open();

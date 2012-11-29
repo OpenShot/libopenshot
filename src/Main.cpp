@@ -55,6 +55,8 @@ int main()
 
 	// Create timeline
 	Timeline t(624, 348, Framerate(24,1), 44100, 2);
+	t.color.blue.AddPoint(1, 0);
+	t.color.blue.AddPoint(300, 65000);
 
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
@@ -171,8 +173,8 @@ int main()
 
 	// Add clips
 	t.AddClip(&c1);
-	t.AddClip(&c2);
-	t.AddClip(&c3);
+	//t.AddClip(&c2);
+	//t.AddClip(&c3);
 
 
 	// Create a writer

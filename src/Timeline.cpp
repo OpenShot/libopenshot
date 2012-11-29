@@ -11,6 +11,11 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 	viewport_x = Keyframe(0.0);
 	viewport_y = Keyframe(0.0);
 
+	// Init background color
+	color.red = Keyframe(0.0);
+	color.green = Keyframe(0.0);
+	color.blue = Keyframe(0.0);
+
 	// Init cache
 	int64 bytes = height * width * 4 + (44100 * 2 * 4);
 	final_cache = Cache(20 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
@@ -50,7 +55,7 @@ float Timeline::calculate_time(int number, Framerate rate)
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number)
+void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number)
 {
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
@@ -60,7 +65,12 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 	if (new_frame->GetImage()->columns() == 1)
-		new_frame->AddColor(width, height, "#000000");
+	{
+		int red = color.red.GetInt(timeline_frame_number);
+		int green = color.green.GetInt(timeline_frame_number);
+		int blue = color.blue.GetInt(timeline_frame_number);
+		new_frame->AddColor(width, height, Magick::Color(red, green, blue));
+	}
 
 	/* COPY AUDIO - with correct volume */
 	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
@@ -334,14 +344,19 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
 
 								// Add clip's frame as layer
-								add_layer(new_frame, clip, clip_frame_number);
+								add_layer(new_frame, clip, clip_frame_number, frame_number);
 
 							} else
 								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
 
 							// Check for empty frame image (and fill with color)
 							if (new_frame->GetImage()->columns() == 1)
-								new_frame->AddColor(width, height, "#000000");
+							{
+								int red = color.red.GetInt(frame_number);
+								int green = color.green.GetInt(frame_number);
+								int blue = color.blue.GetInt(frame_number);
+								new_frame->AddColor(width, height, Magick::Color(red, green, blue));
+							}
 
 							// Add final frame to cache
 							#pragma omp critical (timeline_cache)
