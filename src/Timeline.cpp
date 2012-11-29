@@ -56,19 +56,44 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	tr1::shared_ptr<Frame> source_frame;
 	#pragma omp critical (reader_lock)
 		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-	tr1::shared_ptr<Magick::Image> source_image = source_frame->GetImage();
-
-	// Get some basic image properties
-	int source_width = source_image->columns();
-	int source_height = source_image->rows();
+	tr1::shared_ptr<Magick::Image> source_image;
 
 	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 	if (new_frame->GetImage()->columns() == 1)
 		new_frame->AddColor(width, height, "#000000");
 
-	/* COPY AUDIO */
+	/* COPY AUDIO - with correct volume */
 	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
-		new_frame->AddAudio(channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0f);
+	{
+		float initial_volume = 1.0f;
+		float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
+		float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
+
+		// If no ramp needed, set initial volume = clip's volume
+		if (isEqual(previous_volume, volume))
+			initial_volume = volume;
+
+		// Apply ramp to source frame (if needed)
+		if (!isEqual(previous_volume, volume))
+			source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
+
+		// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
+		// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
+		new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+
+	}
+
+	/* GET IMAGE DATA - OR GENERATE IT */
+	if (!source_clip->Waveform())
+		// Get actual frame image data
+		source_image = source_frame->GetImage();
+	else
+		// Generate Waveform Dynamically (the size of the timeline)
+		source_image = source_frame->GetWaveform(width, height);
+
+	// Get some basic image properties
+	int source_width = source_image->columns();
+	int source_height = source_image->rows();
 
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)

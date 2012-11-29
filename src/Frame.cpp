@@ -199,7 +199,8 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height)
 		}
 
 		// Create image
-		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("#000000")));
+		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("none")));
+		wave_image->backgroundColor(Magick::Color("none"));
 
 		// Draw the waveform
 		wave_image->draw(lines);
@@ -216,7 +217,8 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height)
 	else
 	{
 		// No audio samples present
-		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000")));
+		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("none")));
+		wave_image->backgroundColor(Magick::Color("none"));
 
 		// Add Channel Label
 		lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
@@ -524,17 +526,25 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 }
 
 // Add audio samples to a specific channel
-void Frame::AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
+void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
 	// Extend audio buffer (if needed)
 	if (destStartSample + numSamples > audio->getNumSamples())
 		audio->setSize(audio->getNumChannels(), destStartSample + numSamples, true, true, false);
 
 	// Always clear the range of samples first
-	audio->clear(destChannel, destStartSample, numSamples);
+	if (replaceSamples)
+		audio->clear(destChannel, destStartSample, numSamples);
 
 	// Add samples to frame's audio buffer
 	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
+}
+
+// Apply gain ramp (i.e. fading volume)
+void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
+{
+	// Apply gain ramp
+	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
 }
 
 // Experimental method to add effects to this frame

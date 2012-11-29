@@ -146,7 +146,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 }
 
 // Set audio export options
-void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate, bool visualize)
+void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -172,7 +172,6 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 
 	// Enable / Disable audio
 	info.has_audio = has_audio;
-	info.visualize = visualize;
 }
 
 // Set custom options (some codecs accept additional params)
@@ -1155,13 +1154,8 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		AVFrame *frame_source = NULL;
 		const Magick::PixelPacket *pixel_packets = NULL;
 
-		// If visualizing waveform (replace image with waveform image)
-		if (!info.visualize)
-			// Get a list of pixels from source image
-			pixel_packets = frame->GetPixels();
-		else
-			// Get a list of pixels from waveform image
-			pixel_packets = frame->GetWaveformPixels(source_image_width, source_image_height);
+		// Get a list of pixels from source image
+		pixel_packets = frame->GetPixels();
 
 		// Init AVFrame for source image & final (converted image)
 		frame_source = allocate_avframe(PIX_FMT_RGB24, source_image_width, source_image_height, &bytes_source);

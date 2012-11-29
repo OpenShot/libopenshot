@@ -288,7 +288,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 					number_to_copy = remaining_samples;
 
 				// Add samples to new frame
-				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, number_to_copy, 1.0);
+				frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, number_to_copy, 1.0);
 			}
 			else if (starting_frame > mapped.Samples.frame_start && starting_frame < mapped.Samples.frame_end)
 			{
@@ -298,7 +298,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 					number_to_copy = remaining_samples;
 
 				// Add samples to new frame
-				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+				frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 			}
 			else
 			{
@@ -308,7 +308,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 					number_to_copy = remaining_samples;
 
 				// Add samples to new frame
-				frame->AddAudio(channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+				frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 			}
 		}
 

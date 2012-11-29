@@ -81,7 +81,10 @@ namespace openshot
 		void AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lines);
 
 		/// Add audio samples to a specific channel
-		void AddAudio(int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
+		void AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
+
+		/// Apply gain ramp (i.e. fading volume)
+		void ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain, float final_gain);
 
 		/// Composite a new image on top of the existing image
 		void AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha);

@@ -167,7 +167,7 @@ namespace openshot
 		void RemoveScalers();
 
 		/// Set audio export options
-		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate, bool visualize);
+		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
 
 		/// Set the cache size (number of frames to queue before writing)
 		int SetCacheSize(int new_size) { cache_size = new_size; };

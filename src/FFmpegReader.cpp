@@ -872,7 +872,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					f = CreateFrame(starting_frame_number);
 
 				// Add samples for current channel to the frame
-				f->AddAudio(channel_filter, start, iterate_channel_buffer, samples, 1.0f);
+				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 				#pragma omp critical (openshot_cache)
 					// Add or update cache

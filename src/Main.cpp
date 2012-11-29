@@ -60,16 +60,24 @@ int main()
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
 	Clip c1(new FFmpegReader("/home/jonathan/Music/lonely island/B004YRCAIU_(disc_1)_02_-_Mama_[Explicit].mp3"));
 	//Clip c1(new FFmpegReader("/home/jonathan/sintel.webm"));
-	Clip c2(new ImageReader("/home/jonathan/Desktop/logo1.png"));
-	Clip c3(new ImageReader("/home/jonathan/Desktop/logo1.png"));
+	Clip c2(new ImageReader("/home/jonathan/Desktop/openshot_style1.png"));
+	Clip c3(new FFmpegReader("/home/jonathan/Music/lonely island/B004YRCAUI_(disc_1)_16_-_Japan.mp3"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
 	c1.scale = SCALE_FIT;
 	c1.End(20);
+	c1.Layer(2);
+	c1.volume.AddPoint(1, 0.0);
+	c1.volume.AddPoint(100, 0.5);
+	c1.volume.AddPoint(200, 0.0);
+	c1.volume.AddPoint(300, 0.5);
+	c1.Waveform(true);
+	//c1.scale_x.AddPoint(1, 0.5, LINEAR);
+	//c1.scale_y.AddPoint(1, 0.5, LINEAR);
 
 	c2.Position(0.0);
-	c2.Layer(2);
+	c2.Layer(1);
 	c2.gravity = GRAVITY_BOTTOM_RIGHT;
 	c2.scale = SCALE_NONE;
 	c2.alpha.AddPoint(1, 1);
@@ -79,9 +87,10 @@ int main()
 	c2.location_y.AddPoint(1, -0.02);
 	c2.End(20);
 
-	c3.Layer(3);
+	c3.Layer(0);
 	c3.End(20);
 	c3.gravity = GRAVITY_CENTER;
+	c3.volume.AddPoint(1, 0.5);
 	//c3.scale_x.AddPoint(1, 0.1);
 	//c3.scale_x.AddPoint(300, 2.0);
 	//c3.scale_y.AddPoint(1, 0.1);
@@ -162,8 +171,8 @@ int main()
 
 	// Add clips
 	t.AddClip(&c1);
-	//t.AddClip(&c2);
-	//t.AddClip(&c3);
+	t.AddClip(&c2);
+	t.AddClip(&c3);
 
 
 	// Create a writer
@@ -172,7 +181,7 @@ int main()
 
 	// Set options
 	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
-	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000, true);
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
 	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 624, 348, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
@@ -184,7 +193,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 600; frame++)
+	for (int frame = 1; frame <= 300; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)

@@ -13,6 +13,7 @@ void Clip::init_settings()
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
+	waveform = false;
 
 	// Init scale curves
 	scale_x = Keyframe(1.0);
@@ -28,7 +29,7 @@ void Clip::init_settings()
 
 	// Init time & volume
 	time = Keyframe(0.0);
-	volume = Keyframe(100.0);
+	volume = Keyframe(1.0);
 
 	// Init crop settings
 	crop_gravity = GRAVITY_CENTER;
@@ -307,7 +308,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				start -= 1;
 			for (int channel = 0; channel < channels; channel++)
 				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(channel, 0, audio_cache->getSampleData(channel, start), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, audio_cache->getSampleData(channel, start), number_of_samples, 1.0f);
 
 			// Clean up if the final section
 			if (time.GetRepeatFraction(frame_number).num == time.GetRepeatFraction(frame_number).den)
@@ -406,7 +407,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			// Add the newly resized audio samples to the current frame
 			for (int channel = 0; channel < channels; channel++)
 				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(channel, 0, buffer->getSampleData(channel), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, buffer->getSampleData(channel), number_of_samples, 1.0f);
 
 			// Clean up
 			buffer = NULL;
@@ -427,7 +428,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 			// Add reversed samples to the frame object
 			for (int channel = 0; channel < channels; channel++)
-				new_frame->AddAudio(channel, 0, samples->getSampleData(channel), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, samples->getSampleData(channel), number_of_samples, 1.0f);
 
 
 		}

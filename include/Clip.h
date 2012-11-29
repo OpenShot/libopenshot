@@ -75,6 +75,7 @@ namespace openshot {
 		int layer; ///<The layer this clip is on. Lower clips are covered up by higher clips.
 		float start; ///<The position in seconds to start playing (used to trim the beginning of a clip)
 		float end; ///<The position in seconds to end playing (used to trim the ending of a clip)
+		bool waveform; ///<Should a waveform be used instead of the clip's image
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -144,13 +145,15 @@ namespace openshot {
 		int Layer() { return layer; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
 		float Start() { return start; } ///<Get start position of clip (trim start of video)
 		float End(); ///<Get end position of clip (trim end of video), which can be affected by the time curve.
-		float Duration() { End() - Start(); } ///<Get the length of this clip (in seconds)
+		float Duration() { return End() - Start(); } ///<Get the length of this clip (in seconds)
+		bool Waveform() { return waveform; } ///<Get the waveform property of this clip
 
 		/// Set basic properties
 		void Position(float value) { position = value; } ///<Get position on timeline
 		void Layer(int value) { layer = value; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///<Get start position of clip (trim start of video)
 		void End(float value) { end = value; } ///<Get end position of clip (trim end of video)
+		void Waveform(bool value) { waveform = value; } ///<Set the waveform property of this clip
 
 		// Scale and Location curves
 		Keyframe scale_x; ///<Curve representing the horizontal scaling in percent (0 to 100)
@@ -164,7 +167,7 @@ namespace openshot {
 
 		// Time and Volume curves
 		Keyframe time; ///<Curve representing the frames over time to play (used for speed and direction of video)
-		Keyframe volume; ///<Curve representing the volume (0 to 100)
+		Keyframe volume; ///<Curve representing the volume (0 to 1)
 
 		// Crop settings and curves
 		GravityType crop_gravity; ///<Cropping needs to have a gravity to determine what side we are cropping
