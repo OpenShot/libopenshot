@@ -31,6 +31,9 @@ void Clip::init_settings()
 	time = Keyframe(0.0);
 	volume = Keyframe(1.0);
 
+	// Init audio waveform color
+	wave_color = (Color){Keyframe(0), Keyframe(28672), Keyframe(65280)};
+
 	// Init crop settings
 	crop_gravity = GRAVITY_CENTER;
 	crop_width = Keyframe(-1.0);

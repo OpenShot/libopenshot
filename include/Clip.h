@@ -13,6 +13,7 @@
 #endif
 
 #include <tr1/memory>
+#include "Color.h"
 #include "FFmpegReader.h"
 #include "FrameRate.h"
 #include "FrameMapper.h"
@@ -168,6 +169,9 @@ namespace openshot {
 		// Time and Volume curves
 		Keyframe time; ///<Curve representing the frames over time to play (used for speed and direction of video)
 		Keyframe volume; ///<Curve representing the volume (0 to 1)
+
+		// Audio waveform curves
+		Color wave_color;
 
 		// Crop settings and curves
 		GravityType crop_gravity; ///<Cropping needs to have a gravity to determine what side we are cropping

@@ -12,6 +12,7 @@
 #include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
+#include "Color.h"
 #include "Clip.h"
 #include "FileReaderBase.h"
 #include "Fraction.h"
@@ -29,12 +30,6 @@ namespace openshot {
 		bool operator()( Clip* lhs, Clip* rhs){
 		return lhs->Position() <= rhs->Position() && lhs->Layer() < rhs->Layer();
 	}};
-
-	struct Color{
-		Keyframe red; ///<Curve representing the red value (0 - 65536)
-		Keyframe blue; ///<Curve representing the red value (0 - 65536)
-		Keyframe green; ///<Curve representing the red value (0 - 65536)
-	};
 
 	/**
 	 * \brief This class represents a timeline

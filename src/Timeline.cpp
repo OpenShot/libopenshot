@@ -98,8 +98,15 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Get actual frame image data
 		source_image = source_frame->GetImage();
 	else
+	{
+		// Get the color of the waveform
+		int red = source_clip->wave_color.red.GetInt(timeline_frame_number);
+		int green = source_clip->wave_color.green.GetInt(timeline_frame_number);
+		int blue = source_clip->wave_color.blue.GetInt(timeline_frame_number);
+
 		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = source_frame->GetWaveform(width, height);
+		source_image = source_frame->GetWaveform(width, height, red, green, blue);
+	}
 
 	// Get some basic image properties
 	int source_width = source_image->columns();

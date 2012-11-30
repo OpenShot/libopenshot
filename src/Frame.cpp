@@ -131,14 +131,14 @@ void Frame::Display()
 }
 
 // Get an audio waveform image
-tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height)
+tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red, int Green, int Blue)
 {
 	// Clear any existing waveform image
 	ClearWaveform();
 
 	// Init a list of lines
 	list<Magick::Drawable> lines;
-	lines.push_back(Magick::DrawableFillColor("#0070ff"));
+	lines.push_back(Magick::DrawableFillColor(Magick::Color(Red, Green, Blue)));
 	lines.push_back(Magick::DrawablePointSize(16));
 
 	// Calculate 1/2 the width of an image based on the # of samples
@@ -165,7 +165,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height)
 			int X = 0;
 
 			// Change stroke and color
-			lines.push_back(Magick::DrawableStrokeColor("#0070ff"));
+			lines.push_back(Magick::DrawableStrokeColor(Magick::Color(Red, Green, Blue)));
 			lines.push_back(Magick::DrawableStrokeWidth(1));
 
 			// Get audio for this channel
@@ -242,10 +242,10 @@ void Frame::ClearWaveform()
 }
 
 // Get an audio waveform image pixels
-const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
+const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height, int Red, int Green, int Blue)
 {
 	// Get audio wave form image
-	wave_image = GetWaveform(width, height);
+	wave_image = GetWaveform(width, height, Red, Green, Blue);
 
 	// Return array of pixel packets
 	return wave_image->getConstPixels(0,0, wave_image->columns(), wave_image->rows());
@@ -255,7 +255,7 @@ const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height)
 void Frame::DisplayWaveform()
 {
 	// Get audio wave form image
-	GetWaveform(720, 480);
+	GetWaveform(720, 480, 0, 28672, 65280);
 
 	// Display Image
 	wave_image->display();

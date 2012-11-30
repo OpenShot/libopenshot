@@ -60,10 +60,10 @@ int main()
 
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
-	Clip c1(new FFmpegReader("/home/jonathan/Music/lonely island/B004YRCAIU_(disc_1)_02_-_Mama_[Explicit].mp3"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/Movie Music/02 - Shattered [Turn The Car Around] (Album Version).mp3"));
 	//Clip c1(new FFmpegReader("/home/jonathan/sintel.webm"));
-	Clip c2(new ImageReader("/home/jonathan/Desktop/openshot_style1.png"));
-	Clip c3(new FFmpegReader("/home/jonathan/Music/lonely island/B004YRCAUI_(disc_1)_16_-_Japan.mp3"));
+	Clip c2(new ImageReader("/home/jonathan/Desktop/Logo.png"));
+	Clip c3(new FFmpegReader("/home/jonathan/Videos/Movie Music/01 Whip It.mp3"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
@@ -74,7 +74,14 @@ int main()
 	c1.volume.AddPoint(100, 0.5);
 	c1.volume.AddPoint(200, 0.0);
 	c1.volume.AddPoint(300, 0.5);
+
 	c1.Waveform(true);
+//	c1.wave_color.blue.AddPoint(1, 0);
+//	c1.wave_color.red.AddPoint(1, 65280);
+//	c1.wave_color.red.AddPoint(300, 0);
+//	c1.wave_color.green.AddPoint(1, 0);
+//	c1.wave_color.green.AddPoint(300, 65280);
+
 	//c1.scale_x.AddPoint(1, 0.5, LINEAR);
 	//c1.scale_y.AddPoint(1, 0.5, LINEAR);
 

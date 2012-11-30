@@ -141,10 +141,10 @@ namespace openshot
 		int GetHeight();
 
 		/// Get an audio waveform image
-		tr1::shared_ptr<Magick::Image> GetWaveform(int width, int height);
+		tr1::shared_ptr<Magick::Image> GetWaveform(int width, int height, int Red, int Green, int Blue);
 
 		/// Get an audio waveform image pixels
-		const Magick::PixelPacket* GetWaveformPixels(int width, int height);
+		const Magick::PixelPacket* GetWaveformPixels(int width, int height, int Red, int Green, int Blue);
 
 		/// Get height of image
 		int GetWidth();
