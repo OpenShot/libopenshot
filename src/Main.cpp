@@ -60,11 +60,12 @@ int main()
 
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/Movie Music/02 - Shattered [Turn The Car Around] (Album Version).mp3"));
-	//Clip c1(new FFmpegReader("/home/jonathan/sintel.webm"));
+	//Clip c1(new FFmpegReader("/home/jonathan/Videos/Movie Music/02 - Shattered [Turn The Car Around] (Album Version).mp3"));
+	FFmpegReader r1("/home/jonathan/Desktop/sintel.webm");
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/big-buck-bunny_trailer.webm"));
 	Clip c2(new ImageReader("/home/jonathan/Desktop/Logo.png"));
-	Clip c3(new FFmpegReader("/home/jonathan/Videos/Movie Music/01 Whip It.mp3"));
-	//Clip c3(new FFmpegReader("/home/jonathan/Desktop/IncognitoCory_-_April_Song.mp3"));
+	Clip c3(new FFmpegReader("/home/jonathan/Desktop/sintel.webm"));
+	//Clip c3(new FFmpegReader("/home/jonathan/Videos/Movie Music/01 Whip It.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
 	c1.scale = SCALE_FIT;
@@ -183,15 +184,16 @@ int main()
 	//t.AddClip(&c2);
 	//t.AddClip(&c3);
 
+	r1.Open();
 
 	// Create a writer
 	FFmpegWriter w("/home/jonathan/output.webm");
-	w.DisplayInfo();
+	r1.DisplayInfo();
 
 	// Set options
 	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
 	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
-	w.SetVideoOptions(true, "libvpx", Fraction(24, 1), 624, 348, Fraction(1,1), false, false, 2000000);
+	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 624, 348, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -202,12 +204,12 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 300; frame++)
+	for (int frame = 200; frame <= 400; frame++)
 	{
-		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
+		tr1::shared_ptr<Frame> f = r1.GetFrame(frame);
 		if (f)
 		{
-			//if (frame >= 20)
+			//if (frame >= 13)
 			//	f->DisplayWaveform();
 
 			// Write frame

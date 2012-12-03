@@ -6,7 +6,8 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
-	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL) {
+	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), prev_samples(0), prev_pts(0),
+	  pts_total(0), pts_counter(0), display_debug(false) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -722,11 +723,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	while (my_packet->size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
 		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
-		int used = avcodec_decode_audio3(aCodecCtx, audio_buf, &buf_size, my_packet);
+		int used = avcodec_decode_audio3(aCodecCtx, (short *)audio_buf, &buf_size, my_packet);
 
 		if (used < 0) {
 			// Throw exception
-			my_packet->size = 0;
 			throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
 		}
 
@@ -739,7 +739,23 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	}
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
-	int pts_remaining_samples = round(packet_samples / info.channels) - 1; // Adjust for zero based array
+	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
+
+	// DEBUG (FOR AUDIO ISSUES) - Get the audio packet start time (in seconds)
+	int adjusted_pts = packet->pts + audio_pts_offset;
+	double audio_seconds = double(adjusted_pts) * info.audio_timebase.ToDouble();
+	double sample_seconds = float(pts_total) / info.sample_rate;
+
+	if (display_debug)
+		cout << pts_counter << ") PTS: " << adjusted_pts << ", Offset: " << audio_pts_offset << ", PTS Diff: " << (adjusted_pts - prev_pts) << ", Samples: " << pts_remaining_samples << ", Sample PTS ratio: " << (float(adjusted_pts - prev_pts) / pts_remaining_samples) << ", Sample Diff: " << (pts_remaining_samples - prev_samples) << ", Total: " << pts_total << ", PTS Seconds: " << audio_seconds << ", Sample Seconds: " << sample_seconds << ", Seconds Diff: " << (audio_seconds - sample_seconds) << ", raw samples: " << packet_samples << endl;
+
+	// DEBUG (FOR AUDIO ISSUES)
+	prev_pts = adjusted_pts;
+	pts_total += pts_remaining_samples;
+	pts_counter++;
+	prev_samples = pts_remaining_samples;
+
+
 	while (pts_remaining_samples)
 	{
 		// Get Samples per frame (for this frame number)
@@ -784,8 +800,8 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 			// Audio needs to be converted
 			// Create an audio resample context object (used to convert audio samples)
-			if (!resampleCtx)
-				resampleCtx = av_audio_resample_init(
+			//if (!resampleCtx)
+			ReSampleContext *resampleCtx = av_audio_resample_init(
 						info.channels,
 						info.channels,
 						info.sample_rate,
@@ -808,6 +824,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				delete[] converted_audio;
 				converted_audio = NULL;
 			}
+
+			// Close audio resample context
+			if (resampleCtx)
+			{
+				audio_resample_close(resampleCtx);
+				resampleCtx = NULL;
+			}
 		}
 
 		int starting_frame_number = -1;
@@ -815,7 +838,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		{
 			// Array of floats (to hold samples for each channel)
 			starting_frame_number = target_frame;
-			int channel_buffer_size = round(packet_samples / info.channels);
+			int channel_buffer_size = packet_samples / info.channels;
 			float *channel_buffer = new float[channel_buffer_size];
 
 			// Init buffer array
@@ -1109,19 +1132,28 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 	// Calculate the sample # to start on
 	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
 
+	// Protect against broken (i.e. negative) timestamps
+	if (whole_frame < 1)
+		whole_frame = 1;
+	if (sample_start < 0)
+		sample_start = 0;
+
 	// Prepare final audio packet location
 	audio_packet_location location = {whole_frame, sample_start};
 
+
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	int diff_previous_packet = abs(location.sample_start - previous_packet_location.sample_start);
-	if (location.frame == previous_packet_location.frame && diff_previous_packet >= 0 && diff_previous_packet <= 100)
+	if (location.is_near(previous_packet_location, samples_per_frame, 1000))
 	{
 		int orig_frame = location.frame;
 		int orig_start = location.sample_start;
 
 		// Update sample start, to prevent gaps in audio
 		if (previous_packet_location.sample_start + 1 <= samples_per_frame)
-			location.sample_start = previous_packet_location.sample_start + 1;
+		{
+			location.sample_start = previous_packet_location.sample_start;
+			location.frame = previous_packet_location.frame;
+		}
 		else
 		{
 			// set to next frame (since we exceeded the # of samples on a frame)
@@ -1131,6 +1163,8 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 
 		//cout << "GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
 	}
+	//else
+	//	cout << "NOT NEAR!!!  frame " << location.frame << ":" << location.sample_start << "  prev frame " << previous_packet_location.frame << ":" << previous_packet_location.sample_start << endl;
 
 	// Set previous location
 	previous_packet_location = location;

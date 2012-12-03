@@ -42,6 +42,35 @@ namespace openshot
 	{
 		int frame;
 		int sample_start;
+
+		int is_near(audio_packet_location location, int samples_per_frame, int amount)
+		{
+			int sample_diff = abs(location.sample_start - sample_start);
+			if (location.frame == frame && sample_diff >= 0 && sample_diff <= amount)
+				// close
+				return true;
+
+			// new frame is after
+			if (location.frame > frame)
+			{
+				// remaining samples + new samples
+				int sample_diff = (samples_per_frame - sample_start) + location.sample_start;
+				if (sample_diff >= 0 && sample_diff <= amount)
+					return true;
+			}
+
+			// new frame is before
+			if (location.frame < frame)
+			{
+				// remaining new samples + old samples
+				int sample_diff = (samples_per_frame - location.sample_start) + sample_start;
+				if (sample_diff >= 0 && sample_diff <= amount)
+					return true;
+			}
+
+			// not close
+			return false;
+		}
 	};
 
 	/**
@@ -81,6 +110,13 @@ namespace openshot
 		map<int, int> processing_video_frames;
 		map<int, int> processing_audio_frames;
 		audio_packet_location previous_packet_location;
+
+		// DEBUG VARIABLES (FOR AUDIO ISSUES)
+		bool display_debug;
+		int prev_samples;
+		int prev_pts;
+		int pts_total;
+		int pts_counter;
 
 		bool is_seeking;
 		int seeking_pts;

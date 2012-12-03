@@ -561,7 +561,7 @@ void FFmpegWriter::flush_encoders()
 			cout << "Flushing AUDIO buffer!" << endl;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_codec->frame_size / av_get_bytes_per_sample(audio_codec->sample_fmt), (AVRational){1, info.sample_rate}, audio_codec->time_base);
+			write_audio_count += av_rescale_q(audio_codec->frame_size / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -579,7 +579,7 @@ void FFmpegWriter::flush_encoders()
 					error_description = av_err2str(error_code);
 				#endif
 
-				cout << "error encoding audio: " << error_code << ": " << error_description << endl;
+				cout << "error encoding audio (flush): " << error_code << ": " << error_description << endl;
 				//throw ErrorEncodingAudio("Error while flushing audio frame", -1);
 			}
 			if (!got_packet) {
@@ -604,7 +604,7 @@ void FFmpegWriter::flush_encoders()
 			pkt.flags |= AV_PKT_FLAG_KEY;
 
 			// Write packet
-			error_code = av_write_frame(oc, &pkt);
+			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
 				string error_description = "Unknown";
 
@@ -1022,11 +1022,11 @@ void FFmpegWriter::write_audio_packets(bool final)
 				break;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt), (AVRational){1, info.sample_rate}, audio_codec->time_base);
+			write_audio_count += av_rescale_q(audio_input_position / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
 
 			// Create AVFrame (and fill it with samples)
 			AVFrame *frame_final = avcodec_alloc_frame();
-			frame_final->nb_samples = audio_input_position / av_get_bytes_per_sample(audio_codec->sample_fmt);
+			frame_final->nb_samples = audio_input_frame_size / audio_codec->channels; //av_get_bytes_per_sample(audio_codec->sample_fmt);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
 					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 1);
@@ -1079,7 +1079,14 @@ void FFmpegWriter::write_audio_packets(bool final)
 			}
 
 			if (error_code < 0)
-				cout << "Error encoding audio: " << error_code << endl;
+			{
+				string error_description = "Unknown";
+
+				#ifdef av_err2str
+					error_description = av_err2str(error_code);
+				#endif
+				cout << "Error encoding audio: " << error_code << ": " << error_description << endl;
+			}
 
 			// deallocate AVFrame
 			//av_free(frame_final->data[0]);
