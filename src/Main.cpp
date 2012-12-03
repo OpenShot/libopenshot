@@ -61,10 +61,10 @@ int main()
 	// Add some clips
 	//Clip c1(new FFmpegReader("/home/jonathan/Apps/videcho_site/media/user_files/videos/bd0bf442-3221-11e2-8bf6-001fd00ee3aa.webm"));
 	//Clip c1(new FFmpegReader("/home/jonathan/Videos/Movie Music/02 - Shattered [Turn The Car Around] (Album Version).mp3"));
-	FFmpegReader r1("/home/jonathan/Desktop/sintel.webm");
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/big-buck-bunny_trailer.webm"));
-	Clip c2(new ImageReader("/home/jonathan/Desktop/Logo.png"));
-	Clip c3(new FFmpegReader("/home/jonathan/Desktop/sintel.webm"));
+	FFmpegReader r1("../../src/examples/piano.wav");
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c2(new ImageReader("/home/jonathan/Desktop/logo.png"));
+	Clip c3(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
 	//Clip c3(new FFmpegReader("/home/jonathan/Videos/Movie Music/01 Whip It.mp3"));
 	c1.Position(0.0);
 	c1.gravity = GRAVITY_CENTER;
@@ -192,7 +192,7 @@ int main()
 
 	// Set options
 	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000, false);
-	w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000);
+	w.SetAudioOptions(true, "libvorbis", 48000, 2, 128000);
 	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 624, 348, Fraction(1,1), false, false, 2000000);
 
 	// Prepare Streams
@@ -204,13 +204,13 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 200; frame <= 400; frame++)
+	for (int frame = 1; frame <= 100; frame++)
 	{
 		tr1::shared_ptr<Frame> f = r1.GetFrame(frame);
 		if (f)
 		{
 			//if (frame >= 13)
-			//	f->DisplayWaveform();
+			//f->DisplayWaveform();
 
 			// Write frame
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;

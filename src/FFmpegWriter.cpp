@@ -561,7 +561,12 @@ void FFmpegWriter::flush_encoders()
 			cout << "Flushing AUDIO buffer!" << endl;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-			write_audio_count += av_rescale_q(audio_codec->frame_size / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
+#if LIBAVFORMAT_VERSION_MAJOR >= 54
+			// for some reason, it requires me to multiply channels X 2
+			write_audio_count += av_rescale_q(audio_input_position / (audio_codec->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)), (AVRational){1, info.sample_rate}, audio_codec->time_base);
+#else
+			write_audio_count += av_rescale_q(audio_input_position / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
+#endif
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -980,7 +985,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 				audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
 
 				// Update total frames & input frame size (due to bigger or smaller data types)
-				total_frame_samples *= (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+				total_frame_samples *= (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)); // adjust for different byte sizes
+				total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
 				audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
 				// Set remaining samples
@@ -1022,11 +1028,22 @@ void FFmpegWriter::write_audio_packets(bool final)
 				break;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
+#if LIBAVFORMAT_VERSION_MAJOR >= 54
+			// for some reason, it requires me to multiply channels X 2
+			write_audio_count += av_rescale_q(audio_input_position / (audio_codec->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)), (AVRational){1, info.sample_rate}, audio_codec->time_base);
+#else
 			write_audio_count += av_rescale_q(audio_input_position / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
+#endif
 
 			// Create AVFrame (and fill it with samples)
 			AVFrame *frame_final = avcodec_alloc_frame();
-			frame_final->nb_samples = audio_input_frame_size / audio_codec->channels; //av_get_bytes_per_sample(audio_codec->sample_fmt);
+#if LIBAVFORMAT_VERSION_MAJOR >= 54
+			// for some reason, it requires me to multiply channels X 2
+			frame_final->nb_samples = audio_input_position / (audio_codec->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+#else
+			frame_final->nb_samples = audio_input_frame_size / audio_codec->channels;
+#endif
+			//frame_final->nb_samples = audio_input_frame_size / audio_codec->channels; //av_get_bytes_per_sample(audio_codec->sample_fmt);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
 					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 1);
@@ -1136,12 +1153,10 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 	// Determine the height & width of the source image
 	int source_image_width = frame->GetWidth();
 	int source_image_height = frame->GetHeight();
-	// If visualizing waveform (replace image with waveform image)
-	if (info.visualize)
-	{
-		source_image_width = info.width;
-		source_image_height = info.height;
-	}
+
+	// Do nothing if size is 1x1 (i.e. no image in this frame)
+	if (source_image_height == 1 && source_image_width == 1)
+		return;
 
 	// Init rescalers (if not initialized yet)
 	if (image_rescalers.size() == 0)
@@ -1190,10 +1205,6 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		// Deallocate memory
 		av_free(frame_source->data[0]);
 		av_free(frame_source);
-
-		if (info.visualize)
-			// Deallocate the waveform's image (if needed)
-			frame->ClearWaveform();
 
 	} // end task
 
