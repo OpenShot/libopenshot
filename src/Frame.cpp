@@ -432,7 +432,7 @@ void Frame::AddColor(int width, int height, string color)
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color(color)));
 
 	// Give image a transparent background color
-	image->backgroundColor(Magick::Color("none"));
+	image->backgroundColor(Magick::Color("#000000ff"));
 
 	// Update height and width
 	width = image->columns();

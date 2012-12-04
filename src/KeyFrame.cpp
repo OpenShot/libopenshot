@@ -352,7 +352,7 @@ void Keyframe::PrintValues() {
 
 	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
-		cout << int(round(c.X)) << "\t" << int(round(c.Y)) << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << "\t" << c.delta << endl;
+		cout << int(round(c.X)) << "\t" << c.Y << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << "\t" << c.delta << endl;
 	}
 }
 

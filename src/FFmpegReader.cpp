@@ -32,7 +32,7 @@ void FFmpegReader::InitScalers()
 	for (int x = 0; x < num_of_rescalers; x++)
 	{
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, info.width,
-				info.height, PIX_FMT_RGB24, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+				info.height, PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
@@ -643,13 +643,13 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
 		// Determine required buffer size and allocate buffer
-		numBytes = avpicture_get_size(PIX_FMT_RGB24, width, height);
+		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
 		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
 		// Assign appropriate parts of buffer to image planes in pFrameRGB
 		// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
 		// of AVPicture
-		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGB24, width, height);
+		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -661,7 +661,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			f = CreateFrame(current_frame);
 
 		// Add Image data to frame
-		f->AddImage(width, height, "RGB", Magick::CharPixel, buffer);
+		f->AddImage(width, height, "RGBA", Magick::CharPixel, buffer);
 
 		#pragma omp critical (openshot_cache)
 			// Update working cache

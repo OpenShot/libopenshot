@@ -69,7 +69,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
 		int blue = color.blue.GetInt(timeline_frame_number);
-		new_frame->AddColor(width, height, Magick::Color(red, green, blue));
+		new_frame->AddColor(width, height, Magick::Color(red, green, blue, 0));
 	}
 
 	/* COPY AUDIO - with correct volume */
@@ -214,7 +214,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		cout << "COMPLEX" << endl;
 		// Use the distort operator, which is very CPU intensive
 		// origin X,Y     Scale     Angle  NewX,NewY
-		double distort_args[7] = {0,0,  sx,sy,  r,  x-1,y-1 };
+		double distort_args[7] = {0,0,  sx,sy,  r,  x,y };
 		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
 	}
 

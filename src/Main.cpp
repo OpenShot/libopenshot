@@ -33,6 +33,10 @@ int main()
 	c1.gravity = GRAVITY_LEFT;
 	c1.scale = SCALE_CROP;
 	c1.Layer(0);
+	c1.End(16.0);
+	c1.alpha.AddPoint(1, 0.0);
+	c1.alpha.AddPoint(360, 0.0, LINEAR);
+	c1.alpha.AddPoint(384, 1.0);
 
 	// CLIP 2 (wave form)
 	c2.Position(0.0);
@@ -77,7 +81,7 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 300; frame++)
+	for (int frame = 1; frame <= 600; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
