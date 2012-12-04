@@ -302,7 +302,6 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 		for (int channel = 0; channel < num_of_channels; channel++)
 		{
 			// Add sample to output array
-			//cout << position << ", " << channel << ", " << sample << endl;
 			output[position] = buffer->getSampleData(channel)[sample];
 
 			// increment position
@@ -528,11 +527,6 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
-
-	// DEBUG CODE (FOR AUDIO ISSUES)
-	//cout << "AddAudio: Frame: " << number << ", replaceSamples: " << replaceSamples << ", destChannel: " << destChannel << ", destStartSample: " << destStartSample << ", numSamples: " << numSamples << ", gain: " << gainToApplyToSource << ", end: " << (destStartSample + numSamples) << endl;
-	//cout << "  " << source[0] << "," << source[1] << "," << source[2] << " ... " << "," << source[numSamples-2] << "," << source[numSamples-1] << "," << source[numSamples] << "," << source[numSamples+1] << endl;
-
 	// Extend audio buffer (if needed)
 	if (destStartSample + numSamples > audio->getNumSamples())
 		audio->setSize(audio->getNumChannels(), destStartSample + numSamples, true, true, false);

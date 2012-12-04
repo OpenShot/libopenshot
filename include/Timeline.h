@@ -47,6 +47,7 @@ namespace openshot {
 		int sample_rate; ///<Sample rate of timeline
 		int channels; ///<Channels in timeline
 		list<Clip*> clips; ///<List of clips on this timeline
+		list<Clip*> closing_clips; ///<List of clips that need to be closed
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		Cache final_cache; ///<Final cache of timeline frames
 
@@ -64,6 +65,9 @@ namespace openshot {
 
 		/// Update the list of 'opened' clips
 		void update_open_clips(Clip *clip, bool is_open);
+
+		/// Update the list of 'closed' clips
+		void update_closed_clips();
 
 	public:
 

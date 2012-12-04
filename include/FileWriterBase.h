@@ -48,7 +48,6 @@ namespace openshot
 		int channels;		///< The number of audio channels used in the audio stream
 		int audio_stream_index;		///< The index of the audio stream
 		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
-		bool visualize;		///< Replace the video stream with a waveform visualization of the audio samples
 	};
 
 	/**

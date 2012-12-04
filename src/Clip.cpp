@@ -56,8 +56,6 @@ void Clip::init_settings()
 	// Default pointers
 	file_reader = NULL;
 	resampler = NULL;
-
-	cout << "INIT CLIP SETTINGS!!!!" << endl;
 }
 
 // Default Constructor for a clip

@@ -199,9 +199,6 @@ void FFmpegReader::UpdateAudioInfo()
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
 
-	cout << "aStream->time_base: " << aStream->time_base.num << "/" << aStream->time_base.den << endl;
-	cout << "aCodecCtx->time_base: " << aCodecCtx->time_base.num << "/" << aCodecCtx->time_base.den << endl;
-
 	// Get timebase of audio stream (if valid)
 	if (aStream->duration > 0.0f)
 		info.duration = aStream->duration * info.audio_timebase.ToDouble();

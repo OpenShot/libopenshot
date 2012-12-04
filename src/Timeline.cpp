@@ -231,11 +231,8 @@ void Timeline::update_open_clips(Clip *clip, bool is_open)
 
 	if (clip_found && !is_open)
 	{
-		// Remove clip from 'opened' list, because it's closed now
-		open_clips.erase(clip);
-
-		// Close the clip's reader
-		clip->Close();
+		// Mark clip "to be removed"
+		closing_clips.push_back(clip);
 	}
 	else if (!clip_found && is_open)
 	{
@@ -245,6 +242,27 @@ void Timeline::update_open_clips(Clip *clip, bool is_open)
 		// Open the clip's reader
 		clip->Open();
 	}
+}
+
+// Update the list of 'closed' clips
+void Timeline::update_closed_clips()
+{
+	// Close all "to be closed" clips
+	list<Clip*>::iterator clip_itr;
+	for (clip_itr=closing_clips.begin(); clip_itr != closing_clips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *clip = (*clip_itr);
+
+		// Close the clip's reader
+		clip->Close();
+
+		// Remove clip from 'opened' list, because it's closed now
+		open_clips.erase(clip);
+	}
+
+	// Clear list
+	closing_clips.clear();
 }
 
 // Sort clips by position on the timeline
@@ -267,6 +285,9 @@ void Timeline::Close()
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, false);
 	}
+
+	// Actually close the clips
+	update_closed_clips();
 }
 
 // Open the reader (and start consuming resources)
@@ -319,7 +340,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma xxx omp task firstprivate(frame_number)
+					#pragma omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
@@ -339,7 +360,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							float clip_duration = clip->End() - clip->Start();
 							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
 
-							// Open or Close this clip, based on if it's intersecting or not
+							// Open (or schedule for closing) this clip, based on if it's intersecting or not
 							#pragma omp critical (reader_lock)
 							update_open_clips(clip, does_clip_intersect);
 
@@ -373,6 +394,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 
 					} // end omp task
 				} // end frame loop
+
+				// Actually close all clips no longer needed
+				#pragma omp critical (reader_lock)
+				update_closed_clips();
 
 			} // end omp single
 		} // end omp parallel
