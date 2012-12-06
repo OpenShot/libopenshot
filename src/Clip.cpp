@@ -324,10 +324,10 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 
 			// Determine next unique frame (after these repeating frames)
-			int next_unique_frame = time.GetInt(frame_number + (time.GetRepeatFraction(frame_number).den - time.GetRepeatFraction(frame_number).num) + 1);
-			if (next_unique_frame != new_frame_number)
-				// Overlay the next frame on top of this frame (to create a smoother slow motion effect)
-				new_frame->AddImage(file_reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
+			//int next_unique_frame = time.GetInt(frame_number + (time.GetRepeatFraction(frame_number).den - time.GetRepeatFraction(frame_number).num) + 1);
+			//if (next_unique_frame != new_frame_number)
+			//	// Overlay the next frame on top of this frame (to create a smoother slow motion effect)
+			//	new_frame->AddImage(file_reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
 
 		}
 		else if (abs(delta) > 1 && abs(delta) < 100)
@@ -437,7 +437,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		// clean up
 		//delete resampler;
 		//resampler = NULL;
-		cout << "samples: "<< samples << endl;
+
 		delete samples;
 		samples = NULL;
 

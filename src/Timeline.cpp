@@ -200,8 +200,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	bool is_x_animated = source_clip->location_x.Points.size() > 2;
 	bool is_y_animated = source_clip->location_y.Points.size() > 2;
 
-	int offset_x = 0;
-	int offset_y = 0;
+	int offset_x = -1;
+	int offset_y = -1;
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
 		cout << "SIMPLE" << endl;
@@ -340,7 +340,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma omp task firstprivate(frame_number)
+					#pragma omp xxx task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
