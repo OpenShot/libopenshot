@@ -73,6 +73,10 @@ Clip::Clip(FileReaderBase* reader)
 
 	// set reader pointer
 	file_reader = reader;
+
+	// Open and Close the reader (to set the duration of the clip)
+	Open();
+	Close();
 }
 
 // Constructor with filepath
@@ -145,7 +149,7 @@ void Clip::Open() throw(InvalidFile)
 		file_reader->Open();
 
 		// Set some clip properties from the file reader
-		if (end == 0)
+		if (end == 0.0)
 			End(file_reader->info.duration);
 	}
 }
