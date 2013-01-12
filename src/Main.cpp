@@ -24,13 +24,13 @@ int main()
 
 	// Add some clips
 	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
-	Clip c2(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
-	Clip c3(new ImageReader("/home/jonathan/Desktop/logo.png"));
-	Clip c4(new ImageReader("/home/jonathan/Desktop/text3.png")); // audio
-	Clip c5(new ImageReader("/home/jonathan/Desktop/text1.png")); // color
-	Clip c6(new ImageReader("/home/jonathan/Desktop/text4.png")); // sub-pixel
-	Clip c7(new ImageReader("/home/jonathan/Desktop/text8.png")); // coming soon
-	Clip c10(new ImageReader("/home/jonathan/Desktop/text10.png")); // time mapping
+//	Clip c2(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
+//	Clip c3(new ImageReader("/home/jonathan/Desktop/logo.png"));
+//	Clip c4(new ImageReader("/home/jonathan/Desktop/text3.png")); // audio
+//	Clip c5(new ImageReader("/home/jonathan/Desktop/text1.png")); // color
+//	Clip c6(new ImageReader("/home/jonathan/Desktop/text4.png")); // sub-pixel
+//	Clip c7(new ImageReader("/home/jonathan/Desktop/text8.png")); // coming soon
+//	Clip c10(new ImageReader("/home/jonathan/Desktop/text10.png")); // time mapping
 
 	// CLIP 1 (background movie)
 	c1.Position(0.0);
@@ -41,97 +41,97 @@ int main()
 	c1.alpha.AddPoint(1, 0.0);
 	c1.alpha.AddPoint(500, 0.0);
 	c1.alpha.AddPoint(565, 1.0);
-	c1.time.AddPoint(1, 360);
-	c1.time.AddPoint(384, 180, LINEAR);
-	c1.time.AddPoint(385, 180);
-	c1.time.AddPoint(565, 720, LINEAR);
+//	c1.time.AddPoint(1, 360);
+//	c1.time.AddPoint(384, 180, LINEAR);
+//	c1.time.AddPoint(385, 180);
+//	c1.time.AddPoint(565, 720, LINEAR);
 	//c1.time.PrintValues();
 	//return 1;
 
 
 	// CLIP 2 (wave form)
-	c2.Position(0.0);
-	c2.Layer(1);
-	c2.Waveform(true);
-	c2.alpha.AddPoint(1, 1.0);
-	c2.alpha.AddPoint(150, 0.0);
-	c2.alpha.AddPoint(360, 0.0, LINEAR);
-	c2.alpha.AddPoint(384, 1.0);
-	c2.volume.AddPoint(1, 0.0);
-	c2.volume.AddPoint(300, 0.0, LINEAR);
-	c2.End(15.0);
-	c2.wave_color.blue.AddPoint(1, 65000);
-	c2.wave_color.blue.AddPoint(300, 0);
-	c2.wave_color.red.AddPoint(1, 0);
-	c2.wave_color.red.AddPoint(300, 65000);
+//	c2.Position(0.0);
+//	c2.Layer(1);
+//	c2.Waveform(true);
+//	c2.alpha.AddPoint(1, 1.0);
+//	c2.alpha.AddPoint(150, 0.0);
+//	c2.alpha.AddPoint(360, 0.0, LINEAR);
+//	c2.alpha.AddPoint(384, 1.0);
+//	c2.volume.AddPoint(1, 0.0);
+//	c2.volume.AddPoint(300, 0.0, LINEAR);
+//	c2.End(15.0);
+//	c2.wave_color.blue.AddPoint(1, 65000);
+//	c2.wave_color.blue.AddPoint(300, 0);
+//	c2.wave_color.red.AddPoint(1, 0);
+//	c2.wave_color.red.AddPoint(300, 65000);
 
 	// CLIP 3 (watermark)
-	c3.Layer(2);
-	c3.End(50);
-	c3.gravity = GRAVITY_BOTTOM_RIGHT;
-	c3.scale = SCALE_NONE;
-	c3.alpha.AddPoint(1, 1.0);
-	c3.alpha.AddPoint(75, 0.0);
-	c3.location_x.AddPoint(1, -5);
-	c3.location_y.AddPoint(1, -5);
-
-	// CLIP 4 (text about waveform)
-	c4.Layer(3);
-	c4.scale = SCALE_NONE;
-	c4.gravity = GRAVITY_CENTER;
-	c4.Position(1);
-	c4.alpha.AddPoint(1, 1.0);
-	c4.alpha.AddPoint(30, 0.0);
-	c4.alpha.AddPoint(100, 0.0);
-	c4.alpha.AddPoint(130, 1.0);
-	c4.End(5.5);
-
-	// CLIP 5 (text about colors)
-	c5.Layer(3);
-	c5.scale = SCALE_NONE;
-	c5.gravity = GRAVITY_CENTER;
-	c5.Position(16);
-	c5.alpha.AddPoint(1, 1.0);
-	c5.alpha.AddPoint(30, 0.0);
-	c5.alpha.AddPoint(100, 0.0);
-	c5.alpha.AddPoint(130, 1.0);
-	c5.End(5.5);
-
-	// CLIP 6 (text about sub-pixel)
-	c6.Layer(3);
-	c6.scale = SCALE_NONE;
-	c6.gravity = GRAVITY_LEFT;
-	c6.Position(24);
-	c6.alpha.AddPoint(1, 1.0);
-	c6.alpha.AddPoint(30, 0.0);
-	c6.alpha.AddPoint(100, 0.0);
-	c6.alpha.AddPoint(130, 1.0);
-	c6.location_x.AddPoint(1,0.05);
-	c6.location_x.AddPoint(130, 0.3);
-	c6.End(5.5);
-
-	// CLIP 7 (text about coming soon)
-	c7.Layer(3);
-	c7.scale = SCALE_NONE;
-	c7.gravity = GRAVITY_CENTER;
-	c7.Position(18.0);
-	c7.alpha.AddPoint(1, 1.0);
-	c7.alpha.AddPoint(30, 0.0);
-	c7.alpha.AddPoint(100, 0.0);
-	c7.alpha.AddPoint(130, 1.0);
-	c7.End(5.5);
-
-
-	// CLIP 10 (text about waveform)
-	c10.Layer(3);
-	c10.scale = SCALE_NONE;
-	c10.gravity = GRAVITY_CENTER;
-	c10.Position(1);
-	c10.alpha.AddPoint(1, 1.0);
-	c10.alpha.AddPoint(30, 0.0);
-	c10.alpha.AddPoint(100, 0.0);
-	c10.alpha.AddPoint(130, 1.0);
-	c10.End(5.5);
+//	c3.Layer(2);
+//	c3.End(50);
+//	c3.gravity = GRAVITY_BOTTOM_RIGHT;
+//	c3.scale = SCALE_NONE;
+//	c3.alpha.AddPoint(1, 1.0);
+//	c3.alpha.AddPoint(75, 0.0);
+//	c3.location_x.AddPoint(1, -5);
+//	c3.location_y.AddPoint(1, -5);
+//
+//	// CLIP 4 (text about waveform)
+//	c4.Layer(3);
+//	c4.scale = SCALE_NONE;
+//	c4.gravity = GRAVITY_CENTER;
+//	c4.Position(1);
+//	c4.alpha.AddPoint(1, 1.0);
+//	c4.alpha.AddPoint(30, 0.0);
+//	c4.alpha.AddPoint(100, 0.0);
+//	c4.alpha.AddPoint(130, 1.0);
+//	c4.End(5.5);
+//
+//	// CLIP 5 (text about colors)
+//	c5.Layer(3);
+//	c5.scale = SCALE_NONE;
+//	c5.gravity = GRAVITY_CENTER;
+//	c5.Position(16);
+//	c5.alpha.AddPoint(1, 1.0);
+//	c5.alpha.AddPoint(30, 0.0);
+//	c5.alpha.AddPoint(100, 0.0);
+//	c5.alpha.AddPoint(130, 1.0);
+//	c5.End(5.5);
+//
+//	// CLIP 6 (text about sub-pixel)
+//	c6.Layer(3);
+//	c6.scale = SCALE_NONE;
+//	c6.gravity = GRAVITY_LEFT;
+//	c6.Position(24);
+//	c6.alpha.AddPoint(1, 1.0);
+//	c6.alpha.AddPoint(30, 0.0);
+//	c6.alpha.AddPoint(100, 0.0);
+//	c6.alpha.AddPoint(130, 1.0);
+//	c6.location_x.AddPoint(1,0.05);
+//	c6.location_x.AddPoint(130, 0.3);
+//	c6.End(5.5);
+//
+//	// CLIP 7 (text about coming soon)
+//	c7.Layer(3);
+//	c7.scale = SCALE_NONE;
+//	c7.gravity = GRAVITY_CENTER;
+//	c7.Position(18.0);
+//	c7.alpha.AddPoint(1, 1.0);
+//	c7.alpha.AddPoint(30, 0.0);
+//	c7.alpha.AddPoint(100, 0.0);
+//	c7.alpha.AddPoint(130, 1.0);
+//	c7.End(5.5);
+//
+//
+//	// CLIP 10 (text about waveform)
+//	c10.Layer(3);
+//	c10.scale = SCALE_NONE;
+//	c10.gravity = GRAVITY_CENTER;
+//	c10.Position(1);
+//	c10.alpha.AddPoint(1, 1.0);
+//	c10.alpha.AddPoint(30, 0.0);
+//	c10.alpha.AddPoint(100, 0.0);
+//	c10.alpha.AddPoint(130, 1.0);
+//	c10.End(5.5);
 
 	// Add clips
 	t.AddClip(&c1);
@@ -140,8 +140,8 @@ int main()
 	//t.AddClip(&c4);
 	//t.AddClip(&c5);
 	//t.AddClip(&c6);
-	t.AddClip(&c7);
-	t.AddClip(&c10);
+	//t.AddClip(&c7);
+	//t.AddClip(&c10);
 	/* ---------------- */
 
 
