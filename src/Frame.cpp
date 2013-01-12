@@ -77,16 +77,16 @@ Frame::Frame ( const Frame &other )
 }
 
 // Assignment operator
-Frame& Frame::operator= (const Frame& other)
-{
-	if (this != &other) {
-		// copy pointers and data
-		DeepCopy(other);
-	}
-
-	// return this instance
-	return *this;
-  }
+//Frame& Frame::operator= (const Frame& other)
+//{
+//	if (this != &other) {
+//		// copy pointers and data
+//		DeepCopy(other);
+//	}
+//
+//	// return this instance
+//	return *this;
+//  }
 
 // Copy data and pointers from another Frame instance
 void Frame::DeepCopy(const Frame& other)
@@ -100,6 +100,14 @@ void Frame::DeepCopy(const Frame& other)
 
 	if (other.wave_image)
 		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.wave_image)));
+}
+
+// Descructor
+Frame::~Frame() {
+	// Clear all pointers
+	image.reset();
+	audio.reset();
+	audio.reset();
 }
 
 // Display the frame image to the screen (primarily used for debugging reasons)

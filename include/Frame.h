@@ -66,7 +66,10 @@ namespace openshot
 		Frame ( const Frame &other );
 
 		/// Assignment operator
-		Frame& operator= (const Frame& other);
+		//Frame& operator= (const Frame& other);
+
+		/// Destructor
+		~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int width, int height, string color);

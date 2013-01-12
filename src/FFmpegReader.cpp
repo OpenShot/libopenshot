@@ -292,15 +292,6 @@ void FFmpegReader::UpdateVideoInfo()
 
 }
 
-/// Get an openshot::Frame object for a specific frame number of this reader.
-///
-/// @returns The requested frame of video
-/// @param[requested_frame] number The frame number that is requested.
-Frame* FFmpegReader::GetFrameObject(int requested_frame) throw(ReaderClosed, TooManySeeks)
-{
-	// just return the unprotected pointer
-	return GetFrame(requested_frame).get();
-}
 
 tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
 {
