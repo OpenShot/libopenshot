@@ -1131,7 +1131,7 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 
 
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	if (location.is_near(previous_packet_location, samples_per_frame, 1000))
+	if (location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
 	{
 		int orig_frame = location.frame;
 		int orig_start = location.sample_start;

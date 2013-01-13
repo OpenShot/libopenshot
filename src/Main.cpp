@@ -147,11 +147,12 @@ int main()
 
 
 	/* WRITER ---------------- */
-	FFmpegWriter w("/home/jonathan/output.webm");
+	FFmpegWriter w("/home/jonathan/output.mp3");
 
 	// Set options
-	w.SetAudioOptions(true, "libvorbis", 48000, 2, 128000);
-	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 720, 420, Fraction(1,1), false, false, 3000000);
+	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 128000);
+	w.SetAudioOptions(true, "libmp3lame", 48000, 2, 128000);
+	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 720, 420, Fraction(1,1), false, false, 3000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -167,8 +168,8 @@ int main()
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
 		{
-			//if (frame >= 13)
-			//f->Display();
+			//if (frame >= 62)
+			//	f->DisplayWaveform();
 
 			// Write frame
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
