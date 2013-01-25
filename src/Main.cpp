@@ -18,6 +18,16 @@ void FrameReady(int number)
 int main()
 {
 
+	FFmpegReader r("/home/jonathan/Apps/videcho_site/media/user_files/videos/74c51b3a-66bc-11e2-9c6a-001fd00ee3aa.webm");
+	r.Open();
+	tr1::shared_ptr<Frame> f = r.GetFrame(75);
+	f->Display();
+	r.Close();
+
+	return 0;
+
+
+
 	/* TIMELINE ---------------- */
 	Timeline t(720, 420, Framerate(24,1), 48000, 2);
 

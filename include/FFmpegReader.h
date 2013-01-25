@@ -45,6 +45,11 @@ namespace openshot
 
 		int is_near(audio_packet_location location, int samples_per_frame, int amount)
 		{
+			// Is frame even close to this one?
+			if (abs(location.frame - frame) >= 2)
+				// This is too far away to be considered
+				return false;
+
 			int sample_diff = abs(location.sample_start - sample_start);
 			if (location.frame == frame && sample_diff >= 0 && sample_diff <= amount)
 				// close

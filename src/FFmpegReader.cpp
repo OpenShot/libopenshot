@@ -363,14 +363,14 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	int packet_error = -1;
 
 	// Minimum number of packets to process (for performance reasons)
-	int frames_processed = 0;
-	int minimum_frames = 8;
+	int packets_processed = 0;
+	int minimum_packets = 16;
 
 	//omp_set_num_threads(1);
 	omp_set_nested(true);
 	#pragma omp parallel
 	{
-		#pragma omp single
+		#pragma omp master
 		{
 			// Loop through the stream until the correct frame is found
 			while (true)
@@ -449,11 +449,11 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 					is_cache_found = final_cache.Exists(requested_frame);
 
 					// Increment frames processed
-					frames_processed++;
+					packets_processed++;
 				}
 
 				// Break once the frame is found
-				if (is_cache_found && frames_processed >= minimum_frames)
+				if (is_cache_found && packets_processed >= minimum_packets)
 					break;
 
 			} // end while
@@ -983,15 +983,18 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		}
 
 		// Seek audio stream (if not already seeked... and if an audio stream is found)
-		seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
-		if (!seek_worked && info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-			seek_worked = false;
-			fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
-		} else
+		if (!seek_worked)
 		{
-			// AUDIO SEEK
-			seek_worked = true;
-			is_video_seek = false;
+			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
+			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
+				seek_worked = false;
+				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
+			} else
+			{
+				// AUDIO SEEK
+				seek_worked = true;
+				is_video_seek = false;
+			}
 		}
 
 		// Was the seek successful?
@@ -1004,6 +1007,10 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 			// Flush video buffer
 			if (info.has_video)
 				avcodec_flush_buffers(pCodecCtx);
+
+			// Reset previous audio location to zero
+			previous_packet_location.frame = -1;
+			previous_packet_location.sample_start = 0;
 
 			// init seek flags
 			is_seeking = true;
@@ -1129,9 +1136,8 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 	// Prepare final audio packet location
 	audio_packet_location location = {whole_frame, sample_start};
 
-
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	if (location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
+	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
 	{
 		int orig_frame = location.frame;
 		int orig_start = location.sample_start;
@@ -1149,7 +1155,8 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 			location.frame++;
 		}
 
-		//cout << "GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
+		if (display_debug)
+			cout << "AUDIO GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
 	}
 	//else
 	//	cout << "NOT NEAR!!!  frame " << location.frame << ":" << location.sample_start << "  prev frame " << previous_packet_location.frame << ":" << previous_packet_location.sample_start << endl;
