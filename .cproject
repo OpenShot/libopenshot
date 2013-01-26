@@ -41,6 +41,7 @@
 <listOptionValue builtIn="false" value="/usr/local/include/juce"/>
 <listOptionValue builtIn="false" value="/usr/include/SDL"/>
 <listOptionValue builtIn="false" value="/usr/local/include/libopenshot-audio"/>
+<listOptionValue builtIn="false" value="&quot;/home/jonathan/Blackmagic DeckLink SDK 9.5/Linux/include&quot;"/>
 </option>
 <inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1807071462" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 </tool>

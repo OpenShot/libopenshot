@@ -26,6 +26,15 @@ FIND_PACKAGE(SDL REQUIRED)
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
 
+################# BLACKMAGIC DECKLINK ###################
+# Find BlackMagic DeckLinkAPI libraries
+FIND_PACKAGE(BlackMagic)
+
+IF (BLACKMAGIC_FOUND)
+	# Include SDL headers (needed for compile)
+	include_directories(${BLACKMAGIC_INCLUDE_DIR})
+ENDIF (BLACKMAGIC_FOUND)
+
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
 FIND_PACKAGE(OpenMP)
@@ -67,7 +76,7 @@ set_target_properties(openshot
 			SOVERSION ${SO_VERSION})
 
 # Link all referenced libraries
-target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY} ${PROFILER})
+target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY} ${BLACKMAGIC_LIBRARY_DIR} ${PROFILER})
 
 
 ############### TEST EXECUTABLE ################
@@ -76,6 +85,15 @@ add_executable(example Main.cpp)
 
 # Link test executable to the new library
 target_link_libraries(example openshot ${PROFILER} )
+
+############### TEST BLACKMAGIC CAPTURE APP ################
+IF (BLACKMAGIC_FOUND)
+	# Create test executable
+	add_executable(blackmagic Capture.cpp)
+	
+	# Link test executable to the new library
+	target_link_libraries(blackmagic openshot ${PROFILER} )
+ENDIF (BLACKMAGIC_FOUND)
 
 ############### SWIG PYTHON BINDINGS ################
 FIND_PACKAGE(SWIG REQUIRED)
