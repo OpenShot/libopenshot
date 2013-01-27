@@ -396,6 +396,19 @@ int Frame::GetWidth()
 	return image->columns();
 }
 
+// Make colors in a specific range transparent
+void Frame::TransparentColors(string color, double fuzz)
+{
+	// Make this range of colors transparent
+	image->colorFuzz(fuzz * 65535 / 100.0);
+	image->transparent(Magick::Color(color));
+	image->colorFuzz(0);
+
+	//image->quantumOperator(Magick::OpacityChannel, Magick::UndefinedEvaluateOperator, "K0*b − K1*g + K2");
+	//image->fx("g-2*b+1");
+	//K0*b − K1*g + K2
+}
+
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Save(string path, float scale)
 {

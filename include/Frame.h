@@ -164,6 +164,9 @@ namespace openshot
 		/// Set Sample Rate, used for playback (Play() method)
 		void SetSampleRate(int sample_rate);
 
+		/// Make colors in a specific range transparent
+		void TransparentColors(string color, double fuzz);
+
 		/// Play audio samples for this frame
 		void Play();
 	};

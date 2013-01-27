@@ -25,15 +25,20 @@
 ** -LICENSE-END-
 */
 
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <omp.h>
 
 #include "DeckLinkAPI.h"
 #include "../include/Capture.h"
+#include "../include/Frame.h"
+
+using namespace std;
 
 pthread_mutex_t					sleepMutex;
 pthread_cond_t					sleepCond;
@@ -53,6 +58,10 @@ const char *					g_audioOutputFile = NULL;
 static int						g_maxFrames = -1;
 
 static unsigned long 			frameCount = 0;
+
+// Convert between YUV and RGB
+IDeckLinkOutput *m_deckLinkOutput;
+IDeckLinkVideoConversion *m_deckLinkConverter;
 
 DeckLinkCaptureDelegate::DeckLinkCaptureDelegate() : m_refCount(0)
 {
@@ -92,8 +101,6 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 {
 	IDeckLinkVideoFrame*	                rightEyeFrame = NULL;
 	IDeckLinkVideoFrame3DExtensions*        threeDExtensions = NULL;
-	void*					frameBytes;
-	void*					audioFrameBytes;
 	
 	// Handle Video Frame
 	if(videoFrame)
@@ -136,20 +143,84 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			
 			if (videoOutputFile != -1)
 			{
-				videoFrame->GetBytes(&frameBytes);
-				write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
-				
-				if (rightEyeFrame)
-				{
-					rightEyeFrame->GetBytes(&frameBytes);
-					write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
-				}
+
+
+//omp_set_num_threads(1);
+omp_set_nested(true);
+#pragma omp parallel
+{
+	#pragma omp single
+	{
+		#pragma omp task firstprivate(m_deckLinkOutput, m_deckLinkConverter, videoFrame, frameCount)
+		{
+			cout << "Start processing frame " << frameCount << endl;
+
+				// *********** CONVERT YUV source frame to RGB ************
+				void *frameBytes;
+				void *audioFrameBytes;
+
+				// Create a new RGB frame object
+				IDeckLinkMutableVideoFrame *m_rgbFrame = NULL;
+
+				int width = videoFrame->GetWidth();
+				int height = videoFrame->GetHeight();
+
+				HRESULT res = m_deckLinkOutput->CreateVideoFrame(
+										width,
+										height,
+										width * 4,
+										bmdFormat8BitARGB,
+										bmdFrameFlagDefault,
+										&m_rgbFrame);
+
+				if(res != S_OK)
+					cout << "BMDOutputDelegate::StartRunning: Error creating RGB frame, res:" << res << endl;
+
+				// Create a RGB version of this YUV video frame
+				m_deckLinkConverter->ConvertFrame(videoFrame, m_rgbFrame);
+
+				// Get RGB Byte array
+				m_rgbFrame->GetBytes(&frameBytes);
+
+				// *********** CREATE OPENSHOT FRAME **********
+				tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(frameCount, width, height, "#000000", 2048, 2));
+
+				// Add Image data to openshot frame
+				f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
+
+				// Remove background color
+				f->TransparentColors("#546466ff", 15.0);
+
+				// Display Image DEBUG
+				if (frameCount == 40)
+					#pragma omp critical (image_magick)
+					f->Display();
+
+				// Release RGB data
+				if (m_rgbFrame)
+					m_rgbFrame->Release();
+
+				cout << "End processing frame " << frameCount << endl;
+		}
+	}
+}
+
+				// ORIGINAL EXAMPLE - write raw video and audio files
+				//videoFrame->GetBytes(&frameBytes);
+				//write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
+				//
+				//if (rightEyeFrame)
+				//{
+				//	rightEyeFrame->GetBytes(&frameBytes);
+				//	write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
+				//}
 			}
 		}
 		
 		if (rightEyeFrame)
 			rightEyeFrame->Release();
 
+		// Increment frame count
 		frameCount++;
 
 		if (g_maxFrames > 0 && frameCount >= g_maxFrames)
@@ -159,14 +230,14 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 	}
 
 	// Handle Audio Frame
-	if (audioFrame)
-	{
-		if (audioOutputFile != -1)
-		{
-			audioFrame->GetBytes(&audioFrameBytes);
-			write(audioOutputFile, audioFrameBytes, audioFrame->GetSampleFrameCount() * g_audioChannels * (g_audioSampleDepth / 8));
-		}
-	}
+	//if (audioFrame)
+	//{
+	//	if (audioOutputFile != -1)
+	//	{
+	//		audioFrame->GetBytes(&audioFrameBytes);
+	//		write(audioOutputFile, audioFrameBytes, audioFrame->GetSampleFrameCount() * g_audioChannels * (g_audioSampleDepth / 8));
+	//	}
+	//}
     return S_OK;
 }
 
@@ -278,6 +349,21 @@ int main(int argc, char *argv[])
 		goto bail;
 	}
 	
+
+	// Init deckLinkOutput (needed for color conversion)
+	if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
+	{
+		cout << "Failed to create a deckLinkOutput(), used to convert YUV to RGB." << endl;
+		m_deckLinkOutput = NULL;
+	}
+
+	// Init the YUV to RGB conversion
+	if(!(m_deckLinkConverter = CreateVideoConversionInstance()))
+	{
+		cout << "Failed to create a VideoConversionInstance(), used to convert YUV to RGB." << endl;
+		m_deckLinkConverter = NULL;
+	}
+
 	// Parse command line options
 	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:")) != -1) 
 	{
