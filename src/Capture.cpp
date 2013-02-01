@@ -59,6 +59,9 @@ static int						g_maxFrames = -1;
 
 static unsigned long 			frameCount = 0;
 
+// Queue of raw video frames
+deque<IDeckLinkMutableVideoFrame*> raw_video_frames;
+
 // Convert between YUV and RGB
 IDeckLinkOutput *m_deckLinkOutput;
 IDeckLinkVideoConversion *m_deckLinkConverter;
@@ -99,22 +102,9 @@ ULONG DeckLinkCaptureDelegate::Release(void)
 
 HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioFrame)
 {
-	IDeckLinkVideoFrame*	                rightEyeFrame = NULL;
-	IDeckLinkVideoFrame3DExtensions*        threeDExtensions = NULL;
-	
 	// Handle Video Frame
 	if(videoFrame)
 	{	
-		// If 3D mode is enabled we retreive the 3D extensions interface which gives.
-		// us access to the right eye frame by calling GetFrameForRightEye() .
-		if ( (videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) != S_OK) ||
-			(threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK))
-		{
-			rightEyeFrame = NULL;
-		}
-		
-		if (threeDExtensions)
-			threeDExtensions->Release();
 
 		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
 		{
@@ -132,10 +122,9 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 				}
 			}
 
-			fprintf(stderr, "Frame received (#%lu) [%s] - %s - Size: %li bytes\n", 
+			fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
 				frameCount,
 				timecodeString != NULL ? timecodeString : "No timecode",
-				rightEyeFrame != NULL ? "Valid Frame (3D left/right)" : "Valid Frame", 
 				videoFrame->GetRowBytes() * videoFrame->GetHeight());
 
 			if (timecodeString)
@@ -143,24 +132,8 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			
 			if (videoOutputFile != -1)
 			{
-
-
-//omp_set_num_threads(1);
-omp_set_nested(true);
-#pragma omp parallel
-{
-	#pragma omp single
-	{
-		#pragma omp task firstprivate(m_deckLinkOutput, m_deckLinkConverter, videoFrame, frameCount)
-		{
-			cout << "Start processing frame " << frameCount << endl;
-
-				// *********** CONVERT YUV source frame to RGB ************
-				void *frameBytes;
-				void *audioFrameBytes;
-
-				// Create a new RGB frame object
-				IDeckLinkMutableVideoFrame *m_rgbFrame = NULL;
+				// Create a new copy of the YUV frame object
+				IDeckLinkMutableVideoFrame *m_yuvFrame = NULL;
 
 				int width = videoFrame->GetWidth();
 				int height = videoFrame->GetHeight();
@@ -168,57 +141,99 @@ omp_set_nested(true);
 				HRESULT res = m_deckLinkOutput->CreateVideoFrame(
 										width,
 										height,
-										width * 4,
-										bmdFormat8BitARGB,
+										videoFrame->GetRowBytes(),
+										bmdFormat8BitYUV,
 										bmdFrameFlagDefault,
-										&m_rgbFrame);
+										&m_yuvFrame);
 
-				if(res != S_OK)
-					cout << "BMDOutputDelegate::StartRunning: Error creating RGB frame, res:" << res << endl;
+				// Copy pixel and audio to copied frame
+				void *frameBytesSource;
+				void *frameBytesDest;
+				videoFrame->GetBytes(&frameBytesSource);
+				m_yuvFrame->GetBytes(&frameBytesDest);
+				memcpy(frameBytesDest, frameBytesSource, videoFrame->GetRowBytes() * height);
 
-				// Create a RGB version of this YUV video frame
-				m_deckLinkConverter->ConvertFrame(videoFrame, m_rgbFrame);
+				// Add raw YUV frame to queue
+				raw_video_frames.push_back(m_yuvFrame);
 
-				// Get RGB Byte array
-				m_rgbFrame->GetBytes(&frameBytes);
+				if (raw_video_frames.size() >= omp_get_num_procs())
+				{
+					cout << "Start Converting YUV to RGB using " << omp_get_num_procs() << " processes" << endl;
 
-				// *********** CREATE OPENSHOT FRAME **********
-				tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(frameCount, width, height, "#000000", 2048, 2));
 
-				// Add Image data to openshot frame
-				f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
+//omp_set_num_threads(1);
+omp_set_nested(true);
+#pragma  omp parallel
+{
+	#pragma  omp single
+	{
+					// Loop through each queued image frame
+					while (!raw_video_frames.empty())
+					{
+						// Get front frame (from the queue)
+						IDeckLinkMutableVideoFrame* frame = raw_video_frames.front();
 
-				// Remove background color
-				f->TransparentColors("#546466ff", 15.0);
+						#pragma omp task firstprivate(m_deckLinkOutput, m_deckLinkConverter, frame, frameCount)
+						{
+							// *********** CONVERT YUV source frame to RGB ************
+							void *frameBytes;
+							void *audioFrameBytes;
 
-				// Display Image DEBUG
-				if (frameCount == 40)
-					#pragma omp critical (image_magick)
-					f->Display();
+							// Create a new RGB frame object
+							IDeckLinkMutableVideoFrame *m_rgbFrame = NULL;
 
-				// Release RGB data
-				if (m_rgbFrame)
-					m_rgbFrame->Release();
+							int width = videoFrame->GetWidth();
+							int height = videoFrame->GetHeight();
 
-				cout << "End processing frame " << frameCount << endl;
-		}
-	}
-}
+							HRESULT res = m_deckLinkOutput->CreateVideoFrame(
+													width,
+													height,
+													width * 4,
+													bmdFormat8BitARGB,
+													bmdFrameFlagDefault,
+													&m_rgbFrame);
 
-				// ORIGINAL EXAMPLE - write raw video and audio files
-				//videoFrame->GetBytes(&frameBytes);
-				//write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
-				//
-				//if (rightEyeFrame)
-				//{
-				//	rightEyeFrame->GetBytes(&frameBytes);
-				//	write(videoOutputFile, frameBytes, videoFrame->GetRowBytes() * videoFrame->GetHeight());
-				//}
+							if(res != S_OK)
+								cout << "BMDOutputDelegate::StartRunning: Error creating RGB frame, res:" << res << endl;
+
+							// Create a RGB version of this YUV video frame
+							m_deckLinkConverter->ConvertFrame(frame, m_rgbFrame);
+
+							// Get RGB Byte array
+							m_rgbFrame->GetBytes(&frameBytes);
+
+							// *********** CREATE OPENSHOT FRAME **********
+							tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(frameCount, width, height, "#000000", 2048, 2));
+
+							// Add Image data to openshot frame
+							f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
+
+							// Remove background color
+							f->TransparentColors("#546466ff", 15.0);
+
+							// Display Image DEBUG
+							if (frameCount > 60)
+								#pragma omp critical (image_magick)
+								f->Display();
+
+							// Release RGB data
+							if (m_rgbFrame)
+								m_rgbFrame->Release();
+							// Release RGB data
+							if (frame)
+								frame->Release();
+
+						} // end task
+
+						// Remove front item
+						raw_video_frames.pop_front();
+					} // end while
+	} // omp single
+} // omp parallel
+
+				}
 			}
 		}
-		
-		if (rightEyeFrame)
-			rightEyeFrame->Release();
 
 		// Increment frame count
 		frameCount++;
@@ -229,15 +244,6 @@ omp_set_nested(true);
 		}
 	}
 
-	// Handle Audio Frame
-	//if (audioFrame)
-	//{
-	//	if (audioOutputFile != -1)
-	//	{
-	//		audioFrame->GetBytes(&audioFrameBytes);
-	//		write(audioOutputFile, audioFrameBytes, audioFrame->GetSampleFrameCount() * g_audioChannels * (g_audioSampleDepth / 8));
-	//	}
-	//}
     return S_OK;
 }
 
