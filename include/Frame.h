@@ -16,6 +16,7 @@
 #include <sstream>
 #include <queue>
 #include <tr1/memory>
+#include <unistd.h>
 #include "Magick++.h"
 #include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"

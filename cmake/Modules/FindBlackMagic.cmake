@@ -39,7 +39,7 @@ ELSE (WIN32)
 			# LINUX
 			FIND_PATH( BLACKMAGIC_INCLUDE_DIR DeckLinkAPI.h
 					   PATHS $ENV{BLACKMAGIC_DIR}/Linux/include/
-					   		 "/home/jonathan/Blackmagic DeckLink SDK 9.5/Linux/include/" )
+					   		 "/home/jonathan/Blackmagic DeckLink SDK 9.7/Linux/include/" )
 
 			FIND_LIBRARY( BLACKMAGIC_LIBRARY_DIR DeckLinkAPI
 					  PATHS /usr/lib/

@@ -18,9 +18,9 @@ void FrameReady(int number)
 int main()
 {
 
-	FFmpegReader r("/home/jonathan/Apps/videcho_site/media/user_files/videos/74c51b3a-66bc-11e2-9c6a-001fd00ee3aa.webm");
+	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r.Open();
-	tr1::shared_ptr<Frame> f = r.GetFrame(75);
+	tr1::shared_ptr<Frame> f = r.GetFrame(300);
 	f->Display();
 	r.Close();
 
@@ -33,7 +33,7 @@ int main()
 
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
 //	Clip c2(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
 //	Clip c3(new ImageReader("/home/jonathan/Desktop/logo.png"));
 //	Clip c4(new ImageReader("/home/jonathan/Desktop/text3.png")); // audio

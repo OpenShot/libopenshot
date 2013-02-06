@@ -33,6 +33,22 @@ FIND_PACKAGE(SDL REQUIRED)
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
 
+################# BLACKMAGIC DECKLINK ###################
+# Find BlackMagic DeckLinkAPI libraries
+FIND_PACKAGE(BlackMagic)
+
+IF (BLACKMAGIC_FOUND)
+	# Include SDL headers (needed for compile)
+	include_directories(${BLACKMAGIC_INCLUDE_DIR})
+ENDIF (BLACKMAGIC_FOUND)
+
+################### OPENMP #####################
+# Check for OpenMP (used for multi-core processing)
+FIND_PACKAGE(OpenMP)
+
+# Add the OpenMP compiler flag
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (tester)
 add_executable(tester

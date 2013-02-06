@@ -46,28 +46,38 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 #set(PROFILER "/usr/lib/libprofiler.so")
 #set(PROFILER "/usr/lib/libtcmalloc.so")
 
+
+###############  SET LIBRARY SOURCE FILES  #################
+SET ( OPENSHOT_SOURCE_FILES
+  		AudioBufferSource.cpp
+		AudioResampler.cpp
+		Cache.cpp
+		Clip.cpp
+		Coordinate.cpp
+		DummyReader.cpp
+		FileReaderBase.cpp
+		FileWriterBase.cpp
+		FFmpegReader.cpp
+		FFmpegWriter.cpp
+		Fraction.cpp
+		Frame.cpp
+		FrameMapper.cpp
+		FrameRate.cpp
+		KeyFrame.cpp
+		ImageReader.cpp
+		Player.cpp
+		Point.cpp
+		Timeline.cpp )
+		
+		IF (BLACKMAGIC_FOUND)
+			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES} DecklinkCapture.cpp )
+		ENDIF (BLACKMAGIC_FOUND)
+		
+
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED
-			AudioBufferSource.cpp
-			AudioResampler.cpp
-			Cache.cpp
-			Clip.cpp
-			Coordinate.cpp
-			DummyReader.cpp
-			FileReaderBase.cpp
-			FileWriterBase.cpp
-			FFmpegReader.cpp
-			FFmpegWriter.cpp
-			Fraction.cpp
-			Frame.cpp
-			FrameMapper.cpp
-			FrameRate.cpp
-			KeyFrame.cpp
-			ImageReader.cpp
-			Player.cpp
-			Point.cpp
-			Timeline.cpp)
+			${OPENSHOT_SOURCE_FILES})
 			
 # Set SONAME and other library properties
 set_target_properties(openshot
@@ -89,7 +99,8 @@ target_link_libraries(example openshot ${PROFILER} )
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)
 	# Create test executable
-	add_executable(blackmagic Capture.cpp)
+	add_executable(blackmagic 
+				   Main_Blackmagic.cpp)
 	
 	# Link test executable to the new library
 	target_link_libraries(blackmagic openshot ${PROFILER} )

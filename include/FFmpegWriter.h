@@ -34,6 +34,7 @@ extern "C" {
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
