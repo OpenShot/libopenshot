@@ -170,6 +170,7 @@ omp_set_nested(true);
 				{
 					// Get front frame (from the queue)
 					IDeckLinkMutableVideoFrame* frame = raw_video_frames.front();
+					raw_video_frames.pop_front();
 
 					// declare local variables (for OpenMP)
 					IDeckLinkOutput *copy_deckLinkOutput(deckLinkOutput);
@@ -240,9 +241,6 @@ omp_set_nested(true);
 							frame->Release();
 
 					} // end task
-
-					// Remove front item
-					raw_video_frames.pop_front();
 				} // end while
 } // omp single
 } // omp parallel
