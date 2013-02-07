@@ -47,6 +47,7 @@
 #include "KeyFrame.h"
 #include "Player.h"
 #include "Point.h"
+#include "TextReader.h"
 #include "Timeline.h"
 
 

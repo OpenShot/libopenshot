@@ -71,6 +71,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		ImageReader.cpp
 		Player.cpp
 		Point.cpp
+		TextReader.cpp
 		Timeline.cpp )
 		
 		IF (BLACKMAGIC_FOUND)

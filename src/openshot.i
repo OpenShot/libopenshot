@@ -34,6 +34,7 @@
 #include "../include/Player.h"
 #include "../include/Point.h"
 #include "../include/KeyFrame.h"
+#include "../include/TextReader.h"
 #include "../include/Timeline.h"
 %}
 
@@ -54,4 +55,5 @@
 %include "../include/Player.h"
 %include "../include/Point.h"
 %include "../include/KeyFrame.h"
+%include "../include/TextReader.h"
 %include "../include/Timeline.h"
