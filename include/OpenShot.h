@@ -30,7 +30,9 @@
 #include "Cache.h"
 #include "Clip.h"
 #include "Coordinate.h"
-#include "DecklinkCapture.h"
+#ifndef OPENSHOT_H
+	#include "DecklinkCapture.h"
+#endif
 #include "DummyReader.h"
 #include "Exceptions.h"
 #include "FileReaderBase.h"

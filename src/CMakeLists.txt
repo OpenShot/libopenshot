@@ -33,6 +33,10 @@ FIND_PACKAGE(BlackMagic)
 IF (BLACKMAGIC_FOUND)
 	# Include SDL headers (needed for compile)
 	include_directories(${BLACKMAGIC_INCLUDE_DIR})
+	
+	# define a global var (used in the C++)
+	add_definitions( -DUSE_BLACKMAGIC )
+	
 ENDIF (BLACKMAGIC_FOUND)
 
 ################### OPENMP #####################
@@ -84,9 +88,21 @@ set_target_properties(openshot
 			PROPERTIES
 			VERSION ${PROJECT_VERSION}
 			SOVERSION ${SO_VERSION})
+			
+###############  LINK LIBRARY  #################
+SET ( REQUIRED_LIBRARIES
+  		${ImageMagick_LIBRARIES}
+		${FFMPEG_LIBRARIES}
+		${LIBJUCE_LIBRARIES}
+		${SDL_LIBRARY}
+		${PROFILER} )
+		
+		IF (BLACKMAGIC_FOUND)
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )
+		ENDIF (BLACKMAGIC_FOUND)
 
 # Link all referenced libraries
-target_link_libraries(openshot ${ImageMagick_LIBRARIES} ${FFMPEG_LIBRARIES} ${LIBJUCE_LIBRARIES} ${SDL_LIBRARY} ${BLACKMAGIC_LIBRARY_DIR} ${PROFILER})
+target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
 
 ############### TEST EXECUTABLE ################
@@ -107,7 +123,7 @@ IF (BLACKMAGIC_FOUND)
 ENDIF (BLACKMAGIC_FOUND)
 
 ############### SWIG PYTHON BINDINGS ################
-FIND_PACKAGE(SWIG REQUIRED)
+FIND_PACKAGE(SWIG 2.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 
 FIND_PACKAGE(PythonLibs)
