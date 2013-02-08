@@ -30,7 +30,7 @@
 #include "Cache.h"
 #include "Clip.h"
 #include "Coordinate.h"
-#ifndef OPENSHOT_H
+#ifdef USE_BLACKMAGIC
 	#include "DecklinkCapture.h"
 #endif
 #include "DummyReader.h"

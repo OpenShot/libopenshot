@@ -31,7 +31,7 @@ include_directories(${SDL_INCLUDE_DIR})
 FIND_PACKAGE(BlackMagic)
 
 IF (BLACKMAGIC_FOUND)
-	# Include SDL headers (needed for compile)
+	# Include headers (needed for compile)
 	include_directories(${BLACKMAGIC_INCLUDE_DIR})
 	
 	# define a global var (used in the C++)

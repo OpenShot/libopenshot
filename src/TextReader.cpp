@@ -3,7 +3,7 @@
 using namespace openshot;
 
 TextReader::TextReader(int width, int height, int x_offset, int y_offset, string text, string font, double size, string text_color, string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), size(size), text_color(text_color), background_color(background_color), is_open(false)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -26,7 +26,8 @@ void TextReader::Open()
 		image->backgroundColor(Magick::Color("none"));
 
 		// Set stroke properties
-		lines.push_back(Magick::DrawableStrokeColor(text_color));
+		lines.push_back(Magick::DrawableStrokeColor(Magick::Color("none")));
+		lines.push_back(Magick::DrawableStrokeWidth(0.0));
 		lines.push_back(Magick::DrawableFillColor(text_color));
 		lines.push_back(Magick::DrawableFont(font));
 		lines.push_back(Magick::DrawablePointSize(size));
