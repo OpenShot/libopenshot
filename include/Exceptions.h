@@ -32,6 +32,15 @@ namespace openshot {
 		}
 	};
 
+	/// Exception when accessing a blackmagic decklink card
+	class DecklinkError : public BaseException
+	{
+	public:
+		DecklinkError(string message)
+			: BaseException(message) { }
+		virtual ~DecklinkError() throw () {}
+	};
+
 	/// Exception when decoding audio packet
 	class ErrorDecodingAudio : public BaseException
 	{

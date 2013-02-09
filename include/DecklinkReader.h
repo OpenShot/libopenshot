@@ -25,37 +25,9 @@
 #include "Cache.h"
 #include "Exceptions.h"
 #include "Frame.h"
-
-// Only found if the decklink SDK is installed (and a blackmagic card
-// is installed on your computer)
-#include "DeckLinkAPI.h"
-
+#include "DecklinkCapture.h"
 
 using namespace std;
-
-
-// Class definition used by Decklink API
-class DeckLinkCaptureDelegate: public IDeckLinkInputCallback {
-public:
-	DeckLinkCaptureDelegate();
-	~DeckLinkCaptureDelegate();
-
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) {
-		return E_NOINTERFACE;
-	}
-	virtual ULONG STDMETHODCALLTYPE AddRef(void);
-	virtual ULONG STDMETHODCALLTYPE Release(void);
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(
-			BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*,
-			BMDDetectedVideoInputFormatFlags);
-	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(
-			IDeckLinkVideoInputFrame*, IDeckLinkAudioInputPacket*);
-
-private:
-	ULONG m_refCount;
-	pthread_mutex_t m_mutex;
-};
-
 
 namespace openshot
 {
@@ -67,15 +39,36 @@ namespace openshot
 	class DecklinkReader : public FileReaderBase
 	{
 	private:
-		string path;
-		tr1::shared_ptr<Magick::Image> image;
 		bool is_open;
+
+		IDeckLink 					*deckLink;
+		IDeckLinkInput				*deckLinkInput;
+		IDeckLinkDisplayModeIterator	*displayModeIterator;
+		IDeckLinkOutput				*m_deckLinkOutput;
+		IDeckLinkVideoConversion 	*m_deckLinkConverter;
+		pthread_mutex_t				sleepMutex;
+		pthread_cond_t				sleepCond;
+		IDeckLinkIterator			*deckLinkIterator;
+		DeckLinkCaptureDelegate 	*delegate;
+		IDeckLinkDisplayMode		*displayMode;
+		BMDVideoInputFlags			inputFlags;
+		BMDDisplayMode				selectedDisplayMode;
+		BMDPixelFormat				pixelFormat;
+		int							displayModeCount;
+		int							exitStatus;
+		int							ch;
+		bool 						foundDisplayMode;
+		HRESULT						result;
+		int							g_videoModeIndex;
+		int							g_audioChannels;
+		int							g_audioSampleDepth;
+		int							g_maxFrames;
 
 	public:
 
 		/// Constructor for DecklinkReader.  This automatically opens the device and loads
 		/// the first second of video, or it throws one of the following exceptions.
-		DecklinkReader(string path) throw(InvalidFile);
+		DecklinkReader(int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError);
 
 		/// Close the device and video stream
 		void Close();
@@ -88,7 +81,7 @@ namespace openshot
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Open device and video stream - which is called by the constructor automatically
-		void Open() throw(InvalidFile);
+		void Open() throw(DecklinkError);
 	};
 
 }

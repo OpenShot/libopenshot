@@ -32,6 +32,7 @@
 #include "Coordinate.h"
 #ifdef USE_BLACKMAGIC
 	#include "DecklinkCapture.h"
+	#include "DecklinkReader.h"
 #endif
 #include "DummyReader.h"
 #include "Exceptions.h"

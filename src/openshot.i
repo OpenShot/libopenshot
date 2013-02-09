@@ -38,11 +38,20 @@
 #include "../include/Timeline.h"
 %}
 
+#ifdef USE_BLACKMAGIC
+	%{
+		#include "../include/DecklinkReader.h"
+	%}
+#endif
+
 %include "../include/FileReaderBase.h"
 %include "../include/FileWriterBase.h"
 %include "../include/Cache.h"
 %include "../include/Clip.h"
 %include "../include/Coordinate.h"
+#ifdef USE_BLACKMAGIC
+	%include "../include/DecklinkReader.h"
+#endif
 %include "../include/DummyReader.h"
 %include "../include/Exceptions.h"
 %include "../include/FFmpegReader.h"
