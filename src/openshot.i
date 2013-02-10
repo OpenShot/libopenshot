@@ -41,6 +41,7 @@
 #ifdef USE_BLACKMAGIC
 	%{
 		#include "../include/DecklinkReader.h"
+		#include "../include/DecklinkWriter.h"
 	%}
 #endif
 
@@ -51,6 +52,7 @@
 %include "../include/Coordinate.h"
 #ifdef USE_BLACKMAGIC
 	%include "../include/DecklinkReader.h"
+	%include "../include/DecklinkWriter.h"
 #endif
 %include "../include/DummyReader.h"
 %include "../include/Exceptions.h"

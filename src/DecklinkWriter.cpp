@@ -1,8 +1,8 @@
-#include "../include/DecklinkReader.h"
+#include "../include/DecklinkWriter.h"
 
 using namespace openshot;
 
-DecklinkReader::DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError)
+DecklinkWriter::DecklinkWriter(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError)
 	: device(device), is_open(false), g_videoModeIndex(video_mode), g_audioChannels(channels), g_audioSampleDepth(sample_depth)
 {
 	// Init FileInfo struct (clear all values)
@@ -23,13 +23,14 @@ DecklinkReader::DecklinkReader(int device, int video_mode, int pixel_format, int
 		case 0: pixelFormat = bmdFormat8BitYUV; break;
 		case 1: pixelFormat = bmdFormat10BitYUV; break;
 		case 2: pixelFormat = bmdFormat10BitRGB; break;
+		case 3: pixelFormat = bmdFormat8BitARGB; break;
 		default:
-			throw DecklinkError("Pixel format is not valid (must be 0,1,2).");
+			throw DecklinkError("Pixel format is not valid (must be 0,1,2,3).");
 	}
 }
 
 // Open image file
-void DecklinkReader::Open() throw(DecklinkError)
+void DecklinkWriter::Open() throw(DecklinkError)
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -52,27 +53,13 @@ void DecklinkReader::Open() throw(DecklinkError)
 				break;
 		}
 
-		if (deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&deckLinkInput) != S_OK)
+		if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput) != S_OK)
 			throw DecklinkError("DeckLink QueryInterface Failed.");
 
 		// Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on output
-		result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
+		result = deckLinkOutput->GetDisplayModeIterator(&displayModeIterator);
 		if (result != S_OK)
 			throw DecklinkError("Could not obtain the video output display mode iterator.");
-
-		// Init deckLinkOutput (needed for color conversion)
-		if (deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
-			throw DecklinkError("Failed to create a deckLinkOutput(), used to convert YUV to RGB.");
-
-		// Init the YUV to RGB conversion
-		if(!(m_deckLinkConverter = CreateVideoConversionInstance()))
-			throw DecklinkError("Failed to create a VideoConversionInstance(), used to convert YUV to RGB.");
-
-		// Create Delegate & Pass in pointers to the output and converters
-		delegate = new DeckLinkInputDelegate(&sleepCond, m_deckLinkOutput, m_deckLinkConverter);
-		deckLinkInput->SetCallback(delegate);
-
-
 
 		if (g_videoModeIndex < 0)
 			throw DecklinkError("No video mode specified.");
@@ -90,43 +77,58 @@ void DecklinkReader::Open() throw(DecklinkError)
 				foundDisplayMode = true;
 				displayMode->GetName(&displayModeName);
 				selectedDisplayMode = displayMode->GetDisplayMode();
-				deckLinkInput->DoesSupportVideoMode(selectedDisplayMode, pixelFormat, bmdVideoInputFlagDefault, &result, NULL);
+				//deckLinkOutput->DoesSupportVideoMode(selectedDisplayMode, pixelFormat, bmdVideoOutputFlagDefault, &result, NULL);
 
 				// Get framerate
 		        displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
 
-				if (result == bmdDisplayModeNotSupported)
-					throw DecklinkError("The display mode does not support the selected pixel format.");
-
-				if (inputFlags & bmdVideoInputDualStream3D)
-				{
-					if (!(displayMode->GetFlags() & bmdDisplayModeSupports3D))
-						throw DecklinkError("The display mode does not support 3D.");
-				}
+				//if (result == bmdDisplayModeNotSupported)
+				//{
+				//	cout << "The display mode does not support the selected pixel format." << endl;
+				//	throw DecklinkError("The display mode does not support the selected pixel format.");
+				//}
 
 				break;
 			}
 			displayModeCount++;
-			displayMode->Release();
 		}
 
 		if (!foundDisplayMode)
 			throw DecklinkError("Invalid video mode.  No matching ones found.");
 
+		// Calculate FPS
+		unsigned long m_framesPerSecond = (unsigned long)((frameRateScale + (frameRateDuration-1))  /  frameRateDuration);
+
+		// Create Delegate & Pass in pointers to the output and converters
+		delegate = new DeckLinkOutputDelegate(displayMode, deckLinkOutput);
+
+		// Provide this class as a delegate to the audio and video output interfaces
+		deckLinkOutput->SetScheduledFrameCompletionCallback(delegate);
+		//deckLinkOutput->SetAudioCallback(delegate);
+
 		// Check for video input
-	    result = deckLinkInput->EnableVideoInput(selectedDisplayMode, pixelFormat, inputFlags);
-	    if(result != S_OK)
-	    	throw DecklinkError("Failed to enable video input. Is another application using the card?");
+		if (deckLinkOutput->EnableVideoOutput(displayMode->GetDisplayMode(), bmdVideoOutputFlagDefault) != S_OK)
+	    	throw DecklinkError("Failed to enable video output. Is another application using the card?");
 
 	    // Check for audio input
-	    result = deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz, g_audioSampleDepth, g_audioChannels);
-	    if(result != S_OK)
-	    	throw DecklinkError("Failed to enable audio input. Is another application using the card?");
+		//if (deckLinkOutput->EnableAudioOutput(bmdAudioSampleRate48kHz, g_audioSampleDepth, g_audioChannels, bmdAudioOutputStreamContinuous) != S_OK)
+	    //	throw DecklinkError("Failed to enable audio output. Is another application using the card?");
 
-	    // Start the streams
-		result = deckLinkInput->StartStreams();
-	    if(result != S_OK)
-	    	throw DecklinkError("Failed to start the video and audio streams.");
+		// Begin video preroll by scheduling a second of frames in hardware
+		tr1::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
+		f->AddColor(displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
+
+		// Preroll 1 second of video
+		for (unsigned i = 0; i < 16; i++)
+		{
+			// Write 30 blank frames (for preroll)
+			delegate->WriteFrame(f);
+			delegate->ScheduleNextFrame(true);
+		}
+
+		deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		//if (deckLinkOutput->BeginAudioPreroll() != S_OK)
+		//	throw DecklinkError("Failed to begin audio preroll.");
 
 
 		// Update image properties
@@ -161,15 +163,18 @@ void DecklinkReader::Open() throw(DecklinkError)
 }
 
 // Close device and video stream
-void DecklinkReader::Close()
+void DecklinkWriter::Close()
 {
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
-		// Stop streams
-		result = deckLinkInput->StopStreams();
-	    if(result != S_OK)
-	    	throw DecklinkError("Failed to stop the video and audio streams.");
+		// Stop the audio and video output streams immediately
+		deckLinkOutput->StopScheduledPlayback(0, NULL, 0);
+		deckLinkOutput->DisableAudioOutput();
+		deckLinkOutput->DisableVideoOutput();
+
+		// Release DisplayMode
+		displayMode->Release();
 
 		if (displayModeIterator != NULL)
 		{
@@ -177,10 +182,10 @@ void DecklinkReader::Close()
 			displayModeIterator = NULL;
 		}
 
-	    if (deckLinkInput != NULL)
+	    if (deckLinkOutput != NULL)
 	    {
-	        deckLinkInput->Release();
-	        deckLinkInput = NULL;
+	    	deckLinkOutput->Release();
+	    	deckLinkOutput = NULL;
 	    }
 
 	    if (deckLink != NULL)
@@ -197,11 +202,22 @@ void DecklinkReader::Close()
 	}
 }
 
-// Get an openshot::Frame object for the next available LIVE frame
-tr1::shared_ptr<Frame> DecklinkReader::GetFrame(int requested_frame) throw(ReaderClosed)
+// This method is required for all derived classes of FileWriterBase.  Write a Frame to the video file.
+void DecklinkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 {
-	// Get a frame from the delegate decklink class (which is collecting them on another thread)
-	return delegate->GetFrame(requested_frame); // frame # does not matter, since it always gets the oldest frame
+	delegate->WriteFrame(frame);
 }
 
+// This method is required for all derived classes of FileWriterBase.  Write a block of frames from a reader.
+void DecklinkWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+{
+	// Loop through each frame (and encoded it)
+	for (int number = start; number <= length; number++)
+	{
+		// Get the frame
+		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
 
+		// Encode frame
+		WriteFrame(f);
+	}
+}

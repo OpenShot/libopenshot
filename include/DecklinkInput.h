@@ -1,5 +1,5 @@
-#ifndef __CAPTURE_H__
-#define __CAPTURE_H__
+#ifndef OPENSHOT_DECKLINK_INPUT_H
+#define OPENSHOT_DECKLINK_INPUT_H
 
 #include <iostream>
 #include <stdio.h>
@@ -11,11 +11,10 @@
 #include <omp.h>
 
 #include "DeckLinkAPI.h"
-#include "../include/DecklinkCapture.h"
 #include "../include/Frame.h"
 
 
-class DeckLinkCaptureDelegate : public IDeckLinkInputCallback
+class DeckLinkInputDelegate : public IDeckLinkInputCallback
 {
 public:
 	pthread_cond_t*			sleepCond;
@@ -30,8 +29,8 @@ public:
 	IDeckLinkOutput *deckLinkOutput;
 	IDeckLinkVideoConversion *deckLinkConverter;
 
-	DeckLinkCaptureDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoConversion* deckLinkConverter);
-	~DeckLinkCaptureDelegate();
+	DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoConversion* deckLinkConverter);
+	~DeckLinkInputDelegate();
 
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
 	virtual ULONG STDMETHODCALLTYPE AddRef(void);

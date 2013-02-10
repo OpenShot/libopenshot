@@ -400,9 +400,11 @@ int Frame::GetWidth()
 void Frame::TransparentColors(string color, double fuzz)
 {
 	// Make this range of colors transparent
-	image->colorFuzz(fuzz * 65535 / 100.0);
-	image->transparent(Magick::Color(color));
-	image->colorFuzz(0);
+	//image->colorFuzz(fuzz * 65535 / 100.0);
+	//image->transparent(Magick::Color(color));
+	//image->colorFuzz(0);
+	image->negate();
+	image->flip();
 }
 
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)

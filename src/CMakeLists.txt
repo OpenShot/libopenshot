@@ -77,8 +77,10 @@ SET ( OPENSHOT_SOURCE_FILES
 		
 		IF (BLACKMAGIC_FOUND)
 			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES} 
-				DecklinkCapture.cpp
-				DecklinkReader.cpp )
+				DecklinkInput.cpp
+				DecklinkReader.cpp
+				DecklinkOutput.cpp
+				DecklinkWriter.cpp)
 		ENDIF (BLACKMAGIC_FOUND)
 		
 

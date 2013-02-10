@@ -25,11 +25,11 @@
 ** -LICENSE-END-
 */
 
-#include "../include/DecklinkCapture.h"
+#include "../include/DecklinkInput.h"
 
 using namespace std;
 
-DeckLinkCaptureDelegate::DeckLinkCaptureDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* m_deckLinkOutput, IDeckLinkVideoConversion* m_deckLinkConverter)
+DeckLinkInputDelegate::DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* m_deckLinkOutput, IDeckLinkVideoConversion* m_deckLinkConverter)
  : m_refCount(0), g_timecodeFormat(0), frameCount(0)
 {
 	sleepCond = m_sleepCond;
@@ -39,12 +39,12 @@ DeckLinkCaptureDelegate::DeckLinkCaptureDelegate(pthread_cond_t* m_sleepCond, ID
 	pthread_mutex_init(&m_mutex, NULL);
 }
 
-DeckLinkCaptureDelegate::~DeckLinkCaptureDelegate()
+DeckLinkInputDelegate::~DeckLinkInputDelegate()
 {
 	pthread_mutex_destroy(&m_mutex);
 }
 
-ULONG DeckLinkCaptureDelegate::AddRef(void)
+ULONG DeckLinkInputDelegate::AddRef(void)
 {
 	pthread_mutex_lock(&m_mutex);
 		m_refCount++;
@@ -53,7 +53,7 @@ ULONG DeckLinkCaptureDelegate::AddRef(void)
 	return (ULONG)m_refCount;
 }
 
-ULONG DeckLinkCaptureDelegate::Release(void)
+ULONG DeckLinkInputDelegate::Release(void)
 {
 	pthread_mutex_lock(&m_mutex);
 		m_refCount--;
@@ -68,11 +68,11 @@ ULONG DeckLinkCaptureDelegate::Release(void)
 	return (ULONG)m_refCount;
 }
 
-tr1::shared_ptr<openshot::Frame> DeckLinkCaptureDelegate::GetFrame(int requested_frame)
+tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_frame)
 {
 	tr1::shared_ptr<openshot::Frame> f;
 
-	#pragma omp critical (blackmagic_queue)
+	#pragma omp critical (blackmagic_input_queue)
 	{
 		if (final_frames.size() > 0)
 		{
@@ -101,7 +101,7 @@ tr1::shared_ptr<openshot::Frame> DeckLinkCaptureDelegate::GetFrame(int requested
 	return f;
 }
 
-HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioFrame)
+HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFrame, IDeckLinkAudioInputPacket* audioFrame)
 {
 	// Handle Video Frame
 	if(videoFrame)
@@ -161,9 +161,9 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 //omp_set_num_threads(1);
 omp_set_nested(true);
-#pragma  omp parallel
+#pragma xxx omp parallel
 {
-#pragma  omp single
+#pragma xxx omp single
 {
 				// Loop through each queued image frame
 				while (!raw_video_frames.empty())
@@ -177,7 +177,7 @@ omp_set_nested(true);
 					IDeckLinkVideoConversion *copy_deckLinkConverter(deckLinkConverter);
 					unsigned long copy_frameCount(frameCount);
 
-					#pragma omp task firstprivate(copy_deckLinkOutput, copy_deckLinkConverter, frame, copy_frameCount)
+					#pragma xxx omp task firstprivate(copy_deckLinkOutput, copy_deckLinkConverter, frame, copy_frameCount)
 					{
 						// *********** CONVERT YUV source frame to RGB ************
 						void *frameBytes;
@@ -212,16 +212,17 @@ omp_set_nested(true);
 						// Add Image data to openshot frame
 						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
+						f->TransparentColors("#737e72", 20.0);
 
-						#pragma omp critical (blackmagic_queue)
+						#pragma omp critical (blackmagic_input_queue)
 						{
 							// Add to final queue
 							final_frames.push_back(f);
 
 							// Don't keep too many frames (remove old frames)
-							while (final_frames.size() > 20)
+							//while (final_frames.size() > 20)
 								// Remove oldest frame
-								final_frames.pop_front();
+							//	final_frames.pop_front();
 						}
 
 
@@ -260,7 +261,7 @@ omp_set_nested(true);
     return S_OK;
 }
 
-HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags)
+HRESULT DeckLinkInputDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags)
 {
     return S_OK;
 }
