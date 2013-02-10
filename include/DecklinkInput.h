@@ -12,6 +12,7 @@
 
 #include "DeckLinkAPI.h"
 #include "../include/Frame.h"
+#include "../include/Cache.h"
 
 
 class DeckLinkInputDelegate : public IDeckLinkInputCallback
@@ -28,6 +29,7 @@ public:
 	// Convert between YUV and RGB
 	IDeckLinkOutput *deckLinkOutput;
 	IDeckLinkVideoConversion *deckLinkConverter;
+	openshot::Cache temp_cache;
 
 	DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoConversion* deckLinkConverter);
 	~DeckLinkInputDelegate();

@@ -161,10 +161,13 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 
 //omp_set_num_threads(1);
 omp_set_nested(true);
-#pragma xxx omp parallel
+#pragma omp parallel
 {
-#pragma xxx omp single
+#pragma omp single
 {
+				// Temp frame counters (to keep the frames in order)
+				frameCount = 0;
+
 				// Loop through each queued image frame
 				while (!raw_video_frames.empty())
 				{
@@ -177,7 +180,7 @@ omp_set_nested(true);
 					IDeckLinkVideoConversion *copy_deckLinkConverter(deckLinkConverter);
 					unsigned long copy_frameCount(frameCount);
 
-					#pragma xxx omp task firstprivate(copy_deckLinkOutput, copy_deckLinkConverter, frame, copy_frameCount)
+					#pragma omp task firstprivate(copy_deckLinkOutput, copy_deckLinkConverter, frame, copy_frameCount)
 					{
 						// *********** CONVERT YUV source frame to RGB ************
 						void *frameBytes;
@@ -212,27 +215,16 @@ omp_set_nested(true);
 						// Add Image data to openshot frame
 						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
-						f->TransparentColors("#737e72", 20.0);
+						// TEST EFFECTS
+						f->TransparentColors("#8fa09a", 20.0);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{
-							// Add to final queue
-							final_frames.push_back(f);
-
-							// Don't keep too many frames (remove old frames)
-							//while (final_frames.size() > 20)
-								// Remove oldest frame
-							//	final_frames.pop_front();
+							//f->Save("/home/jonathan/test.png", 1.0);
+							//f->Display();
+							// Add processed frame to cache (to be recalled in order after the thread pool is done)
+							temp_cache.Add(copy_frameCount, f);
 						}
-
-
-						// Remove background color
-						//f->TransparentColors("#737e72", 20.0);
-
-						// Display Image DEBUG
-						//if (copy_frameCount > 300)
-						//	#pragma omp critical (image_magick)
-						//	f->Display();
 
 						// Release RGB data
 						if (m_rgbFrame)
@@ -242,21 +234,39 @@ omp_set_nested(true);
 							frame->Release();
 
 					} // end task
+
+					// Increment frame count
+					frameCount++;
+
 				} // end while
+
+				// Add frames to final queue (in order)
+				for (int z = 0; z < omp_get_num_procs(); z++)
+				{
+					if (temp_cache.Exists(z))
+					{
+						tr1::shared_ptr<openshot::Frame> f = temp_cache.GetFrame(z);
+
+						// Add to final queue
+						final_frames.push_back(f);
+					}
+				}
+
+				// Clear temp cache
+				temp_cache.Clear();
+
+				// Don't keep too many frames (remove old frames)
+				while (final_frames.size() > 20)
+					// Remove oldest frame
+					final_frames.pop_front();
+
+
 } // omp single
 } // omp parallel
 
-			}
-		}
-
-		// Increment frame count
-		frameCount++;
-
-		//if (g_maxFrames > 0 && frameCount >= g_maxFrames)
-		//{
-		//	pthread_cond_signal(sleepCond);
-		//}
-	}
+			} // if size > num processors
+		} // has video source
+	} // if videoFrame
 
     return S_OK;
 }
