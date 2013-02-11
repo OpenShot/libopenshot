@@ -65,8 +65,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 			source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 			if (source_frame)
 				break;
-			else
-				usleep(1000 * 1);
+			//else
+				usleep(1000 * 2);
 		}
 	tr1::shared_ptr<Magick::Image> source_image;
 

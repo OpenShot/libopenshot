@@ -94,7 +94,7 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 
 		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
 		{
-			//fprintf(stderr, "Frame received (#%lu) - No input signal detected\n", frameCount);
+			fprintf(stderr, "Frame received (#%lu) - No input signal detected\n", frameCount);
 		}
 		else
 		{
@@ -108,10 +108,10 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 				}
 			}
 
-			//fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
-			//	frameCount,
-			//	timecodeString != NULL ? timecodeString : "No timecode",
-			//	videoFrame->GetRowBytes() * videoFrame->GetHeight());
+			fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
+				frameCount,
+				timecodeString != NULL ? timecodeString : "No timecode",
+				videoFrame->GetRowBytes() * videoFrame->GetHeight());
 
 			if (timecodeString)
 				free((void*)timecodeString);
@@ -201,12 +201,14 @@ omp_set_nested(true);
 						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
 						// TEST EFFECTS
-						f->TransparentColors("#8fa09a", 20.0);
+						f->TransparentColors("#216e3c", 10.0);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{
+							//f->Save("/home/jonathan/test.png", 1.0);
 							// Add processed frame to cache (to be recalled in order after the thread pool is done)
 							temp_cache.Add(copy_frameCount, f);
+							//usleep(1000 * 100);
 						}
 
 						// Release RGB data

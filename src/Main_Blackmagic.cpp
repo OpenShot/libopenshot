@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
 	Clip c1(new ImageReader("/home/jonathan/Pictures/moon.jpg"));
 	//Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
 	Clip c2(new DecklinkReader(1, 11, 0, 2, 16));
+	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
 
 
 	// CLIP 1 (background image)
@@ -31,10 +32,18 @@ int main(int argc, char *argv[])
 
 	// CLIP 2 (decklink live stream)
 	c2.Position(0.0);
-	c1.scale = SCALE_NONE;
+	c2.scale = SCALE_NONE;
 	//c1.End(30.0);
 	c2.Layer(1);
 	t.AddClip(&c2);
+
+	// CLIP 3 (foreground image)
+	c3.Position(0.0);
+	c3.gravity = GRAVITY_TOP;
+	c3.scale = SCALE_NONE;
+	//c1.End(30.0);
+	c3.Layer(2);
+	//t.AddClip(&c3);
 
 	// Decklink writer
 	DecklinkWriter w(0, 11, 3, 2, 16);
@@ -54,7 +63,7 @@ int main(int argc, char *argv[])
 			//	t.GetFrame(0)->Display();
 
 			w.WriteFrame(f);
-			usleep(1000 * 1);
+			usleep(1000 * 2);
 
 			x++;
 		}

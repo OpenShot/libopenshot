@@ -184,7 +184,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 										&m_rgbFrame) != S_OK)
 				{
 					// keep trying
-					usleep(1000 * 1);
+					usleep(1000 * 2);
 				}
 
 				// copy of frame count
