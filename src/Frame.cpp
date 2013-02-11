@@ -376,6 +376,12 @@ void Frame::SetPixelRatio(int num, int den)
 	pixel_ratio.den = den;
 }
 
+// Set frame number
+void Frame::SetFrameNumber(int new_number)
+{
+	number = new_number;
+}
+
 // Set Sample Rate
 void Frame::SetSampleRate(int rate)
 {
@@ -386,14 +392,15 @@ void Frame::SetSampleRate(int rate)
 int Frame::GetHeight()
 {
 	// return height
-	return image->rows();
+	return height;
+	//return image->rows();
 }
 
 // Get height of image
 int Frame::GetWidth()
 {
-	// return width
-	return image->columns();
+	return width;
+	//return image->columns();
 }
 
 // Make colors in a specific range transparent

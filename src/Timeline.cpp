@@ -60,17 +60,15 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
 	#pragma omp critical (reader_lock)
-		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+		while (!source_frame)
+		{
+			source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+			if (source_frame)
+				break;
+			else
+				usleep(1000 * 1);
+		}
 	tr1::shared_ptr<Magick::Image> source_image;
-
-	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
-	if (new_frame->GetImage()->columns() == 1)
-	{
-		int red = color.red.GetInt(timeline_frame_number);
-		int green = color.green.GetInt(timeline_frame_number);
-		int blue = color.blue.GetInt(timeline_frame_number);
-		new_frame->AddColor(width, height, Magick::Color(red, green, blue, 0));
-	}
 
 	/* COPY AUDIO - with correct volume */
 	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
@@ -90,7 +88,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 		// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
 		new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
-
 	}
 
 	/* GET IMAGE DATA - OR GENERATE IT */
@@ -184,8 +181,10 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
+	bool source_resized = false;
 	if (source_width != width || source_height != height)
 	{
+		source_resized = true;
 		source_image->borderColor(Magick::Color("none"));
 		source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
 		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
@@ -202,12 +201,14 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	int offset_x = -1;
 	int offset_y = -1;
+	bool transformed = false;
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
 		cout << "SIMPLE" << endl;
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
 		offset_x = round(x);
 		offset_y = round(y);
+		transformed = true;
 
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
@@ -216,11 +217,34 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x,y };
 		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
+		transformed = true;
 	}
 
-	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
+	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
+	if (new_frame->GetImage()->columns() == 1 && !source_resized && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
+	{
+		// Just use this image as the background
+		new_frame->AddImage(source_image);
+	}
+	else if (new_frame->GetImage()->columns() == 1)
+	{
+		// Needs a new (black) background canvas
+		int red = color.red.GetInt(timeline_frame_number);
+		int green = color.green.GetInt(timeline_frame_number);
+		int blue = color.blue.GetInt(timeline_frame_number);
+		new_frame->AddColor(width, height, Magick::Color(red, green, blue, 0));
+
+		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
+		new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
+	}
+	else
+	{
+		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
+		new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
+	}
+
 }
 
 // Update the list of 'opened' clips
@@ -333,14 +357,14 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 
 		//omp_set_num_threads(1);
 		omp_set_nested(true);
-		#pragma omp parallel
+		#pragma xxx omp parallel
 		{
-			#pragma omp single
+			#pragma xxx omp single
 			{
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma omp xxx task firstprivate(frame_number)
+					#pragma xxx omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));

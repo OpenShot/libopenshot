@@ -12,6 +12,7 @@
 #include "Magick++.h"
 
 #include "DeckLinkAPI.h"
+#include "../include/Cache.h"
 #include "../include/Frame.h"
 
 enum OutputSignal {
@@ -32,6 +33,9 @@ protected:
 	unsigned long					m_audioSampleDepth;
 	unsigned long					audioSamplesPerFrame;
 	unsigned long					m_framesPerSecond;
+
+	unsigned long 							frameCount;
+	map<int, IDeckLinkMutableVideoFrame* > 	temp_cache;
 
 	BMDTimeValue frameRateDuration, frameRateScale;
 

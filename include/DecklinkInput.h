@@ -21,6 +21,7 @@ public:
 	pthread_cond_t*			sleepCond;
 	BMDTimecodeFormat		g_timecodeFormat;
 	unsigned long 			frameCount;
+	unsigned long 			final_frameCount;
 
 	// Queue of raw video frames
 	deque<IDeckLinkMutableVideoFrame*> raw_video_frames;

@@ -64,12 +64,15 @@ namespace openshot
 		int							g_audioSampleDepth;
 		int							g_maxFrames;
 		int							device;
+		BMDTimeValue frameRateDuration, frameRateScale;
+		const char *displayModeName;
 
 	public:
 
 		/// Constructor for DecklinkReader.  This automatically opens the device and loads
 		/// the first second of video, or it throws one of the following exceptions.
 		DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError);
+		~DecklinkReader(); /// Destructor
 
 		/// Close the device and video stream
 		void Close();

@@ -115,18 +115,18 @@ void DecklinkWriter::Open() throw(DecklinkError)
 	    //	throw DecklinkError("Failed to enable audio output. Is another application using the card?");
 
 		// Begin video preroll by scheduling a second of frames in hardware
-		tr1::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
-		f->AddColor(displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
+		//tr1::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
+		//f->AddColor(displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
 
 		// Preroll 1 second of video
-		for (unsigned i = 0; i < 16; i++)
-		{
-			// Write 30 blank frames (for preroll)
-			delegate->WriteFrame(f);
-			delegate->ScheduleNextFrame(true);
-		}
+		//for (unsigned i = 0; i < 16; i++)
+		//{
+		//	// Write 30 blank frames (for preroll)
+		//	delegate->WriteFrame(f);
+		//	delegate->ScheduleNextFrame(true);
+		//}
 
-		deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		//deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
 		//if (deckLinkOutput->BeginAudioPreroll() != S_OK)
 		//	throw DecklinkError("Failed to begin audio preroll.");
 

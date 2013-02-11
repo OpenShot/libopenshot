@@ -30,7 +30,7 @@
 using namespace std;
 
 DeckLinkInputDelegate::DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* m_deckLinkOutput, IDeckLinkVideoConversion* m_deckLinkConverter)
- : m_refCount(0), g_timecodeFormat(0), frameCount(0)
+ : m_refCount(0), g_timecodeFormat(0), frameCount(0), final_frameCount(0)
 {
 	sleepCond = m_sleepCond;
 	deckLinkOutput = m_deckLinkOutput;
@@ -76,27 +76,12 @@ tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_f
 	{
 		if (final_frames.size() > 0)
 		{
-			cout << "remaining: " << final_frames.size() << endl;
+			//cout << "remaining: " << final_frames.size() << endl;
 			f = final_frames.front();
 			final_frames.pop_front();
 		}
-//		// Try for up to 1 second before giving up
-//		for(int x = 0; x < 60; x++)
-//		{
-//			if (final_frames.size() > 0)
-//			{
-//				// Get the oldest frame
-//				cout << "Found the frame! Remaining: " << final_frames.size() << endl;
-//				f = final_frames.front();
-//				break;
-//			} else
-//			{
-//				// No frames yet... so sleep for a 1/60 second
-//				cout << "sleeping for 1/60 a second" << endl;
-//				usleep(20000);
-//			}
-//		}
 	}
+
 
 	return f;
 }
@@ -109,7 +94,7 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 
 		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
 		{
-			fprintf(stderr, "Frame received (#%lu) - No input signal detected\n", frameCount);
+			//fprintf(stderr, "Frame received (#%lu) - No input signal detected\n", frameCount);
 		}
 		else
 		{
@@ -123,10 +108,10 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 				}
 			}
 
-			fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
-				frameCount,
-				timecodeString != NULL ? timecodeString : "No timecode",
-				videoFrame->GetRowBytes() * videoFrame->GetHeight());
+			//fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
+			//	frameCount,
+			//	timecodeString != NULL ? timecodeString : "No timecode",
+			//	videoFrame->GetRowBytes() * videoFrame->GetHeight());
 
 			if (timecodeString)
 				free((void*)timecodeString);
@@ -220,8 +205,6 @@ omp_set_nested(true);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{
-							//f->Save("/home/jonathan/test.png", 1.0);
-							//f->Display();
 							// Add processed frame to cache (to be recalled in order after the thread pool is done)
 							temp_cache.Add(copy_frameCount, f);
 						}
@@ -240,29 +223,29 @@ omp_set_nested(true);
 
 				} // end while
 
-				// Add frames to final queue (in order)
-				for (int z = 0; z < omp_get_num_procs(); z++)
-				{
-					if (temp_cache.Exists(z))
-					{
-						tr1::shared_ptr<openshot::Frame> f = temp_cache.GetFrame(z);
-
-						// Add to final queue
-						final_frames.push_back(f);
-					}
-				}
-
-				// Clear temp cache
-				temp_cache.Clear();
-
-				// Don't keep too many frames (remove old frames)
-				while (final_frames.size() > 20)
-					// Remove oldest frame
-					final_frames.pop_front();
-
-
 } // omp single
 } // omp parallel
+
+			// Add frames to final queue (in order)
+			for (int z = 0; z < frameCount; z++)
+			{
+				if (temp_cache.Exists(z))
+				{
+					tr1::shared_ptr<openshot::Frame> f = temp_cache.GetFrame(z);
+
+					// Add to final queue
+					final_frames.push_back(f);
+				}
+			}
+
+			// Clear temp cache
+			temp_cache.Clear();
+
+			// Don't keep too many frames (remove old frames)
+			while (final_frames.size() > 20)
+				// Remove oldest frame
+				final_frames.pop_front();
+
 
 			} // if size > num processors
 		} // has video source

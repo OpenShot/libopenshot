@@ -66,7 +66,10 @@ HRESULT DeckLinkOutputDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* co
 {
 	// Skip ahead, if frame was not shown
 	if (result != bmdOutputFrameCompleted)
-		m_totalFramesScheduled++;
+		cout << "NOT SCHEDULED" << endl;
+		//m_totalFramesScheduled += 2;
+
+	cout << "Scheduled Successfully!" << endl;
 
 	// When a video frame has been released by the API, schedule another video frame to be output
 	ScheduleNextFrame(false);
@@ -82,34 +85,34 @@ HRESULT DeckLinkOutputDelegate::ScheduledPlaybackHasStopped ()
 
 HRESULT DeckLinkOutputDelegate::RenderAudioSamples (bool preroll)
 {
-	// Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
-	const unsigned long kAudioWaterlevel = 48000;
-	unsigned int bufferedSamples;
-
-	// Try to maintain the number of audio samples buffered in the API at a specified waterlevel
-	if ((deckLinkOutput->GetBufferedAudioSampleFrameCount(&bufferedSamples) == S_OK) && (bufferedSamples < kAudioWaterlevel))
-	{
-		unsigned int samplesToEndOfBuffer;
-		unsigned int samplesToWrite;
-		unsigned int samplesWritten;
-
-		samplesToEndOfBuffer = (m_audioBufferSampleLength - m_audioBufferOffset);
-		samplesToWrite = (kAudioWaterlevel - bufferedSamples);
-		if (samplesToWrite > samplesToEndOfBuffer)
-			samplesToWrite = samplesToEndOfBuffer;
-
-		if (deckLinkOutput->ScheduleAudioSamples((void*)((unsigned long)m_audioBuffer + (m_audioBufferOffset * m_audioChannelCount * m_audioSampleDepth/8)), samplesToWrite, 0, 0, &samplesWritten) == S_OK)
-		{
-			m_audioBufferOffset = ((m_audioBufferOffset + samplesWritten) % m_audioBufferSampleLength);
-		}
-	}
-
-
-	if (preroll)
-	{
-		// Start audio and video output
-		deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
-	}
+//	// Provide further audio samples to the DeckLink API until our preferred buffer waterlevel is reached
+//	const unsigned long kAudioWaterlevel = 48000;
+//	unsigned int bufferedSamples;
+//
+//	// Try to maintain the number of audio samples buffered in the API at a specified waterlevel
+//	if ((deckLinkOutput->GetBufferedAudioSampleFrameCount(&bufferedSamples) == S_OK) && (bufferedSamples < kAudioWaterlevel))
+//	{
+//		unsigned int samplesToEndOfBuffer;
+//		unsigned int samplesToWrite;
+//		unsigned int samplesWritten;
+//
+//		samplesToEndOfBuffer = (m_audioBufferSampleLength - m_audioBufferOffset);
+//		samplesToWrite = (kAudioWaterlevel - bufferedSamples);
+//		if (samplesToWrite > samplesToEndOfBuffer)
+//			samplesToWrite = samplesToEndOfBuffer;
+//
+//		if (deckLinkOutput->ScheduleAudioSamples((void*)((unsigned long)m_audioBuffer + (m_audioBufferOffset * m_audioChannelCount * m_audioSampleDepth/8)), samplesToWrite, 0, 0, &samplesWritten) == S_OK)
+//		{
+//			m_audioBufferOffset = ((m_audioBufferOffset + samplesWritten) % m_audioBufferSampleLength);
+//		}
+//	}
+//
+//
+//	if (preroll)
+//	{
+//		// Start audio and video output
+//		deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+//	}
 
 	return S_OK;
 }
@@ -129,13 +132,15 @@ void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 			if (deckLinkOutput->ScheduleVideoFrame(m_rgbFrame, (m_totalFramesScheduled * frameRateDuration), frameRateDuration, frameRateScale) != S_OK)
 				cout << "ScheduleVideoFrame FAILED!!! " << m_totalFramesScheduled << endl;
 
-			// Update the timestamp (regardless of previous frame's success)
-			m_totalFramesScheduled += 1;
-
 			// Release frame
 			m_rgbFrame->Release();
+
+			// Update the timestamp (regardless of previous frame's success)
+			m_totalFramesScheduled += 1;
 		}
 	} // critical
+
+
 }
 
 void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
@@ -152,10 +157,13 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 
 		//omp_set_num_threads(1);
 		omp_set_nested(true);
-		#pragma xxx omp parallel
+		#pragma omp parallel
 		{
-		#pragma xxx omp single
+		#pragma omp single
 		{
+			// Temp frame counters (to keep the frames in order)
+			frameCount = 0;
+
 			// Loop through each queued image frame
 			while (!raw_video_frames.empty())
 			{
@@ -176,58 +184,96 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 										&m_rgbFrame) != S_OK)
 				{
 					// keep trying
-					usleep(1000 * 10);
+					usleep(1000 * 1);
 				}
 
-					#pragma xxx omp task firstprivate(m_rgbFrame, frame)
+				// copy of frame count
+				unsigned long copy_frameCount(frameCount);
+
+				#pragma omp task firstprivate(m_rgbFrame, frame, copy_frameCount)
+				{
+					// *********** CONVERT YUV source frame to RGB ************
+					void *frameBytes;
+					void *audioFrameBytes;
+
+					int width = frame->GetWidth();
+					int height = frame->GetHeight();
+
+					// Get RGB Byte array
+					m_rgbFrame->GetBytes(&frameBytes);
+					uint8_t *castBytes = (uint8_t *) frameBytes;
+
+					// Get a list of pixels in our frame's image.  Each pixel is represented by
+					// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
+					const Magick::PixelPacket *pixel_packets = frame->GetPixels();
+
+					// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
+					// colors around to match the Decklink order (ARGB).
+					int numBytes = m_rgbFrame->GetRowBytes() * height;
+					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
 					{
-						// *********** CONVERT YUV source frame to RGB ************
-						void *frameBytes;
-						void *audioFrameBytes;
+						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
+						castBytes[row] = 255; // alpha
+						castBytes[row+1] = pixel_packets[packet].red;
+						castBytes[row+2] = pixel_packets[packet].green;
+						castBytes[row+3] = pixel_packets[packet].blue;
+					}
 
-						int width = frame->GetWidth();
-						int height = frame->GetHeight();
+					#pragma omp critical (blackmagic_output_queue)
+					{
+						// Add processed frame to cache (to be recalled in order after the thread pool is done)
+						temp_cache[copy_frameCount] = m_rgbFrame;
+					}
 
-						// Get RGB Byte array
-						m_rgbFrame->GetBytes(&frameBytes);
-						uint8_t *castBytes = (uint8_t *) frameBytes;
+					// Add processed RGB frame to final_frames
+					//final_frames.push_back(m_rgbFrame);
+				} // end task
 
-						// Get a list of pixels in our frame's image.  Each pixel is represented by
-						// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
-						const Magick::PixelPacket *pixel_packets = frame->GetPixels();
-
-						// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
-						// colors around to match the Decklink order (ARGB).
-						int numBytes = m_rgbFrame->GetRowBytes() * height;
-						for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
-						{
-							// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-							castBytes[row] = 255; // alpha
-							castBytes[row+1] = pixel_packets[packet].red;
-							castBytes[row+2] = pixel_packets[packet].green;
-							castBytes[row+3] = pixel_packets[packet].blue;
-						}
-
-						// Add processed RGB frame to final_frames
-						final_frames.push_back(m_rgbFrame);
-					} // end task
+				// Increment frame count
+				frameCount++;
 
 			} // end while
 		} // omp single
 		} // omp parallel
 
-#pragma xxx omp critical (blackmagic_output_queue)
-{
-	//cout << "final_frames.size(): " << final_frames.size() << ", raw_video_frames.size(): " << raw_video_frames.size() << endl;
-		// Don't keep too many frames (remove old frames)
-		while (final_frames.size() > 15)
+
+		// Add frames to final queue (in order)
+		for (int z = 0; z < frameCount; z++)
 		{
-			cout << "Too many, so remove some..." << endl;
-			// Remove oldest frame
-			final_frames.front()->Release();
-			final_frames.pop_front();
+			IDeckLinkMutableVideoFrame *m_rgbFrame = temp_cache[z];
+			// Add to final queue
+			final_frames.push_back(m_rgbFrame);
 		}
-}
+
+		// Clear temp cache
+		temp_cache.clear();
+
+
+		cout << "final_frames.size(): " << final_frames.size() << ", raw_video_frames.size(): " << raw_video_frames.size() << endl;
+		if (final_frames.size() >= m_framesPerSecond && m_totalFramesScheduled == 0)
+		{
+			cout << "Prerolling!" << endl;
+
+			for (int x = 0; x < final_frames.size(); x++)
+				ScheduleNextFrame(true);
+
+			cout << "Starting scheduled playback!" << endl;
+
+			// Start playback when enough frames have been processed
+			deckLinkOutput->StartScheduledPlayback(0, 100, 1.0);
+		}
+		else
+		{
+			// Be sure we don't have too many extra frames
+			while (final_frames.size() > (m_framesPerSecond + 15))
+			{
+				cout << "Too many, so remove some..." << endl;
+				// Remove oldest frame
+				final_frames.front()->Release();
+				final_frames.pop_front();
+			}
+		}
+
 
 	} // if
 
