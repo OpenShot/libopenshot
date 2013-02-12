@@ -32,13 +32,16 @@ using namespace std;
 DeckLinkOutputDelegate::DeckLinkOutputDelegate(IDeckLinkDisplayMode *displayMode, IDeckLinkOutput* m_deckLinkOutput)
  : m_refCount(0), displayMode(displayMode)
 {
+	// reference to output device
 	deckLinkOutput = m_deckLinkOutput;
 
+	// init some variables
 	m_totalFramesScheduled = 0;
 	m_audioChannelCount = 2;
 	m_audioSampleRate = bmdAudioSampleRate48kHz;
 	m_audioSampleDepth = 16;
 	m_outputSignal = kOutputSignalDrop;
+	m_currentFrame = NULL;
 
 	// Get framerate
     displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
@@ -64,11 +67,6 @@ DeckLinkOutputDelegate::~DeckLinkOutputDelegate()
 /************************* DeckLink API Delegate Methods *****************************/
 HRESULT DeckLinkOutputDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	// Skip ahead, if frame was not shown
-	if (result != bmdOutputFrameCompleted)
-		cout << "NOT SCHEDULED" << endl;
-		//m_totalFramesScheduled += 2;
-
 	cout << "Scheduled Successfully!" << endl;
 
 	// When a video frame has been released by the API, schedule another video frame to be output
@@ -125,19 +123,28 @@ void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 		// Get oldest frame (if any)
 		if (final_frames.size() > 0)
 		{
-			// Schedule the next frame
-			IDeckLinkMutableVideoFrame *m_rgbFrame = final_frames.front();
+			// Release the current frame (if any)
+			if (m_currentFrame)
+			{
+				m_currentFrame->Release();
+				m_currentFrame = NULL;
+			}
+
+			// Get the next frame off the queue
+			cout << "Queue: get next (" << final_frames.size() - 1 << " remaining)" << endl;
+			m_currentFrame = final_frames.front();
 			final_frames.pop_front(); // remove this frame from the queue
-
-			if (deckLinkOutput->ScheduleVideoFrame(m_rgbFrame, (m_totalFramesScheduled * frameRateDuration), frameRateDuration, frameRateScale) != S_OK)
-				cout << "ScheduleVideoFrame FAILED!!! " << m_totalFramesScheduled << endl;
-
-			// Release frame
-			m_rgbFrame->Release();
-
-			// Update the timestamp (regardless of previous frame's success)
-			m_totalFramesScheduled += 1;
 		}
+		else
+			cout << "Queue: empty on writer..." << endl;
+
+		// Schedule a frame to be displayed
+		if (m_currentFrame && deckLinkOutput->ScheduleVideoFrame(m_currentFrame, (m_totalFramesScheduled * frameRateDuration), frameRateDuration, frameRateScale) != S_OK)
+			cout << "ScheduleVideoFrame FAILED!!! " << m_totalFramesScheduled << endl;
+
+		// Update the timestamp (regardless of previous frame's success)
+		m_totalFramesScheduled += 1;
+
 	} // critical
 
 

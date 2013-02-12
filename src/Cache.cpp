@@ -66,6 +66,8 @@ tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
 // Get the smallest frame number
 tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {
+	tr1::shared_ptr<openshot::Frame> f;
+
 	// Loop through frame numbers
 	 deque<int>::iterator itr;
 	 int smallest_frame = -1;
@@ -76,7 +78,10 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 	 }
 
 	 // Return frame (or error if no frame found)
-	 return GetFrame(smallest_frame);
+	 if (smallest_frame > 0)
+		 f = GetFrame(smallest_frame);
+
+	 return f;
 }
 
 // Remove a specific frame

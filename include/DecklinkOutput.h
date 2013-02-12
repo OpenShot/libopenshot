@@ -47,6 +47,9 @@ protected:
 	IDeckLinkOutput *deckLinkOutput;
 	IDeckLinkDisplayMode *displayMode;
 
+	// Current frame being displayed
+	IDeckLinkMutableVideoFrame *m_currentFrame;
+
 public:
 	DeckLinkOutputDelegate(IDeckLinkDisplayMode *displayMode, IDeckLinkOutput* deckLinkOutput);
 	~DeckLinkOutputDelegate();

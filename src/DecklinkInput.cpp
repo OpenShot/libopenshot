@@ -36,6 +36,9 @@ DeckLinkInputDelegate::DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckL
 	deckLinkOutput = m_deckLinkOutput;
 	deckLinkConverter = m_deckLinkConverter;
 
+	// Set cache size (20 1080p frames)
+	final_frames.SetMaxBytes(30 * 1920 * 1080 * 4 + (44100 * 2 * 4));
+
 	pthread_mutex_init(&m_mutex, NULL);
 }
 
@@ -74,14 +77,15 @@ tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_f
 
 	#pragma omp critical (blackmagic_input_queue)
 	{
-		if (final_frames.size() > 0)
+		if (final_frames.Exists(requested_frame))
 		{
-			//cout << "remaining: " << final_frames.size() << endl;
-			f = final_frames.front();
-			final_frames.pop_front();
+			// Get the frame and remove it from the cache
+			f = final_frames.GetFrame(requested_frame);
+			final_frames.Remove(requested_frame);
 		}
+		else
+			cout << "Can't find " << requested_frame << endl;
 	}
-
 
 	return f;
 }
@@ -151,7 +155,7 @@ omp_set_nested(true);
 #pragma omp single
 {
 				// Temp frame counters (to keep the frames in order)
-				frameCount = 0;
+				//frameCount = 0;
 
 				// Loop through each queued image frame
 				while (!raw_video_frames.empty())
@@ -205,10 +209,8 @@ omp_set_nested(true);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{
-							//f->Save("/home/jonathan/test.png", 1.0);
 							// Add processed frame to cache (to be recalled in order after the thread pool is done)
-							temp_cache.Add(copy_frameCount, f);
-							//usleep(1000 * 100);
+							final_frames.Add(copy_frameCount, f);
 						}
 
 						// Release RGB data
@@ -227,26 +229,6 @@ omp_set_nested(true);
 
 } // omp single
 } // omp parallel
-
-			// Add frames to final queue (in order)
-			for (int z = 0; z < frameCount; z++)
-			{
-				if (temp_cache.Exists(z))
-				{
-					tr1::shared_ptr<openshot::Frame> f = temp_cache.GetFrame(z);
-
-					// Add to final queue
-					final_frames.push_back(f);
-				}
-			}
-
-			// Clear temp cache
-			temp_cache.Clear();
-
-			// Don't keep too many frames (remove old frames)
-			while (final_frames.size() > 20)
-				// Remove oldest frame
-				final_frames.pop_front();
 
 
 			} // if size > num processors

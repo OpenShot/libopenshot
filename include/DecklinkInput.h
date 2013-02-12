@@ -25,12 +25,11 @@ public:
 
 	// Queue of raw video frames
 	deque<IDeckLinkMutableVideoFrame*> raw_video_frames;
-	deque<tr1::shared_ptr<openshot::Frame> > final_frames;
+	openshot::Cache final_frames;
 
 	// Convert between YUV and RGB
 	IDeckLinkOutput *deckLinkOutput;
 	IDeckLinkVideoConversion *deckLinkConverter;
-	openshot::Cache temp_cache;
 
 	DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckLinkOutput* deckLinkOutput, IDeckLinkVideoConversion* deckLinkConverter);
 	~DeckLinkInputDelegate();

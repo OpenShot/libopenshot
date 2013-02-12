@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 	//Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
 	Clip c2(new DecklinkReader(1, 11, 0, 2, 16));
 	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
+	Clip c4(new ImageReader("/home/jonathan/Pictures/jason-mask.png"));
 
 
 	// CLIP 1 (background image)
@@ -37,13 +38,21 @@ int main(int argc, char *argv[])
 	c2.Layer(1);
 	t.AddClip(&c2);
 
-	// CLIP 3 (foreground image)
+	// CLIP 3 (foreground image 1)
 	c3.Position(0.0);
 	c3.gravity = GRAVITY_TOP;
 	c3.scale = SCALE_NONE;
 	//c1.End(30.0);
 	c3.Layer(2);
 	//t.AddClip(&c3);
+
+	// CLIP 4 (foreground image 2)
+	c4.Position(0.0);
+	c4.gravity = GRAVITY_TOP;
+	c4.scale = SCALE_NONE;
+	//c1.End(30.0);
+	c4.Layer(3);
+	//t.AddClip(&c4);
 
 	// Decklink writer
 	DecklinkWriter w(0, 11, 3, 2, 16);
@@ -53,17 +62,17 @@ int main(int argc, char *argv[])
 	int x = 0;
 	while (true)
 	{
-		if (x % 30 == 0)
+		if (x != 0 && x % 30 == 0)
 			cout << "30 frames..." << endl;
 
 		tr1::shared_ptr<Frame> f = t.GetFrame(x);
 		if (f)
 		{
-			//if (x % 30 == 0)
+			//if (x == 150)
 			//	t.GetFrame(0)->Display();
 
 			w.WriteFrame(f);
-			usleep(1000 * 2);
+			//usleep(1000 * 1);
 
 			x++;
 		}

@@ -59,36 +59,53 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 {
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
+
 	#pragma omp critical (reader_lock)
-		while (!source_frame)
-		{
-			source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-			if (source_frame)
-				break;
-			//else
-				usleep(1000 * 2);
-		}
+	{
+		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+//		if (source_frame)
+//			break;
+//		usleep(1000 * 2);
+//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+//		if (source_frame)
+//			break;
+//		usleep(1000 * 2);
+//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+//		if (source_frame)
+//			break;
+//		usleep(1000 * 2);
+//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+//		if (source_frame)
+//			break;
+//		usleep(1000 * 2);
+	}
+
+	// No frame found... so bail
+	if (!source_frame)
+		return;
+
 	tr1::shared_ptr<Magick::Image> source_image;
 
 	/* COPY AUDIO - with correct volume */
-	for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
-	{
-		float initial_volume = 1.0f;
-		float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
-		float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
+	if (source_clip->Reader()->info.has_audio)
+		for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
+		{
+			float initial_volume = 1.0f;
+			float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
+			float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
 
-		// If no ramp needed, set initial volume = clip's volume
-		if (isEqual(previous_volume, volume))
-			initial_volume = volume;
+			// If no ramp needed, set initial volume = clip's volume
+			if (isEqual(previous_volume, volume))
+				initial_volume = volume;
 
-		// Apply ramp to source frame (if needed)
-		if (!isEqual(previous_volume, volume))
-			source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
+			// Apply ramp to source frame (if needed)
+			if (!isEqual(previous_volume, volume))
+				source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
 
-		// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
-		// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
-		new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
-	}
+			// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
+			// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
+			new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+		}
 
 	/* GET IMAGE DATA - OR GENERATE IT */
 	if (!source_clip->Waveform())
@@ -204,7 +221,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	bool transformed = false;
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
-		cout << "SIMPLE" << endl;
+		//cout << "SIMPLE" << endl;
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
 		offset_x = round(x);
 		offset_y = round(y);
@@ -212,7 +229,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
-		cout << "COMPLEX" << endl;
+		//cout << "COMPLEX" << endl;
 		// Use the distort operator, which is very CPU intensive
 		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x,y };
@@ -220,7 +237,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		transformed = true;
 	}
 
-	/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
+	/* Is this the 1st layer?  And the same size as this image? */
 	if (new_frame->GetImage()->columns() == 1 && !source_resized && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
 	{
 		// Just use this image as the background
@@ -228,7 +245,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 	else if (new_frame->GetImage()->columns() == 1)
 	{
-		// Needs a new (black) background canvas
+		/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
 		int blue = color.blue.GetInt(timeline_frame_number);
@@ -353,18 +370,18 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	else
 	{
 		// Minimum number of packets to process (for performance reasons)
-		int minimum_frames = 8;
+		int minimum_frames = 4;
 
 		//omp_set_num_threads(1);
 		omp_set_nested(true);
-		#pragma xxx omp parallel
+		#pragma omp parallel
 		{
-			#pragma xxx omp single
+			#pragma omp single
 			{
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma xxx omp task firstprivate(frame_number)
+					#pragma omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
