@@ -220,14 +220,16 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
 					{
 						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-						//castBytes[row] = 0; // alpha
-						castBytes[row+1] = pixel_packets[packet].red;
-						castBytes[row+2] = pixel_packets[packet].green;
-						castBytes[row+3] = pixel_packets[packet].blue;
+						castBytes[row] = 0; // alpha
+						castBytes[row+1] = pixel_packets[packet].red / 255;
+						castBytes[row+2] = pixel_packets[packet].green / 255;
+						castBytes[row+3] = pixel_packets[packet].blue / 255;
 					}
 
 					#pragma omp critical (blackmagic_output_queue)
 					{
+						//if (20 == frame->number)
+						//	frame->Display();
 						// Add processed frame to cache (to be recalled in order after the thread pool is done)
 						temp_cache[copy_frameCount] = m_rgbFrame;
 					}

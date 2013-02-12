@@ -44,8 +44,9 @@ int main(int argc, char *argv[])
 	c3.scale = SCALE_NONE;
 	//c1.End(30.0);
 	c3.Layer(2);
-	//c3.alpha.AddPoint(1,1);
-	//c3.alpha.AddPoint(60,0);
+	c3.alpha.AddPoint(1,1, LINEAR);
+	c3.alpha.AddPoint(40,1, LINEAR);
+	c3.alpha.AddPoint(100,0);
 	t.AddClip(&c3);
 
 	// CLIP 4 (foreground image 2)
@@ -53,6 +54,9 @@ int main(int argc, char *argv[])
 	c4.gravity = GRAVITY_BOTTOM;
 	c4.scale = SCALE_NONE;
 	//c1.End(30.0);
+	c4.alpha.AddPoint(1,1, LINEAR);
+	c4.alpha.AddPoint(30,1, LINEAR);
+	c4.alpha.AddPoint(60,0);
 	c4.Layer(3);
 	t.AddClip(&c4);
 
@@ -72,6 +76,7 @@ int main(int argc, char *argv[])
 		{
 			// Send current frame to BlackMagic
 			w.WriteFrame(f);
+			//f->Display();
 
 			// Sleep some
 			//usleep(1000 * 1);
