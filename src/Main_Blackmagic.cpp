@@ -22,8 +22,7 @@ int main(int argc, char *argv[])
 	DecklinkReader dr(1, 11, 0, 2, 16);
 	Clip c2(&dr);
 	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
-	Clip c4(new ImageReader("/home/jonathan/Pictures/jason-mask.png"));
-
+	Clip c4(new ImageReader("/home/jonathan/Pictures/logo.png"));
 
 	// CLIP 1 (background image)
 	c1.Position(0.0);

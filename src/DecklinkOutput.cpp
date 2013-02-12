@@ -220,7 +220,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
 					{
 						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-						castBytes[row] = 255; // alpha
+						//castBytes[row] = 0; // alpha
 						castBytes[row+1] = pixel_packets[packet].red;
 						castBytes[row+2] = pixel_packets[packet].green;
 						castBytes[row+3] = pixel_packets[packet].blue;
