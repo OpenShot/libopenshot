@@ -201,6 +201,11 @@ void DecklinkReader::Close()
 	}
 }
 
+unsigned long DecklinkReader::GetCurrentFrameNumber()
+{
+	return delegate->GetCurrentFrameNumber();
+}
+
 // Get an openshot::Frame object for the next available LIVE frame
 tr1::shared_ptr<Frame> DecklinkReader::GetFrame(int requested_frame) throw(ReaderClosed)
 {

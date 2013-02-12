@@ -67,7 +67,7 @@ DeckLinkOutputDelegate::~DeckLinkOutputDelegate()
 /************************* DeckLink API Delegate Methods *****************************/
 HRESULT DeckLinkOutputDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 {
-	cout << "Scheduled Successfully!" << endl;
+	//cout << "Scheduled Successfully!" << endl;
 
 	// When a video frame has been released by the API, schedule another video frame to be output
 	ScheduleNextFrame(false);
@@ -77,7 +77,7 @@ HRESULT DeckLinkOutputDelegate::ScheduledFrameCompleted (IDeckLinkVideoFrame* co
 
 HRESULT DeckLinkOutputDelegate::ScheduledPlaybackHasStopped ()
 {
-	cout << "PLAYBACK HAS STOPPED!!!" << endl;
+	//cout << "PLAYBACK HAS STOPPED!!!" << endl;
 	return S_OK;
 }
 
@@ -131,7 +131,7 @@ void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 			}
 
 			// Get the next frame off the queue
-			cout << "Queue: get next (" << final_frames.size() - 1 << " remaining)" << endl;
+			//cout << "Queue: get next (" << final_frames.size() - 1 << " remaining)" << endl;
 			m_currentFrame = final_frames.front();
 			final_frames.pop_front(); // remove this frame from the queue
 		}
@@ -191,7 +191,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 										&m_rgbFrame) != S_OK)
 				{
 					// keep trying
-					usleep(1000 * 2);
+					usleep(1000 * 1);
 				}
 
 				// copy of frame count
@@ -256,7 +256,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 		temp_cache.clear();
 
 
-		cout << "final_frames.size(): " << final_frames.size() << ", raw_video_frames.size(): " << raw_video_frames.size() << endl;
+		//cout << "final_frames.size(): " << final_frames.size() << ", raw_video_frames.size(): " << raw_video_frames.size() << endl;
 		if (final_frames.size() >= m_framesPerSecond && m_totalFramesScheduled == 0)
 		{
 			cout << "Prerolling!" << endl;

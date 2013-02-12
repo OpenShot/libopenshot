@@ -410,17 +410,12 @@ void Frame::TransparentColors(string color, double fuzz)
 	image->colorFuzz(fuzz * 65535 / 100.0);
 	image->transparent(Magick::Color(color));
 	image->colorFuzz(0);
-	//image->negate();
+	image->negate();
 	//image->flip();
+	//image->flop();
+	//image->solarize(50.0);
 
 
-	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-//	tr1::shared_ptr<Magick::Image> background = tr1::shared_ptr<Magick::Image>(new Magick::Image("/home/jonathan/Pictures/Screenshot from 2013-02-10 15:06:38.png"));
-//	background->composite(*image.get(), 0, 0, Magick::OverCompositeOp);
-//
-//	// Replace them with updated pixels
-//	image = background;
-//	image->modifyImage();
 }
 
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)

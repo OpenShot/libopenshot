@@ -61,24 +61,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	tr1::shared_ptr<Frame> source_frame;
 
 	#pragma omp critical (reader_lock)
-	{
 		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-//		if (source_frame)
-//			break;
-//		usleep(1000 * 2);
-//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-//		if (source_frame)
-//			break;
-//		usleep(1000 * 2);
-//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-//		if (source_frame)
-//			break;
-//		usleep(1000 * 2);
-//		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
-//		if (source_frame)
-//			break;
-//		usleep(1000 * 2);
-	}
 
 	// No frame found... so bail
 	if (!source_frame)
@@ -197,16 +180,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		break;
 	}
 
-	/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
-	bool source_resized = false;
-	if (source_width != width || source_height != height)
-	{
-		source_resized = true;
-		source_image->borderColor(Magick::Color("none"));
-		source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
-		source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
-	}
-
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
 	x += width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
@@ -230,6 +203,15 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
 		//cout << "COMPLEX" << endl;
+
+		/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
+		if (source_width != width || source_height != height)
+		{
+			source_image->borderColor(Magick::Color("none"));
+			source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
+			source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+		}
+
 		// Use the distort operator, which is very CPU intensive
 		// origin X,Y     Scale     Angle  NewX,NewY
 		double distort_args[7] = {0,0,  sx,sy,  r,  x,y };
@@ -238,7 +220,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* Is this the 1st layer?  And the same size as this image? */
-	if (new_frame->GetImage()->columns() == 1 && !source_resized && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
+	if (new_frame->GetImage()->columns() == 1 && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
 	{
 		// Just use this image as the background
 		new_frame->AddImage(source_image);
@@ -370,7 +352,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	else
 	{
 		// Minimum number of packets to process (for performance reasons)
-		int minimum_frames = 4;
+		int minimum_frames = omp_get_num_procs();
 
 		//omp_set_num_threads(1);
 		omp_set_nested(true);

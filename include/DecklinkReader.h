@@ -83,6 +83,7 @@ namespace openshot
 		/// @returns The requested frame (containing the image)
 		/// @param[requested_frame] number The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
+		unsigned long GetCurrentFrameNumber();
 
 		/// Open device and video stream - which is called by the constructor automatically
 		void Open() throw(DecklinkError);

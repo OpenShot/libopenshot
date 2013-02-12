@@ -19,7 +19,8 @@ int main(int argc, char *argv[])
 	// Add some clips
 	Clip c1(new ImageReader("/home/jonathan/Pictures/moon.jpg"));
 	//Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
-	Clip c2(new DecklinkReader(1, 11, 0, 2, 16));
+	DecklinkReader dr(1, 11, 0, 2, 16);
+	Clip c2(&dr);
 	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
 	Clip c4(new ImageReader("/home/jonathan/Pictures/jason-mask.png"));
 
@@ -44,15 +45,17 @@ int main(int argc, char *argv[])
 	c3.scale = SCALE_NONE;
 	//c1.End(30.0);
 	c3.Layer(2);
-	//t.AddClip(&c3);
+	//c3.alpha.AddPoint(1,1);
+	//c3.alpha.AddPoint(60,0);
+	t.AddClip(&c3);
 
 	// CLIP 4 (foreground image 2)
 	c4.Position(0.0);
-	c4.gravity = GRAVITY_TOP;
+	c4.gravity = GRAVITY_BOTTOM;
 	c4.scale = SCALE_NONE;
 	//c1.End(30.0);
 	c4.Layer(3);
-	//t.AddClip(&c4);
+	t.AddClip(&c4);
 
 	// Decklink writer
 	DecklinkWriter w(0, 11, 3, 2, 16);
@@ -68,13 +71,19 @@ int main(int argc, char *argv[])
 		tr1::shared_ptr<Frame> f = t.GetFrame(x);
 		if (f)
 		{
-			//if (x == 150)
-			//	t.GetFrame(0)->Display();
-
+			// Send current frame to BlackMagic
 			w.WriteFrame(f);
+
+			// Sleep some
 			//usleep(1000 * 1);
 
-			x++;
+			// Go to next frame on timeline
+			if (abs(dr.GetCurrentFrameNumber() - x) > 90)
+				// Got behind... skip ahead some
+				x = dr.GetCurrentFrameNumber() - 8;
+			else
+				// Go to the next frame
+				x++;
 		}
 	}
 

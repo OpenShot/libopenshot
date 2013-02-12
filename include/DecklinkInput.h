@@ -42,6 +42,7 @@ public:
 
 	// Extra methods
 	tr1::shared_ptr<openshot::Frame> GetFrame(int requested_frame);
+	unsigned long GetCurrentFrameNumber();
 
 private:
 	ULONG				m_refCount;

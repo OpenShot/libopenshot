@@ -37,7 +37,7 @@ DeckLinkInputDelegate::DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckL
 	deckLinkConverter = m_deckLinkConverter;
 
 	// Set cache size (20 1080p frames)
-	final_frames.SetMaxBytes(30 * 1920 * 1080 * 4 + (44100 * 2 * 4));
+	final_frames.SetMaxBytes(100 * 1920 * 1080 * 4 + (44100 * 2 * 4));
 
 	pthread_mutex_init(&m_mutex, NULL);
 }
@@ -71,9 +71,20 @@ ULONG DeckLinkInputDelegate::Release(void)
 	return (ULONG)m_refCount;
 }
 
+unsigned long DeckLinkInputDelegate::GetCurrentFrameNumber()
+{
+	return frameCount;
+}
+
 tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_frame)
 {
 	tr1::shared_ptr<openshot::Frame> f;
+
+	// Is this frame for the future?
+	while (requested_frame + omp_get_num_procs() > frameCount)
+	{
+		usleep(1000 * 1);
+	}
 
 	#pragma omp critical (blackmagic_input_queue)
 	{
@@ -112,10 +123,10 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 				}
 			}
 
-			fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
-				frameCount,
-				timecodeString != NULL ? timecodeString : "No timecode",
-				videoFrame->GetRowBytes() * videoFrame->GetHeight());
+//			fprintf(stderr, "Frame received (#%lu) [%s] - Size: %li bytes\n",
+//				frameCount,
+//				timecodeString != NULL ? timecodeString : "No timecode",
+//				videoFrame->GetRowBytes() * videoFrame->GetHeight());
 
 			if (timecodeString)
 				free((void*)timecodeString);
