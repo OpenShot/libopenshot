@@ -44,6 +44,12 @@ void Timeline::AddClip(Clip* clip)
 	SortClips();
 }
 
+// Remove an openshot::Clip to the timeline
+void Timeline::RemoveClip(Clip* clip)
+{
+	clips.remove(clip);
+}
+
 // Calculate time of a frame number, based on a framerate
 float Timeline::calculate_time(int number, Framerate rate)
 {

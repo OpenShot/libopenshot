@@ -295,6 +295,7 @@ void FFmpegReader::UpdateVideoInfo()
 
 tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
 {
+	//cout << "GET FRAME " << requested_frame << ", last_frame: " << last_frame << endl;
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
@@ -364,13 +365,13 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = 16;
+	int minimum_packets = 8;
 
 	//omp_set_num_threads(1);
 	omp_set_nested(true);
 	#pragma omp parallel
 	{
-		#pragma omp master
+		#pragma omp single
 		{
 			// Loop through the stream until the correct frame is found
 			while (true)

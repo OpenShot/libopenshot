@@ -216,7 +216,7 @@ omp_set_nested(true);
 						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
 						// TEST EFFECTS
-						f->TransparentColors("#216e3c", 10.0);
+						f->TransparentColors("#4c5442", 10.0);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{

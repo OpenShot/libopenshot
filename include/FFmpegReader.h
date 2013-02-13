@@ -108,7 +108,6 @@ namespace openshot
 		vector<SwsContext*> image_rescalers;
 		ReSampleContext *resampleCtx;
 
-		Cache final_cache;
 		Cache working_cache;
 		map<AVPacket*, AVPacket*> packets;
 		map<AVPicture*, AVPicture*> frames;
@@ -214,6 +213,8 @@ namespace openshot
 		void UpdateVideoInfo();
 
 	public:
+		/// Final cache object used to hold final frames
+		Cache final_cache;
 
 		/// Enable or disable seeking.  Seeking can more quickly locate the requested frame, but some
 		/// codecs have trouble seeking, and can introduce artifacts or blank images into the video.

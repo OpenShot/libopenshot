@@ -77,6 +77,9 @@ namespace openshot {
 		/// Add an openshot::Clip to the timeline
 		void AddClip(Clip* clip);
 
+		/// Remove an openshot::Clip to the timeline
+		void RemoveClip(Clip* clip);
+
 		/// Close the reader (and any resources it was consuming)
 		void Close();
 

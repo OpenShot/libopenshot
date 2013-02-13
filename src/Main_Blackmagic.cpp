@@ -16,9 +16,18 @@ int main(int argc, char *argv[])
 	/* TIMELINE ---------------- */
 	Timeline t(1920, 1080, Framerate(30,1), 48000, 2);
 
+	// Use an image seq
+	FFmpegReader tr1("/home/jonathan/Videos/sintel/%06d.tif");
+	tr1.final_cache.SetMaxBytes(50 * 1920 * 1080 * 4 + (44100 * 2 * 4));
+
+	FFmpegReader tr2("/home/jonathan/Videos/sintel2/%06d.tif");
+	tr2.final_cache.SetMaxBytes(50 * 1920 * 1080 * 4 + (44100 * 2 * 4));
+
+	Clip c1(&tr1);
+
 	// Add some clips
-	Clip c1(new ImageReader("/home/jonathan/Pictures/moon.jpg"));
-	//Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	//Clip c1(new ImageReader("/home/jonathan/Pictures/moon.jpg"));
+
 	DecklinkReader dr(1, 11, 0, 2, 16);
 	Clip c2(&dr);
 	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
@@ -27,7 +36,7 @@ int main(int argc, char *argv[])
 	// CLIP 1 (background image)
 	c1.Position(0.0);
 	c1.scale = SCALE_NONE;
-	//c1.End(30.0);
+	//c1.End(60 * 60 * 24);
 	c1.Layer(0);
 	t.AddClip(&c1);
 
@@ -58,7 +67,7 @@ int main(int argc, char *argv[])
 	c4.alpha.AddPoint(30,1, LINEAR);
 	c4.alpha.AddPoint(60,0);
 	c4.Layer(3);
-	t.AddClip(&c4);
+	//t.AddClip(&c4);
 
 	// Decklink writer
 	DecklinkWriter w(0, 11, 3, 2, 16);
@@ -80,6 +89,19 @@ int main(int argc, char *argv[])
 
 			// Sleep some
 			//usleep(1000 * 1);
+
+			// EXPERIMENTAL
+			if (x == 300)
+			{
+				// Remove clip 1
+				tr1.Close();
+				//t.RemoveClip(&c1);
+
+				// Use a new image seq
+				tr2.Open();
+				c1.Reader(&tr2);
+				c1.Position(x / 30);
+			}
 
 			// Go to next frame on timeline
 			if (abs(dr.GetCurrentFrameNumber() - x) > 90)
