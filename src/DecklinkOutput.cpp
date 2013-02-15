@@ -30,7 +30,7 @@
 using namespace std;
 
 DeckLinkOutputDelegate::DeckLinkOutputDelegate(IDeckLinkDisplayMode *displayMode, IDeckLinkOutput* m_deckLinkOutput)
- : m_refCount(0), displayMode(displayMode)
+ : m_refCount(0), displayMode(displayMode), width(0), height(0)
 {
 	// reference to output device
 	deckLinkOutput = m_deckLinkOutput;
@@ -118,25 +118,48 @@ HRESULT DeckLinkOutputDelegate::RenderAudioSamples (bool preroll)
 // Schedule the next frame
 void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 {
-	#pragma omp critical (blackmagic_output_queue)
-	{
 		// Get oldest frame (if any)
 		if (final_frames.size() > 0)
 		{
-			// Release the current frame (if any)
-			if (m_currentFrame)
+			#pragma omp critical (blackmagic_output_queue)
 			{
-				m_currentFrame->Release();
-				m_currentFrame = NULL;
-			}
+				// Get the next frame off the queue
+				uint8_t* castBytes = final_frames.front();
+				final_frames.pop_front(); // remove this frame from the queue
 
-			// Get the next frame off the queue
-			//cout << "Queue: get next (" << final_frames.size() - 1 << " remaining)" << endl;
-			m_currentFrame = final_frames.front();
-			final_frames.pop_front(); // remove this frame from the queue
+				// Release the current frame (if any)
+				if (m_currentFrame)
+				{
+					m_currentFrame->Release();
+					m_currentFrame = NULL;
+				}
+
+				// Create a new one
+				while (deckLinkOutput->CreateVideoFrame(
+										width,
+										height,
+										width * 4,
+										bmdFormat8BitARGB,
+										bmdFrameFlagDefault,
+										&m_currentFrame) != S_OK)
+				{
+					cout << "failed to create video frame" << endl;
+					usleep(1000 * 1);
+				}
+
+				// Copy pixel data to frame
+				void *frameBytesDest;
+				m_currentFrame->GetBytes(&frameBytesDest);
+				memcpy(frameBytesDest, castBytes, width * height * 4);
+
+				// Delete temp array
+				delete[] castBytes;
+				castBytes = NULL;
+
+			} // critical
 		}
-		else
-			cout << "Queue: empty on writer..." << endl;
+		//else
+		//	cout << "Queue: empty on writer..." << endl;
 
 		// Schedule a frame to be displayed
 		if (m_currentFrame && deckLinkOutput->ScheduleVideoFrame(m_currentFrame, (m_totalFramesScheduled * frameRateDuration), frameRateDuration, frameRateScale) != S_OK)
@@ -144,9 +167,6 @@ void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 
 		// Update the timestamp (regardless of previous frame's success)
 		m_totalFramesScheduled += 1;
-
-	} // critical
-
 
 }
 
@@ -178,37 +198,21 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 				tr1::shared_ptr<openshot::Frame> frame = raw_video_frames.front();
 				raw_video_frames.pop_front();
 
-
-				// Create a new RGB frame object
-				IDeckLinkMutableVideoFrame *m_rgbFrame = NULL;
-
-				while (deckLinkOutput->CreateVideoFrame(
-										frame->GetWidth(),
-										frame->GetHeight(),
-										frame->GetWidth() * 4,
-										bmdFormat8BitARGB,
-										bmdFrameFlagDefault,
-										&m_rgbFrame) != S_OK)
-				{
-					// keep trying
-					usleep(1000 * 1);
-				}
-
 				// copy of frame count
 				unsigned long copy_frameCount(frameCount);
 
-				#pragma omp task firstprivate(m_rgbFrame, frame, copy_frameCount)
+				#pragma omp task firstprivate(frame, copy_frameCount)
 				{
 					// *********** CONVERT YUV source frame to RGB ************
 					void *frameBytes;
 					void *audioFrameBytes;
 
-					int width = frame->GetWidth();
-					int height = frame->GetHeight();
+					width = frame->GetWidth();
+					height = frame->GetHeight();
 
 					// Get RGB Byte array
-					m_rgbFrame->GetBytes(&frameBytes);
-					uint8_t *castBytes = (uint8_t *) frameBytes;
+					int numBytes = frame->GetHeight() * frame->GetWidth() * 4;
+					uint8_t *castBytes = new uint8_t[numBytes];
 
 					// Get a list of pixels in our frame's image.  Each pixel is represented by
 					// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
@@ -216,7 +220,6 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 
 					// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
 					// colors around to match the Decklink order (ARGB).
-					int numBytes = m_rgbFrame->GetRowBytes() * height;
 					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
 					{
 						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
@@ -231,11 +234,9 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 						//if (20 == frame->number)
 						//	frame->Display();
 						// Add processed frame to cache (to be recalled in order after the thread pool is done)
-						temp_cache[copy_frameCount] = m_rgbFrame;
+						temp_cache[copy_frameCount] = castBytes;
 					}
 
-					// Add processed RGB frame to final_frames
-					//final_frames.push_back(m_rgbFrame);
 				} // end task
 
 				// Increment frame count
@@ -247,11 +248,11 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 
 
 		// Add frames to final queue (in order)
+		#pragma omp critical (blackmagic_output_queue)
 		for (int z = 0; z < frameCount; z++)
 		{
-			IDeckLinkMutableVideoFrame *m_rgbFrame = temp_cache[z];
 			// Add to final queue
-			final_frames.push_back(m_rgbFrame);
+			final_frames.push_back(temp_cache[z]);
 		}
 
 		// Clear temp cache
@@ -274,11 +275,12 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 		else
 		{
 			// Be sure we don't have too many extra frames
+			#pragma omp critical (blackmagic_output_queue)
 			while (final_frames.size() > (m_framesPerSecond + 15))
 			{
-				cout << "Too many, so remove some..." << endl;
+				//cout << "Too many, so remove some..." << endl;
 				// Remove oldest frame
-				final_frames.front()->Release();
+				delete[] final_frames.front();
 				final_frames.pop_front();
 			}
 		}

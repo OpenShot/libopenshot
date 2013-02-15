@@ -33,14 +33,18 @@ protected:
 	unsigned long					m_audioSampleDepth;
 	unsigned long					audioSamplesPerFrame;
 	unsigned long					m_framesPerSecond;
+	int								height;
+	int								width;
 
 	unsigned long 							frameCount;
-	map<int, IDeckLinkMutableVideoFrame* > 	temp_cache;
+	//map<int, IDeckLinkMutableVideoFrame* > 	temp_cache;
+	map<int, uint8_t * > 	temp_cache;
 
 	BMDTimeValue frameRateDuration, frameRateScale;
 
 	// Queue of raw video frames
-	deque<IDeckLinkMutableVideoFrame*> final_frames;
+	//deque<IDeckLinkMutableVideoFrame*> final_frames;
+	deque<uint8_t * > final_frames;
 	deque<tr1::shared_ptr<openshot::Frame> > raw_video_frames;
 
 	// Convert between YUV and RGB

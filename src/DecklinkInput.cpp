@@ -37,7 +37,7 @@ DeckLinkInputDelegate::DeckLinkInputDelegate(pthread_cond_t* m_sleepCond, IDeckL
 	deckLinkConverter = m_deckLinkConverter;
 
 	// Set cache size (20 1080p frames)
-	final_frames.SetMaxBytes(100 * 1920 * 1080 * 4 + (44100 * 2 * 4));
+	final_frames.SetMaxBytes(60 * 1920 * 1080 * 4 + (44100 * 2 * 4));
 
 	pthread_mutex_init(&m_mutex, NULL);
 }
@@ -73,7 +73,10 @@ ULONG DeckLinkInputDelegate::Release(void)
 
 unsigned long DeckLinkInputDelegate::GetCurrentFrameNumber()
 {
-	return frameCount;
+	if (final_frameCount > 0)
+		return final_frameCount - 1;
+	else
+		return 0;
 }
 
 tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_frame)
@@ -81,9 +84,9 @@ tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_f
 	tr1::shared_ptr<openshot::Frame> f;
 
 	// Is this frame for the future?
-	while (requested_frame + omp_get_num_procs() > frameCount)
+	while (requested_frame > GetCurrentFrameNumber())
 	{
-		usleep(1000 * 1);
+		usleep(500 * 1);
 	}
 
 	#pragma omp critical (blackmagic_input_queue)
@@ -95,7 +98,10 @@ tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int requested_f
 			final_frames.Remove(requested_frame);
 		}
 		else
-			cout << "Can't find " << requested_frame << endl;
+		{
+			cout << "Can't find " << requested_frame << ", GetCurrentFrameNumber(): " << GetCurrentFrameNumber() << endl;
+			final_frames.Display();
+		}
 	}
 
 	return f;
@@ -156,7 +162,8 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 			raw_video_frames.push_back(m_yuvFrame);
 
 			// Process frames once we have a few (to take advantage of multiple threads)
-			if (raw_video_frames.size() >= omp_get_num_procs())
+			int number_to_process = raw_video_frames.size();
+			if (number_to_process >= omp_get_num_procs())
 			{
 
 //omp_set_num_threads(1);
@@ -210,13 +217,13 @@ omp_set_nested(true);
 						m_rgbFrame->GetBytes(&frameBytes);
 
 						// *********** CREATE OPENSHOT FRAME **********
-						tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(frameCount, width, height, "#000000", 2048, 2));
+						tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(copy_frameCount, width, height, "#000000", 2048, 2));
 
 						// Add Image data to openshot frame
 						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
 						// TEST EFFECTS
-						f->TransparentColors("#4c5442", 10.0);
+						f->TransparentColors("#23731f", 10.0);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{
@@ -240,6 +247,9 @@ omp_set_nested(true);
 
 } // omp single
 } // omp parallel
+
+				// Update final frameCount (since they are done processing now)
+				final_frameCount += number_to_process;
 
 
 			} // if size > num processors

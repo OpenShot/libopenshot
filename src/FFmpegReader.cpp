@@ -335,7 +335,8 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderC
 		else
 		{
 			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM" << endl;
+			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM (diff: " << diff << ", requested_frame: " << requested_frame << ", last_frame: " << last_frame << ")" << endl;
+			final_cache.Display();
 			if (enable_seek)
 				// Only seek if enabled
 				Seek(requested_frame);
@@ -365,7 +366,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = 8;
+	int minimum_packets = omp_get_num_procs();
 
 	//omp_set_num_threads(1);
 	omp_set_nested(true);
@@ -378,6 +379,10 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 			{
 				#pragma omp critical (packet_cache)
 				packet_error = GetNextPacket();
+
+				// Wait if too many frames are being processed
+				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
+					usleep(1000 * 1);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)
@@ -556,6 +561,8 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		// CHECK AUDIO SEEK?
 		else if (!is_video && !is_video_seek)
 			current_pts = packet->pts;
+
+		cout << "current_pts: " << current_pts << ", seeking_pts: " << seeking_pts << endl;
 
 		// determine if we are "before" the requested frame
 		if (current_pts > seeking_pts)
@@ -984,7 +991,7 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		}
 
 		// Seek audio stream (if not already seeked... and if an audio stream is found)
-		if (!seek_worked)
+		if (!seek_worked && info.has_audio)
 		{
 			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
 			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {

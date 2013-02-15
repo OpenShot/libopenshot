@@ -18,7 +18,7 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 
 	// Init cache
 	int64 bytes = height * width * 4 + (44100 * 2 * 4);
-	final_cache = Cache(20 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
+	final_cache = Cache(2 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -404,7 +404,8 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								add_layer(new_frame, clip, clip_frame_number, frame_number);
 
 							} else
-								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", pos: " << clip->Position() << ", end: " << clip->End() << endl;
+								#pragma omp critical (timeline_output)
+								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", clip->Position(): " << clip->Position() << ", requested_time: " << requested_time << ", clip_duration: " << clip_duration << endl;
 
 							// Check for empty frame image (and fill with color)
 							if (new_frame->GetImage()->columns() == 1)
