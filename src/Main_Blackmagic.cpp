@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
 		{
 			if (x != 0 && x % 30 == 0)
 			{
-				cout << "30 frames... (" << abs(dr.GetCurrentFrameNumber() - x) << " diff)" << endl;
+				//cout << "30 frames... (" << abs(dr.GetCurrentFrameNumber() - x) << " diff)" << endl;
+				cout << "30 frames... " << endl;
 
 				if (x != 0 && x % 60 == 0)
 				{
@@ -143,7 +144,7 @@ int main(int argc, char *argv[])
 			//usleep(500 * 1);
 
 			// Go to next frame on timeline
-			if (abs(dr.GetCurrentFrameNumber() - x) > 40)
+			if (abs(int(dr.GetCurrentFrameNumber() - x)) > 40)
 			{
 				// Got behind... skip ahead some
 				x = dr.GetCurrentFrameNumber();

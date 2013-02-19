@@ -18,22 +18,22 @@ void FrameReady(int number)
 int main()
 {
 
-	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	r.Open();
-	tr1::shared_ptr<Frame> f = r.GetFrame(300);
-	f->Display();
-	r.Close();
-
-	return 0;
+//	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-1080p.mp4");
+//	r.Open();
+//	tr1::shared_ptr<Frame> f = r.GetFrame(300);
+//	f->Display();
+//	r.Close();
+//
+//	return 0;
 
 
 
 	/* TIMELINE ---------------- */
-	Timeline t(720, 420, Framerate(24,1), 48000, 2);
+	Timeline t(1280, 720, Framerate(24,1), 48000, 2);
 
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel-1280-stereo.mp4"));
 //	Clip c2(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
 //	Clip c3(new ImageReader("/home/jonathan/Desktop/logo.png"));
 //	Clip c4(new ImageReader("/home/jonathan/Desktop/text3.png")); // audio
@@ -47,15 +47,20 @@ int main()
 	c1.gravity = GRAVITY_LEFT;
 	c1.scale = SCALE_CROP;
 	c1.Layer(0);
-	c1.End(16.0);
-	c1.alpha.AddPoint(1, 0.0);
-	c1.alpha.AddPoint(500, 0.0);
-	c1.alpha.AddPoint(565, 1.0);
-//	c1.time.AddPoint(1, 360);
-//	c1.time.AddPoint(384, 180, LINEAR);
-//	c1.time.AddPoint(385, 180);
-//	c1.time.AddPoint(565, 720, LINEAR);
-	//c1.time.PrintValues();
+	//c1.End(16.0);
+	//c1.alpha.AddPoint(1, 0.0);
+	//c1.alpha.AddPoint(500, 0.0);
+	//c1.alpha.AddPoint(565, 1.0);
+	c1.time.AddPoint(1, 3096);
+	c1.time.AddPoint(180, 3276, LINEAR);
+	c1.time.AddPoint(181, 3276);
+	c1.time.AddPoint(361, 3096, LINEAR);
+	c1.time.AddPoint(362, 3096);
+	c1.time.AddPoint(722, 3276, LINEAR);
+	c1.time.AddPoint(723, 3276);
+	c1.time.AddPoint(903, 2916, LINEAR);
+	c1.time.AddPoint(1083, 3276, LINEAR);
+	c1.time.PrintValues();
 	//return 1;
 
 
@@ -157,12 +162,13 @@ int main()
 
 
 	/* WRITER ---------------- */
-	FFmpegWriter w("/home/jonathan/output.mp3");
+	FFmpegWriter w("/home/jonathan/output.mp4");
 
 	// Set options
-	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 128000);
+	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
 	w.SetAudioOptions(true, "libmp3lame", 48000, 2, 128000);
-	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 720, 420, Fraction(1,1), false, false, 3000000);
+	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+	w.SetVideoOptions(true, "mpeg4", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -173,13 +179,15 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 565; frame++)
+	//for (int frame = 3096; frame <= 3276; frame++)
+	for (int frame = 1; frame <= 1082; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
 		{
 			//if (frame >= 62)
-			//	f->DisplayWaveform();
+			//f->DisplayWaveform();
+			f->AddOverlayNumber(frame);
 
 			// Write frame
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
