@@ -18,13 +18,13 @@ void FrameReady(int number)
 int main()
 {
 
-//	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-1080p.mp4");
-//	r.Open();
-//	tr1::shared_ptr<Frame> f = r.GetFrame(300);
-//	f->Display();
-//	r.Close();
-//
-//	return 0;
+	TextReader r(720, 480, 10, 10, GRAVITY_TOP_RIGHT, "What's Up!", "Courier", 30, "Blue", "Black");
+	r.Open();
+	tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	f->Display();
+	r.Close();
+
+	return 0;
 
 
 

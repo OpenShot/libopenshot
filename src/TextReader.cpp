@@ -2,8 +2,8 @@
 
 using namespace openshot;
 
-TextReader::TextReader(int width, int height, int x_offset, int y_offset, string text, string font, double size, string text_color, string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false)
+TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -24,6 +24,38 @@ void TextReader::Open()
 
 		// Give image a transparent background color
 		image->backgroundColor(Magick::Color("none"));
+
+		// Set gravity (map between OpenShot and ImageMagick)
+		switch (gravity)
+		{
+		case GRAVITY_TOP_LEFT:
+			lines.push_back(Magick::DrawableGravity(Magick::NorthWestGravity));
+			break;
+		case GRAVITY_TOP:
+			lines.push_back(Magick::DrawableGravity(Magick::NorthGravity));
+			break;
+		case GRAVITY_TOP_RIGHT:
+			lines.push_back(Magick::DrawableGravity(Magick::NorthEastGravity));
+			break;
+		case GRAVITY_LEFT:
+			lines.push_back(Magick::DrawableGravity(Magick::WestGravity));
+			break;
+		case GRAVITY_CENTER:
+			lines.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+			break;
+		case GRAVITY_RIGHT:
+			lines.push_back(Magick::DrawableGravity(Magick::EastGravity));
+			break;
+		case GRAVITY_BOTTOM_LEFT:
+			lines.push_back(Magick::DrawableGravity(Magick::SouthWestGravity));
+			break;
+		case GRAVITY_BOTTOM:
+			lines.push_back(Magick::DrawableGravity(Magick::SouthGravity));
+			break;
+		case GRAVITY_BOTTOM_RIGHT:
+			lines.push_back(Magick::DrawableGravity(Magick::SouthEastGravity));
+			break;
+		}
 
 		// Set stroke properties
 		lines.push_back(Magick::DrawableStrokeColor(Magick::Color("none")));
