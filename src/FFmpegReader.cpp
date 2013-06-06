@@ -382,7 +382,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
-					usleep(1000 * 1);
+					Sleep(1);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)

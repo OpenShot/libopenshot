@@ -22,6 +22,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
+#include "Sleep.h"
 
 using namespace std;
 
