@@ -21,6 +21,7 @@ include_directories(${LIBJUCE_INCLUDE_DIRS})
 
 ################# SDL ###################
 # Find SDL libraries
+SET(SDL_BUILDING_LIBRARY "True") # This prevents SDL_main from being linked
 FIND_PACKAGE(SDL REQUIRED)
 
 # Include SDL headers (needed for compile)
