@@ -6,39 +6,37 @@
 #include <tr1/memory>
 #include "../include/OpenShot.h"
 #include <omp.h>
+#include <time.h>
 
 using namespace openshot;
 
 int main(int argc, char *argv[])
 {
+	// Init datetime
+	time_t rawtime;
+	struct tm * timeinfo;
 
 	/* TIMELINE ---------------- */
 	Timeline t(1920, 1080, Framerate(30,1), 48000, 2);
 
 	// Create background video
-	FFmpegReader background_massive_warp("/home/jonathan/Videos/massive_warp_hd/%06d.tif");
-	background_massive_warp.info.fps = Fraction(30,1);
-	background_massive_warp.info.video_timebase = Fraction(1,30);
-	background_massive_warp.final_cache.SetMaxBytes(35 * 1920 * 1080 * 4 + (44100 * 2 * 4));
-	background_massive_warp.enable_seek = false;
-//	background_massive_warp.Open();
-//	for (int z = 1; z < 300; z++)
-//	{
-//		cout << "caching background frame: " << z << endl;
-//		background_massive_warp.GetFrame(z);
-//	}
+	ImageReader b1("/home/jonathan/Pictures/moon.jpg");
+	ImageReader b2("/home/jonathan/Pictures/trees.jpg");
+	ImageReader b3("/home/jonathan/Pictures/clouds.jpg");
+	ImageReader b4("/home/jonathan/Pictures/minecraft.png");
+	ImageReader b5("/home/jonathan/Pictures/tux.jpg");
+	Clip c1(&b1);
 
-
-
-	// Load 1st background
-	int background_number = 1;
-	int background_frame = 1;
-	int background_repeat = 0;
-	Clip c1(&background_massive_warp);
+	// Background counter
+	int background_frame = 0;
+	int background_id = 1;
 
 	DecklinkReader dr(1, 11, 0, 2, 16);
 	Clip c2(&dr);
-	Clip c3(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
+	Clip c3(new ImageReader("/home/jonathan/Pictures/watermark.png"));
+
+	// mask
+	Clip c4(new ImageReader("/home/jonathan/Pictures/mask_small.png"));
 
 	// CLIP 1 (background image)
 	c1.Position(0.0);
@@ -55,12 +53,17 @@ int main(int argc, char *argv[])
 	// CLIP 3 (foreground image 1)
 	c3.Position(0.0);
 	c3.gravity = GRAVITY_TOP;
+	//c3.gravity = GRAVITY_BOTTOM;
 	c3.scale = SCALE_NONE;
 	c3.Layer(2);
-	//c3.alpha.AddPoint(1,1, LINEAR);
-	//c3.alpha.AddPoint(40,1, LINEAR);
-	//c3.alpha.AddPoint(100,0);
-	//t.AddClip(&c3);
+	t.AddClip(&c3);
+
+	// CLIP 4 (foreground image 2)
+	c4.Position(0.0);
+	c4.gravity = GRAVITY_TOP;
+	c4.scale = SCALE_NONE;
+	c4.Layer(3);
+	//t.AddClip(&c4);
 
 	// Decklink writer
 	DecklinkWriter w(0, 11, 3, 2, 16);
@@ -79,9 +82,18 @@ int main(int argc, char *argv[])
 
 				if (x != 0 && x % 60 == 0)
 				{
+					time ( &rawtime );
+					timeinfo = localtime ( &rawtime );
+
+					stringstream timestamp;
+					timestamp << asctime (timeinfo);
+
 					stringstream filename;
-					filename << "/home/jonathan/Pictures/screenshots/frame_" << x << ".jpeg";
+					filename << "/home/jonathan/Pictures/screenshots/detailed/" << timestamp.str() << ".jpeg";
 					f->Save(filename.str(), 1.0);
+					stringstream filename_small;
+					filename_small << "/home/jonathan/Pictures/screenshots/thumbs/" << timestamp.str() << ".jpeg";
+					f->Save(filename_small.str(), 0.15);
 				}
 			}
 
@@ -91,70 +103,44 @@ int main(int argc, char *argv[])
 			// Increment background frame #
 			background_frame++;
 
-			// Move background (if the end is reached)
-			if (background_frame == (c1.Reader()->info.video_length - 12))
+			// Change background
+			if (background_frame == 300)
 			{
-				cout << "-- Restart background video --" << endl;
-				// Reset counter
-				background_frame = 1;
-				background_repeat++;
-
-				// Change background (after 3 repeats)
-//				if (background_repeat == 1)
-//				{
-//					switch (background_number)
-//					{
-//					case 1:
-//						// Switch to 2
-//						background_massive_warp.final_cache.Clear();
-//						c1.Reader(&background_space_undulation);
-//						background_number = 2;
-//						background_repeat = 0;
-//						break;
-//
-//					case 2:
-//						// Switch to 3
-//						background_space_undulation.final_cache.Clear();
-//						c1.Reader(&background_tract_hd);
-//						background_number = 3;
-//						background_repeat = 0;
-//						break;
-//
-//					case 3:
-//						// Switch to 1
-//						background_tract_hd.final_cache.Clear();
-//						c1.Reader(&background_massive_warp);
-//						background_number = 1;
-//						background_repeat = 0;
-//						break;
-//					}
-//				}
-
-				// Move Background Clip
-				c1.Position(float(x-1) / 30.0f);
-
-				// Close and Re-Open Reader()
-				background_massive_warp.final_cache.Clear();
-				c1.End(0.0); // this will cause the clip.open() method to reset the end.
-				c1.Close();
-				c1.Open();
+				background_frame = 0;
+				switch (background_id)
+				{
+				case 1:
+					c1.Reader(&b2);
+					background_id = 2;
+					break;
+				case 2:
+					c1.Reader(&b3);
+					background_id = 3;
+					break;
+				case 3:
+					c1.Reader(&b4);
+					background_id = 4;
+					break;
+				case 4:
+					c1.Reader(&b5);
+					background_id = 5;
+					break;
+				case 5:
+					c1.Reader(&b1);
+					background_id = 1;
+					break;
+				}
 			}
 
-			//usleep(500 * 1);
 
+			//usleep(500 * 1);
 			// Go to next frame on timeline
-			if (abs(dr.GetCurrentFrameNumber() - x) > 40)
+			if (abs(dr.GetCurrentFrameNumber() - x) > 40 || x == 90)
 			{
 				// Got behind... skip ahead some
 				x = dr.GetCurrentFrameNumber();
 
 				cout << "JUMPING AHEAD to " << x << ", background moved to " << (float(x) / 30.0f) << endl;
-
-				// Move Background Clip
-				c1.Position(float(x-1) / 30.0f);
-				// Close and Re-Open Reader()
-				c1.Reader()->Close();
-				c1.Reader()->Open();
 			}
 			else
 				// Go to the next frame

@@ -410,7 +410,7 @@ void Frame::TransparentColors(string color, double fuzz)
 	image->colorFuzz(fuzz * 65535 / 100.0);
 	image->transparent(Magick::Color(color));
 	//image->colorFuzz(0);
-	//image->negate();
+	image->negate();
 	//image->flip();
 	//image->flop();
 	//image->solarize(50.0);
