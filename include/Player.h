@@ -10,6 +10,8 @@
 #include <iostream>
 #include <vector>
 #include "../include/FileReaderBase.h"
+
+#define _SDL_main_h // This prevents SDL_main from replacing our main() function.
 #include <SDL.h>
 #include <SDL_thread.h>
 
