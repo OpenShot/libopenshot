@@ -67,7 +67,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	tr1::shared_ptr<Frame> source_frame;
 
 	#pragma omp critical (reader_lock)
-		source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 
 	// No frame found... so bail
 	if (!source_frame)

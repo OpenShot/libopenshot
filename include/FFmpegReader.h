@@ -29,6 +29,7 @@ extern "C" {
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
+#include "Sleep.h"
 
 
 using namespace std;

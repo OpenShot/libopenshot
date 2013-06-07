@@ -21,6 +21,7 @@ include_directories(${LIBJUCE_INCLUDE_DIRS})
 
 ################# SDL ###################
 # Find SDL libraries
+SET(SDL_BUILDING_LIBRARY "True") # This prevents SDL_main from being linked
 FIND_PACKAGE(SDL REQUIRED)
 
 # Include SDL headers (needed for compile)
@@ -44,8 +45,9 @@ ENDIF (BLACKMAGIC_FOUND)
 # Check for OpenMP (used for multi-core processing)
 FIND_PACKAGE(OpenMP)
 
-# Add the OpenMP compiler flag
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+if (OPENMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif(OPENMP_FOUND)
 
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so")
@@ -101,7 +103,12 @@ SET ( REQUIRED_LIBRARIES
 		${FFMPEG_LIBRARIES}
 		${LIBJUCE_LIBRARIES}
 		${SDL_LIBRARY}
-		${PROFILER} )
+		${PROFILER}
+		)
+		
+		IF (OPENMP_FOUND)
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )
+		ENDIF (OPENMP_FOUND)
 		
 		IF (BLACKMAGIC_FOUND)
 			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )

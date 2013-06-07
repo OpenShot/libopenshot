@@ -429,7 +429,8 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				samples->addFrom(channel, 0, frame->GetAudioSamples(channel), number_of_samples, 1.0f);
 
 			// reverse the samples
-			reverse_buffer(samples);
+			if (!time.IsIncreasing(frame_number))
+				reverse_buffer(samples);
 
 			// Add reversed samples to the frame object
 			for (int channel = 0; channel < channels; channel++)

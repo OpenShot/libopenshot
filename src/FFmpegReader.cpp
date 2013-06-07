@@ -382,7 +382,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
-					usleep(1000 * 1);
+					Sleep(1);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)
@@ -960,7 +960,7 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		throw TooManySeeks("Too many seek attempts... something seems wrong.", path);
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 5;
+	int buffer_amount = 10;
 	if (requested_frame - buffer_amount <= 1)
 	{
 		// Close and re-open file (basically seeking to frame 1)

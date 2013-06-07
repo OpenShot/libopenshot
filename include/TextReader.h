@@ -17,6 +17,7 @@
 #include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
+#include "Clip.h"
 #include "Exceptions.h"
 
 using namespace std;
@@ -43,11 +44,12 @@ namespace openshot
 		tr1::shared_ptr<Magick::Image> image;
 		list<Magick::Drawable> lines;
 		bool is_open;
+		GravityType gravity;
 
 	public:
 
 		/// Constructor for TextReader.
-		TextReader(int width, int height, int x_offset, int y_offset, string text, string font, double size, string text_color, string background_color);
+		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
 
 		/// Close Reader
 		void Close();

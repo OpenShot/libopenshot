@@ -18,9 +18,9 @@ void FrameReady(int number)
 int main()
 {
 
-	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	TextReader r(720, 480, 10, 10, GRAVITY_TOP_RIGHT, "What's Up!", "Courier", 30, "Blue", "Black");
 	r.Open();
-	tr1::shared_ptr<Frame> f = r.GetFrame(300);
+	tr1::shared_ptr<Frame> f = r.GetFrame(1);
 	f->Display();
 	r.Close();
 
@@ -29,13 +29,14 @@ int main()
 
 
 	/* TIMELINE ---------------- */
-	Timeline t(720, 420, Framerate(24,1), 48000, 2);
+	Timeline t(1280, 720, Framerate(25,1), 44100, 2);
 
 
 	// Add some clips
-	Clip c1(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4"));
+	Clip c1(new ImageReader("/home/jonathan/Desktop/Template2/video_background.jpg"));
+	Clip c2(new FFmpegReader("/home/jonathan/Desktop/Template2/OpenShot Version 1-4-3.mp4"));
 //	Clip c2(new FFmpegReader("/home/jonathan/Videos/sintel_trailer-480p.mp4"));
-//	Clip c3(new ImageReader("/home/jonathan/Desktop/logo.png"));
+	Clip c3(new ImageReader("/home/jonathan/Desktop/Template2/logo.png"));
 //	Clip c4(new ImageReader("/home/jonathan/Desktop/text3.png")); // audio
 //	Clip c5(new ImageReader("/home/jonathan/Desktop/text1.png")); // color
 //	Clip c6(new ImageReader("/home/jonathan/Desktop/text4.png")); // sub-pixel
@@ -47,41 +48,47 @@ int main()
 	c1.gravity = GRAVITY_LEFT;
 	c1.scale = SCALE_CROP;
 	c1.Layer(0);
-	c1.End(16.0);
-	c1.alpha.AddPoint(1, 0.0);
-	c1.alpha.AddPoint(500, 0.0);
-	c1.alpha.AddPoint(565, 1.0);
-//	c1.time.AddPoint(1, 360);
-//	c1.time.AddPoint(384, 180, LINEAR);
-//	c1.time.AddPoint(385, 180);
-//	c1.time.AddPoint(565, 720, LINEAR);
-	//c1.time.PrintValues();
+	//c1.End(16.0);
+	//c1.alpha.AddPoint(1, 0.0);
+	//c1.alpha.AddPoint(500, 0.0);
+	//c1.alpha.AddPoint(565, 1.0);
+//	c1.time.AddPoint(1, 3096);
+//	c1.time.AddPoint(180, 3276, LINEAR);
+//	c1.time.AddPoint(181, 3276);
+//	c1.time.AddPoint(361, 3096, LINEAR);
+//	c1.time.AddPoint(362, 3096);
+//	c1.time.AddPoint(722, 3276, LINEAR);
+//	c1.time.AddPoint(723, 3276);
+//	c1.time.AddPoint(903, 2916, LINEAR);
+//	c1.time.AddPoint(1083, 3276, LINEAR);
+	c1.time.PrintValues();
 	//return 1;
 
 
 	// CLIP 2 (wave form)
-//	c2.Position(0.0);
-//	c2.Layer(1);
-//	c2.Waveform(true);
+	c2.Position(0.0);
+	c2.Layer(1);
+	c2.Waveform(true);
 //	c2.alpha.AddPoint(1, 1.0);
 //	c2.alpha.AddPoint(150, 0.0);
 //	c2.alpha.AddPoint(360, 0.0, LINEAR);
 //	c2.alpha.AddPoint(384, 1.0);
-//	c2.volume.AddPoint(1, 0.0);
-//	c2.volume.AddPoint(300, 0.0, LINEAR);
+	c2.volume.AddPoint(1, 1.0);
+	c2.volume.AddPoint(900, 1.0, LINEAR);
+	c2.volume.AddPoint(1000, 0.0, LINEAR);
 //	c2.End(15.0);
-//	c2.wave_color.blue.AddPoint(1, 65000);
-//	c2.wave_color.blue.AddPoint(300, 0);
-//	c2.wave_color.red.AddPoint(1, 0);
-//	c2.wave_color.red.AddPoint(300, 65000);
+	c2.wave_color.blue.AddPoint(1, 65000);
+	c2.wave_color.blue.AddPoint(300, 0);
+	c2.wave_color.red.AddPoint(1, 0);
+	c2.wave_color.red.AddPoint(300, 65000);
 
 	// CLIP 3 (watermark)
-//	c3.Layer(2);
+	c3.Layer(2);
 //	c3.End(50);
-//	c3.gravity = GRAVITY_BOTTOM_RIGHT;
-//	c3.scale = SCALE_NONE;
-//	c3.alpha.AddPoint(1, 1.0);
-//	c3.alpha.AddPoint(75, 0.0);
+	c3.gravity = GRAVITY_CENTER;
+	c3.scale = SCALE_NONE;
+	c3.alpha.AddPoint(1, 1.0);
+	c3.alpha.AddPoint(150, 0.0);
 //	c3.location_x.AddPoint(1, -5);
 //	c3.location_y.AddPoint(1, -5);
 //
@@ -145,8 +152,8 @@ int main()
 
 	// Add clips
 	t.AddClip(&c1);
-	//t.AddClip(&c2);
-	//t.AddClip(&c3);
+	t.AddClip(&c2);
+	t.AddClip(&c3);
 	//t.AddClip(&c4);
 	//t.AddClip(&c5);
 	//t.AddClip(&c6);
@@ -157,12 +164,13 @@ int main()
 
 
 	/* WRITER ---------------- */
-	FFmpegWriter w("/home/jonathan/output.mp3");
+	FFmpegWriter w("/home/jonathan/output.mp4");
 
 	// Set options
-	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 128000);
-	w.SetAudioOptions(true, "libmp3lame", 48000, 2, 128000);
-	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 720, 420, Fraction(1,1), false, false, 3000000);
+	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
+	w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
+	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+	w.SetVideoOptions(true, "mpeg4", Fraction(25,1), 1280, 720, Fraction(1,1), false, false, 30000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -173,13 +181,16 @@ int main()
 	// Output stream info
 	w.OutputStreamInfo();
 
-	for (int frame = 1; frame <= 565; frame++)
+	//for (int frame = 3096; frame <= 3276; frame++)
+	for (int frame = 1; frame <= 1000; frame++)
 	{
 		tr1::shared_ptr<Frame> f = t.GetFrame(frame);
 		if (f)
 		{
 			//if (frame >= 62)
-			//	f->DisplayWaveform();
+			//f->DisplayWaveform();
+			//f->AddOverlayNumber(frame);
+			//f->Display();
 
 			// Write frame
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
