@@ -27,6 +27,9 @@
 	#ifndef AVCODEC_MAX_AUDIO_FRAME_SIZE
 		#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
 	#endif
+	#ifndef AV_ERROR_MAX_STRING_SIZE
+		#define AV_ERROR_MAX_STRING_SIZE 64
+	#endif
 
 	// This wraps an unsafe C macro to be C++ compatible function
 	static const std::string av_make_error_string(int errnum)
