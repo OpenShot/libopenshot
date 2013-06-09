@@ -510,12 +510,7 @@ void FFmpegWriter::flush_encoders()
 			#endif
 
 			if (error_code < 0) {
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
-
+				string error_description = av_err2str(error_code);
 				cout << "error encoding video: " << error_code << ": " << error_description << endl;
 				//throw ErrorEncodingVideo("Error while flushing video frame", -1);
 			}
@@ -539,12 +534,7 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
-
+				string error_description = av_err2str(error_code);
 				cout << "error writing video: " << error_code << ": " << error_description << endl;
 				//throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
 			}
@@ -578,12 +568,7 @@ void FFmpegWriter::flush_encoders()
 			int got_packet = 0;
 			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
-
+				string error_description = av_err2str(error_code);
 				cout << "error encoding audio (flush): " << error_code << ": " << error_description << endl;
 				//throw ErrorEncodingAudio("Error while flushing audio frame", -1);
 			}
@@ -611,12 +596,7 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
-
+				string error_description = av_err2str(error_code);
 				cout << "error writing audio: " << error_code << ": " << error_description << endl;
 				//throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
 			}
@@ -1084,12 +1064,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				int error_code = av_interleaved_write_frame(oc, &pkt);
 				if (error_code != 0)
 				{
-					string error_description = "Unknown";
-
-					#ifdef av_err2str
-						error_description = av_err2str(error_code);
-					#endif
-
+					string error_description = av_err2str(error_code);
 					cout << "error: " << error_code << ": " << error_description << endl;
 					throw ErrorEncodingAudio("Error while writing compressed audio frame", write_audio_count);
 				}
@@ -1097,11 +1072,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			if (error_code < 0)
 			{
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
+				string error_description = av_err2str(error_code);
 				cout << "Error encoding audio: " << error_code << ": " << error_description << endl;
 			}
 
@@ -1231,12 +1202,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		int error_code = av_interleaved_write_frame(oc, &pkt);
 		if (error_code != 0)
 		{
-			string error_description = "Unknown";
-
-			#ifdef av_err2str
-				error_description = av_err2str(error_code);
-			#endif
-
+			string error_description = av_err2str(error_code);
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
 
@@ -1309,12 +1275,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			int error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0)
 			{
-				string error_description = "Unknown";
-
-				#ifdef av_err2str
-					error_description = av_err2str(error_code);
-				#endif
-
+				string error_description = av_err2str(error_code);
 				cout << "error: " << error_code << ": " << error_description << endl;
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}

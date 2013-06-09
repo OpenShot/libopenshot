@@ -15,6 +15,7 @@ FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
     /usr/include/unittest++
     /sw/include # Fink
     /opt/local/include # DarwinPorts
+    /opt/local/include/UnitTest++
     /opt/csw/include # Blastwave
     /opt/include
     [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]/include

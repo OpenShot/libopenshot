@@ -10,25 +10,9 @@
 #include "FileReaderBase.h"
 #include "FileWriterBase.h"
 
-// Required for libavformat to build on Windows
-#ifndef INT64_C
-#define INT64_C(c) (c ## LL)
-#define UINT64_C(c) (c ## ULL)
-#endif
+// Include FFmpeg headers and macros
+#include "FFmpegUtilities.h"
 
-extern "C" {
-	#include <libavcodec/avcodec.h>
-	#include <libavformat/avformat.h>
-	#include <libswscale/swscale.h>
-	#include <libavutil/mathematics.h>
-
-#if LIBAVFORMAT_VERSION_MAJOR >= 53
-	#include <libavutil/opt.h>
-#else
-	#include <libavcodec/opt.h>
-#endif
-
-}
 #include <cmath>
 #include <ctime>
 #include <iostream>

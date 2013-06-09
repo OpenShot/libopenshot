@@ -7,6 +7,14 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
+// Defining some ImageMagic flags... for Mac (since they appear to be unset)
+#ifndef MAGICKCORE_QUANTUM_DEPTH
+	#define MAGICKCORE_QUANTUM_DEPTH 16
+#endif
+#ifndef MAGICKCORE_HDRI_ENABLE
+	#define MAGICKCORE_HDRI_ENABLE 0
+#endif
+
 #include <list>
 #include <omp.h>
 #include <tr1/memory>

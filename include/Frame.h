@@ -12,6 +12,18 @@
 	#define __JUCE_UNITTEST_JUCEHEADER__
 #endif
 
+// Defining some ImageMagic flags... for Mac (since they appear to be unset)
+#ifndef MAGICKCORE_QUANTUM_DEPTH
+	#define MAGICKCORE_QUANTUM_DEPTH 16
+#endif
+#ifndef MAGICKCORE_HDRI_ENABLE
+	#define MAGICKCORE_HDRI_ENABLE 0
+#endif
+#ifndef _NDEBUG
+	// Define NO debug for JUCE on mac os
+	#define _NDEBUG
+#endif
+
 #include <iomanip>
 #include <sstream>
 #include <queue>
