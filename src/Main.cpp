@@ -5,6 +5,7 @@
 #include <queue>
 #include <tr1/memory>
 #include "../include/OpenShot.h"
+#include "../include/Json.h"
 #include <omp.h>
 
 using namespace openshot;
@@ -17,6 +18,21 @@ void FrameReady(int number)
 
 int main()
 {
+
+	// JSON Test Code
+	Json::Value root;   // will contains the root value after parsing.
+	Json::Reader reader;
+	bool parsingSuccessful = reader.parse( "{\"age\":34, \"listy\" : [1, \"abc\" , 12.3, -4]}", root );
+	if ( !parsingSuccessful )
+	{
+	    // report to the user the failure and their locations in the document.
+	    std::cout  << "Failed to parse configuration\n"
+	               << reader.getFormatedErrorMessages();
+	}
+
+	cout << root["listy"][2].asDouble() << endl;
+
+	return 0;
 
 	// Chunk writer example
 	FFmpegReader *r1 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");

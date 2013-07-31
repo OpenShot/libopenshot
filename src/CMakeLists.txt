@@ -49,6 +49,10 @@ if (OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif(OPENMP_FOUND)
 
+################### JSONCPP #####################
+# Include jsoncpp headers (needed for JSON parsing)
+include_directories("../thirdparty/jsoncpp/include")
+
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so")
 #set(PROFILER "/usr/lib/libtcmalloc.so")
@@ -76,7 +80,12 @@ SET ( OPENSHOT_SOURCE_FILES
 		Player.cpp
 		Point.cpp
 		TextReader.cpp
-		Timeline.cpp )
+		Timeline.cpp
+		
+		# Third Party JSON Parser
+		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
+		../thirdparty/jsoncpp/src/lib_json/json_value.cpp
+		../thirdparty/jsoncpp/src/lib_json/json_writer.cpp )
 		
 		IF (BLACKMAGIC_FOUND)
 			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES} 
