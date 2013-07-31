@@ -21,6 +21,7 @@
 #include "../include/FileWriterBase.h"
 #include "../include/Cache.h"
 #include "../include/Clip.h"
+#include "../include/ChunkWriter.h"
 #include "../include/Coordinate.h"
 #include "../include/DummyReader.h"
 #include "../include/Exceptions.h"
@@ -48,6 +49,7 @@
 %include "../include/FileReaderBase.h"
 %include "../include/FileWriterBase.h"
 %include "../include/Cache.h"
+%include "../include/ChunkWriter.h"
 %include "../include/Clip.h"
 %include "../include/Coordinate.h"
 #ifdef USE_BLACKMAGIC

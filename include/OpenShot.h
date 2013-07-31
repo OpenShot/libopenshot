@@ -28,6 +28,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Cache.h"
+#include "ChunkWriter.h"
 #include "Clip.h"
 #include "Coordinate.h"
 #ifdef USE_BLACKMAGIC

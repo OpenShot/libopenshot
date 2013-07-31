@@ -63,6 +63,9 @@ namespace openshot
 		/// Information about the current media file
 		WriterInfo info;
 
+		/// This method copy's the info struct of a reader, and sets the writer with the same info
+		void CopyReaderInfo(FileReaderBase* reader);
+
 		/// This method is required for all derived classes of FileWriterBase.  Write a Frame to the video file.
 		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) = 0;
 

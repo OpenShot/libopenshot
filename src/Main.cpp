@@ -18,6 +18,16 @@ void FrameReady(int number)
 int main()
 {
 
+	// Chunk writer example
+	FFmpegReader *r1 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r1->Open();
+	ChunkWriter cw(r1, "");
+	cw.WriteFrame(r1, 1, 600);
+
+	return 0;
+
+
+
 	TextReader r(720, 480, 10, 10, GRAVITY_TOP_RIGHT, "What's Up!", "Courier", 30, "Blue", "Black");
 	r.Open();
 	tr1::shared_ptr<Frame> f = r.GetFrame(1);
