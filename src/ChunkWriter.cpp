@@ -9,14 +9,14 @@
 
 using namespace openshot;
 
-ChunkWriter::ChunkWriter(FileReaderBase *reader, string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
-		path(path), cache_size(8), is_writing(false)
+ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
+		local_reader(reader), path(path), cache_size(8), is_writing(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
 
 	// Copy info struct from the source reader
-	CopyReaderInfo(reader);
+	CopyReaderInfo(local_reader);
 }
 
 // Add a frame to the queue waiting to be encoded.
@@ -106,12 +106,38 @@ void ChunkWriter::WriteFrame(FileReaderBase* reader, int start, int length)
 	}
 }
 
+// Write a block of frames from the local cached reader
+void ChunkWriter::WriteFrame(int start, int length)
+{
+	// Loop through each frame (and encoded it)
+	for (int number = start; number <= length; number++)
+	{
+		// Get the frame
+		tr1::shared_ptr<Frame> f = local_reader->GetFrame(number);
+
+		// Encode frame
+		WriteFrame(f);
+	}
+}
+
 // Close the writer
 void ChunkWriter::Close()
 {
 	// Reset frame counters
 	write_video_count = 0;
 	write_audio_count = 0;
+}
+
+// check for chunk folder
+bool ChunkWriter::does_chunk_folder_exist()
+{
+
+}
+
+// check for valid chunk json
+bool ChunkWriter::is_chunk_valid()
+{
+
 }
 
 // process frame
@@ -148,5 +174,6 @@ void ChunkWriter::process_frame(tr1::shared_ptr<Frame> frame)
 	} // end task
 
 }
+
 
 

@@ -40,6 +40,7 @@ namespace openshot
 		bool is_writing;
 		int64 write_video_count;
 		int64 write_audio_count;
+		FileReaderBase *local_reader;
 
 	    tr1::shared_ptr<Frame> last_frame;
 	    deque<tr1::shared_ptr<Frame> > spooled_frames;
@@ -49,13 +50,19 @@ namespace openshot
 		/// process video frame
 		void process_frame(tr1::shared_ptr<Frame> frame);
 
+		/// check for chunk folder
+		bool does_chunk_folder_exist();
+
+		/// check for valid chunk json
+		bool is_chunk_valid();
+
 		/// write all queued frames
 		void write_queued_frames();
 
 	public:
 
 		/// Constructor for ChunkWriter. Throws one of the following exceptions.
-		ChunkWriter(FileReaderBase *reader, string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
+		ChunkWriter(string path, FileReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
 
 		/// Close the writer
 		void Close();
@@ -68,6 +75,9 @@ namespace openshot
 
 		/// Add a frame to the stack waiting to be encoded.
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
+
+		/// Write a block of frames from a reader
+		void WriteFrame(int start, int length);
 
 		/// Write a block of frames from a reader
 		void WriteFrame(FileReaderBase* reader, int start, int length);

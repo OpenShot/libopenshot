@@ -29,16 +29,33 @@ int main()
 	    std::cout  << "Failed to parse configuration\n"
 	               << reader.getFormatedErrorMessages();
 	}
-
 	cout << root["listy"][2].asDouble() << endl;
+
+	// Add a value
+	root["final"] = 700;
+	root["listy"].append(604);
+	root.removeMember("age");
+
+	// JSON Create new snippet
+	Json::Value new_root;
+	new_root["name"] = "jonathan";
+	new_root["type_id"] = 23;
+	new_root["amount"] = 100.50;
+	new_root["listed"] = Json::Value(Json::arrayValue);
+	new_root["listed"].append(0.5);
+	new_root["listed"].append(1.5);
+	new_root["listed"].append(Json::Value(Json::objectValue));
+	new_root["listed"][2]["a"] = 1;
+	new_root["listed"][2]["b"] = 2;
+	cout << new_root << endl;
 
 	return 0;
 
 	// Chunk writer example
 	FFmpegReader *r1 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r1->Open();
-	ChunkWriter cw(r1, "");
-	cw.WriteFrame(r1, 1, 600);
+	ChunkWriter cw("", r1);
+	cw.WriteFrame(1, 600);
 
 	return 0;
 
