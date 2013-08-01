@@ -27,6 +27,15 @@ FIND_PACKAGE(SDL REQUIRED)
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
 
+################# QT4 ###################
+# Find QT4 libraries
+FIND_PACKAGE(Qt4 REQUIRED)
+
+# Include SDL headers (needed for compile)
+INCLUDE(${QT_USE_FILE})
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+
+
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 FIND_PACKAGE(BlackMagic)
@@ -113,6 +122,7 @@ SET ( REQUIRED_LIBRARIES
 		${FFMPEG_LIBRARIES}
 		${LIBJUCE_LIBRARIES}
 		${SDL_LIBRARY}
+		${QT_LIBRARIES}
 		${PROFILER}
 		)
 		
