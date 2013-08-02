@@ -7,6 +7,7 @@
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 #include <omp.h>
+#include <qt4/QtCore/qdir.h>
 
 using namespace openshot;
 using namespace tr1;
@@ -16,8 +17,18 @@ void FrameReady(int number)
 	cout << "Frame #: " << number << " is ready!" << endl;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	// Qt Test Code
+	if (argc == 2)
+	{
+		QDir dir(argv[1]);
+		if (dir.exists()) {
+			cout << "Yes, " << argv[1] << " exists!" << endl;
+		}
+	} else
+		cout << "Not enough arguments!" << endl;
+
 
 	// JSON Test Code
 	Json::Value root;   // will contains the root value after parsing.
