@@ -7,7 +7,7 @@
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 #include <omp.h>
-#include <qt4/QtCore/qdir.h>
+#include <qdir.h>
 
 using namespace openshot;
 using namespace tr1;

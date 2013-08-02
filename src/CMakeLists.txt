@@ -31,9 +31,10 @@ include_directories(${SDL_INCLUDE_DIR})
 # Find QT4 libraries
 FIND_PACKAGE(Qt4 REQUIRED)
 
-# Include SDL headers (needed for compile)
-INCLUDE(${QT_USE_FILE})
-ADD_DEFINITIONS(${QT_DEFINITIONS})
+# Include Qt headers (needed for compile)
+include(${QT_USE_FILE})
+include_directories(${QT_INCLUDES})
+add_definitions(${QT_DEFINITIONS})
 
 
 ################# BLACKMAGIC DECKLINK ###################
