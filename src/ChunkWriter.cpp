@@ -10,7 +10,7 @@
 using namespace openshot;
 
 ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
-		local_reader(reader), path(path), cache_size(8), is_writing(false)
+		local_reader(reader), path(path), chunk_size(24 * 3), chunk_count(1), frame_count(1), is_writing(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -23,80 +23,106 @@ ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile
 
 	// Write JSON meta data file
 	write_json_meta_data();
+
+	// Open reader
+	local_reader->Open();
+}
+
+// get a formatted path of a specific chunk
+string ChunkWriter::get_chunk_path(int chunk_number, string folder, string extension)
+{
+	// Create path of new chunk video
+	stringstream chunk_count_string;
+	chunk_count_string << chunk_number;
+	QString padded_count = "%1"; //chunk_count_string.str().c_str();
+	padded_count = padded_count.arg(chunk_count_string.str().c_str(), 6, '0');
+	if (folder.length() != 0 && extension.length() != 0)
+		// Return path with FOLDER and EXTENSION name
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str() + QDir::separator() + padded_count + extension.c_str()).toStdString();
+
+	else if (folder.length() == 0 && extension.length() != 0)
+		// Return path with NO FOLDER and EXTENSION name
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + padded_count + extension.c_str()).toStdString();
+
+	else if (folder.length() != 0 && extension.length() == 0)
+		// Return path with FOLDER and NO EXTENSION
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str()).toStdString();
 }
 
 // Add a frame to the queue waiting to be encoded.
 void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 {
-	// Add frame pointer to "queue", waiting to be processed the next
-	// time the WriteFrames() method is called.
-	spooled_frames.push_back(frame);
-
-	// Write the frames once it reaches the correct cache size
-	if (spooled_frames.size() == cache_size)
+	// Check if currently writing chunks?
+	if (!is_writing)
 	{
-		// Is writer currently writing?
-		if (!is_writing)
-			// Write frames to video file
-			write_queued_frames();
+		// Save thumbnail of chunk start frame
+		frame->Save(get_chunk_path(chunk_count, "", ".jpeg"), 1.0);
 
-		else
-		{
-			// YES, WRITING... so wait until it finishes, before writing again
-			while (is_writing)
-				Sleep(1); // sleep for 250 milliseconds
+		// Create FFmpegWriter (FINAL quality)
+		create_folder(get_chunk_path(chunk_count, "final", ""));
+		writer_final = new FFmpegWriter(get_chunk_path(chunk_count, "final", ".webm"));
+		writer_final->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_final->SetVideoOptions(true, "libvpx", info.fps, info.width, info.height, info.pixel_ratio, false, false, info.video_bit_rate);
 
-			// Write frames to video file
-			write_queued_frames();
-		}
+		// Create FFmpegWriter (PREVIEW quality)
+		create_folder(get_chunk_path(chunk_count, "preview", ""));
+		writer_preview = new FFmpegWriter(get_chunk_path(chunk_count, "preview", ".webm"));
+		writer_preview->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_preview->SetVideoOptions(true, "libvpx", info.fps, info.width * 0.5, info.height * 0.5, info.pixel_ratio, false, false, info.video_bit_rate * 0.5);
+
+		// Create FFmpegWriter (LOW quality)
+		create_folder(get_chunk_path(chunk_count, "thumb", ""));
+		writer_thumb = new FFmpegWriter(get_chunk_path(chunk_count, "thumb", ".webm"));
+		writer_thumb->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_thumb->SetVideoOptions(true, "libvpx", info.fps, info.width * 0.25, info.height * 0.25, info.pixel_ratio, false, false, info.video_bit_rate * 0.25);
+
+
+		// Prepare Streams
+		writer_final->PrepareStreams();
+		writer_preview->PrepareStreams();
+		writer_thumb->PrepareStreams();
+
+		// Write header
+		writer_final->WriteHeader();
+		writer_preview->WriteHeader();
+		writer_thumb->WriteHeader();
+
+		// Keep track that a chunk is being writen
+		is_writing = true;
+	}
+
+	// Write a frame to the current chunk
+	writer_final->WriteFrame(frame);
+	writer_preview->WriteFrame(frame);
+	writer_thumb->WriteFrame(frame);
+
+	// Increment frame counter
+	frame_count++;
+
+	// Write the frames once it reaches the correct chunk size
+	if (frame_count % chunk_size == 0 && frame_count >= chunk_size)
+	{
+		// Write Footer
+		writer_final->WriteTrailer();
+		writer_preview->WriteTrailer();
+		writer_thumb->WriteTrailer();
+
+		// Close writer & reader
+		writer_final->Close();
+		writer_preview->Close();
+		writer_thumb->Close();
+
+		// Increment chunk count
+		chunk_count++;
+
+		// Stop writing chunk
+		is_writing = false;
 	}
 
 	// Keep track of the last frame added
 	last_frame = frame;
 }
 
-// Write all frames in the queue to the video file.
-void ChunkWriter::write_queued_frames()
-{
-	// Flip writing flag
-	is_writing = true;
-
-	// Transfer spool to queue
-	queued_frames = spooled_frames;
-
-	// Empty spool
-	spooled_frames.clear();
-
-	//omp_set_num_threads(1);
-	omp_set_nested(true);
-	#pragma omp parallel
-	{
-		#pragma omp single
-		{
-			// Loop through each queued image frame
-			while (!queued_frames.empty())
-			{
-				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = queued_frames.front();
-
-				// Add to processed queue
-				processed_frames.push_back(frame);
-
-				// Encode and add the frame to the output file
-				process_frame(frame);
-
-				// Remove front item
-				queued_frames.pop_front();
-
-			} // end while
-
-			// Done writing
-			is_writing = false;
-
-		} // end omp single
-	} // end omp parallel
-
-}
 
 // Write a block of frames from a reader
 void ChunkWriter::WriteFrame(FileReaderBase* reader, int start, int length)
@@ -130,8 +156,11 @@ void ChunkWriter::WriteFrame(int start, int length)
 void ChunkWriter::Close()
 {
 	// Reset frame counters
-	write_video_count = 0;
-	write_audio_count = 0;
+	chunk_count = 0;
+	frame_count = 0;
+
+	// Open reader
+	local_reader->Close();
 }
 
 // write json meta data
@@ -184,7 +213,6 @@ void ChunkWriter::write_json_meta_data()
 	myfile.open (json_path.c_str());
 	myfile << root << endl;
 	myfile.close();
-
 }
 
 // check for chunk folder
@@ -201,41 +229,5 @@ bool ChunkWriter::is_chunk_valid()
 {
 
 }
-
-// process frame
-void ChunkWriter::process_frame(tr1::shared_ptr<Frame> frame)
-{
-	#pragma omp task firstprivate(frame)
-	{
-		// Determine the height & width of the source image
-		int source_image_width = frame->GetWidth();
-		int source_image_height = frame->GetHeight();
-
-		// Generate frame image name
-		stringstream thumb_name;
-		stringstream preview_name;
-		stringstream final_name;
-		thumb_name << frame->number << "_t.JPG";
-		preview_name << frame->number << "_p.JPG";
-		final_name << frame->number << "_f.JPG";
-
-		#pragma omp critical (chunk_output)
-		cout << "Writing " << thumb_name.str() << endl;
-
-		// Do nothing if size is 1x1 (i.e. no image in this frame)
-		if (source_image_height > 1 && source_image_width > 1)
-		{
-			// Write image of frame to chunk
-			frame->Save(thumb_name.str(), 0.25);
-			frame->Save(preview_name.str(), 0.5);
-			frame->Save(final_name.str(), 1.0);
-		}
-
-
-
-	} // end task
-
-}
-
 
 

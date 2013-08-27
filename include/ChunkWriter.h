@@ -9,6 +9,7 @@
 
 #include "FileReaderBase.h"
 #include "FileWriterBase.h"
+#include "FFmpegWriter.h"
 
 #include <cmath>
 #include <ctime>
@@ -40,31 +41,27 @@ namespace openshot
 	{
 	private:
 		string path;
-		int cache_size;
+		int chunk_count;
+		int chunk_size;
+		int frame_count;
 		bool is_writing;
-		int64 write_video_count;
-		int64 write_audio_count;
 		FileReaderBase *local_reader;
-
+		FFmpegWriter *writer_thumb;
+		FFmpegWriter *writer_preview;
+		FFmpegWriter *writer_final;
 	    tr1::shared_ptr<Frame> last_frame;
-	    deque<tr1::shared_ptr<Frame> > spooled_frames;
-	    deque<tr1::shared_ptr<Frame> > queued_frames;
-	    deque<tr1::shared_ptr<Frame> > processed_frames;
-
-		/// process video frame
-		void process_frame(tr1::shared_ptr<Frame> frame);
 
 		/// check for chunk folder
 		bool create_folder(string path);
+
+		/// get a formatted path of a specific chunk
+		string get_chunk_path(int chunk_number, string folder, string extension);
 
 		/// check for valid chunk json
 		bool is_chunk_valid();
 
 		/// write json meta data
 		void write_json_meta_data();
-
-		/// write all queued frames
-		void write_queued_frames();
 
 	public:
 
@@ -74,11 +71,11 @@ namespace openshot
 		/// Close the writer
 		void Close();
 
-		/// Get the cache size (number of frames to queue before writing)
-		int GetCacheSize() { return cache_size; };
+		/// Get the chunk size (number of frames to write in each chunk)
+		int GetChunkSize() { return chunk_size; };
 
-		/// Set the cache size (number of frames to queue before writing)
-		int SetCacheSize(int new_size) { cache_size = new_size; };
+		/// Set the chunk size (number of frames to write in each chunk)
+		int SetChunkSize(int new_size) { chunk_size = new_size; };
 
 		/// Add a frame to the stack waiting to be encoded.
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
