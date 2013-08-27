@@ -176,7 +176,15 @@ void ChunkWriter::write_json_meta_data()
 	root["audio_timebase"]["num"] = local_reader->info.audio_timebase.num;
 	root["audio_timebase"]["den"] = local_reader->info.audio_timebase.den;
 
-	cout << root << endl;
+	// Load path of chunk folder
+	string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
+
+	// Write JSON file
+	ofstream myfile;
+	myfile.open (json_path.c_str());
+	myfile << root << endl;
+	myfile.close();
+
 }
 
 // check for chunk folder

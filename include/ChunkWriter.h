@@ -13,6 +13,7 @@
 #include <cmath>
 #include <ctime>
 #include <iostream>
+#include <fstream>
 #include <omp.h>
 #include <qdir.h>
 #include <stdio.h>
