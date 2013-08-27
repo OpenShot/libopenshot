@@ -19,6 +19,10 @@ void FrameReady(int number)
 
 int main(int argc, char* argv[])
 {
+	// Create a chunkwriter
+	FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
+
 	// Qt Test Code
 	if (argc == 2)
 	{

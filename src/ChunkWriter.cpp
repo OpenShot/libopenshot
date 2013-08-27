@@ -17,6 +17,12 @@ ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile
 
 	// Copy info struct from the source reader
 	CopyReaderInfo(local_reader);
+
+	// Create folder (if it does not exist)
+	create_folder(path);
+
+	// Write JSON meta data file
+	write_json_meta_data();
 }
 
 // Add a frame to the queue waiting to be encoded.
@@ -128,10 +134,58 @@ void ChunkWriter::Close()
 	write_audio_count = 0;
 }
 
-// check for chunk folder
-bool ChunkWriter::does_chunk_folder_exist()
+// write json meta data
+void ChunkWriter::write_json_meta_data()
 {
+	Json::Value root;
+	root["has_video"] = local_reader->info.has_video;
+	root["has_audio"] = local_reader->info.has_audio;
+	root["duration"] = local_reader->info.duration;
+	stringstream filesize_stream;
+	filesize_stream << local_reader->info.file_size;
+	root["file_size"] = filesize_stream.str();
+	root["height"] = local_reader->info.height;
+	root["width"] = local_reader->info.width;
+	root["pixel_format"] = local_reader->info.pixel_format;
+	root["fps"] = Json::Value(Json::objectValue);
+	root["fps"]["num"] = local_reader->info.fps.num;
+	root["fps"]["den"] = local_reader->info.fps.den;
+	root["video_bit_rate"] = local_reader->info.video_bit_rate;
+	root["pixel_ratio"] = Json::Value(Json::objectValue);
+	root["pixel_ratio"]["num"] = local_reader->info.pixel_ratio.num;
+	root["pixel_ratio"]["den"] = local_reader->info.pixel_ratio.den;
+	root["display_ratio"] = Json::Value(Json::objectValue);
+	root["display_ratio"]["num"] = local_reader->info.display_ratio.num;
+	root["display_ratio"]["den"] = local_reader->info.display_ratio.den;
+	root["vcodec"] = local_reader->info.vcodec;
+	stringstream video_length_stream;
+	video_length_stream << local_reader->info.video_length;
+	root["video_length"] = video_length_stream.str();
+	root["video_stream_index"] = local_reader->info.video_stream_index;
+	root["video_timebase"] = Json::Value(Json::objectValue);
+	root["video_timebase"]["num"] = local_reader->info.video_timebase.num;
+	root["video_timebase"]["den"] = local_reader->info.video_timebase.den;
+	root["interlaced_frame"] = local_reader->info.interlaced_frame;
+	root["top_field_first"] = local_reader->info.top_field_first;
+	root["acodec"] = local_reader->info.acodec;
+	root["audio_bit_rate"] = local_reader->info.audio_bit_rate;
+	root["sample_rate"] = local_reader->info.sample_rate;
+	root["channels"] = local_reader->info.channels;
+	root["audio_stream_index"] = local_reader->info.audio_stream_index;
+	root["audio_timebase"] = Json::Value(Json::objectValue);
+	root["audio_timebase"]["num"] = local_reader->info.audio_timebase.num;
+	root["audio_timebase"]["den"] = local_reader->info.audio_timebase.den;
 
+	cout << root << endl;
+}
+
+// check for chunk folder
+bool ChunkWriter::create_folder(string path)
+{
+	QDir dir(path.c_str());
+	if (!dir.exists()) {
+	    dir.mkpath(".");
+	}
 }
 
 // check for valid chunk json

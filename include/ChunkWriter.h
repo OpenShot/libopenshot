@@ -14,13 +14,16 @@
 #include <ctime>
 #include <iostream>
 #include <omp.h>
+#include <qdir.h>
 #include <stdio.h>
 #include <sstream>
 #include <unistd.h>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
+#include "Json.h"
 #include "Sleep.h"
+
 
 
 using namespace std;
@@ -51,10 +54,13 @@ namespace openshot
 		void process_frame(tr1::shared_ptr<Frame> frame);
 
 		/// check for chunk folder
-		bool does_chunk_folder_exist();
+		bool create_folder(string path);
 
 		/// check for valid chunk json
 		bool is_chunk_valid();
+
+		/// write json meta data
+		void write_json_meta_data();
 
 		/// write all queued frames
 		void write_queued_frames();

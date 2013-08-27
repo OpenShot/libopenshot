@@ -33,6 +33,15 @@ FIND_PACKAGE(SDL REQUIRED)
 # Include SDL headers (needed for compile)
 include_directories(${SDL_INCLUDE_DIR})
 
+################# QT4 ###################
+# Find QT4 libraries
+FIND_PACKAGE(Qt4 REQUIRED)
+
+# Include Qt headers (needed for compile)
+include(${QT_USE_FILE})
+include_directories(${QT_INCLUDES})
+add_definitions(${QT_DEFINITIONS})
+
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 FIND_PACKAGE(BlackMagic)
@@ -48,6 +57,10 @@ FIND_PACKAGE(OpenMP)
 
 # Add the OpenMP compiler flag
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+
+################### JSONCPP #####################
+# Include jsoncpp headers (needed for JSON parsing)
+include_directories("../thirdparty/jsoncpp/include")
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (tester)
