@@ -50,6 +50,9 @@ namespace openshot
 		FFmpegWriter *writer_preview;
 		FFmpegWriter *writer_final;
 	    tr1::shared_ptr<Frame> last_frame;
+	    string default_extension;
+	    string default_vcodec;
+	    string default_acodec;
 
 		/// check for chunk folder
 		bool create_folder(string path);

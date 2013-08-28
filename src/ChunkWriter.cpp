@@ -10,7 +10,8 @@
 using namespace openshot;
 
 ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
-		local_reader(reader), path(path), chunk_size(24 * 3), chunk_count(1), frame_count(1), is_writing(false)
+		local_reader(reader), path(path), chunk_size(24 * 3), chunk_count(1), frame_count(1), is_writing(false),
+		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis")
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -60,21 +61,21 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 
 		// Create FFmpegWriter (FINAL quality)
 		create_folder(get_chunk_path(chunk_count, "final", ""));
-		writer_final = new FFmpegWriter(get_chunk_path(chunk_count, "final", ".webm"));
-		writer_final->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
-		writer_final->SetVideoOptions(true, "libvpx", info.fps, info.width, info.height, info.pixel_ratio, false, false, info.video_bit_rate);
+		writer_final = new FFmpegWriter(get_chunk_path(chunk_count, "final", default_extension));
+		writer_final->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_final->SetVideoOptions(true, default_vcodec, info.fps, info.width, info.height, info.pixel_ratio, false, false, info.video_bit_rate);
 
 		// Create FFmpegWriter (PREVIEW quality)
 		create_folder(get_chunk_path(chunk_count, "preview", ""));
-		writer_preview = new FFmpegWriter(get_chunk_path(chunk_count, "preview", ".webm"));
-		writer_preview->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
-		writer_preview->SetVideoOptions(true, "libvpx", info.fps, info.width * 0.5, info.height * 0.5, info.pixel_ratio, false, false, info.video_bit_rate * 0.5);
+		writer_preview = new FFmpegWriter(get_chunk_path(chunk_count, "preview", default_extension));
+		writer_preview->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_preview->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.5, info.height * 0.5, info.pixel_ratio, false, false, info.video_bit_rate * 0.5);
 
 		// Create FFmpegWriter (LOW quality)
 		create_folder(get_chunk_path(chunk_count, "thumb", ""));
-		writer_thumb = new FFmpegWriter(get_chunk_path(chunk_count, "thumb", ".webm"));
-		writer_thumb->SetAudioOptions(true, "libvorbis", info.sample_rate, info.channels, info.audio_bit_rate);
-		writer_thumb->SetVideoOptions(true, "libvpx", info.fps, info.width * 0.25, info.height * 0.25, info.pixel_ratio, false, false, info.video_bit_rate * 0.25);
+		writer_thumb = new FFmpegWriter(get_chunk_path(chunk_count, "thumb", default_extension));
+		writer_thumb->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_thumb->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.25, info.height * 0.25, info.pixel_ratio, false, false, info.video_bit_rate * 0.25);
 
 
 		// Prepare Streams
@@ -186,7 +187,7 @@ void ChunkWriter::write_json_meta_data()
 	root["display_ratio"] = Json::Value(Json::objectValue);
 	root["display_ratio"]["num"] = local_reader->info.display_ratio.num;
 	root["display_ratio"]["den"] = local_reader->info.display_ratio.den;
-	root["vcodec"] = local_reader->info.vcodec;
+	root["vcodec"] = default_vcodec;
 	stringstream video_length_stream;
 	video_length_stream << local_reader->info.video_length;
 	root["video_length"] = video_length_stream.str();
@@ -196,7 +197,7 @@ void ChunkWriter::write_json_meta_data()
 	root["video_timebase"]["den"] = local_reader->info.video_timebase.den;
 	root["interlaced_frame"] = local_reader->info.interlaced_frame;
 	root["top_field_first"] = local_reader->info.top_field_first;
-	root["acodec"] = local_reader->info.acodec;
+	root["acodec"] = default_acodec;
 	root["audio_bit_rate"] = local_reader->info.audio_bit_rate;
 	root["sample_rate"] = local_reader->info.sample_rate;
 	root["channels"] = local_reader->info.channels;
