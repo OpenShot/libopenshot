@@ -20,10 +20,16 @@ void FrameReady(int number)
 int main(int argc, char* argv[])
 {
 	// Create a chunkwriter
-	FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
-	cw1.WriteFrame(r3, 1, r3->info.video_length);
-	cw1.Close();
+	//FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	//ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
+	//cw1.WriteFrame(r3, 1, r3->info.video_length);
+	//cw1.Close();
+
+	// Create a chunkreader
+	cout << "Start Chunk Reader" << endl;
+	ChunkReader cr1("/home/jonathan/apps/chunks/chunk1/");
+	cr1.DisplayInfo();
+	cout << "End Chunk Reader" << endl;
 
 	// Qt Test Code
 	if (argc == 2)

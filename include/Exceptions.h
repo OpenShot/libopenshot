@@ -114,6 +114,16 @@ namespace openshot {
 		virtual ~InvalidFormat() throw () {}
 	};
 
+	/// Exception for invalid JSON
+	class InvalidJSON : public BaseException
+	{
+	public:
+		string file_path;
+		InvalidJSON(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~InvalidJSON() throw () {}
+	};
+
 	/// Exception when invalid encoding options are used
 	class InvalidOptions : public BaseException
 	{

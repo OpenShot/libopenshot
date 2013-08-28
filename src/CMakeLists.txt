@@ -73,6 +73,7 @@ SET ( OPENSHOT_SOURCE_FILES
   		AudioBufferSource.cpp
 		AudioResampler.cpp
 		Cache.cpp
+		ChunkReader.cpp
 		ChunkWriter.cpp
 		Clip.cpp
 		Coordinate.cpp
