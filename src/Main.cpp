@@ -27,8 +27,13 @@ int main(int argc, char* argv[])
 
 	// Create a chunkreader
 	cout << "Start Chunk Reader" << endl;
-	ChunkReader cr1("/home/jonathan/apps/chunks/chunk1/");
+	ChunkReader cr1("/home/jonathan/apps/chunks/chunk1/", FINAL);
 	cr1.DisplayInfo();
+	cr1.Open();
+	//for (int z1 = 70; z1 < 85; z1++)
+	//	cr1.GetFrame(z1)->Display();
+	cr1.GetFrame(300)->Display();
+
 	cout << "End Chunk Reader" << endl;
 
 	// Qt Test Code

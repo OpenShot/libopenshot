@@ -32,6 +32,20 @@ namespace openshot {
 		}
 	};
 
+	/// Exception when a required chunk is missing
+	class ChunkNotFound : public BaseException
+	{
+	public:
+		string file_path;
+		int frame_number;
+		int chunk_number;
+		int chunk_frame;
+		ChunkNotFound(string message, int frame_number, int chunk_number, int chunk_frame)
+			: BaseException(message), frame_number(frame_number), chunk_number(chunk_number), chunk_frame(chunk_frame) { }
+		virtual ~ChunkNotFound() throw () {}
+	};
+
+
 	/// Exception when accessing a blackmagic decklink card
 	class DecklinkError : public BaseException
 	{

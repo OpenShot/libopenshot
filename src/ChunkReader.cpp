@@ -2,8 +2,8 @@
 
 using namespace openshot;
 
-ChunkReader::ChunkReader(string path) throw(InvalidFile, InvalidJSON)
-		: path(path), is_open(false)
+ChunkReader::ChunkReader(string path, ChunkVersion chunk_version) throw(InvalidFile, InvalidJSON)
+		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -12,6 +12,10 @@ ChunkReader::ChunkReader(string path) throw(InvalidFile, InvalidJSON)
 	if (!does_folder_exist(path))
 		// Raise exception
 		throw InvalidFile("Chunk folder could not be opened.", path);
+
+	// Init previous location
+	previous_location.number = 0;
+	previous_location.frame = 0;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -94,6 +98,22 @@ void ChunkReader::load_json()
 	}
 }
 
+// Find the location of a frame in a chunk
+chunk_location ChunkReader::find_chunk_frame(int requested_frame)
+{
+	// Determine which chunk contains this frame
+	int chunk_number = (requested_frame / chunk_size) + 1;
+
+	// Determine which frame in this chunk
+	int start_frame_of_chunk = (chunk_number - 1) * chunk_size;
+	int chunk_frame_number = requested_frame - start_frame_of_chunk;
+
+	// Prepare chunk location struct
+	chunk_location location = {chunk_number, chunk_frame_number};
+
+	return location;
+}
+
 // Open chunk folder or file
 void ChunkReader::Open() throw(InvalidFile)
 {
@@ -119,18 +139,83 @@ void ChunkReader::Close()
 	}
 }
 
-// Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> ChunkReader::GetFrame(int requested_frame) throw(ReaderClosed)
+// get a formatted path of a specific chunk
+string ChunkReader::get_chunk_path(int chunk_number, string folder, string extension)
 {
-	if (1==1)
+	// Create path of new chunk video
+	stringstream chunk_count_string;
+	chunk_count_string << chunk_number;
+	QString padded_count = "%1"; //chunk_count_string.str().c_str();
+	padded_count = padded_count.arg(chunk_count_string.str().c_str(), 6, '0');
+	if (folder.length() != 0 && extension.length() != 0)
+		// Return path with FOLDER and EXTENSION name
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str() + QDir::separator() + padded_count + extension.c_str()).toStdString();
+
+	else if (folder.length() == 0 && extension.length() != 0)
+		// Return path with NO FOLDER and EXTENSION name
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + padded_count + extension.c_str()).toStdString();
+
+	else if (folder.length() != 0 && extension.length() == 0)
+		// Return path with FOLDER and NO EXTENSION
+		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str()).toStdString();
+}
+
+// Get an openshot::Frame object for a specific frame number of this reader.
+tr1::shared_ptr<Frame> ChunkReader::GetFrame(int requested_frame) throw(ReaderClosed, ChunkNotFound)
+{
+	// Determine what chunk contains this frame
+	chunk_location location = find_chunk_frame(requested_frame);
+
+	// New Chunk (Close the old reader, and open the new one)
+	if (previous_location.number != location.number)
 	{
+		// Determine version of chunk
+		string folder_name = "";
+		switch (version)
+		{
+		case THUMBNAIL:
+			folder_name = "thumb";
+			break;
+		case PREVIEW:
+			folder_name = "preview";
+			break;
+		case FINAL:
+			folder_name = "final";
+			break;
+		}
 
+		// Load path of chunk video
+		string chunk_video_path = get_chunk_path(location.number, folder_name, ".webm");
 
+		// Close existing reader (if needed)
+		if (local_reader)
+		{
+			cout << "Close READER" << endl;
+			// Close and delete old reader
+			local_reader->Close();
+			delete local_reader;
+		}
 
+		try
+		{
+			cout << "Load READER: " << chunk_video_path << endl;
+			// Load new FFmpegReader
+			local_reader = new FFmpegReader(chunk_video_path);
+			local_reader->enable_seek = false; // disable seeking
+			local_reader->Open(); // open reader
+
+		} catch (InvalidFile)
+		{
+			// Invalid Chunk (possibly it is not found)
+			throw ChunkNotFound(path, requested_frame, location.number, location.frame);
+		}
+
+		// Set the new location
+		previous_location = location;
 	}
-	else
-		// no frame loaded
-		throw InvalidFile("No frame could be created from this type of file.", path);
+
+	// Return the frame (from the current reader)
+	return local_reader->GetFrame(location.frame);
 }
 
 
