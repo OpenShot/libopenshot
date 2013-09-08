@@ -58,6 +58,7 @@ namespace openshot
 		FFmpegReader *local_reader;
 		chunk_location previous_location;
 		ChunkVersion version;
+		tr1::shared_ptr<Frame> last_frame;
 
 		/// Check if folder path existing
 		bool does_folder_exist(string path);

@@ -92,6 +92,7 @@ namespace openshot
 		AVPacket *packet;
 		AVPicture *pFrame;
 		bool is_open;
+		bool is_duration_known;
 
 		bool check_interlace;
 		bool check_fps;

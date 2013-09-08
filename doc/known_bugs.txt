@@ -1,0 +1,12 @@
+These are the known bugs in the OpenShot Library
+-------------------------------------------------
+1) (CRITICAL) FFmpegReader - Issues with audio continuity and GetAudioPTSLocation(). For some reason, there are skipped
+   audio samples, gaps in PTS timecodes, and generally "Poppy" and "Crackly" audio in WebM files. WebM files
+   seem to have more audio issues than other codecs, for some reason.
+2) (CRITICAL) FFmpegReader - Issues with OpenMP and the nested ImageMagick++ OpenMP implementation. On my 8 core system,
+   If I don't call omp_set_num_threads(4... or less), an ImageMagick++ error is raised. I have posted this 
+   issue on the ImageMagick forum: http://www.imagemagick.org/discourse-server/viewtopic.php?f=23&t=24036
+3) (CRITICAL) FFmpegReader - OpenMP issue if more tasks are created than the number of processors. For example, on 
+   ReadStream(), if minimum_packets = 8 and omp_set_num_threads(4), than potentially more than 4 tasks will
+   be running at the same time, and some tasks just seem to disappear (or never actually start).
+4) 

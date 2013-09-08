@@ -35,6 +35,7 @@ include_directories(${SDL_INCLUDE_DIR})
 
 ################# QT4 ###################
 # Find QT4 libraries
+SET(QT_QMAKE_EXECUTABLE '/usr/bin/qmake-qt4') # DEBUB, WORK-AROUND: Force the use of QT4 (when multiple versions are installed)
 FIND_PACKAGE(Qt4 REQUIRED)
 
 # Include Qt headers (needed for compile)

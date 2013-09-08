@@ -329,7 +329,7 @@ void FFmpegWriter::write_queued_frames()
 	spooled_video_frames.clear();
 	spooled_audio_frames.clear();
 
-	//omp_set_num_threads(1);
+	omp_set_num_threads(4);
 	omp_set_nested(true);
 	#pragma omp parallel
 	{

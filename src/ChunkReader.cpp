@@ -214,8 +214,14 @@ tr1::shared_ptr<Frame> ChunkReader::GetFrame(int requested_frame) throw(ReaderCl
 		previous_location = location;
 	}
 
-	// Return the frame (from the current reader)
-	return local_reader->GetFrame(location.frame);
+	// Get the frame (from the current reader)
+	last_frame = local_reader->GetFrame(location.frame);
+
+	// Update the frame number property
+	last_frame->number = requested_frame;
+
+	// Return the frame
+	return last_frame;
 }
 
 

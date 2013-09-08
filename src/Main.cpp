@@ -20,10 +20,26 @@ void FrameReady(int number)
 int main(int argc, char* argv[])
 {
 	// Create a chunkwriter
-	//FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	//ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
-	//cw1.WriteFrame(r3, 1, r3->info.video_length);
-	//cw1.Close();
+//	FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+//	r3->DisplayInfo();
+//	ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
+//	cw1.WriteFrame(r3, 1, r3->info.video_length);
+//	cw1.Close();
+//	return 0;
+
+	// FFmpegReader to test 1 part of a chunk
+//	FFmpegReader *r10 = new FFmpegReader("/home/jonathan/apps/chunks/chunk1/final/000001.webm");
+//	r10->enable_seek = false;
+//	r10->Open();
+////	r10->GetFrame(1)->Display();
+////	r10->GetFrame(2)->Display();
+////	r10->GetFrame(3)->Display();
+////	r10->GetFrame(1)->Display();
+//	for (int z1 = 20; z1 <= 24*3; z1++)
+//		if (z1 >= 65)
+//			r10->GetFrame(z1)->DisplayWaveform();
+//	return 0;
+
 
 	// Create a chunkreader
 	cout << "Start Chunk Reader" << endl;
@@ -35,11 +51,11 @@ int main(int argc, char* argv[])
 	//cr1.GetFrame(300)->Display();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w9("/home/jonathan/fromchunks.webm");
+	FFmpegWriter w9("/home/jonathan/fromchunks.mp3");
 
 	// Set options
-	w9.SetAudioOptions(true, cr1.info.acodec, cr1.info.sample_rate, cr1.info.channels, cr1.info.audio_bit_rate);
-	w9.SetVideoOptions(true, cr1.info.vcodec, cr1.info.fps, cr1.info.width, cr1.info.height, cr1.info.pixel_ratio, false, false, cr1.info.video_bit_rate);
+	w9.SetAudioOptions(true, "libmp3lame", cr1.info.sample_rate, cr1.info.channels, cr1.info.audio_bit_rate);
+	//w9.SetVideoOptions(true, cr1.info.vcodec, cr1.info.fps, cr1.info.width, cr1.info.height, cr1.info.pixel_ratio, false, false, cr1.info.video_bit_rate);
 
 	// Prepare Streams
 	w9.PrepareStreams();
@@ -57,6 +73,7 @@ int main(int argc, char* argv[])
 
 
 	cout << "End Chunk Reader" << endl;
+	return 0;
 
 	// Qt Test Code
 	if (argc == 2)

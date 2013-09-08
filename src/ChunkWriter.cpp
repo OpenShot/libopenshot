@@ -10,7 +10,7 @@
 using namespace openshot;
 
 ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
-		local_reader(reader), path(path), chunk_size(24 * 3), chunk_count(1), frame_count(1), is_writing(false),
+		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
 		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis")
 {
 	// Init FileInfo struct (clear all values)
@@ -62,21 +62,20 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 		// Create FFmpegWriter (FINAL quality)
 		create_folder(get_chunk_path(chunk_count, "final", ""));
 		writer_final = new FFmpegWriter(get_chunk_path(chunk_count, "final", default_extension));
-		writer_final->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_final->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
 		writer_final->SetVideoOptions(true, default_vcodec, info.fps, info.width, info.height, info.pixel_ratio, false, false, info.video_bit_rate);
 
 		// Create FFmpegWriter (PREVIEW quality)
 		create_folder(get_chunk_path(chunk_count, "preview", ""));
 		writer_preview = new FFmpegWriter(get_chunk_path(chunk_count, "preview", default_extension));
-		writer_preview->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_preview->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
 		writer_preview->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.5, info.height * 0.5, info.pixel_ratio, false, false, info.video_bit_rate * 0.5);
 
 		// Create FFmpegWriter (LOW quality)
 		create_folder(get_chunk_path(chunk_count, "thumb", ""));
 		writer_thumb = new FFmpegWriter(get_chunk_path(chunk_count, "thumb", default_extension));
-		writer_thumb->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.audio_bit_rate);
+		writer_thumb->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
 		writer_thumb->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.25, info.height * 0.25, info.pixel_ratio, false, false, info.video_bit_rate * 0.25);
-
 
 		// Prepare Streams
 		writer_final->PrepareStreams();
@@ -97,12 +96,22 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 	writer_preview->WriteFrame(frame);
 	writer_thumb->WriteFrame(frame);
 
-	// Increment frame counter
-	frame_count++;
-
 	// Write the frames once it reaches the correct chunk size
 	if (frame_count % chunk_size == 0 && frame_count >= chunk_size)
 	{
+		cout << "Done with chunk" << endl;
+		cout << "frame_count: " << frame_count << endl;
+		cout << "chunk_size: " << chunk_size << endl;
+
+		// Pad an additional 12 frames
+		for (int z = 0; z<12; z++)
+		{
+			// Repeat frame
+			writer_final->WriteFrame(frame);
+			writer_preview->WriteFrame(frame);
+			writer_thumb->WriteFrame(frame);
+		}
+
 		// Write Footer
 		writer_final->WriteTrailer();
 		writer_preview->WriteTrailer();
@@ -119,6 +128,9 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 		// Stop writing chunk
 		is_writing = false;
 	}
+
+	// Increment frame counter
+	frame_count++;
 
 	// Keep track of the last frame added
 	last_frame = frame;
@@ -156,6 +168,39 @@ void ChunkWriter::WriteFrame(int start, int length)
 // Close the writer
 void ChunkWriter::Close()
 {
+	// Write the frames once it reaches the correct chunk size
+	if (is_writing)
+	{
+		cout << "Final chunk" << endl;
+		cout << "frame_count: " << frame_count << endl;
+		cout << "chunk_size: " << chunk_size << endl;
+
+		// Pad an additional 12 frames
+		for (int z = 0; z<12; z++)
+		{
+			// Repeat frame
+			writer_final->WriteFrame(last_frame);
+			writer_preview->WriteFrame(last_frame);
+			writer_thumb->WriteFrame(last_frame);
+		}
+
+		// Write Footer
+		writer_final->WriteTrailer();
+		writer_preview->WriteTrailer();
+		writer_thumb->WriteTrailer();
+
+		// Close writer & reader
+		writer_final->Close();
+		writer_preview->Close();
+		writer_thumb->Close();
+
+		// Increment chunk count
+		chunk_count++;
+
+		// Stop writing chunk
+		is_writing = false;
+	}
+
 	// Reset frame counters
 	chunk_count = 0;
 	frame_count = 0;

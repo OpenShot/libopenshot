@@ -9,65 +9,66 @@
 
 # FindAvformat
 FIND_PATH( AVFORMAT_INCLUDE_DIR libavformat/avformat.h
-		   PATHS /usr/include/
-				 /usr/include/ffmpeg/
-				 $ENV{FFMPEGDIR}/include/
-				 $ENV{FFMPEGDIR}/include/ffmpeg/ )
+		  PATHS /usr/include/
+		   	/usr/include/ffmpeg/
+		   	$ENV{FFMPEGDIR}/include/
+		   	$ENV{FFMPEGDIR}/include/ffmpeg/ )
 
 FIND_LIBRARY( AVFORMAT_LIBRARY avformat
-			  PATHS /usr/lib/
-					/usr/lib/ffmpeg/
-					$ENV{FFMPEGDIR}/lib/
-					$ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   PATHS /usr/lib/
+		   	 /usr/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/lib/
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
 #FindAvcodec
 FIND_PATH( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h
 		   PATHS /usr/include/
-				 /usr/include/ffmpeg/
-				 $ENV{FFMPEGDIR}/include/
-				 $ENV{FFMPEGDIR}/include/ffmpeg/ )
+		   	 /usr/include/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/include/
+		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
 FIND_LIBRARY( AVCODEC_LIBRARY avcodec
-			  PATHS /usr/lib/
-					/usr/lib/ffmpeg/
-					$ENV{FFMPEGDIR}/lib/
-					$ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   PATHS /usr/lib/
+		   	 /usr/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/lib/
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
 #FindAvutil
 FIND_PATH( AVUTIL_INCLUDE_DIR libavutil/avutil.h
 		   PATHS /usr/include/
-				 /usr/include/ffmpeg/
-				 $ENV{FFMPEGDIR}/include/
-				 $ENV{FFMPEGDIR}/include/ffmpeg/ )
+		   	 /usr/include/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/include/
+		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
 FIND_LIBRARY( AVUTIL_LIBRARY avutil
-			  PATHS /usr/lib/
-					/usr/lib/ffmpeg/
-					$ENV{FFMPEGDIR}/lib/
-					$ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   PATHS /usr/lib/
+		   	 /usr/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/lib/
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
 
 #FindAvdevice
 FIND_PATH( AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h
 		   PATHS /usr/include/
-				 /usr/include/ffmpeg/
-				 $ENV{FFMPEGDIR}/include/
-				 $ENV{FFMPEGDIR}/include/ffmpeg/ )
+		   	 /usr/include/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/include/
+		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
 FIND_LIBRARY( AVDEVICE_LIBRARY avdevice
-			  PATHS /usr/lib/
-					/usr/lib/ffmpeg/
-					$ENV{FFMPEGDIR}/lib/
-					$ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   PATHS /usr/lib/
+		   	 /usr/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/lib/
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+
 #FindSwscale
 FIND_PATH( SWSCALE_INCLUDE_DIR libswscale/swscale.h
 		   PATHS /usr/include/
-				 /usr/include/ffmpeg/
-				 $ENV{FFMPEGDIR}/include/
-				 $ENV{FFMPEGDIR}/include/ffmpeg/ )
+		   	 /usr/include/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/include/
+		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
 FIND_LIBRARY( SWSCALE_LIBRARY swscale
-			  PATHS /usr/lib/
-					/usr/lib/ffmpeg/
-					$ENV{FFMPEGDIR}/lib/
-					$ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   PATHS /usr/lib/
+		   	 /usr/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/lib/
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
 
 SET( FFMPEG_FOUND FALSE )
 

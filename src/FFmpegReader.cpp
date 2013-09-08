@@ -7,7 +7,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
 	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), prev_samples(0), prev_pts(0),
-	  pts_total(0), pts_counter(0), display_debug(false) {
+	  pts_total(0), pts_counter(0), display_debug(false), is_duration_known(false) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -273,12 +273,32 @@ void FFmpegReader::UpdateVideoInfo()
 	// Set the duration in seconds, and video length (# of frames)
 	info.duration = pStream->duration * info.video_timebase.ToDouble();
 
-	// Check for valid duration
+	// Check for valid duration (if found)
 	if (info.duration <= 0.0f && pFormatCtx->duration >= 0)
 		// Use the format's duration
 		info.duration = pFormatCtx->duration / AV_TIME_BASE;
 
-	info.video_length = round(info.duration * info.fps.ToDouble());
+	// Calculate duration from filesize and bitrate (if any)
+	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0)
+		// Estimate from bitrate, total bytes, and framerate
+		info.duration = (info.file_size / info.video_bit_rate);
+
+	// No duration found in stream of file
+	if (info.duration <= 0.0f)
+	{
+		// No duration is found in the video stream
+		info.duration = -1;
+		info.video_length = -1;
+		is_duration_known = false;
+	}
+	else
+	{
+		// Yes, a duration was found
+		is_duration_known = true;
+
+		// Calculate number of frames
+		info.video_length = round(info.duration * info.fps.ToDouble());
+	}
 
 	// Override an invalid framerate
 	if (info.fps.ToFloat() > 120.0f)
@@ -295,7 +315,9 @@ void FFmpegReader::UpdateVideoInfo()
 
 tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
 {
-	//cout << "GET FRAME " << requested_frame << ", last_frame: " << last_frame << endl;
+	if (display_debug)
+		cout << "GET FRAME " << requested_frame << ", last_frame: " << last_frame << endl;
+
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
@@ -311,19 +333,19 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderC
 		// Adjust for a requested frame that is too small or too large
 		if (requested_frame < 1)
 			requested_frame = 1;
-		if (requested_frame > info.video_length)
+		if (requested_frame > info.video_length && is_duration_known)
 			requested_frame = info.video_length;
 		if (info.has_video && info.video_length == 0)
 			// Invalid duration of video file
 			throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
+		// Reset seek count
+		seek_count = 0;
+
 		// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
 		if (last_frame == 0 && requested_frame != 1)
 			// Get first frame
 			ReadStream(1);
-
-		// Reset seek count
-		seek_count = 0;
 
 		// Are we within 30 frames of the requested frame?
 		int diff = requested_frame - last_frame;
@@ -366,12 +388,13 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = omp_get_num_procs();
-
-	//omp_set_num_threads(1);
+	int minimum_packets = omp_get_num_procs() / 2; // DEBUG, WORK-AROUND for an ImageMagick bug (preventing use of all 8 cores)
+	omp_set_num_threads(minimum_packets); // DEBUG, WORK-AROUND for an ImageMagick bug (preventing use of all 8 cores)
 	omp_set_nested(true);
+
 	#pragma omp parallel
 	{
+
 		#pragma omp single
 		{
 			// Loop through the stream until the correct frame is found
