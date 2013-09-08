@@ -83,7 +83,7 @@ namespace openshot {
 		AudioSampleBuffer *audio_cache;
 
 		// File Reader object
-		FileReaderBase* file_reader;
+		ReaderBase* file_reader;
 
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
@@ -121,7 +121,7 @@ namespace openshot {
 		Clip(string path);
 
 		/// Constructor with reader
-		Clip(FileReaderBase* reader);
+		Clip(ReaderBase* reader);
 
 		/// Close the internal reader
 		void Close();
@@ -136,10 +136,10 @@ namespace openshot {
 		void Open() throw(InvalidFile);
 
 		/// Set the current reader
-		void Reader(FileReaderBase* reader);
+		void Reader(ReaderBase* reader);
 
 		/// Get the current reader
-		FileReaderBase* Reader();
+		ReaderBase* Reader();
 
 		/// Get basic properties
 		float Position() { return position; } ///<Get position on timeline

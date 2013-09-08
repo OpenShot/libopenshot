@@ -7,8 +7,8 @@
  * \author Copyright (c) 2013 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
-#include "FileWriterBase.h"
+#include "ReaderBase.h"
+#include "WriterBase.h"
 #include "FFmpegWriter.h"
 
 #include <cmath>
@@ -37,7 +37,7 @@ namespace openshot
 	 * chunks of small video and audio data. These chunks can easily be passed around in a distributed
 	 * computing environment, without needing to share the entire video file.
 	 */
-	class ChunkWriter : public FileWriterBase
+	class ChunkWriter : public WriterBase
 	{
 	private:
 		string path;
@@ -45,7 +45,7 @@ namespace openshot
 		int chunk_size;
 		int frame_count;
 		bool is_writing;
-		FileReaderBase *local_reader;
+		ReaderBase *local_reader;
 		FFmpegWriter *writer_thumb;
 		FFmpegWriter *writer_preview;
 		FFmpegWriter *writer_final;
@@ -69,7 +69,7 @@ namespace openshot
 	public:
 
 		/// Constructor for ChunkWriter. Throws one of the following exceptions.
-		ChunkWriter(string path, FileReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
+		ChunkWriter(string path, ReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
 
 		/// Close the writer
 		void Close();
@@ -87,7 +87,7 @@ namespace openshot
 		void WriteFrame(int start, int length);
 
 		/// Write a block of frames from a reader
-		void WriteFrame(FileReaderBase* reader, int start, int length);
+		void WriteFrame(ReaderBase* reader, int start, int length);
 
 	};
 

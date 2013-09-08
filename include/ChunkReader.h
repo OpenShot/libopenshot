@@ -7,7 +7,7 @@
  * \author Copyright (c) 2013 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 #include "FFmpegReader.h"
 
 #include <cmath>
@@ -49,7 +49,7 @@ namespace openshot
 	 * \brief This class reads a special chunk-formatted file, which can be easily
 	 * shared in a distributed environment, and can return openshot::Frame objects.
 	 */
-	class ChunkReader : public FileReaderBase
+	class ChunkReader : public ReaderBase
 	{
 	private:
 		string path;

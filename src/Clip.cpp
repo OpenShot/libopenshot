@@ -66,7 +66,7 @@ Clip::Clip()
 }
 
 // Constructor with reader
-Clip::Clip(FileReaderBase* reader)
+Clip::Clip(ReaderBase* reader)
 {
 	// Init all default settings
 	init_settings();
@@ -128,14 +128,14 @@ Clip::Clip(string path)
 }
 
 /// Set the current reader
-void Clip::Reader(FileReaderBase* reader)
+void Clip::Reader(ReaderBase* reader)
 {
 	// set reader pointer
 	file_reader = reader;
 }
 
 /// Get the current reader
-FileReaderBase* Clip::Reader()
+ReaderBase* Clip::Reader()
 {
 	return file_reader;
 }

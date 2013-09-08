@@ -1,35 +1,34 @@
-#ifndef OPENSHOT_FILE_READER_BASE_H
-#define OPENSHOT_FILE_READER_BASE_H
+#ifndef OPENSHOT_FILE_WRITER_BASE_H
+#define OPENSHOT_FILE_WRITER_BASE_H
 
 /**
  * \file
- * \brief Header file for FileReaderBase class
+ * \brief Header file for WriterBase class
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
 #include <iostream>
 #include <iomanip>
-#include <tr1/memory>
 #include "Fraction.h"
 #include "Frame.h"
+#include "ReaderBase.h"
 
 using namespace std;
 
 namespace openshot
 {
 	/**
-	 * \brief This struct contains info about a media file, such as height, width, frames per second, etc...
+	 * \brief This struct contains info about encoding a media file, such as height, width, frames per second, etc...
 	 *
-	 * Each derived class of FileReaderBase is responsible for updating this struct to reflect accurate information
-	 * about the streams. Derived classes of FileReaderBase should call the InitFileInfo() method to initialize the
-	 * default values of this struct.
+	 * Each derived class of WriterBase is responsible for updating this struct to reflect accurate information
+	 * about the streams.
 	 */
-	struct ReaderInfo
+	struct WriterInfo
 	{
 		bool has_video;	///< Determines if this file has a video stream
 		bool has_audio;	///< Determines if this file has an audio stream
 		float duration;	///< Length of time (in seconds)
-		long long file_size;	///< Size of file (in bytes)
+		int file_size;	///< Size of file (in bytes)
 		int height;		///< The height of the video (in pixels)
 		int width;		///< The width of the video (in pixesl)
 		int pixel_format;	///< The pixel format (i.e. YUV420P, RGB24, etc...)
@@ -52,38 +51,33 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This abstract class is the base class, used by readers.  Readers are types of classes that read
-	 * video, audio, and image files, and return openshot::Frame objects.
+	 * \brief This abstract class is the base class, used by writers.  Writers are types of classes that encode
+	 * video, audio, and image files.
 	 *
-	 * The only requirements for a 'reader', are to derive from this base class, implement the
-	 * GetFrame method, and call the InitFileInfo() method.
+	 * The only requirements for a 'writer', are to derive from this base class, and implement the
+	 * WriteFrame method.
 	 */
-	class FileReaderBase
+	class WriterBase
 	{
 	public:
 		/// Information about the current media file
-		ReaderInfo info;
+		WriterInfo info;
 
-		/// Close the reader (and any resources it was consuming)
-		virtual void Close() = 0;
+		/// This method copy's the info struct of a reader, and sets the writer with the same info
+		void CopyReaderInfo(ReaderBase* reader);
+
+		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
+		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) = 0;
+
+		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
+		virtual void WriteFrame(ReaderBase* reader, int start, int length) = 0;
+
+		/// Initialize the values of the WriterInfo struct.  It is important for derived classes to call
+		/// this method, or the WriterInfo struct values will not be initialized.
+		void InitFileInfo();
 
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
-
-		/// This method is required for all derived classes of FileReaderBase, and return the
-		/// openshot::Frame object, which contains the image and audio information for that
-		/// frame of video.
-		///
-		/// @returns The requested frame of video
-		/// @param[in] number The frame number that is requested.
-		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
-
-		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
-		/// this method, or the ReaderInfo struct values will not be initialized.
-		void InitFileInfo();
-
-		/// Open the reader (and start consuming resources, such as images or video files)
-		virtual void Open() = 0;
 	};
 
 }

@@ -38,8 +38,8 @@
 #endif
 #include "DummyReader.h"
 #include "Exceptions.h"
-#include "FileReaderBase.h"
-#include "FileWriterBase.h"
+#include "ReaderBase.h"
+#include "WriterBase.h"
 #include "FFmpegReader.h"
 #include "FFmpegWriter.h"
 #include "Fraction.h"

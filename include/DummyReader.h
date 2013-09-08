@@ -7,7 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 
 #include <cmath>
 #include <ctime>
@@ -29,7 +29,7 @@ namespace openshot
 	 * can be created with any framerate or samplerate.  This is useful in unit tests that need to test
 	 * different framerates or samplerates.
 	 */
-	class DummyReader : public FileReaderBase
+	class DummyReader : public ReaderBase
 	{
 	private:
 		tr1::shared_ptr<Frame> image_frame;

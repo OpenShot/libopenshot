@@ -202,14 +202,14 @@ void DecklinkWriter::Close()
 	}
 }
 
-// This method is required for all derived classes of FileWriterBase.  Write a Frame to the video file.
+// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
 void DecklinkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 {
 	delegate->WriteFrame(frame);
 }
 
-// This method is required for all derived classes of FileWriterBase.  Write a block of frames from a reader.
-void DecklinkWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
+void DecklinkWriter::WriteFrame(ReaderBase* reader, int start, int length)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)

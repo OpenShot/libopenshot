@@ -9,7 +9,7 @@
 
 using namespace openshot;
 
-ChunkWriter::ChunkWriter(string path, FileReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
+ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
 		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis")
 {
@@ -138,7 +138,7 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 
 
 // Write a block of frames from a reader
-void ChunkWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)

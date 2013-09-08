@@ -7,7 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
@@ -80,7 +80,7 @@ namespace openshot
 	 * to start retrieving frames.  Use the info struct to obtain info on the file, such as the length
 	 * (in frames), height, width, bitrate, frames per second (fps), etc...
 	 */
-	class FFmpegReader : public FileReaderBase
+	class FFmpegReader : public ReaderBase
 	{
 	private:
 		string path;

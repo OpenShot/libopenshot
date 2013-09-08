@@ -22,7 +22,7 @@
 #include "Cache.h"
 #include "Color.h"
 #include "Clip.h"
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "FrameRate.h"
@@ -47,7 +47,7 @@ namespace openshot {
 	 * video output will be rendered.  It has a collection of layers and clips, that arrange,
 	 * sequence, and generate the final video output.
 	 */
-	class Timeline : public FileReaderBase {
+	class Timeline : public ReaderBase {
 	private:
 		int width; ///<Width of the canvas and viewport
 		int height; ///<Height of the canvas and viewport

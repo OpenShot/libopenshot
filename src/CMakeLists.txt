@@ -79,8 +79,8 @@ SET ( OPENSHOT_SOURCE_FILES
 		Clip.cpp
 		Coordinate.cpp
 		DummyReader.cpp
-		FileReaderBase.cpp
-		FileWriterBase.cpp
+		ReaderBase.cpp
+		WriterBase.cpp
 		FFmpegReader.cpp
 		FFmpegWriter.cpp
 		Fraction.cpp

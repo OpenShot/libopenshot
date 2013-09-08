@@ -17,8 +17,8 @@
 %shared_ptr(Frame)
 
 %{
-#include "../include/FileReaderBase.h"
-#include "../include/FileWriterBase.h"
+#include "../include/ReaderBase.h"
+#include "../include/WriterBase.h"
 #include "../include/Cache.h"
 #include "../include/Clip.h"
 #include "../include/ChunkReader.h"
@@ -47,8 +47,8 @@
 	%}
 #endif
 
-%include "../include/FileReaderBase.h"
-%include "../include/FileWriterBase.h"
+%include "../include/ReaderBase.h"
+%include "../include/WriterBase.h"
 %include "../include/Cache.h"
 %include "../include/ChunkReader.h"
 %include "../include/ChunkWriter.h"

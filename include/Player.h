@@ -9,7 +9,7 @@
 
 #include <iostream>
 #include <vector>
-#include "../include/FileReaderBase.h"
+#include "../include/ReaderBase.h"
 
 #define _SDL_main_h // This prevents SDL_main from replacing our main() function.
 #include <SDL.h>
@@ -31,7 +31,7 @@ namespace openshot
 	class Player
 	{
 	private:
-		FileReaderBase *reader;
+		ReaderBase *reader;
 		CallbackPtr callback;
 		void *pythonmethod;
 
@@ -43,7 +43,7 @@ namespace openshot
 		Player();
 
 		/// Set the current reader, such as a FFmpegReader
-		void SetReader(FileReaderBase *p_reader);
+		void SetReader(ReaderBase *p_reader);
 
 		/// Set a callback function which will be invoked each time a frame is ready to be displayed
 		void SetFrameCallback(CallbackPtr p_callback, void *p_pythonmethod);

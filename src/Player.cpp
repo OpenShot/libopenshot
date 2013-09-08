@@ -8,7 +8,7 @@ Player::Player() {
 };
 
 // Set the current reader, such as a FFmpegReader
-void Player::SetReader(FileReaderBase *p_reader)
+void Player::SetReader(ReaderBase *p_reader)
 {
 	// Set the reader
 	reader = p_reader;

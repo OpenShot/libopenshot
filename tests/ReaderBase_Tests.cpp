@@ -6,10 +6,10 @@ using namespace openshot;
 
 // Since it is not possible to instantiate an abstract class, this test creates
 // a new derived class, in order to test the base class file info struct.
-TEST(FileReaderBase_Derived_Class)
+TEST(ReaderBase_Derived_Class)
 {
-	// Create a new derived class from type FileReaderBase
-	class TestReader : public FileReaderBase
+	// Create a new derived class from type ReaderBase
+	class TestReader : public ReaderBase
 	{
 	public:
 		TestReader() { InitFileInfo(); };

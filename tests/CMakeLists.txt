@@ -70,7 +70,7 @@ add_executable(tester
 			   Cache_Tests.cpp
 			   Clip_Tests.cpp
 			   Coordinate_Tests.cpp
-			   FileReaderBase_Tests.cpp
+			   ReaderBase_Tests.cpp
 			   FFmpegReader_Tests.cpp
 			   Fraction_Tests.cpp
 			   FrameMapper_Tests.cpp

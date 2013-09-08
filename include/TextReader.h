@@ -7,7 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 
 #include <cmath>
 #include <ctime>
@@ -29,7 +29,7 @@ namespace openshot
 	 * \brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
 	 * openshot::Frame objects containing the image of the text.
 	 */
-	class TextReader : public FileReaderBase
+	class TextReader : public ReaderBase
 	{
 	private:
 		int width;

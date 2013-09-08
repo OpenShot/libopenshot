@@ -7,7 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
+#include "ReaderBase.h"
 
 #include <cmath>
 #include <ctime>
@@ -28,7 +28,7 @@ namespace openshot
 	 * \brief This class uses the ImageMagick++ libraries, to open image files, and return
 	 * openshot::Frame objects containing the image.
 	 */
-	class ImageReader : public FileReaderBase
+	class ImageReader : public ReaderBase
 	{
 	private:
 		string path;

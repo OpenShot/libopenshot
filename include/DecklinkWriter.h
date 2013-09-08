@@ -7,7 +7,7 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileWriterBase.h"
+#include "WriterBase.h"
 
 #include <cmath>
 #include <ctime>
@@ -36,7 +36,7 @@ namespace openshot
 	 * \brief This class uses the Blackmagic Decklink libraries, to open video streams on Blackmagic devices, and return
 	 * openshot::Frame objects containing the image and audio data.
 	 */
-	class DecklinkWriter : public FileWriterBase
+	class DecklinkWriter : public WriterBase
 	{
 	private:
 		bool is_open;
@@ -73,11 +73,11 @@ namespace openshot
 		/// Close the device and video stream
 		void Close();
 
-		/// This method is required for all derived classes of FileWriterBase.  Write a Frame to the video file.
+		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
 
-		/// This method is required for all derived classes of FileWriterBase.  Write a block of frames from a reader.
-		void WriteFrame(FileReaderBase* reader, int start, int length);
+		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
+		void WriteFrame(ReaderBase* reader, int start, int length);
 
 		/// Open device and video stream - which is called by the constructor automatically
 		void Open() throw(DecklinkError);

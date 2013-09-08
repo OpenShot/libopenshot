@@ -13,7 +13,7 @@
 #include <vector>
 #include <tr1/memory>
 #include "../include/Cache.h"
-#include "../include/FileReaderBase.h"
+#include "../include/ReaderBase.h"
 #include "../include/Frame.h"
 #include "../include/FrameRate.h"
 #include "../include/Exceptions.h"
@@ -102,7 +102,7 @@ namespace openshot
 	 * assert(frame2.Odd.Frame == 2);
 	 * \endcode
 	 */
-	class FrameMapper : public FileReaderBase {
+	class FrameMapper : public ReaderBase {
 	private:
 		vector<Field> fields;		// List of all fields
 		vector<MappedFrame> frames;	// List of all frames
@@ -110,7 +110,7 @@ namespace openshot
 		Framerate original;		// The original frame rate
 		Framerate target;			// The target frame rate
 		Pulldown_Method pulldown;	// The pull-down technique
-		FileReaderBase *reader;	// The source video reader
+		ReaderBase *reader;	// The source video reader
 		Cache final_cache; // Cache of actual Frame objects
 
 		// Internal methods used by init
@@ -128,7 +128,7 @@ namespace openshot
 
 	public:
 		/// Default constructor for FrameMapper class
-		FrameMapper(FileReaderBase *reader, Framerate target, Pulldown_Method pulldown);
+		FrameMapper(ReaderBase *reader, Framerate target, Pulldown_Method pulldown);
 
 		/// Close the internal reader
 		void Close();
@@ -136,7 +136,7 @@ namespace openshot
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
-		/// This method is required for all derived classes of FileReaderBase, and return the
+		/// This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.
 		///

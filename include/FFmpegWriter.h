@@ -7,8 +7,8 @@
  * \author Copyright (c) 2011 Jonathan Thomas
  */
 
-#include "FileReaderBase.h"
-#include "FileWriterBase.h"
+#include "ReaderBase.h"
+#include "WriterBase.h"
 
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
@@ -43,7 +43,7 @@ namespace openshot
 	 *
 	 * TODO
 	 */
-	class FFmpegWriter : public FileWriterBase
+	class FFmpegWriter : public WriterBase
 	{
 	private:
 		string path;
@@ -172,7 +172,7 @@ namespace openshot
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
 
 		/// Write a block of frames from a reader
-		void WriteFrame(FileReaderBase* reader, int start, int length);
+		void WriteFrame(ReaderBase* reader, int start, int length);
 
 		/// Write the file trailer (after all frames are written)
 		void WriteTrailer();

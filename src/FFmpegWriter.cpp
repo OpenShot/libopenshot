@@ -418,7 +418,7 @@ void FFmpegWriter::write_queued_frames()
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(FileReaderBase* reader, int start, int length)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, int start, int length)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)

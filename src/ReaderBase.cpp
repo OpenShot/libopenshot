@@ -1,9 +1,9 @@
-#include "../include/FileWriterBase.h"
+#include "../include/ReaderBase.h"
 
 using namespace openshot;
 
 // Initialize the values of the FileInfo struct
-void FileWriterBase::InitFileInfo()
+void ReaderBase::InitFileInfo()
 {
 	info.has_video = false;
 	info.has_audio = false;
@@ -30,41 +30,8 @@ void FileWriterBase::InitFileInfo()
 	info.audio_timebase = Fraction();
 }
 
-// This method copy's the info struct of a reader, and sets the writer with the same info
-void FileWriterBase::CopyReaderInfo(FileReaderBase* reader)
-{
-	info.has_video = reader->info.has_video;
-	info.has_audio = reader->info.has_audio;
-	info.duration = reader->info.duration;
-	info.file_size = reader->info.file_size;
-	info.height = reader->info.height;
-	info.width = reader->info.width;
-	info.pixel_format = reader->info.pixel_format;
-	info.fps.num = reader->info.fps.num;
-	info.fps.den = reader->info.fps.den;
-	info.video_bit_rate = reader->info.video_bit_rate;
-	info.pixel_ratio.num = reader->info.pixel_ratio.num;
-	info.pixel_ratio.den = reader->info.pixel_ratio.den;
-	info.display_ratio.num = reader->info.display_ratio.num;
-	info.display_ratio.den = reader->info.display_ratio.den;
-	info.vcodec = reader->info.vcodec;
-	info.video_length = reader->info.video_length;
-	info.video_stream_index = reader->info.video_stream_index;
-	info.video_timebase.num = reader->info.video_timebase.num;
-	info.video_timebase.den = reader->info.video_timebase.den;
-	info.interlaced_frame = reader->info.interlaced_frame;
-	info.top_field_first = reader->info.top_field_first;
-	info.acodec = reader->info.acodec;
-	info.audio_bit_rate = reader->info.audio_bit_rate;
-	info.sample_rate = reader->info.sample_rate;
-	info.channels = reader->info.channels;
-	info.audio_stream_index = reader->info.audio_stream_index;
-	info.audio_timebase.num = reader->info.audio_timebase.num;
-	info.audio_timebase.den = reader->info.audio_timebase.den;
-}
-
 // Display file information
-void FileWriterBase::DisplayInfo() {
+void ReaderBase::DisplayInfo() {
 	cout << fixed << setprecision(2) << boolalpha;
 	cout << "----------------------------" << endl;
 	cout << "----- File Information -----" << endl;
