@@ -63,15 +63,15 @@ namespace openshot
 		int frame; ///< The frame number
 	};
 
-	/// Since chunks contain multiple video streams, this version enumeration
-	/// allows the user to choose which version of the chunk they would like.
-	/// For example, if you want a small version with reduced quality, you can
-	/// choose the THUMBNAIL version. This is used on the ChunkReader
-	/// constructor.
-
 	/**
 	 * \brief This version enumeration allows the user to choose which version
 	 * of the chunk they would like (low quality, medium, or high quality).
+	 *
+	 * Since chunks contain multiple video streams, this version enumeration
+	 * allows the user to choose which version of the chunk they would like.
+	 * For example, if you want a small version with reduced quality, you can
+	 * choose the THUMBNAIL version. This is used on the ChunkReader
+	 * constructor.
 	 */
 	enum ChunkVersion
 	{
@@ -83,6 +83,19 @@ namespace openshot
 	/**
 	 * \brief This class reads a special chunk-formatted file, which can be easily
 	 * shared in a distributed environment, and can return openshot::Frame objects.
+	 *
+	 * \code
+	 * // This example demonstrates how to read a chunk folder and access frame objects inside it.
+	 * ChunkReader r("/home/jonathan/apps/chunks/chunk1/", FINAL); // Load highest quality version of this chunk file
+	 * r.DisplayInfo(); // Display all known details about this chunk file
+	 * r.Open(); // Open the reader
+	 *
+	 * // Access frame 1
+	 * r.GetFrame(1)->Display();
+	 *
+	 * // Close the reader
+	 * r.Close();
+	 * \endcode
 	 */
 	class ChunkReader : public ReaderBase
 	{
@@ -109,26 +122,29 @@ namespace openshot
 
 	public:
 
-		/// Constructor for ChunkReader.  This automatically opens the chunk file or folder and loads
+		/// \brief Constructor for ChunkReader.  This automatically opens the chunk file or folder and loads
 		/// frame 1, or it throws one of the following exceptions.
+		/// @param path				The folder path / location of a chunk (chunks are stored as folders)
+		/// @param chunk_version	Choose the video version / quality (THUMBNAIL, PREVIEW, or FINAL)
 		ChunkReader(string path, ChunkVersion chunk_version) throw(InvalidFile, InvalidJSON);
 
-		/// Close Reader
+		/// Close the reader
 		void Close();
 
-		/// Get the chunk size (number of frames to write in each chunk)
+		/// \brief Get the chunk size (number of frames to write in each chunk)
+		/// @returns	The number of frames in this chunk
 		int GetChunkSize() { return chunk_size; };
 
-		/// Set the chunk size (number of frames to write in each chunk)
-		int SetChunkSize(int new_size) { chunk_size = new_size; };
+		/// \brief Set the chunk size (number of frames to write in each chunk)
+		/// @param new_size		The number of frames per chunk
+		void SetChunkSize(int new_size) { chunk_size = new_size; };
 
-		/// Get an openshot::Frame object for a specific frame number of this reader.
-		///
-		/// @returns The requested frame (containing the image)
-		/// @param[requested_frame] number The frame number that is requested.
+		/// \brief Get an openshot::Frame object for a specific frame number of this reader.
+		/// @returns				The requested frame (containing the image and audio)
+		/// @param requested_frame	The frame number you want to retrieve
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, ChunkNotFound);
 
-		/// Open File - which is called by the constructor automatically
+		/// Open the reader. This is required before you can access frames or data from the reader.
 		void Open() throw(InvalidFile);
 	};
 

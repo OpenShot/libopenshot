@@ -2,27 +2,75 @@
 #define OPENSHOT_H
 
 /**
- * \file
- * \brief This header includes all commonly used headers, for ease-of-use
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
- */
-
-/**
- * \mainpage OpenShot Video Editing Library C++ API
+ * @file
+ * @brief This header includes all commonly used headers for libopenshot, for ease-of-use
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * Welcome to the OpenShot Video Editing Library C++ API.  This library is a video editing and animation
- * framework, which powers the <a href="http://www.openshot.org">OpenShot Video Editor</a> application.
- * It can also be used to power your next C++ video editing project!  It is very powerful, supporting many
- * different framerate mapping conversions as well as many different keyframe interpolation methods, such
- * as Bezier curves, Linear, and Constant.
+ * @section LICENSE
  *
- * All you need is a single <b>include</b> to get started:
- * \code
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @mainpage OpenShot Video Editing Library C++ API
+ *
+ * Welcome to the OpenShot Video Editing Library C++ API | libopenshot. This library was developed to
+ * make high-quality video editing and animation solutions freely available to the world. With a focus
+ * on stability, performance, and ease-of-use, we believe libopenshot is the best cross-platform,
+ * open-source video editing library in the world. This library powers
+ * <a href="http://www.openshot.org">OpenShot Video Editor</a> (version 2.0+), the highest rated video
+ * editor available on Linux. It could also <b>power</b> your next video editing project!
+ *
+ * Our documentation is quite extensive, including descriptions and examples of almost every class, method,
+ * and parameter. However, getting started is easy.
+ *
+ * All you need is a <b>single</b> include to get started:
+ * @code
  * #include "OpenShot.h"
- * \endcode
+ * @endcode
+ *
+ * To understand libopenshot, we must first learn about the basic building blocks:.
+ *  - <b>Readers</b> - A reader is used to load a video, audio, or image file (or stream) and return openshot::Frame objects.
+ *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to create a video, audio, or image file (or stream).
+ *  - <b>Timeline</b> - A timeline allows many readers to be trimmed, arranged, and layered together.
+ *  - <b> KeyFrame</b> - A Keyframe is used to change values of properties over time on the timeline.
+ *
+ * Now that you understand the basic building blocks of libopenshot, lets take a look at a simple example,
+ * where we use a reader to access frames of a video file.
 
- * Please read this documentation to learn all about how the OpenShot Video Editing Library works, and how
- * you can use it on your next video editing application.
+ * @code
+ * // Create a reader for a video
+ * FFmpegReader r("MyAwesomeVideo.webm");
+ * r.Open(); // Open the reader
+ *
+ * // Get frame number 1 from the video
+ * tr1::shared_ptr<Frame> f = r.GetFrame(1);
+ *
+ * // Now that we have an openshot::Frame object, lets have some fun!
+ * f->Display(); // Display the frame on the screen
+ * f->DisplayWaveform(); // Display the audio waveform as an image
+ * f->Play(); // Play the audio through your speaker
+ *
+ * // Close the reader
+ * r.Close();
+ * @endcode
+ *
+ * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  */
 
 #include "AudioBufferSource.h"

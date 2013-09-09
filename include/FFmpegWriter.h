@@ -156,7 +156,7 @@ namespace openshot
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);
 
 		/// Set the cache size (number of frames to queue before writing)
-		int SetCacheSize(int new_size) { cache_size = new_size; };
+		void SetCacheSize(int new_size) { cache_size = new_size; };
 
 		/// Set video export options
 		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,

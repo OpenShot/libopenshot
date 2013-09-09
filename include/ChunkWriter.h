@@ -36,6 +36,20 @@ namespace openshot
 	 * \brief This class takes any reader and generates a special type of video file, built with
 	 * chunks of small video and audio data. These chunks can easily be passed around in a distributed
 	 * computing environment, without needing to share the entire video file.
+	 *
+	 * \code
+	 * // This example demonstrates how to feed a reader into a ChunkWriter
+	 * FFmpegReader *r = new FFmpegReader("MyAwesomeVideo.mp4"); // Get a reader
+	 *
+	 * // Create a ChunkWriter (and a folder location on your computer)
+	 * ChunkWriter w("/folder_path_to_hold_chunks/", r);
+	 *
+	 * // Write a block of frames to the ChunkWriter (from frame 1 to the end)
+	 * w.WriteFrame(r, 1, r->info.video_length);
+	 *
+	 * // Close the ChunkWriter
+	 * w.Close();
+	 * \endcode
 	 */
 	class ChunkWriter : public WriterBase
 	{
