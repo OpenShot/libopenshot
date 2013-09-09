@@ -1,11 +1,32 @@
+/**
+ * @file
+ * @brief Header file for ChunkReader class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef OPENSHOT_CHUNK_READER_H
 #define OPENSHOT_CHUNK_READER_H
-
-/**
- * \file
- * \brief Header file for ChunkReader class
- * \author Copyright (c) 2013 Jonathan Thomas
- */
 
 #include "ReaderBase.h"
 #include "FFmpegReader.h"
@@ -29,15 +50,29 @@ using namespace std;
 namespace openshot
 {
 
-	/// This struct holds the location of a frame within a chunk. Chunks are small video files, which
-	/// typically contain a few seconds of video each. Locating a frame among these small video files is
-	/// accomplished by using this struct.
-	struct chunk_location
+	/**
+	 * \brief This struct holds the location of a frame within a chunk.
+	 *
+	 * Chunks are small video files, which typically contain a few seconds of video each.
+	 * Locating a frame among these small video files is accomplished by using
+	 * this struct.
+	 */
+	struct ChunkLocation
 	{
-		int number;
-		int frame;
+		int number; ///< The chunk number
+		int frame; ///< The frame number
 	};
 
+	/// Since chunks contain multiple video streams, this version enumeration
+	/// allows the user to choose which version of the chunk they would like.
+	/// For example, if you want a small version with reduced quality, you can
+	/// choose the THUMBNAIL version. This is used on the ChunkReader
+	/// constructor.
+
+	/**
+	 * \brief This version enumeration allows the user to choose which version
+	 * of the chunk they would like (low quality, medium, or high quality).
+	 */
 	enum ChunkVersion
 	{
 		THUMBNAIL,
@@ -56,7 +91,7 @@ namespace openshot
 		bool is_open;
 		int chunk_size;
 		FFmpegReader *local_reader;
-		chunk_location previous_location;
+		ChunkLocation previous_location;
 		ChunkVersion version;
 		tr1::shared_ptr<Frame> last_frame;
 
@@ -64,7 +99,7 @@ namespace openshot
 		bool does_folder_exist(string path);
 
 		/// Find the location of a frame in a chunk
-		chunk_location find_chunk_frame(int requested_frame);
+		ChunkLocation find_chunk_frame(int requested_frame);
 
 		/// get a formatted path of a specific chunk
 		string get_chunk_path(int chunk_number, string folder, string extension);

@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Header file for Coordinate class
- * \author Copyright (c) 2011 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "../include/Fraction.h"

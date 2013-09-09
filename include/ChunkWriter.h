@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Header file for ChunkWriter class
- * \author Copyright (c) 2013 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"

@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Header file for Clip class
- * \author Copyright (c) 2011 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 /// Do not include the juce unittest headers, because it collides with unittest++

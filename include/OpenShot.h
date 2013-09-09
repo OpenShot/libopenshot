@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief This header includes all commonly used headers, for ease-of-use
- * \author Copyright (c) 2011 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 /**

@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Header file for all Exception classes
- * \author Copyright (c) 2011 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <cstring>

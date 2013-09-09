@@ -1,7 +1,7 @@
 /**
  * \file
  * \brief Source code for the Frame class
- * \author Copyright (c) 2011 Jonathan Thomas
+ * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "../include/Frame.h"

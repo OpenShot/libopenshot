@@ -39,6 +39,41 @@ void FFmpegReader::InitScalers()
 	}
 }
 
+// This struct holds the associated video frame and starting sample # for an audio packet.
+int audio_packet_location::is_near(audio_packet_location location, int samples_per_frame, int amount)
+{
+	// Is frame even close to this one?
+	if (abs(location.frame - frame) >= 2)
+		// This is too far away to be considered
+		return false;
+
+	int sample_diff = abs(location.sample_start - sample_start);
+	if (location.frame == frame && sample_diff >= 0 && sample_diff <= amount)
+		// close
+		return true;
+
+	// new frame is after
+	if (location.frame > frame)
+	{
+		// remaining samples + new samples
+		int sample_diff = (samples_per_frame - sample_start) + location.sample_start;
+		if (sample_diff >= 0 && sample_diff <= amount)
+			return true;
+	}
+
+	// new frame is before
+	if (location.frame < frame)
+	{
+		// remaining new samples + old samples
+		int sample_diff = (samples_per_frame - location.sample_start) + sample_start;
+		if (sample_diff >= 0 && sample_diff <= amount)
+			return true;
+	}
+
+	// not close
+	return false;
+}
+
 // Remove & deallocate all software scalers
 void FFmpegReader::RemoveScalers()
 {
