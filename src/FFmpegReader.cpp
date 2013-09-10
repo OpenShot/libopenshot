@@ -67,7 +67,7 @@ void FFmpegReader::InitScalers()
 }
 
 // This struct holds the associated video frame and starting sample # for an audio packet.
-int audio_packet_location::is_near(audio_packet_location location, int samples_per_frame, int amount)
+int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int amount)
 {
 	// Is frame even close to this one?
 	if (abs(location.frame - frame) >= 2)
@@ -523,7 +523,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 					UpdatePTSOffset(false);
 
 					// Determine related video frame and starting sample # from audio PTS
-					audio_packet_location location = GetAudioPTSLocation(packet->pts);
+					AudioLocation location = GetAudioPTSLocation(packet->pts);
 
 					// Process Audio Packet
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
@@ -1197,7 +1197,7 @@ int FFmpegReader::ConvertFrameToAudioPTS(int frame_number)
 }
 
 // Calculate Starting video frame and sample # for an audio PTS
-audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
+AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 {
 	// Apply PTS offset
 	pts = pts + audio_pts_offset;
@@ -1229,7 +1229,7 @@ audio_packet_location FFmpegReader::GetAudioPTSLocation(int pts)
 		sample_start = 0;
 
 	// Prepare final audio packet location
-	audio_packet_location location = {whole_frame, sample_start};
+	AudioLocation location = {whole_frame, sample_start};
 
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
 	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))

@@ -9,7 +9,7 @@
 using namespace std;
 using namespace openshot;
 
-FrameMapper::FrameMapper(ReaderBase *reader, Framerate target, Pulldown_Method pulldown) :
+FrameMapper::FrameMapper(ReaderBase *reader, Framerate target, PulldownType pulldown) :
 		reader(reader), target(target), pulldown(pulldown), final_cache(820 * 1024)
 {
 

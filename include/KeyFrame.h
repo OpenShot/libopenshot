@@ -82,7 +82,7 @@ namespace openshot {
 		void AddPoint(float x, float y);
 
 		/// Add a new point on the key-frame, with a specific interpolation type
-		void AddPoint(float x, float y, Interpolation_Type interpolate);
+		void AddPoint(float x, float y, InterpolationType interpolate);
 
 		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
 		void SetHandles(Point current);

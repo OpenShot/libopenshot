@@ -16,7 +16,7 @@ namespace openshot
 	 * point and this one.  Bezier is a smooth curve.  Linear is a straight line.  Constant is
 	 * is a jump from the previous point to this one.
 	 */
-	enum Interpolation_Type {
+	enum InterpolationType {
 		BEZIER,
 		LINEAR,
 		CONSTANT
@@ -28,7 +28,7 @@ namespace openshot
 	 * automatically, to achieve the smoothest curves.  MANUAL will leave the handles
 	 * alone, making it the responsibility of the user to set them.
 	 */
-	enum Handle_Type {
+	enum HandleType {
 		AUTO,
 		MANUAL
 	};
@@ -56,8 +56,8 @@ namespace openshot
 		Coordinate co; 						///< This is the primary coordinate
 		Coordinate handle_left; 			///< This is the left handle coordinate
 		Coordinate handle_right; 			///< This is the right handle coordinate
-		Interpolation_Type interpolation;	///< This is the interpolation mode
-		Handle_Type handle_type; 			///< This is the handle mode
+		InterpolationType interpolation;	///< This is the interpolation mode
+		HandleType handle_type; 			///< This is the handle mode
 
 		/// Constructor which creates a single coordinate at X=0
 		Point(float y);
@@ -66,16 +66,16 @@ namespace openshot
 		Point(float x, float y);
 
 		/// Constructor which also creates a Point and sets the X,Y, and interpolation of the Point.
-		Point(float x, float y, Interpolation_Type interpolation);
+		Point(float x, float y, InterpolationType interpolation);
 
 		// Constructor which takes a coordinate
 		Point(Coordinate co);
 
 		// Constructor which takes a coordinate and interpolation mode
-		Point(Coordinate co, Interpolation_Type interpolation);
+		Point(Coordinate co, InterpolationType interpolation);
 
 		// Constructor which takes a coordinate, interpolation mode, and handle type
-		Point(Coordinate co, Interpolation_Type interpolation, Handle_Type handle_type);
+		Point(Coordinate co, InterpolationType interpolation, HandleType handle_type);
 
 		/**
 		 * Set the left and right handles to the same Y coordinate as the primary

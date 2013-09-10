@@ -12,10 +12,10 @@
 using namespace openshot;
 using namespace tr1;
 
-void FrameReady(int number)
-{
-	cout << "Frame #: " << number << " is ready!" << endl;
-}
+//void FrameReady(int number)
+//{
+//	cout << "Frame #: " << number << " is ready!" << endl;
+//}
 
 int main(int argc, char* argv[])
 {

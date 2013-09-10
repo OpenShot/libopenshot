@@ -8,7 +8,7 @@
  *
  * @mainpage OpenShot Video Editing Library C++ API
  *
- * Welcome to the OpenShot Video Editing Library C++ API | libopenshot. This library was developed to
+ * Welcome to the OpenShot Video Editing Library (libopenshot) C++ API. This library was developed to
  * make high-quality video editing and animation solutions freely available to the world. With a focus
  * on stability, performance, and ease-of-use, we believe libopenshot is the best cross-platform,
  * open-source video editing library in the world. This library powers

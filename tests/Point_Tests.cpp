@@ -29,7 +29,7 @@ TEST(Point_Constructor_With_Coordinate_And_LINEAR_Interpolation)
 {
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
-	Interpolation_Type interp = LINEAR;
+	InterpolationType interp = LINEAR;
 	openshot::Point p1(c1, interp);
 
 	CHECK_EQUAL(3, c1.X);
@@ -41,7 +41,7 @@ TEST(Point_Constructor_With_Coordinate_And_BEZIER_Interpolation)
 {
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
-	Interpolation_Type interp = BEZIER;
+	InterpolationType interp = BEZIER;
 	openshot::Point p1(c1, interp);
 
 	CHECK_EQUAL(3, p1.co.X);
@@ -53,7 +53,7 @@ TEST(Point_Constructor_With_Coordinate_And_CONSTANT_Interpolation)
 {
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(2,8);
-	Interpolation_Type interp = CONSTANT;
+	InterpolationType interp = CONSTANT;
 	openshot::Point p1(c1, interp);
 
 	CHECK_EQUAL(2, p1.co.X);

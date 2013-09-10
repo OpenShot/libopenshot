@@ -50,14 +50,17 @@ using namespace std;
 
 namespace openshot
 {
-	/// This struct holds the associated video frame and starting sample # for an audio packet.
-	/// Because audio packets do not match up with video frames, this helps determine exactly
-	/// where the audio packet's samples belong.
-	struct audio_packet_location
+	/**
+	 * @brief This struct holds the associated video frame and starting sample # for an audio packet.
+	 *
+	 * Because audio packets do not match up with video frames, this helps determine exactly
+	 * where the audio packet's samples belong.
+	 */
+	struct AudioLocation
 	{
 		int frame;
 		int sample_start;
-		int is_near(audio_packet_location location, int samples_per_frame, int amount);
+		int is_near(AudioLocation location, int samples_per_frame, int amount);
 	};
 
 	/**
@@ -96,7 +99,7 @@ namespace openshot
 		map<AVPicture*, AVPicture*> frames;
 		map<int, int> processing_video_frames;
 		map<int, int> processing_audio_frames;
-		audio_packet_location previous_packet_location;
+		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
 		bool display_debug;
@@ -142,7 +145,7 @@ namespace openshot
 		tr1::shared_ptr<Frame> CreateFrame(int requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
-		audio_packet_location GetAudioPTSLocation(int pts);
+		AudioLocation GetAudioPTSLocation(int pts);
 
 		/// Get an AVFrame (if any)
 		bool GetAVFrame();

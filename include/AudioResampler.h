@@ -42,12 +42,13 @@
 #include "AudioBufferSource.h"
 #include "Exceptions.h"
 
-/// This namespace is the default namespace for all code in the openshot library.
 namespace openshot {
 
 	/**
-	 * @brief This class is used to resample audio data for many sequential frames. It maintains some data from the last
-	 * call to GetResampledBuffer(), so there are no pops and clicks between frames.
+	 * @brief This class is used to resample audio data for many sequential frames.
+	 *
+	 * It maintains some data from the last call to GetResampledBuffer(), so there
+	 * are no pops and clicks between frames.
 	 */
 	class AudioResampler {
 	private:

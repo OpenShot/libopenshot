@@ -25,9 +25,10 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * @brief This class is used as a simple, dummy reader, which always returns a blank frame, and
-	 * can be created with any framerate or samplerate.  This is useful in unit tests that need to test
-	 * different framerates or samplerates.
+	 * @brief This class is used as a simple, dummy reader, which always returns a blank frame.
+	 *
+	 * A dummy reader can be created with any framerate or samplerate. This is useful in unit
+	 * tests that need to test different framerates or samplerates.
 	 */
 	class DummyReader : public ReaderBase
 	{

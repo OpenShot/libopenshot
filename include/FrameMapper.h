@@ -29,7 +29,7 @@ namespace openshot
 	 * needed to remove artificial fields added when converting between 24 fps (film)
 	 * and television fps (29.97 fps NTSC or 25 fps PAL).
 	 */
-	enum Pulldown_Method
+	enum PulldownType
 	{
 		PULLDOWN_CLASSIC,	// Classic 2:3:2:3 pull-down
 		PULLDOWN_ADVANCED,	// Advanced 2:3:3:2 pull-down (minimal dirty frames)
@@ -109,7 +109,7 @@ namespace openshot
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
 		Framerate original;		// The original frame rate
 		Framerate target;			// The target frame rate
-		Pulldown_Method pulldown;	// The pull-down technique
+		PulldownType pulldown;	// The pull-down technique
 		ReaderBase *reader;	// The source video reader
 		Cache final_cache; // Cache of actual Frame objects
 
@@ -128,7 +128,7 @@ namespace openshot
 
 	public:
 		/// Default constructor for FrameMapper class
-		FrameMapper(ReaderBase *reader, Framerate target, Pulldown_Method pulldown);
+		FrameMapper(ReaderBase *reader, Framerate target, PulldownType pulldown);
 
 		/// Close the internal reader
 		void Close();

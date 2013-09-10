@@ -175,7 +175,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 }
 
 // Set custom options (some codecs accept additional params)
-void FFmpegWriter::SetOption(Stream_Type stream, string name, string value)
+void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 {
 	// Declare codec context
 	AVCodecContext *c = NULL;

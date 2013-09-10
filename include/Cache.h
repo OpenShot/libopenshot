@@ -34,14 +34,13 @@
 #include "Frame.h"
 #include "Exceptions.h"
 
-/// This namespace is the default namespace for all code in the openshot library.
 namespace openshot {
 
 	/**
-	 * @brief This class is a cache manager for Frame objects.  It is used by FileReaders (such as FFmpegReader) to cache
-	 * recently accessed frames.
+	 * @brief This class is a cache manager for Frame objects.
 	 *
-	 * Due to the high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
+	 * It is used by FileReaders (such as FFmpegReader) to cache recently accessed frames. Due to the
+	 * high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
 	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
 	 * is required.  You can set the max number of bytes to cache.
 	 */

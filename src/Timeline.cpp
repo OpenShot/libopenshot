@@ -298,7 +298,7 @@ void Timeline::update_closed_clips()
 void Timeline::SortClips()
 {
 	// sort clips
-	clips.sort(compare_clip_pointers());
+	clips.sort(CompareClips());
 }
 
 // Close the reader (and any resources it was consuming)

@@ -79,7 +79,7 @@ void Keyframe::AddPoint(float x, float y)
 }
 
 // Add a new point on the key-frame, with a specific interpolation type
-void Keyframe::AddPoint(float x, float y, Interpolation_Type interpolate)
+void Keyframe::AddPoint(float x, float y, InterpolationType interpolate)
 {
 	// Create a point
 	Point new_point(x, y, interpolate);

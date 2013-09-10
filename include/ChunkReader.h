@@ -64,8 +64,8 @@ namespace openshot
 	};
 
 	/**
-	 * @brief This version enumeration allows the user to choose which version
-	 * of the chunk they would like (low quality, medium, or high quality).
+	 * @brief This enumeration allows the user to choose which version
+	 * of the chunk they would like (low, medium, or high quality).
 	 *
 	 * Since chunks contain multiple video streams, this version enumeration
 	 * allows the user to choose which version of the chunk they would like.
@@ -82,7 +82,12 @@ namespace openshot
 
 	/**
 	 * @brief This class reads a special chunk-formatted file, which can be easily
-	 * shared in a distributed environment, and can return openshot::Frame objects.
+	 * shared in a distributed environment.
+	 *
+	 * It stores the video in small "chunks", which are really just short video clips,
+	 * a few seconds each. A ChunkReader only needs the part of the chunk that contains
+	 * the frames it is looking for. For example, if you only need the end of a video,
+	 * only the last few chunks might be needed to successfully access those openshot::Frame objects.
 	 *
 	 * \code
 	 * // This example demonstrates how to read a chunk folder and access frame objects inside it.

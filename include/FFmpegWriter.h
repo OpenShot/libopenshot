@@ -32,7 +32,7 @@ namespace openshot
 	/**
 	 * This enumeration designates which a type of stream when encoding
 	 */
-	enum Stream_Type
+	enum StreamType
 	{
 		VIDEO_STREAM,
 		AUDIO_STREAM
@@ -163,7 +163,7 @@ namespace openshot
 				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// Set custom options (some codecs accept additional params)
-		void SetOption(Stream_Type stream, string name, string value);
+		void SetOption(StreamType stream, string name, string value);
 
 		/// Write the file header (after the options are set)
 		void WriteHeader();
