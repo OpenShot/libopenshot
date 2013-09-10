@@ -2,9 +2,9 @@
 #define OPENSHOT_FRAME_H
 
 /**
- * \file
- * \brief Header file for Frame class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Frame class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 /// Do not include the juce unittest headers, because it collides with unittest++
@@ -41,7 +41,7 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * \brief This class represents a single frame of video (i.e. image & audio data)
+	 * @brief This class represents a single frame of video (i.e. image & audio data)
 	 *
 	 * FileReaders (such as FFmpegReader) use instances of this class to store the individual frames of video,
 	 * which include both the image data (i.e. pixels) and audio samples.

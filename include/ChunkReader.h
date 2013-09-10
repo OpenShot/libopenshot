@@ -51,7 +51,7 @@ namespace openshot
 {
 
 	/**
-	 * \brief This struct holds the location of a frame within a chunk.
+	 * @brief This struct holds the location of a frame within a chunk.
 	 *
 	 * Chunks are small video files, which typically contain a few seconds of video each.
 	 * Locating a frame among these small video files is accomplished by using
@@ -64,7 +64,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This version enumeration allows the user to choose which version
+	 * @brief This version enumeration allows the user to choose which version
 	 * of the chunk they would like (low quality, medium, or high quality).
 	 *
 	 * Since chunks contain multiple video streams, this version enumeration
@@ -81,7 +81,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This class reads a special chunk-formatted file, which can be easily
+	 * @brief This class reads a special chunk-formatted file, which can be easily
 	 * shared in a distributed environment, and can return openshot::Frame objects.
 	 *
 	 * \code
@@ -122,7 +122,7 @@ namespace openshot
 
 	public:
 
-		/// \brief Constructor for ChunkReader.  This automatically opens the chunk file or folder and loads
+		/// @brief Constructor for ChunkReader.  This automatically opens the chunk file or folder and loads
 		/// frame 1, or it throws one of the following exceptions.
 		/// @param path				The folder path / location of a chunk (chunks are stored as folders)
 		/// @param chunk_version	Choose the video version / quality (THUMBNAIL, PREVIEW, or FINAL)
@@ -131,15 +131,15 @@ namespace openshot
 		/// Close the reader
 		void Close();
 
-		/// \brief Get the chunk size (number of frames to write in each chunk)
+		/// @brief Get the chunk size (number of frames to write in each chunk)
 		/// @returns	The number of frames in this chunk
 		int GetChunkSize() { return chunk_size; };
 
-		/// \brief Set the chunk size (number of frames to write in each chunk)
+		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size		The number of frames per chunk
 		void SetChunkSize(int new_size) { chunk_size = new_size; };
 
-		/// \brief Get an openshot::Frame object for a specific frame number of this reader.
+		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, ChunkNotFound);

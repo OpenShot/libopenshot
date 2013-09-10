@@ -2,9 +2,9 @@
 #define OPENSHOT_KEYFRAME_H
 
 /**
- * \file
- * \brief Header file for the Keyframe class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for the Keyframe class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 #include <iostream>
 #include <math.h>
@@ -21,7 +21,7 @@ using namespace openshot;
 namespace openshot {
 
 	/**
-	 * \brief A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
+	 * @brief A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
 	 *
 	 * Keyframes are used to animate and interpolate values of properties over time.  For example, a single property
 	 * can use a Keyframe instead of a constant value.  Assume you want to slide an image (from left to right) over
@@ -112,7 +112,7 @@ namespace openshot {
 		int GetLength();
 
 		/**
-		 * \brief Calculate all of the values for this keyframe.
+		 * @brief Calculate all of the values for this keyframe.
 		 *
 		 * This clears any existing data in the "values" vector.  This method is automatically called
 		 * by AddPoint(), so you don't typically need to call this method.

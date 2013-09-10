@@ -2,9 +2,9 @@
 #define OPENSHOT_FILE_WRITER_BASE_H
 
 /**
- * \file
- * \brief Header file for WriterBase class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for WriterBase class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <iostream>
@@ -18,7 +18,7 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * \brief This struct contains info about encoding a media file, such as height, width, frames per second, etc...
+	 * @brief This struct contains info about encoding a media file, such as height, width, frames per second, etc...
 	 *
 	 * Each derived class of WriterBase is responsible for updating this struct to reflect accurate information
 	 * about the streams.
@@ -51,7 +51,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This abstract class is the base class, used by writers.  Writers are types of classes that encode
+	 * @brief This abstract class is the base class, used by writers.  Writers are types of classes that encode
 	 * video, audio, and image files.
 	 *
 	 * The only requirements for a 'writer', are to derive from this base class, and implement the

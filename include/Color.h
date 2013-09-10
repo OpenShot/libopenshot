@@ -2,9 +2,9 @@
 #define OPENSHOT_COLOR_H
 
 /**
- * \file
- * \brief Header file for Color class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Color class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "KeyFrame.h"
@@ -12,7 +12,7 @@
 namespace openshot {
 
 	/**
-	 * \brief This struct represents a color (used on the timeline and clips)
+	 * @brief This struct represents a color (used on the timeline and clips)
 	 *
 	 * Colors are represented by 4 curves, representing red, green, and blue.  The curves
 	 * can be used to animate colors over time.

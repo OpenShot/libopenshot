@@ -2,9 +2,9 @@
 #define OPENSHOT_COORDINATE_H
 
 /**
- * \file
- * \brief Header file for Coordinate class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Coordinate class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "../include/Fraction.h"
@@ -13,7 +13,7 @@
 namespace openshot {
 
 	/**
-	 * \brief This class represents a Cartesian coordinate (X, Y) used in the Keyframe animation system.
+	 * @brief This class represents a Cartesian coordinate (X, Y) used in the Keyframe animation system.
 	 *
 	 * Animation involves the changing (i.e. interpolation) of numbers over time.  A series of Coordinate
 	 * objects allows us to plot a specific curve or line used during interpolation.  In other words, it helps us

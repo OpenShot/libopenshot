@@ -2,9 +2,9 @@
 #define OPENSHOT_PLAYER_H
 
 /**
- * \file
- * \brief Header file for Frame class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Frame class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <iostream>
@@ -22,7 +22,7 @@ namespace openshot
 	typedef void (*CallbackPtr)(int, int, int, const Magick::PixelPacket *Pixels, void *);
 
 	/**
-	 * \brief This class is used to playback a video from a reader.
+	 * @brief This class is used to playback a video from a reader.
 	 *
 	 * This player does not actually show the video, but rather it invokes a method each time
 	 * a frame should be displayed.  This allows the calling application to display the image using

@@ -10,7 +10,7 @@ namespace Json {
 
    class Value;
 
-   /** \brief Abstract class for writers.
+   /** @brief Abstract class for writers.
     */
    class JSON_API Writer
    {
@@ -20,7 +20,7 @@ namespace Json {
       virtual std::string write( const Value &root ) = 0;
    };
 
-   /** \brief Outputs a Value in <a HREF="http://www.json.org">JSON</a> format without formatting (not human friendly).
+   /** @brief Outputs a Value in <a HREF="http://www.json.org">JSON</a> format without formatting (not human friendly).
     *
     * The JSON document is written in a single line. It is not intended for 'human' consumption,
     * but may be usefull to support feature such as RPC where bandwith is limited.
@@ -44,7 +44,7 @@ namespace Json {
       bool yamlCompatiblityEnabled_;
    };
 
-   /** \brief Writes a Value in <a HREF="http://www.json.org">JSON</a> format in a human friendly way.
+   /** @brief Writes a Value in <a HREF="http://www.json.org">JSON</a> format in a human friendly way.
     *
     * The rules for line break and indent are as follow:
     * - Object value:
@@ -69,7 +69,7 @@ namespace Json {
       virtual ~StyledWriter(){}
 
    public: // overridden from Writer
-      /** \brief Serialize a Value in <a HREF="http://www.json.org">JSON</a> format.
+      /** @brief Serialize a Value in <a HREF="http://www.json.org">JSON</a> format.
        * \param root Value to serialize.
        * \return String containing the JSON document that represents the root value.
        */
@@ -99,7 +99,7 @@ namespace Json {
       bool addChildValues_;
    };
 
-   /** \brief Writes a Value in <a HREF="http://www.json.org">JSON</a> format in a human friendly way,
+   /** @brief Writes a Value in <a HREF="http://www.json.org">JSON</a> format in a human friendly way,
         to a stream rather than to a string.
     *
     * The rules for line break and indent are as follow:
@@ -126,7 +126,7 @@ namespace Json {
       ~StyledStreamWriter(){}
 
    public:
-      /** \brief Serialize a Value in <a HREF="http://www.json.org">JSON</a> format.
+      /** @brief Serialize a Value in <a HREF="http://www.json.org">JSON</a> format.
        * \param out Stream to write to. (Can be ostringstream, e.g.)
        * \param root Value to serialize.
        * \note There is no point in deriving from Writer, since write() should not return a value.
@@ -163,7 +163,7 @@ namespace Json {
    std::string JSON_API valueToString( bool value );
    std::string JSON_API valueToQuotedString( const char *value );
 
-   /// \brief Output using the StyledStreamWriter.
+   /// @brief Output using the StyledStreamWriter.
    /// \see Json::operator>>()
    std::ostream& operator<<( std::ostream&, const Value &root );
 

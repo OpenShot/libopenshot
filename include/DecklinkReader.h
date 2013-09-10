@@ -2,9 +2,9 @@
 #define OPENSHOT_DECKLINK_READER_H
 
 /**
- * \file
- * \brief Header file for ImageReader class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for ImageReader class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -33,7 +33,7 @@ namespace openshot
 {
 
 	/**
-	 * \brief This class uses the Blackmagic Decklink libraries, to open video streams on Blackmagic devices, and return
+	 * @brief This class uses the Blackmagic Decklink libraries, to open video streams on Blackmagic devices, and return
 	 * openshot::Frame objects containing the image and audio data.
 	 */
 	class DecklinkReader : public ReaderBase

@@ -2,9 +2,9 @@
 #define OPENSHOT_CHUNK_WRITER_H
 
 /**
- * \file
- * \brief Header file for ChunkWriter class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for ChunkWriter class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -33,7 +33,7 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * \brief This class takes any reader and generates a special type of video file, built with
+	 * @brief This class takes any reader and generates a special type of video file, built with
 	 * chunks of small video and audio data. These chunks can easily be passed around in a distributed
 	 * computing environment, without needing to share the entire video file.
 	 *

@@ -1,11 +1,33 @@
+/**
+ * @file
+ * @brief Header file for FFmpegReader class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
 #ifndef OPENSHOT_FFMPEG_READER_H
 #define OPENSHOT_FFMPEG_READER_H
-
-/**
- * \file
- * \brief Header file for FFmpegReader class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
- */
 
 #include "ReaderBase.h"
 
@@ -39,7 +61,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This class uses the FFmpeg libraries, to open video files and audio files, and return
+	 * @brief This class uses the FFmpeg libraries, to open video files and audio files, and return
 	 * openshot::Frame objects for any frame in the file.
 	 *
 	 * All seeking and caching is handled internally, and the only public interface is the GetFrame()
@@ -191,7 +213,7 @@ namespace openshot
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video
-		/// @param[requested_frame] number The frame number that is requested.
+		/// @param requested_frame	The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
 
 		/// Open File - which is called by the constructor automatically

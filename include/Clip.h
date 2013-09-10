@@ -2,9 +2,9 @@
 #define OPENSHOT_CLIP_H
 
 /**
- * \file
- * \brief Header file for Clip class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Clip class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 /// Do not include the juce unittest headers, because it collides with unittest++
@@ -64,7 +64,7 @@ namespace openshot {
 	};
 
 	/**
-	 * \brief This class represents a clip
+	 * @brief This class represents a clip
 	 *
 	 * Each image, video, or audio file is represented on a layer as a clip.  A clip has many
 	 * properties that affect how it behaves on the timeline, such as its size, position,

@@ -1,7 +1,7 @@
 /**
- * \file
- * \brief Source code for the Coordinate class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Source code for the Coordinate class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "../include/Coordinate.h"

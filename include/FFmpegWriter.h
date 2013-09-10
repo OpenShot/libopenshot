@@ -2,9 +2,9 @@
 #define OPENSHOT_FFMPEG_WRITER_H
 
 /**
- * \file
- * \brief Header file for FFmpegWriter class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for FFmpegWriter class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -39,7 +39,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This class uses the FFmpeg libraries, to write and encode video files and audio files
+	 * @brief This class uses the FFmpeg libraries, to write and encode video files and audio files
 	 *
 	 * TODO
 	 */

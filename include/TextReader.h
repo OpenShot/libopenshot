@@ -2,9 +2,9 @@
 #define OPENSHOT_TEXT_READER_H
 
 /**
- * \file
- * \brief Header file for TextReader class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for TextReader class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -26,7 +26,7 @@ namespace openshot
 {
 
 	/**
-	 * \brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
+	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
 	 * openshot::Frame objects containing the image of the text.
 	 */
 	class TextReader : public ReaderBase

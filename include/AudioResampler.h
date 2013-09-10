@@ -46,7 +46,7 @@
 namespace openshot {
 
 	/**
-	 * \brief This class is used to resample audio data for many sequential frames. It maintains some data from the last
+	 * @brief This class is used to resample audio data for many sequential frames. It maintains some data from the last
 	 * call to GetResampledBuffer(), so there are no pops and clicks between frames.
 	 */
 	class AudioResampler {

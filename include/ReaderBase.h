@@ -2,9 +2,9 @@
 #define OPENSHOT_FILE_READER_BASE_H
 
 /**
- * \file
- * \brief Header file for ReaderBase class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for ReaderBase class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <iostream>
@@ -18,7 +18,7 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * \brief This struct contains info about a media file, such as height, width, frames per second, etc...
+	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
 	 * Each derived class of ReaderBase is responsible for updating this struct to reflect accurate information
 	 * about the streams. Derived classes of ReaderBase should call the InitFileInfo() method to initialize the
@@ -52,7 +52,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This abstract class is the base class, used by readers.  Readers are types of classes that read
+	 * @brief This abstract class is the base class, used by readers.  Readers are types of classes that read
 	 * video, audio, and image files, and return openshot::Frame objects.
 	 *
 	 * The only requirements for a 'reader', are to derive from this base class, implement the

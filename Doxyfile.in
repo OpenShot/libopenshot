@@ -159,7 +159,7 @@ JAVADOC_AUTOBRIEF      = NO
 # interpret the first line (until the first dot) of a Qt-style
 # comment as the brief description. If set to NO, the comments
 # will behave just like regular Qt-style comments (thus requiring
-# an explicit \brief command for a brief description.)
+# an explicit @brief command for a brief description.)
 
 QT_AUTOBRIEF           = NO
 
@@ -595,7 +595,7 @@ FILE_VERSION_FILTER    =
 # You can optionally specify a file name after the option, if omitted
 # DoxygenLayout.xml will be used as the name of the layout file.
 
-LAYOUT_FILE            =
+LAYOUT_FILE            = 
 
 # The CITE_BIB_FILES tag can be used to specify one or more bib files
 # containing the references data. This must be a list of .bib files. The
@@ -859,7 +859,7 @@ VERBATIM_HEADERS       = YES
 # of all compounds will be generated. Enable this if the project
 # contains a lot of classes, structs, unions or interfaces.
 
-ALPHABETICAL_INDEX     = NO
+ALPHABETICAL_INDEX     = YES
 
 # If the alphabetical index is enabled (see ALPHABETICAL_INDEX) then
 # the COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns

@@ -38,7 +38,7 @@
 namespace openshot {
 
 	/**
-	 * \brief This class is a cache manager for Frame objects.  It is used by FileReaders (such as FFmpegReader) to cache
+	 * @brief This class is a cache manager for Frame objects.  It is used by FileReaders (such as FFmpegReader) to cache
 	 * recently accessed frames.
 	 *
 	 * Due to the high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,

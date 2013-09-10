@@ -6,27 +6,6 @@
  * @brief This header includes all commonly used headers for libopenshot, for ease-of-use
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
- *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
- * OpenShot Library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * OpenShot Library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
- *
  * @mainpage OpenShot Video Editing Library C++ API
  *
  * Welcome to the OpenShot Video Editing Library C++ API | libopenshot. This library was developed to
@@ -44,12 +23,14 @@
  * #include "OpenShot.h"
  * @endcode
  *
+ * ### The Basics ###
  * To understand libopenshot, we must first learn about the basic building blocks:.
  *  - <b>Readers</b> - A reader is used to load a video, audio, or image file (or stream) and return openshot::Frame objects.
  *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to create a video, audio, or image file (or stream).
  *  - <b>Timeline</b> - A timeline allows many readers to be trimmed, arranged, and layered together.
  *  - <b> KeyFrame</b> - A Keyframe is used to change values of properties over time on the timeline.
  *
+ * ### Example Code ###
  * Now that you understand the basic building blocks of libopenshot, lets take a look at a simple example,
  * where we use a reader to access frames of a video file.
 
@@ -71,6 +52,26 @@
  * @endcode
  *
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
+ *
+ * ### License & Copyright ###
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). OpenShot Library (http://www.openshot.org) is an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "AudioBufferSource.h"

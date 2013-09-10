@@ -2,9 +2,9 @@
 #define OPENSHOT_POINT_H
 
 /**
- * \file
- * \brief Header file for the Point class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for the Point class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "Coordinate.h"
@@ -34,7 +34,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief A Point is the basic building block of a key-frame curve.
+	 * @brief A Point is the basic building block of a key-frame curve.
 	 *
 	 * Points have a primary coordinate and a left and right handle coordinate.
 	 * The handles are used to influence the direction of the curve as it

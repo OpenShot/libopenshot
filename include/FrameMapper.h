@@ -2,9 +2,9 @@
 #define OPENSHOT_FRAMEMAPPER_H
 
 /**
- * \file
- * \brief Header file for the FrameMapper class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for the FrameMapper class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <assert.h>
@@ -37,7 +37,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This struct holds a single field (half a frame).
+	 * @brief This struct holds a single field (half a frame).
 	 *
 	 * A frame of video is made up of 2 fields (half a frame).  This struct points to which original
 	 * frame, and whether this is the ODD or EVEN lines (i.e. top or bottom).
@@ -57,7 +57,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This struct holds a the range of samples needed by this frame
+	 * @brief This struct holds a the range of samples needed by this frame
 	 *
 	 * When frame rate is changed, the audio needs to be redistributed among the remaining
 	 * frames.  This struct holds the range samples needed by the this frame.
@@ -74,7 +74,7 @@ namespace openshot
 	};
 
 	/**
-	 * \brief This struct holds two fields which together make up a complete video frame.
+	 * @brief This struct holds two fields which together make up a complete video frame.
 	 *
 	 * These fields can point at different original frame numbers, for example the odd lines from
 	 * frame 3, and the even lines of frame 4, if required by a pull-down technique.
@@ -88,7 +88,7 @@ namespace openshot
 
 
 	/**
-	 * \brief This class creates a mapping between 2 different frame rates, applying a specific pull-down technique.
+	 * @brief This class creates a mapping between 2 different frame rates, applying a specific pull-down technique.
 	 *
 	 * This class creates a mapping between 2 different video files, and supports many pull-down techniques,
 	 * such as 2:3:2:3 or 2:3:3:2, and also supports inverse telecine. Pull-down techniques are only needed to remove
@@ -157,7 +157,7 @@ namespace openshot
 		void SourceFPS(Framerate new_fps) { original = new_fps; };
 
 		/**
-		 * \brief Re-map time to slow down, speed up, or reverse a clip based on a Keyframe.
+		 * @brief Re-map time to slow down, speed up, or reverse a clip based on a Keyframe.
 		 *
 		 * This method re-maps the time of a clip, or in other words, changes the sequence and/or
 		 * duration of frames in a clip.  Because this method accepts a Keyframe, the time, sequence,

@@ -2,9 +2,9 @@
 #define OPENSHOT_FRAMERATE_H
 
 /**
- * \file
- * \brief Header file for the FrameRate class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for the FrameRate class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <math.h>
@@ -13,7 +13,7 @@
 namespace openshot
 {
 	/**
-	 * \brief This class represents a frame rate (otherwise known as frames per second).
+	 * @brief This class represents a frame rate (otherwise known as frames per second).
 	 *
 	 * Frame rates are stored as a fraction, such as 24/1, 25/1 and 30000/1001 (29.97).
 	 *

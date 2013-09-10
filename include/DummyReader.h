@@ -2,9 +2,9 @@
 #define OPENSHOT_DUMMY_READER_H
 
 /**
- * \file
- * \brief Header file for ImageReader class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for ImageReader class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -25,7 +25,7 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * \brief This class is used as a simple, dummy reader, which always returns a blank frame, and
+	 * @brief This class is used as a simple, dummy reader, which always returns a blank frame, and
 	 * can be created with any framerate or samplerate.  This is useful in unit tests that need to test
 	 * different framerates or samplerates.
 	 */

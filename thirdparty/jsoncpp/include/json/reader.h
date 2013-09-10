@@ -10,7 +10,7 @@
 
 namespace Json {
 
-   /** \brief Unserialize a <a HREF="http://www.json.org">JSON</a> document into a Value.
+   /** @brief Unserialize a <a HREF="http://www.json.org">JSON</a> document into a Value.
     *
     */
    class JSON_API Reader
@@ -19,17 +19,17 @@ namespace Json {
       typedef char Char;
       typedef const Char *Location;
 
-      /** \brief Constructs a Reader allowing all features
+      /** @brief Constructs a Reader allowing all features
        * for parsing.
        */
       Reader();
 
-      /** \brief Constructs a Reader allowing the specified feature set
+      /** @brief Constructs a Reader allowing the specified feature set
        * for parsing.
        */
       Reader( const Features &features );
 
-      /** \brief Read a Value from a <a HREF="http://www.json.org">JSON</a> document.
+      /** @brief Read a Value from a <a HREF="http://www.json.org">JSON</a> document.
        * \param document UTF-8 encoded string containing the document to read.
        * \param root [out] Contains the root value of the document if it was
        *             successfully parsed.
@@ -43,7 +43,7 @@ namespace Json {
                   Value &root,
                   bool collectComments = true );
 
-      /** \brief Read a Value from a <a HREF="http://www.json.org">JSON</a> document.
+      /** @brief Read a Value from a <a HREF="http://www.json.org">JSON</a> document.
        * \param document UTF-8 encoded string containing the document to read.
        * \param root [out] Contains the root value of the document if it was
        *             successfully parsed.
@@ -57,13 +57,13 @@ namespace Json {
                   Value &root,
                   bool collectComments = true );
 
-      /// \brief Parse from input stream.
+      /// @brief Parse from input stream.
       /// \see Json::operator>>(std::istream&, Json::Value&).
       bool parse( std::istream &is,
                   Value &root,
                   bool collectComments = true );
 
-      /** \brief Returns a user friendly string that list errors in the parsed document.
+      /** @brief Returns a user friendly string that list errors in the parsed document.
        * \return Formatted error message with the list of errors with their location in 
        *         the parsed document. An empty string is returned if no error occurred
        *         during parsing.
@@ -165,7 +165,7 @@ namespace Json {
       bool collectComments_;
    };
 
-   /** \brief Read from 'sin' into 'root'.
+   /** @brief Read from 'sin' into 'root'.
 
     Always keep comments from the input JSON.
 

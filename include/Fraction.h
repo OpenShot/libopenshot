@@ -2,15 +2,15 @@
 #define OPENSHOT_FRACTION_H
 
 /**
- * \file
- * \brief Header file for Fraction class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Fraction class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 namespace openshot {
 
 	/**
-	 * \brief This class represents a fraction
+	 * @brief This class represents a fraction
 	 *
 	 * Fractions are often used in video editing to represent ratios and rates, for example:
 	 * pixel ratios, frames per second, timebase, and other common ratios.  Fractions are preferred

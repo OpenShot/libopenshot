@@ -2,9 +2,9 @@
 #define OPENSHOT_EXCEPTIONS_H
 
 /**
- * \file
- * \brief Header file for all Exception classes
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for all Exception classes
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include <cstring>
@@ -14,7 +14,7 @@ using namespace std;
 namespace openshot {
 
 	/**
-	 * \brief Base exception class with a custom message variable.
+	 * @brief Base exception class with a custom message variable.
 	 *
 	 * A custom error message field has been added to the std::exception base class.  All
 	 * OpenShot exception classes inherit from this class.

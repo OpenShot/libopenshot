@@ -2,9 +2,9 @@
 #define OPENSHOT_TIMELINE_H
 
 /**
- * \file
- * \brief Header file for Timeline class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for Timeline class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 // Defining some ImageMagic flags... for Mac (since they appear to be unset)
@@ -40,7 +40,7 @@ namespace openshot {
 	}};
 
 	/**
-	 * \brief This class represents a timeline
+	 * @brief This class represents a timeline
 	 *
 	 * The timeline is one of the most important features of a video editor, and controls all
 	 * aspects of how video, image, and audio clips are combined together, and how the final

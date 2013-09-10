@@ -45,7 +45,7 @@ namespace openshot
 {
 
 	/**
-	 * \brief This class is used to expose an AudioSampleBuffer as an AudioSource in JUCE.
+	 * @brief This class is used to expose an AudioSampleBuffer as an AudioSource in JUCE.
 	 *
 	 * The <a href="http://www.juce.com/">JUCE</a> library cannot play audio directly from an AudioSampleBuffer, so this class exposes
 	 * an AudioSampleBuffer as a AudioSource, so that JUCE can play the audio.

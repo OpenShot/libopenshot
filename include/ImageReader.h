@@ -2,9 +2,9 @@
 #define OPENSHOT_IMAGE_READER_H
 
 /**
- * \file
- * \brief Header file for ImageReader class
- * \author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @file
+ * @brief Header file for ImageReader class
+ * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
  */
 
 #include "ReaderBase.h"
@@ -25,7 +25,7 @@ namespace openshot
 {
 
 	/**
-	 * \brief This class uses the ImageMagick++ libraries, to open image files, and return
+	 * @brief This class uses the ImageMagick++ libraries, to open image files, and return
 	 * openshot::Frame objects containing the image.
 	 */
 	class ImageReader : public ReaderBase

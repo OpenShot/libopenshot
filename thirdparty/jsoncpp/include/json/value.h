@@ -14,11 +14,11 @@
 #  include <cpptl/forwards.h>
 # endif
 
-/** \brief JSON (JavaScript Object Notation).
+/** @brief JSON (JavaScript Object Notation).
  */
 namespace Json {
 
-   /** \brief Type of the value held by a Value object.
+   /** @brief Type of the value held by a Value object.
     */
    enum ValueType
    {
@@ -45,7 +45,7 @@ namespace Json {
 //   typedef CppTL::AnyEnumerator<const Value &> EnumValues;
 //# endif
 
-   /** \brief Lightweight wrapper to tag static string.
+   /** @brief Lightweight wrapper to tag static string.
     *
     * Value constructor and objectValue member assignement takes advantage of the
     * StaticString and avoid the cost of string duplication when storing the
@@ -81,7 +81,7 @@ namespace Json {
       const char *str_;
    };
 
-   /** \brief Represents a <a HREF="http://www.json.org">JSON</a> value.
+   /** @brief Represents a <a HREF="http://www.json.org">JSON</a> value.
     *
     * This class is a discriminated union wrapper that can represents a:
     * - signed integer [range: Value::minInt - Value::maxInt]
@@ -166,7 +166,7 @@ namespace Json {
 #endif // ifndef JSONCPP_DOC_EXCLUDE_IMPLEMENTATION
 
    public:
-      /** \brief Create a default Value of the given type.
+      /** @brief Create a default Value of the given type.
 
         This is a very useful constructor.
         To create an empty array, pass arrayValue.
@@ -187,7 +187,7 @@ namespace Json {
       Value( double value );
       Value( const char *value );
       Value( const char *beginValue, const char *endValue );
-      /** \brief Constructs a value from a static string.
+      /** @brief Constructs a value from a static string.
 
        * Like other value string constructor but do not duplicate the string for
        * internal storage. The given string must remain alive after the call to this
@@ -250,7 +250,7 @@ namespace Json {
       /// Number of values in array or object
       UInt size() const;
 
-      /// \brief Return true if empty array, empty object, or null;
+      /// @brief Return true if empty array, empty object, or null;
       /// otherwise, false.
       bool empty() const;
 
@@ -285,7 +285,7 @@ namespace Json {
                  const Value &defaultValue ) const;
       /// Return true if index < size().
       bool isValidIndex( UInt index ) const;
-      /// \brief Append value to array at the end.
+      /// @brief Append value to array at the end.
       ///
       /// Equivalent to jsonvalue[jsonvalue.size()] = value;
       Value &append( const Value &value );
@@ -298,7 +298,7 @@ namespace Json {
       Value &operator[]( const std::string &key );
       /// Access an object value by name, returns null if there is no member with that name.
       const Value &operator[]( const std::string &key ) const;
-      /** \brief Access an object value by name, create a null member if it does not exist.
+      /** @brief Access an object value by name, create a null member if it does not exist.
 
        * If the object as no entry for that name, then the member name used to store
        * the new entry is not duplicated.
@@ -327,7 +327,7 @@ namespace Json {
       Value get( const CppTL::ConstString &key,
                  const Value &defaultValue ) const;
 # endif
-      /// \brief Remove and return the named member.  
+      /// @brief Remove and return the named member.  
       ///
       /// Do nothing if it did not exist.
       /// \return the removed Value, or null.
@@ -346,7 +346,7 @@ namespace Json {
       bool isMember( const CppTL::ConstString &key ) const;
 # endif
 
-      /// \brief Return a list of the member names.
+      /// @brief Return a list of the member names.
       ///
       /// If null, return an empty list.
       /// \pre type() is objectValue or nullValue
@@ -446,7 +446,7 @@ namespace Json {
    };
 
 
-   /** \brief Experimental and untested: represents an element of the "path" to access a node.
+   /** @brief Experimental and untested: represents an element of the "path" to access a node.
     */
    class PathArgument
    {
@@ -470,7 +470,7 @@ namespace Json {
       Kind kind_;
    };
 
-   /** \brief Experimental and untested: represents a "path" to access a node.
+   /** @brief Experimental and untested: represents a "path" to access a node.
     *
     * Syntax:
     * - "." => root node
@@ -513,7 +513,7 @@ namespace Json {
       Args args_;
    };
 
-   /** \brief Experimental do not use: Allocator to customize member name and string value memory management done by Value.
+   /** @brief Experimental do not use: Allocator to customize member name and string value memory management done by Value.
     *
     * - makeMemberName() and releaseMemberName() are called to respectively duplicate and
     *   free an Json::objectValue member name.
@@ -535,7 +535,7 @@ namespace Json {
    };
 
 #ifdef JSON_VALUE_USE_INTERNAL_MAP
-   /** \brief Allocator to customize Value internal map.
+   /** @brief Allocator to customize Value internal map.
     * Below is an example of a simple implementation (default implementation actually
     * use memory pool for speed).
     * \code
@@ -592,7 +592,7 @@ namespace Json {
       virtual void releaseMapLink( ValueInternalLink *link ) = 0;
    };
 
-   /** \brief ValueInternalMap hash-map bucket chain link (for internal use only).
+   /** @brief ValueInternalMap hash-map bucket chain link (for internal use only).
     * \internal previous_ & next_ allows for bidirectional traversal.
     */
    class JSON_API ValueInternalLink
@@ -615,7 +615,7 @@ namespace Json {
    };
 
 
-   /** \brief A linked page based hash-table implementation used internally by Value.
+   /** @brief A linked page based hash-table implementation used internally by Value.
     * \internal ValueInternalMap is a tradional bucket based hash-table, with a linked
     * list in each bucket to handle collision. There is an addional twist in that
     * each node of the collision linked list is a page containing a fixed amount of
@@ -714,7 +714,7 @@ namespace Json {
       BucketIndex itemCount_;
    };
 
-   /** \brief A simplified deque implementation used internally by Value.
+   /** @brief A simplified deque implementation used internally by Value.
    * \internal
    * It is based on a list of fixed "page", each page contains a fixed number of items.
    * Instead of using a linked-list, a array of pointer is used for fast item look-up.
@@ -785,7 +785,7 @@ namespace Json {
       PageIndex pageCount_;
    };
 
-   /** \brief Experimental: do not use. Allocator to customize Value internal array.
+   /** @brief Experimental: do not use. Allocator to customize Value internal array.
     * Below is an example of a simple implementation (actual implementation use
     * memory pool).
       \code
@@ -851,7 +851,7 @@ public: // overridden from ValueArrayAllocator
       virtual ValueInternalArray *newArray() = 0;
       virtual ValueInternalArray *newArrayCopy( const ValueInternalArray &other ) = 0;
       virtual void destructArray( ValueInternalArray *array ) = 0;
-      /** \brief Reallocate array page index.
+      /** @brief Reallocate array page index.
        * Reallocates an array of pointer on each page.
        * \param indexes [input] pointer on the current index. May be \c NULL.
        *                [output] pointer on the new index of at least 
@@ -873,7 +873,7 @@ public: // overridden from ValueArrayAllocator
 #endif // #ifdef JSON_VALUE_USE_INTERNAL_MAP
 
 
-   /** \brief base class for Value iterators.
+   /** @brief base class for Value iterators.
     *
     */
    class ValueIteratorBase
@@ -943,7 +943,7 @@ public: // overridden from ValueArrayAllocator
 #endif
    };
 
-   /** \brief const iterator for object and array value.
+   /** @brief const iterator for object and array value.
     *
     */
    class ValueConstIterator : public ValueIteratorBase
@@ -1002,7 +1002,7 @@ public: // overridden from ValueArrayAllocator
    };
 
 
-   /** \brief Iterator for object and array value.
+   /** @brief Iterator for object and array value.
     */
    class ValueIterator : public ValueIteratorBase
    {
