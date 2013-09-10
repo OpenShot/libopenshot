@@ -60,13 +60,15 @@ namespace openshot
 		AudioSampleBuffer *buffer;
 
 	public:
-		/// Default constructor
+		/// @brief Default constructor
+		/// @param audio_buffer This buffer contains the samples you want to play through JUCE.
 		AudioBufferSource(AudioSampleBuffer *audio_buffer);
 
 		/// Destructor
 		~AudioBufferSource();
 
-		/// Get the next block of audio samples
+		/// @brief Get the next block of audio samples
+		/// @param info This struct informs us of which samples are needed next.
 		void getNextAudioBlock (const AudioSourceChannelInfo& info);
 
 		/// Prepare to play this audio source
@@ -75,7 +77,8 @@ namespace openshot
 		/// Release all resources
 		void releaseResources();
 
-		/// Set the next read position of this source
+		/// @brief Set the next read position of this source
+		/// @param newPosition The sample # to start reading from
 		void setNextReadPosition (long long newPosition);
 
 		/// Get the next read position of this source
@@ -87,7 +90,8 @@ namespace openshot
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;
 
-		/// Set if this audio source should repeat when it reaches the end
+		/// @brief Set if this audio source should repeat when it reaches the end
+		/// @param shouldLoop Determines if the audio source should repeat when it reaches the end
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
