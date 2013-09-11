@@ -12,25 +12,27 @@
 namespace openshot
 {
 	/**
-	 * This controls how a Keyframe uses this point to interpolate between the previous
-	 * point and this one.  Bezier is a smooth curve.  Linear is a straight line.  Constant is
-	 * is a jump from the previous point to this one.
+	 * @brief This controls how a Keyframe uses this point to interpolate between two points.
+	 *
+	 * Bezier is a smooth curve. Linear is a straight line. Constant is a jump from the
+	 * previous point to this one.
 	 */
 	enum InterpolationType {
-		BEZIER,
-		LINEAR,
-		CONSTANT
+		BEZIER,		///< Bezier curves are quadratic curves, which create a smooth curve.
+		LINEAR,		///< Linear curves are angular, straight lines between two points.
+		CONSTANT	///< Constant curves jump from their previous position to a new one (with no interpolation).
 	};
 
 	/**
-	 * When BEZIER interpolation is used, the point's left and right handles are used
-	 * to influence the direction of the curve.  AUTO will try and adjust the handles
-	 * automatically, to achieve the smoothest curves.  MANUAL will leave the handles
-	 * alone, making it the responsibility of the user to set them.
+	 * @brief When BEZIER interpolation is used, the point's left and right handles are used
+	 * to influence the direction of the curve.
+	 *
+	 * AUTO will try and adjust the handles automatically, to achieve the smoothest curves.
+	 * MANUAL will leave the handles alone, making it the responsibility of the user to set them.
 	 */
 	enum HandleType {
-		AUTO,
-		MANUAL
+		AUTO,	///< Automatically adjust the handles to achieve the smoothest curve
+		MANUAL	///< Do not automatically adjust handles (set them manually)
 	};
 
 	/**

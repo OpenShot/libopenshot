@@ -24,16 +24,16 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * This enumeration determines how frame rates are increased or decreased, and
-	 * whether to apply pull-down techniques or not.  Pull-down techniques are only
-	 * needed to remove artificial fields added when converting between 24 fps (film)
-	 * and television fps (29.97 fps NTSC or 25 fps PAL).
+	 * @brief This enumeration determines how frame rates are increased or decreased.
+	 *
+	 * Pull-down techniques are only needed to remove artificial fields added when converting
+	 * between 24 fps (film) and television fps (29.97 fps NTSC or 25 fps PAL).
 	 */
 	enum PulldownType
 	{
-		PULLDOWN_CLASSIC,	// Classic 2:3:2:3 pull-down
-		PULLDOWN_ADVANCED,	// Advanced 2:3:3:2 pull-down (minimal dirty frames)
-		PULLDOWN_NONE,		// Do not apply pull-down techniques, just repeat or skip entire frames
+		PULLDOWN_CLASSIC,	///< Classic 2:3:2:3 pull-down
+		PULLDOWN_ADVANCED,	///< Advanced 2:3:3:2 pull-down (minimal dirty frames)
+		PULLDOWN_NONE,		///< Do not apply pull-down techniques, just repeat or skip entire frames
 	};
 
 	/**
@@ -136,12 +136,12 @@ namespace openshot
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
-		/// This method is required for all derived classes of ReaderBase, and return the
+		/// @brief This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.
 		///
 		/// @returns The requested frame of video
-		/// @param[in] number The frame number that is requested.
+		/// @param requested_frame The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Get the target framerate

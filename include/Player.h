@@ -19,6 +19,7 @@ using namespace std;
 
 namespace openshot
 {
+	/// This type is a pointer to a method, used to render the current frame of video on a player.
 	typedef void (*CallbackPtr)(int, int, int, const Magick::PixelPacket *Pixels, void *);
 
 	/**

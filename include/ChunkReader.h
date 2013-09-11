@@ -75,9 +75,9 @@ namespace openshot
 	 */
 	enum ChunkVersion
 	{
-		THUMBNAIL,
-		PREVIEW,
-		FINAL
+		THUMBNAIL,	///< The lowest quality stream contained in this chunk file
+		PREVIEW,	///< The medium quality stream contained in this chunk file
+		FINAL		///< The highest quality stream contained in this chunk file
 	};
 
 	/**

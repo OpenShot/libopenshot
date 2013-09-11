@@ -72,13 +72,13 @@ namespace openshot {
 		~AudioResampler();
 
 		/// @brief Sets the audio buffer and key settings
-		/// @param new_buffer The audio samples that need to be resampled
+		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param sample_rate The original sample rate of the buffered samples
-		/// @param new_sample_rate The requested sample rate you need.
+		/// @param new_sample_rate The requested sample rate you need
 		int SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
 
 		/// @brief Sets the audio buffer and key settings
-		/// @param new_buffer The audio samples that need to be resampled
+		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param ratio The multiplier that needs to be applied to the sample rate (this is how resampling happens)
 		int SetBuffer(AudioSampleBuffer *new_buffer, double ratio);
 

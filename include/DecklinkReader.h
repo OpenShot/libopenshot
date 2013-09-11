@@ -33,8 +33,10 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the Blackmagic Decklink libraries, to open video streams on Blackmagic devices, and return
-	 * openshot::Frame objects containing the image and audio data.
+	 * @brief This class uses the Blackmagic Decklink libraries, to open video streams on Blackmagic devices.
+	 *
+	 * This requires special hardware manufactured by <a href="http://www.blackmagicdesign.com/products">Blackmagic Designs</a>.
+	 * Once the device is aquired and connected, this reader returns openshot::Frame objects containing the image and audio data.
 	 */
 	class DecklinkReader : public ReaderBase
 	{

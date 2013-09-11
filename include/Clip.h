@@ -27,44 +27,38 @@ using namespace openshot;
 
 namespace openshot {
 
-	/**
-	 * This enumeration determines how clips are aligned to their parent container.
-	 */
+	/// This enumeration determines how clips are aligned to their parent container.
 	enum GravityType
 	{
-		GRAVITY_TOP_LEFT,
-		GRAVITY_TOP,
-		GRAVITY_TOP_RIGHT,
-		GRAVITY_LEFT,
-		GRAVITY_CENTER,
-		GRAVITY_RIGHT,
-		GRAVITY_BOTTOM_LEFT,
-		GRAVITY_BOTTOM,
-		GRAVITY_BOTTOM_RIGHT
+		GRAVITY_TOP_LEFT,		///< Align clip to the top left of its parent
+		GRAVITY_TOP,			///< Align clip to the top center of its parent
+		GRAVITY_TOP_RIGHT,		///< Align clip to the top right of its parent
+		GRAVITY_LEFT,			///< Align clip to the left of its parent (middle aligned)
+		GRAVITY_CENTER,			///< Align clip to the center of its parent (middle aligned)
+		GRAVITY_RIGHT,			///< Align clip to the right of its parent (middle aligned)
+		GRAVITY_BOTTOM_LEFT,	///< Align clip to the bottom left of its parent
+		GRAVITY_BOTTOM,			///< Align clip to the bottom center of its parent
+		GRAVITY_BOTTOM_RIGHT	///< Align clip to the bottom right of its parent
 	};
 
-	/**
-	 * This enumeration determines how clips are scaled to fit their parent container.
-	 */
+	/// This enumeration determines how clips are scaled to fit their parent container.
 	enum ScaleType
 	{
-		SCALE_CROP,
-		SCALE_FIT,
-		SCALE_STRETCH,
-		SCALE_NONE
+		SCALE_CROP,		///< Scale the clip until both height and width fill the canvas (cropping the overlap)
+		SCALE_FIT,		///< Scale the clip until either height or width fills the canvas (with no cropping)
+		SCALE_STRETCH,	///< Scale the clip until both height and width fill the canvas (distort to fit)
+		SCALE_NONE		///< Do not scale the clip
 	};
 
-	/**
-	 * This enumeration determines what parent a clip should be aligned to.
-	 */
+	/// This enumeration determines what parent a clip should be aligned to.
 	enum AnchorType
 	{
-		ANCHOR_CANVAS,
-		ANCHOR_VIEWPORT
+		ANCHOR_CANVAS,	///< Anchor the clip to the canvas
+		ANCHOR_VIEWPORT	///< Anchor the clip to the viewport (which can be moved / animated around the canvas)
 	};
 
 	/**
-	 * @brief This class represents a clip
+	 * @brief This class represents a clip (used to arrange readers on the timeline)
 	 *
 	 * Each image, video, or audio file is represented on a layer as a clip.  A clip has many
 	 * properties that affect how it behaves on the timeline, such as its size, position,
@@ -117,25 +111,28 @@ namespace openshot {
 		/// Default Constructor
 		Clip();
 
-		/// Constructor with filepath (reader is automatically created... by guessing file extensions)
+		/// @brief Constructor with filepath (reader is automatically created... by guessing file extensions)
+		/// @param path The path of a reader (video file, image file, etc...). The correct reader will be used automatically.
 		Clip(string path);
 
-		/// Constructor with reader
+		/// @brief Constructor with reader
+		/// @param reader The reader to be used by this clip
 		Clip(ReaderBase* reader);
 
 		/// Close the internal reader
 		void Close();
 
-		/// Get an openshot::Frame object for a specific frame number of this timeline.
+		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
 		///
 		/// @returns The requested frame (containing the image)
-		/// @param[requested_frame] number The frame number that is requested.
+		/// @param requested_frame The frame number that is requested
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile);
 
-		/// Set the current reader
+		/// @brief Set the current reader
+		/// @param reader The reader to be used by this clip
 		void Reader(ReaderBase* reader);
 
 		/// Get the current reader

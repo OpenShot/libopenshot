@@ -58,10 +58,13 @@ namespace openshot {
 		/// Default constructor, no max bytes
 		Cache();
 
-		/// Constructor that sets the max bytes to cache
+		/// @brief Constructor that sets the max bytes to cache
+		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		Cache(int64 max_bytes);
 
-		/// Add a Frame to the cache
+		/// @brief Add a Frame to the cache
+		/// @param frame_number The frame number of the cached frame
+		/// @param frame The openshot::Frame object needing to be cached.
 		void Add(int frame_number, tr1::shared_ptr<Frame> frame);
 
 		/// Clear the cache of all frames
@@ -73,10 +76,12 @@ namespace openshot {
 		/// Display a list of cached frame numbers
 		void Display();
 
-		/// Check for the existence of a frame in the cache
+		/// @brief Check for the existence of a frame in the cache
+		/// @param frame_number The frame number of the cached frame
 		bool Exists(int frame_number);
 
-		/// Get a frame from the cache
+		/// @brief Get a frame from the cache
+		/// @param frame_number The frame number of the cached frame
 		tr1::shared_ptr<Frame> GetFrame(int frame_number);
 
 		/// Gets the maximum bytes value
@@ -88,13 +93,16 @@ namespace openshot {
 		/// Get the smallest frame number
 		tr1::shared_ptr<Frame> GetSmallestFrame();
 
-		/// Move frame to front of queue (so it lasts longer)
+		/// @brief Move frame to front of queue (so it lasts longer)
+		/// @param frame_number The frame number of the cached frame
 		void MoveToFront(int frame_number);
 
-		/// Remove a specific frame
+		/// @brief Remove a specific frame
+		/// @param frame_number The frame number of the cached frame
 		void Remove(int frame_number);
 
-		/// Set maximum bytes to a different amount
+		/// @breif Set maximum bytes to a different amount
+		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 
 

@@ -27,7 +27,10 @@ namespace openshot
 
 	/**
 	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
-	 * openshot::Frame objects containing the image of the text.
+	 * openshot::Frame objects.
+	 *
+	 * All system fonts are supported, including many different font properties, such as size, color,
+	 * alignment, padding, etc...
 	 */
 	class TextReader : public ReaderBase
 	{

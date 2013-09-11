@@ -34,8 +34,11 @@ namespace openshot
 {
 	/**
 	 * @brief This class takes any reader and generates a special type of video file, built with
-	 * chunks of small video and audio data. These chunks can easily be passed around in a distributed
-	 * computing environment, without needing to share the entire video file.
+	 * chunks of small video and audio data.
+	 *
+	 * These chunks can easily be passed around in a distributed
+	 * computing environment, without needing to share the entire video file. They also allow a
+	 * chunk to be frame accurate, since seeking inaccuracies are removed.
 	 *
 	 * \code
 	 * // This example demonstrates how to feed a reader into a ChunkWriter
@@ -82,7 +85,9 @@ namespace openshot
 
 	public:
 
-		/// Constructor for ChunkWriter. Throws one of the following exceptions.
+		/// @breif Constructor for ChunkWriter. Throws one of the following exceptions.
+		/// @param path The folder path of the chunk file to be created
+		/// @param reader The initial reader to base this chunk file's meta data on (such as fps, height, width, etc...)
 		ChunkWriter(string path, ReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
 
 		/// Close the writer
@@ -91,16 +96,23 @@ namespace openshot
 		/// Get the chunk size (number of frames to write in each chunk)
 		int GetChunkSize() { return chunk_size; };
 
-		/// Set the chunk size (number of frames to write in each chunk)
+		/// @breif Set the chunk size (number of frames to write in each chunk)
+		/// @param new_size The number of frames to write in this chunk file
 		int SetChunkSize(int new_size) { chunk_size = new_size; };
 
-		/// Add a frame to the stack waiting to be encoded.
+		/// @breif Add a frame to the stack waiting to be encoded.
+		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
 
-		/// Write a block of frames from a reader
+		/// @breif Write a block of frames from a reader
+		/// @param start The starting frame number to write (of the reader passed into the constructor)
+		/// @param length The number of frames to write (of the reader passed into the constructor)
 		void WriteFrame(int start, int length);
 
-		/// Write a block of frames from a reader
+		/// @breif Write a block of frames from a reader
+		/// @param reader The reader containing the frames you need
+		/// @param start The starting frame number to write
+		/// @param length The number of frames to write
 		void WriteFrame(ReaderBase* reader, int start, int length);
 
 	};

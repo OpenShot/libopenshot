@@ -52,11 +52,11 @@ namespace openshot
 	};
 
 	/**
-	 * @brief This abstract class is the base class, used by readers.  Readers are types of classes that read
-	 * video, audio, and image files, and return openshot::Frame objects.
+	 * @brief This abstract class is the base class, used by all readers in libopenshot.
 	 *
-	 * The only requirements for a 'reader', are to derive from this base class, implement the
-	 * GetFrame method, and call the InitFileInfo() method.
+	 * Readers are types of classes that read video, audio, and image files, and
+	 * return openshot::Frame objects. The only requirements for a 'reader', are to
+	 * derive from this base class, implement the GetFrame method, and call the InitFileInfo() method.
 	 */
 	class ReaderBase
 	{

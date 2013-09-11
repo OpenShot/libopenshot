@@ -29,19 +29,16 @@ using namespace std;
 
 namespace openshot
 {
-	/**
-	 * This enumeration designates which a type of stream when encoding
-	 */
+
+	/// This enumeration designates the type of stream when encoding (video or audio)
 	enum StreamType
 	{
-		VIDEO_STREAM,
-		AUDIO_STREAM
+		VIDEO_STREAM,	///< A video stream (used to determine which type of stream)
+		AUDIO_STREAM	///< An audio stream (used to determine which type of stream)
 	};
 
 	/**
 	 * @brief This class uses the FFmpeg libraries, to write and encode video files and audio files
-	 *
-	 * TODO
 	 */
 	class FFmpegWriter : public WriterBase
 	{
