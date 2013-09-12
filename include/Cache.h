@@ -101,7 +101,7 @@ namespace openshot {
 		/// @param frame_number The frame number of the cached frame
 		void Remove(int frame_number);
 
-		/// @breif Set maximum bytes to a different amount
+		/// @brief Set maximum bytes to a different amount
 		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 

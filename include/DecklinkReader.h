@@ -104,7 +104,7 @@ namespace openshot
 		/// is ignored, since it always gets the latest LIVE frame.
 		///
 		/// @returns The requested frame (containing the image)
-		/// @param[requested_frame] number The frame number that is requested.
+		/// @param requested_frame The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 		unsigned long GetCurrentFrameNumber();
 

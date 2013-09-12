@@ -1,11 +1,36 @@
-#ifndef OPENSHOT_FFMPEG_WRITER_H
-#define OPENSHOT_FFMPEG_WRITER_H
-
 /**
  * @file
  * @brief Header file for FFmpegWriter class
- * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * This file is originally based on the Libavformat API example, and then modified
+ * by the libopenshot project.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+
+#ifndef OPENSHOT_FFMPEG_WRITER_H
+#define OPENSHOT_FFMPEG_WRITER_H
 
 #include "ReaderBase.h"
 #include "WriterBase.h"
@@ -38,7 +63,40 @@ namespace openshot
 	};
 
 	/**
-	 * @brief This class uses the FFmpeg libraries, to write and encode video files and audio files
+	 * @brief This class uses the FFmpeg libraries, to write and encode video files and audio files.
+	 *
+	 * All FFmpeg options can be set using the SetOption() method, and any Reader may be used
+	 * to generate openshot::Frame objects needed for writing. Be sure to use valid bit rates, frame
+	 * rates, and sample rates (each format / codec has a limited # of valid options).
+	 *
+	 * @code
+	 * // Create a reader for a video
+	 * FFmpegReader r("MyAwesomeVideo.webm");
+	 * r.Open(); // Open the reader
+	 *
+	 * // Create a writer (which will create a WebM video)
+	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
+	 *
+	 * // Set options
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
+	 *
+	 * // Prepare Streams
+	 * w.PrepareStreams();
+	 *
+	 * // Write header
+	 * w.WriteHeader();
+	 *
+	 * // Write all frames from the reader
+	 * w.WriteFrame(&r, 1, r.info.video_length);
+	 *
+	 * // Write Footer
+	 * w.WriteTrailer();
+	 *
+	 * // Close the reader & writer
+	 * w.Close();
+	 * r.Close();
+	 * @endcode
 	 */
 	class FFmpegWriter : public WriterBase
 	{

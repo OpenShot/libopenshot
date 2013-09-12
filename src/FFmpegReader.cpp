@@ -1,15 +1,18 @@
 /**
  * @file
  * @brief Source file for FFmpegReader class
- * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
  * to the world.
+ *
+ * This file is originally based on the Libavformat API example, and then modified
+ * by the libopenshot project.
  *
  * OpenShot Library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

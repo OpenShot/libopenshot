@@ -3,7 +3,7 @@
 
 /**
  * @file
- * @brief This header includes all commonly used headers for libopenshot, for ease-of-use
+ * @brief This header includes all commonly used headers for libopenshot, for ease-of-use.
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @mainpage OpenShot Video Editing Library C++ API
@@ -55,7 +55,8 @@
  *
  * ### License & Copyright ###
  * Copyright (c) 2008-2013 OpenShot Studios, LLC
- * (http://www.openshotstudios.com). OpenShot Library (http://www.openshot.org) is an open-source project
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
  * to the world.
  *
@@ -71,7 +72,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
- *
  */
 
 #include "AudioBufferSource.h"

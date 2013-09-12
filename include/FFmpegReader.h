@@ -1,15 +1,18 @@
 /**
  * @file
  * @brief Header file for FFmpegReader class
- * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
  * to the world.
+ *
+ * This file is originally based on the Libavformat API example, and then modified
+ * by the libopenshot project.
  *
  * OpenShot Library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +27,6 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 #ifndef OPENSHOT_FFMPEG_READER_H
 #define OPENSHOT_FFMPEG_READER_H
@@ -71,6 +73,23 @@ namespace openshot
 	 * method.  To use this reader, simply create an instance of this class, and call the GetFrame method
 	 * to start retrieving frames.  Use the info struct to obtain info on the file, such as the length
 	 * (in frames), height, width, bitrate, frames per second (fps), etc...
+	 *
+	 * @code
+	 * // Create a reader for a video
+	 * FFmpegReader r("MyAwesomeVideo.webm");
+	 * r.Open(); // Open the reader
+	 *
+	 * // Get frame number 1 from the video
+	 * tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	 *
+	 * // Now that we have an openshot::Frame object, lets have some fun!
+	 * f->Display(); // Display the frame on the screen
+	 * f->DisplayWaveform(); // Display the audio waveform as an image
+	 * f->Play(); // Play the audio through your speaker
+	 *
+	 * // Close the reader
+	 * r.Close();
+	 * @endcode
 	 */
 	class FFmpegReader : public ReaderBase
 	{

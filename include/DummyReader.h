@@ -75,7 +75,7 @@ namespace openshot
 		/// return the same Frame, since they all share the same image data.
 		///
 		/// @returns The requested frame (containing the image)
-		/// @param[requested_frame] number The frame number that is requested.
+		/// @param requested_frame The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Open File - which is called by the constructor automatically

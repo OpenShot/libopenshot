@@ -1,11 +1,32 @@
-#ifndef OPENSHOT_CHUNK_WRITER_H
-#define OPENSHOT_CHUNK_WRITER_H
-
 /**
  * @file
  * @brief Header file for ChunkWriter class
- * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef OPENSHOT_CHUNK_WRITER_H
+#define OPENSHOT_CHUNK_WRITER_H
 
 #include "ReaderBase.h"
 #include "WriterBase.h"
@@ -85,7 +106,7 @@ namespace openshot
 
 	public:
 
-		/// @breif Constructor for ChunkWriter. Throws one of the following exceptions.
+		/// @brief Constructor for ChunkWriter. Throws one of the following exceptions.
 		/// @param path The folder path of the chunk file to be created
 		/// @param reader The initial reader to base this chunk file's meta data on (such as fps, height, width, etc...)
 		ChunkWriter(string path, ReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
@@ -96,20 +117,20 @@ namespace openshot
 		/// Get the chunk size (number of frames to write in each chunk)
 		int GetChunkSize() { return chunk_size; };
 
-		/// @breif Set the chunk size (number of frames to write in each chunk)
+		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size The number of frames to write in this chunk file
 		int SetChunkSize(int new_size) { chunk_size = new_size; };
 
-		/// @breif Add a frame to the stack waiting to be encoded.
+		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
 		void WriteFrame(tr1::shared_ptr<Frame> frame);
 
-		/// @breif Write a block of frames from a reader
+		/// @brief Write a block of frames from a reader
 		/// @param start The starting frame number to write (of the reader passed into the constructor)
 		/// @param length The number of frames to write (of the reader passed into the constructor)
 		void WriteFrame(int start, int length);
 
-		/// @breif Write a block of frames from a reader
+		/// @brief Write a block of frames from a reader
 		/// @param reader The reader containing the frames you need
 		/// @param start The starting frame number to write
 		/// @param length The number of frames to write

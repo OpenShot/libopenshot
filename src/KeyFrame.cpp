@@ -1,7 +1,28 @@
 /**
  * @file
- * @brief Source code for the Keyframe class
- * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @brief Source file for the KeyFrame class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "../include/KeyFrame.h"
@@ -204,13 +225,13 @@ bool Keyframe::IsIncreasing(int index)
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
-		return int(round(Values[index].increasing));
+		return int(round(Values[index].IsIncreasing()));
 	else if (index < 0 && Values.size() > 0)
 		// Return the minimum value
-		return int(round(Values[0].increasing));
+		return int(round(Values[0].IsIncreasing()));
 	else if (index >= Values.size() && Values.size() > 0)
 		// return the maximum value
-		return int(round(Values[Values.size() - 1].increasing));
+		return int(round(Values[Values.size() - 1].IsIncreasing()));
 	else
 		// return a blank coordinate (0,0)
 		return true;
@@ -226,13 +247,13 @@ Fraction Keyframe::GetRepeatFraction(int index)
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
-		return Values[index].repeated;
+		return Values[index].Repeat();
 	else if (index < 0 && Values.size() > 0)
 		// Return the minimum value
-		return Values[0].repeated;
+		return Values[0].Repeat();
 	else if (index >= Values.size() && Values.size() > 0)
 		// return the maximum value
-		return Values[Values.size() - 1].repeated;
+		return Values[Values.size() - 1].Repeat();
 	else
 		// return a blank coordinate (0,0)
 		return Fraction(1,1);
@@ -248,13 +269,13 @@ float Keyframe::GetDelta(int index)
 	// Is index a valid point?
 	if (index >= 0 && index < Values.size())
 		// Return value
-		return Values[index].delta;
+		return Values[index].Delta();
 	else if (index < 0 && Values.size() > 0)
 		// Return the minimum value
-		return Values[0].delta;
+		return Values[0].Delta();
 	else if (index >= Values.size() && Values.size() > 0)
 		// return the maximum value
-		return Values[Values.size() - 1].delta;
+		return Values[Values.size() - 1].Delta();
 	else
 		// return a blank coordinate (0,0)
 		return 0.0;
@@ -352,7 +373,7 @@ void Keyframe::PrintValues() {
 
 	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
-		cout << int(round(c.X)) << "\t" << c.Y << "\t" << c.increasing << "\t" << c.repeated.num << "\t" << c.repeated.den << "\t" << c.delta << endl;
+		cout << int(round(c.X)) << "\t" << c.Y << "\t" << c.IsIncreasing() << "\t" << c.Repeat().num << "\t" << c.Repeat().den << "\t" << c.Delta() << endl;
 	}
 }
 
@@ -423,7 +444,7 @@ void Keyframe::Process() {
 		}
 
 		// Set direction
-		(*it).increasing = increasing;
+		(*it).IsIncreasing(increasing);
 
 		// Detect repeated Y value
 		if (current_value == last_value)
@@ -445,11 +466,10 @@ void Keyframe::Process() {
 		}
 
 		// Set repeat fraction
-		(*it).repeated.num = repeat_count;
-		(*it).repeated.den = repeat_count + additional_repeats;
+		(*it).Repeat(Fraction(repeat_count, repeat_count + additional_repeats));
 
 		// Set delta (i.e. different from previous unique Y value)
-		(*it).delta = current_value - last_value;
+		(*it).Delta(current_value - last_value);
 
 		// track the last value
 		last_value = current_value;

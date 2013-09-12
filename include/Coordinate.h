@@ -1,11 +1,32 @@
-#ifndef OPENSHOT_COORDINATE_H
-#define OPENSHOT_COORDINATE_H
-
 /**
  * @file
  * @brief Header file for Coordinate class
- * @author Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+ *
+ * Copyright (c) 2008-2013 OpenShot Studios, LLC
+ * (http://www.openshotstudios.com). This file is part of
+ * OpenShot Library (http://www.openshot.org), an open-source project
+ * dedicated to delivering high quality video editing and animation solutions
+ * to the world.
+ *
+ * OpenShot Library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * OpenShot Library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef OPENSHOT_COORDINATE_H
+#define OPENSHOT_COORDINATE_H
 
 #include "../include/Fraction.h"
 
@@ -26,18 +47,43 @@ namespace openshot {
 	 * \endcode
 	 */
 	class Coordinate {
-	public:
-		float X; ///< The X value of the coordinate
-		float Y; ///< The Y value of the coordinate
+	private:
 		bool increasing; ///< Is the Y value increasing or decreasing?
 		Fraction repeated; ///< Fraction of repeated Y values (for example, 1/3 would be the first Y value of 3 repeated values)
 		float delta; ///< This difference in Y value (from the previous unique Y value)
 
+	public:
+		float X; ///< The X value of the coordinate (usually representing the frame #)
+		float Y; ///< The Y value of the coordinate (usually representing the value of the property being animated)
+
 		/// The default constructor, which defaults to (0,0)
 		Coordinate();
 
-		/// Constructor which also sets the X and Y
+		/// @brief Constructor which also sets the X and Y
+		/// @param x The X coordinate (usually representing the frame #)
+		/// @param y The Y coordinate (usually representing the value of the property being animated)
 		Coordinate(float x, float y);
+
+		/// @brief Set the repeating Fraction (used internally on the timeline, to track changes to coordinates)
+		/// @param repeated The fraction representing how many times this coordinate Y value repeats (only used on the timeline)
+		void Repeat(Fraction repeated) { repeated=repeated; }
+
+		/// Get the repeating Fraction (used internally on the timeline, to track changes to coordinates)
+		Fraction Repeat() { return repeated; }
+
+		/// @brief Set the increasing flag (used internally on the timeline, to track changes to coordinates)
+		/// @param increasing Indicates if this coorindate Y value is increasing (when compared to the previous coordinate)
+		void IsIncreasing(bool increasing) { increasing=increasing; }
+
+		/// Get the increasing flag (used internally on the timeline, to track changes to coordinates)
+		bool IsIncreasing() { return increasing; }
+
+		/// @brief Set the delta / difference between previous coordinate value (used internally on the timeline, to track changes to coordinates)
+		/// @param delta Indicates how much this Y value differs from the previous Y value
+		void Delta(float delta) { delta=delta; }
+
+		/// Get the delta / difference between previous coordinate value (used internally on the timeline, to track changes to coordinates)
+		float Delta() { return delta; }
 	};
 
 }
