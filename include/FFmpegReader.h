@@ -69,10 +69,10 @@ namespace openshot
 	 * @brief This class uses the FFmpeg libraries, to open video files and audio files, and return
 	 * openshot::Frame objects for any frame in the file.
 	 *
-	 * All seeking and caching is handled internally, and the only public interface is the GetFrame()
+	 * All seeking and caching is handled internally, and the primary public interface is the GetFrame()
 	 * method.  To use this reader, simply create an instance of this class, and call the GetFrame method
-	 * to start retrieving frames.  Use the info struct to obtain info on the file, such as the length
-	 * (in frames), height, width, bitrate, frames per second (fps), etc...
+	 * to start retrieving frames.  Use the <b>info</b> struct to obtain information on the file, such as the length
+	 * (# of frames), height, width, bit rate, frames per second (fps), etc...
 	 *
 	 * @code
 	 * // Create a reader for a video

@@ -84,6 +84,32 @@ namespace openshot {
 	 * Each image, video, or audio file is represented on a layer as a clip.  A clip has many
 	 * properties that affect how it behaves on the timeline, such as its size, position,
 	 * transparency, rotation, speed, volume, etc...
+	 *
+	 * @code
+	 * // Create some clips
+	 * Clip c1(new ImageReader("MyAwesomeLogo.jpeg"));
+	 * Clip c2(new FFmpegReader("BackgroundVideo.webm"));
+	 *
+	 * // CLIP 1 (logo) - Set some clip properties (with Keyframes)
+	 * c1.Position(0.0); // Set the position or location (in seconds) on the timeline
+	 * c1.gravity = GRAVITY_LEFT; // Set the alignment / gravity of the clip (position on the screen)
+	 * c1.scale = SCALE_CROP; // Set the scale mode (how the image is resized to fill the screen)
+	 * c1.Layer(1); // Set the layer of the timeline (higher layers cover up images of lower layers)
+	 * c1.Start(0.0); // Set the starting position of the video (trim the left side of the video)
+	 * c1.End(16.0); // Set the ending position of the video (trim the right side of the video)
+	 * c1.alpha.AddPoint(1, 0.0); // Set the alpha to transparent on frame #1
+	 * c1.alpha.AddPoint(500, 0.0); // Keep the alpha transparent until frame #500
+	 * c1.alpha.AddPoint(565, 1.0); // Animate the alpha from transparent to visible (between frame #501 and #565)
+	 *
+	 * // CLIP 2 (background video) - Set some clip properties (with Keyframes)
+	 * c2.Position(0.0); // Set the position or location (in seconds) on the timeline
+	 * c2.Start(10.0); // Set the starting position of the video (trim the left side of the video)
+	 * c2.Layer(0); // Set the layer of the timeline (higher layers cover up images of lower layers)
+	 * c2.alpha.AddPoint(1, 1.0); // Set the alpha to visible on frame #1
+	 * c2.alpha.AddPoint(150, 0.0); // Animate the alpha to transparent (between frame 2 and frame #150)
+	 * c2.alpha.AddPoint(360, 0.0, LINEAR); // Keep the alpha transparent until frame #360
+	 * c2.alpha.AddPoint(384, 1.0); // Animate the alpha to visible (between frame #360 and frame #384)
+	 * @endcode
 	 */
 	class Clip {
 	private:
@@ -188,7 +214,7 @@ namespace openshot {
 		Keyframe time; ///<Curve representing the frames over time to play (used for speed and direction of video)
 		Keyframe volume; ///<Curve representing the volume (0 to 1)
 
-		// Audio waveform curves
+		/// Curve representing the color of the audio wave form
 		Color wave_color;
 
 		// Crop settings and curves
