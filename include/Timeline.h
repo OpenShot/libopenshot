@@ -81,7 +81,7 @@ namespace openshot {
 	 * Clip c1(new ImageReader("MyAwesomeLogo.jpeg"));
 	 * Clip c2(new FFmpegReader("BackgroundVideo.webm"));
 	 *
-	 * // CLIP 1 (logo) - Set some clip properties (with KeyFrames)
+	 * // CLIP 1 (logo) - Set some clip properties (with Keyframes)
 	 * c1.Position(0.0);
 	 * c1.gravity = GRAVITY_LEFT;
 	 * c1.scale = SCALE_CROP;
@@ -91,7 +91,7 @@ namespace openshot {
 	 * c1.alpha.AddPoint(500, 0.0);
 	 * c1.alpha.AddPoint(565, 1.0);
 	 *
-	 * // CLIP 2 (background video) - Set some clip properties (with KeyFrames)
+	 * // CLIP 2 (background video) - Set some clip properties (with Keyframes)
 	 * c2.Position(0.0);
 	 * c2.Layer(0);
 	 * c2.alpha.AddPoint(1, 1.0);

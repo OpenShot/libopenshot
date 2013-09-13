@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the KeyFrame class
+ * @brief Header file for the Keyframe class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE

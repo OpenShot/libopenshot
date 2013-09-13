@@ -25,10 +25,17 @@
  *
  * ### The Basics ###
  * To understand libopenshot, we must first learn about the basic building blocks:.
- *  - <b>Readers</b> - A reader is used to load a video, audio, or image file (or stream) and return openshot::Frame objects.
- *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to create a video, audio, or image file (or stream).
+ *  - <b>Readers</b> - A reader is used to load a video, audio, image file, or stream and return openshot::Frame objects.
+ *    - A few common readers are openshot::FFmpegReader, openshot::TextReader, openshot::ImageReader, openshot::ChunkReader
+ *
+ *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to create a video, audio, image file, or stream.
+ *    - A few common writers are openshot::FFmpegWriter, openshot::ChunkWriter
+ *
  *  - <b>Timeline</b> - A timeline allows many readers to be trimmed, arranged, and layered together.
- *  - <b> KeyFrame</b> - A Keyframe is used to change values of properties over time on the timeline.
+ *    - The openshot::Timeline is a special kind of reader (combining other readers to make a new one)
+ *
+ *  - <b> Keyframe</b> - A Keyframe is used to change values of properties over time on the timeline.
+ *    - The openshot::Keyframe, openshot::Point, and openshot::Coordinate are used to animate properties on the timeline.
  *
  * ### Example Code ###
  * Now that you understand the basic building blocks of libopenshot, lets take a look at a simple example,
