@@ -26,7 +26,7 @@
  * ### The Basics ###
  * To understand libopenshot, we must first learn about the basic building blocks:.
  *  - <b>Readers</b> - A reader is used to read a video, audio, image file, or stream and return openshot::Frame objects.
- *    - A few common readers are openshot::FFmpegReader, openshot::TextReader, openshot::ImageReader, openshot::ChunkReader
+ *    - A few common readers are openshot::FFmpegReader, openshot::TextReader, openshot::ImageReader, openshot::ChunkReader, openshot::FrameMapper
  *
  *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to write / create a video, audio, image file, or stream.
  *    - A few common writers are openshot::FFmpegWriter, openshot::ChunkWriter
@@ -58,6 +58,17 @@
  * r.Close();
  * @endcode
  *
+ * ### A Closer Look at the Timeline ###
+ * The <b>following graphic</b> displays a timeline, and how clips can be arranged, scaled, and layered together. It
+ * also demonstrates how the viewport can be scaled smaller than the canvas, which can be used to zoom and pan around the
+ * canvas (i.e. pan & scan).
+ * \image html /doc/images/Timeline_Layers.png
+ *
+ * ### Build Instructions (Linux, Mac, and Windows) ###
+ * For a step-by-step guide to building / compiling libopenshot, check out the
+ * <a href="InstallationGuide.pdf" target="_blank">Official Installation Guide</a>.
+ *
+ * ### Want to Learn More? ###
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  *
  * ### License & Copyright ###

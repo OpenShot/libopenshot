@@ -63,11 +63,20 @@ namespace openshot {
 	/**
 	 * @brief This class represents a timeline
 	 *
-	 * The timeline is one of the most important features of a video editor, and controls all
+	 * The timeline is one of the <b>most important</b> features of a video editor, and controls all
 	 * aspects of how video, image, and audio clips are combined together, and how the final
 	 * video output will be rendered.  It has a collection of layers and clips, that arrange,
-	 * sequence, and generate the final video output. Lets take a look at what the code looks like:
+	 * sequence, and generate the final video output.
 	 *
+	 * The <b>following graphic</b> displays a timeline, and how clips can be arranged, scaled, and layered together. It
+	 * also demonstrates how the viewport can be scaled smaller than the canvas, which can be used to zoom and pan around the
+	 * canvas (i.e. pan & scan).
+	 * \image html /doc/images/Timeline_Layers.png
+	 *
+	 * The <b>following graphic</b> displays how the playhead determines which frames to combine and layer.
+	 * \image html /doc/images/Playhead.png
+	 *
+	 * Lets take a look at what the code looks like:
 	 * @code
 	 * // Create a Timeline
 	 * Timeline t(1280, // width
@@ -116,7 +125,6 @@ namespace openshot {
 	 *
 	 * // Close the timeline reader
 	 * t.Close();
-	 *
 	 * @endcode
 	 */
 	class Timeline : public ReaderBase {

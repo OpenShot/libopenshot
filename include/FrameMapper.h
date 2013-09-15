@@ -115,6 +115,10 @@ namespace openshot
 	 * such as 2:3:2:3 or 2:3:3:2, and also supports inverse telecine. Pull-down techniques are only needed to remove
 	 * artificial fields added when converting between 24 fps (film) and television fps (29.97 fps NTSC or 25 fps PAL).
 	 *
+	 * The <b>following graphic</b> displays a how frame rates are mapped, and how time remapping affects the order
+	 * of frames returned from the FrameMapper.
+	 * \image html /doc/images/FrameMapper.png
+	 *
 	 * Please see the following <b>Example Code</b>:
 	 * \code
 	 * // Create a frame mapper for a clip with 100 frames, and convert the frame rate (from 24 fps to 29.97 fps)
