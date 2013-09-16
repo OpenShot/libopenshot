@@ -88,6 +88,7 @@ namespace openshot
 		FFmpegWriter *writer_preview;
 		FFmpegWriter *writer_final;
 	    tr1::shared_ptr<Frame> last_frame;
+	    bool last_frame_needed;
 	    string default_extension;
 	    string default_vcodec;
 	    string default_acodec;

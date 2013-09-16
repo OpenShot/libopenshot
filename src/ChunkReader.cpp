@@ -128,12 +128,12 @@ void ChunkReader::load_json()
 // Find the location of a frame in a chunk
 ChunkLocation ChunkReader::find_chunk_frame(int requested_frame)
 {
-	// Determine which chunk contains this frame
+	// Determine which chunk contains this frame.
 	int chunk_number = (requested_frame / chunk_size) + 1;
 
 	// Determine which frame in this chunk
 	int start_frame_of_chunk = (chunk_number - 1) * chunk_size;
-	int chunk_frame_number = requested_frame - start_frame_of_chunk;
+	int chunk_frame_number = (requested_frame - start_frame_of_chunk) + 1; // Add 1 to adjust for the 1st frame of every chunk is just there to "stoke" the audio samples from the previous chunk.
 
 	// Prepare chunk location struct
 	ChunkLocation location = {chunk_number, chunk_frame_number};

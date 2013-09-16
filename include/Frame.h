@@ -65,7 +65,55 @@ namespace openshot
 	 * @brief This class represents a single frame of video (i.e. image & audio data)
 	 *
 	 * FileReaders (such as FFmpegReader) use instances of this class to store the individual frames of video,
-	 * which include both the image data (i.e. pixels) and audio samples.
+	 * which include both the image data (i.e. pixels) and audio samples. An openshot::Frame also has many debug
+	 * methods, such as the ability to display the image (using X11), play the audio samples (using JUCE), or
+	 * display the audio waveform as an image.
+	 *
+	 * FileWriters (such as FFmpegWriter) use instances of this class to create new video files, image files, or
+	 * video streams. So, think of these openshot::Frame instances as the smallest unit of work in a video
+	 * editor.
+	 *
+	 * There are many ways to create an instance of an openshot::Frame:
+	 * @code
+	 *
+	 * // Most basic: a blank frame (300x200 blank image, 48kHz audio silence)
+	 * Frame();
+	 *
+	 * // Image only settings (48kHz audio silence)
+	 * Frame(1, // Frame number
+	 *       720, // Width of image
+	 *       480, // Height of image
+	 *       "#000000" // HTML color code of background color
+	 *       );
+	 *
+	 * // Image only from pixel array (48kHz audio silence)
+	 * Frame(number, // Frame number
+	 *       720, // Width of image
+	 *       480, // Height of image
+	 *       "RGBA", // Color format / map
+	 *       Magick::CharPixel, // Storage format / data type
+	 *       buffer // Array of image data (pixels)
+	 *       );
+	 *
+	 * // Audio only (300x200 blank image)
+	 * Frame(number, // Frame number
+	 *       44100, // Sample rate of audio stream
+	 *       2 // Number of audio channels
+	 *       );
+	 *
+	 * // Image and Audio settings (user defines all key settings)
+	 * Frame(number, // Frame number
+	 *       720, // Width of image
+	 *       480, // Height of image
+	 *       "#000000" // HTML color code of background color
+	 *       44100, // Sample rate of audio stream
+	 *       2 // Number of audio channels
+	 *       );
+	 *
+	 * // Some methods require a shared pointer to an openshot::Frame object.
+	 * tr1::shared_ptr<Frame> f(new Frame(1, 720, 480, "#000000", 44100, 2));
+	 *
+	 * @endcode
 	 */
 	class Frame
 	{

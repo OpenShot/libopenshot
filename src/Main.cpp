@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 //	FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 //	r3->DisplayInfo();
 //	ChunkWriter cw1("/home/jonathan/apps/chunks/chunk1/", r3);
-//	cw1.WriteFrame(r3, 1, r3->info.video_length);
+//	cw1.WriteFrame(r3, 1, r3->info.video_length - 45);
 //	cw1.Close();
 //	return 0;
 
@@ -77,11 +77,11 @@ int main(int argc, char* argv[])
 	//cr1.GetFrame(300)->Display();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w9("/home/jonathan/fromchunks.mp3");
+	FFmpegWriter w9("/home/jonathan/fromchunks.webm");
 
 	// Set options
-	w9.SetAudioOptions(true, "libmp3lame", cr1.info.sample_rate, cr1.info.channels, cr1.info.audio_bit_rate);
-	//w9.SetVideoOptions(true, cr1.info.vcodec, cr1.info.fps, cr1.info.width, cr1.info.height, cr1.info.pixel_ratio, false, false, cr1.info.video_bit_rate);
+	w9.SetAudioOptions(true, "libvorbis", cr1.info.sample_rate, cr1.info.channels, cr1.info.audio_bit_rate);
+	w9.SetVideoOptions(true, cr1.info.vcodec, cr1.info.fps, cr1.info.width, cr1.info.height, cr1.info.pixel_ratio, false, false, cr1.info.video_bit_rate);
 
 	// Prepare Streams
 	w9.PrepareStreams();

@@ -31,7 +31,7 @@ using namespace openshot;
 
 ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
-		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis")
+		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -107,14 +107,42 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 		writer_preview->WriteHeader();
 		writer_thumb->WriteHeader();
 
-		// Keep track that a chunk is being writen
+		// Keep track that a chunk is being written
 		is_writing = true;
+		last_frame_needed = true;
 	}
 
-	// Write a frame to the current chunk
+	// If this is not the 1st chunk, always start frame 1 with the last frame from the previous
+	// chunk. This helps to prevent audio resampling issues (because it "stokes" the sample array)
+	if (last_frame_needed)
+	{
+		if (last_frame)
+		{
+			// Write the previous chunks LAST FRAME to the current chunk
+			writer_final->WriteFrame(last_frame);
+			writer_preview->WriteFrame(last_frame);
+			writer_thumb->WriteFrame(last_frame);
+		} else {
+			// Write the 1st frame (of the 1st chunk)... since no previous chunk is available
+			tr1::shared_ptr<Frame> blank_frame(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+			blank_frame->AddColor(info.width, info.height, "#000000");
+			writer_final->WriteFrame(blank_frame);
+			writer_preview->WriteFrame(blank_frame);
+			writer_thumb->WriteFrame(blank_frame);
+		}
+
+		// disable last frame
+		last_frame_needed = false;
+	}
+
+
+	//////////////////////////////////////////////////
+	// WRITE THE CURRENT FRAME TO THE CURRENT CHUNK
 	writer_final->WriteFrame(frame);
 	writer_preview->WriteFrame(frame);
 	writer_thumb->WriteFrame(frame);
+	//////////////////////////////////////////////////
+
 
 	// Write the frames once it reaches the correct chunk size
 	if (frame_count % chunk_size == 0 && frame_count >= chunk_size)
