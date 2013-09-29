@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for EffectBase class
+ * @brief Source file for Negate class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,29 +25,30 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectBase.h"
+#include "../include/effects/Negate.h"
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
-void EffectBase::InitEffectInfo()
+// Default constructor
+Negate::Negate()
 {
-	info.has_video = false;
+	/// Initialize the values of the EffectInfo struct.
+	InitEffectInfo();
+
+	/// Set the effect info
+	info.name = "Negative";
+	info.description = "Negates the colors, producing a negative of the image.";
 	info.has_audio = false;
-	info.name = "";
-	info.description = "";
+	info.has_video = true;
 }
 
-// Display file information
-void EffectBase::DisplayInfo() {
-	cout << fixed << setprecision(2) << boolalpha;
-	cout << "----------------------------" << endl;
-	cout << "----- Effect Information -----" << endl;
-	cout << "----------------------------" << endl;
-	cout << "--> Name: " << info.name << endl;
-	cout << "--> Description: " << info.description << endl;
-	cout << "--> Has Video: " << info.has_video << endl;
-	cout << "--> Has Audio: " << info.has_audio << endl;
-	cout << "----------------------------" << endl;
-}
+// This method is required for all derived classes of EffectBase, and returns a
+// modified openshot::Frame object
+tr1::shared_ptr<Frame> Negate::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
+{
+	// Make this range of colors transparent
+	frame->GetImage()->negate();
 
+	// return the modified frame
+	return frame;
+}

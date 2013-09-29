@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for EffectBase class
+ * @brief Header file for Negate class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,48 +25,38 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_EFFECT_BASE_H
-#define OPENSHOT_EFFECT_BASE_H
+#ifndef OPENSHOT_NEGATE_EFFECT_H
+#define OPENSHOT_NEGATE_EFFECT_H
 
+#include "../EffectBase.h"
+
+#include <cmath>
+#include <ctime>
 #include <iostream>
-#include <iomanip>
+#include <omp.h>
+#include <stdio.h>
 #include <tr1/memory>
-#include "Frame.h"
+#include "Magick++.h"
+#include "../Color.h"
+#include "../Exceptions.h"
+#include "../KeyFrame.h"
 
 using namespace std;
 
 namespace openshot
 {
-	/**
-	 * @brief This struct contains info about an effect, such as the name, video or audio effect, etc...
-	 *
-	 * Each derived class of EffectBase is responsible for updating this struct to reflect accurate information
-	 * about the underlying effect. Derived classes of EffectBase should call the InitEffectInfo() method to initialize the
-	 * default values of this struct.
-	 */
-	struct EffectInfo
-	{
-		string name; ///< The name of the effect
-		string description; ///< The description of this effect and what it does
-		bool has_video;	///< Determines if this effect manipulates the image of a frame
-		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
-	};
 
 	/**
-	 * @brief This abstract class is the base class, used by all effects in libopenshot.
+	 * @brief This class uses the ImageMagick++ libraries, to negate image (i.e. negative)
 	 *
-	 * Effects are types of classes that manipulate the image or audio data of an openshot::Frame object.
-	 * The only requirements for an 'effect', is to derive from this base class, implement the Apply()
-	 * method, and call the InitEffectInfo() method.
+	 * This produces a common negative effect popular in photography.
 	 */
-	class EffectBase
+	class Negate : public EffectBase
 	{
 	public:
-		/// Information about the current effect
-		EffectInfo info;
 
-		/// Display effect information in the standard output stream (stdout)
-		void DisplayInfo();
+		/// Default constructor
+		Negate();
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -77,11 +67,7 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		virtual tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, int frame_number) = 0;
-
-		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
-		/// this method, or the EffectInfo struct values will not be initialized.
-		void InitEffectInfo();
+		tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, int frame_number);
 	};
 
 }

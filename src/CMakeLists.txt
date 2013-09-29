@@ -95,6 +95,8 @@ include_directories("../thirdparty/jsoncpp/include")
 #set(PROFILER "/usr/lib/libprofiler.so")
 #set(PROFILER "/usr/lib/libtcmalloc.so")
 
+#### GET LIST OF EFFECT FILES ####
+FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")
 
 ###############  SET LIBRARY SOURCE FILES  #################
 SET ( OPENSHOT_SOURCE_FILES
@@ -109,6 +111,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		ReaderBase.cpp
 		WriterBase.cpp
 		EffectBase.cpp
+		${EFFECT_FILES}
 		FFmpegReader.cpp
 		FFmpegWriter.cpp
 		Fraction.cpp
