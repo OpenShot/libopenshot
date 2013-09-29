@@ -104,6 +104,7 @@
 	#include "DecklinkWriter.h"
 #endif
 #include "DummyReader.h"
+#include "EffectBase.h"
 #include "Exceptions.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"

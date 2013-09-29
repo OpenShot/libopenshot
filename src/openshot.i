@@ -29,6 +29,8 @@
 
 %include "typemaps.i"
 %include "std_string.i"
+%include "std_list.i"
+%include "std_vector.i"
 
 /* Unhandled STL Exception Handling */
 %include <std_except.i>
@@ -36,6 +38,7 @@
 /* Include shared pointer code */
 #define SWIG_SHARED_PTR_SUBNAMESPACE tr1
 %include <std_shared_ptr.i>
+
 
 /* Mark these classes as shared_ptr classes */
 %shared_ptr(Magick::Image)
@@ -52,6 +55,7 @@
 #include "../include/ChunkWriter.h"
 #include "../include/Coordinate.h"
 #include "../include/DummyReader.h"
+#include "../include/EffectBase.h"
 #include "../include/Exceptions.h"
 #include "../include/FFmpegReader.h"
 #include "../include/FFmpegWriter.h"
@@ -86,6 +90,7 @@
 	%include "../include/DecklinkWriter.h"
 #endif
 %include "../include/DummyReader.h"
+%include "../include/EffectBase.h"
 %include "../include/Exceptions.h"
 %include "../include/FFmpegReader.h"
 %include "../include/FFmpegWriter.h"
@@ -99,3 +104,14 @@
 %include "../include/KeyFrame.h"
 %include "../include/TextReader.h"
 %include "../include/Timeline.h"
+
+/* Wrap std templates (list, vector, etc...) */
+namespace std {
+ %template(ClipList) list<Clip *>;
+ %template(EffectBaseList) list<EffectBase *>;
+ %template(CoordinateVector) vector<Coordinate>;
+ %template(PointsVector) vector<Point>;
+ %template(FieldVector) vector<Field>;
+ %template(MappedFrameVector) vector<MappedFrame>;
+ 
+}

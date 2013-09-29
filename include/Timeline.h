@@ -43,6 +43,7 @@
 #include "Cache.h"
 #include "Color.h"
 #include "Clip.h"
+#include "EffectBase.h"
 #include "ReaderBase.h"
 #include "Fraction.h"
 #include "Frame.h"
@@ -137,6 +138,7 @@ namespace openshot {
 		list<Clip*> clips; ///<List of clips on this timeline
 		list<Clip*> closing_clips; ///<List of clips that need to be closed
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
+		list<EffectBase*> effects; ///<List of clips on this timeline
 		Cache final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
@@ -171,12 +173,18 @@ namespace openshot {
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
 		void AddClip(Clip* clip);
 
-		/// @brief Remove an openshot::Clip to the timeline
-		/// @param clip Remove an openshot::Clip from the timeline.
-		void RemoveClip(Clip* clip);
+		/// @brief Add an effect to the timeline
+		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
+		void AddEffect(EffectBase* effect);
 
-		/// Close the reader (and any resources it was consuming)
+		/// Return a list of clips on the timeline
+		list<Clip*> Clips() { return clips; };
+
+		/// Close the timeline reader (and any resources it was consuming)
 		void Close();
+
+		/// Return the list of effects on the timeline
+		list<EffectBase*> Effects() { return effects; };
 
 		/// Get the framerate of this timeline
 		Framerate FrameRate() { return fps; };
@@ -208,6 +216,14 @@ namespace openshot {
 
 		/// Open the reader (and start consuming resources)
 		void Open();
+
+		/// @brief Remove an openshot::Clip from the timeline
+		/// @param clip Remove an openshot::Clip from the timeline.
+		void RemoveClip(Clip* clip);
+
+		/// @brief Remove an effect from the timeline
+		/// @param effect Remove an effect from the timeline.
+		void RemoveEffect(EffectBase* effect);
 
 		/// Sort clips by position on the timeline
 		void SortClips();

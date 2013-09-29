@@ -30,6 +30,16 @@
 using namespace std;
 using namespace openshot;
 
+// Default constructor (defaults to 0,0)
+Point::Point() : interpolation(BEZIER), handle_type(AUTO)
+{
+	// set new coorinate
+	co = Coordinate(0, 0);
+
+	// set handles
+	Initialize_Handles();
+}
+
 // Constructor which creates a single coordinate at X=0
 Point::Point(float y) :
 	interpolation(BEZIER), handle_type(AUTO) {

@@ -83,6 +83,7 @@ void Clip::init_settings()
 	// Default pointers
 	file_reader = NULL;
 	resampler = NULL;
+	audio_cache = NULL;
 }
 
 // Default Constructor for a clip
@@ -162,13 +163,17 @@ void Clip::Reader(ReaderBase* reader)
 }
 
 /// Get the current reader
-ReaderBase* Clip::Reader()
+ReaderBase* Clip::Reader() throw(ReaderClosed)
 {
-	return file_reader;
+	if (file_reader)
+		return file_reader;
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 }
 
 // Open the internal reader
-void Clip::Open() throw(InvalidFile)
+void Clip::Open() throw(InvalidFile, ReaderClosed)
 {
 	if (file_reader)
 	{
@@ -179,17 +184,23 @@ void Clip::Open() throw(InvalidFile)
 		if (end == 0.0)
 			End(file_reader->info.duration);
 	}
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 }
 
 // Close the internal reader
-void Clip::Close()
+void Clip::Close() throw(ReaderClosed)
 {
 	if (file_reader)
 		file_reader->Close();
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
-float Clip::End()
+float Clip::End() throw(ReaderClosed)
 {
 	// if a time curve is present, use it's length
 	if (time.Points.size() > 1)
@@ -199,6 +210,9 @@ float Clip::End()
 		if (file_reader)
 			// file reader
 			fps = file_reader->info.fps.ToFloat();
+		else
+			// Throw error if reader not initialized
+			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 
 		return float(time.GetLength()) / fps;
 	}
@@ -210,22 +224,28 @@ float Clip::End()
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {
-	// Adjust out of bounds frame number
-	requested_frame = adjust_frame_number_minimum(requested_frame);
+	if (file_reader)
+	{
+		// Adjust out of bounds frame number
+		requested_frame = adjust_frame_number_minimum(requested_frame);
 
-	// Is a time map detected
-	int new_frame_number = requested_frame;
-	if (time.Values.size() > 1)
-		new_frame_number = time.GetInt(requested_frame);
+		// Is a time map detected
+		int new_frame_number = requested_frame;
+		if (time.Values.size() > 1)
+			new_frame_number = time.GetInt(requested_frame);
 
-	// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-	tr1::shared_ptr<Frame> frame = file_reader->GetFrame(new_frame_number);
+		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
+		tr1::shared_ptr<Frame> frame = file_reader->GetFrame(new_frame_number);
 
-	// Get time mapped frame number (used to increase speed, change direction, etc...)
-	tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
+		// Get time mapped frame number (used to increase speed, change direction, etc...)
+		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
 
-	// Return processed 'frame'
-	return new_frame;
+		// Return processed 'frame'
+		return new_frame;
+	}
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 }
 
 // Get file extension
@@ -264,8 +284,13 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number)
+tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed)
 {
+	// Check for valid reader
+	if (!file_reader)
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+
 	tr1::shared_ptr<Frame> new_frame;
 
 	// Check for a valid time map curve
@@ -493,8 +518,13 @@ int Clip::adjust_frame_number_minimum(int frame_number)
 }
 
 // Calculate the # of samples per video frame (for a specific frame number)
-int Clip::GetSamplesPerFrame(int frame_number, Fraction rate)
+int Clip::GetSamplesPerFrame(int frame_number, Fraction rate) throw(ReaderClosed)
 {
+	// Check for valid reader
+	if (!file_reader)
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps = rate.Reciprocal().ToDouble();
 	double previous_samples = round((file_reader->info.sample_rate * fps) * (frame_number - 1));

@@ -113,11 +113,11 @@ namespace openshot {
 	 */
 	class Clip {
 	private:
-		float position; ///<The position of the timeline where this clip should start playing
-		int layer; ///<The layer this clip is on. Lower clips are covered up by higher clips.
-		float start; ///<The position in seconds to start playing (used to trim the beginning of a clip)
-		float end; ///<The position in seconds to end playing (used to trim the ending of a clip)
-		bool waveform; ///<Should a waveform be used instead of the clip's image
+		float position; ///< The position on the timeline where this clip should start playing
+		int layer; ///< The layer this clip is on. Lower clips are covered up by higher clips.
+		float start; ///< The position in seconds to start playing (used to trim the beginning of a clip)
+		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
+		bool waveform; ///< Should a waveform be used instead of the clip's image
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -133,10 +133,10 @@ namespace openshot {
 		string get_file_extension(string path);
 
 		/// Adjust the audio and image of a time mapped frame
-		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number);
+		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed);
 
 		/// Calculate the # of samples per video frame (for a specific frame number)
-		int GetSamplesPerFrame(int frame_number, Fraction rate);
+		int GetSamplesPerFrame(int frame_number, Fraction rate)  throw(ReaderClosed);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -145,9 +145,9 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
-		GravityType gravity; ///<The gravity of a clip determines where it snaps to it's parent
-		ScaleType scale; ///<The scale determines how a clip should be resized to fit it's parent
-		AnchorType anchor; ///<The anchor determines what parent a clip should snap to
+		GravityType gravity; ///< The gravity of a clip determines where it snaps to it's parent
+		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
+		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
 
 		// Compare a clip using the Position() property
 		bool operator< ( Clip& a) { return (Position() < a.Position()); }
@@ -167,7 +167,7 @@ namespace openshot {
 		Clip(ReaderBase* reader);
 
 		/// Close the internal reader
-		void Close();
+		void Close() throw(ReaderClosed);
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
 		///
@@ -176,65 +176,65 @@ namespace openshot {
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Open the internal reader
-		void Open() throw(InvalidFile);
+		void Open() throw(InvalidFile, ReaderClosed);
 
 		/// @brief Set the current reader
 		/// @param reader The reader to be used by this clip
 		void Reader(ReaderBase* reader);
 
 		/// Get the current reader
-		ReaderBase* Reader();
+		ReaderBase* Reader() throw(ReaderClosed);
 
 		/// Get basic properties
-		float Position() { return position; } ///<Get position on timeline
-		int Layer() { return layer; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
-		float Start() { return start; } ///<Get start position of clip (trim start of video)
-		float End(); ///<Get end position of clip (trim end of video), which can be affected by the time curve.
-		float Duration() { return End() - Start(); } ///<Get the length of this clip (in seconds)
-		bool Waveform() { return waveform; } ///<Get the waveform property of this clip
+		float Position() { return position; } ///< Get position on timeline (in seconds)
+		int Layer() { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
+		float Start() { return start; } ///< Get start position (in seconds) of clip (trim start of video)
+		float End() throw(ReaderClosed); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
+		float Duration() { return End() - Start(); } ///< Get the length of this clip (in seconds)
+		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 
 		/// Set basic properties
-		void Position(float value) { position = value; } ///<Get position on timeline
-		void Layer(int value) { layer = value; } ///<Get layer of clip on timeline (lower number is covered by higher numbers)
-		void Start(float value) { start = value; } ///<Get start position of clip (trim start of video)
-		void End(float value) { end = value; } ///<Get end position of clip (trim end of video)
-		void Waveform(bool value) { waveform = value; } ///<Set the waveform property of this clip
+		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
+		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
+		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
+		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
+		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
 		// Scale and Location curves
-		Keyframe scale_x; ///<Curve representing the horizontal scaling in percent (0 to 100)
-		Keyframe scale_y; ///<Curve representing the vertical scaling in percent (0 to 100)
-		Keyframe location_x; ///<Curve representing the relative X position in percent based on the gravity (-100 to 100)
-		Keyframe location_y; ///<Curve representing the relative Y position in percent based on the gravity (-100 to 100)
+		Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 100)
+		Keyframe scale_y; ///< Curve representing the vertical scaling in percent (0 to 100)
+		Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-100 to 100)
+		Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-100 to 100)
 
 		// Alpha and Rotation curves
-		Keyframe alpha; ///<Curve representing the alpha or transparency (0 to 100)
-		Keyframe rotation; ///<Curve representing the rotation (0 to 360)
+		Keyframe alpha; ///< Curve representing the alpha or transparency (0 to 100)
+		Keyframe rotation; ///< Curve representing the rotation (0 to 360)
 
 		// Time and Volume curves
-		Keyframe time; ///<Curve representing the frames over time to play (used for speed and direction of video)
-		Keyframe volume; ///<Curve representing the volume (0 to 1)
+		Keyframe time; ///< Curve representing the frames over time to play (used for speed and direction of video)
+		Keyframe volume; ///< Curve representing the volume (0 to 1)
 
 		/// Curve representing the color of the audio wave form
 		Color wave_color;
 
 		// Crop settings and curves
-		GravityType crop_gravity; ///<Cropping needs to have a gravity to determine what side we are cropping
-		Keyframe crop_width; ///<Curve representing width in percent (0.0=0%, 1.0=100%)
-		Keyframe crop_height; ///<Curve representing height in percent (0.0=0%, 1.0=100%)
-		Keyframe crop_x; ///<Curve representing X offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
-		Keyframe crop_y; ///<Curve representing Y offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
+		GravityType crop_gravity; ///< Cropping needs to have a gravity to determine what side we are cropping
+		Keyframe crop_width; ///< Curve representing width in percent (0.0=0%, 1.0=100%)
+		Keyframe crop_height; ///< Curve representing height in percent (0.0=0%, 1.0=100%)
+		Keyframe crop_x; ///< Curve representing X offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
+		Keyframe crop_y; ///< Curve representing Y offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
 
 		// Shear and perspective curves
-		Keyframe shear_x; ///<Curve representing X shear angle in degrees (-45.0=left, 45.0=right)
-		Keyframe shear_y; ///<Curve representing Y shear angle in degrees (-45.0=down, 45.0=up)
-		Keyframe perspective_c1_x; ///<Curves representing X for coordinate 1
-		Keyframe perspective_c1_y; ///<Curves representing Y for coordinate 1
-		Keyframe perspective_c2_x; ///<Curves representing X for coordinate 2
-		Keyframe perspective_c2_y; ///<Curves representing Y for coordinate 2
-		Keyframe perspective_c3_x; ///<Curves representing X for coordinate 3
-		Keyframe perspective_c3_y; ///<Curves representing Y for coordinate 3
-		Keyframe perspective_c4_x; ///<Curves representing X for coordinate 4
-		Keyframe perspective_c4_y; ///<Curves representing Y for coordinate 4
+		Keyframe shear_x; ///< Curve representing X shear angle in degrees (-45.0=left, 45.0=right)
+		Keyframe shear_y; ///< Curve representing Y shear angle in degrees (-45.0=down, 45.0=up)
+		Keyframe perspective_c1_x; ///< Curves representing X for coordinate 1
+		Keyframe perspective_c1_y; ///< Curves representing Y for coordinate 1
+		Keyframe perspective_c2_x; ///< Curves representing X for coordinate 2
+		Keyframe perspective_c2_y; ///< Curves representing Y for coordinate 2
+		Keyframe perspective_c3_x; ///< Curves representing X for coordinate 3
+		Keyframe perspective_c3_y; ///< Curves representing Y for coordinate 3
+		Keyframe perspective_c4_x; ///< Curves representing X for coordinate 4
+		Keyframe perspective_c4_y; ///< Curves representing Y for coordinate 4
 
 	};
 

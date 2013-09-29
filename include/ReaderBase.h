@@ -91,7 +91,7 @@ namespace openshot
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
 
-		/// This method is required for all derived classes of ReaderBase, and return the
+		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.
 		///

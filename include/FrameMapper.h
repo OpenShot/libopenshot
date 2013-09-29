@@ -129,8 +129,6 @@ namespace openshot
 	 */
 	class FrameMapper : public ReaderBase {
 	private:
-		vector<Field> fields;		// List of all fields
-		vector<MappedFrame> frames;	// List of all frames
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
 		Framerate original;		// The original frame rate
 		Framerate target;			// The target frame rate
@@ -152,6 +150,10 @@ namespace openshot
 		int GetSamplesPerFrame(int frame_number, Fraction rate);
 
 	public:
+		// Init some containers
+		vector<Field> fields;		// List of all fields
+		vector<MappedFrame> frames;	// List of all frames
+
 		/// Default constructor for FrameMapper class
 		FrameMapper(ReaderBase *reader, Framerate target, PulldownType pulldown);
 

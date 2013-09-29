@@ -71,6 +71,19 @@ void Timeline::AddClip(Clip* clip)
 	SortClips();
 }
 
+// Add an effect to the timeline
+void Timeline::AddEffect(EffectBase* effect)
+{
+	// Add effect to list
+	effects.push_back(effect);
+}
+
+// Remove an effect from the timeline
+void Timeline::RemoveEffect(EffectBase* effect)
+{
+	effects.remove(effect);
+}
+
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {

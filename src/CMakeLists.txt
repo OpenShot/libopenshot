@@ -108,6 +108,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		DummyReader.cpp
 		ReaderBase.cpp
 		WriterBase.cpp
+		EffectBase.cpp
 		FFmpegReader.cpp
 		FFmpegWriter.cpp
 		Fraction.cpp
