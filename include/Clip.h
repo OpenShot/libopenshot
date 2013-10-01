@@ -34,6 +34,7 @@
 #endif
 
 #include <tr1/memory>
+#include "ClipBase.h"
 #include "Color.h"
 #include "FFmpegReader.h"
 #include "FrameRate.h"
@@ -111,13 +112,10 @@ namespace openshot {
 	 * c2.alpha.AddPoint(384, 1.0); // Animate the alpha to visible (between frame #360 and frame #384)
 	 * @endcode
 	 */
-	class Clip {
+	class Clip : public ClipBase {
 	private:
-		float position; ///< The position on the timeline where this clip should start playing
-		int layer; ///< The layer this clip is on. Lower clips are covered up by higher clips.
-		float start; ///< The position in seconds to start playing (used to trim the beginning of a clip)
-		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
 		bool waveform; ///< Should a waveform be used instead of the clip's image
+		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -149,12 +147,6 @@ namespace openshot {
 		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
 		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
 
-		// Compare a clip using the Position() property
-		bool operator< ( Clip& a) { return (Position() < a.Position()); }
-		bool operator<= ( Clip& a) { return (Position() <= a.Position()); }
-		bool operator> ( Clip& a) { return (Position() > a.Position()); }
-		bool operator>= ( Clip& a) { return (Position() >= a.Position()); }
-
 		/// Default Constructor
 		Clip();
 
@@ -185,19 +177,12 @@ namespace openshot {
 		/// Get the current reader
 		ReaderBase* Reader() throw(ReaderClosed);
 
-		/// Get basic properties
-		float Position() { return position; } ///< Get position on timeline (in seconds)
-		int Layer() { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
-		float Start() { return start; } ///< Get start position (in seconds) of clip (trim start of video)
+		/// Override End() method
 		float End() throw(ReaderClosed); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
-		float Duration() { return End() - Start(); } ///< Get the length of this clip (in seconds)
-		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
-
-		/// Set basic properties
-		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
-		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
-		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
+
+		/// Waveform property
+		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
 		// Scale and Location curves

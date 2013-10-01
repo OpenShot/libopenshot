@@ -32,6 +32,12 @@ using namespace openshot;
 // Initialize the values of the FileInfo struct
 void EffectBase::InitEffectInfo()
 {
+	// Init clip settings
+	Position(0.0);
+	Layer(0);
+	Start(0.0);
+	End(0.0);
+
 	info.has_video = false;
 	info.has_audio = false;
 	info.name = "";

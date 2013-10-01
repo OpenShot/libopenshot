@@ -57,7 +57,7 @@ namespace openshot {
 
 	/// Comparison method for sorting clip pointers (by Position and Layer)
 	struct CompareClips{
-		bool operator()( Clip* lhs, Clip* rhs){
+		bool operator()( ClipBase* lhs, ClipBase* rhs){
 		return lhs->Position() <= rhs->Position() && lhs->Layer() < rhs->Layer();
 	}};
 

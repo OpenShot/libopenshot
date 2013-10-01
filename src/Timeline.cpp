@@ -155,6 +155,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	int source_width = source_image->columns();
 	int source_height = source_image->rows();
 
+	/* APPLY EFFECTS */
+
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
 	{

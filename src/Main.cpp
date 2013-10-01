@@ -45,6 +45,33 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	// Create a empty clip
+	Clip c1a;
+	//c1a.Open();
+
+//	// Check basic settings
+//	CHECK_EQUAL(ANCHOR_CANVAS, c1a.anchor);
+//	CHECK_EQUAL(GRAVITY_CENTER, c1a.gravity);
+//	CHECK_EQUAL(SCALE_FIT, c1a.scale);
+//	CHECK_EQUAL(0, c1a.Layer());
+//	CHECK_CLOSE(0.0f, c1a.Position(), 0.00001);
+//	CHECK_CLOSE(0.0f, c1a.Start(), 0.00001);
+//	CHECK_CLOSE(0.0f, c1a.End(), 0.00001);
+
+	// Change some properties
+	c1a.Layer(1);
+	c1a.Position(5.0);
+	c1a.Start(3.5);
+	c1a.End(10.5);
+
+	cout << c1a.Layer() << endl;
+	cout << c1a.Position() << endl;
+	cout << c1a.Start() << endl;
+	cout << c1a.End() << endl;
+
+	return 0;
+
+
 	// Create a chunkwriter
 //	FFmpegReader *r3 = new FFmpegReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 //	r3->DisplayInfo();

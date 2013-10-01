@@ -31,6 +31,7 @@
 #include <iostream>
 #include <iomanip>
 #include <tr1/memory>
+#include "ClipBase.h"
 #include "Frame.h"
 
 using namespace std;
@@ -59,7 +60,7 @@ namespace openshot
 	 * The only requirements for an 'effect', is to derive from this base class, implement the Apply()
 	 * method, and call the InitEffectInfo() method.
 	 */
-	class EffectBase
+	class EffectBase : ClipBase
 	{
 	public:
 		/// Information about the current effect

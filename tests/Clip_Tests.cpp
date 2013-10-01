@@ -66,9 +66,9 @@ TEST(Clip_Basic_Gettings_and_Setters)
 {
 	// Create a empty clip
 	Clip c1;
-	c1.Open();
 
 	// Check basic settings
+	CHECK_THROW(c1.Open(), ReaderClosed);
 	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);
 	CHECK_EQUAL(GRAVITY_CENTER, c1.gravity);
 	CHECK_EQUAL(SCALE_FIT, c1.scale);

@@ -233,7 +233,7 @@ bool Keyframe::IsIncreasing(int index)
 		// return the maximum value
 		return int(round(Values[Values.size() - 1].IsIncreasing()));
 	else
-		// return a blank coordinate (0,0)
+		// return the default direction of most curves (i.e. increasing is true)
 		return true;
 }
 
@@ -430,6 +430,7 @@ void Keyframe::Process() {
 		// Loop forward and look for the next unique value (to determine direction)
 		for (vector<Coordinate>::iterator direction_it = it + 1; direction_it != Values.end(); direction_it++) {
 			int next = int(round((*direction_it).Y));
+
 			// Detect direction
 			if (current_value < next)
 			{
