@@ -60,9 +60,12 @@ namespace openshot
 	 * The only requirements for an 'effect', is to derive from this base class, implement the Apply()
 	 * method, and call the InitEffectInfo() method.
 	 */
-	class EffectBase : ClipBase
+	class EffectBase : public ClipBase
 	{
+	private:
+		int order; ///< The order to evaluate this effect. Effects are processed in this order (when more than one overlap).
 	public:
+
 		/// Information about the current effect
 		EffectInfo info;
 
@@ -83,6 +86,12 @@ namespace openshot
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.
 		void InitEffectInfo();
+
+		/// Get the order that this effect should be executed.
+		int Order() { return order; }
+
+		/// Set the order that this effect should be executed.
+		void Order(int new_order) { order = new_order; }
 	};
 
 }

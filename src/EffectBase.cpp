@@ -37,6 +37,7 @@ void EffectBase::InitEffectInfo()
 	Layer(0);
 	Start(0.0);
 	End(0.0);
+	Order(0);
 
 	info.has_video = false;
 	info.has_audio = false;

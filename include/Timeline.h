@@ -57,8 +57,14 @@ namespace openshot {
 
 	/// Comparison method for sorting clip pointers (by Position and Layer)
 	struct CompareClips{
-		bool operator()( ClipBase* lhs, ClipBase* rhs){
-		return lhs->Position() <= rhs->Position() && lhs->Layer() < rhs->Layer();
+		bool operator()( Clip* lhs, Clip* rhs){
+		return lhs->Position() < rhs->Position() && lhs->Layer() < rhs->Layer();
+	}};
+
+	/// Comparison method for sorting effect pointers (by Position, Layer, and Order)
+	struct CompareEffects{
+		bool operator()( EffectBase* lhs, EffectBase* rhs){
+		return lhs->Position() < rhs->Position() && lhs->Layer() < rhs->Layer() && lhs->Order() < rhs->Order();
 	}};
 
 	/**
@@ -171,7 +177,7 @@ namespace openshot {
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
-		void AddClip(Clip* clip);
+		void AddClip(Clip* clip) throw(ReaderClosed);
 
 		/// @brief Add an effect to the timeline
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
@@ -227,6 +233,9 @@ namespace openshot {
 
 		/// Sort clips by position on the timeline
 		void SortClips();
+
+		/// Sort effects by position on the timeline
+		void SortEffects();
 
 		/// Get the width of canvas and viewport
 		int Width() { return width; }

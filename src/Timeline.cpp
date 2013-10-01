@@ -58,7 +58,7 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 }
 
 // Add an openshot::Clip to the timeline
-void Timeline::AddClip(Clip* clip)
+void Timeline::AddClip(Clip* clip) throw(ReaderClosed)
 {
 	// All clips must be converted to the frame rate of this timeline,
 	// so assign the same frame rate to each clip.
@@ -76,6 +76,9 @@ void Timeline::AddEffect(EffectBase* effect)
 {
 	// Add effect to list
 	effects.push_back(effect);
+
+	// Sort effects
+	SortEffects();
 }
 
 // Remove an effect from the timeline
@@ -341,6 +344,13 @@ void Timeline::SortClips()
 {
 	// sort clips
 	clips.sort(CompareClips());
+}
+
+// Sort effects by position on the timeline
+void Timeline::SortEffects()
+{
+	// sort clips
+	effects.sort(CompareEffects());
 }
 
 // Close the reader (and any resources it was consuming)
