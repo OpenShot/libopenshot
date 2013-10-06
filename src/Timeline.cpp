@@ -103,6 +103,44 @@ float Timeline::calculate_time(int number, Framerate rate)
 	return float(number - 1) / raw_fps;
 }
 
+// Apply effects to the source frame (if any)
+tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer)
+{
+	// Calculate time of frame
+	float requested_time = calculate_time(timeline_frame_number, fps);
+
+	// Find Effects at this position and layer
+	list<EffectBase*>::iterator effect_itr;
+	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	{
+		// Get clip object from the iterator
+		EffectBase *effect = (*effect_itr);
+
+		// Have we gone past the requested time?
+		if (effect->Position() > requested_time)
+			break;
+
+		// Does clip intersect the current requested time
+		float effect_duration = effect->End() - effect->Start();
+		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
+
+		// Clip is visible
+		if (does_effect_intersect)
+		{
+			// Determine the frame needed for this clip (based on the position on the timeline)
+			float time_diff = (requested_time - effect->Position()) + effect->Start();
+			int effect_frame_number = round(time_diff * fps.GetFPS()) + 1;
+
+			// Apply the effect to this frame
+			frame = effect->GetFrame(frame, effect_frame_number);
+		}
+
+	} // end effect loop
+
+	// Return modified frame
+	return frame;
+}
+
 // Process a new layer of video or audio
 void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number)
 {
@@ -115,6 +153,9 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// No frame found... so bail
 	if (!source_frame)
 		return;
+
+	/* Apply effects to the source frame (if any) */
+	source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
 	tr1::shared_ptr<Magick::Image> source_image;
 
@@ -157,8 +198,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Get some basic image properties
 	int source_width = source_image->columns();
 	int source_height = source_image->rows();
-
-	/* APPLY EFFECTS */
 
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
@@ -410,18 +449,19 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	else
 	{
 		// Minimum number of packets to process (for performance reasons)
-		int minimum_frames = omp_get_num_procs();
+		//int minimum_frames = omp_get_num_procs() / 2;
+		int minimum_frames = 1;
 
 		//omp_set_num_threads(1);
 		omp_set_nested(true);
-		#pragma omp parallel
+		#pragma xx omp parallel
 		{
-			#pragma omp single
+			#pragma xx omp single
 			{
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma omp task firstprivate(frame_number)
+					#pragma xx omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
@@ -436,6 +476,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 						{
 							// Get clip object from the iterator
 							Clip *clip = (*clip_itr);
+
+							// Have we gone past the requested time?
+							if (clip->Position() > requested_time)
+								break;
 
 							// Does clip intersect the current requested time
 							float clip_duration = clip->End() - clip->Start();

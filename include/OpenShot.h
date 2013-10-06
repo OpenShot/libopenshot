@@ -122,5 +122,9 @@
 #include "TextReader.h"
 #include "Timeline.h"
 
+/* Effects */
+#include "effects/ChromaKey.h"
+#include "effects/Negate.h"
+
 
 #endif

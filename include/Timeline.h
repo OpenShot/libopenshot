@@ -158,6 +158,9 @@ namespace openshot {
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Framerate rate);
 
+		/// Apply effects to the source frame (if any)
+		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
+
 		/// Calculate the # of samples per video frame (for a specific frame number)
 		int GetSamplesPerFrame(int frame_number);
 

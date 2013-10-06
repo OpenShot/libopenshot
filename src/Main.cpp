@@ -46,42 +46,85 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 	// Create a empty clip
-	Timeline t1(720, 480, Framerate(24,1), 44100, 2);
-	DummyReader dr1(Framerate(24,1),720,480, 41000, 2, 10.0);
+	Timeline timeline_animation(720, 480, Framerate(24,1), 44100, 2);
 
-	// Change some properties
-	Clip c1a(&dr1);
-	c1a.Layer(1);
-	c1a.Position(5.0);
-	c1a.Start(5);
-	c1a.End(10.5);
-	t1.AddClip(&c1a);
+	// Add Sky Layer
+	ImageReader sky_reader("/home/jonathan/Animation/sky.png");
+	Clip clip_sky(&sky_reader);
+	clip_sky.Layer(0);
+	clip_sky.Position(0.0);
+	clip_sky.End(30);
+	timeline_animation.AddClip(&clip_sky);
 
-	Clip c2a(&dr1);
-	c2a.Layer(1);
-	c2a.Position(5.0);
-	c2a.Start(1);
-	c2a.End(10.5);
-	t1.AddClip(&c2a);
+	// Add Hills Layer
+	ImageReader hills_reader("/home/jonathan/Animation/hills.png");
+	Clip clip_hills(&hills_reader);
+	clip_hills.Layer(2);
+	clip_hills.Position(0.0);
+	clip_hills.End(30);
+	clip_hills.gravity = GRAVITY_BOTTOM;
+	clip_hills.scale = SCALE_CROP;
+	clip_hills.location_y = Keyframe(0.40);
+	timeline_animation.AddClip(&clip_hills);
 
-	Clip c3a(&dr1);
-	c3a.Layer(1);
-	c3a.Position(5.0);
-	c3a.Start(3);
-	c3a.End(10.5);
-	t1.AddClip(&c3a);
+	// Add Sun Layer
+	ImageReader sun_reader("/home/jonathan/Animation/sun.png");
+	Clip clip_sun(&sun_reader);
+	clip_sun.Layer(3);
+	clip_sun.Position(0.0);
+	clip_sun.End(30);
+	clip_sun.gravity = GRAVITY_TOP_RIGHT;
+	clip_sun.scale = SCALE_NONE;
+	clip_sun.location_y = Keyframe(0.025);
+	clip_sun.location_x = Keyframe(-0.025);
+	timeline_animation.AddClip(&clip_sun);
 
+	// Add Cloud 1 Layer
+	ImageReader cloud_reader("/home/jonathan/Animation/cloud.png");
+	Clip clip_cloud(&cloud_reader);
+	clip_cloud.Layer(4);
+	clip_cloud.Position(0.0);
+	clip_cloud.End(30);
+	clip_cloud.gravity = GRAVITY_TOP_LEFT;
+	clip_cloud.scale = SCALE_NONE;
+	clip_cloud.location_y = Keyframe(0.025);
+	clip_cloud.location_x = Keyframe(0.025);
+	timeline_animation.AddClip(&clip_cloud);
 
-	list<Clip*>::iterator clip_itr;
-	list<Clip*> myClips = t1.Clips();
-	for (clip_itr=myClips.begin(); clip_itr != myClips.end(); ++clip_itr)
-	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
+	// Add Cloud 2 Layer
+	ImageReader cloud_reader2("/home/jonathan/Animation/cloud.png");
+	Clip clip_cloud2(&cloud_reader2);
+	clip_cloud2.Layer(4);
+	clip_cloud2.Position(0.0);
+	clip_cloud2.End(30);
+	clip_cloud2.gravity = GRAVITY_TOP_LEFT;
+	clip_cloud2.scale = SCALE_NONE;
+	clip_cloud2.location_y = Keyframe(0.2);
+	clip_cloud2.location_x = Keyframe(0.25);
+	timeline_animation.AddClip(&clip_cloud2);
 
-		// Open or Close this clip, based on if it's intersecting or not
-		cout << clip->Start() << endl;
-	}
+	// Add Cloud 3 Layer
+	ImageReader cloud_reader3("/home/jonathan/Animation/cloud.png");
+	Clip clip_cloud3(&cloud_reader3);
+	clip_cloud3.Layer(4);
+	clip_cloud3.Position(0.0);
+	clip_cloud3.End(30);
+	clip_cloud3.gravity = GRAVITY_TOP_LEFT;
+	clip_cloud3.scale = SCALE_NONE;
+	clip_cloud3.alpha = Keyframe(0.2);
+	clip_cloud3.location_y = Keyframe(0.025);
+	clip_cloud3.location_x = Keyframe(0.65);
+	timeline_animation.AddClip(&clip_cloud3);
+
+	// Add Effect to cloud layer
+	Negate effect;
+	effect.Position(0);
+	effect.End(30.0);
+	effect.Layer(3);
+	timeline_animation.AddEffect(&effect);
+
+	// View frames
+	timeline_animation.GetFrame(1)->Display();
 
 	return 0;
 
