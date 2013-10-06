@@ -46,28 +46,42 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 	// Create a empty clip
-	Clip c1a;
-	//c1a.Open();
-
-//	// Check basic settings
-//	CHECK_EQUAL(ANCHOR_CANVAS, c1a.anchor);
-//	CHECK_EQUAL(GRAVITY_CENTER, c1a.gravity);
-//	CHECK_EQUAL(SCALE_FIT, c1a.scale);
-//	CHECK_EQUAL(0, c1a.Layer());
-//	CHECK_CLOSE(0.0f, c1a.Position(), 0.00001);
-//	CHECK_CLOSE(0.0f, c1a.Start(), 0.00001);
-//	CHECK_CLOSE(0.0f, c1a.End(), 0.00001);
+	Timeline t1(720, 480, Framerate(24,1), 44100, 2);
+	DummyReader dr1(Framerate(24,1),720,480, 41000, 2, 10.0);
 
 	// Change some properties
+	Clip c1a(&dr1);
 	c1a.Layer(1);
 	c1a.Position(5.0);
-	c1a.Start(3.5);
+	c1a.Start(5);
 	c1a.End(10.5);
+	t1.AddClip(&c1a);
 
-	cout << c1a.Layer() << endl;
-	cout << c1a.Position() << endl;
-	cout << c1a.Start() << endl;
-	cout << c1a.End() << endl;
+	Clip c2a(&dr1);
+	c2a.Layer(1);
+	c2a.Position(5.0);
+	c2a.Start(1);
+	c2a.End(10.5);
+	t1.AddClip(&c2a);
+
+	Clip c3a(&dr1);
+	c3a.Layer(1);
+	c3a.Position(5.0);
+	c3a.Start(3);
+	c3a.End(10.5);
+	t1.AddClip(&c3a);
+
+
+	list<Clip*>::iterator clip_itr;
+	list<Clip*> myClips = t1.Clips();
+	for (clip_itr=myClips.begin(); clip_itr != myClips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *clip = (*clip_itr);
+
+		// Open or Close this clip, based on if it's intersecting or not
+		cout << clip->Start() << endl;
+	}
 
 	return 0;
 

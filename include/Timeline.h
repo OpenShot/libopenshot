@@ -58,13 +58,18 @@ namespace openshot {
 	/// Comparison method for sorting clip pointers (by Position and Layer)
 	struct CompareClips{
 		bool operator()( Clip* lhs, Clip* rhs){
-		return lhs->Position() < rhs->Position() && lhs->Layer() < rhs->Layer();
+			if( lhs->Position() < rhs->Position() ) return true;
+			if( lhs->Position() == rhs->Position() ) return lhs->Layer() < rhs->Layer();
+			return false;
 	}};
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order)
 	struct CompareEffects{
 		bool operator()( EffectBase* lhs, EffectBase* rhs){
-		return lhs->Position() < rhs->Position() && lhs->Layer() < rhs->Layer() && lhs->Order() < rhs->Order();
+			if( lhs->Position() < rhs->Position() ) return true;
+			if( lhs->Position() == rhs->Position() ) return lhs->Layer() < rhs->Layer();
+			if( lhs->Position() == rhs->Position() && lhs->Layer() == rhs->Layer() ) return lhs->Order() < rhs->Order();
+			return false;
 	}};
 
 	/**
