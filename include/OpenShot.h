@@ -125,6 +125,7 @@
 /* Effects */
 #include "effects/ChromaKey.h"
 #include "effects/Negate.h"
+#include "effects/Wipe.h"
 
 
 #endif

@@ -50,16 +50,14 @@
 #include "../include/ReaderBase.h"
 #include "../include/WriterBase.h"
 #include "../include/Cache.h"
-#include "../include/ClipBase.h"
-#include "../include/Clip.h"
 #include "../include/ChunkReader.h"
 #include "../include/ChunkWriter.h"
+#include "../include/ClipBase.h"
+#include "../include/Clip.h"
 #include "../include/Coordinate.h"
 #include "../include/Color.h"
 #include "../include/DummyReader.h"
 #include "../include/EffectBase.h"
-#include "../include/effects/ChromaKey.h"
-#include "../include/effects/Negate.h"
 #include "../include/Exceptions.h"
 #include "../include/FFmpegReader.h"
 #include "../include/FFmpegWriter.h"
@@ -73,6 +71,12 @@
 #include "../include/KeyFrame.h"
 #include "../include/TextReader.h"
 #include "../include/Timeline.h"
+
+/* Effects */
+#include "../include/effects/ChromaKey.h"
+#include "../include/effects/Negate.h"
+#include "../include/effects/Wipe.h"
+
 %}
 
 #ifdef USE_BLACKMAGIC
@@ -97,8 +101,6 @@
 #endif
 %include "../include/DummyReader.h"
 %include "../include/EffectBase.h"
-%include "../include/effects/ChromaKey.h"
-%include "../include/effects/Negate.h"
 %include "../include/Exceptions.h"
 %include "../include/FFmpegReader.h"
 %include "../include/FFmpegWriter.h"
@@ -112,6 +114,12 @@
 %include "../include/KeyFrame.h"
 %include "../include/TextReader.h"
 %include "../include/Timeline.h"
+
+/* Effects */
+%include "../include/effects/ChromaKey.h"
+%include "../include/effects/Negate.h"
+%include "../include/effects/Wipe.h"
+
 
 /* Wrap std templates (list, vector, etc...) */
 namespace std {
