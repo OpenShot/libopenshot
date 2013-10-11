@@ -69,6 +69,8 @@ void Wipe::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, flo
 	{
 		// Make mask darker
 		double black_alpha = abs(brightness) / 100.0;
+		tr1::shared_ptr<Magick::Image> black = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("Black")));
+		black->matte(true);
 		black->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, black_alpha);
 		image->composite(*black.get(), 0, 0, Magick::OverCompositeOp);
 
@@ -77,6 +79,8 @@ void Wipe::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, flo
 	{
 		// Make mask whiter
 		double white_alpha = brightness / 100.0;
+		tr1::shared_ptr<Magick::Image> white = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("White")));
+		white->matte(true);
 		white->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, white_alpha);
 		image->composite(*white.get(), 0, 0, Magick::OverCompositeOp);
 	}
@@ -98,15 +102,6 @@ tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 		mask->resize(new_size);
 	}
 
-	// Load white & black images, to quickly lighten and darken the mask (for animation)
-	white = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("White")));
-	black = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("Black")));
-
-	// Give white & black images a transparent background color
-	white->matte(true);
-	black->matte(true);
-
-
 	// Make a copy of the resized image (since we will be modifying the brightness and contrast)
 	tr1::shared_ptr<Magick::Image> image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*mask.get()));
 
@@ -114,7 +109,41 @@ tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 	set_brightness_and_contrast(image, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
 	// Composite the alpha channel of our mask onto our frame's alpha channel
-	frame->GetImage()->composite(*image.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+	tr1::shared_ptr<Magick::Image> alpha_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("White")));
+	alpha_image->backgroundColor(Magick::Color("none"));
+	alpha_image->matte(true);
+	alpha_image->composite(*image.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+
+	// Add 2 alpha channels together (i.e. maintain the original alpha while adding more)
+	// Prepare to update image
+	frame->GetImage()->modifyImage();
+
+	// Loop through each row
+	for (int row = 0; row < frame->GetImage()->size().height(); row++)
+	{
+		const Magick::PixelPacket* original_pixels = frame->GetImage()->getConstPixels(0, row, frame->GetImage()->columns(), 1);
+		const Magick::PixelPacket* alpha_pixels = alpha_image->getConstPixels(0, row, alpha_image->columns(), 1);
+
+		// Loop through each column
+		for (int col = 0; col < frame->GetImage()->size().width(); col++)
+		{
+			// Calculate new opacity value (and prevent overflow)
+			int new_alpha = original_pixels[col].opacity + alpha_pixels[col].opacity;
+			if (new_alpha > 65535.0)
+				new_alpha = 65535.0;
+
+			// Set the new opacity
+			frame->GetImage()->pixelColor(col, row, Magick::Color(original_pixels[col].red, original_pixels[col].green, original_pixels[col].blue, new_alpha));
+		}
+	}
+	// Transfer image cache pixels to the image
+	frame->GetImage()->syncPixels();
+
+
+
+	// Copy the combined alpha channel back to the frame
+	//frame->GetImage()->composite(*combined_image.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+
 
 	// return the modified frame
 	return frame;
