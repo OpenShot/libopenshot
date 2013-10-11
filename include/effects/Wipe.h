@@ -58,7 +58,12 @@ namespace openshot
 		string path;
 		Keyframe brightness;
 		Keyframe contrast;
-		tr1::shared_ptr<Magick::Image> image;
+		tr1::shared_ptr<Magick::Image> mask;
+		tr1::shared_ptr<Magick::Image> white;
+		tr1::shared_ptr<Magick::Image> black;
+
+		/// Set brightness and contrast
+		void set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast);
 
 	public:
 

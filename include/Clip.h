@@ -192,7 +192,7 @@ namespace openshot {
 		Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-100 to 100)
 
 		// Alpha and Rotation curves
-		Keyframe alpha; ///< Curve representing the alpha or transparency (0 to 100)
+		Keyframe alpha; ///< Curve representing the alpha or transparency (0 to 1)
 		Keyframe rotation; ///< Curve representing the rotation (0 to 360)
 
 		// Time and Volume curves

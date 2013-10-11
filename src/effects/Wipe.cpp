@@ -48,11 +48,12 @@ Wipe::Wipe(string mask_path, Keyframe mask_brightness, Keyframe mask_contrast) t
 	try
 	{
 		// load image
-		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
-		image->type(Magick::GrayscaleType); // convert to grayscale
+		mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
+		mask->type(Magick::GrayscaleType); // convert to grayscale
 
-		// Give image a transparent background color
-		//image->backgroundColor(Magick::Color("none"));
+		// Remove transparency support (so mask will sub color brightness for alpha)
+		mask->matte(false); // This is required for the composite operator to copy the brightness of each pixel into the alpha channel
+
 	}
 	catch (Magick::Exception e) {
 		// raise exception
@@ -60,19 +61,57 @@ Wipe::Wipe(string mask_path, Keyframe mask_brightness, Keyframe mask_contrast) t
 	}
 }
 
+// Set brightness and contrast (brightness between -100 and 100)
+void Wipe::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast)
+{
+	// Determine if white or black image is needed
+	if (brightness >= -100.0 and brightness <= 0.0)
+	{
+		// Make mask darker
+		double black_alpha = abs(brightness) / 100.0;
+		black->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, black_alpha);
+		image->composite(*black.get(), 0, 0, Magick::OverCompositeOp);
+
+	}
+	else if (brightness > 0.0 and brightness <= 100.0)
+	{
+		// Make mask whiter
+		double white_alpha = brightness / 100.0;
+		white->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, white_alpha);
+		image->composite(*white.get(), 0, 0, Magick::OverCompositeOp);
+	}
+
+	// Set Contrast
+	image->sigmoidalContrast(true, contrast);
+
+}
+
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
 	// Resize mask to match this frame size (if different)
-	if (frame->GetImage()->size() != image->size())
-		image->resize(frame->GetImage()->size());
+	if (frame->GetImage()->size() != mask->size())
+	{
+		Magick::Geometry new_size(frame->GetImage()->size().width(), frame->GetImage()->size().height());
+		new_size.aspect(true);
+		mask->resize(new_size);
+	}
+
+	// Load white & black images, to quickly lighten and darken the mask (for animation)
+	white = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("White")));
+	black = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("Black")));
+
+	// Give white & black images a transparent background color
+	white->matte(true);
+	black->matte(true);
+
+
+	// Make a copy of the resized image (since we will be modifying the brightness and contrast)
+	tr1::shared_ptr<Magick::Image> image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*mask.get()));
 
 	// Set the brightness of the mask (from a user-defined curve)
-	image->modulate(brightness.GetValue(frame_number), 100.0, 100.0);
-
-	// Set the contrast of the mask (from a cuser-defined curve)
-	image->contrast(contrast.GetInt(frame_number));
+	set_brightness_and_contrast(image, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
 	// Composite the alpha channel of our mask onto our frame's alpha channel
 	frame->GetImage()->composite(*image.get(), 0, 0, Magick::CopyOpacityCompositeOp);
