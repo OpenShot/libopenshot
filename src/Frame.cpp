@@ -446,6 +446,10 @@ void Frame::Save(string path, float scale)
 	Magick::Image copy;
 	copy = *image;
 
+	// Maintain alpha channel
+	copy.backgroundColor(Magick::Color("none"));
+	copy.matte(true);
+
 	// display the image (if any)
 	if (copy.size().width() > 1 && copy.size().height() > 1)
 	{

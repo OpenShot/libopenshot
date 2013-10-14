@@ -53,6 +53,7 @@ void ImageReader::Open() throw(InvalidFile)
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
+			image->matte(true);
 		}
 		catch (Magick::Exception e) {
 			// raise exception

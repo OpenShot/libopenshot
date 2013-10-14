@@ -1,0 +1,35 @@
+import openshot
+
+# Create a empty clip
+t = openshot.Timeline(720, 480, openshot.Framerate(24,1), 44100, 2)
+
+# lower layer
+lower = openshot.ImageReader("/home/jonathan/Downloads/front1.png")
+c1 = openshot.Clip(lower)
+c1.Layer(1)
+t.AddClip(c1)
+
+# higher layer
+higher = openshot.ImageReader("/home/jonathan/Downloads/back.png")
+c2 = openshot.Clip(higher)
+c2.Layer(2)
+#c2.alpha = openshot.Keyframe(0.5)
+t.AddClip(c2)
+
+# Wipe / Transition
+brightness = openshot.Keyframe()
+brightness.AddPoint(1, 100.0, openshot.BEZIER)
+brightness.AddPoint(24, -100.0, openshot.BEZIER)
+
+contrast = openshot.Keyframe()
+contrast.AddPoint(1, 20.0, openshot.BEZIER)
+contrast.AddPoint(24, 20.0, openshot.BEZIER)
+
+e = openshot.Wipe("/home/jonathan/Downloads/mask.png", brightness, contrast)
+e.Layer(2)
+e.End(60)
+t.AddEffect(e)
+
+for n in range(1,25):
+ print n
+ t.GetFrame(n).Save("%s.png" % n, 1.0)
