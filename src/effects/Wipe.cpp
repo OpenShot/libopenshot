@@ -49,7 +49,7 @@ Wipe::Wipe(string mask_path, Keyframe mask_brightness, Keyframe mask_contrast) t
 	{
 		// load image
 		mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
-		mask->type(Magick::GrayscaleType); // convert to grayscale
+		//mask->type(Magick::GrayscaleType); // convert to grayscale
 
 		// Remove transparency support (so mask will sub color brightness for alpha)
 		mask->matte(false); // This is required for the composite operator to copy the brightness of each pixel into the alpha channel
@@ -102,26 +102,21 @@ tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 		mask->resize(new_size);
 	}
 
-	// Make a copy of the resized image (since we will be modifying the brightness and contrast)
-	tr1::shared_ptr<Magick::Image> image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*mask.get()));
+	// Make a copy of the resized mask image (since we will be modifying the brightness and contrast)
+	tr1::shared_ptr<Magick::Image> mask_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*mask.get()));
 
 	// Set the brightness of the mask (from a user-defined curve)
-	set_brightness_and_contrast(image, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
+	set_brightness_and_contrast(mask_image, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
-	// Get copy of our frame's image
+	// Get copy of our source frame's image
 	tr1::shared_ptr<Magick::Image> copy_source = tr1::shared_ptr<Magick::Image>(new Magick::Image(*frame->GetImage().get()));
-	copy_source->backgroundColor(Magick::Color("none"));
-	copy_source->matte(true);
-
-	// Composite the alpha channel of our mask onto our frame's alpha channel
-	tr1::shared_ptr<Magick::Image> alpha_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("Black")));
-	alpha_image->matte(false);
-	alpha_image->composite(*image.get(), 0, 0, Magick::CopyOpacityCompositeOp); // convert mask into alpha channel
-	alpha_image->matte(true); // now enable alpha
-	alpha_image->composite(*copy_source.get(), 0, 0, Magick::MultiplyCompositeOp); // add all channels together (including alpha)
+	copy_source->channel(Magick::MatteChannel); // extract alpha channel as grayscale image
+	copy_source->matte(false); // remove alpha channel
+	copy_source->negate(true); // negate source alpha channel before multiplying mask
+	copy_source->composite(*mask_image.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
 
 	// Copy the combined alpha channel back to the frame
-	frame->GetImage()->composite(*alpha_image.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+	frame->GetImage()->composite(*copy_source.get(), 0, 0, Magick::CopyOpacityCompositeOp);
 
 	// return the modified frame
 	return frame;
