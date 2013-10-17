@@ -978,8 +978,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 					// Create or get frame object
 					f = CreateFrame(starting_frame_number);
 
-				// Add samples for current channel to the frame
-				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 1.0f);
+				// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
+				// some louder samples from maxing out at 1.0 (not sure why this happens)
+				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
 
 				#pragma omp critical (openshot_cache)
 					// Add or update cache
@@ -1211,8 +1212,6 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	// Divide by the video timebase, to get the video frame number (frame # is decimal at this point)
 	double frame = (audio_seconds * info.fps.ToDouble()) + 1;
 
-	/** @todo Make the value externally configurable */
-
 	// Frame # as a whole number (no more decimals)
 	int whole_frame = int(frame);
 
@@ -1241,7 +1240,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 		int orig_start = location.sample_start;
 
 		// Update sample start, to prevent gaps in audio
-		if (previous_packet_location.sample_start + 1 <= samples_per_frame)
+		if (previous_packet_location.sample_start <= samples_per_frame)
 		{
 			location.sample_start = previous_packet_location.sample_start;
 			location.frame = previous_packet_location.frame;
@@ -1256,8 +1255,8 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 		if (display_debug)
 			cout << "AUDIO GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
 	}
-	//else
-	//	cout << "NOT NEAR!!!  frame " << location.frame << ":" << location.sample_start << "  prev frame " << previous_packet_location.frame << ":" << previous_packet_location.sample_start << endl;
+	else if (display_debug)
+		cout << "NOT NEAR!!!  frame " << location.frame << ":" << location.sample_start << "  prev frame " << previous_packet_location.frame << ":" << previous_packet_location.sample_start << endl;
 
 	// Set previous location
 	previous_packet_location = location;
