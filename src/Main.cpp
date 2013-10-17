@@ -41,10 +41,13 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
-
 	// Reader
-	FFmpegReader r("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	r.Open();
+	FFmpegReader r1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r1.Open();
+
+	// FrameMapper
+	FrameMapper r(&r1, Framerate(100,1), PULLDOWN_NONE);
+	//r.PrintMapping();
 
 	/* WRITER ---------------- */
 	FFmpegWriter w("/home/jonathan/output.mp4");
@@ -53,7 +56,7 @@ int main(int argc, char* argv[])
 	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
 	w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
 	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
-	w.SetVideoOptions(true, "mpeg4", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+	w.SetVideoOptions(true, "mpeg4", r.info.fps, 1280, 720, Fraction(1,1), false, false, 3000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -65,13 +68,13 @@ int main(int argc, char* argv[])
 	w.OutputStreamInfo();
 
 	//for (int frame = 3096; frame <= 3276; frame++)
-	for (int frame = 1; frame <= 1000; frame++)
+	for (int frame = 1; frame <= 1500; frame++)
 	{
 		tr1::shared_ptr<Frame> f = r.GetFrame(frame);
 		if (f)
 		{
-			//if (frame >= 62)
-			//f->DisplayWaveform();
+			//if (frame >= 250)
+			//	f->DisplayWaveform();
 			//f->AddOverlayNumber(frame);
 			//f->Display();
 
@@ -88,7 +91,7 @@ int main(int argc, char* argv[])
 	w.Close();
 
 	// Close timeline
-	r.Close();
+	r1.Close();
 	/* ---------------- */
 
 

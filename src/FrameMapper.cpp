@@ -80,94 +80,118 @@ void FrameMapper::AddField(Field field)
 // whether the frame rate is increasing or decreasing.
 void FrameMapper::Init()
 {
-	// Get the difference (in frames) between the original and target frame rates
-	float difference = target.GetRoundedFPS() - original.GetRoundedFPS();
-
-	// Find the number (i.e. interval) of fields that need to be skipped or repeated
-	int field_interval = 0;
-	int frame_interval = 0;
-
-	if (difference != 0)
-	{
-		field_interval = round(fabs(original.GetRoundedFPS() / difference));
-
-		// Get frame interval (2 fields per frame)
-		frame_interval = field_interval * 2.0f;
-	}
-
 	// Clear the fields & frames lists
 	fields.clear();
 	frames.clear();
 
-	// Calculate # of fields to map
-	int frame = 1;
-	int number_of_fields = reader->info.video_length * 2;
-//	if (reader->info.video_length * 2 > number_of_fields)
-//		number_of_fields = reader->info.video_length * 2;
+	// Some framerates are handled special, and some use a generic Keyframe curve to
+	// map the framerates. These are the special framerates:
+	if ((original.GetRoundedFPS() == 24 || original.GetRoundedFPS() == 25 || original.GetRoundedFPS() == 30) &&
+		(target.GetRoundedFPS() == 24 || target.GetRoundedFPS() == 25 || target.GetRoundedFPS() == 30)) {
 
-	// Loop through all fields in the original video file
-	for (int field = 1; field <= number_of_fields; field++)
-	{
+		// Get the difference (in frames) between the original and target frame rates
+		float difference = target.GetRoundedFPS() - original.GetRoundedFPS();
 
-		if (difference == 0) // Same frame rate, NO pull-down or special techniques required
+		// Find the number (i.e. interval) of fields that need to be skipped or repeated
+		int field_interval = 0;
+		int frame_interval = 0;
+
+		if (difference != 0)
 		{
-			// Add fields
-			AddField(frame);
-		}
-		else if (difference > 0) // Need to ADD fake fields & frames, because original video has too few frames
-		{
-			// Add current field
-			AddField(frame);
+			field_interval = round(fabs(original.GetRoundedFPS() / difference));
 
-			if (pulldown == PULLDOWN_CLASSIC && field % field_interval == 0)
-			{
-				// Add extra field for each 'field interval
-				AddField(frame);
-			}
-			else if (pulldown == PULLDOWN_ADVANCED && field % field_interval == 0 && field % frame_interval != 0)
-			{
-				// Add both extra fields in the middle 'together' (i.e. 2:3:3:2 technique)
-				AddField(frame); // add field for current frame
-
-				if (frame + 1 <= info.video_length)
-					// add field for next frame (if the next frame exists)
-					AddField(Field(frame + 1, field_toggle));
-			}
-			else if (pulldown == PULLDOWN_NONE && field % frame_interval == 0)
-			{
-				// No pull-down technique needed, just repeat this frame
-				AddField(frame);
-				AddField(frame);
-			}
-		}
-		else if (difference < 0) // Need to SKIP fake fields & frames, because we want to return to the original film frame rate
-		{
-
-			if (pulldown == PULLDOWN_CLASSIC && field % field_interval == 0)
-			{
-				// skip current field and toggle the odd/even flag
-				field_toggle = (field_toggle ? false : true);
-			}
-			else if (pulldown == PULLDOWN_ADVANCED && field % field_interval == 0 && field % frame_interval != 0)
-			{
-				// skip this field, plus the next field
-				field++;
-			}
-			else if (pulldown == PULLDOWN_NONE && frame % field_interval == 0)
-			{
-				// skip this field, plus the next one
-				field++;
-			}
-			else
-			{
-				// No skipping needed, so add the field
-				AddField(frame);
-			}
+			// Get frame interval (2 fields per frame)
+			frame_interval = field_interval * 2.0f;
 		}
 
-		// increment frame number (if field is divisible by 2)
-		if (field % 2 == 0 && field > 0)
-			frame++;
+
+		// Calculate # of fields to map
+		int frame = 1;
+		int number_of_fields = reader->info.video_length * 2;
+
+		// Loop through all fields in the original video file
+		for (int field = 1; field <= number_of_fields; field++)
+		{
+
+			if (difference == 0) // Same frame rate, NO pull-down or special techniques required
+			{
+				// Add fields
+				AddField(frame);
+			}
+			else if (difference > 0) // Need to ADD fake fields & frames, because original video has too few frames
+			{
+				// Add current field
+				AddField(frame);
+
+				if (pulldown == PULLDOWN_CLASSIC && field % field_interval == 0)
+				{
+					// Add extra field for each 'field interval
+					AddField(frame);
+				}
+				else if (pulldown == PULLDOWN_ADVANCED && field % field_interval == 0 && field % frame_interval != 0)
+				{
+					// Add both extra fields in the middle 'together' (i.e. 2:3:3:2 technique)
+					AddField(frame); // add field for current frame
+
+					if (frame + 1 <= info.video_length)
+						// add field for next frame (if the next frame exists)
+						AddField(Field(frame + 1, field_toggle));
+				}
+				else if (pulldown == PULLDOWN_NONE && field % frame_interval == 0)
+				{
+					// No pull-down technique needed, just repeat this frame
+					AddField(frame);
+					AddField(frame);
+				}
+			}
+			else if (difference < 0) // Need to SKIP fake fields & frames, because we want to return to the original film frame rate
+			{
+
+				if (pulldown == PULLDOWN_CLASSIC && field % field_interval == 0)
+				{
+					// skip current field and toggle the odd/even flag
+					field_toggle = (field_toggle ? false : true);
+				}
+				else if (pulldown == PULLDOWN_ADVANCED && field % field_interval == 0 && field % frame_interval != 0)
+				{
+					// skip this field, plus the next field
+					field++;
+				}
+				else if (pulldown == PULLDOWN_NONE && frame % field_interval == 0)
+				{
+					// skip this field, plus the next one
+					field++;
+				}
+				else
+				{
+					// No skipping needed, so add the field
+					AddField(frame);
+				}
+			}
+
+			// increment frame number (if field is divisible by 2)
+			if (field % 2 == 0 && field > 0)
+				frame++;
+		}
+
+	} else {
+		// Map the remaining framerates using a simple Keyframe curve
+		// Calculate the difference (to be used as a multiplier)
+		float rate_diff = target.GetFPS() / original.GetFPS();
+		int new_length = reader->info.video_length * rate_diff;
+
+		// Build curve for framerate mapping
+		Keyframe rate_curve;
+		rate_curve.AddPoint(1, 1, LINEAR);
+		rate_curve.AddPoint(new_length, reader->info.video_length, LINEAR);
+
+		// Loop through curve, and build list of frames
+		for (int frame_num = 1; frame_num <= new_length; frame_num++)
+		{
+			// Add 2 fields per frame
+			AddField(rate_curve.GetInt(frame_num));
+			AddField(rate_curve.GetInt(frame_num));
+		}
 	}
 
 	// Loop through the target frames again (combining fields into frames)
@@ -209,7 +233,7 @@ void FrameMapper::Init()
 				if (original_samples >= remaining_samples)
 				{
 					// Take all that we need, and break loop
-					end_samples_position = remaining_samples;
+					end_samples_position += remaining_samples;
 					remaining_samples = 0;
 				} else
 				{
@@ -219,6 +243,8 @@ void FrameMapper::Init()
 					remaining_samples -= original_samples; // reduce the remaining amount
 				}
 			}
+
+
 
 			// Create the sample mapping struct
 			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, GetSamplesPerFrame(frame_number, target.GetFraction())};
