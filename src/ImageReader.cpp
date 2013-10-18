@@ -105,23 +105,21 @@ void ImageReader::Close()
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderClosed)
 {
-	if (image)
-	{
-		// Create or get frame object
-		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
-		image_frame->SetSampleRate(44100);
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
-		// Add Image data to frame
-		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
-		copy_image->modifyImage(); // actually copy the image data to this object
-		image_frame->AddImage(copy_image);
+	// Create or get frame object
+	tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+	image_frame->SetSampleRate(44100);
 
-		// return frame object
-		return image_frame;
-	}
-	else
-		// no frame loaded
-		throw InvalidFile("No frame could be created from this type of file.", path);
+	// Add Image data to frame
+	tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+	copy_image->modifyImage(); // actually copy the image data to this object
+	image_frame->AddImage(copy_image);
+
+	// return frame object
+	return image_frame;
 }
 
 

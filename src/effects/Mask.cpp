@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Wipe class
+ * @brief Source file for Mask class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,44 +25,42 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/effects/Wipe.h"
+#include "../include/effects/Mask.h"
 
 using namespace openshot;
 
-// Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
-// is used to determine how similar colored pixels are matched. The higher the fuzz, the
-// more colors are matched.
-Wipe::Wipe(string mask_path, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile) :
-		path(mask_path), brightness(mask_brightness), contrast(mask_contrast)
+// Default constructor
+Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed) :
+		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast)
 {
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
-	info.name = "Wipe (Transition)";
+	info.name = "Alpha Mask / Wipe Transition";
 	info.description = "Uses a grayscale mask image file to gradually wipe / transition between 2 images.";
 	info.has_audio = false;
 	info.has_video = true;
 
-	// Attempt to open mask file
-	try
-	{
-		// load image
-		mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
-		//mask->type(Magick::GrayscaleType); // convert to grayscale
-
-		// Remove transparency support (so mask will sub color brightness for alpha)
-		mask->matte(false); // This is required for the composite operator to copy the brightness of each pixel into the alpha channel
-
-	}
-	catch (Magick::Exception e) {
-		// raise exception
-		throw InvalidFile("File could not be opened.", path);
-	}
+//	// Attempt to open mask file
+//	try
+//	{
+//		// load image
+//		mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
+//		//mask->type(Magick::GrayscaleType); // convert to grayscale
+//
+//		// Remove transparency support (so mask will sub color brightness for alpha)
+//		mask->matte(false); // This is required for the composite operator to copy the brightness of each pixel into the alpha channel
+//
+//	}
+//	catch (Magick::Exception e) {
+//		// raise exception
+//		throw InvalidFile("File could not be opened.", path);
+//	}
 }
 
 // Set brightness and contrast (brightness between -100 and 100)
-void Wipe::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast)
+void Mask::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast)
 {
 	// Determine if white or black image is needed
 	if (brightness >= -100.0 and brightness <= 0.0)
@@ -92,8 +90,13 @@ void Wipe::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, flo
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
+tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
+	// Get the mask image (from the mask reader)
+	mask = reader->GetFrame(frame_number)->GetImage();
+	mask->type(Magick::GrayscaleType); // convert to grayscale
+	mask->matte(false); // Remove transparency from the image. This is required for the composite operator to copy the brightness of each pixel into the alpha channel
+
 	// Resize mask to match this frame size (if different)
 	if (frame->GetImage()->size() != mask->size())
 	{
@@ -102,18 +105,15 @@ tr1::shared_ptr<Frame> Wipe::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 		mask->resize(new_size);
 	}
 
-	// Make a copy of the resized mask image (since we will be modifying the brightness and contrast)
-	tr1::shared_ptr<Magick::Image> mask_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*mask.get()));
-
 	// Set the brightness of the mask (from a user-defined curve)
-	set_brightness_and_contrast(mask_image, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
+	set_brightness_and_contrast(mask, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
 	// Get copy of our source frame's image
 	tr1::shared_ptr<Magick::Image> copy_source = tr1::shared_ptr<Magick::Image>(new Magick::Image(*frame->GetImage().get()));
 	copy_source->channel(Magick::MatteChannel); // extract alpha channel as grayscale image
 	copy_source->matte(false); // remove alpha channel
 	copy_source->negate(true); // negate source alpha channel before multiplying mask
-	copy_source->composite(*mask_image.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
+	copy_source->composite(*mask.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
 
 	// Copy the combined alpha channel back to the frame
 	frame->GetImage()->composite(*copy_source.get(), 0, 0, Magick::CopyOpacityCompositeOp);

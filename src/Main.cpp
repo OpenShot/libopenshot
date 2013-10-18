@@ -41,6 +41,20 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	// Image of interlaced frame
+	ImageReader ir("/home/jonathan/apps/libopenshot/src/examples/interlaced.png");
+	ir.Open();
+
+	// FrameMapper to de-interlace frame
+	//FrameMapper fm(&ir, Framerate(24,1), PULLDOWN_NONE);
+	//fm.DeInterlaceFrame(ir.GetFrame(1), true)->Display();
+	Deinterlace de(false);
+	de.GetFrame(ir.GetFrame(1), 1)->Display();
+
+
+	return 0;
+
+
 	// Reader
 	FFmpegReader r1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r1.Open();

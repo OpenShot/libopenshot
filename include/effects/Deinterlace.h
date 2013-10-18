@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Wipe class
+ * @brief Header file for De-interlace class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,8 +25,8 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_WIPE_EFFECT_H
-#define OPENSHOT_WIPE_EFFECT_H
+#ifndef OPENSHOT_NEGATE_EFFECT_H
+#define OPENSHOT_NEGATE_EFFECT_H
 
 #include "../EffectBase.h"
 
@@ -47,32 +47,21 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to remove (i.e. key out) a color (i.e. greenscreen)
+	 * @brief This class uses the ImageMagick++ libraries, to de-interlace the image, which
+	 * removes the EVEN or ODD horizontal lines (which represent different points of time).
 	 *
-	 * The greenscreen / bluescreen effect replaces matching colors in the video image with
-	 * transparent pixels, revealing lower layers in the timeline.
+	 * This is most useful when converting video made for traditional TVs to computers,
+	 * which are not interlaced.
 	 */
-	class Wipe : public EffectBase
+	class Deinterlace : public EffectBase
 	{
 	private:
-		string path;
-		Keyframe brightness;
-		Keyframe contrast;
-		tr1::shared_ptr<Magick::Image> mask;
-
-		/// Set brightness and contrast
-		void set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast);
+		bool isOdd;
 
 	public:
 
-		/// Default constructor, which takes 2 curves and a mask image path. The mask is used to
-		/// determine the alpha for each pixel (black is transparend, white is visible). The curves
-		/// adjust the brightness and contrast of this file, to animate the effect.
-		///
-		/// @param mask_path The path of a grayscale mask file, to be used by the wipe transition
-		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask
-		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask
-		Wipe(string mask_path, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile);
+		/// Default constructor
+		Deinterlace(bool isOdd);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
