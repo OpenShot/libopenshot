@@ -279,10 +279,13 @@ void FrameMapper::Init()
 MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
 {
 	// Check if frame number is valid
-	if(TargetFrameNumber < 1 || TargetFrameNumber > frames.size())
-	{
+	if(TargetFrameNumber < 1)
+		// frame too small, return error
 		throw OutOfBoundsFrame("An invalid frame was requested.", TargetFrameNumber, frames.size());
-	}
+
+	else if (TargetFrameNumber > frames.size())
+		// frame too large, set to end frame
+		TargetFrameNumber = frames.size();
 
 	// Return frame
 	return frames[TargetFrameNumber - 1];
@@ -369,41 +372,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 	// Return processed 'frame'
 	return final_cache.GetFrame(frame->number);
-}
-
-void FrameMapper::MapTime(Keyframe new_time) throw(OutOfBoundsFrame)
-{
-	// New time-mapped frames vector
-	vector<MappedFrame> time_mapped_frames;
-
-	// Loop through each coordinate of the Keyframe
-	for (int keyframe_number = 1; keyframe_number < new_time.Values.size(); keyframe_number++) {
-		// Get the current coordinate from the Keyframe
-		Coordinate c = new_time.Values[keyframe_number];
-
-		// Get the requested time-mapped frame number... and make it zero based, to match
-		// the existing frame mapper vector.
-		int requested_frame = round(c.Y) - 1;
-
-		// Check if frame number is valid
-		if(requested_frame < 0 || requested_frame >= frames.size())
-		{
-			throw OutOfBoundsFrame("An invalid frame was requested.", requested_frame + 1, frames.size());
-		}
-
-		// Add the Keyframe requested frame to the new "time-mapped" frames vector
-		time_mapped_frames.push_back(frames[requested_frame]);
-	}
-
-	// Now that we have a new vector of frames that match the Keyframe, we need
-	// to replace the internal frames vector with this new one.
-	frames.clear();
-	for (int new_frame = 0; new_frame < time_mapped_frames.size(); new_frame++)
-	{
-		// Add new frames to this frame mapper instance
-		frames.push_back(time_mapped_frames[new_frame]);
-	}
-
 }
 
 // Calculate the # of samples per video frame (for a specific frame number)

@@ -183,47 +183,6 @@ namespace openshot
 		/// Set the source framerate
 		void SourceFPS(Framerate new_fps) { original = new_fps; };
 
-		/**
-		 * @brief Re-map time to slow down, speed up, or reverse a clip based on a Keyframe.
-		 *
-		 * This method re-maps the time of a clip, or in other words, changes the sequence and/or
-		 * duration of frames in a clip.  Because this method accepts a Keyframe, the time, sequence,
-		 * and direction of frames can be based on LINEAR, BEZIER, or CONSTANT values.
-		 *
-		 * The X axis of the Keyframe represents the time (in frames) of this clip.  If you make the
-		 * X axis longer than the number of frames in the clip, if will slow down your clip.  If the
-		 * X axis is shorter than your clip, it will speed up your clip.  The Y axis determines which
-		 * original frame from the media file will be played.  For example, if you clip has 100 frames,
-		 * and your Keyframe goes from (1,1) to (100,100), the clip will playback in the original sequence,
-		 * and at the original speed.  If your Keyframe goes from (1,100) to (100,1), it will playback in the
-		 * reverse direction, and at normal speed.  If your Keyframe goes from (1,100) to (500,1),
-		 * it will play in reverse at 1/5 the original speed.
-		 *
-		 * Please see the following <b>Example Code</b>:
-		 * \code
-		 * // Create a mapping between 24 fps and 24 fps (a mapping is required for time-remapping)
-		 * FrameMapper mapping(100, Framerate(24, 1), Framerate(24, 1), PULLDOWN_NONE);
-		 *
-		 * // Print the mapping (before it's been time-mapped)
-		 * mapping.PrintMapping();
-		 * cout << "-----------------------" << endl;
-		 *
-		 * // Create a Keyframe to re-map time (forward, reverse, and then forward again)
-		 * Keyframe kf;
-		 * kf.AddPoint(Point(Coordinate(1, 1), LINEAR));
-		 * kf.AddPoint(Point(Coordinate(40, 40), LINEAR));
-		 * kf.AddPoint(Point(Coordinate(60, 20), LINEAR)); // Reverse for 20 frames
-		 * kf.AddPoint(Point(Coordinate(100, 100), LINEAR)); // Play to end (in fast forward)
-		 *
-		 * // Use the Keyframe to remap the time of this clip
-		 * mapping.MapTime(kf);
-		 *
-		 * // Print the mapping again (to see the time remapping)
-		 * mapping.PrintMapping();
-		 * \endcode
-		 */
-		void MapTime(Keyframe new_time) throw(OutOfBoundsFrame);
-
 		/// Open the internal reader
 		void Open() throw(InvalidFile);
 
