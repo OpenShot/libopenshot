@@ -42,33 +42,33 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 	// Image of interlaced frame
-	ImageReader ir("/home/jonathan/apps/libopenshot/src/examples/interlaced.png");
-	ir.Open();
-
-	// FrameMapper to de-interlace frame
-	//FrameMapper fm(&ir, Framerate(24,1), PULLDOWN_NONE);
-	//fm.DeInterlaceFrame(ir.GetFrame(1), true)->Display();
-	Deinterlace de(false);
-	de.GetFrame(ir.GetFrame(1), 1)->Display();
-
-
-	return 0;
+//	ImageReader ir("/home/jonathan/apps/libopenshot/src/examples/interlaced.png");
+//	ir.Open();
+//
+//	// FrameMapper to de-interlace frame
+//	//FrameMapper fm(&ir, Framerate(24,1), PULLDOWN_NONE);
+//	//fm.DeInterlaceFrame(ir.GetFrame(1), true)->Display();
+//	Deinterlace de(false);
+//	de.GetFrame(ir.GetFrame(1), 1)->Display();
+//
+//
+//	return 0;
 
 
 	// Reader
-	FFmpegReader r1("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	FFmpegReader r1("/home/jonathan/colors-24-converted-to-29-97-fps-pulldown-advanced.mp4");
 	r1.Open();
 
 	// FrameMapper
-	FrameMapper r(&r1, Framerate(100,1), PULLDOWN_NONE);
-	//r.PrintMapping();
+	FrameMapper r(&r1, Framerate(24,1), PULLDOWN_ADVANCED);
+	r.PrintMapping();
 
 	/* WRITER ---------------- */
 	FFmpegWriter w("/home/jonathan/output.mp4");
 
 	// Set options
 	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
-	w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
+	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
 	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
 	w.SetVideoOptions(true, "mpeg4", r.info.fps, 1280, 720, Fraction(1,1), false, false, 3000000);
 
@@ -82,8 +82,18 @@ int main(int argc, char* argv[])
 	w.OutputStreamInfo();
 
 	//for (int frame = 3096; frame <= 3276; frame++)
-	for (int frame = 1; frame <= 1500; frame++)
+	for (int frame = 1; frame <= 20; frame++)
 	{
+//		tr1::shared_ptr<Frame> f(new Frame(frame, 1280, 720, "#000000", 44100, 2));
+//		if (frame % 2 == 0)
+//			f->AddColor(1280, 720, "Yellow");
+//		else
+//			f->AddColor(1280, 720, "Black");
+//
+//		f->AddOverlayNumber(f->number);
+//		cout << f->number << endl;
+//		w.WriteFrame(f);
+
 		tr1::shared_ptr<Frame> f = r.GetFrame(frame);
 		if (f)
 		{
@@ -93,6 +103,7 @@ int main(int argc, char* argv[])
 			//f->Display();
 
 			// Write frame
+			f->Display();
 			cout << "queue frame " << frame << " (" << f->number << ", " << f << ")" << endl;
 			w.WriteFrame(f);
 		}

@@ -512,7 +512,7 @@ void Frame::AddImage(int width, int height, const string map, const Magick::Stor
 void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 {
 	// assign image data
-	image = new_image;
+	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
 
 	// Update height and width
 	width = image->columns();
@@ -524,7 +524,7 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lin
 {
 	// Replace image (if needed)
 	if (image->columns() == 1)
-		image = new_image;
+		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
 
 	// Loop through each odd or even line, and copy it to the image
 	int starting_row = 0;
@@ -557,7 +557,7 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 {
 	// Replace image (if needed)
 	if (image->columns() == 1)
-		image = new_image;
+		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
 	else
 	{
 		// Calculate opacity of new image

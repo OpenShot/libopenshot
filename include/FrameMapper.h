@@ -160,14 +160,6 @@ namespace openshot
 		/// Close the internal reader
 		void Close();
 
-		/// @brief This method de-interlaces a frame which has alternating fields. In other words
-		/// alternating horizontal lines, that represent 2 different points of time.
-		///
-		/// @returns The de-interlaced frame of video
-		/// @param frame The frame which needs to be de-interlaced
-		/// @param isOdd Use the odd horizontal lines (if false, the Even lines are used)
-		tr1::shared_ptr<Frame> DeInterlaceFrame(tr1::shared_ptr<Frame> frame, bool isOdd);
-
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
