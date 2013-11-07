@@ -128,8 +128,9 @@ SET ( OPENSHOT_SOURCE_FILES
 		FrameRate.cpp
 		KeyFrame.cpp
 		ImageReader.cpp
-		Player.cpp
+		PlayerBase.cpp
 		Point.cpp
+		SDLPlayer.cpp
 		TextReader.cpp
 		Timeline.cpp
 		

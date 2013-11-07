@@ -41,6 +41,15 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r2.Open();
+	SDLPlayer p;
+	p.Reader(&r2);
+	p.Play();
+	return 0;
+
+
+
 	// Image of interlaced frame
 //	ImageReader ir("/home/jonathan/apps/libopenshot/src/examples/interlaced.png");
 //	ir.Open();

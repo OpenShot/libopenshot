@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Player class
+ * @brief Source file for QtPlayer class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE

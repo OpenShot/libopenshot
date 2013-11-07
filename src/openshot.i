@@ -66,9 +66,10 @@
 #include "../include/FrameMapper.h"
 #include "../include/FrameRate.h"
 #include "../include/ImageReader.h"
-#include "../include/Player.h"
+#include "../include/PlayerBase.h"
 #include "../include/Point.h"
 #include "../include/KeyFrame.h"
+#include "../include/SDLPlayer.h"
 #include "../include/TextReader.h"
 #include "../include/Timeline.h"
 
@@ -110,9 +111,10 @@
 %include "../include/FrameMapper.h"
 %include "../include/FrameRate.h"
 %include "../include/ImageReader.h"
-%include "../include/Player.h"
+%include "../include/PlayerBase.h"
 %include "../include/Point.h"
 %include "../include/KeyFrame.h"
+%include "../include/SDLPlayer.h"
 %include "../include/TextReader.h"
 %include "../include/Timeline.h"
 
