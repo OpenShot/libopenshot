@@ -65,12 +65,20 @@ IF (QT_EXECUTABLE)
 ENDIF (QT_EXECUTABLE)
 
 # Find QT4 libraries
-FIND_PACKAGE(Qt4 REQUIRED)
+FIND_PACKAGE(Qt4 COMPONENTS QtCore QtGui QtMultimedia REQUIRED)
 
 # Include Qt headers (needed for compile)
 include(${QT_USE_FILE})
 include_directories(${QT_INCLUDES})
 add_definitions(${QT_DEFINITIONS})
+
+# Add Multimedia library
+SET(QT_LIBRARIES ${QT_LIBRARIES} ${QT_QTMULTIMEDIA_LIBRARY})
+
+# Moc all Qt headers
+FILE(GLOB QT_HEADERS "/home/jonathan/apps/libopenshot/include/Qt/*.h")
+qt4_wrap_cpp (QT_MOC_FILES ${QT_HEADERS})
+message('${QT_MOC_FILES}')
 
 
 ################# BLACKMAGIC DECKLINK ###################
@@ -133,6 +141,12 @@ SET ( OPENSHOT_SOURCE_FILES
 		SDLPlayer.cpp
 		TextReader.cpp
 		Timeline.cpp
+		
+		# Qt Video Player
+		${QT_MOC_FILES}
+		Qt/videoplayer.cpp
+		Qt/videowidget.cpp
+		Qt/videowidgetsurface.cpp
 		
 		# Third Party JSON Parser
 		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp

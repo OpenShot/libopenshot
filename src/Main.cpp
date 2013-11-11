@@ -33,20 +33,96 @@
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 #include <omp.h>
-#include <qdir.h>
+#include <qt4/QtCore/qdir.h>
+#include <qt4/QtMultimedia/qvideoframe.h>
+#include <qt4/QtMultimedia/qvideosurfaceformat.h>
+#include <QtGui/QApplication>
 
 using namespace openshot;
 using namespace tr1;
 
-
 int main(int argc, char* argv[])
 {
+
+	// Start Qt Application
+	QApplication app(argc, argv);\
+
+	// Init video player widget
+	VideoPlayer player;
+	player.showMaximized();
+
+	// Prepare video surface
+	VideoWidgetSurface * videoWidget = new VideoWidgetSurface(&player);
+	QSize videoSize(1280, 720); // supplement with your video dimensions
+
+	// look at VideoWidgetSurface::supportedPixelFormats for supported formats
+	QVideoSurfaceFormat format( videoSize, QVideoFrame::Format_ARGB32);
+
+
+
+	// Get test frame
 	FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r2.Open();
-	SDLPlayer p;
-	p.Reader(&r2);
-	p.Play();
-	return 0;
+	tr1::shared_ptr<Frame> frame = r2.GetFrame(600);
+
+	// Get image
+	tr1::shared_ptr<Magick::Image> image = r2.GetFrame(300)->GetImage();
+
+	// Create Qt Video Frame
+	QVideoFrame aFrame(32 * image->size().width() * image->size().height(), QSize(image->size().width(), image->size().height()), 32 * image->size().width(), QVideoFrame::Format_ARGB32);
+
+	// Get a reference to the internal videoframe buffer
+	aFrame.map(QAbstractVideoBuffer::WriteOnly);
+	uchar *pixels = aFrame.bits();
+
+	// Copy pixel data from ImageMagick to Qt
+	Magick::Blob my_blob_1;
+	image->write(&my_blob_1); // or PNG img1.write(&my_blob_1); const QByteArray imageData1((char*)(my_blob_1.data()),my_blob_1.length());
+
+	pixels = (uchar*)(my_blob_1.data()),my_blob_1.length();
+	//memcpy(pixels, my_blob_1.data(), my_blob_1.length());
+
+	// Get a list of pixels from source image
+//	const Magick::PixelPacket *pixel_packets = frame->GetPixels();
+//
+//	// Fill the AVFrame with RGB image data
+//	int source_total_pixels = image->size().width() * image->size().height();
+//	for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=4)
+//	{
+//		// Update buffer (which is already linked to the AVFrame: pFrameRGB)
+//		// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
+//		pixels[row] = 255;
+//		pixels[row+1] = 255;
+//		pixels[row+2] = pixel_packets[packet].green >> 8;
+//		pixels[row+3] = pixel_packets[packet].blue >> 8;
+//		//pixels[row] = qRgb(pixel_packets[packet].red, pixel_packets[packet].green, pixel_packets[packet].blue);
+//	}
+	aFrame.unmap();
+
+	// Start video player (which sets format's size)
+	videoWidget->start(format);
+
+	// Display frame
+	videoWidget->present(aFrame);
+
+
+
+	// Start Qt App
+    return app.exec();
+
+
+
+
+
+
+
+
+//	FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+//	r2.Open();
+//	SDLPlayer p;
+//	p.Reader(&r2);
+//	p.Play();
+//	return 0;
 
 
 
