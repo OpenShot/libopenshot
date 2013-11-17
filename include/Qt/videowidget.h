@@ -43,7 +43,8 @@
 
  #include "videowidgetsurface.h"
 
- #include <QtGui/QWidget>
+ //#include <QtGui/QWidget>
+#include <qt5/QtWidgets/qwidget.h>
 
  class QAbstractVideoSurface;
 

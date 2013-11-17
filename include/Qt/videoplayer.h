@@ -41,8 +41,11 @@
  #ifndef VIDEOPLAYER_H
  #define VIDEOPLAYER_H
 
- #include <QtGui/QMovie>
- #include <QtGui/QWidget>
+#include <qt5/QtGui/qmovie.h>
+#include <qt5/QtWidgets/qwidget.h>
+
+// #include <QtGui/QMovie>
+// #include <QtGui/QWidget>
 
  class QAbstractButton;
  class QAbstractVideoSurface;

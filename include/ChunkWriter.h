@@ -37,7 +37,7 @@
 #include <iostream>
 #include <fstream>
 #include <omp.h>
-#include <qdir.h>
+#include <qt5/QtCore/qdir.h>
 #include <stdio.h>
 #include <sstream>
 #include <unistd.h>

@@ -41,10 +41,16 @@
  #ifndef VIDEOWIDGETSURFACE_H
  #define VIDEOWIDGETSURFACE_H
 
- #include <QtCore/QRect>
- #include <QtGui/QImage>
- #include <QtMultimedia/QAbstractVideoSurface>
- #include <QtMultimedia/QVideoFrame>
+#include <qt5/QtCore/qrect.h>
+#include <qt5/QtGui/qimage.h>
+#include <qt5/QtMultimedia/qabstractvideosurface.h>
+#include <qt5/QtMultimedia/qvideoframe.h>
+
+
+ //#include <QtCore/QRect>
+ //#include <QtGui/QImage>
+ //#include <QtMultimedia/QAbstractVideoSurface>
+ //#include <QtMultimedia/QVideoFrame>
  #include <iostream>
 
 using namespace std;
