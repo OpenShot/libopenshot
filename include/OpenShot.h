@@ -124,9 +124,9 @@
 #include "Timeline.h"
 
 /* Qt Video Player */
-#include "Qt/videoplayer.h"
-#include "Qt/videowidget.h"
-#include "Qt/videowidgetsurface.h"
+//#include "Qt/videoplayer.h"
+//#include "Qt/videowidget.h"
+//#include "Qt/videowidgetsurface.h"
 
 /* Effects */
 #include "effects/ChromaKey.h"

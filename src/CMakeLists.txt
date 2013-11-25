@@ -56,6 +56,7 @@ include_directories(${SDL_INCLUDE_DIR})
 
 ################# QT5 ###################
 set(CMAKE_AUTOMOC ON)
+#set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.1.1/")
 
 # Find QT5 libraries
 find_package(Qt5Widgets)
