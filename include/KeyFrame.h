@@ -36,6 +36,7 @@
 #include "Fraction.h"
 #include "Coordinate.h"
 #include "Point.h"
+#include "Json.h"
 
 using namespace std;
 using namespace openshot;
@@ -118,9 +119,6 @@ namespace openshot {
 		/// Get the rounded INT value at a specific index
 		int GetInt(int index);
 
-		/// Get the direction of the curve at a specific index (increasing or decreasing)
-		bool IsIncreasing(int index);
-
 		/// Get the fraction that represents how many times this value is repeated in the curve
 		Fraction GetRepeatFraction(int index);
 
@@ -132,6 +130,12 @@ namespace openshot {
 
 		// Get the number of values (i.e. coordinates on the X axis)
 		int GetLength();
+
+		/// Get the direction of the curve at a specific index (increasing or decreasing)
+		bool IsIncreasing(int index);
+
+		/// Generate JSON of keyframe data
+		string Json();
 
 		/**
 		 * @brief Calculate all of the values for this keyframe.

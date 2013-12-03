@@ -237,6 +237,47 @@ bool Keyframe::IsIncreasing(int index)
 		return true;
 }
 
+// Generate JSON of keyframe data
+string Keyframe::Json() {
+
+	// Check if it needs to be processed
+	if (needs_update)
+		Process();
+
+	// Create root json object
+	Json::Value root = Json::Value(Json::arrayValue);
+
+	// loop through points, and find a matching coordinate
+	for (int x = 0; x < Points.size(); x++) {
+		// Get each point
+		Point existing_point = Points[x];
+
+		// Create new point object
+		Json::Value point = Json::Value(Json::objectValue);
+		point["interpolation"] = existing_point.interpolation;
+		point["handle_type"] = existing_point.handle_type;
+		point["co"] = Json::Value(Json::objectValue);
+		point["co"]["X"] = existing_point.co.X;
+		point["co"]["Y"] = existing_point.co.Y;
+
+		point["left"] = Json::Value(Json::objectValue);
+		point["left"]["X"] = existing_point.handle_left.X;
+		point["left"]["Y"] = existing_point.handle_left.Y;
+
+		point["right"] = Json::Value(Json::objectValue);
+		point["right"]["X"] = existing_point.handle_right.X;
+		point["right"]["Y"] = existing_point.handle_right.Y;
+
+		// Append point to array
+		root.append(point);
+
+	}
+
+	// return formatted json string
+	return root.toStyledString();
+
+}
+
 // Get the fraction that represents how many times this value is repeated in the curve
 Fraction Keyframe::GetRepeatFraction(int index)
 {

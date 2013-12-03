@@ -97,6 +97,9 @@ namespace openshot
 		/// this method, or the WriterInfo struct values will not be initialized.
 		void InitFileInfo();
 
+		/// Generate JSON string of writer info
+		string Json();
+
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
 	};

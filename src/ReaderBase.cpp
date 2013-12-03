@@ -95,3 +95,51 @@ void ReaderBase::DisplayInfo() {
 	cout << "----------------------------" << endl;
 }
 
+// Generate JSON string of reader info
+string ReaderBase::Json() {
+
+	// Create root json object
+	Json::Value root;
+	root["has_video"] = info.has_video;
+	root["has_audio"] = info.has_audio;
+	root["duration"] = info.duration;
+	stringstream filesize_stream;
+	filesize_stream << info.file_size;
+	root["file_size"] = filesize_stream.str();
+	root["height"] = info.height;
+	root["width"] = info.width;
+	root["pixel_format"] = info.pixel_format;
+	root["fps"] = Json::Value(Json::objectValue);
+	root["fps"]["num"] = info.fps.num;
+	root["fps"]["den"] = info.fps.den;
+	root["video_bit_rate"] = info.video_bit_rate;
+	root["pixel_ratio"] = Json::Value(Json::objectValue);
+	root["pixel_ratio"]["num"] = info.pixel_ratio.num;
+	root["pixel_ratio"]["den"] = info.pixel_ratio.den;
+	root["display_ratio"] = Json::Value(Json::objectValue);
+	root["display_ratio"]["num"] = info.display_ratio.num;
+	root["display_ratio"]["den"] = info.display_ratio.den;
+	root["vcodec"] = info.vcodec;
+	stringstream video_length_stream;
+	video_length_stream << info.video_length;
+	root["video_length"] = video_length_stream.str();
+	root["video_stream_index"] = info.video_stream_index;
+	root["video_timebase"] = Json::Value(Json::objectValue);
+	root["video_timebase"]["num"] = info.video_timebase.num;
+	root["video_timebase"]["den"] = info.video_timebase.den;
+	root["interlaced_frame"] = info.interlaced_frame;
+	root["top_field_first"] = info.top_field_first;
+	root["acodec"] = info.acodec;
+	root["audio_bit_rate"] = info.audio_bit_rate;
+	root["sample_rate"] = info.sample_rate;
+	root["channels"] = info.channels;
+	root["audio_stream_index"] = info.audio_stream_index;
+	root["audio_timebase"] = Json::Value(Json::objectValue);
+	root["audio_timebase"]["num"] = info.audio_timebase.num;
+	root["audio_timebase"]["den"] = info.audio_timebase.den;
+
+	// return formatted json string
+	return root.toStyledString();
+}
+
+

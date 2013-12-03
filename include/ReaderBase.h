@@ -33,6 +33,7 @@
 #include <tr1/memory>
 #include "Fraction.h"
 #include "Frame.h"
+#include "Json.h"
 
 using namespace std;
 
@@ -102,6 +103,9 @@ namespace openshot
 		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
 		/// this method, or the ReaderInfo struct values will not be initialized.
 		void InitFileInfo();
+
+		/// Generate JSON string of reader info
+		string Json();
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

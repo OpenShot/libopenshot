@@ -535,3 +535,24 @@ int Clip::GetSamplesPerFrame(int frame_number, Fraction rate) throw(ReaderClosed
 	double samples_per_frame = total_samples - previous_samples;
 	return samples_per_frame;
 }
+
+// Generate JSON of clip data
+string Clip::Json() {
+
+	// Create root json object
+	Json::Value root;
+	root["position"] = Position();
+	root["layer"] = Layer();
+	root["start"] = Start();
+	root["end"] = End();
+	root["gravity"] = gravity;
+	root["scale"] = scale;
+	root["anchor"] = anchor;
+	root["waveform"] = waveform;
+
+	// return formatted json string
+	return root.toStyledString();
+
+}
+
+
