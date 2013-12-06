@@ -25,59 +25,32 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectBase.h"
+#include "../include/Color.h"
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
-void EffectBase::InitEffectInfo()
-{
-	// Init clip settings
-	Position(0.0);
-	Layer(0);
-	Start(0.0);
-	End(0.0);
-	Order(0);
-
-	info.has_video = false;
-	info.has_audio = false;
-	info.name = "";
-	info.description = "";
-}
-
-// Display file information
-void EffectBase::DisplayInfo() {
-	cout << fixed << setprecision(2) << boolalpha;
-	cout << "----------------------------" << endl;
-	cout << "----- Effect Information -----" << endl;
-	cout << "----------------------------" << endl;
-	cout << "--> Name: " << info.name << endl;
-	cout << "--> Description: " << info.description << endl;
-	cout << "--> Has Video: " << info.has_video << endl;
-	cout << "--> Has Audio: " << info.has_audio << endl;
-	cout << "----------------------------" << endl;
-}
-
 // Generate JSON string of this object
-string EffectBase::Json() {
+string Color::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value EffectBase::JsonValue() {
+Json::Value Color::JsonValue() {
 
 	// Create root json object
-	Json::Value root = ClipBase::JsonValue(); // get parent properties
-	root["order"] = Order();
+	Json::Value root;
+	root["red"] = red.JsonValue();
+	root["green"] = green.JsonValue();
+	root["blue"] = blue.JsonValue();
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void EffectBase::Json(string value) throw(InvalidJSON) {
+void Color::Json(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -100,12 +73,13 @@ void EffectBase::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void EffectBase::Json(Json::Value root) {
-
-	// Set parent data
-	ClipBase::Json(root);
+void Color::Json(Json::Value root) {
 
 	// Set data from Json (if key is found)
-	if (root["order"] != Json::nullValue)
-		Order(root["order"].asInt());
+	if (root["red"] != Json::nullValue)
+		red.Json(root["red"]);
+	if (root["green"] != Json::nullValue)
+		green.Json(root["green"]);
+	if (root["blue"] != Json::nullValue)
+		blue.Json(root["blue"]);
 }

@@ -41,6 +41,10 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
+	Color c;
+	std::string a;
+	a = "{\"blue\":{\"Auto_Handle_Percentage\":0.4000000059604645,\"Points\":[]},\"red\":{\"Auto_Handle_Percentage\":0.4000000059604645,\"Points\":[{\"co\":{\"X\":0,\"Y\":243,\"delta\":0,\"increasing\":true,\"repeated\":{\"den\":1,\"num\":1}},\"handle_left\":{\"X\":0,\"Y\":243,\"delta\":0,\"increasing\":true,\"repeated\":{\"den\":1,\"num\":1}},\"handle_right\":{\"X\":0,\"Y\":243,\"delta\":0,\"increasing\":true,\"repeated\":{\"den\":1,\"num\":1}},\"handle_type\":0,\"interpolation\":0}]}}";
+	c.Json(a);
 
 //	FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 //	r2.Open();

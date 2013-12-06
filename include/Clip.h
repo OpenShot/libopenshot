@@ -181,8 +181,11 @@ namespace openshot {
 		float End() throw(ReaderClosed); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
-		/// Generate JSON of clip data
-		string Json();
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip

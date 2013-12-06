@@ -98,6 +98,7 @@
 #include "ChunkReader.h"
 #include "ChunkWriter.h"
 #include "Clip.h"
+#include "ClipBase.h"
 #include "Coordinate.h"
 #ifdef USE_BLACKMAGIC
 	#include "DecklinkReader.h"

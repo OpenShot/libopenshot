@@ -28,8 +28,7 @@
 #ifndef OPENSHOT_EXCEPTIONS_H
 #define OPENSHOT_EXCEPTIONS_H
 
-#include <cstring>
-
+#include <string>
 using namespace std;
 
 namespace openshot {

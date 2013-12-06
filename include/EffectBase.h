@@ -33,6 +33,7 @@
 #include <tr1/memory>
 #include "ClipBase.h"
 #include "Frame.h"
+#include "Json.h"
 
 using namespace std;
 
@@ -86,6 +87,12 @@ namespace openshot
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.
 		void InitEffectInfo();
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Get the order that this effect should be executed.
 		int Order() { return order; }

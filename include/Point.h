@@ -29,6 +29,10 @@
 #define OPENSHOT_POINT_H
 
 #include "Coordinate.h"
+#include "Exceptions.h"
+#include "Json.h"
+
+using namespace std;
 
 namespace openshot
 {
@@ -109,6 +113,12 @@ namespace openshot
 		 * to smooth the curve (if BEZIER interpolation mode is used)
 		 */
 		void Initialize_Handles(float Offset = 0.0f);
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 
 	};
 

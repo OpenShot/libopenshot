@@ -78,6 +78,12 @@ namespace openshot
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, int frame_number);
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 
 }

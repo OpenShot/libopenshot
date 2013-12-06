@@ -34,6 +34,8 @@
 #endif
 
 #include <tr1/memory>
+#include "Exceptions.h"
+#include "Json.h"
 
 using namespace std;
 
@@ -72,6 +74,12 @@ namespace openshot {
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 
 	};
 

@@ -29,7 +29,11 @@
 #define OPENSHOT_COORDINATE_H
 
 #include <iostream>
-#include "../include/Fraction.h"
+#include "Exceptions.h"
+#include "Fraction.h"
+#include "Json.h"
+
+using namespace std;
 
 namespace openshot {
 
@@ -85,6 +89,12 @@ namespace openshot {
 
 		/// Get the delta / difference between previous coordinate value (used internally on the timeline, to track changes to coordinates)
 		float Delta() { return delta; }
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 
 }

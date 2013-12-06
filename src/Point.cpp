@@ -92,3 +92,64 @@ void Point::Initialize_Handles(float Offset) {
 	handle_left = Coordinate(co.X - Offset, co.Y);
 	handle_right = Coordinate(co.X + Offset, co.Y);
 }
+
+// Generate JSON string of this object
+string Point::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Point::JsonValue() {
+
+	// Create root json object
+	Json::Value root;
+	root["co"] = co.JsonValue();
+	root["handle_left"] = handle_left.JsonValue();
+	root["handle_right"] = handle_right.JsonValue();
+	root["interpolation"] = interpolation;
+	root["handle_type"] = handle_type;
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Point::Json(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		Json(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Point::Json(Json::Value root) {
+
+	if (root["co"] != Json::nullValue)
+		co.Json(root["co"]); // update coordinate
+	if (root["handle_left"] != Json::nullValue)
+		handle_left.Json(root["handle_left"]); // update coordinate
+	if (root["handle_right"] != Json::nullValue)
+		handle_right.Json(root["handle_right"]); // update coordinate
+	if (root["interpolation"] != Json::nullValue)
+		interpolation = (InterpolationType) root["interpolation"].asInt();
+	if (root["handle_type"] != Json::nullValue)
+		handle_type = (HandleType) root["handle_type"].asInt();
+
+}

@@ -121,3 +121,60 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 	// return the modified frame
 	return frame;
 }
+
+// Generate JSON string of this object
+string Mask::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Mask::JsonValue() {
+
+	// Create root json object
+	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["brightness"] = brightness.JsonValue();
+	root["contrast"] = contrast.JsonValue();
+	//root["reader"] = reader.JsonValue();
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Mask::Json(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		Json(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Mask::Json(Json::Value root) {
+
+	// Set parent data
+	EffectBase::Json(root);
+
+	// Set data from Json (if key is found)
+	if (root["brightness"] != Json::nullValue)
+		brightness.Json(root["brightness"]);
+	if (root["contrast"] != Json::nullValue)
+		contrast.Json(root["contrast"]);
+}
+

@@ -42,6 +42,12 @@ namespace openshot {
 		Keyframe red; ///<Curve representing the red value (0 - 65536)
 		Keyframe green; ///<Curve representing the green value (0 - 65536)
 		Keyframe blue; ///<Curve representing the red blue (0 - 65536)
+
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void Json(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 
 

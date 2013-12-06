@@ -128,7 +128,9 @@ SET ( OPENSHOT_SOURCE_FILES
 		Cache.cpp
 		ChunkReader.cpp
 		ChunkWriter.cpp
+		Color.cpp
 		Clip.cpp
+		ClipBase.cpp
 		Coordinate.cpp
 		DummyReader.cpp
 		ReaderBase.cpp

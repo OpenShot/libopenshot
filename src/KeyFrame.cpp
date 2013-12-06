@@ -237,44 +237,82 @@ bool Keyframe::IsIncreasing(int index)
 		return true;
 }
 
-// Generate JSON of keyframe data
+// Generate JSON string of this object
 string Keyframe::Json() {
 
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Keyframe::JsonValue() {
 
 	// Create root json object
-	Json::Value root = Json::Value(Json::arrayValue);
+	Json::Value root;
+	root["Points"] = Json::Value(Json::arrayValue);
 
 	// loop through points, and find a matching coordinate
 	for (int x = 0; x < Points.size(); x++) {
 		// Get each point
 		Point existing_point = Points[x];
-
-		// Create new point object
-		Json::Value point = Json::Value(Json::objectValue);
-		point["interpolation"] = existing_point.interpolation;
-		point["handle_type"] = existing_point.handle_type;
-		point["co"] = Json::Value(Json::objectValue);
-		point["co"]["X"] = existing_point.co.X;
-		point["co"]["Y"] = existing_point.co.Y;
-
-		point["left"] = Json::Value(Json::objectValue);
-		point["left"]["X"] = existing_point.handle_left.X;
-		point["left"]["Y"] = existing_point.handle_left.Y;
-
-		point["right"] = Json::Value(Json::objectValue);
-		point["right"]["X"] = existing_point.handle_right.X;
-		point["right"]["Y"] = existing_point.handle_right.Y;
-
-		// Append point to array
-		root.append(point);
-
+		root["Points"].append(existing_point.JsonValue());
 	}
+	root["Auto_Handle_Percentage"] = Auto_Handle_Percentage;
 
-	// return formatted json string
-	return root.toStyledString();
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Keyframe::Json(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		Json(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Keyframe::Json(Json::Value root) {
+
+	// mark as dirty
+	needs_update = true;
+
+	// Clear existing points
+	Points.clear();
+
+	if (root["Points"] != Json::nullValue)
+		// loop through points, and find a matching coordinate
+		for (int x = 0; x < root["Points"].size(); x++) {
+			// Get each point
+			Json::Value existing_point = root["Points"][x];
+
+			// Create Point
+			Point p;
+
+			// Load Json into Point
+			p.Json(existing_point);
+
+			// Add Point to Keyframe
+			AddPoint(p);
+		}
+
+	if (root["Auto_Handle_Percentage"] != Json::nullValue)
+		Auto_Handle_Percentage = root["Auto_Handle_Percentage"].asBool();
 
 }
 

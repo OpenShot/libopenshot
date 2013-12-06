@@ -39,3 +39,70 @@ Coordinate::Coordinate() :
 Coordinate::Coordinate(float x, float y) :
 	X(x), Y(y), increasing(true), repeated(1,1), delta(0.0)  {
 }
+
+
+// Generate JSON string of this object
+string Coordinate::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Coordinate::JsonValue() {
+
+	// Create root json object
+	Json::Value root;
+	root["X"] = X;
+	root["Y"] = Y;
+	root["increasing"] = increasing;
+	root["repeated"] = Json::Value(Json::objectValue);
+	root["repeated"]["num"] = repeated.num;
+	root["repeated"]["den"] = repeated.den;
+	root["delta"] = delta;
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Coordinate::Json(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		Json(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Coordinate::Json(Json::Value root) {
+
+	// Set data from Json (if key is found)
+	if (root["X"] != Json::nullValue)
+		X = root["X"].asDouble();
+	if (root["Y"] != Json::nullValue)
+		Y = root["Y"].asDouble();
+	if (root["increasing"] != Json::nullValue)
+		increasing = root["increasing"].asBool();
+	if (root["repeated"] != Json::nullValue)
+	{
+		repeated.num = root["repeated"]["num"].asInt();
+		repeated.den = root["repeated"]["den"].asInt();
+	}
+	if (root["delta"] != Json::nullValue)
+		delta = root["delta"].asDouble();
+}

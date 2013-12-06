@@ -536,23 +536,63 @@ int Clip::GetSamplesPerFrame(int frame_number, Fraction rate) throw(ReaderClosed
 	return samples_per_frame;
 }
 
-// Generate JSON of clip data
+// Generate JSON string of this object
 string Clip::Json() {
 
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Clip::JsonValue() {
+
 	// Create root json object
-	Json::Value root;
-	root["position"] = Position();
-	root["layer"] = Layer();
-	root["start"] = Start();
-	root["end"] = End();
+	Json::Value root = ClipBase::JsonValue(); // get parent properties
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
 	root["waveform"] = waveform;
 
-	// return formatted json string
-	return root.toStyledString();
-
+	// return JsonValue
+	return root;
 }
 
+// Load JSON string into this object
+void Clip::Json(string value) throw(InvalidJSON) {
 
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		Json(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Clip::Json(Json::Value root) {
+
+	// Set parent data
+	ClipBase::Json(root);
+
+	// Set data from Json (if key is found)
+	if (root["gravity"] != Json::nullValue)
+		gravity = (GravityType) root["gravity"].asInt();
+	if (root["scale"] != Json::nullValue)
+		scale = (ScaleType) root["scale"].asInt();
+	if (root["anchor"] != Json::nullValue)
+		anchor = (AnchorType) root["anchor"].asInt();
+	if (root["waveform"] != Json::nullValue)
+		waveform = root["waveform"].asBool();
+}
