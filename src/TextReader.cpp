@@ -157,4 +157,55 @@ tr1::shared_ptr<Frame> TextReader::GetFrame(int requested_frame) throw(ReaderClo
 
 }
 
+// Generate Json::JsonValue for this object
+Json::Value TextReader::JsonValue() {
 
+	// Create root json object
+	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["width"] = width;
+	root["height"] = height;
+	root["x_offset"] = x_offset;
+	root["y_offset"] = y_offset;
+	root["text"] = text;
+	root["font"] = font;
+	root["size"] = size;
+	root["text_color"] = text_color;
+	root["background_color"] = background_color;
+	root["gravity"] = gravity;
+
+	// return JsonValue
+	return root;
+}
+
+// Load Json::JsonValue into this object
+void TextReader::Json(Json::Value root) throw(InvalidFile) {
+
+	// Set parent data
+	ReaderBase::Json(root);
+
+	// Set data from Json (if key is found)
+	if (root["width"] != Json::nullValue)
+		width = root["width"].asInt();
+	if (root["height"] != Json::nullValue)
+		height = root["height"].asInt();
+	if (root["x_offset"] != Json::nullValue)
+		x_offset = root["x_offset"].asInt();
+	if (root["y_offset"] != Json::nullValue)
+		y_offset = root["y_offset"].asInt();
+	if (root["text"] != Json::nullValue)
+		text = root["text"].asString();
+	if (root["font"] != Json::nullValue)
+		font = root["font"].asString();
+	if (root["size"] != Json::nullValue)
+		size = root["size"].asDouble();
+	if (root["text_color"] != Json::nullValue)
+		text_color = root["text_color"].asString();
+	if (root["background_color"] != Json::nullValue)
+		background_color = root["background_color"].asString();
+	if (root["gravity"] != Json::nullValue)
+		gravity = (GravityType) root["gravity"].asInt();
+
+	// Open path, and re-init everything
+	Close();
+	Open();
+}

@@ -1554,4 +1554,28 @@ int FFmpegReader::GetSmallestAudioFrame()
 	return smallest_frame;
 }
 
+// Generate Json::JsonValue for this object
+Json::Value FFmpegReader::JsonValue() {
 
+	// Create root json object
+	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["path"] = path;
+
+	// return JsonValue
+	return root;
+}
+
+// Load Json::JsonValue into this object
+void FFmpegReader::Json(Json::Value root) throw(InvalidFile) {
+
+	// Set parent data
+	ReaderBase::Json(root);
+
+	// Set data from Json (if key is found)
+	if (root["path"] != Json::nullValue)
+		path = root["path"].asString();
+
+	// Open path, and re-init everything
+	Close();
+	Open();
+}

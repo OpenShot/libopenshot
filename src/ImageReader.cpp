@@ -123,3 +123,28 @@ tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderCl
 }
 
 
+// Generate Json::JsonValue for this object
+Json::Value ImageReader::JsonValue() {
+
+	// Create root json object
+	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["path"] = path;
+
+	// return JsonValue
+	return root;
+}
+
+// Load Json::JsonValue into this object
+void ImageReader::Json(Json::Value root) throw(InvalidFile) {
+
+	// Set parent data
+	ReaderBase::Json(root);
+
+	// Set data from Json (if key is found)
+	if (root["path"] != Json::nullValue)
+		path = root["path"].asString();
+
+	// Open path, and re-init everything
+	Close();
+	Open();
+}
