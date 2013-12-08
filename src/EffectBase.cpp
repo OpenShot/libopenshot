@@ -77,7 +77,7 @@ Json::Value EffectBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void EffectBase::Json(string value) throw(InvalidJSON) {
+void EffectBase::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -90,7 +90,7 @@ void EffectBase::Json(string value) throw(InvalidJSON) {
 	try
 	{
 		// Set all values that match
-		Json(root);
+		SetJsonValue(root);
 	}
 	catch (exception e)
 	{
@@ -100,10 +100,10 @@ void EffectBase::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void EffectBase::Json(Json::Value root) {
+void EffectBase::SetJsonValue(Json::Value root) {
 
 	// Set parent data
-	ClipBase::Json(root);
+	ClipBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
 	if (root["order"] != Json::nullValue)

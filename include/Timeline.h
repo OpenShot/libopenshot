@@ -228,6 +228,12 @@ namespace openshot {
 		// Background color
 		Color color; ///<Background color of timeline canvas
 
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+
 		/// Open the reader (and start consuming resources)
 		void Open();
 

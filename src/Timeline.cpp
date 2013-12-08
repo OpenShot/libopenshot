@@ -532,3 +532,53 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		return final_cache.GetFrame(requested_frame);
 	}
 }
+
+
+// Generate JSON string of this object
+string Timeline::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value Timeline::JsonValue() {
+
+	// Create root json object
+	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["type"] = "Timeline";
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Timeline::SetJson(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile) {
+
+	// Set parent data
+	ReaderBase::SetJsonValue(root);
+
+}

@@ -66,7 +66,7 @@ Json::Value Coordinate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Coordinate::Json(string value) throw(InvalidJSON) {
+void Coordinate::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -79,7 +79,7 @@ void Coordinate::Json(string value) throw(InvalidJSON) {
 	try
 	{
 		// Set all values that match
-		Json(root);
+		SetJsonValue(root);
 	}
 	catch (exception e)
 	{
@@ -89,7 +89,7 @@ void Coordinate::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Coordinate::Json(Json::Value root) {
+void Coordinate::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (root["X"] != Json::nullValue)

@@ -116,7 +116,7 @@ Json::Value Point::JsonValue() {
 }
 
 // Load JSON string into this object
-void Point::Json(string value) throw(InvalidJSON) {
+void Point::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -129,7 +129,7 @@ void Point::Json(string value) throw(InvalidJSON) {
 	try
 	{
 		// Set all values that match
-		Json(root);
+		SetJsonValue(root);
 	}
 	catch (exception e)
 	{
@@ -139,14 +139,14 @@ void Point::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Point::Json(Json::Value root) {
+void Point::SetJsonValue(Json::Value root) {
 
 	if (root["co"] != Json::nullValue)
-		co.Json(root["co"]); // update coordinate
+		co.SetJsonValue(root["co"]); // update coordinate
 	if (root["handle_left"] != Json::nullValue)
-		handle_left.Json(root["handle_left"]); // update coordinate
+		handle_left.SetJsonValue(root["handle_left"]); // update coordinate
 	if (root["handle_right"] != Json::nullValue)
-		handle_right.Json(root["handle_right"]); // update coordinate
+		handle_right.SetJsonValue(root["handle_right"]); // update coordinate
 	if (root["interpolation"] != Json::nullValue)
 		interpolation = (InterpolationType) root["interpolation"].asInt();
 	if (root["handle_type"] != Json::nullValue)

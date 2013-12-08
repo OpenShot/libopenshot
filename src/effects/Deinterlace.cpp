@@ -66,6 +66,13 @@ tr1::shared_ptr<Frame> Deinterlace::GetFrame(tr1::shared_ptr<Frame> frame, int f
 	return frame;
 }
 
+// Generate JSON string of this object
+string Deinterlace::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
 // Generate Json::JsonValue for this object
 Json::Value Deinterlace::JsonValue() {
 
@@ -77,11 +84,34 @@ Json::Value Deinterlace::JsonValue() {
 	return root;
 }
 
+// Load JSON string into this object
+void Deinterlace::SetJson(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
 // Load Json::JsonValue into this object
-void Deinterlace::Json(Json::Value root) {
+void Deinterlace::SetJsonValue(Json::Value root) {
 
 	// Set parent data
-	EffectBase::Json(root);
+	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
 	if (root["isOdd"] != Json::nullValue)

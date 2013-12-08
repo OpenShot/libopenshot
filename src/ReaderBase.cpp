@@ -95,13 +95,6 @@ void ReaderBase::DisplayInfo() {
 	cout << "----------------------------" << endl;
 }
 
-// Generate JSON string of this object
-string ReaderBase::Json() {
-
-	// Return formatted string
-	return JsonValue().toStyledString();
-}
-
 // Generate Json::JsonValue for this object
 Json::Value ReaderBase::JsonValue() {
 
@@ -149,31 +142,8 @@ Json::Value ReaderBase::JsonValue() {
 	return root;
 }
 
-// Load JSON string into this object
-void ReaderBase::Json(string value) throw(InvalidJSON) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
-
-	try
-	{
-		// Set all values that match
-		Json(root);
-	}
-	catch (exception e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
-	}
-}
-
 // Load Json::JsonValue into this object
-void ReaderBase::Json(Json::Value root) {
+void ReaderBase::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (root["has_video"] != Json::nullValue)
@@ -183,7 +153,7 @@ void ReaderBase::Json(Json::Value root) {
 	if (root["duration"] != Json::nullValue)
 		info.duration = root["duration"].asDouble();
 	if (root["file_size"] != Json::nullValue)
-		info.file_size = (long long) root["file_size"].asUInt();
+		info.file_size = atoll(root["file_size"].asString().c_str());
 	if (root["height"] != Json::nullValue)
 		info.height = root["height"].asInt();
 	if (root["width"] != Json::nullValue)
@@ -207,7 +177,7 @@ void ReaderBase::Json(Json::Value root) {
 	if (root["vcodec"] != Json::nullValue)
 		info.vcodec = root["vcodec"].asString();
 	if (root["video_length"] != Json::nullValue)
-		info.video_length = (long int) root["video_length"].asUInt();
+		info.video_length = atoll(root["video_length"].asString().c_str());
 	if (root["video_stream_index"] != Json::nullValue)
 		info.video_stream_index = root["video_stream_index"].asInt();
 	if (root["video_timebase"] != Json::nullValue) {

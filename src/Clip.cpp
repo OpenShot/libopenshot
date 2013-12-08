@@ -81,7 +81,7 @@ void Clip::init_settings()
 	perspective_c4_y = Keyframe(-1.0);
 
 	// Default pointers
-	file_reader = NULL;
+	reader = NULL;
 	resampler = NULL;
 	audio_cache = NULL;
 }
@@ -94,13 +94,10 @@ Clip::Clip()
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* reader)
+Clip::Clip(ReaderBase* reader) : reader(reader)
 {
 	// Init all default settings
 	init_settings();
-
-	// set reader pointer
-	file_reader = reader;
 
 	// Open and Close the reader (to set the duration of the clip)
 	Open();
@@ -124,25 +121,25 @@ Clip::Clip(string path)
 		try
 		{
 			// Open common video format
-			file_reader = new FFmpegReader(path);
+			reader = new FFmpegReader(path);
 			cout << "READER FOUND: FFmpegReader" << endl;
 		} catch(...) { }
 	}
 
 	// If no video found, try each reader
-	if (!file_reader)
+	if (!reader)
 	{
 		try
 		{
 			// Try an image reader
-			file_reader = new ImageReader(path);
+			reader = new ImageReader(path);
 			cout << "READER FOUND: ImageReader" << endl;
 
 		} catch(...) {
 			try
 			{
 				// Try a video reader
-				file_reader = new FFmpegReader(path);
+				reader = new FFmpegReader(path);
 				cout << "READER FOUND: FFmpegReader" << endl;
 
 			} catch(BaseException ex) {
@@ -156,17 +153,17 @@ Clip::Clip(string path)
 }
 
 /// Set the current reader
-void Clip::Reader(ReaderBase* reader)
+void Clip::Reader(ReaderBase* new_reader)
 {
 	// set reader pointer
-	file_reader = reader;
+	reader = new_reader;
 }
 
 /// Get the current reader
 ReaderBase* Clip::Reader() throw(ReaderClosed)
 {
-	if (file_reader)
-		return file_reader;
+	if (reader)
+		return reader;
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
@@ -175,14 +172,14 @@ ReaderBase* Clip::Reader() throw(ReaderClosed)
 // Open the internal reader
 void Clip::Open() throw(InvalidFile, ReaderClosed)
 {
-	if (file_reader)
+	if (reader)
 	{
 		// Open the reader
-		file_reader->Open();
+		reader->Open();
 
 		// Set some clip properties from the file reader
 		if (end == 0.0)
-			End(file_reader->info.duration);
+			End(reader->info.duration);
 	}
 	else
 		// Throw error if reader not initialized
@@ -192,8 +189,8 @@ void Clip::Open() throw(InvalidFile, ReaderClosed)
 // Close the internal reader
 void Clip::Close() throw(ReaderClosed)
 {
-	if (file_reader)
-		file_reader->Close();
+	if (reader)
+		reader->Close();
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
@@ -207,9 +204,9 @@ float Clip::End() throw(ReaderClosed)
 	{
 		// Determine the FPS fo this clip
 		float fps = 24.0;
-		if (file_reader)
+		if (reader)
 			// file reader
-			fps = file_reader->info.fps.ToFloat();
+			fps = reader->info.fps.ToFloat();
 		else
 			// Throw error if reader not initialized
 			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
@@ -224,7 +221,7 @@ float Clip::End() throw(ReaderClosed)
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 {
-	if (file_reader)
+	if (reader)
 	{
 		// Adjust out of bounds frame number
 		requested_frame = adjust_frame_number_minimum(requested_frame);
@@ -235,7 +232,7 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 			new_frame_number = time.GetInt(requested_frame);
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		tr1::shared_ptr<Frame> frame = file_reader->GetFrame(new_frame_number);
+		tr1::shared_ptr<Frame> frame = reader->GetFrame(new_frame_number);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
@@ -287,7 +284,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed)
 {
 	// Check for valid reader
-	if (!file_reader)
+	if (!reader)
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 
@@ -305,20 +302,20 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		int new_frame_number = time.GetInt(frame_number);
 
 		// Create a new frame
-		int samples_in_frame = GetSamplesPerFrame(new_frame_number, file_reader->info.fps);
+		int samples_in_frame = GetSamplesPerFrame(new_frame_number, reader->info.fps);
 		new_frame = tr1::shared_ptr<Frame>(new Frame(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount()));
 
 		// Copy the image from the new frame
-		new_frame->AddImage(file_reader->GetFrame(new_frame_number)->GetImage());
+		new_frame->AddImage(reader->GetFrame(new_frame_number)->GetImage());
 
 
 		// Get delta (difference in previous Y value)
 		int delta = int(round(time.GetDelta(frame_number)));
 
 		// Init audio vars
-		int sample_rate = file_reader->GetFrame(new_frame_number)->GetAudioSamplesRate();
-		int channels = file_reader->info.channels;
-		int number_of_samples = file_reader->GetFrame(new_frame_number)->GetAudioSamplesCount();
+		int sample_rate = reader->GetFrame(new_frame_number)->GetAudioSamplesRate();
+		int channels = reader->info.channels;
+		int number_of_samples = reader->GetFrame(new_frame_number)->GetAudioSamplesCount();
 
 		// Determine if we are speeding up or slowing down
 		if (time.GetRepeatFraction(frame_number).den > 1)
@@ -336,7 +333,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				// Loop through channels, and get audio samples
 				for (int channel = 0; channel < channels; channel++)
 					// Get the audio samples for this channel
-					samples->addFrom(channel, 0, file_reader->GetFrame(new_frame_number)->GetAudioSamples(channel), number_of_samples, 1.0f);
+					samples->addFrom(channel, 0, reader->GetFrame(new_frame_number)->GetAudioSamples(channel), number_of_samples, 1.0f);
 
 				// Reverse the samples (if needed)
 				if (!time.IsIncreasing(frame_number))
@@ -383,7 +380,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			//int next_unique_frame = time.GetInt(frame_number + (time.GetRepeatFraction(frame_number).den - time.GetRepeatFraction(frame_number).num) + 1);
 			//if (next_unique_frame != new_frame_number)
 			//	// Overlay the next frame on top of this frame (to create a smoother slow motion effect)
-			//	new_frame->AddImage(file_reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
+			//	new_frame->AddImage(reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
 
 		}
 		else if (abs(delta) > 1 && abs(delta) < 100)
@@ -399,12 +396,12 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				for (int delta_frame = new_frame_number - (delta - 1); delta_frame <= new_frame_number; delta_frame++)
 				{
 					// buffer to hold detal samples
-					int number_of_delta_samples = file_reader->GetFrame(delta_frame)->GetAudioSamplesCount();
+					int number_of_delta_samples = reader->GetFrame(delta_frame)->GetAudioSamplesCount();
 					AudioSampleBuffer* delta_samples = new juce::AudioSampleBuffer(channels, number_of_delta_samples);
 					delta_samples->clear();
 
 					for (int channel = 0; channel < channels; channel++)
-						delta_samples->addFrom(channel, 0, file_reader->GetFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
+						delta_samples->addFrom(channel, 0, reader->GetFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
 
 					// Reverse the samples (if needed)
 					if (!time.IsIncreasing(frame_number))
@@ -429,12 +426,12 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				for (int delta_frame = new_frame_number - (delta + 1); delta_frame >= new_frame_number; delta_frame--)
 				{
 					// buffer to hold delta samples
-					int number_of_delta_samples = file_reader->GetFrame(delta_frame)->GetAudioSamplesCount();
+					int number_of_delta_samples = reader->GetFrame(delta_frame)->GetAudioSamplesCount();
 					AudioSampleBuffer* delta_samples = new juce::AudioSampleBuffer(channels, number_of_delta_samples);
 					delta_samples->clear();
 
 					for (int channel = 0; channel < channels; channel++)
-						delta_samples->addFrom(channel, 0, file_reader->GetFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
+						delta_samples->addFrom(channel, 0, reader->GetFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
 
 					// Reverse the samples (if needed)
 					if (!time.IsIncreasing(frame_number))
@@ -521,19 +518,26 @@ int Clip::adjust_frame_number_minimum(int frame_number)
 int Clip::GetSamplesPerFrame(int frame_number, Fraction rate) throw(ReaderClosed)
 {
 	// Check for valid reader
-	if (!file_reader)
+	if (!reader)
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
 
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps = rate.Reciprocal().ToDouble();
-	double previous_samples = round((file_reader->info.sample_rate * fps) * (frame_number - 1));
-	double total_samples = round((file_reader->info.sample_rate * fps) * frame_number);
+	double previous_samples = round((reader->info.sample_rate * fps) * (frame_number - 1));
+	double total_samples = round((reader->info.sample_rate * fps) * frame_number);
 
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
 	double samples_per_frame = total_samples - previous_samples;
 	return samples_per_frame;
+}
+
+// Generate JSON string of this object
+string Clip::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
@@ -545,16 +549,41 @@ Json::Value Clip::JsonValue() {
 	root["scale"] = scale;
 	root["anchor"] = anchor;
 	root["waveform"] = waveform;
+	if (reader)
+		root["reader"] = reader->JsonValue();
 
 	// return JsonValue
 	return root;
 }
 
+// Load JSON string into this object
+void Clip::SetJson(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
 // Load Json::JsonValue into this object
-void Clip::Json(Json::Value root) {
+void Clip::SetJsonValue(Json::Value root) {
 
 	// Set parent data
-	ClipBase::Json(root);
+	ClipBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
 	if (root["gravity"] != Json::nullValue)
@@ -565,4 +594,37 @@ void Clip::Json(Json::Value root) {
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (root["waveform"] != Json::nullValue)
 		waveform = root["waveform"].asBool();
+	if (root["reader"] != Json::nullValue) // does Json contain a reader?
+	{
+		if (root["reader"]["type"] != Json::nullValue) // does the reader Json contain a 'type'?
+		{
+			// Close previous reader (if any)
+			if (reader)
+				reader->Close();
+
+			// Create new reader (and load properties)
+			string type = root["reader"]["type"].asString();
+
+			if (type == "FFmpegReader") {
+
+				// Create new reader
+				reader = new FFmpegReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "ImageReader") {
+
+				// Create new reader
+				reader = new ImageReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "TextReader") {
+
+				// Create new reader
+				reader = new TextReader();
+				reader->SetJsonValue(root["reader"]);
+			}
+
+			//TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
+		}
+	}
 }

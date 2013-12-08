@@ -76,10 +76,10 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		virtual string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void Json(string value) throw(InvalidJSON); ///< Load JSON string into this object
-		void Json(Json::Value root); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 	};
 

@@ -264,7 +264,7 @@ Json::Value Keyframe::JsonValue() {
 }
 
 // Load JSON string into this object
-void Keyframe::Json(string value) throw(InvalidJSON) {
+void Keyframe::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -277,7 +277,7 @@ void Keyframe::Json(string value) throw(InvalidJSON) {
 	try
 	{
 		// Set all values that match
-		Json(root);
+		SetJsonValue(root);
 	}
 	catch (exception e)
 	{
@@ -287,7 +287,7 @@ void Keyframe::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Keyframe::Json(Json::Value root) {
+void Keyframe::SetJsonValue(Json::Value root) {
 
 	// mark as dirty
 	needs_update = true;
@@ -305,7 +305,7 @@ void Keyframe::Json(Json::Value root) {
 			Point p;
 
 			// Load Json into Point
-			p.Json(existing_point);
+			p.SetJsonValue(existing_point);
 
 			// Add Point to Keyframe
 			AddPoint(p);

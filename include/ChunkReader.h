@@ -149,6 +149,12 @@ namespace openshot
 		/// @param requested_frame	The frame number you want to retrieve
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, ChunkNotFound);
 
+		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+
 		/// Open the reader. This is required before you can access frames or data from the reader.
 		void Open() throw(InvalidFile);
 	};

@@ -106,6 +106,7 @@
 #endif
 #include "DummyReader.h"
 #include "EffectBase.h"
+#include "Enums.h"
 #include "Exceptions.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"

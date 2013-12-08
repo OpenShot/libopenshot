@@ -50,7 +50,7 @@ Json::Value Color::JsonValue() {
 }
 
 // Load JSON string into this object
-void Color::Json(string value) throw(InvalidJSON) {
+void Color::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -63,7 +63,7 @@ void Color::Json(string value) throw(InvalidJSON) {
 	try
 	{
 		// Set all values that match
-		Json(root);
+		SetJsonValue(root);
 	}
 	catch (exception e)
 	{
@@ -73,13 +73,13 @@ void Color::Json(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Color::Json(Json::Value root) {
+void Color::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (root["red"] != Json::nullValue)
-		red.Json(root["red"]);
+		red.SetJsonValue(root["red"]);
 	if (root["green"] != Json::nullValue)
-		green.Json(root["green"]);
+		green.SetJsonValue(root["green"]);
 	if (root["blue"] != Json::nullValue)
-		blue.Json(root["blue"]);
+		blue.SetJsonValue(root["blue"]);
 }

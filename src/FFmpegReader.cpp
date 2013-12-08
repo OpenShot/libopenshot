@@ -1554,28 +1554,62 @@ int FFmpegReader::GetSmallestAudioFrame()
 	return smallest_frame;
 }
 
+// Generate JSON string of this object
+string FFmpegReader::Json() {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
 // Generate Json::JsonValue for this object
 Json::Value FFmpegReader::JsonValue() {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["type"] = "FFmpegReader";
 	root["path"] = path;
 
 	// return JsonValue
 	return root;
 }
 
+// Load JSON string into this object
+void FFmpegReader::SetJson(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
 // Load Json::JsonValue into this object
-void FFmpegReader::Json(Json::Value root) throw(InvalidFile) {
+void FFmpegReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 
 	// Set parent data
-	ReaderBase::Json(root);
+	ReaderBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
 	if (root["path"] != Json::nullValue)
 		path = root["path"].asString();
 
-	// Open path, and re-init everything
-	Close();
-	Open();
+	// Re-Open path, and re-init everything (if needed)
+	if (is_open)
+	{
+		Close();
+		Open();
+	}
 }

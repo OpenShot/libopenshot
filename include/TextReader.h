@@ -38,7 +38,7 @@
 #include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
-#include "Clip.h"
+#include "Enums.h"
 #include "Exceptions.h"
 
 using namespace std;
@@ -97,7 +97,10 @@ namespace openshot
 
 	public:
 
-		/// @brief Constructor for TextReader.
+		/// Default constructor (blank text)
+		TextReader();
+
+		/// @brief Constructor for TextReader with all parameters.
 		/// @param width The width of the requested openshot::Frame (not the size of the text)
 		/// @param height The height of the requested openshot::Frame (not the size of the text)
 		/// @param x_offset The number of pixels to offset the text on the X axis (horizontal)
@@ -121,8 +124,10 @@ namespace openshot
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
 
 		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void Json(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
 
 		/// Open Reader - which is called by the constructor automatically
 		void Open();

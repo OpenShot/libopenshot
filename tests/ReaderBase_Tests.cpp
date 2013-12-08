@@ -43,6 +43,8 @@ TEST(ReaderBase_Derived_Class)
 		tr1::shared_ptr<Frame> GetFrame(int number) { tr1::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
+		string Json() { };
+		void SetJson(string value) throw(InvalidJSON) { };
 	};
 
 	// Create an instance of the derived class

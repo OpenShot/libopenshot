@@ -251,4 +251,68 @@ tr1::shared_ptr<Frame> ChunkReader::GetFrame(int requested_frame) throw(ReaderCl
 	return last_frame;
 }
 
+// Generate JSON string of this object
+string ChunkReader::Json() {
 
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::JsonValue for this object
+Json::Value ChunkReader::JsonValue() {
+
+	// Create root json object
+	Json::Value root = ReaderBase::JsonValue(); // get parent properties
+	root["type"] = "ChunkReader";
+	root["path"] = path;
+	root["chunk_size"] = chunk_size;
+	root["chunk_version"] = version;
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void ChunkReader::SetJson(string value) throw(InvalidJSON) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Load Json::JsonValue into this object
+void ChunkReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+
+	// Set parent data
+	ReaderBase::SetJsonValue(root);
+
+	// Set data from Json (if key is found)
+	if (root["path"] != Json::nullValue)
+		path = root["path"].asString();
+	if (root["chunk_size"] != Json::nullValue)
+		chunk_size = root["chunk_size"].asInt();
+	if (root["chunk_version"] != Json::nullValue)
+		version = (ChunkVersion) root["chunk_version"].asInt();
+
+	// Re-Open path, and re-init everything (if needed)
+	if (is_open)
+	{
+		Close();
+		Open();
+	}
+}

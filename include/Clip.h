@@ -34,50 +34,25 @@
 #endif
 
 #include <tr1/memory>
+#include <string>
+#include "JuceLibraryCode/JuceHeader.h"
+#include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
+#include "Enums.h"
 #include "FFmpegReader.h"
 #include "FrameRate.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
+#include "TextReader.h"
+#include "ChunkReader.h"
 #include "KeyFrame.h"
-#include "JuceLibraryCode/JuceHeader.h"
-#include "AudioResampler.h"
+#include "ReaderBase.h"
 
 using namespace std;
 using namespace openshot;
 
 namespace openshot {
-
-	/// This enumeration determines how clips are aligned to their parent container.
-	enum GravityType
-	{
-		GRAVITY_TOP_LEFT,		///< Align clip to the top left of its parent
-		GRAVITY_TOP,			///< Align clip to the top center of its parent
-		GRAVITY_TOP_RIGHT,		///< Align clip to the top right of its parent
-		GRAVITY_LEFT,			///< Align clip to the left of its parent (middle aligned)
-		GRAVITY_CENTER,			///< Align clip to the center of its parent (middle aligned)
-		GRAVITY_RIGHT,			///< Align clip to the right of its parent (middle aligned)
-		GRAVITY_BOTTOM_LEFT,	///< Align clip to the bottom left of its parent
-		GRAVITY_BOTTOM,			///< Align clip to the bottom center of its parent
-		GRAVITY_BOTTOM_RIGHT	///< Align clip to the bottom right of its parent
-	};
-
-	/// This enumeration determines how clips are scaled to fit their parent container.
-	enum ScaleType
-	{
-		SCALE_CROP,		///< Scale the clip until both height and width fill the canvas (cropping the overlap)
-		SCALE_FIT,		///< Scale the clip until either height or width fills the canvas (with no cropping)
-		SCALE_STRETCH,	///< Scale the clip until both height and width fill the canvas (distort to fit)
-		SCALE_NONE		///< Do not scale the clip
-	};
-
-	/// This enumeration determines what parent a clip should be aligned to.
-	enum AnchorType
-	{
-		ANCHOR_CANVAS,	///< Anchor the clip to the canvas
-		ANCHOR_VIEWPORT	///< Anchor the clip to the viewport (which can be moved / animated around the canvas)
-	};
 
 	/**
 	 * @brief This class represents a clip (used to arrange readers on the timeline)
@@ -122,7 +97,7 @@ namespace openshot {
 		AudioSampleBuffer *audio_cache;
 
 		// File Reader object
-		ReaderBase* file_reader;
+		ReaderBase* reader;
 
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
@@ -172,7 +147,7 @@ namespace openshot {
 
 		/// @brief Set the current reader
 		/// @param reader The reader to be used by this clip
-		void Reader(ReaderBase* reader);
+		void Reader(ReaderBase* new_reader);
 
 		/// Get the current reader
 		ReaderBase* Reader() throw(ReaderClosed);
@@ -182,8 +157,10 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
+		string Json(); ///< Generate JSON string of this object
+		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void Json(Json::Value root); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
