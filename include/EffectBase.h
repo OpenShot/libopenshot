@@ -89,10 +89,10 @@ namespace openshot
 		void InitEffectInfo();
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		virtual string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
+		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 
 		/// Get the order that this effect should be executed.
 		int Order() { return order; }

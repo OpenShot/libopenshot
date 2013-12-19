@@ -45,6 +45,9 @@ TEST(ReaderBase_Derived_Class)
 		void Open() { };
 		string Json() { };
 		void SetJson(string value) throw(InvalidJSON) { };
+		Json::Value JsonValue() { };
+		void SetJsonValue(Json::Value root) { };
+		bool IsOpen() { return true; };
 	};
 
 	// Create an instance of the derived class

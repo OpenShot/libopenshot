@@ -105,11 +105,14 @@ namespace openshot
 		/// this method, or the ReaderInfo struct values will not be initialized.
 		void InitFileInfo();
 
+		/// Determine if reader is open or closed
+		virtual bool IsOpen() = 0;
+
 		/// Get and Set JSON methods
 		virtual string Json() = 0; ///< Generate JSON string of this object
 		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
+		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

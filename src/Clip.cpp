@@ -599,8 +599,17 @@ void Clip::SetJsonValue(Json::Value root) {
 		if (root["reader"]["type"] != Json::nullValue) // does the reader Json contain a 'type'?
 		{
 			// Close previous reader (if any)
+			bool already_open = false;
 			if (reader)
+			{
+				// Track if reader was open
+				already_open = reader->IsOpen();
+
+				// Close and delete existing reader (if any)
 				reader->Close();
+				delete reader;
+				reader = NULL;
+			}
 
 			// Create new reader (and load properties)
 			string type = root["reader"]["type"].asString();
@@ -622,9 +631,18 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new TextReader();
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "ChunkReader") {
+
+				// Create new reader
+				reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
+				reader->SetJsonValue(root["reader"]);
 			}
 
-			//TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
+			// Re-Open reader (if needed)
+			if (already_open)
+				reader->Open();
+
 		}
 	}
 }

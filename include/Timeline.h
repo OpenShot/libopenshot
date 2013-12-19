@@ -141,6 +141,7 @@ namespace openshot {
 	 */
 	class Timeline : public ReaderBase {
 	private:
+		bool is_open; ///<Is Timeline Open?
 		int width; ///<Width of the canvas and viewport
 		int height; ///<Height of the canvas and viewport
 		Framerate fps; ///<Frames per second of the timeline
@@ -227,6 +228,9 @@ namespace openshot {
 
 		// Background color
 		Color color; ///<Background color of timeline canvas
+
+		/// Determine if reader is open or closed
+		bool IsOpen() { return is_open; };
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

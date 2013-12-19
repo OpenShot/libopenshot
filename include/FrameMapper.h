@@ -129,6 +129,7 @@ namespace openshot
 	 */
 	class FrameMapper : public ReaderBase {
 	private:
+		bool is_open;
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
 		Framerate original;		// The original frame rate
 		Framerate target;			// The target frame rate
@@ -170,6 +171,9 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
+
+		/// Determine if reader is open or closed
+		bool IsOpen();
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

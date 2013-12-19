@@ -31,7 +31,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int channels) :
-		width(width), height(height), fps(fps), sample_rate(sample_rate), channels(channels)
+		width(width), height(height), fps(fps), sample_rate(sample_rate), channels(channels), is_open(false)
 {
 	// Init viewport size (curve based, because it can be animated)
 	viewport_scale = Keyframe(100.0);
@@ -408,12 +408,13 @@ void Timeline::Close()
 
 	// Actually close the clips
 	update_closed_clips();
+	is_open = false;
 }
 
 // Open the reader (and start consuming resources)
 void Timeline::Open()
 {
-
+	is_open = true;
 }
 
 // Calculate the # of samples per video frame (for a specific frame number)

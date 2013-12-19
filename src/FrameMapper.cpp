@@ -421,6 +421,16 @@ void FrameMapper::PrintMapping()
 
 }
 
+
+// Determine if reader is open or closed
+bool FrameMapper::IsOpen() {
+	if (reader)
+		return reader->IsOpen();
+	else
+		return false;
+}
+
+
 // Open the internal reader
 void FrameMapper::Open() throw(InvalidFile)
 {
