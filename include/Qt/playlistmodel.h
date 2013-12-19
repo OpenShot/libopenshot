@@ -38,43 +38,49 @@
 **
 ****************************************************************************/
 
-#include "../../include/Qt/videowidget.h"
+#ifndef OPENSHOT_PLAYLISTMODEL_H
+#define OPENSHOT_PLAYLISTMODEL_H
 
-#include <QKeyEvent>
-#include <QMouseEvent>
+#include <QAbstractItemModel>
 
-VideoWidget::VideoWidget(QWidget *parent)
-    : QVideoWidget(parent)
+class QMediaPlaylist;
+
+class PlaylistModel : public QAbstractItemModel
 {
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    Q_OBJECT
 
-    QPalette p = palette();
-    p.setColor(QPalette::Window, Qt::black);
-    setPalette(p);
+public:
+    enum Column
+    {
+        Title = 0,
+        ColumnCount
+    };
 
-    setAttribute(Qt::WA_OpaquePaintEvent);
-}
+    PlaylistModel(QObject *parent = 0);
 
-void VideoWidget::keyPressEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape && isFullScreen()) {
-        setFullScreen(false);
-        event->accept();
-    } else if (event->key() == Qt::Key_Enter && event->modifiers() & Qt::Key_Alt) {
-        setFullScreen(!isFullScreen());
-        event->accept();
-    } else {
-        QVideoWidget::keyPressEvent(event);
-    }
-}
+    int rowCount(const QModelIndex &parent = QModelIndex()) const;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const;
 
-void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    setFullScreen(!isFullScreen());
-    event->accept();
-}
+    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
+    QModelIndex parent(const QModelIndex &child) const;
 
-void VideoWidget::mousePressEvent(QMouseEvent *event)
-{
-    QVideoWidget::mousePressEvent(event);
-}
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+
+    QMediaPlaylist *playlist() const;
+    void setPlaylist(QMediaPlaylist *playlist);
+
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::DisplayRole);
+
+private slots:
+    void beginInsertItems(int start, int end);
+    void endInsertItems();
+    void beginRemoveItems(int start, int end);
+    void endRemoveItems();
+    void changeItems(int start, int end);
+
+private:
+    QMediaPlaylist *m_playlist;
+    QMap<QModelIndex, QVariant> m_data;
+};
+
+#endif // OPENSHOT_PLAYLISTMODEL_H

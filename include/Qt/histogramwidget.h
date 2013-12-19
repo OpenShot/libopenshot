@@ -38,43 +38,46 @@
 **
 ****************************************************************************/
 
-#include "../../include/Qt/videowidget.h"
+#ifndef OPENSHOT_HISTOGRAMWIDGET_H
+#define OPENSHOT_HISTOGRAMWIDGET_H
 
-#include <QKeyEvent>
-#include <QMouseEvent>
+#include <QThread>
+#include <QVideoFrame>
+#include <QWidget>
 
-VideoWidget::VideoWidget(QWidget *parent)
-    : QVideoWidget(parent)
+class FrameProcessor: public QObject
 {
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    Q_OBJECT
 
-    QPalette p = palette();
-    p.setColor(QPalette::Window, Qt::black);
-    setPalette(p);
+public slots:
+    void processFrame(QVideoFrame frame, int levels);
 
-    setAttribute(Qt::WA_OpaquePaintEvent);
-}
+signals:
+    void histogramReady(QVector<qreal> histogram);
+};
 
-void VideoWidget::keyPressEvent(QKeyEvent *event)
+class HistogramWidget : public QWidget
 {
-    if (event->key() == Qt::Key_Escape && isFullScreen()) {
-        setFullScreen(false);
-        event->accept();
-    } else if (event->key() == Qt::Key_Enter && event->modifiers() & Qt::Key_Alt) {
-        setFullScreen(!isFullScreen());
-        event->accept();
-    } else {
-        QVideoWidget::keyPressEvent(event);
-    }
-}
+    Q_OBJECT
 
-void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    setFullScreen(!isFullScreen());
-    event->accept();
-}
+public:
+    explicit HistogramWidget(QWidget *parent = 0);
+    ~HistogramWidget();
+    void setLevels(int levels) { m_levels = levels; }
 
-void VideoWidget::mousePressEvent(QMouseEvent *event)
-{
-    QVideoWidget::mousePressEvent(event);
-}
+public slots:
+    void processFrame(QVideoFrame frame);
+    void setHistogram(QVector<qreal> histogram);
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+private:
+    QVector<qreal> m_histogram;
+    int m_levels;
+    FrameProcessor m_processor;
+    QThread m_processorThread;
+    bool m_isBusy;
+};
+
+#endif // OPENSHOT_HISTOGRAMWIDGET_H

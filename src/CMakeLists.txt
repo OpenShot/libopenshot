@@ -55,6 +55,10 @@ FIND_PACKAGE(SDL REQUIRED)
 include_directories(${SDL_INCLUDE_DIR})
 
 ################# QT5 ###################
+# As moc files are generated in the binary dir, tell CMake
+# to always look for includes there:
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 set(CMAKE_AUTOMOC ON)
 #set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.1.1/")
 
@@ -63,31 +67,34 @@ find_package(Qt5Widgets)
 find_package(Qt5Core)
 find_package(Qt5Gui)
 find_package(Qt5Multimedia)
+find_package(Qt5MultimediaWidgets)
 
 # Include Qt headers (needed for compile)
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Multimedia_INCLUDE_DIRS})
+include_directories(${Qt5MultimediaWidgets_INCLUDE_DIRS})
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
 add_definitions(${Qt5Core_DEFINITIONS})
 add_definitions(${Qt5Gui_DEFINITIONS})
 add_definitions(${Qt5Multimedia_DEFINITIONS})
+add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
 
-# Add Multimedia library
 SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES} 
 				 ${Qt5Core_LIBRARIES}
 				 ${Qt5Gui_LIBRARIES}
-				 ${Qt5Multimedia_LIBRARIES})
-				 
+				 ${Qt5Multimedia_LIBRARIES}
+				 ${Qt5MultimediaWidgets_LIBRARIES})
+
 # Set compiler flags for Qt
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
 
-    
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 FIND_PACKAGE(BlackMagic)
@@ -121,6 +128,9 @@ include_directories("../thirdparty/jsoncpp/include")
 #### GET LIST OF EFFECT FILES ####
 FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")
 
+#### GET LIST OF QT PLAYER FILES ####
+FILE(GLOB QT_PLAYER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Qt/*.cpp")
+
 ###############  SET LIBRARY SOURCE FILES  #################
 SET ( OPENSHOT_SOURCE_FILES
   		AudioBufferSource.cpp
@@ -152,10 +162,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Timeline.cpp
 		
 		# Qt Video Player
-		#${QT_MOC_FILES}
-		#Qt/videoplayer.cpp
-		#Qt/videowidget.cpp
-		#Qt/videowidgetsurface.cpp
+		${QT_PLAYER_FILES}
 		
 		# Third Party JSON Parser
 		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
@@ -181,7 +188,7 @@ set_target_properties(openshot
 			PROPERTIES
 			VERSION ${PROJECT_VERSION}
 			SOVERSION ${SO_VERSION})
-			
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
   		${ImageMagick_LIBRARIES}
@@ -203,13 +210,16 @@ SET ( REQUIRED_LIBRARIES
 # Link all referenced libraries
 target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
+# Use Qt5 modules
+#qt5_use_modules(openshot Core Gui Widgets Multimedia MultimediaWidgets)
+			
 
 ############### TEST EXECUTABLE ################
 # Create test executable
 add_executable(example Main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(example openshot ${PROFILER} )
+target_link_libraries(example openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)
@@ -218,7 +228,7 @@ IF (BLACKMAGIC_FOUND)
 				   Main_Blackmagic.cpp)
 	
 	# Link test executable to the new library
-	target_link_libraries(blackmagic openshot ${PROFILER} )
+	target_link_libraries(blackmagic openshot)
 ENDIF (BLACKMAGIC_FOUND)
 
 ############### SWIG PYTHON BINDINGS ################

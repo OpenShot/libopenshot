@@ -38,43 +38,88 @@
 **
 ****************************************************************************/
 
-#include "../../include/Qt/videowidget.h"
+#ifndef OPENSHOT_PLAYER_H
+#define OPENSHOT_PLAYER_H
 
-#include <QKeyEvent>
-#include <QMouseEvent>
+#include "videowidget.h"
 
-VideoWidget::VideoWidget(QWidget *parent)
-    : QVideoWidget(parent)
+#include <QWidget>
+#include <QMediaPlayer>
+#include <QMediaPlaylist>
+
+class QAbstractItemView;
+class QLabel;
+class QMediaPlayer;
+class QModelIndex;
+class QPushButton;
+class QSlider;
+class QVideoProbe;
+class QVideoWidget;
+
+class PlaylistModel;
+class HistogramWidget;
+
+class Player : public QWidget
 {
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    Q_OBJECT
 
-    QPalette p = palette();
-    p.setColor(QPalette::Window, Qt::black);
-    setPalette(p);
+public:
+    Player(QWidget *parent = 0);
+    ~Player();
 
-    setAttribute(Qt::WA_OpaquePaintEvent);
-}
+signals:
+    void fullScreenChanged(bool fullScreen);
 
-void VideoWidget::keyPressEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape && isFullScreen()) {
-        setFullScreen(false);
-        event->accept();
-    } else if (event->key() == Qt::Key_Enter && event->modifiers() & Qt::Key_Alt) {
-        setFullScreen(!isFullScreen());
-        event->accept();
-    } else {
-        QVideoWidget::keyPressEvent(event);
-    }
-}
+private slots:
+    void open();
+    void durationChanged(qint64 duration);
+    void positionChanged(qint64 progress);
+    void metaDataChanged();
 
-void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    setFullScreen(!isFullScreen());
-    event->accept();
-}
+    void previousClicked();
 
-void VideoWidget::mousePressEvent(QMouseEvent *event)
-{
-    QVideoWidget::mousePressEvent(event);
-}
+    void seek(int seconds);
+    void jump(const QModelIndex &index);
+    void playlistPositionChanged(int);
+
+    void statusChanged(QMediaPlayer::MediaStatus status);
+    void bufferingProgress(int progress);
+    void videoAvailableChanged(bool available);
+
+    void displayErrorMessage();
+
+#ifndef PLAYER_NO_COLOROPTIONS
+    void showColorDialog();
+#endif
+    void addToPlaylist(const QStringList &fileNames);
+
+private:
+    void setTrackInfo(const QString &info);
+    void setStatusInfo(const QString &info);
+    void handleCursor(QMediaPlayer::MediaStatus status);
+    void updateDurationInfo(qint64 currentInfo);
+
+    QMediaPlayer *player;
+    QMediaPlaylist *playlist;
+    VideoWidget *videoWidget;
+    QLabel *coverLabel;
+    QSlider *slider;
+    QLabel *labelDuration;
+    QPushButton *fullScreenButton;
+#ifndef PLAYER_NO_COLOROPTIONS
+    QPushButton *colorButton;
+    QDialog *colorDialog;
+#endif
+
+    QLabel *labelHistogram;
+    HistogramWidget *histogram;
+    QVideoProbe *probe;
+
+    PlaylistModel *playlistModel;
+    QAbstractItemView *playlistView;
+    QString trackInfo;
+    QString statusInfo;
+    qint64 duration;
+};
+
+#endif // OPENSHOT_PLAYER_H

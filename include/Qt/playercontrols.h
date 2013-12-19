@@ -38,43 +38,59 @@
 **
 ****************************************************************************/
 
-#include "../../include/Qt/videowidget.h"
+#ifndef OPENSHOT_PLAYERCONTROLS_H
+#define OPENSHOT_PLAYERCONTROLS_H
 
-#include <QKeyEvent>
-#include <QMouseEvent>
+#include <QMediaPlayer>
+#include <QWidget>
 
-VideoWidget::VideoWidget(QWidget *parent)
-    : QVideoWidget(parent)
+class QAbstractButton;
+class QAbstractSlider;
+class QComboBox;
+
+class PlayerControls : public QWidget
 {
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    Q_OBJECT
 
-    QPalette p = palette();
-    p.setColor(QPalette::Window, Qt::black);
-    setPalette(p);
+public:
+    PlayerControls(QWidget *parent = 0);
 
-    setAttribute(Qt::WA_OpaquePaintEvent);
-}
+    QMediaPlayer::State state() const;
+    int volume() const;
+    bool isMuted() const;
+    qreal playbackRate() const;
 
-void VideoWidget::keyPressEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape && isFullScreen()) {
-        setFullScreen(false);
-        event->accept();
-    } else if (event->key() == Qt::Key_Enter && event->modifiers() & Qt::Key_Alt) {
-        setFullScreen(!isFullScreen());
-        event->accept();
-    } else {
-        QVideoWidget::keyPressEvent(event);
-    }
-}
+public slots:
+    void setState(QMediaPlayer::State state);
+    void setVolume(int volume);
+    void setMuted(bool muted);
+    void setPlaybackRate(float rate);
 
-void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    setFullScreen(!isFullScreen());
-    event->accept();
-}
+signals:
+    void play();
+    void pause();
+    void stop();
+    void next();
+    void previous();
+    void changeVolume(int volume);
+    void changeMuting(bool muting);
+    void changeRate(qreal rate);
 
-void VideoWidget::mousePressEvent(QMouseEvent *event)
-{
-    QVideoWidget::mousePressEvent(event);
-}
+private slots:
+    void playClicked();
+    void muteClicked();
+    void updateRate();
+
+private:
+    QMediaPlayer::State playerState;
+    bool playerMuted;
+    QAbstractButton *playButton;
+    QAbstractButton *stopButton;
+    QAbstractButton *nextButton;
+    QAbstractButton *previousButton;
+    QAbstractButton *muteButton;
+    QAbstractSlider *volumeSlider;
+    QComboBox *rateBox;
+};
+
+#endif // OPENSHOT_PLAYERCONTROLS_H
