@@ -57,17 +57,17 @@ include_directories(${SDL_INCLUDE_DIR})
 ################# QT5 ###################
 # As moc files are generated in the binary dir, tell CMake
 # to always look for includes there:
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+#set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-set(CMAKE_AUTOMOC ON)
+#set(CMAKE_AUTOMOC ON)
 #set (CMAKE_PREFIX_PATH "/usr/local/Cellar/qt5/5.1.1/")
 
 # Find QT5 libraries
-find_package(Qt5Widgets)
-find_package(Qt5Core)
-find_package(Qt5Gui)
-find_package(Qt5Multimedia)
-find_package(Qt5MultimediaWidgets)
+find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Core REQUIRED)
+find_package(Qt5Gui REQUIRED)
+find_package(Qt5Multimedia REQUIRED)
+find_package(Qt5MultimediaWidgets REQUIRED)
 
 # Include Qt headers (needed for compile)
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
@@ -94,6 +94,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
+
+# Manually moc Qt files
+qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
+message('${MOC_FILES}')
 
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
@@ -163,6 +167,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		
 		# Qt Video Player
 		${QT_PLAYER_FILES}
+		${MOC_FILES}
 		
 		# Third Party JSON Parser
 		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp

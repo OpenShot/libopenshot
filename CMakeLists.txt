@@ -43,6 +43,10 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
+############## FIND ALL QT RELATED HEADERS ##############
+set(QT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt)
+FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
+
 ############## PROCESS SUB-DIRECTORIES ##############
 add_subdirectory(src)
 add_subdirectory(tests)
