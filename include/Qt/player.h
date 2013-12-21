@@ -43,6 +43,8 @@
 
 #include "videowidget.h"
 
+#include <QMediaMetaData>
+#include <QUrl>
 #include <QWidget>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
