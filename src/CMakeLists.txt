@@ -226,6 +226,13 @@ add_executable(example Main.cpp)
 # Link test executable to the new library
 target_link_libraries(example openshot)
 
+############### TEST QT EXECUTABLE ################
+# Create test executable
+add_executable(qt_player Qt/main_player.cpp)
+
+# Link test executable to the new library
+target_link_libraries(qt_player openshot)
+
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)
 	# Create test executable
