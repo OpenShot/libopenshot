@@ -7,6 +7,7 @@
 FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
     ${UNITTEST_DIR}/include/unittest++
     $ENV{UNITTEST_DIR}/include/unittest++
+	$ENV{UNITTEST_DIR}/src
     $ENV{UNITTEST_DIR}
     ~/Library/Frameworks
     /Library/Frameworks
@@ -27,6 +28,7 @@ FIND_LIBRARY(UNITTEST++_LIBRARY
     PATHS
     ${UNITTEST_DIR}/lib
     $ENV{UNITTEST_DIR}/lib
+	$ENV{UNITTEST_DIR}/build
     $ENV{UNITTEST_DIR}
     ~/Library/Frameworks
     /Library/Frameworks

@@ -41,13 +41,15 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
-	FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	FFmpegReader r2("C:\\Users\\jonathan\\Videos\\sintel_trailer-720p.mp4");
 	//r2.Open();
 	cout << r2.Json() << endl;
 	//r2.SetJson("{\"acodec\":\"\",\"audio_bit_rate\":0,\"audio_stream_index\":-1,\"audio_timebase\":{\"den\":1,\"num\":1},\"channels\":0,\"display_ratio\":{\"den\":9,\"num\":16},\"duration\":10.03333377838135,\"file_size\":\"208835074\",\"fps\":{\"den\":1,\"num\":30},\"has_audio\":false,\"has_video\":true,\"height\":1080,\"interlaced_frame\":false,\"path\":\"/home/jonathan/Videos/space_undulation_hd.mov\",\"pixel_format\":13,\"pixel_ratio\":{\"den\":72,\"num\":72},\"sample_rate\":0,\"top_field_first\":false,\"type\":\"FFmpegReader\",\"vcodec\":\"mjpeg\",\"video_bit_rate\":166513021,\"video_length\":\"301\",\"video_stream_index\":0,\"video_timebase\":{\"den\":30,\"num\":1},\"width\":1920}");
 	Clip c1;
 	c1.Reader(&r2);
 	cout << c1.Json() << endl;
+	c1.Open();
+	c1.GetFrame(150)->Save("test.bmp", 1.0);
 	return 0;
 
 

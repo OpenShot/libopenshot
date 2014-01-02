@@ -97,7 +97,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPIL
 
 # Manually moc Qt files
 qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
-message('${MOC_FILES}')
 
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
@@ -118,7 +117,7 @@ ENDIF (BLACKMAGIC_FOUND)
 FIND_PACKAGE(OpenMP)
 
 if (OPENMP_FOUND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
 endif(OPENMP_FOUND)
 
 ################### JSONCPP #####################
@@ -215,9 +214,6 @@ SET ( REQUIRED_LIBRARIES
 # Link all referenced libraries
 target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
-# Use Qt5 modules
-#qt5_use_modules(openshot Core Gui Widgets Multimedia MultimediaWidgets)
-			
 
 ############### TEST EXECUTABLE ################
 # Create test executable
