@@ -549,6 +549,30 @@ Json::Value Clip::JsonValue() {
 	root["scale"] = scale;
 	root["anchor"] = anchor;
 	root["waveform"] = waveform;
+	root["scale_x"] = scale_x.JsonValue();
+	root["scale_y"] = scale_y.JsonValue();
+	root["location_x"] = location_x.JsonValue();
+	root["location_y"] = location_y.JsonValue();
+	root["alpha"] = alpha.JsonValue();
+	root["rotation"] = rotation.JsonValue();
+	root["time"] = time.JsonValue();
+	root["volume"] = volume.JsonValue();
+	root["wave_color"] = wave_color.JsonValue();
+	root["crop_width"] = crop_width.JsonValue();
+	root["crop_height"] = crop_height.JsonValue();
+	root["crop_x"] = crop_x.JsonValue();
+	root["crop_y"] = crop_y.JsonValue();
+	root["shear_x"] = shear_x.JsonValue();
+	root["shear_y"] = shear_y.JsonValue();
+	root["perspective_c1_x"] = perspective_c1_x.JsonValue();
+	root["perspective_c1_y"] = perspective_c1_y.JsonValue();
+	root["perspective_c2_x"] = perspective_c2_x.JsonValue();
+	root["perspective_c2_y"] = perspective_c2_y.JsonValue();
+	root["perspective_c3_x"] = perspective_c3_x.JsonValue();
+	root["perspective_c3_y"] = perspective_c3_y.JsonValue();
+	root["perspective_c4_x"] = perspective_c4_x.JsonValue();
+	root["perspective_c4_y"] = perspective_c4_y.JsonValue();
+
 	if (reader)
 		root["reader"] = reader->JsonValue();
 
@@ -594,6 +618,52 @@ void Clip::SetJsonValue(Json::Value root) {
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (root["waveform"] != Json::nullValue)
 		waveform = root["waveform"].asBool();
+	if (root["scale_x"] != Json::nullValue)
+		scale_x.SetJsonValue(root["scale_x"]);
+	if (root["scale_y"] != Json::nullValue)
+		scale_y.SetJsonValue(root["scale_y"]);
+	if (root["location_x"] != Json::nullValue)
+		location_x.SetJsonValue(root["location_x"]);
+	if (root["location_y"] != Json::nullValue)
+		location_y.SetJsonValue(root["location_y"]);
+	if (root["alpha"] != Json::nullValue)
+		alpha.SetJsonValue(root["alpha"]);
+	if (root["rotation"] != Json::nullValue)
+		rotation.SetJsonValue(root["rotation"]);
+	if (root["time"] != Json::nullValue)
+		time.SetJsonValue(root["time"]);
+	if (root["volume"] != Json::nullValue)
+		volume.SetJsonValue(root["volume"]);
+	if (root["wave_color"] != Json::nullValue)
+		wave_color.SetJsonValue(root["wave_color"]);
+	if (root["crop_width"] != Json::nullValue)
+		crop_width.SetJsonValue(root["crop_width"]);
+	if (root["crop_height"] != Json::nullValue)
+		crop_height.SetJsonValue(root["crop_height"]);
+	if (root["crop_x"] != Json::nullValue)
+		crop_x.SetJsonValue(root["crop_x"]);
+	if (root["crop_y"] != Json::nullValue)
+		crop_y.SetJsonValue(root["crop_y"]);
+	if (root["shear_x"] != Json::nullValue)
+		shear_x.SetJsonValue(root["shear_x"]);
+	if (root["shear_y"] != Json::nullValue)
+		shear_y.SetJsonValue(root["shear_y"]);
+	if (root["perspective_c1_x"] != Json::nullValue)
+		perspective_c1_x.SetJsonValue(root["perspective_c1_x"]);
+	if (root["perspective_c1_y"] != Json::nullValue)
+		perspective_c1_y.SetJsonValue(root["perspective_c1_y"]);
+	if (root["perspective_c2_x"] != Json::nullValue)
+		perspective_c2_x.SetJsonValue(root["perspective_c2_x"]);
+	if (root["perspective_c2_y"] != Json::nullValue)
+		perspective_c2_y.SetJsonValue(root["perspective_c2_y"]);
+	if (root["perspective_c3_x"] != Json::nullValue)
+		perspective_c3_x.SetJsonValue(root["perspective_c3_x"]);
+	if (root["perspective_c3_y"] != Json::nullValue)
+		perspective_c3_y.SetJsonValue(root["perspective_c3_y"]);
+	if (root["perspective_c4_x"] != Json::nullValue)
+		perspective_c4_x.SetJsonValue(root["perspective_c4_x"]);
+	if (root["perspective_c4_y"] != Json::nullValue)
+		perspective_c4_y.SetJsonValue(root["perspective_c4_y"]);
 	if (root["reader"] != Json::nullValue) // does Json contain a reader?
 	{
 		if (root["reader"]["type"] != Json::nullValue) // does the reader Json contain a 'type'?
