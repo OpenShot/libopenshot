@@ -257,7 +257,7 @@ Json::Value Keyframe::JsonValue() {
 		Point existing_point = Points[x];
 		root["Points"].append(existing_point.JsonValue());
 	}
-	root["Auto_Handle_Percentage"] = Auto_Handle_Percentage;
+	//root["Auto_Handle_Percentage"] = Auto_Handle_Percentage;
 
 	// return JsonValue
 	return root;

@@ -42,7 +42,7 @@ Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 
 // Constructor which creates a single coordinate at X=0
 Point::Point(float y) :
-	interpolation(BEZIER), handle_type(AUTO) {
+	interpolation(CONSTANT), handle_type(AUTO) {
 	// set new coorinate
 	co = Coordinate(0, y);
 
@@ -106,10 +106,12 @@ Json::Value Point::JsonValue() {
 	// Create root json object
 	Json::Value root;
 	root["co"] = co.JsonValue();
-	root["handle_left"] = handle_left.JsonValue();
-	root["handle_right"] = handle_right.JsonValue();
+	if (interpolation == BEZIER) {
+		root["handle_left"] = handle_left.JsonValue();
+		root["handle_right"] = handle_right.JsonValue();
+		root["handle_type"] = handle_type;
+	}
 	root["interpolation"] = interpolation;
-	root["handle_type"] = handle_type;
 
 	// return JsonValue
 	return root;

@@ -55,11 +55,11 @@ Json::Value Coordinate::JsonValue() {
 	Json::Value root;
 	root["X"] = X;
 	root["Y"] = Y;
-	root["increasing"] = increasing;
-	root["repeated"] = Json::Value(Json::objectValue);
-	root["repeated"]["num"] = repeated.num;
-	root["repeated"]["den"] = repeated.den;
-	root["delta"] = delta;
+	//root["increasing"] = increasing;
+	//root["repeated"] = Json::Value(Json::objectValue);
+	//root["repeated"]["num"] = repeated.num;
+	//root["repeated"]["den"] = repeated.den;
+	//root["delta"] = delta;
 
 	// return JsonValue
 	return root;

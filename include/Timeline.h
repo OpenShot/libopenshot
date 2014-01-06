@@ -43,6 +43,7 @@
 #include "Cache.h"
 #include "Color.h"
 #include "Clip.h"
+#include "Point.h"
 #include "EffectBase.h"
 #include "ReaderBase.h"
 #include "Fraction.h"
