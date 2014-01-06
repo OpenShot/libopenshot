@@ -124,7 +124,6 @@ add_executable(tester
 			   FFmpegReader_Tests.cpp
 			   Fraction_Tests.cpp
 			   FrameMapper_Tests.cpp
-			   FrameRate_Tests.cpp
 			   KeyFrame_Tests.cpp
 			   Point_Tests.cpp
 			   Timeline_Tests.cpp)

@@ -60,15 +60,15 @@ TEST(FFmpegReader_Check_Audio_File)
 
 	// Check audio properties
 	CHECK_EQUAL(2, f->GetAudioChannelsCount());
-	CHECK_EQUAL(267, f->GetAudioSamplesCount());
+	CHECK_EQUAL(333, f->GetAudioSamplesCount());
 
 	// Check actual sample values (to be sure the waveform is correct)
 	CHECK_CLOSE(0.0f, samples[0], 0.00001);
 	CHECK_CLOSE(0.0f, samples[50], 0.00001);
 	CHECK_CLOSE(0.0f, samples[100], 0.00001);
 	CHECK_CLOSE(0.0f, samples[200], 0.00001);
-	CHECK_CLOSE(0.164062f, samples[230], 0.00001);
-	CHECK_CLOSE(-0.164062f, samples[266], 0.00001);
+	CHECK_CLOSE(0.160781, samples[230], 0.00001);
+	CHECK_CLOSE(-0.06125f, samples[300], 0.00001);
 
 	// Close reader
 	r.Close();

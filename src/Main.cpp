@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 //	ir.Open();
 //
 //	// FrameMapper to de-interlace frame
-//	//FrameMapper fm(&ir, Framerate(24,1), PULLDOWN_NONE);
+//	//FrameMapper fm(&ir, Fraction(24,1), PULLDOWN_NONE);
 //	//fm.DeInterlaceFrame(ir.GetFrame(1), true)->Display();
 //	Deinterlace de(false);
 //	de.GetFrame(ir.GetFrame(1), 1)->Display();
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 	r1.Open();
 
 	// FrameMapper
-	FrameMapper r(&r1, Framerate(24,1), PULLDOWN_ADVANCED);
+	FrameMapper r(&r1, Fraction(24,1), PULLDOWN_ADVANCED);
 	r.PrintMapping();
 
 	/* WRITER ---------------- */

@@ -41,7 +41,7 @@
 #include "Color.h"
 #include "Enums.h"
 #include "FFmpegReader.h"
-#include "FrameRate.h"
+#include "Fraction.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
 #include "TextReader.h"

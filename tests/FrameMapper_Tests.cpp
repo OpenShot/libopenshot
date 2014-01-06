@@ -34,10 +34,10 @@ using namespace openshot;
 TEST(FrameMapper_Get_Valid_Frame)
 {
 	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 24 fps and 29.97 fps using classic pulldown
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
+	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC);
 
 	try
 	{
@@ -55,35 +55,23 @@ TEST(FrameMapper_Get_Valid_Frame)
 TEST(FrameMapper_Invalid_Frame_Too_Small)
 {
 	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
+	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC);
 
 	// Check invalid frame number
 	CHECK_THROW(mapping.GetMappedFrame(0), OutOfBoundsFrame);
 
 }
 
-TEST(FrameMapper_Invalid_Frame_Too_Large)
-{
-	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 4.0);
-
-	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
-
-	// Check invalid frame number
-	CHECK_THROW(mapping.GetMappedFrame(151), OutOfBoundsFrame);
-}
-
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 {
 	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_CLASSIC);
+	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 
@@ -97,10 +85,10 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 {
 	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_ADVANCED);
+	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_ADVANCED);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
@@ -117,10 +105,10 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 {
 	// Create a reader
-	DummyReader r(Framerate(24,1), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Framerate(30000, 1001), PULLDOWN_NONE);
+	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_NONE);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 
@@ -134,10 +122,10 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 {
 	// Create a reader
-	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
-	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_CLASSIC);
+	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_CLASSIC);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
@@ -154,10 +142,10 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 {
 	// Create a reader
-	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
-	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_ADVANCED);
+	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_ADVANCED);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
@@ -174,10 +162,10 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 {
 	// Create a reader
-	DummyReader r(Framerate(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 29.97 fps and 24 fps
-	FrameMapper mapping(&r, Framerate(24, 1), PULLDOWN_NONE);
+	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_NONE);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 

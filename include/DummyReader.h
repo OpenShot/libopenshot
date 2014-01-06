@@ -39,7 +39,7 @@
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
-#include "FrameRate.h"
+#include "Fraction.h"
 
 using namespace std;
 
@@ -55,7 +55,7 @@ namespace openshot
 	{
 	private:
 		tr1::shared_ptr<Frame> image_frame;
-		Framerate fps;
+		Fraction fps;
 		float duration;
 		int sample_rate;
 		int width;
@@ -69,7 +69,7 @@ namespace openshot
 		DummyReader();
 
 		/// Constructor for DummyReader.
-		DummyReader(Framerate fps, int width, int height, int sample_rate, int channels, float duration);
+		DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration);
 
 		/// Close File
 		void Close();

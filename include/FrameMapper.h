@@ -36,7 +36,7 @@
 #include "../include/Cache.h"
 #include "../include/ReaderBase.h"
 #include "../include/Frame.h"
-#include "../include/FrameRate.h"
+#include "../include/Fraction.h"
 #include "../include/Exceptions.h"
 #include "../include/KeyFrame.h"
 
@@ -122,7 +122,7 @@ namespace openshot
 	 * Please see the following <b>Example Code</b>:
 	 * \code
 	 * // Create a frame mapper for a clip with 100 frames, and convert the frame rate (from 24 fps to 29.97 fps)
-	 * FrameMapper mapping(100, Framerate(24, 1), Framerate(30000, 1001), PULLDOWN_CLASSIC);
+	 * FrameMapper mapping(100, Fraction(24, 1), Fraction(30000, 1001), PULLDOWN_CLASSIC);
 	 * Frame frame2 = mapping.GetFrame(2);
 	 * assert(frame2.Odd.Frame == 2);
 	 * \endcode
@@ -131,8 +131,8 @@ namespace openshot
 	private:
 		bool is_open;
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
-		Framerate original;		// The original frame rate
-		Framerate target;			// The target frame rate
+		Fraction original;		// The original frame rate
+		Fraction target;			// The target frame rate
 		PulldownType pulldown;	// The pull-down technique
 		ReaderBase *reader;	// The source video reader
 		Cache final_cache; // Cache of actual Frame objects
@@ -156,7 +156,7 @@ namespace openshot
 		vector<MappedFrame> frames;	// List of all frames
 
 		/// Default constructor for FrameMapper class
-		FrameMapper(ReaderBase *reader, Framerate target, PulldownType pulldown);
+		FrameMapper(ReaderBase *reader, Fraction target, PulldownType pulldown);
 
 		/// Close the internal reader
 		void Close();
@@ -182,16 +182,16 @@ namespace openshot
 		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
 
 		/// Get the target framerate
-		Framerate TargetFPS() { return target; };
+		Fraction TargetFPS() { return target; };
 
 		/// Get the source framerate
-		Framerate SourceFPS() { return original; };
+		Fraction SourceFPS() { return original; };
 
 		/// Set the target framerate
-		void TargetFPS(Framerate new_fps) { target = new_fps; };
+		void TargetFPS(Fraction new_fps) { target = new_fps; };
 
 		/// Set the source framerate
-		void SourceFPS(Framerate new_fps) { original = new_fps; };
+		void SourceFPS(Fraction new_fps) { original = new_fps; };
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile);

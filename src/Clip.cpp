@@ -122,7 +122,7 @@ Clip::Clip(string path)
 		{
 			// Open common video format
 			reader = new FFmpegReader(path);
-			cout << "READER FOUND: FFmpegReader" << endl;
+
 		} catch(...) { }
 	}
 
@@ -133,18 +133,15 @@ Clip::Clip(string path)
 		{
 			// Try an image reader
 			reader = new ImageReader(path);
-			cout << "READER FOUND: ImageReader" << endl;
 
 		} catch(...) {
 			try
 			{
 				// Try a video reader
 				reader = new FFmpegReader(path);
-				cout << "READER FOUND: FFmpegReader" << endl;
 
 			} catch(BaseException ex) {
 				// No Reader Found, Throw an exception
-				cout << "READER NOT FOUND" << endl;
 				throw ex;
 			}
 		}

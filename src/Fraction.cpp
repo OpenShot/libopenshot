@@ -47,6 +47,12 @@ double Fraction::ToDouble() {
 	return double(num) / double(den);
 }
 
+// Return a rounded integer of the frame rate (for example 30000/1001 returns 30 fps)
+int Fraction::ToInt() {
+	return round((float) num / den);
+}
+
+// Calculate the greatest common denominator
 int Fraction::GreatestCommonDenominator() {
 	int first = num;
 	int second = den;

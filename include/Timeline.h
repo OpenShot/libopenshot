@@ -47,7 +47,6 @@
 #include "ReaderBase.h"
 #include "Fraction.h"
 #include "Frame.h"
-#include "FrameRate.h"
 #include "KeyFrame.h"
 
 #include "effects/ChromaKey.h"
@@ -98,7 +97,7 @@ namespace openshot {
 	 * // Create a Timeline
 	 * Timeline t(1280, // width
 	 *            720, // height
-	 *            Framerate(25,1), // framerate
+	 *            Fraction(25,1), // framerate
 	 *            44100, // sample rate
 	 *            2 // channels
 	 *            );

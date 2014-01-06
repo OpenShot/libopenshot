@@ -155,7 +155,6 @@ SET ( OPENSHOT_SOURCE_FILES
 		Fraction.cpp
 		Frame.cpp
 		FrameMapper.cpp
-		FrameRate.cpp
 		KeyFrame.cpp
 		ImageReader.cpp
 		PlayerBase.cpp

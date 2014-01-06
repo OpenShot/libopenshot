@@ -1,7 +1,7 @@
 import openshot
 
 # Create a empty clip
-t = openshot.Timeline(720, 480, openshot.Framerate(24,1), 44100, 2)
+t = openshot.Timeline(720, 480, openshot.Fraction(24,1), 44100, 2)
 
 # lower layer
 lower = openshot.ImageReader("/home/jonathan/apps/libopenshot/src/examples/back.png")

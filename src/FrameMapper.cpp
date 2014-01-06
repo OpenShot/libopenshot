@@ -30,7 +30,7 @@
 using namespace std;
 using namespace openshot;
 
-FrameMapper::FrameMapper(ReaderBase *reader, Framerate target, PulldownType pulldown) :
+FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType pulldown) :
 		reader(reader), target(target), pulldown(pulldown), final_cache(820 * 1024)
 {
 
@@ -38,14 +38,14 @@ FrameMapper::FrameMapper(ReaderBase *reader, Framerate target, PulldownType pull
 	InitFileInfo();
 
 	// Set the original frame rate from the reader
-	original = Framerate(reader->info.fps.num, reader->info.fps.den);
+	original = Fraction(reader->info.fps.num, reader->info.fps.den);
 
 	// Set all info struct members equal to the internal reader
 	info = reader->info;
-	info.fps.num = target.GetFraction().num;
-	info.fps.den = target.GetFraction().den;
-	info.video_timebase.num = target.GetFraction().den;
-	info.video_timebase.den = target.GetFraction().num;
+	info.fps.num = target.num;
+	info.fps.den = target.den;
+	info.video_timebase.num = target.den;
+	info.video_timebase.den = target.num;
 	info.video_length = round(info.duration * info.fps.ToDouble());
 	info.sample_rate = reader->info.sample_rate;
 	info.channels = reader->info.channels;
@@ -86,11 +86,11 @@ void FrameMapper::Init()
 
 	// Some framerates are handled special, and some use a generic Keyframe curve to
 	// map the framerates. These are the special framerates:
-	if ((original.GetRoundedFPS() == 24 || original.GetRoundedFPS() == 25 || original.GetRoundedFPS() == 30) &&
-		(target.GetRoundedFPS() == 24 || target.GetRoundedFPS() == 25 || target.GetRoundedFPS() == 30)) {
+	if ((original.ToInt() == 24 || original.ToInt() == 25 || original.ToInt() == 30) &&
+		(target.ToInt() == 24 || target.ToInt() == 25 || target.ToInt() == 30)) {
 
 		// Get the difference (in frames) between the original and target frame rates
-		float difference = target.GetRoundedFPS() - original.GetRoundedFPS();
+		float difference = target.ToInt() - original.ToInt();
 
 		// Find the number (i.e. interval) of fields that need to be skipped or repeated
 		int field_interval = 0;
@@ -98,7 +98,7 @@ void FrameMapper::Init()
 
 		if (difference != 0)
 		{
-			field_interval = round(fabs(original.GetRoundedFPS() / difference));
+			field_interval = round(fabs(original.ToInt() / difference));
 
 			// Get frame interval (2 fields per frame)
 			frame_interval = field_interval * 2.0f;
@@ -177,7 +177,7 @@ void FrameMapper::Init()
 	} else {
 		// Map the remaining framerates using a simple Keyframe curve
 		// Calculate the difference (to be used as a multiplier)
-		float rate_diff = target.GetFPS() / original.GetFPS();
+		float rate_diff = target.ToFloat() / original.ToFloat();
 		int new_length = reader->info.video_length * rate_diff;
 
 		// Build curve for framerate mapping
@@ -222,12 +222,12 @@ void FrameMapper::Init()
 			// Determine the range of samples (from the original rate, to the new rate)
 			int end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
-			int remaining_samples = GetSamplesPerFrame(frame_number, target.GetFraction());
+			int remaining_samples = GetSamplesPerFrame(frame_number, target);
 
 			while (remaining_samples > 0)
 			{
 				// get original samples
-				int original_samples = GetSamplesPerFrame(end_samples_frame, original.GetFraction()) - end_samples_position;
+				int original_samples = GetSamplesPerFrame(end_samples_frame, original) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -247,12 +247,12 @@ void FrameMapper::Init()
 
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, GetSamplesPerFrame(frame_number, target.GetFraction())};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, GetSamplesPerFrame(frame_number, target)};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
 			start_samples_position = end_samples_position + 1;
-			if (start_samples_position >= GetSamplesPerFrame(start_samples_frame, original.GetFraction()))
+			if (start_samples_position >= GetSamplesPerFrame(start_samples_frame, original))
 			{
 				start_samples_frame += 1; // increment the frame (since we need to wrap onto the next one)
 				start_samples_position = 0; // reset to 0, since we wrapped
@@ -302,7 +302,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	MappedFrame mapped = GetMappedFrame(requested_frame);
 
 	// Init some basic properties about this frame
-	int samples_in_frame = GetSamplesPerFrame(requested_frame, target.GetFraction());
+	int samples_in_frame = GetSamplesPerFrame(requested_frame, target);
 
 	// Create a new frame
 	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
@@ -391,7 +391,7 @@ int FrameMapper::GetSamplesPerFrame(int frame_number, Fraction rate)
 void FrameMapper::PrintMapping()
 {
 	// Get the difference (in frames) between the original and target frame rates
-	float difference = target.GetRoundedFPS() - original.GetRoundedFPS();
+	float difference = target.ToInt() - original.ToInt();
 
 	int field_interval = 0;
 	int frame_interval = 0;
@@ -399,14 +399,14 @@ void FrameMapper::PrintMapping()
 	if (difference != 0)
 	{
 		// Find the number (i.e. interval) of fields that need to be skipped or repeated
-		field_interval = round(fabs(original.GetRoundedFPS() / difference));
+		field_interval = round(fabs(original.ToInt() / difference));
 
 		// Get frame interval (2 fields per frame)
 		frame_interval = field_interval * 2.0f;
 	}
 
 	// print header
-	cout << "Convert " << original.GetRoundedFPS() << " fps to " << target.GetRoundedFPS() << " fps" << endl;
+	cout << "Convert " << original.ToInt() << " fps to " << target.ToInt() << " fps" << endl;
 	cout << "Difference of " << difference << " frames per second" << endl;
 	cout << "Field Interval: " << field_interval << "th field" << endl;
 	cout << "Frame Interval: " << frame_interval << "th field" << endl << endl;
