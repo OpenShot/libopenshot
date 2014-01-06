@@ -296,7 +296,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 	Points.clear();
 
 	if (root["Points"] != Json::nullValue)
-		// loop through points, and find a matching coordinate
+		// loop through points
 		for (int x = 0; x < root["Points"].size(); x++) {
 			// Get each point
 			Json::Value existing_point = root["Points"][x];

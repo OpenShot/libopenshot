@@ -48,6 +48,7 @@
 #include "ChunkReader.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
+#include "DummyReader.h"
 
 using namespace std;
 using namespace openshot;

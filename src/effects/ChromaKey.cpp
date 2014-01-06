@@ -29,6 +29,12 @@
 
 using namespace openshot;
 
+/// Blank constructor, useful when using Json to load the effect properties
+ChromaKey::ChromaKey() : fuzz(0.0) {
+	// Init default color
+	color = Color();
+}
+
 // Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
 // is used to determine how similar colored pixels are matched. The higher the fuzz, the
 // more colors are matched.
@@ -68,6 +74,7 @@ Json::Value ChromaKey::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["type"] = "ChromaKey";
 	root["color"] = color.JsonValue();
 	root["fuzz"] = fuzz.JsonValue();
 

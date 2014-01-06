@@ -65,6 +65,7 @@ Json::Value Negate::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["type"] = "Negate";
 
 	// return JsonValue
 	return root;

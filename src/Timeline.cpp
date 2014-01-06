@@ -30,8 +30,7 @@
 using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
-Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int channels) :
-		width(width), height(height), fps(fps), sample_rate(sample_rate), channels(channels), is_open(false)
+Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels) : is_open(false)
 {
 	// Init viewport size (curve based, because it can be animated)
 	viewport_scale = Keyframe(100.0);
@@ -51,10 +50,10 @@ Timeline::Timeline(int width, int height, Framerate fps, int sample_rate, int ch
 	InitFileInfo();
 	info.width = width;
 	info.height = height;
-	info.fps = fps.GetFraction();
+	info.fps = fps;
 	info.sample_rate = sample_rate;
 	info.channels = channels;
-	info.video_timebase = fps.GetFraction().Reciprocal();
+	info.video_timebase = fps.Reciprocal();
 }
 
 // Add an openshot::Clip to the timeline
@@ -62,7 +61,7 @@ void Timeline::AddClip(Clip* clip) throw(ReaderClosed)
 {
 	// All clips must be converted to the frame rate of this timeline,
 	// so assign the same frame rate to each clip.
-	clip->Reader()->info.fps = fps.GetFraction();
+	clip->Reader()->info.fps = info.fps;
 
 	// Add clip to list
 	clips.push_back(clip);
@@ -94,10 +93,10 @@ void Timeline::RemoveClip(Clip* clip)
 }
 
 // Calculate time of a frame number, based on a framerate
-float Timeline::calculate_time(int number, Framerate rate)
+float Timeline::calculate_time(int number, Fraction rate)
 {
 	// Get float version of fps fraction
-	float raw_fps = rate.GetFPS();
+	float raw_fps = rate.ToFloat();
 
 	// Return the time (in seconds) of this frame
 	return float(number - 1) / raw_fps;
@@ -107,7 +106,7 @@ float Timeline::calculate_time(int number, Framerate rate)
 tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer)
 {
 	// Calculate time of frame
-	float requested_time = calculate_time(timeline_frame_number, fps);
+	float requested_time = calculate_time(timeline_frame_number, info.fps);
 
 	// Find Effects at this position and layer
 	list<EffectBase*>::iterator effect_itr;
@@ -129,7 +128,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 		{
 			// Determine the frame needed for this clip (based on the position on the timeline)
 			float time_diff = (requested_time - effect->Position()) + effect->Start();
-			int effect_frame_number = round(time_diff * fps.GetFPS()) + 1;
+			int effect_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 			// Apply the effect to this frame
 			frame = effect->GetFrame(frame, effect_frame_number);
@@ -192,7 +191,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int blue = source_clip->wave_color.blue.GetInt(timeline_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = source_frame->GetWaveform(width, height, red, green, blue);
+		source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue);
 	}
 
 	// Get some basic image properties
@@ -207,7 +206,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
-	Magick::Geometry new_size(width, height);
+	Magick::Geometry new_size(info.width, info.height);
 	switch (source_clip->scale)
 	{
 	case (SCALE_FIT):
@@ -223,10 +222,10 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_height = source_image->size().height();
 		break;
 	case (SCALE_CROP):
-		Magick::Geometry width_size(width, round(width / (float(source_width) / float(source_height))));
-		Magick::Geometry height_size(round(height / (float(source_height) / float(source_width))), height);
+		Magick::Geometry width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
+		Magick::Geometry height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
 		new_size.aspect(false); // respect aspect ratio
-		if (width_size.width() >= width && width_size.height() >= height)
+		if (width_size.width() >= info.width && width_size.height() >= info.height)
 			source_image->resize(width_size); // width is larger, so resize to it
 		else
 			source_image->resize(height_size); // height is larger, so resize to it
@@ -241,39 +240,39 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	switch (source_clip->gravity)
 	{
 	case (GRAVITY_TOP):
-		x = (width - source_width) / 2.0; // center
+		x = (info.width - source_width) / 2.0; // center
 		break;
 	case (GRAVITY_TOP_RIGHT):
-		x = width - source_width; // right
+		x = info.width - source_width; // right
 		break;
 	case (GRAVITY_LEFT):
-		y = (height - source_height) / 2.0; // center
+		y = (info.height - source_height) / 2.0; // center
 		break;
 	case (GRAVITY_CENTER):
-		x = (width - source_width) / 2.0; // center
-		y = (height - source_height) / 2.0; // center
+		x = (info.width - source_width) / 2.0; // center
+		y = (info.height - source_height) / 2.0; // center
 		break;
 	case (GRAVITY_RIGHT):
-		x = width - source_width; // right
-		y = (height - source_height) / 2.0; // center
+		x = info.width - source_width; // right
+		y = (info.height - source_height) / 2.0; // center
 		break;
 	case (GRAVITY_BOTTOM_LEFT):
-		y = (height - source_height); // bottom
+		y = (info.height - source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM):
-		x = (width - source_width) / 2.0; // center
-		y = (height - source_height); // bottom
+		x = (info.width - source_width) / 2.0; // center
+		y = (info.height - source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM_RIGHT):
-		x = width - source_width; // right
-		y = (height - source_height); // bottom
+		x = info.width - source_width; // right
+		y = (info.height - source_height); // bottom
 		break;
 	}
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
-	x += width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
-	y += height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
+	x += info.width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
+	y += info.height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
 	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
 	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
 	bool is_x_animated = source_clip->location_x.Points.size() > 2;
@@ -295,11 +294,11 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		//cout << "COMPLEX" << endl;
 
 		/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
-		if (source_width != width || source_height != height)
+		if (source_width != info.width || source_height != info.height)
 		{
 			source_image->borderColor(Magick::Color("none"));
 			source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
-			source_image->size(Magick::Geometry(width, height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+			source_image->size(Magick::Geometry(info.width, info.height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
 		}
 
 		// Use the distort operator, which is very CPU intensive
@@ -321,7 +320,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
 		int blue = color.blue.GetInt(timeline_frame_number);
-		new_frame->AddColor(width, height, Magick::Color(red, green, blue, 0));
+		new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue, 0));
 
 		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
@@ -409,6 +408,9 @@ void Timeline::Close()
 	// Actually close the clips
 	update_closed_clips();
 	is_open = false;
+
+	// Clear cache
+	final_cache.Clear();
 }
 
 // Open the reader (and start consuming resources)
@@ -421,9 +423,9 @@ void Timeline::Open()
 int Timeline::GetSamplesPerFrame(int frame_number)
 {
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double fps_value = fps.GetFraction().Reciprocal().ToDouble();
-	double previous_samples = round((sample_rate * fps_value) * (frame_number - 1));
-	double total_samples = round((sample_rate * fps_value) * frame_number);
+	double fps_value = info.fps.Reciprocal().ToDouble();
+	double previous_samples = round((info.sample_rate * fps_value) * (frame_number - 1));
+	double total_samples = round((info.sample_rate * fps_value) * frame_number);
 
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
@@ -465,11 +467,11 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 					#pragma xx omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
-						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, width, height, "#000000", GetSamplesPerFrame(frame_number), channels)));
+						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", GetSamplesPerFrame(frame_number), info.channels)));
 						new_frame->SetSampleRate(info.sample_rate);
 
 						// Calculate time of frame
-						float requested_time = calculate_time(frame_number, fps);
+						float requested_time = calculate_time(frame_number, info.fps);
 
 						// Find Clips at this time
 						list<Clip*>::iterator clip_itr;
@@ -495,7 +497,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							{
 								// Determine the frame needed for this clip (based on the position on the timeline)
 								float time_diff = (requested_time - clip->Position()) + clip->Start();
-								int clip_frame_number = round(time_diff * fps.GetFPS()) + 1;
+								int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 								// Add clip's frame as layer
 								add_layer(new_frame, clip, clip_frame_number, frame_number);
@@ -510,7 +512,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								int red = color.red.GetInt(frame_number);
 								int green = color.green.GetInt(frame_number);
 								int blue = color.blue.GetInt(frame_number);
-								new_frame->AddColor(width, height, Magick::Color(red, green, blue));
+								new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue));
 							}
 
 							// Add final frame to cache
@@ -548,6 +550,34 @@ Json::Value Timeline::JsonValue() {
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "Timeline";
+	root["viewport_scale"] = viewport_scale.JsonValue();
+	root["viewport_x"] = viewport_x.JsonValue();
+	root["viewport_y"] = viewport_y.JsonValue();
+	root["color"] = color.JsonValue();
+
+	// Add array of clips
+	root["Clips"] = Json::Value(Json::arrayValue);
+
+	// Find Clips at this time
+	list<Clip*>::iterator clip_itr;
+	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *existing_clip = (*clip_itr);
+		root["Clips"].append(existing_clip->JsonValue());
+	}
+
+	// Add array of effects
+	root["Effects"] = Json::Value(Json::arrayValue);
+
+	// loop through effects
+	list<EffectBase*>::iterator effect_itr;
+	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	{
+		// Get clip object from the iterator
+		EffectBase *existing_effect = (*effect_itr);
+		root["Effects"].append(existing_effect->JsonValue());
+	}
 
 	// return JsonValue
 	return root;
@@ -577,9 +607,63 @@ void Timeline::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
+
+	// Close timeline before we do anything (this also removes all open and closing clips)
+	Close();
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
 
+	// Clear existing clips
+	clips.clear();
+
+	if (root["Clips"] != Json::nullValue)
+		// loop through clips
+		for (int x = 0; x < root["Clips"].size(); x++) {
+			// Get each clip
+			Json::Value existing_clip = root["Clips"][x];
+
+			// Create Clip
+			Clip *c = new Clip();
+
+			// Load Json into Clip
+			c->SetJsonValue(existing_clip);
+
+			// Add Clip to Timeline
+			AddClip(c);
+		}
+
+	// Clear existing effects
+	effects.clear();
+
+	if (root["Effects"] != Json::nullValue)
+		// loop through effects
+		for (int x = 0; x < root["Effects"].size(); x++) {
+			// Get each effect
+			Json::Value existing_effect = root["Effects"][x];
+
+			// Create Effect
+			EffectBase *e = NULL;
+
+			if (existing_effect["type"] != Json::nullValue)
+				// Init the matching effect object
+				if (existing_effect["type"].asString() == "ChromaKey")
+					e = new ChromaKey();
+
+				else if (existing_effect["type"].asString() == "Deinterlace")
+					e = new Deinterlace();
+
+				else if (existing_effect["type"].asString() == "Mask")
+					e = new Mask();
+
+				else if (existing_effect["type"].asString() == "Negate")
+					e = new Negate();
+
+			// Load Json into Effect
+			e->SetJsonValue(existing_effect);
+
+			// Add Effect to Timeline
+			AddEffect(e);
+		}
 }

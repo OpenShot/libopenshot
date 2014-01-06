@@ -68,6 +68,9 @@ namespace openshot
 
 	public:
 
+		/// Blank constructor, useful when using Json to load the effect properties
+		Mask();
+
 		/// Default constructor, which takes 2 curves and a mask image path. The mask is used to
 		/// determine the alpha for each pixel (black is transparent, white is visible). The curves
 		/// adjust the brightness and contrast of this file, to animate the effect.

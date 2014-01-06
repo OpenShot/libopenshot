@@ -29,6 +29,12 @@
 
 using namespace openshot;
 
+// Blank constructor for DummyReader, with default settings.
+DummyReader::DummyReader() : fps(Framerate(24,1)), width(1280), height(720),
+		sample_rate(44100), channels(2), duration(30.0) {
+
+}
+
 // Constructor for DummyReader.  Pass a framerate and samplerate.
 DummyReader::DummyReader(Framerate fps, int width, int height, int sample_rate, int channels, float duration) :
 		fps(fps), width(width), height(height), sample_rate(sample_rate), channels(channels), duration(duration)

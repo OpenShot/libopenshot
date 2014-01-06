@@ -65,6 +65,9 @@ namespace openshot
 
 	public:
 
+		/// Blank constructor for DummyReader, with default settings.
+		DummyReader();
+
 		/// Constructor for DummyReader.
 		DummyReader(Framerate fps, int width, int height, int sample_rate, int channels, float duration);
 

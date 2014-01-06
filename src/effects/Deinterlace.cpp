@@ -29,6 +29,11 @@
 
 using namespace openshot;
 
+/// Blank constructor, useful when using Json to load the effect properties
+Deinterlace::Deinterlace() : isOdd(true) {
+
+}
+
 // Default constructor
 Deinterlace::Deinterlace(bool UseOddLines) : isOdd(UseOddLines)
 {
@@ -78,6 +83,7 @@ Json::Value Deinterlace::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["type"] = "Deinterlace";
 	root["isOdd"] = isOdd;
 
 	// return JsonValue

@@ -29,6 +29,11 @@
 
 using namespace openshot;
 
+/// Blank constructor, useful when using Json to load the effect properties
+Mask::Mask() : reader(NULL) {
+
+}
+
 // Default constructor
 Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed) :
 		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast)
@@ -134,6 +139,7 @@ Json::Value Mask::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["type"] = "Mask";
 	root["brightness"] = brightness.JsonValue();
 	root["contrast"] = contrast.JsonValue();
 	//root["reader"] = reader.JsonValue();

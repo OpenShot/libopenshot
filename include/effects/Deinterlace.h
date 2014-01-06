@@ -61,6 +61,9 @@ namespace openshot
 
 	public:
 
+		/// Blank constructor, useful when using Json to load the effect properties
+		Deinterlace();
+
 		/// Default constructor
 		Deinterlace(bool isOdd);
 

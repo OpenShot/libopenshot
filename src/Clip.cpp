@@ -707,6 +707,12 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "DummyReader") {
+
+				// Create new reader
+				reader = new DummyReader();
+				reader->SetJsonValue(root["reader"]);
 			}
 
 			// Re-Open reader (if needed)

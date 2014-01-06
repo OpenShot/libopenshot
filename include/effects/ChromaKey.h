@@ -60,6 +60,9 @@ namespace openshot
 
 	public:
 
+		/// Blank constructor, useful when using Json to load the effect properties
+		ChromaKey();
+
 		/// Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
 		/// is used to determine how similar colored pixels are matched. The higher the fuzz, the
 		/// more colors are matched.

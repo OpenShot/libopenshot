@@ -50,6 +50,11 @@
 #include "FrameRate.h"
 #include "KeyFrame.h"
 
+#include "effects/ChromaKey.h"
+#include "effects/Deinterlace.h"
+#include "effects/Mask.h"
+#include "effects/Negate.h"
+
 using namespace std;
 using namespace openshot;
 
@@ -142,11 +147,6 @@ namespace openshot {
 	class Timeline : public ReaderBase {
 	private:
 		bool is_open; ///<Is Timeline Open?
-		int width; ///<Width of the canvas and viewport
-		int height; ///<Height of the canvas and viewport
-		Framerate fps; ///<Frames per second of the timeline
-		int sample_rate; ///<Sample rate of timeline
-		int channels; ///<Channels in timeline
 		list<Clip*> clips; ///<List of clips on this timeline
 		list<Clip*> closing_clips; ///<List of clips that need to be closed
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
@@ -157,7 +157,7 @@ namespace openshot {
 		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number);
 
 		/// Calculate time of a frame number, based on a framerate
-		float calculate_time(int number, Framerate rate);
+		float calculate_time(int number, Fraction rate);
 
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
@@ -182,7 +182,7 @@ namespace openshot {
 		/// @param fps The frames rate of the timeline
 		/// @param sample_rate The sample rate of the timeline's audio
 		/// @param channels The number of audio channels of the timeline
-		Timeline(int width, int height, Framerate fps, int sample_rate, int channels);
+		Timeline(int width, int height, Fraction fps, int sample_rate, int channels);
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
@@ -201,25 +201,11 @@ namespace openshot {
 		/// Return the list of effects on the timeline
 		list<EffectBase*> Effects() { return effects; };
 
-		/// Get the framerate of this timeline
-		Framerate FrameRate() { return fps; };
-
-		/// @brief Set the framerate for this timeline
-		/// @param new_fps The new frame rate to set for this timeline
-		void FrameRate(Framerate new_fps) { fps = new_fps; };
-
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
 		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
-
-		/// Get the height of canvas and viewport
-		int Height() { return height; }
-
-		/// @brief Set the height of canvas and viewport
-		/// @param new_height The new height to set for this timeline
-		void Height(int new_height) { height = new_height; }
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
@@ -236,7 +222,7 @@ namespace openshot {
 		string Json(); ///< Generate JSON string of this object
 		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed); ///< Load Json::JsonValue into this object
 
 		/// Open the reader (and start consuming resources)
 		void Open();
@@ -254,13 +240,6 @@ namespace openshot {
 
 		/// Sort effects by position on the timeline
 		void SortEffects();
-
-		/// Get the width of canvas and viewport
-		int Width() { return width; }
-
-		/// @brief Set the width of canvas and viewport
-		/// @param new_width The new width to set for this timeline (i.e. the canvas & viewport)
-		void Width(int new_width) { width = new_width; }
 
 	};
 
