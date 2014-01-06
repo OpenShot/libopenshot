@@ -30,17 +30,44 @@
 using namespace openshot;
 
 // Blank constructor for DummyReader, with default settings.
-DummyReader::DummyReader() : fps(Fraction(24,1)), width(1280), height(720),
-		sample_rate(44100), channels(2), duration(30.0) {
+DummyReader::DummyReader() {
 
+	// Call actual constructor with default values
+	DummyReader(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
 }
 
 // Constructor for DummyReader.  Pass a framerate and samplerate.
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) :
-		fps(fps), width(width), height(height), sample_rate(sample_rate), channels(channels), duration(duration)
-{
+DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
+
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
+
+	// Set key info settings
+	info.has_audio = false;
+	info.has_video = true;
+	info.file_size = width * height * sizeof(int);
+	info.vcodec = "raw";
+	info.fps = fps;
+	info.width = width;
+	info.height = height;
+	info.sample_rate = sample_rate;
+	info.channels = channels;
+	info.duration = duration;
+	info.video_length = duration * fps.ToFloat();
+	info.pixel_ratio.num = 1;
+	info.pixel_ratio.den = 1;
+	info.video_timebase = fps.Reciprocal();
+	info.acodec = "raw";
+
+	// Calculate the DAR (display aspect ratio)
+	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
+
+	// Reduce size fraction
+	size.Reduce();
+
+	// Set the ratio based on the reduced fraction
+	info.display_ratio.num = size.num;
+	info.display_ratio.den = size.den;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -54,39 +81,10 @@ void DummyReader::Open() throw(InvalidFile)
 	if (!is_open)
 	{
 		// Create or get frame object
-		image_frame = tr1::shared_ptr<Frame>(new Frame(1, width, height, "#000000", sample_rate, channels));
+		image_frame = tr1::shared_ptr<Frame>(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
 
 		// Add Image data to frame
-		image_frame->AddImage(tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("#000000"))));
-
-		// Update image properties
-		info.has_audio = false;
-		info.has_video = true;
-		info.file_size = width * height * sizeof(int);
-		info.vcodec = "raw";
-		info.width = width;
-		info.height = height;
-		info.pixel_ratio.num = 1;
-		info.pixel_ratio.den = 1;
-		info.duration = duration;
-		info.fps.num = fps.num;
-		info.fps.den = fps.den;
-		info.video_timebase.num = fps.den;
-		info.video_timebase.den = fps.num;
-		info.video_length = round(info.duration * info.fps.ToDouble());
-		info.acodec = "raw";
-		info.channels = channels;
-		info.sample_rate = sample_rate;
-
-		// Calculate the DAR (display aspect ratio)
-		Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
-
-		// Reduce size fraction
-		size.Reduce();
-
-		// Set the ratio based on the reduced fraction
-		info.display_ratio.num = size.num;
-		info.display_ratio.den = size.den;
+		image_frame->AddImage(tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(info.width, info.height), Magick::Color("#000000"))));
 
 		// Mark as "open"
 		is_open = true;

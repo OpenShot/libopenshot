@@ -279,7 +279,7 @@ void FrameMapper::Init()
 MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
 {
 	// Check if frame number is valid
-	if(TargetFrameNumber < 1)
+	if(TargetFrameNumber < 1 || frames.size() == 0)
 		// frame too small, return error
 		throw OutOfBoundsFrame("An invalid frame was requested.", TargetFrameNumber, frames.size());
 
@@ -415,8 +415,8 @@ void FrameMapper::PrintMapping()
 	for (float map = 1; map <= frames.size(); map++)
 	{
 		MappedFrame frame = frames[map - 1];
-		cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
-		cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
+		//cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
+		//cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
 	}
 
 }

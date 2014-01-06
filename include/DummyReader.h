@@ -55,12 +55,6 @@ namespace openshot
 	{
 	private:
 		tr1::shared_ptr<Frame> image_frame;
-		Fraction fps;
-		float duration;
-		int sample_rate;
-		int width;
-		int height;
-		int channels;
 		bool is_open;
 
 	public:
