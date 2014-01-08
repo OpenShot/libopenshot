@@ -146,60 +146,60 @@ Json::Value ReaderBase::JsonValue() {
 void ReaderBase::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
-	if (root["has_video"] != Json::nullValue)
+	if (!root["has_video"].isNull())
 		info.has_video = root["has_video"].asBool();
-	if (root["has_audio"] != Json::nullValue)
+	if (!root["has_audio"].isNull())
 		info.has_audio = root["has_audio"].asBool();
-	if (root["duration"] != Json::nullValue)
+	if (!root["duration"].isNull())
 		info.duration = root["duration"].asDouble();
-	if (root["file_size"] != Json::nullValue)
+	if (!root["file_size"].isNull())
 		info.file_size = atoll(root["file_size"].asString().c_str());
-	if (root["height"] != Json::nullValue)
+	if (!root["height"].isNull())
 		info.height = root["height"].asInt();
-	if (root["width"] != Json::nullValue)
+	if (!root["width"].isNull())
 		info.width = root["width"].asInt();
-	if (root["pixel_format"] != Json::nullValue)
+	if (!root["pixel_format"].isNull())
 		info.pixel_format = root["pixel_format"].asInt();
-	if (root["fps"] != Json::nullValue) {
+	if (!root["fps"].isNull()) {
 		info.fps.num = root["fps"]["num"].asInt();
 		info.fps.den = root["fps"]["den"].asInt();
 	}
-	if (root["video_bit_rate"] != Json::nullValue)
+	if (!root["video_bit_rate"].isNull())
 		info.video_bit_rate = root["video_bit_rate"].asInt();
-	if (root["pixel_ratio"] != Json::nullValue) {
+	if (!root["pixel_ratio"].isNull()) {
 		info.pixel_ratio.num = root["pixel_ratio"]["num"].asInt();
 		info.pixel_ratio.den = root["pixel_ratio"]["den"].asInt();
 	}
-	if (root["display_ratio"] != Json::nullValue) {
+	if (!root["display_ratio"].isNull()) {
 		info.display_ratio.num = root["display_ratio"]["num"].asInt();
 		info.display_ratio.den = root["display_ratio"]["den"].asInt();
 	}
-	if (root["vcodec"] != Json::nullValue)
+	if (!root["vcodec"].isNull())
 		info.vcodec = root["vcodec"].asString();
-	if (root["video_length"] != Json::nullValue)
+	if (!root["video_length"].isNull())
 		info.video_length = atoll(root["video_length"].asString().c_str());
-	if (root["video_stream_index"] != Json::nullValue)
+	if (!root["video_stream_index"].isNull())
 		info.video_stream_index = root["video_stream_index"].asInt();
-	if (root["video_timebase"] != Json::nullValue) {
+	if (!root["video_timebase"].isNull()) {
 		info.video_timebase.num = root["video_timebase"]["num"].asInt();
 		info.video_timebase.den = root["video_timebase"]["den"].asInt();
 	}
-	if (root["interlaced_frame"] != Json::nullValue)
+	if (!root["interlaced_frame"].isNull())
 		info.interlaced_frame = root["interlaced_frame"].asBool();
-	if (root["top_field_first"] != Json::nullValue)
+	if (!root["top_field_first"].isNull())
 		info.top_field_first = root["top_field_first"].asBool();
-	if (root["acodec"] != Json::nullValue)
+	if (!root["acodec"].isNull())
 		info.acodec = root["acodec"].asString();
 
-	if (root["audio_bit_rate"] != Json::nullValue)
+	if (!root["audio_bit_rate"].isNull())
 		info.audio_bit_rate = root["audio_bit_rate"].asInt();
-	if (root["sample_rate"] != Json::nullValue)
+	if (!root["sample_rate"].isNull())
 		info.sample_rate = root["sample_rate"].asInt();
-	if (root["channels"] != Json::nullValue)
+	if (!root["channels"].isNull())
 		info.channels = root["channels"].asInt();
-	if (root["audio_stream_index"] != Json::nullValue)
+	if (!root["audio_stream_index"].isNull())
 		info.audio_stream_index = root["audio_stream_index"].asInt();
-	if (root["audio_timebase"] != Json::nullValue) {
+	if (!root["audio_timebase"].isNull()) {
 		info.audio_timebase.num = root["audio_timebase"]["num"].asInt();
 		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 	}

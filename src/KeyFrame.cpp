@@ -295,7 +295,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 	// Clear existing points
 	Points.clear();
 
-	if (root["Points"] != Json::nullValue)
+	if (!root["Points"].isNull())
 		// loop through points
 		for (int x = 0; x < root["Points"].size(); x++) {
 			// Get each point
@@ -311,7 +311,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 			AddPoint(p);
 		}
 
-	if (root["Auto_Handle_Percentage"] != Json::nullValue)
+	if (!root["Auto_Handle_Percentage"].isNull())
 		Auto_Handle_Percentage = root["Auto_Handle_Percentage"].asBool();
 
 }

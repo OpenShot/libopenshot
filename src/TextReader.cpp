@@ -226,25 +226,25 @@ void TextReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 	ReaderBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["width"] != Json::nullValue)
+	if (!root["width"].isNull())
 		width = root["width"].asInt();
-	if (root["height"] != Json::nullValue)
+	if (!root["height"].isNull())
 		height = root["height"].asInt();
-	if (root["x_offset"] != Json::nullValue)
+	if (!root["x_offset"].isNull())
 		x_offset = root["x_offset"].asInt();
-	if (root["y_offset"] != Json::nullValue)
+	if (!root["y_offset"].isNull())
 		y_offset = root["y_offset"].asInt();
-	if (root["text"] != Json::nullValue)
+	if (!root["text"].isNull())
 		text = root["text"].asString();
-	if (root["font"] != Json::nullValue)
+	if (!root["font"].isNull())
 		font = root["font"].asString();
-	if (root["size"] != Json::nullValue)
+	if (!root["size"].isNull())
 		size = root["size"].asDouble();
-	if (root["text_color"] != Json::nullValue)
+	if (!root["text_color"].isNull())
 		text_color = root["text_color"].asString();
-	if (root["background_color"] != Json::nullValue)
+	if (!root["background_color"].isNull())
 		background_color = root["background_color"].asString();
-	if (root["gravity"] != Json::nullValue)
+	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 
 	// Re-Open path, and re-init everything (if needed)

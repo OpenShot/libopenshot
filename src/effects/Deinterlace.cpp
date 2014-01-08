@@ -120,6 +120,6 @@ void Deinterlace::SetJsonValue(Json::Value root) {
 	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["isOdd"] != Json::nullValue)
+	if (!root["isOdd"].isNull())
 		isOdd = root["isOdd"].asBool();
 }

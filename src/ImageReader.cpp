@@ -171,7 +171,7 @@ void ImageReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 	ReaderBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["path"] != Json::nullValue)
+	if (!root["path"].isNull())
 		path = root["path"].asString();
 
 	// Re-Open path, and re-init everything (if needed)

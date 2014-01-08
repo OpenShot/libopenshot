@@ -178,6 +178,16 @@ namespace openshot {
 		virtual ~InvalidSampleRate() throw () {}
 	};
 
+	/// Exception for missing JSON Change key
+	class InvalidJSONKey : public BaseException
+	{
+	public:
+		string json;
+		InvalidJSONKey(string message, string json)
+			: BaseException(message), json(json) { }
+		virtual ~InvalidJSONKey() throw () {}
+	};
+
 	/// Exception when no streams are found in the file
 	class NoStreamsFound : public BaseException
 	{

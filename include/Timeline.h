@@ -156,6 +156,11 @@ namespace openshot {
 		/// Process a new layer of video or audio
 		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number);
 
+		/// Apply JSON Diffs to various objects contained in this timeline
+		void apply_json_to_clips(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to clips
+		void apply_json_to_effects(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to effects
+		void apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to timeline properties
+
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Fraction rate);
 
@@ -223,6 +228,12 @@ namespace openshot {
 		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed); ///< Load Json::JsonValue into this object
+
+		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)
+		/// This is primarily designed to keep the timeline (and its child objects... such as clips and effects) in sync
+		/// with another application... such as OpenShot Video Editor (http://www.openshot.org).
+		/// @param value A JSON string containing a key, value, and type of change.
+		void ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey);
 
 		/// Open the reader (and start consuming resources)
 		void Open();

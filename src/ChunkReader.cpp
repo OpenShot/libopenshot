@@ -302,11 +302,11 @@ void ChunkReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 	ReaderBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["path"] != Json::nullValue)
+	if (!root["path"].isNull())
 		path = root["path"].asString();
-	if (root["chunk_size"] != Json::nullValue)
+	if (!root["chunk_size"].isNull())
 		chunk_size = root["chunk_size"].asInt();
-	if (root["chunk_version"] != Json::nullValue)
+	if (!root["chunk_version"].isNull())
 		version = (ChunkVersion) root["chunk_version"].asInt();
 
 	// Re-Open path, and re-init everything (if needed)

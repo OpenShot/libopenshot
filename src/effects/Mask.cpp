@@ -178,9 +178,9 @@ void Mask::SetJsonValue(Json::Value root) {
 	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["brightness"] != Json::nullValue)
+	if (!root["brightness"].isNull())
 		brightness.SetJsonValue(root["brightness"]);
-	if (root["contrast"] != Json::nullValue)
+	if (!root["contrast"].isNull())
 		contrast.SetJsonValue(root["contrast"]);
 }
 

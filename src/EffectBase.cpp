@@ -106,6 +106,6 @@ void EffectBase::SetJsonValue(Json::Value root) {
 	ClipBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["order"] != Json::nullValue)
+	if (!root["order"].isNull())
 		Order(root["order"].asInt());
 }

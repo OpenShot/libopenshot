@@ -41,6 +41,19 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
+	Timeline t77(640, 480, Fraction(24,1), 44100, 2);
+	t77.ApplyJsonDiff("[{\"type\":\"insert\",\"key\":[\"effects\",\"effect\"],\"value\":{\"end\":0,\"id\":\"e004\",\"layer\":0,\"order\":0,\"position\":0,\"start\":0,\"type\":\"Negate\"}}]");
+	cout << t77.Json() << endl;
+	t77.ApplyJsonDiff("[{\"type\":\"update\",\"key\":[\"effects\",\"effect\",{\"id\":\"e004\"}],\"value\":{\"order\":10.5,\"position\":11.6,\"start\":12.7}}]");
+	cout << t77.Json() << endl;
+	t77.ApplyJsonDiff("[{\"type\":\"delete\",\"key\":[\"effects\",\"effect\",{\"id\":\"e004\"}],\"value\":{}}]");
+	cout << t77.Json() << endl;
+	t77.ApplyJsonDiff("[{\"type\":\"insert\",\"key\":[\"color\"],\"value\":{\"blue\":{\"Points\":[{\"co\":{\"X\":0,\"Y\":30},\"interpolation\":2}]},\"green\":{\"Points\":[{\"co\":{\"X\":0,\"Y\":20},\"interpolation\":2}]},\"red\":{\"Points\":[{\"co\":{\"X\":0,\"Y\":10},\"interpolation\":2}]}}}]");
+	cout << t77.Json() << endl;
+	t77.ApplyJsonDiff("[{\"type\":\"delete\",\"key\":[\"color\"],\"value\":{}}]");
+	cout << t77.Json() << endl;
+	return 0;
+
 	//FFmpegReader r2("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//r2.Open();
 	//cout << r2.Json() << endl;

@@ -112,8 +112,8 @@ void ChromaKey::SetJsonValue(Json::Value root) {
 	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (root["color"] != Json::nullValue)
+	if (!root["color"].isNull())
 		color.SetJsonValue(root["color"]);
-	if (root["fuzz"] != Json::nullValue)
+	if (!root["fuzz"].isNull())
 		fuzz.SetJsonValue(root["fuzz"]);
 }

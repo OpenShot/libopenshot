@@ -92,17 +92,17 @@ void Coordinate::SetJson(string value) throw(InvalidJSON) {
 void Coordinate::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
-	if (root["X"] != Json::nullValue)
+	if (!root["X"].isNull())
 		X = root["X"].asDouble();
-	if (root["Y"] != Json::nullValue)
+	if (!root["Y"].isNull())
 		Y = root["Y"].asDouble();
-	if (root["increasing"] != Json::nullValue)
+	if (!root["increasing"].isNull())
 		increasing = root["increasing"].asBool();
-	if (root["repeated"] != Json::nullValue)
+	if (!root["repeated"].isNull())
 	{
 		repeated.num = root["repeated"]["num"].asInt();
 		repeated.den = root["repeated"]["den"].asInt();
 	}
-	if (root["delta"] != Json::nullValue)
+	if (!root["delta"].isNull())
 		delta = root["delta"].asDouble();
 }

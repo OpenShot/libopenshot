@@ -76,10 +76,10 @@ void Color::SetJson(string value) throw(InvalidJSON) {
 void Color::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
-	if (root["red"] != Json::nullValue)
+	if (!root["red"].isNull())
 		red.SetJsonValue(root["red"]);
-	if (root["green"] != Json::nullValue)
+	if (!root["green"].isNull())
 		green.SetJsonValue(root["green"]);
-	if (root["blue"] != Json::nullValue)
+	if (!root["blue"].isNull())
 		blue.SetJsonValue(root["blue"]);
 }

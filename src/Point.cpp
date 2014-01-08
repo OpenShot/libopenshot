@@ -143,15 +143,15 @@ void Point::SetJson(string value) throw(InvalidJSON) {
 // Load Json::JsonValue into this object
 void Point::SetJsonValue(Json::Value root) {
 
-	if (root["co"] != Json::nullValue)
+	if (!root["co"].isNull())
 		co.SetJsonValue(root["co"]); // update coordinate
-	if (root["handle_left"] != Json::nullValue)
+	if (!root["handle_left"].isNull())
 		handle_left.SetJsonValue(root["handle_left"]); // update coordinate
-	if (root["handle_right"] != Json::nullValue)
+	if (!root["handle_right"].isNull())
 		handle_right.SetJsonValue(root["handle_right"]); // update coordinate
-	if (root["interpolation"] != Json::nullValue)
+	if (!root["interpolation"].isNull())
 		interpolation = (InterpolationType) root["interpolation"].asInt();
-	if (root["handle_type"] != Json::nullValue)
+	if (!root["handle_type"].isNull())
 		handle_type = (HandleType) root["handle_type"].asInt();
 
 }

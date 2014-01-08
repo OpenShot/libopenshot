@@ -49,6 +49,7 @@ namespace openshot {
 	 */
 	class ClipBase {
 	private:
+		string id; ///< ID Property for all derived Clip and Effect classes.
 		float position; ///< The position on the timeline where this clip should start playing
 		int layer; ///< The layer this clip is on. Lower clips are covered up by higher clips.
 		float start; ///< The position in seconds to start playing (used to trim the beginning of a clip)
@@ -63,6 +64,7 @@ namespace openshot {
 		bool operator>= ( ClipBase& a) { return (Position() >= a.Position()); }
 
 		/// Get basic properties
+		string Id() { return id; } ///< Get the Id of this clip object
 		float Position() { return position; } ///< Get position on timeline (in seconds)
 		int Layer() { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
 		float Start() { return start; } ///< Get start position (in seconds) of clip (trim start of video)
@@ -70,6 +72,7 @@ namespace openshot {
 		float Duration() { return End() - Start(); } ///< Get the length of this clip (in seconds)
 
 		/// Set basic properties
+		void Id(string value) { id = value; } ///> Set the Id of this clip object
 		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)

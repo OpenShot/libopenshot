@@ -618,7 +618,7 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 	// Clear existing clips
 	clips.clear();
 
-	if (root["Clips"] != Json::nullValue)
+	if (!root["Clips"].isNull())
 		// loop through clips
 		for (int x = 0; x < root["Clips"].size(); x++) {
 			// Get each clip
@@ -637,7 +637,7 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 	// Clear existing effects
 	effects.clear();
 
-	if (root["Effects"] != Json::nullValue)
+	if (!root["Effects"].isNull())
 		// loop through effects
 		for (int x = 0; x < root["Effects"].size(); x++) {
 			// Get each effect
@@ -646,7 +646,7 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			// Create Effect
 			EffectBase *e = NULL;
 
-			if (existing_effect["type"] != Json::nullValue)
+			if (!existing_effect["type"].isNull())
 				// Init the matching effect object
 				if (existing_effect["type"].asString() == "ChromaKey")
 					e = new ChromaKey();
@@ -667,3 +667,240 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			AddEffect(e);
 		}
 }
+
+// Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
+void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( value, root );
+	if (!success || !root.isArray())
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid).", "");
+
+	try
+	{
+		// Process the JSON change array, loop through each item
+		for (int x = 0; x < root.size(); x++) {
+			// Get each change
+			Json::Value change = root[x];
+			string root_key = change["key"][(uint)0].asString();
+
+			// Process each type of change
+			if (root_key == "clips")
+				// Apply to CLIPS
+				apply_json_to_clips(change);
+
+			else if (root_key == "effects")
+				// Apply to EFFECTS
+				apply_json_to_effects(change);
+
+			else
+				// Apply to TIMELINE
+				apply_json_to_timeline(change);
+
+		}
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+}
+
+// Apply JSON diff to clips
+void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
+
+	// Get key and type of change
+	string change_type = change["type"].asString();
+	string clip_id = "";
+	Clip *existing_clip = NULL;
+
+	// Find id of clip (if any)
+	for (int x = 0; x < change["key"].size(); x++) {
+		// Get each change
+		Json::Value key_part = change["key"][x];
+
+		if (key_part.isObject()) {
+			// Check for id
+			if (!key_part["id"].isNull()) {
+				// Set the id
+				clip_id = key_part["id"].asString();
+
+				// Find matching clip in timeline (if any)
+				list<Clip*>::iterator clip_itr;
+				for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+				{
+					// Get clip object from the iterator
+					Clip *c = (*clip_itr);
+					if (c->Id() == clip_id) {
+						existing_clip = c;
+						break; // clip found, exit loop
+					}
+				}
+				break; // id found, exit loop
+			}
+		}
+	}
+
+	// Determine type of change operation
+	if (change_type == "insert") {
+
+		// Create new clip
+		Clip *clip = new Clip();
+		clip->SetJsonValue(change["value"]); // Set properties of new clip from JSON
+		AddClip(clip); // Add clip to timeline
+
+	} else if (change_type == "update") {
+
+		// Update existing clip
+		if (existing_clip)
+			existing_clip->SetJsonValue(change["value"]); // Update clip properties from JSON
+
+	} else if (change_type == "delete") {
+
+		// Remove existing clip
+		if (existing_clip)
+			RemoveClip(existing_clip); // Remove clip from timeline
+
+	}
+
+}
+
+// Apply JSON diff to effects
+void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
+
+	// Get key and type of change
+	string change_type = change["type"].asString();
+	string effect_id = "";
+	EffectBase *existing_effect = NULL;
+
+	// Find id of an effect (if any)
+	for (int x = 0; x < change["key"].size(); x++) {
+		// Get each change
+		Json::Value key_part = change["key"][x];
+
+		if (key_part.isObject()) {
+			// Check for id
+			if (!key_part["id"].isNull())
+			{
+				// Set the id
+				effect_id = key_part["id"].asString();
+
+				// Find matching effect in timeline (if any)
+				list<EffectBase*>::iterator effect_itr;
+				for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+				{
+					// Get effect object from the iterator
+					EffectBase *e = (*effect_itr);
+					if (e->Id() == effect_id) {
+						existing_effect = e;
+						break; // effect found, exit loop
+					}
+				}
+				break; // id found, exit loop
+			}
+		}
+	}
+
+	// Determine type of change operation
+	if (change_type == "insert") {
+
+		// Determine type of effect
+		string effect_type = change["value"]["type"].asString();
+
+		// Create Effect
+		EffectBase *e = NULL;
+
+		// Init the matching effect object
+		if (effect_type == "ChromaKey")
+			e = new ChromaKey();
+
+		else if (effect_type == "Deinterlace")
+			e = new Deinterlace();
+
+		else if (effect_type == "Mask")
+			e = new Mask();
+
+		else if (effect_type == "Negate")
+			e = new Negate();
+
+		// Load Json into Effect
+		e->SetJsonValue(change["value"]);
+
+		// Add Effect to Timeline
+		AddEffect(e);
+
+	} else if (change_type == "update") {
+
+		// Update existing effect
+		if (existing_effect)
+			existing_effect->SetJsonValue(change["value"]); // Update effect properties from JSON
+
+	} else if (change_type == "delete") {
+
+		// Remove existing effect
+		if (existing_effect)
+			RemoveEffect(existing_effect); // Remove effect from timeline
+
+	}
+
+}
+
+// Apply JSON diff to timeline properties
+void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) {
+
+	// Get key and type of change
+	string change_type = change["type"].asString();
+	string root_key = change["key"][(uint)0].asString();
+
+	// Determine type of change operation
+	if (change_type == "insert" || change_type == "update") {
+
+		// INSERT / UPDATE
+		// Check for valid property
+		if (root_key == "color")
+			// Set color
+			color.SetJsonValue(change["value"]);
+		else if (root_key == "viewport_scale")
+			// Set viewport scale
+			viewport_scale.SetJsonValue(change["value"]);
+		else if (root_key == "viewport_x")
+			// Set viewport x offset
+			viewport_x.SetJsonValue(change["value"]);
+		else if (root_key == "viewport_y")
+			// Set viewport y offset
+			viewport_y.SetJsonValue(change["value"]);
+		else
+			// Error parsing JSON (or missing keys)
+			throw InvalidJSONKey("JSON change key is invalid", change.toStyledString());
+
+
+	} else if (change["type"].asString() == "delete") {
+
+		// DELETE / RESET
+		// Reset the following properties (since we can't delete them)
+		if (root_key == "color") {
+			color = Color();
+			color.red = Keyframe(0.0);
+			color.green = Keyframe(0.0);
+			color.blue = Keyframe(0.0);
+		}
+		else if (root_key == "viewport_scale")
+			viewport_scale = Keyframe(1.0);
+		else if (root_key == "viewport_x")
+			viewport_x = Keyframe(0.0);
+		else if (root_key == "viewport_y")
+			viewport_y = Keyframe(0.0);
+		else
+			// Error parsing JSON (or missing keys)
+			throw InvalidJSONKey("JSON change key is invalid", change.toStyledString());
+
+	}
+
+}
+
+
+
+

@@ -34,6 +34,7 @@ Json::Value ClipBase::JsonValue() {
 
 	// Create root json object
 	Json::Value root;
+	root["id"] = Id();
 	root["position"] = Position();
 	root["layer"] = Layer();
 	root["start"] = Start();
@@ -47,12 +48,14 @@ Json::Value ClipBase::JsonValue() {
 void ClipBase::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
-	if (root["position"] != Json::nullValue)
+	if (!root["id"].isNull())
+		Id(root["id"].asString());
+	if (!root["position"].isNull())
 		Position(root["position"].asDouble());
-	if (root["layer"] != Json::nullValue)
+	if (!root["layer"].isNull())
 		Layer(root["layer"].asInt());
-	if (root["start"] != Json::nullValue)
+	if (!root["start"].isNull())
 		Start(root["start"].asDouble());
-	if (root["end"] != Json::nullValue)
+	if (!root["end"].isNull())
 		End(root["end"].asDouble());
 }
