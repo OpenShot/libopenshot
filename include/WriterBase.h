@@ -51,7 +51,7 @@ namespace openshot
 		float duration;	///< Length of time (in seconds)
 		int file_size;	///< Size of file (in bytes)
 		int height;		///< The height of the video (in pixels)
-		int width;		///< The width of the video (in pixesl)
+		int width;		///< The width of the video (in pixels)
 		int pixel_format;	///< The pixel format (i.e. YUV420P, RGB24, etc...)
 		Fraction fps;		///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
 		int video_bit_rate;	///< The bit rate of the video stream (in bytes)

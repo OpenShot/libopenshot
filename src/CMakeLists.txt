@@ -159,6 +159,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		ImageReader.cpp
 		PlayerBase.cpp
 		Point.cpp
+		Profile.cpp
 		SDLPlayer.cpp
 		TextReader.cpp
 		Timeline.cpp

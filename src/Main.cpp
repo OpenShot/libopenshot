@@ -40,6 +40,8 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	Profile p("/home/jonathan/Apps/openshot/openshot/profiles/atsc_1080p_25");
+	return 0;
 
 	Timeline t77(640, 480, Fraction(24,1), 44100, 2);
 	t77.ApplyJsonDiff("[{\"type\":\"insert\",\"key\":[\"effects\",\"effect\"],\"value\":{\"end\":0,\"id\":\"e004\",\"layer\":0,\"order\":0,\"position\":0,\"start\":0,\"type\":\"Negate\"}}]");
