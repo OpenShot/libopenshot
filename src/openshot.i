@@ -58,6 +58,7 @@
 #include "../include/Color.h"
 #include "../include/DummyReader.h"
 #include "../include/EffectBase.h"
+#include "../include/Effects.h"
 #include "../include/Exceptions.h"
 #include "../include/FFmpegReader.h"
 #include "../include/FFmpegWriter.h"
@@ -72,12 +73,6 @@
 #include "../include/SDLPlayer.h"
 #include "../include/TextReader.h"
 #include "../include/Timeline.h"
-
-/* Effects */
-#include "../include/effects/ChromaKey.h"
-#include "../include/effects/Deinterlace.h"
-#include "../include/effects/Mask.h"
-#include "../include/effects/Negate.h"
 
 %}
 

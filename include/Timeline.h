@@ -45,15 +45,11 @@
 #include "Clip.h"
 #include "Point.h"
 #include "EffectBase.h"
-#include "ReaderBase.h"
+#include "Effects.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
-
-#include "effects/ChromaKey.h"
-#include "effects/Deinterlace.h"
-#include "effects/Mask.h"
-#include "effects/Negate.h"
+#include "ReaderBase.h"
 
 using namespace std;
 using namespace openshot;
