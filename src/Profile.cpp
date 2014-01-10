@@ -33,8 +33,24 @@ using namespace openshot;
 // @brief Constructor for Profile.
 // @param path 	The folder path / location of a profile file
 Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
+
+	bool read_file = false;
+
 	try
 	{
+		// Initialize info values
+		info.description = "";
+		info.height = 0;
+		info.width = 0;
+		info.pixel_format = 0;
+		info.fps.num = 0;
+		info.fps.den = 0;
+		info.pixel_ratio.num = 0;
+		info.pixel_ratio.den = 0;
+		info.display_ratio.num = 0;
+		info.display_ratio.den = 0;
+		info.interlaced_frame = false;
+
 		// Read the profile file
 		ifstream myfile (path.c_str());
 		if (myfile.is_open())
@@ -43,6 +59,7 @@ Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
 			while (myfile.good())
 			{
 				// read current line of file
+				read_file = true;
 				string line = "";
 				getline (myfile, line);
 
@@ -103,13 +120,17 @@ Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
 			myfile.close();
 		}
 
-
 	}
 	catch (exception e)
 	{
 		// Error parsing profile file
 		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
 	}
+
+	// Throw error if file was not read
+	if (!read_file)
+		// Error parsing profile file
+		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
 }
 
 // Generate JSON string of this object

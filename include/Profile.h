@@ -29,17 +29,13 @@
 #define OPENSHOT_PROFILE_H
 
 #include <iostream>
-#include <vector>
 #include <string>
 #include <sstream>
-#include <iterator>
 #include <fstream>
 #include <qt5/QtCore/qstring.h>
 #include <qt5/QtCore/qstringlist.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <tr1/memory>
-#include <vector>
 #include "Exceptions.h"
 #include "Fraction.h"
 #include "Json.h"
