@@ -35,6 +35,11 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
+#include <qt5/QtCore/qstring.h>
+#include <QGraphicsItem>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
+#include <QPixmap>
 
 using namespace std;
 
@@ -100,6 +105,9 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
 		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
+
+		/// Test method to draw a bitmap on a Qt QGraphicsScene
+		void DrawFrameOnScene(string path, long _graphics_scene_address);
 
 		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
 		/// this method, or the ReaderInfo struct values will not be initialized.

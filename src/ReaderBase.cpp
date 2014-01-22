@@ -204,3 +204,16 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 	}
 }
+
+// Test method to draw a bitmap on a Qt QGraphicsScene
+void ReaderBase::DrawFrameOnScene(string path, long _graphics_scene_address) {
+
+	// Get pixmap
+	QGraphicsScene *scene = reinterpret_cast<QGraphicsScene*>(_graphics_scene_address);
+	QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap(QString(path.c_str())));
+	scene->addItem(item);
+
+}
+
+
+
