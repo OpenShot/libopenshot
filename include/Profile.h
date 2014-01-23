@@ -32,8 +32,8 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-#include <qt5/QtCore/qstring.h>
-#include <qt5/QtCore/qstringlist.h>
+#include <QtCore/qstring.h>
+#include <QtCore/qstringlist.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "Exceptions.h"

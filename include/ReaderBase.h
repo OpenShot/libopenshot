@@ -35,7 +35,7 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
-#include <qt5/QtCore/qstring.h>
+#include <QtCore/qstring.h>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>
