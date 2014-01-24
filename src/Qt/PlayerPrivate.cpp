@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for QtPlayer class
+ * @brief Source file for PlayerPrivate class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -24,56 +24,29 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef OPENSHOT_QT_PLAYER_H
-#define OPENSHOT_QT_PLAYER_H
-
-#include <iostream>
-#include <vector>
-#include "../include/PlayerBase.h"
-
-using namespace std;
+#include "../include/ReaderBase.h"
+#include "../include/RendererBase.h"
+#include "PlayerPrivate.h"
 
 namespace openshot
 {
-    class RendererBase;
-    class PlayerPrivate;
 
-    /**
-     * @brief This class is used to playback a video from a reader.
-     *
-     */
-    class QtPlayer : public PlayerBase
+    PlayerPrivate::PlayerPrivate(RendererBase *rb)
+	: position(0), renderer(rb)
     {
-	PlayerPrivate *p;
+    }
 
-    public:
-	/// Default constructor
-	explicit QtPlayer(RendererBase *rb);
+    PlayerPrivate::~PlayerPrivate()
+    {
+	
+    }
 
-	virtual ~QtPlayer();
-
-	void SetSource(const std::string &source);
-	
-	/// Play the video
-	void Play();
-	
-	/// Display a loading animation
-	void Loading();
-	
-	/// Pause the video
-	void Pause();
-	
-	/// Get the current frame number being played
-	int Position();
-	
-	/// Seek to a specific frame in the player
-	void Seek(int new_frame);
-	
-	/// Stop the video player and clear the cached frames
-	void Stop();
-    };
+    void PlayerPrivate::startPlayback()
+    {
+	tr1::shared_ptr<Frame> frame = reader->GetFrame(position);
+	if (frame) {
+	    renderer->paint(frame);
+	}
+    }
 
 }
-
-#endif

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for QtPlayer class
+ * @brief Header file for RendererBase class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -25,53 +25,46 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_QT_PLAYER_H
-#define OPENSHOT_QT_PLAYER_H
+#ifndef OPENSHOT_RENDERER_BASE_H
+#define OPENSHOT_RENDERER_BASE_H
 
-#include <iostream>
-#include <vector>
-#include "../include/PlayerBase.h"
-
-using namespace std;
+#include <tr1/memory>
 
 namespace openshot
 {
-    class RendererBase;
-    class PlayerPrivate;
+    class Frame;
 
     /**
-     * @brief This class is used to playback a video from a reader.
+     *  @brief The pixel format supported by renderers.
      *
+     *  Currently only RGB_888 is supported.
+     *
+     *  @see QuantumType
      */
-    class QtPlayer : public PlayerBase
+    enum PixelFormat {
+	RGB_888,
+    };
+
+    /**
+     * @brief This is the base class of all Renderers in libopenshot.
+     *
+     * Renderers are responsible for rendering images of a video onto a
+     * display device.
+     */
+    class RendererBase
     {
-	PlayerPrivate *p;
+	unsigned char *buffer;
 
     public:
-	/// Default constructor
-	explicit QtPlayer(RendererBase *rb);
 
-	virtual ~QtPlayer();
+	/// Paint(render) a video Frame.
+	void paint(const std::tr1::shared_ptr<Frame> & frame);
 
-	void SetSource(const std::string &source);
+    protected:
+	RendererBase();
+	virtual ~RendererBase();
 	
-	/// Play the video
-	void Play();
-	
-	/// Display a loading animation
-	void Loading();
-	
-	/// Pause the video
-	void Pause();
-	
-	/// Get the current frame number being played
-	int Position();
-	
-	/// Seek to a specific frame in the player
-	void Seek(int new_frame);
-	
-	/// Stop the video player and clear the cached frames
-	void Stop();
+	virtual void render(PixelFormat format, int width, int height, int bytesPerLine, unsigned char *data) = 0;
     };
 
 }

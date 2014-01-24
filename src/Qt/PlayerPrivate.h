@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for QtPlayer class
+ * @brief Source file for QtPlayer class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -25,55 +25,24 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_QT_PLAYER_H
-#define OPENSHOT_QT_PLAYER_H
-
-#include <iostream>
-#include <vector>
-#include "../include/PlayerBase.h"
-
-using namespace std;
-
 namespace openshot
 {
-    class RendererBase;
-    class PlayerPrivate;
 
     /**
-     * @brief This class is used to playback a video from a reader.
-     *
+     *  @brief The private part of QtPlayer class.
      */
-    class QtPlayer : public PlayerBase
+    class PlayerPrivate
     {
-	PlayerPrivate *p;
+	int position; /// The current frame position.
+	ReaderBase *reader;
+	RendererBase *renderer;
 
-    public:
-	/// Default constructor
-	explicit QtPlayer(RendererBase *rb);
+	PlayerPrivate(RendererBase *rb);
+	virtual ~PlayerPrivate();
 
-	virtual ~QtPlayer();
+	void startPlayback();
 
-	void SetSource(const std::string &source);
-	
-	/// Play the video
-	void Play();
-	
-	/// Display a loading animation
-	void Loading();
-	
-	/// Pause the video
-	void Pause();
-	
-	/// Get the current frame number being played
-	int Position();
-	
-	/// Seek to a specific frame in the player
-	void Seek(int new_frame);
-	
-	/// Stop the video player and clear the cached frames
-	void Stop();
+	friend class QtPlayer;
     };
 
 }
-
-#endif

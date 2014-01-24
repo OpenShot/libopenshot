@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for QtPlayer class
+ * @brief Source file for RendererBase class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -25,55 +25,29 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_QT_PLAYER_H
-#define OPENSHOT_QT_PLAYER_H
+#include "../include/RendererBase.h"
+#include "../include/Frame.h"
+#include <stdlib.h> // for realloc
 
-#include <iostream>
-#include <vector>
-#include "../include/PlayerBase.h"
+using namespace openshot;
 
-using namespace std;
-
-namespace openshot
+RendererBase::RendererBase() : buffer(NULL)
 {
-    class RendererBase;
-    class PlayerPrivate;
-
-    /**
-     * @brief This class is used to playback a video from a reader.
-     *
-     */
-    class QtPlayer : public PlayerBase
-    {
-	PlayerPrivate *p;
-
-    public:
-	/// Default constructor
-	explicit QtPlayer(RendererBase *rb);
-
-	virtual ~QtPlayer();
-
-	void SetSource(const std::string &source);
-	
-	/// Play the video
-	void Play();
-	
-	/// Display a loading animation
-	void Loading();
-	
-	/// Pause the video
-	void Pause();
-	
-	/// Get the current frame number being played
-	int Position();
-	
-	/// Seek to a specific frame in the player
-	void Seek(int new_frame);
-	
-	/// Stop the video player and clear the cached frames
-	void Stop();
-    };
-
 }
 
-#endif
+RendererBase::~RendererBase()
+{
+}
+
+void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
+{
+    const tr1::shared_ptr<Magick::Image> image = frame->GetImage();
+    const std::size_t width = image->columns();
+    const std::size_t height = image->rows();
+    const std::size_t bufferSize = width * height * 3;
+    /// Use realloc for fast memory allocation.    
+    /// TODO: consider locking buffer for mt safety
+    buffer = reinterpret_cast<unsigned char*>(realloc(buffer, bufferSize));
+    image->readPixels(Magick::RGBQuantum, buffer);
+    this->render(RGB_888, width, height, width, buffer);
+}

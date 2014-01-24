@@ -147,6 +147,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Coordinate.cpp
 		DummyReader.cpp
 		ReaderBase.cpp
+		RendererBase.cpp
 		WriterBase.cpp
 		EffectBase.cpp
 		${EFFECT_FILES}
@@ -161,6 +162,8 @@ SET ( OPENSHOT_SOURCE_FILES
 		Point.cpp
 		Profile.cpp
 		SDLPlayer.cpp
+		QtPlayer.cpp
+		Qt/PlayerPrivate.cpp
 		TextReader.cpp
 		Timeline.cpp
 		
@@ -224,7 +227,7 @@ target_link_libraries(example openshot)
 
 ############### TEST QT EXECUTABLE ################
 # Create test executable
-add_executable(qt_player Qt/main_player.cpp)
+add_executable(qt_player Qt/main.cpp)
 
 # Link test executable to the new library
 target_link_libraries(qt_player openshot)
