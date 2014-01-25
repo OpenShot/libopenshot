@@ -6,6 +6,7 @@
 #define __VIDEO_RENDER_WIDGET__
 
 #include <QtWidgets/QWidget>
+#include <QImage>
 
 class VideoRenderer;
 
@@ -23,9 +24,11 @@ protected:
     void paintEvent(QPaintEvent *event);
 
 private slots:
+    void present(const QImage & image);
 
 private:
     VideoRenderer *renderer;
+    QImage image;
 };
 
 #endif //__VIDEO_RENDER_WIDGET__

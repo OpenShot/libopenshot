@@ -44,9 +44,8 @@ namespace openshot
     void PlayerPrivate::startPlayback()
     {
 	tr1::shared_ptr<Frame> frame = reader->GetFrame(position);
-	if (frame) {
-	    renderer->paint(frame);
-	}
+	if (!frame) return;
+	renderer->paint(frame);
     }
 
 }

@@ -16,6 +16,8 @@ VideoRenderWidget::VideoRenderWidget(QWidget *parent)
     setPalette(p);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+
+    connect(renderer, SIGNAL(present(const QImage &)), this, SLOT(present(const QImage &)));
 }
 
 VideoRenderWidget::~VideoRenderWidget()
@@ -35,5 +37,11 @@ void VideoRenderWidget::paintEvent(QPaintEvent *event)
         painter.fillRect(event->rect(), palette().window());
     }
 
-    renderer->paint(&painter, event->rect());
+    painter.drawImage(QRect(0, 0, width(), height()), image);
+}
+
+void VideoRenderWidget::present(const QImage & m)
+{
+    image = m;
+    repaint();
 }

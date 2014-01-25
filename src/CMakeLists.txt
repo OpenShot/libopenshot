@@ -94,6 +94,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb ")
 
 # Manually moc Qt files
 qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
@@ -163,7 +164,6 @@ SET ( OPENSHOT_SOURCE_FILES
 		Profile.cpp
 		SDLPlayer.cpp
 		QtPlayer.cpp
-		Qt/PlayerPrivate.cpp
 		TextReader.cpp
 		Timeline.cpp
 		
@@ -227,10 +227,10 @@ target_link_libraries(example openshot)
 
 ############### TEST QT EXECUTABLE ################
 # Create test executable
-add_executable(qt_player Qt/main.cpp)
+add_executable(demo_player Qt/demo/main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(qt_player openshot)
+target_link_libraries(demo_player openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)

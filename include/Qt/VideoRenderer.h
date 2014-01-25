@@ -9,6 +9,7 @@
 #include <QtCore/QObject>
 #include <tr1/memory>
 
+class QImage;
 class QPainter;
 
 class VideoRenderer : public QObject, public openshot::RendererBase
@@ -19,7 +20,10 @@ public:
     VideoRenderer(QObject *parent = 0);
     ~VideoRenderer();
 
-    void paint(QPainter *painter, const QRect &rect);
+    //void paint(QPainter *painter, const QRect &rect);
+
+signals:
+    void present(const QImage & image);
 
 protected:
     void render(openshot::PixelFormat format, int width, int height, int bytesPerLine, unsigned char *data);

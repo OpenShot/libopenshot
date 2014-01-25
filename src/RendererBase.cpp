@@ -41,13 +41,26 @@ RendererBase::~RendererBase()
 
 void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
 {
+    const int BPP = 3;
     const tr1::shared_ptr<Magick::Image> image = frame->GetImage();
     const std::size_t width = image->columns();
     const std::size_t height = image->rows();
-    const std::size_t bufferSize = width * height * 3;
+    const std::size_t bufferSize = width * height * BPP;
     /// Use realloc for fast memory allocation.    
-    /// TODO: consider locking buffer for mt safety
+    /// TODO: consider locking the buffer for mt safety
     buffer = reinterpret_cast<unsigned char*>(realloc(buffer, bufferSize));
+#if false
+    /**
+     *  FIXME: this is buggy somehow...
+     */
     image->readPixels(Magick::RGBQuantum, buffer);
-    this->render(RGB_888, width, height, width, buffer);
+#else
+    const Magick::PixelPacket *pixels = frame->GetPixels();
+    for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
+	buffer[i+0] = pixels[n].red   >> 8;
+	buffer[i+1] = pixels[n].green >> 8;
+	buffer[i+2] = pixels[n].blue  >> 8;
+    }
+#endif
+    this->render(RGB_888, width, height, width * BPP, buffer);
 }
