@@ -368,14 +368,16 @@
 			</target>
 			<target name="Mac: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-D"CMAKE_C_COMPILER=/opt/local/bin/gcc-mp-4.7" -D"CMAKE_CXX_COMPILER=/opt/local/bin/g++-mp-4.7" ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildArguments>-DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.1.1/ ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
 			</target>
 			<target name="Mac: CMake Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-D"CMAKE_C_COMPILER=/opt/local/bin/gcc-mp-4.7" -D"CMAKE_CXX_COMPILER=/opt/local/bin/g++-mp-4.7" ../ -D"CMAKE_BUILD_TYPE:STRING=Release"</buildArguments>
+				<buildArguments>-DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.1.1/ ../ -D"CMAKE_BUILD_TYPE:STRING=Release"</buildArguments>
+				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -383,7 +385,6 @@
 			<target name="Windows: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
 				<buildArguments>-G "MinGW Makefiles" ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
-				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -391,7 +392,6 @@
 			<target name="Windows: CMake Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
 				<buildArguments>-G "MinGW Makefiles" ../ -D"CMAKE_BUILD_TYPE:STRING=Release"</buildArguments>
-				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
