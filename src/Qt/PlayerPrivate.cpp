@@ -67,7 +67,10 @@ namespace openshot
 		break;
 	    }
 
+	    Time t1 = Time::getCurrentTime();
+
 	    videoPlayback->frame = frame;
+	    videoPlayback->reset = false;
 	    videoPlayback->render.signal();
 
 	    audioPlayback->source.setBuffer(frame->GetAudioSampleBuffer());
@@ -78,6 +81,12 @@ namespace openshot
 
 	    videoPlayback->reset = true;
 	    videoPlayback->rendered.wait();
+
+	    Time t2 = Time::getCurrentTime();
+	    int64 ft = int64(reader->info.fps.Reciprocal().ToDouble() * 1000.0);
+	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
+	    //if (0 < d - ft) sleep(int(d - ft));
+	    sleep(int(d + ft));
 	}
 	
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
