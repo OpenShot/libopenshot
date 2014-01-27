@@ -27,25 +27,74 @@
 #include "../include/ReaderBase.h"
 #include "../include/RendererBase.h"
 #include "PlayerPrivate.h"
+#include "AudioPlaybackThread.h"
+#include "VideoPlaybackThread.h"
 
 namespace openshot
 {
-
     PlayerPrivate::PlayerPrivate(RendererBase *rb)
-	: position(0), renderer(rb)
+	: Thread("player"), position(0)
+	, audioPlayback(new AudioPlaybackThread())
+	, videoPlayback(new VideoPlaybackThread(rb))
     {
     }
 
     PlayerPrivate::~PlayerPrivate()
     {
-	
+	if (isThreadRunning()) stopThread(500);
+	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(500);
+	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(500);
+	delete audioPlayback;
+	delete videoPlayback;
     }
 
-    void PlayerPrivate::startPlayback()
+    void PlayerPrivate::run()
     {
-	tr1::shared_ptr<Frame> frame = reader->GetFrame(position);
-	if (!frame) return;
-	renderer->paint(frame);
+	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
+	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
+
+	audioPlayback->startThread(1);
+	videoPlayback->startThread(2);
+
+	while (!threadShouldExit()) {
+	    tr1::shared_ptr<Frame> frame;
+	    try {
+		frame = reader->GetFrame(position++);
+		if (!frame) break; /* continue; */
+	    } catch (const ReaderClosed & e) {
+		break;
+	    } catch (const TooManySeeks & e) {
+		break;
+	    }
+
+	    videoPlayback->frame = frame;
+	    videoPlayback->render.signal();
+
+	    audioPlayback->source.setBuffer(frame->GetAudioSampleBuffer());
+	    audioPlayback->sampleRate = frame->GetAudioSamplesRate();
+	    audioPlayback->numChannels = frame->GetAudioChannelsCount();
+	    audioPlayback->play.signal();
+	    audioPlayback->played.wait();
+
+	    videoPlayback->reset = true;
+	    videoPlayback->rendered.wait();
+	}
+	
+	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
+	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
+    }
+
+    bool PlayerPrivate::startPlayback()
+    {
+	if (position < 0) return false;
+	stopPlayback(-1);
+	startThread(1);
+	return true;
+    }
+
+    void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
+    {
+	if (isThreadRunning()) stopThread(timeOutMilliseconds);
     }
 
 }

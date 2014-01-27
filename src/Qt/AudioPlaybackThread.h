@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for QtPlayer class
+ * @brief Source file for AudioPlaybackThread class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -25,61 +25,32 @@
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FFmpegReader.h"
-#include "../include/QtPlayer.h"
-#include "Qt/PlayerPrivate.h"
-
-using namespace openshot;
-
-QtPlayer::QtPlayer(RendererBase *rb) : PlayerBase(), p(new PlayerPrivate(rb))
+namespace openshot
 {
-    reader = NULL;
-}
+    using juce::Thread;
+    using juce::WaitableEvent;
 
-QtPlayer::~QtPlayer()
-{
-    if (mode != PLAYBACK_STOPPED) {
-	//p->stop();
-    }
-    delete p;
-}
+    /**
+     *  @brief The audio playback class.
+     */
+    class AudioPlaybackThread : Thread
+    {
+	AudioDeviceManager audioDeviceManager;
+	AudioSourcePlayer player;
+	AudioTransportSource transport;
+	MixerAudioSource mixer;
+	AudioBufferSource source;
+	double sampleRate;
+	int numChannels;
+	WaitableEvent play;
+	WaitableEvent played;
+	
+	AudioPlaybackThread();
+	~AudioPlaybackThread();
 
-void QtPlayer::SetSource(const std::string &source)
-{
-    reader = new FFmpegReader(source);
-    reader->Open();
-}
+	void run();
+	
+	friend class PlayerPrivate;
+    };
 
-void QtPlayer::Play()
-{
-    mode = PLAYBACK_PLAY;
-    p->stopPlayback();
-    p->position = 0;
-    p->reader = reader;
-    p->startPlayback();
-}
-
-void QtPlayer::Loading()
-{
-    mode = PLAYBACK_LOADING;
-}
-
-void QtPlayer::Pause()
-{
-    mode = PLAYBACK_PAUSED;
-}
-
-int QtPlayer::Position()
-{
-    return p->position;
-}
-
-void QtPlayer::Seek(int new_frame)
-{
-    p->position = new_frame;
-}
-
-void QtPlayer::Stop()
-{
-    mode = PLAYBACK_STOPPED;
 }

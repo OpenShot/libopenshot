@@ -211,6 +211,8 @@ namespace openshot
 		/// Get the audio sample rate
 		int GetAudioSamplesRate();
 
+	    juce::AudioSampleBuffer *GetAudioSampleBuffer();
+
 		/// Get the size in bytes of this frame (rough estimate)
 		int64 GetBytes();
 

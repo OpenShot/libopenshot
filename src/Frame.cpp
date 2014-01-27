@@ -363,6 +363,11 @@ int Frame::GetAudioSamplesRate()
 	return sample_rate;
 }
 
+juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
+{
+    return audio.get();
+}
+
 // Get the size in bytes of this frame (rough estimate)
 int64 Frame::GetBytes()
 {
@@ -723,8 +728,3 @@ void Frame::Play()
 
 
 }
-
-
-
-
-

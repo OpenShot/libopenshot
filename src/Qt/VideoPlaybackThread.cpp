@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for QtPlayer class
+ * @brief Source file for VideoPlaybackThread class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -24,62 +24,28 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "../include/ReaderBase.h"
+#include "../include/RendererBase.h"
+#include "VideoPlaybackThread.h"
 
-#include "../include/FFmpegReader.h"
-#include "../include/QtPlayer.h"
-#include "Qt/PlayerPrivate.h"
-
-using namespace openshot;
-
-QtPlayer::QtPlayer(RendererBase *rb) : PlayerBase(), p(new PlayerPrivate(rb))
+namespace openshot
 {
-    reader = NULL;
-}
-
-QtPlayer::~QtPlayer()
-{
-    if (mode != PLAYBACK_STOPPED) {
-	//p->stop();
+    VideoPlaybackThread::VideoPlaybackThread(RendererBase *rb)
+	: Thread("video-playback"), renderer(rb)
+	, render(), reset(false)
+    {
     }
-    delete p;
-}
 
-void QtPlayer::SetSource(const std::string &source)
-{
-    reader = new FFmpegReader(source);
-    reader->Open();
-}
+    VideoPlaybackThread::~VideoPlaybackThread()
+    {
+    }
 
-void QtPlayer::Play()
-{
-    mode = PLAYBACK_PLAY;
-    p->stopPlayback();
-    p->position = 0;
-    p->reader = reader;
-    p->startPlayback();
-}
-
-void QtPlayer::Loading()
-{
-    mode = PLAYBACK_LOADING;
-}
-
-void QtPlayer::Pause()
-{
-    mode = PLAYBACK_PAUSED;
-}
-
-int QtPlayer::Position()
-{
-    return p->position;
-}
-
-void QtPlayer::Seek(int new_frame)
-{
-    p->position = new_frame;
-}
-
-void QtPlayer::Stop()
-{
-    mode = PLAYBACK_STOPPED;
+    void VideoPlaybackThread::run()
+    {
+	while (!threadShouldExit()) {
+	    render.wait();
+	    renderer->paint(frame);
+	    rendered.signal();
+	}
+    }
 }

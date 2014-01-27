@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for QtPlayer class
+ * @brief Source file for PlayerPrivate class
  * @author Duzy Chan <code@duzy.info>
  *
  * @section LICENSE
@@ -27,20 +27,27 @@
 
 namespace openshot
 {
+    class AudioPlaybackThread;
+    class VideoPlaybackThread;
+    using juce::Thread;
 
     /**
      *  @brief The private part of QtPlayer class.
      */
-    class PlayerPrivate
+    class PlayerPrivate : Thread
     {
 	int position; /// The current frame position.
 	ReaderBase *reader;
-	RendererBase *renderer;
+	AudioPlaybackThread *audioPlayback;
+	VideoPlaybackThread *videoPlayback;
 
 	PlayerPrivate(RendererBase *rb);
 	virtual ~PlayerPrivate();
 
-	void startPlayback();
+	void run();
+
+	bool startPlayback();
+	void stopPlayback(int timeOutMilliseconds = -1);
 
 	friend class QtPlayer;
     };
