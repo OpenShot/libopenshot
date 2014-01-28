@@ -49,7 +49,7 @@ void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
     /// Use realloc for fast memory allocation.    
     /// TODO: consider locking the buffer for mt safety
     buffer = reinterpret_cast<unsigned char*>(realloc(buffer, bufferSize));
-#if true
+#if false
     // Not sure if this is actually faster... but it works now
     image->getPixels(0,0, width, height); // load pixels into cache
     image->depth( 8 ); // this is required of it crashes

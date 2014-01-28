@@ -31,11 +31,11 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2), width(1), height(1)
+Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -43,11 +43,11 @@ Frame::Frame() : number(1), pixel_ratio(1,1), sample_rate(48000), channels(2), w
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -55,11 +55,11 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(2), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 1600));
+	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -67,7 +67,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels), width(1), height(1)
+		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
@@ -79,7 +79,7 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), pixel_ratio(1,1), sample_rate(48000), channels(channels), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -116,7 +116,6 @@ void Frame::DeepCopy(const Frame& other)
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.image)));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
-	sample_rate = other.sample_rate;
 	channels = other.channels;
 
 	if (other.wave_image)
@@ -301,7 +300,7 @@ float* Frame::GetAudioSamples(int channel)
 }
 
 // Get an array of sample data (all channels interleaved together), using any sample rate
-float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
+float* Frame::GetInterleavedAudioSamples(int original_sample_rate, int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
 	AudioSampleBuffer *buffer(audio.get());
@@ -309,10 +308,10 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 	int num_of_samples = audio->getNumSamples();
 
 	// Resample to new sample rate (if needed)
-	if (new_sample_rate != sample_rate)
+	if (new_sample_rate != original_sample_rate)
 	{
 		// YES, RESAMPLE AUDIO
-		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
+		resampler->SetBuffer(audio.get(), original_sample_rate, new_sample_rate);
 
 		// Resample data, and return new buffer pointer
 		buffer = resampler->GetResampledBuffer();
@@ -355,12 +354,6 @@ int Frame::GetAudioChannelsCount()
 int Frame::GetAudioSamplesCount()
 {
 	return audio->getNumSamples();
-}
-
-// Get the audio sample rate
-int Frame::GetAudioSamplesRate()
-{
-	return sample_rate;
 }
 
 juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
@@ -408,10 +401,24 @@ void Frame::SetFrameNumber(int new_number)
 	number = new_number;
 }
 
-// Set Sample Rate
-void Frame::SetSampleRate(int rate)
+// Calculate the # of samples per video frame (for a specific frame number and frame rate)
+int Frame::GetSamplesPerFrame(int number, Fraction fps, int sample_rate)
 {
-	sample_rate = rate;
+	// Get the total # of samples for the previous frame, and the current frame (rounded)
+	double fps_rate = fps.Reciprocal().ToDouble();
+	double previous_samples = round((sample_rate * fps_rate) * (number - 1));
+	double total_samples = round((sample_rate * fps_rate) * number);
+
+	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
+	// be evenly divided into frames, so each frame can have have different # of samples.
+	double samples_per_frame = total_samples - previous_samples;
+	return samples_per_frame;
+}
+
+// Calculate the # of samples per video frame (for the current frame number)
+int Frame::GetSamplesPerFrame(Fraction fps, int sample_rate)
+{
+	return GetSamplesPerFrame(number, fps, sample_rate);
 }
 
 // Get height of image
@@ -664,7 +671,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetImage()
 }
 
 // Play audio samples for this frame
-void Frame::Play()
+void Frame::Play(int sample_rate)
 {
 	// Check if samples are present
 	if (!audio->getNumSamples())

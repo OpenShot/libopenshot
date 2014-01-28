@@ -147,9 +147,6 @@ namespace openshot
 		// whether the frame rate is increasing or decreasing.
 		void Init();
 
-		/// Calculate the # of samples per video frame (for a specific frame number)
-		int GetSamplesPerFrame(int frame_number, Fraction rate);
-
 	public:
 		// Init some containers
 		vector<Field> fields;		// List of all fields

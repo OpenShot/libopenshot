@@ -163,9 +163,6 @@ namespace openshot {
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
 
-		/// Calculate the # of samples per video frame (for a specific frame number)
-		int GetSamplesPerFrame(int frame_number);
-
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
 

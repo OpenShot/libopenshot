@@ -299,7 +299,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		int new_frame_number = time.GetInt(frame_number);
 
 		// Create a new frame
-		int samples_in_frame = GetSamplesPerFrame(new_frame_number, reader->info.fps);
+		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate);
 		new_frame = tr1::shared_ptr<Frame>(new Frame(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount()));
 
 		// Copy the image from the new frame
@@ -310,7 +310,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		int delta = int(round(time.GetDelta(frame_number)));
 
 		// Init audio vars
-		int sample_rate = reader->GetFrame(new_frame_number)->GetAudioSamplesRate();
+		int sample_rate = reader->info.sample_rate;
 		int channels = reader->info.channels;
 		int number_of_samples = reader->GetFrame(new_frame_number)->GetAudioSamplesCount();
 
@@ -509,25 +509,6 @@ int Clip::adjust_frame_number_minimum(int frame_number)
 	else
 		return frame_number;
 
-}
-
-// Calculate the # of samples per video frame (for a specific frame number)
-int Clip::GetSamplesPerFrame(int frame_number, Fraction rate) throw(ReaderClosed)
-{
-	// Check for valid reader
-	if (!reader)
-		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
-
-	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double fps = rate.Reciprocal().ToDouble();
-	double previous_samples = round((reader->info.sample_rate * fps) * (frame_number - 1));
-	double total_samples = round((reader->info.sample_rate * fps) * frame_number);
-
-	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
-	// be evenly divided into frames, so each frame can have have different # of samples.
-	double samples_per_frame = total_samples - previous_samples;
-	return samples_per_frame;
 }
 
 // Generate JSON string of this object

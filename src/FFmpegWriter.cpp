@@ -36,7 +36,8 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
-		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0)
+		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
+		original_sample_rate(0), original_channels(0)
 {
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -174,6 +175,12 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 		info.channels = channels;
 	if (bit_rate > 999)
 		info.audio_bit_rate = bit_rate;
+
+	// init resample options (if zero)
+	if (original_sample_rate == 0)
+		original_sample_rate = info.sample_rate;
+	if (original_channels == 0)
+		original_channels = info.channels;
 
 	// Enable / Disable audio
 	info.has_audio = has_audio;
@@ -928,7 +935,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			channels_in_frame = frame->GetAudioChannelsCount();
 
 			// Get audio sample array
-			float* frame_samples_float = frame->GetInterleavedAudioSamples(info.sample_rate, new_sampler, &samples_in_frame);
+			float* frame_samples_float = frame->GetInterleavedAudioSamples(original_sample_rate, info.sample_rate, new_sampler, &samples_in_frame);
 
 			// Calculate total samples
 			total_frame_samples = samples_in_frame * channels_in_frame;
@@ -1318,6 +1325,12 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
 	}
+}
+
+// Set audio resample options
+void FFmpegWriter::ResampleAudio(int sample_rate, int channels) {
+	original_sample_rate = sample_rate;
+	original_channels = channels;
 }
 
 // Remove & deallocate all software scalers

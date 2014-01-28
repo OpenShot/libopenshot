@@ -178,9 +178,6 @@ namespace openshot
 		/// Get the smallest audio frame that is still being processed
 		int GetSmallestAudioFrame();
 
-		/// Calculate the # of samples per video frame (for a specific frame number)
-		int GetSamplesPerFrame(int frame_number);
-
 		/// Get the PTS for the current video packet
 		int GetVideoPTS();
 
