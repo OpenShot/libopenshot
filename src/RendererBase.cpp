@@ -49,17 +49,18 @@ void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
     /// Use realloc for fast memory allocation.    
     /// TODO: consider locking the buffer for mt safety
     buffer = reinterpret_cast<unsigned char*>(realloc(buffer, bufferSize));
-#if false
-    /**
-     *  FIXME: this is buggy somehow...
-     */
-    image->readPixels(Magick::RGBQuantum, buffer);
+#if true
+    // Not sure if this is actually faster... but it works now
+    image->getPixels(0,0, width, height); // load pixels into cache
+    image->depth( 8 ); // this is required of it crashes
+    image->writePixels(Magick::RGBQuantum, buffer); // write pixel data to our buffer
 #else
+    // Iterate through the pixel packets, and load our own buffer
     const Magick::PixelPacket *pixels = frame->GetPixels();
     for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
-	buffer[i+0] = pixels[n].red   >> 8;
-	buffer[i+1] = pixels[n].green >> 8;
-	buffer[i+2] = pixels[n].blue  >> 8;
+		buffer[i+0] = pixels[n].red   >> 8;
+		buffer[i+1] = pixels[n].green >> 8;
+		buffer[i+2] = pixels[n].blue  >> 8;
     }
 #endif
     this->render(RGB_888, width, height, width * BPP, buffer);

@@ -40,6 +40,15 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	FFmpegReader r99("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r99.Open();
+	for (int count99 = 1; count99 < 10000000; count99++) {
+		cout << count99 << endl;
+		r99.GetFrame(count99);
+	}
+
+	return 0;
+
 	Profile p("/home/jonathan/Apps/openshot/openshot/profiles/atsc_1080p_25");
 	return 0;
 

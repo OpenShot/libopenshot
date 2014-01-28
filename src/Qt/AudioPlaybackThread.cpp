@@ -63,12 +63,17 @@ namespace openshot
     {
 	while (!threadShouldExit()) {
 	    play.wait();
+/*
+		// Create TimeSliceThread for audio buffering
+		TimeSliceThread my_thread("Audio buffer thread");
 
-	    /*
+		// Start thread
+		my_thread.startThread();
+
 	    transport.setSource(
 		&source,
 		5000, // tells it to buffer this many samples ahead
-		nullptr,
+		&my_thread,
 		sampleRate,
 		numChannels);
 	    transport.setPosition(0);
@@ -79,7 +84,7 @@ namespace openshot
 	    }
 	    transport.stop();
 	    transport.setSource(0);
-	    */
+*/
 
 	    played.signal();
 	}

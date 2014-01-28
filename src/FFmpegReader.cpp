@@ -378,7 +378,7 @@ void FFmpegReader::UpdateVideoInfo()
 }
 
 
-tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks)
+tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks)
 {
 	if (display_debug)
 		cout << "GET FRAME " << requested_frame << ", last_frame: " << last_frame << endl;
@@ -477,6 +477,11 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 				{
 					// Break loop when no more packets found
 					end_of_stream = true;
+
+					// Wait for all frames to be processed
+					while (processing_video_frames.size() + processing_audio_frames.size() == 0)
+						Sleep(1);
+
 					break;
 				}
 
@@ -556,17 +561,23 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	} // end omp parallel
 
 
-	// End of stream?  Mark the any other working frames as 'finished'
-	if (end_of_stream)
+	// End of stream?
+	if (end_of_stream) {
+		// Mark the any other working frames as 'finished'
 		CheckWorkingFrames(end_of_stream);
+
+		// Update readers video length (to a guess of the correct video length)
+		info.video_length = requested_frame - 1; // just a guess, but this frame is certainly out of bounds
+	}
 
 	// Return requested frame (if found)
 	if (final_cache.Exists(requested_frame))
 		// Return prepared frame
 		return final_cache.GetFrame(requested_frame);
 	else
-		// Return blank frame
-		return CreateFrame(requested_frame);
+		// Frame not found (possibily end of stream)
+		throw OutOfBoundsFrame("Frame not found in video (invalid frame requested)", requested_frame, info.video_length);
+
 }
 
 // Get the next packet (if any)

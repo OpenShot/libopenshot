@@ -236,7 +236,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, TooManySeeks);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
