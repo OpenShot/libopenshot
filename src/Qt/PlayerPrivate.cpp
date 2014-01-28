@@ -60,12 +60,15 @@ namespace openshot
 	    tr1::shared_ptr<Frame> frame;
 	    try {
 		frame = reader->GetFrame(position++);
-		if (!frame) break; /* continue; */
 	    } catch (const ReaderClosed & e) {
 		break;
 	    } catch (const TooManySeeks & e) {
 		break;
+	    } catch (const OutOfBoundsFrame & e) {
+		break;
 	    }
+
+	    if (!frame) break; /* continue; */
 
 	    Time t1 = Time::getCurrentTime();
 
@@ -83,10 +86,11 @@ namespace openshot
 	    videoPlayback->rendered.wait();
 
 	    Time t2 = Time::getCurrentTime();
-	    int64 ft = int64(reader->info.fps.Reciprocal().ToDouble() * 1000.0);
+	    double ft = (1000.0 / reader->info.fps.ToDouble()) /* * 2.0 */;
 	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
-	    //if (0 < d - ft) sleep(int(d - ft));
-	    sleep(int(d + ft));
+	    int st = int(ft - d + 0.5);
+	    if (0 < ft - d) sleep(st);
+	    std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
 	}
 	
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
