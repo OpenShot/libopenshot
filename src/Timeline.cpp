@@ -54,6 +54,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.sample_rate = sample_rate;
 	info.channels = channels;
 	info.video_timebase = fps.Reciprocal();
+	info.duration = 60 * 30; // 30 minute default duration
 }
 
 // Add an openshot::Clip to the timeline
@@ -556,7 +557,7 @@ Json::Value Timeline::JsonValue() {
 	root["color"] = color.JsonValue();
 
 	// Add array of clips
-	root["Clips"] = Json::Value(Json::arrayValue);
+	root["clips"] = Json::Value(Json::arrayValue);
 
 	// Find Clips at this time
 	list<Clip*>::iterator clip_itr;
@@ -564,11 +565,11 @@ Json::Value Timeline::JsonValue() {
 	{
 		// Get clip object from the iterator
 		Clip *existing_clip = (*clip_itr);
-		root["Clips"].append(existing_clip->JsonValue());
+		root["clips"].append(existing_clip->JsonValue());
 	}
 
 	// Add array of effects
-	root["Effects"] = Json::Value(Json::arrayValue);
+	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
 	list<EffectBase*>::iterator effect_itr;
@@ -576,7 +577,7 @@ Json::Value Timeline::JsonValue() {
 	{
 		// Get clip object from the iterator
 		EffectBase *existing_effect = (*effect_itr);
-		root["Effects"].append(existing_effect->JsonValue());
+		root["effects"].append(existing_effect->JsonValue());
 	}
 
 	// return JsonValue
@@ -618,11 +619,11 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 	// Clear existing clips
 	clips.clear();
 
-	if (!root["Clips"].isNull())
+	if (!root["clips"].isNull())
 		// loop through clips
-		for (int x = 0; x < root["Clips"].size(); x++) {
+		for (int x = 0; x < root["clips"].size(); x++) {
 			// Get each clip
-			Json::Value existing_clip = root["Clips"][x];
+			Json::Value existing_clip = root["clips"][x];
 
 			// Create Clip
 			Clip *c = new Clip();
@@ -637,11 +638,11 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 	// Clear existing effects
 	effects.clear();
 
-	if (!root["Effects"].isNull())
+	if (!root["effects"].isNull())
 		// loop through effects
-		for (int x = 0; x < root["Effects"].size(); x++) {
+		for (int x = 0; x < root["effects"].size(); x++) {
 			// Get each effect
-			Json::Value existing_effect = root["Effects"][x];
+			Json::Value existing_effect = root["effects"][x];
 
 			// Create Effect
 			EffectBase *e = NULL;

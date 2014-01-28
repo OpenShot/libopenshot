@@ -48,7 +48,7 @@ namespace openshot {
 	 * together. There are 2 primary types of clips: Effects and Video/Audio Clips.
 	 */
 	class ClipBase {
-	private:
+	protected:
 		string id; ///< ID Property for all derived Clip and Effect classes.
 		float position; ///< The position on the timeline where this clip should start playing
 		int layer; ///< The layer this clip is on. Lower clips are covered up by higher clips.
@@ -69,7 +69,7 @@ namespace openshot {
 		int Layer() { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
 		float Start() { return start; } ///< Get start position (in seconds) of clip (trim start of video)
 		float End() { return end; } ///< Get end position (in seconds) of clip (trim end of video)
-		float Duration() { return End() - Start(); } ///< Get the length of this clip (in seconds)
+		float Duration() { return end - start; } ///< Get the length of this clip (in seconds)
 
 		/// Set basic properties
 		void Id(string value) { id = value; } ///> Set the Id of this clip object

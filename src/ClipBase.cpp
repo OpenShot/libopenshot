@@ -39,6 +39,7 @@ Json::Value ClipBase::JsonValue() {
 	root["layer"] = Layer();
 	root["start"] = Start();
 	root["end"] = End();
+	root["duration"] = Duration();
 
 	// return JsonValue
 	return root;

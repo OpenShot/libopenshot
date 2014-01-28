@@ -91,7 +91,6 @@ namespace openshot {
 	class Clip : public ClipBase {
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
-		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
