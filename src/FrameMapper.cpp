@@ -222,12 +222,12 @@ void FrameMapper::Init()
 			// Determine the range of samples (from the original rate, to the new rate)
 			int end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
-			int remaining_samples = GetSamplesPerFrame(frame_number, target);
+			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, info.sample_rate);
 
 			while (remaining_samples > 0)
 			{
 				// get original samples
-				int original_samples = GetSamplesPerFrame(end_samples_frame, original) - end_samples_position;
+				int original_samples = Frame::GetSamplesPerFrame(end_samples_frame, original, info.sample_rate) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -247,12 +247,12 @@ void FrameMapper::Init()
 
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, GetSamplesPerFrame(frame_number, target)};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(frame_number, target, info.sample_rate)};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
 			start_samples_position = end_samples_position + 1;
-			if (start_samples_position >= GetSamplesPerFrame(start_samples_frame, original))
+			if (start_samples_position >= Frame::GetSamplesPerFrame(start_samples_frame, original, info.sample_rate))
 			{
 				start_samples_frame += 1; // increment the frame (since we need to wrap onto the next one)
 				start_samples_position = 0; // reset to 0, since we wrapped
@@ -302,11 +302,10 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	MappedFrame mapped = GetMappedFrame(requested_frame);
 
 	// Init some basic properties about this frame
-	int samples_in_frame = GetSamplesPerFrame(requested_frame, target);
+	int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, target, info.sample_rate);
 
 	// Create a new frame
 	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
-	frame->SetSampleRate(info.sample_rate);
 
 	// Copy the image from the odd field (TODO: make this copy each field from the correct frames)
 	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage(), true);
@@ -372,20 +371,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 	// Return processed 'frame'
 	return final_cache.GetFrame(frame->number);
-}
-
-// Calculate the # of samples per video frame (for a specific frame number)
-int FrameMapper::GetSamplesPerFrame(int frame_number, Fraction rate)
-{
-	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double fps = rate.Reciprocal().ToDouble();
-	double previous_samples = round((reader->info.sample_rate * fps) * (frame_number - 1));
-	double total_samples = round((reader->info.sample_rate * fps) * frame_number);
-
-	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
-	// be evenly divided into frames, so each frame can have have different # of samples.
-	double samples_per_frame = total_samples - previous_samples;
-	return samples_per_frame;
 }
 
 void FrameMapper::PrintMapping()

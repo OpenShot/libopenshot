@@ -122,7 +122,6 @@ namespace openshot
 		tr1::shared_ptr<Magick::Image> wave_image;
 		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
 		Fraction pixel_ratio;
-		int sample_rate;
 		int channels;
 		int width;
 		int height;
@@ -200,16 +199,13 @@ namespace openshot
 		float* GetAudioSamples(int channel);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
-		float* GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
+		float* GetInterleavedAudioSamples(int original_sample_rate, int new_sample_rate, AudioResampler* resampler, int* sample_count);
 
 		/// Get number of audio channels
 		int GetAudioChannelsCount();
 
 		/// Get number of audio channels
 		int GetAudioSamplesCount();
-
-		/// Get the audio sample rate
-		int GetAudioSamplesRate();
 
 	    juce::AudioSampleBuffer *GetAudioSampleBuffer();
 
@@ -227,6 +223,12 @@ namespace openshot
 
 		/// Get height of image
 		int GetHeight();
+
+		/// Calculate the # of samples per video frame (for the current frame number)
+		int GetSamplesPerFrame(Fraction fps, int sample_rate);
+
+		/// Calculate the # of samples per video frame (for a specific frame number and frame rate)
+		static int GetSamplesPerFrame(int frame_number, Fraction fps, int sample_rate);
 
 		/// Get an audio waveform image
 		tr1::shared_ptr<Magick::Image> GetWaveform(int width, int height, int Red, int Green, int Blue);
@@ -249,14 +251,11 @@ namespace openshot
 		/// Set Pixel Aspect Ratio
 		void SetPixelRatio(int num, int den);
 
-		/// Set Sample Rate, used for playback (Play() method)
-		void SetSampleRate(int sample_rate);
-
 		/// Make colors in a specific range transparent
 		void TransparentColors(string color, double fuzz);
 
 		/// Play audio samples for this frame
-		void Play();
+		void Play(int sample_rate);
 	};
 
 }

@@ -77,8 +77,8 @@ namespace openshot
 	    videoPlayback->render.signal();
 
 	    audioPlayback->source.setBuffer(frame->GetAudioSampleBuffer());
-	    audioPlayback->sampleRate = frame->GetAudioSamplesRate();
-	    audioPlayback->numChannels = frame->GetAudioChannelsCount();
+	    audioPlayback->sampleRate = reader->info.sample_rate;
+	    audioPlayback->numChannels = reader->info.channels;
 	    audioPlayback->play.signal();
 	    audioPlayback->played.wait();
 

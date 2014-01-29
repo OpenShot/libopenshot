@@ -93,6 +93,7 @@
  */
 
 #include "AudioBufferSource.h"
+#include "AudioReaderSource.h"
 #include "AudioResampler.h"
 #include "Cache.h"
 #include "ChunkReader.h"

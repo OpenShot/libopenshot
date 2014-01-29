@@ -420,20 +420,6 @@ void Timeline::Open()
 	is_open = true;
 }
 
-// Calculate the # of samples per video frame (for a specific frame number)
-int Timeline::GetSamplesPerFrame(int frame_number)
-{
-	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double fps_value = info.fps.Reciprocal().ToDouble();
-	double previous_samples = round((info.sample_rate * fps_value) * (frame_number - 1));
-	double total_samples = round((info.sample_rate * fps_value) * frame_number);
-
-	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
-	// be evenly divided into frames, so each frame can have have different # of samples.
-	double samples_per_frame = total_samples - previous_samples;
-	return samples_per_frame;
-}
-
 // Compare 2 floating point numbers for equality
 bool Timeline::isEqual(double a, double b)
 {
@@ -468,8 +454,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 					#pragma xx omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
-						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", GetSamplesPerFrame(frame_number), info.channels)));
-						new_frame->SetSampleRate(info.sample_rate);
+						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
 
 						// Calculate time of frame
 						float requested_time = calculate_time(frame_number, info.fps);

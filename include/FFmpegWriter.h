@@ -127,6 +127,10 @@ namespace openshot
 	    int audio_input_position;
 	    AudioResampler *resampler;
 
+	    /* Resample options */
+	    int original_sample_rate;
+	    int original_channels;
+
 	    tr1::shared_ptr<Frame> last_frame;
 	    deque<tr1::shared_ptr<Frame> > spooled_audio_frames;
 	    deque<tr1::shared_ptr<Frame> > spooled_video_frames;
@@ -206,6 +210,9 @@ namespace openshot
 
 		/// Remove & deallocate all software scalers
 		void RemoveScalers();
+
+		/// Set audio resample options
+		void ResampleAudio(int sample_rate, int channels);
 
 		/// Set audio export options
 		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate);

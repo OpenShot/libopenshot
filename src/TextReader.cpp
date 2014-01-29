@@ -155,7 +155,6 @@ tr1::shared_ptr<Frame> TextReader::GetFrame(int requested_frame) throw(ReaderClo
 	{
 		// Create or get frame object
 		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
-		image_frame->SetSampleRate(44100);
 
 		// Add Image data to frame
 		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));

@@ -108,9 +108,6 @@ namespace openshot {
 		/// Adjust the audio and image of a time mapped frame
 		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed);
 
-		/// Calculate the # of samples per video frame (for a specific frame number)
-		int GetSamplesPerFrame(int frame_number, Fraction rate)  throw(ReaderClosed);
-
 		/// Init default settings for a clip
 		void init_settings();
 

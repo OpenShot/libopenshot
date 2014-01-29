@@ -854,7 +854,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	while (pts_remaining_samples)
 	{
 		// Get Samples per frame (for this frame number)
-		int samples_per_frame = GetSamplesPerFrame(previous_packet_location.frame);
+		int samples_per_frame = Frame::GetSamplesPerFrame(previous_packet_location.frame, info.fps, info.sample_rate);
 
 		// Calculate # of samples to add to this frame
 		int samples = samples_per_frame - previous_packet_location.sample_start;
@@ -973,7 +973,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			while (remaining_samples > 0)
 			{
 				// Get Samples per frame (for this frame number)
-				int samples_per_frame = GetSamplesPerFrame(starting_frame_number);
+				int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate);
 
 				// Calculate # of samples to add to this frame
 				int samples = samples_per_frame - start;
@@ -1230,7 +1230,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	double sample_start_percentage = frame - double(whole_frame);
 
 	// Get Samples per frame
-	int samples_per_frame = GetSamplesPerFrame(whole_frame);
+	int samples_per_frame = Frame::GetSamplesPerFrame(whole_frame, info.fps, info.sample_rate);
 
 	// Calculate the sample # to start on
 	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
@@ -1276,20 +1276,6 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	return location;
 }
 
-// Calculate the # of samples per video frame (for a specific frame number)
-int FFmpegReader::GetSamplesPerFrame(int frame_number)
-{
-	// Get the total # of samples for the previous frame, and the current frame (rounded)
-	double fps = info.fps.Reciprocal().ToDouble();
-	double previous_samples = round((info.sample_rate * fps) * (frame_number - 1));
-	double total_samples = round((info.sample_rate * fps) * frame_number);
-
-	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
-	// be evenly divided into frames, so each frame can have have different # of samples.
-	double samples_per_frame = total_samples - previous_samples;
-	return samples_per_frame;
-}
-
 // Create a new Frame (or return an existing one) and add it to the working queue.
 tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 {
@@ -1303,13 +1289,9 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 	}
 	else
 	{
-		// Get Samples per frame
-		int samples_per_frame = GetSamplesPerFrame(requested_frame);
-
 		// Create a new frame on the working cache
-		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", samples_per_frame, info.channels));
+		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate), info.channels));
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
-		f->SetSampleRate(info.sample_rate);
 
 		working_cache.Add(requested_frame, f);
 

@@ -138,6 +138,7 @@ FILE(GLOB QT_PLAYER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Qt/*.cpp")
 ###############  SET LIBRARY SOURCE FILES  #################
 SET ( OPENSHOT_SOURCE_FILES
   		AudioBufferSource.cpp
+  		AudioReaderSource.cpp
 		AudioResampler.cpp
 		Cache.cpp
 		ChunkReader.cpp

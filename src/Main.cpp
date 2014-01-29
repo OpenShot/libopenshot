@@ -40,11 +40,23 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
-	FFmpegReader r99("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	r99.Open();
-	for (int count99 = 1; count99 < 10000000; count99++) {
-		cout << count99 << endl;
-		r99.GetFrame(count99);
+	FFmpegReader sinelReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	sinelReader.Open();
+
+	AudioReaderSource readerSource(&sinelReader, 1, 10000);
+	for (int z = 0; z < 2000; z++) {
+		// Get audio chunks
+		int chunk_size = 750;
+		juce::AudioSampleBuffer *master_buffer = new juce::AudioSampleBuffer(sinelReader.info.channels, chunk_size);
+		master_buffer->clear();
+		const AudioSourceChannelInfo info = {master_buffer, 0, chunk_size};
+
+		// Get next audio block
+		readerSource.getNextAudioBlock(info);
+
+		// Delete buffer
+		master_buffer->clear();
+		delete master_buffer;
 	}
 
 	return 0;
