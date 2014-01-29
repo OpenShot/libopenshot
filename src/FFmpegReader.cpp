@@ -1290,7 +1290,7 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 	else
 	{
 		// Create a new frame on the working cache
-		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", 0, info.channels));
+		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate), info.channels));
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 
 		working_cache.Add(requested_frame, f);

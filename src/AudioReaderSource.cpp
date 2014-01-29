@@ -32,7 +32,8 @@ using namespace openshot;
 
 // Constructor that reads samples from a reader
 AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64 starting_frame_number, int buffer_size)
-	: reader(audio_reader), frame_number(starting_frame_number), size(buffer_size) {
+	: reader(audio_reader), frame_number(starting_frame_number), original_frame_number(starting_frame_number),
+	  size(buffer_size), position(0), frame_position(0) {
 
 	// Initialize an audio buffer (based on reader)
 	buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
@@ -51,55 +52,86 @@ AudioReaderSource::~AudioReaderSource()
 
 // Get more samples from the reader
 void AudioReaderSource::GetMoreSamplesFromReader() {
+
 	// Determine the amount of samples needed to fill up this buffer
-	int amount_needed = start; // replace these used samples
-	int amount_remaining = size - start;
+	int amount_needed = position; // replace these used samples
+	int amount_remaining = size - amount_needed; // these are unused samples, and need to be carried forward
 	if (!frame) {
 		// If no frame, load entire buffer
 		amount_needed = size;
-		amount_remaining = size;
+		amount_remaining = 0;
 	}
 
 	// Init new buffer
 	juce::AudioSampleBuffer *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
+	new_buffer->clear();
 
 	// Move the remaining samples into new buffer (if any)
-	if (start > 0) {
+	if (amount_remaining > 0) {
 		for (int channel = 0; channel < buffer->getNumChannels(); channel++)
-			new_buffer->copyFrom(channel, 0, *buffer, channel, start, amount_remaining);
-		start = amount_remaining;
-	}
+			new_buffer->addFrom(channel, 0, *buffer, channel, position, amount_remaining);
+		position = amount_remaining;
+	} else
+		// reset position to 0
+		position = 0;
 
 	// Loop through frames until buffer filled
-	int fill_start = start;
 	while (amount_needed > 0) {
 
-		// Get the next frame
-	    try {
-	    	frame = reader->GetFrame(frame_number++);
-	    } catch (const ReaderClosed & e) {
-		break;
-	    } catch (const TooManySeeks & e) {
-		break;
-	    } catch (const OutOfBoundsFrame & e) {
-		break;
-	    }
+		// Get the next frame (if position is zero)
+		if (frame_position == 0) {
+			try {
+				// Get frame object
+				frame = reader->GetFrame(frame_number++);
 
-		// Is buffer big enough to hold entire frame
-		if (fill_start + frame->GetAudioSamplesCount() > size) {
-			// Increase size of buffer
-			new_buffer->setSize(frame->GetAudioChannelsCount(), fill_start + frame->GetAudioSamplesCount(), true, true, false);
-			size = new_buffer->getNumSamples();
+			} catch (const ReaderClosed & e) {
+			break;
+			} catch (const TooManySeeks & e) {
+			break;
+			} catch (const OutOfBoundsFrame & e) {
+			break;
+			}
 		}
 
-		// Load all of its samples into the buffer
-		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-			new_buffer->copyFrom(channel, fill_start, *frame->GetAudioSampleBuffer(), channel, 0, frame->GetAudioSamplesCount());
+		bool frame_completed = false;
+		int amount_to_copy = frame->GetAudioSamplesCount();
+		if (amount_to_copy > amount_needed) {
+			// Don't copy too many samples (we don't want to overflow the buffer)
+			amount_to_copy = amount_needed;
+			amount_needed = 0;
+		} else {
+			// Not enough to fill the buffer (so use the entire frame)
+			amount_needed -= amount_to_copy;
+			frame_completed = true;
+		}
+
+		if (frame->number > 200) {
+			frame->DisplayWaveform();
+			for (int y = 0; y < frame->GetAudioSamplesCount(); y++)
+				cout << y << ": " << frame->GetAudioSampleBuffer()->getSampleData(0)[y] << endl;
+
+			// Load all of its samples into the buffer
+			for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
+				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
+		}
 
 		// Adjust remaining samples
-		amount_remaining -= fill_start + frame->GetAudioSamplesCount();
-		fill_start += frame->GetAudioSamplesCount();
+		position += amount_to_copy;
+		if (frame_completed)
+			// Reset frame buffer position (which will load a new frame on the next loop)
+			frame_position = 0;
+		else
+			// Continue tracking the current frame's position
+			frame_position += amount_to_copy;
 	}
+
+	// Delete old buffer
+	buffer->clear();
+	delete buffer;
+
+	// Replace buffer and reset position
+	buffer = new_buffer;
+	position = 0;
 }
 
 // Get the next block of audio samples

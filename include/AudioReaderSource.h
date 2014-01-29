@@ -54,15 +54,16 @@ namespace openshot
 	class AudioReaderSource : public PositionableAudioSource
 	{
 	private:
-		int position;
-		int start;
-		bool repeat;
-		AudioSampleBuffer *buffer;
+		int position; /// The position of the audio source (index of buffer)
+		bool repeat; /// Repeat the audio source when finished
+		int size; /// The size of the internal buffer
+		AudioSampleBuffer *buffer; /// The audio sample buffer
 
-		int size; /// The size of the buffer
 		ReaderBase *reader; /// The reader to pull samples from
-		int64 frame_number; /// The current frame to read from
+		int64 original_frame_number; /// The current frame to read from
+		int64 frame_number; /// The current frame number
 		tr1::shared_ptr<Frame> frame; /// The current frame object that is being read
+		int frame_position; /// The position of the current frame's buffer
 
 		/// Get more samples from the reader
 		void GetMoreSamplesFromReader();
