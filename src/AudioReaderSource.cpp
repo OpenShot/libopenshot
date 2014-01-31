@@ -105,17 +105,9 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 			frame_completed = true;
 		}
 
-		if (frame->number > 200) {
-		    /*
-		    frame->DisplayWaveform();
-		    for (int y = 0; y < frame->GetAudioSamplesCount(); y++)
-		    cout << y << ": " << frame->GetAudioSampleBuffer()->getSampleData(0)[y] << endl;
-		    */
-
-			// Load all of its samples into the buffer
-			for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
-		}
+		// Load all of its samples into the buffer
+		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
+			new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
 
 		// Adjust remaining samples
 		position += amount_to_copy;
