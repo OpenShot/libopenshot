@@ -26,6 +26,7 @@
  */
 #include "../include/ReaderBase.h"
 #include "../include/RendererBase.h"
+#include "../include/AudioReaderSource.h"
 #include "AudioPlaybackThread.h"
 
 namespace openshot
@@ -40,6 +41,21 @@ namespace openshot
 	, sampleRate(0.0)
 	, numChannels(0)
     {
+    }
+
+    AudioPlaybackThread::~AudioPlaybackThread()
+    {
+    }
+
+    void AudioPlaybackThread::setReader(ReaderBase *reader)
+    {
+	sampleRate = reader->info.sample_rate;
+	numChannels = reader->info.channels;
+	source = new AudioReaderSource(reader, 10000, 1024*5);
+    }
+
+    void AudioPlaybackThread::run()
+    {
 	audioDeviceManager.initialise (
 	    0, /* number of input channels */
 	    2, /* number of output channels */
@@ -48,45 +64,34 @@ namespace openshot
 	audioDeviceManager.addAudioCallback(&player);
 	mixer.addInputSource(&transport, false);
 	player.setSource(&mixer);
-    }
 
-    AudioPlaybackThread::~AudioPlaybackThread()
-    {
+	// Create TimeSliceThread for audio buffering
+	TimeSliceThread my_thread("Audio buffer thread");
+
+	// Start thread
+	my_thread.startThread();
+
+	transport.setSource(
+	    source,
+	    10000, // tells it to buffer this many samples ahead
+	    &my_thread,
+	    sampleRate,
+	    numChannels);
+	transport.setPosition(0);
+	transport.setGain(1.0);
+	transport.start();
+
+	while (!threadShouldExit() && transport.isPlaying()) {
+	    sleep(1);
+	}
+
+	transport.stop();
+	transport.setSource(0);
+
 	player.setSource(0);
 	audioDeviceManager.removeAudioCallback(&player);
 	audioDeviceManager.closeAudioDevice();
 	audioDeviceManager.removeAllChangeListeners();
 	audioDeviceManager.dispatchPendingMessages();
-    }
-
-    void AudioPlaybackThread::run()
-    {
-	while (!threadShouldExit()) {
-	    play.wait();
-/*
-		// Create TimeSliceThread for audio buffering
-		TimeSliceThread my_thread("Audio buffer thread");
-
-		// Start thread
-		my_thread.startThread();
-
-	    transport.setSource(
-		&source,
-		5000, // tells it to buffer this many samples ahead
-		&my_thread,
-		sampleRate,
-		numChannels);
-	    transport.setPosition(0);
-	    transport.setGain(1.0);
-	    transport.start();
-	    while (transport.isPlaying()) {
-		sleep(10);
-	    }
-	    transport.stop();
-	    transport.setSource(0);
-*/
-
-	    played.signal();
-	}
     }
 }

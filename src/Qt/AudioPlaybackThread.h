@@ -39,7 +39,8 @@ namespace openshot
 	AudioSourcePlayer player;
 	AudioTransportSource transport;
 	MixerAudioSource mixer;
-	AudioBufferSource source;
+	//AudioBufferSource source;
+	AudioReaderSource *source;
 	double sampleRate;
 	int numChannels;
 	WaitableEvent play;
@@ -47,6 +48,8 @@ namespace openshot
 	
 	AudioPlaybackThread();
 	~AudioPlaybackThread();
+
+	void setReader(ReaderBase *reader);
 
 	void run();
 	

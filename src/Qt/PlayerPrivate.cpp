@@ -26,6 +26,7 @@
  */
 #include "../include/ReaderBase.h"
 #include "../include/RendererBase.h"
+#include "../include/AudioReaderSource.h"
 #include "PlayerPrivate.h"
 #include "AudioPlaybackThread.h"
 #include "VideoPlaybackThread.h"
@@ -53,36 +54,23 @@ namespace openshot
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
 
+	audioPlayback->setReader(reader);
 	audioPlayback->startThread(1);
 	videoPlayback->startThread(2);
 
+	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
-	    tr1::shared_ptr<Frame> frame;
-	    try {
-		frame = reader->GetFrame(position++);
-	    } catch (const ReaderClosed & e) {
-		break;
-	    } catch (const TooManySeeks & e) {
-		break;
-	    } catch (const OutOfBoundsFrame & e) {
-		break;
+	    frame = audioPlayback->source->getFrame();
+	    if (!frame) {
+		sleep(1); continue;
+		//break;
 	    }
-
-	    if (!frame) break; /* continue; */
 
 	    Time t1 = Time::getCurrentTime();
 
 	    videoPlayback->frame = frame;
-	    videoPlayback->reset = false;
 	    videoPlayback->render.signal();
-
-	    audioPlayback->source.setBuffer(frame->GetAudioSampleBuffer());
-	    audioPlayback->sampleRate = reader->info.sample_rate;
-	    audioPlayback->numChannels = reader->info.channels;
-	    audioPlayback->play.signal();
-	    audioPlayback->played.wait();
-
-	    videoPlayback->reset = true;
+	    //frame = getFrame();
 	    videoPlayback->rendered.wait();
 
 	    Time t2 = Time::getCurrentTime();
@@ -95,6 +83,20 @@ namespace openshot
 	
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
+    }
+
+    tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
+    {
+	try {
+	    return reader->GetFrame(position++);
+	} catch (const ReaderClosed & e) {
+	    // ...
+	} catch (const TooManySeeks & e) {
+	    // ...
+	} catch (const OutOfBoundsFrame & e) {
+	    // ...
+	}
+	return tr1::shared_ptr<Frame>();
     }
 
     bool PlayerPrivate::startPlayback()

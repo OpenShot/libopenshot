@@ -107,6 +107,9 @@ namespace openshot
 
 		/// Update the internal buffer used by this source
 		void setBuffer (AudioSampleBuffer *audio_buffer);
+
+	    const ReaderInfo & getReaderInfo() const { return reader->info; }
+	    tr1::shared_ptr<Frame> getFrame() const { return frame; }
 	};
 
 }
