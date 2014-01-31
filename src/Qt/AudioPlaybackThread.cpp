@@ -54,6 +54,12 @@ namespace openshot
 	source = new AudioReaderSource(reader, 10000, 1024*5);
     }
 
+    tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
+    {
+	if (source) return source->getFrame();
+	return tr1::shared_ptr<Frame>();
+    }
+
     void AudioPlaybackThread::run()
     {
 	audioDeviceManager.initialise (

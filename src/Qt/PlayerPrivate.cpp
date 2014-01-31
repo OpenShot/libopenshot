@@ -58,23 +58,24 @@ namespace openshot
 	audioPlayback->startThread(1);
 	videoPlayback->startThread(2);
 
+	//tr1::shared_ptr<Frame> frame = getFrame();
 	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
-	    frame = audioPlayback->source->getFrame();
+	    const Time t1 = Time::getCurrentTime();
+
+	    frame = audioPlayback->getFrame();
 	    if (!frame) {
 		sleep(1); continue;
 		//break;
 	    }
-
-	    Time t1 = Time::getCurrentTime();
 
 	    videoPlayback->frame = frame;
 	    videoPlayback->render.signal();
 	    //frame = getFrame();
 	    videoPlayback->rendered.wait();
 
-	    Time t2 = Time::getCurrentTime();
-	    double ft = (1000.0 / reader->info.fps.ToDouble()) /* * 2.0 */;
+	    const Time t2 = Time::getCurrentTime();
+	    double ft = (1000.0 / reader->info.fps.ToDouble());
 	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
 	    int st = int(ft - d + 0.5);
 	    if (0 < ft - d) sleep(st);

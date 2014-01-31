@@ -50,6 +50,7 @@ namespace openshot
 	~AudioPlaybackThread();
 
 	void setReader(ReaderBase *reader);
+	tr1::shared_ptr<Frame> getFrame();
 
 	void run();
 	
