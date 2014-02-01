@@ -1,0 +1,10 @@
+ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-6.8.8-4.tar.xz;fe7c78dd29aa7d88e77a7f4c617bf29d
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libpng-1.6.8.tar.xz;51ce71a1642cdde1f4485a7ff82193c0
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libwebp-0.3.1.tar.gz;dc862bb4006d819b7587767a9e83d31f
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libwmf-0.2.8.4.tar.gz;d1177739bf1ceb07f57421f0cee191e0
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libxml2-2.9.1.tar.gz;9c0cfef285d5c4a5c80d00904ddab380
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/zlib-1.2.8.tar.xz;28f1205d8dd2001f26fec1e8c2cebe37
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/freetype-2.5.2.tar.bz2;10e8f4d6a019b124088d18bc26123a25
+http://ncu.dl.sourceforge.net/project/mingw/MinGW/Extension/bzip2/bzip2-1.0.6-4/bzip2-1.0.6-4-mingw32-src.tar.lzma;2a25de4331d1e6e1458d8632dff55fad
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libfpx-1.3.1-3.tar.xz;e61be90557b26bf365ad63d3dd3b0877
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/jpegsrc.v9.tar.gz;b397211ddfd506b92cd5e02a22ac924d
