@@ -56,6 +56,7 @@ namespace openshot
 
 	audioPlayback->setReader(reader);
 	audioPlayback->startThread(1);
+	/*
 	videoPlayback->startThread(2);
 
 	//tr1::shared_ptr<Frame> frame = getFrame();
@@ -82,8 +83,9 @@ namespace openshot
 	    std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
 	}
 	
-	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
+	*/
+	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
     }
 
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()

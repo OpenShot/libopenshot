@@ -31,6 +31,19 @@
 
 namespace openshot
 {
+    struct SafeTimeSliceThread : TimeSliceThread
+    {
+	SafeTimeSliceThread(const String & s) : TimeSliceThread(s) {}
+	void run()
+	{
+	    try {
+		TimeSliceThread::run();
+	    } catch (const TooManySeeks & e) {
+		// ...
+	    }
+	}
+    };
+
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
 	, audioDeviceManager()
@@ -72,15 +85,15 @@ namespace openshot
 	player.setSource(&mixer);
 
 	// Create TimeSliceThread for audio buffering
-	TimeSliceThread my_thread("Audio buffer thread");
+	SafeTimeSliceThread thread("audio-buffer");
 
 	// Start thread
-	my_thread.startThread();
+	thread.startThread();
 
 	transport.setSource(
 	    source,
 	    10000, // tells it to buffer this many samples ahead
-	    &my_thread,
+	    &thread,
 	    sampleRate,
 	    numChannels);
 	transport.setPosition(0);
