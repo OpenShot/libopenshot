@@ -64,7 +64,7 @@ namespace openshot
     {
 	sampleRate = reader->info.sample_rate;
 	numChannels = reader->info.channels;
-	source = new AudioReaderSource(reader, 10000, 1024*5);
+	source = new AudioReaderSource(reader, 1, 10000);
     }
 
     tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
@@ -75,21 +75,21 @@ namespace openshot
 
     void AudioPlaybackThread::run()
     {
+    // Init audio device
 	audioDeviceManager.initialise (
 	    0, /* number of input channels */
-	    2, /* number of output channels */
+	    numChannels, /* number of output channels */
 	    0, /* no XML settings.. */
 	    true  /* select default device on failure */);
+
+	// Add callback
 	audioDeviceManager.addAudioCallback(&player);
-	mixer.addInputSource(&transport, false);
-	player.setSource(&mixer);
 
 	// Create TimeSliceThread for audio buffering
 	SafeTimeSliceThread thread("audio-buffer");
-
-	// Start thread
 	thread.startThread();
 
+	// Connect source to transport
 	transport.setSource(
 	    source,
 	    10000, // tells it to buffer this many samples ahead
@@ -98,9 +98,17 @@ namespace openshot
 	    numChannels);
 	transport.setPosition(0);
 	transport.setGain(1.0);
+
+	// Connect transport to mixer and player
+	mixer.addInputSource(&transport, false);
+	player.setSource(&mixer);
+
+	cout << "starting transport" << endl;
 	transport.start();
 
-	while (!threadShouldExit() && transport.isPlaying()) {
+	//TODO: re-add this code    !threadShouldExit() &&
+	while (transport.isPlaying()) {
+		cout << "... still playing" << endl;
 	    sleep(1);
 	}
 

@@ -52,7 +52,7 @@ AudioReaderSource::~AudioReaderSource()
 
 // Get more samples from the reader
 void AudioReaderSource::GetMoreSamplesFromReader() {
-
+	cout << "GetMoreSamplesFromReader" << endl;
 	// Determine the amount of samples needed to fill up this buffer
 	int amount_needed = position; // replace these used samples
 	int amount_remaining = size - amount_needed; // these are unused samples, and need to be carried forward
@@ -131,34 +131,34 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 // Get the next block of audio samples
 void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 {
+	cout << "getNextAudioBlock" << endl;
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
 
 	if (info.numSamples > 0) {
-		int start = position;
 		int number_to_copy = 0;
 
 		// Do we need more samples?
 		if ((reader && reader->IsOpen() && !frame) or
-		   (reader && reader->IsOpen() && buffer_samples - start < info.numSamples))
+		   (reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
 			// Refill buffer from reader
 			GetMoreSamplesFromReader();
 
 		// Determine how many samples to copy
-		if (start + info.numSamples <= buffer_samples)
+		if (position + info.numSamples <= buffer_samples)
 		{
 			// copy the full amount requested
 			number_to_copy = info.numSamples;
 		}
-		else if (start > buffer_samples)
+		else if (position > buffer_samples)
 		{
 			// copy nothing
 			number_to_copy = 0;
 		}
-		else if (buffer_samples - start > 0)
+		else if (buffer_samples - position > 0)
 		{
 			// only copy what is left in the buffer
-			number_to_copy = buffer_samples - start;
+			number_to_copy = buffer_samples - position;
 		}
 		else
 		{
@@ -171,7 +171,7 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 		{
 			// Loop through each channel and copy some samples
 			for (int channel = 0; channel < buffer_channels; channel++)
-				info.buffer->copyFrom(channel, info.startSample, *buffer, channel, start, number_to_copy);
+				info.buffer->copyFrom(channel, info.startSample, *buffer, channel, position, number_to_copy);
 
 			// Update the position of this audio source
 			position += number_to_copy;
@@ -205,7 +205,10 @@ long long AudioReaderSource::getNextReadPosition() const
 long long AudioReaderSource::getTotalLength() const
 {
 	// Get the length
-	return buffer->getNumSamples();
+	if (reader)
+		return reader->info.sample_rate * reader->info.duration;
+	else
+		return 0;
 }
 
 // Determines if this audio source should repeat when it reaches the end
