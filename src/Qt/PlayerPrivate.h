@@ -49,7 +49,7 @@ namespace openshot
 	bool startPlayback();
 	void stopPlayback(int timeOutMilliseconds = -1);
 
-	tr1::shared_ptr<Frame> getFrame();
+	//tr1::shared_ptr<Frame> getFrame();
 
 	friend class QtPlayer;
     };

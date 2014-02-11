@@ -56,18 +56,18 @@ namespace openshot
 
 	audioPlayback->setReader(reader);
 	audioPlayback->startThread(1);
-	/*
 	videoPlayback->startThread(2);
 
-	//tr1::shared_ptr<Frame> frame = getFrame();
 	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
 	    const Time t1 = Time::getCurrentTime();
 
-	    frame = audioPlayback->getFrame();
-	    if (!frame) {
-		sleep(1); continue;
-		//break;
+	    if (!(frame = audioPlayback->getFrame())) {
+		if (true) {
+		    sleep(1); continue;
+		} else {
+		    break;
+		}
 	    }
 
 	    videoPlayback->frame = frame;
@@ -80,14 +80,14 @@ namespace openshot
 	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
 	    int st = int(ft - d + 0.5);
 	    if (0 < ft - d) sleep(st);
-	    std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
+	    //std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
 	}
 	
 	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
-	*/
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
     }
 
+    /*
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
@@ -101,6 +101,7 @@ namespace openshot
 	}
 	return tr1::shared_ptr<Frame>();
     }
+    */
 
     bool PlayerPrivate::startPlayback()
     {

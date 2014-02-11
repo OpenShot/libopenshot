@@ -131,7 +131,7 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 // Get the next block of audio samples
 void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 {
-	cout << "getNextAudioBlock" << endl;
+    //cout << "getNextAudioBlock" << endl;
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
 

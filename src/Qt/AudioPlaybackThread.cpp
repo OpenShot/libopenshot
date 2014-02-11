@@ -75,7 +75,7 @@ namespace openshot
 
     void AudioPlaybackThread::run()
     {
-    // Init audio device
+	// Init audio device
 	audioDeviceManager.initialise (
 	    0, /* number of input channels */
 	    numChannels, /* number of output channels */
@@ -106,9 +106,7 @@ namespace openshot
 	cout << "starting transport" << endl;
 	transport.start();
 
-	//TODO: re-add this code    !threadShouldExit() &&
-	while (transport.isPlaying()) {
-		cout << "... still playing" << endl;
+	while (!threadShouldExit() && transport.isPlaying()) {
 	    sleep(1);
 	}
 
