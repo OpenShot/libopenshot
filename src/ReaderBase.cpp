@@ -215,5 +215,8 @@ void ReaderBase::DrawFrameOnScene(string path, long _graphics_scene_address) {
 
 }
 
-
-
+tr1::shared_ptr<Frame> ReaderBase::GetFrameSafe(int number)
+{
+    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    return GetFrame(number);
+}

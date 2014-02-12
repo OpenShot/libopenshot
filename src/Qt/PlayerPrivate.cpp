@@ -90,7 +90,7 @@ namespace openshot
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
-	    return reader->GetFrame(position++);
+	    return reader->GetFrameSafe(position++);
 	} catch (const ReaderClosed & e) {
 	    // ...
 	} catch (const TooManySeeks & e) {

@@ -82,7 +82,7 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 		if (frame_position == 0) {
 			try {
 				// Get frame object
-				frame = reader->GetFrame(frame_number++);
+				frame = reader->GetFrameSafe(frame_number++);
 
 			} catch (const ReaderClosed & e) {
 			break;

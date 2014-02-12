@@ -88,6 +88,8 @@ namespace openshot
 	 */
 	class ReaderBase
 	{
+	    CriticalSection getFrameCriticalSection;
+
 	public:
 		/// Information about the current media file
 		ReaderInfo info;
@@ -105,6 +107,9 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
 		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
+
+	    /// A thread safe version of GetFrame.
+	    tr1::shared_ptr<Frame> GetFrameSafe(int number);
 
 		/// Test method to draw a bitmap on a Qt QGraphicsScene
 		void DrawFrameOnScene(string path, long _graphics_scene_address);
