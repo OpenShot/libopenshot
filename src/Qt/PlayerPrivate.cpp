@@ -58,11 +58,11 @@ namespace openshot
 	audioPlayback->startThread(1);
 	videoPlayback->startThread(2);
 
-	tr1::shared_ptr<Frame> frame;
+	tr1::shared_ptr<Frame> frame = getFrame();
 	while (!threadShouldExit()) {
 	    const Time t1 = Time::getCurrentTime();
 
-	    if (!(frame = audioPlayback->getFrame())) {
+	    if (!(frame /*= audioPlayback->getFrame()*/)) {
 		if (true) {
 		    sleep(1); continue;
 		} else {
@@ -72,7 +72,7 @@ namespace openshot
 
 	    videoPlayback->frame = frame;
 	    videoPlayback->render.signal();
-	    //frame = getFrame();
+	    frame = getFrame();
 	    videoPlayback->rendered.wait();
 
 	    const Time t2 = Time::getCurrentTime();
@@ -87,7 +87,6 @@ namespace openshot
 	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
     }
 
-    /*
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
@@ -101,7 +100,6 @@ namespace openshot
 	}
 	return tr1::shared_ptr<Frame>();
     }
-    */
 
     bool PlayerPrivate::startPlayback()
     {
