@@ -217,14 +217,6 @@ function build() {
     cd ${oldPwd}
 }
 
-function spitDll() {
-    cd /usr/local/lib
-    for f in libMagick*.dll.a; do
-        gcc --shared -o ${f%.a} -Wl,--out-implib=$f -Wl,--export-all-symbols -Wl,--enable-auto-import
-    done
-}
-
 download
 buildDelegate
 build
-spitDll

@@ -1,5 +1,5 @@
-ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-6.8.8-4.tar.xz;fe7c78dd29aa7d88e77a7f4c617bf29d
-ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libpng-1.6.8.tar.xz;51ce71a1642cdde1f4485a7ff82193c0
+ftp://ftp.imagemagick.org/pub/ImageMagick/ImageMagick-6.8.8-5.tar.xz;d727efcba3e45ce6c51cafbfb387a8fd
+ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libpng-1.6.9.tar.xz;14e037c5c9f1db16844760285ad5c2d6
 ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libwebp-0.3.1.tar.gz;dc862bb4006d819b7587767a9e83d31f
 ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libwmf-0.2.8.4.tar.gz;d1177739bf1ceb07f57421f0cee191e0
 ftp://ftp.imagemagick.org/pub/ImageMagick/delegates/libxml2-2.9.1.tar.gz;9c0cfef285d5c4a5c80d00904ddab380

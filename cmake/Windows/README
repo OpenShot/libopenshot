@@ -1,0 +1,12 @@
+Installing ImageMagick on Windows using Qt's version of MinGW:
+
+Step 1) Copy these files into your local MSYS environment
+Step 2) Run MSYS Shell
+Step 3) Install wget command (this requires your c:\mingw folder to be at the end of your PATH) 
+  $ mingw-get install msys-wget
+Step 4) Execute this command (this requires the C:\Qt\Qt5.2.1\Tools\mingw48_32\bin at the beginning of your PATH)
+  $ ./build-imagemagick.sh
+Step 5) Copy the MSYS /local/bin/ DLLs to your PATH
+
+These ImageMagick DLL's need to be found by the libopenshot build process,
+and linked and loaded at runtime.
