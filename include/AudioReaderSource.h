@@ -64,6 +64,8 @@ namespace openshot
 		int64 frame_number; /// The current frame number
 		tr1::shared_ptr<Frame> frame; /// The current frame object that is being read
 		int frame_position; /// The position of the current frame's buffer
+		double estimated_frame; /// The estimated frame position of the currently playing buffer
+		int estimated_samples_per_frame; /// The estimated samples per frame of video
 
 		/// Get more samples from the reader
 		void GetMoreSamplesFromReader();

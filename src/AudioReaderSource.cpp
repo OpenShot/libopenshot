@@ -33,7 +33,7 @@ using namespace openshot;
 // Constructor that reads samples from a reader
 AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64 starting_frame_number, int buffer_size)
 	: reader(audio_reader), frame_number(starting_frame_number), original_frame_number(starting_frame_number),
-	  size(buffer_size), position(0), frame_position(0) {
+	  size(buffer_size), position(0), frame_position(0), estimated_frame(0) {
 
 	// Initialize an audio buffer (based on reader)
 	buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
@@ -61,6 +61,9 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 		amount_needed = size;
 		amount_remaining = 0;
 	}
+
+	// Init estimated buffer equal to the current frame position (before getting more samples)
+	estimated_frame = frame_number;
 
 	// Init new buffer
 	juce::AudioSampleBuffer *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
@@ -177,6 +180,9 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 			position += number_to_copy;
 		}
 
+		// Adjust estimate frame number (the estimated frame number that is being played)
+		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate);
+		estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
 	}
 }
 
