@@ -51,6 +51,7 @@ namespace openshot
 
 	void setReader(ReaderBase *reader);
 	tr1::shared_ptr<Frame> getFrame();
+	int getCurrentFramePosition();
 
 	void run();
 	

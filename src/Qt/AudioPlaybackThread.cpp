@@ -73,6 +73,11 @@ namespace openshot
 	return tr1::shared_ptr<Frame>();
     }
 
+    int AudioPlaybackThread::getCurrentFramePosition()
+    {
+	return source ? source->getEstimatedFrame() : 0;
+    }
+
     void AudioPlaybackThread::run()
     {
 	// Init audio device

@@ -72,15 +72,23 @@ namespace openshot
 
 	    videoPlayback->frame = frame;
 	    videoPlayback->render.signal();
+	    position = audioPlayback->getCurrentFramePosition();
 	    frame = getFrame();
 	    videoPlayback->rendered.wait();
+
+	    int fd = position - audioPlayback->getCurrentFramePosition();
 
 	    const Time t2 = Time::getCurrentTime();
 	    double ft = (1000.0 / reader->info.fps.ToDouble());
 	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
 	    int st = int(ft - d + 0.5);
-	    if (0 < ft - d) sleep(st);
+
+	    st += fd * reader->info.fps.ToDouble();
+
+	    if (0 < st) sleep(st);
+
 	    //std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
+	    std::cout << "drift: " << fd << std::endl;
 	}
 	
 	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);

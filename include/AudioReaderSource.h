@@ -112,6 +112,8 @@ namespace openshot
 
 	    const ReaderInfo & getReaderInfo() const { return reader->info; }
 	    tr1::shared_ptr<Frame> getFrame() const { return frame; }
+	    int getFramePosition() const { return frame_position; }
+	    int getEstimatedFrame() const { return int(estimated_frame); }
 	};
 
 }
