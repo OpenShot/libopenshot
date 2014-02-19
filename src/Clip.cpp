@@ -140,10 +140,7 @@ Clip::Clip(string path)
 				// Try a video reader
 				reader = new FFmpegReader(path);
 
-			} catch(BaseException ex) {
-				// No Reader Found, Throw an exception
-				throw ex;
-			}
+			} catch(...) { }
 		}
 	}
 
