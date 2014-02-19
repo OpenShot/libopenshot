@@ -44,7 +44,7 @@ include_directories(${FFMPEG_INCLUDE_DIR})
 FIND_PACKAGE(OpenShotAudio REQUIRED)
 
 # Include Juce headers (needed for compile)
-include_directories(${LIBJUCE_INCLUDE_DIRS})
+include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 ################# SDL ###################
 # Find SDL libraries
@@ -201,7 +201,7 @@ set_target_properties(openshot
 SET ( REQUIRED_LIBRARIES
   		${ImageMagick_LIBRARIES}
 		${FFMPEG_LIBRARIES}
-		${LIBJUCE_LIBRARIES}
+		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${SDL_LIBRARY}
 		${QT_LIBRARIES}
 		${PROFILER}
@@ -257,11 +257,10 @@ SWIG_ADD_MODULE(openshot python openshot.i)
 SWIG_LINK_LIBRARIES(openshot ${PYTHON_LIBRARIES} openshot)
 
 ### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-#EXECUTE_PROCESS ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print( sysconfig.get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
 EXECUTE_PROCESS ( COMMAND ${PYTHON_EXECUTABLE} -c "import site; print(site.getsitepackages()[0])"
                      OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
                      OUTPUT_STRIP_TRAILING_WHITESPACE )
- 
+
 GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
 FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
 SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH})
@@ -276,5 +275,5 @@ INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 INSTALL(TARGETS openshot DESTINATION lib)
 
 # Install Python bindings
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/_openshot.so DESTINATION ${PYTHON_MODULE_PATH} )
+INSTALL(TARGETS _openshot DESTINATION ${PYTHON_MODULE_PATH} )
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION ${PYTHON_MODULE_PATH} )

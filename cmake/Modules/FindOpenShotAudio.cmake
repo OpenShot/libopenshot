@@ -1,19 +1,21 @@
 # - Try to find JUCE-based OpenShot Audio Library
 # libopenshot-audio;
 # Once done this will define
-#  LIBJUCE_FOUND - System has libjuce.so
-#  LIBJUCE_INCLUDE_DIRS - The juce.h include directories
-#  LIBJUCE_LIBRARIES - The libraries needed to use juce
+#  LIBOPENSHOT_AUDIO_FOUND - System has libjuce.so
+#  LIBOPENSHOT_AUDIO_INCLUDE_DIRS - The juce.h include directories
+#  LIBOPENSHOT_AUDIO_LIBRARIES - The libraries needed to use juce
+
+message("$ENV{LIBOPENSHOT_AUDIO_DIR}")
 
 # Find the base directory of juce includes
-find_path(LIBJUCE_BASE_DIR JuceHeader.h
+find_path(LIBOPENSHOT_AUDIO_BASE_DIR JuceHeader.h
 			PATHS /usr/include/libopenshot-audio/
 			/usr/local/include/libopenshot-audio/
 			$ENV{LIBOPENSHOT_AUDIO_DIR}/include/libopenshot-audio/ )
 
 # Get a list of all header file paths
 FILE(GLOB_RECURSE JUCE_HEADER_FILES
-  ${LIBJUCE_BASE_DIR}/*.h
+  ${LIBOPENSHOT_AUDIO_BASE_DIR}/*.h
 )
 
 # Loop through each header file
@@ -31,22 +33,22 @@ ENDFOREACH(HEADER_PATH)
 LIST(REMOVE_DUPLICATES HEADER_DIRECTORIES)
 
 # Find the libopenshot-audio.so / libopenshot-audio.dll library
-find_library(LIBJUCE_LIBRARY
+find_library(LIBOPENSHOT_AUDIO_LIBRARY
 			NAMES libopenshot-audio openshot-audio
 			HINTS /usr/lib/
 			/usr/lib/libopenshot-audio/
 			/usr/local/lib/
 			$ENV{LIBOPENSHOT_AUDIO_DIR}/lib/ )
 
-set(LIBJUCE_LIBRARIES ${LIBJUCE_LIBRARY})
-set(LIBJUCE_LIBRARY ${LIBJUCE_LIBRARIES})
+set(LIBOPENSHOT_AUDIO_LIBRARIES ${LIBOPENSHOT_AUDIO_LIBRARY})
+set(LIBOPENSHOT_AUDIO_LIBRARY ${LIBOPENSHOT_AUDIO_LIBRARIES})
 
 # Seems to work fine with just the base dir (rather than all the actual include folders)
-set(LIBJUCE_INCLUDE_DIR ${LIBJUCE_BASE_DIR} )
-set(LIBJUCE_INCLUDE_DIRS ${LIBJUCE_BASE_DIR} )
+set(LIBOPENSHOT_AUDIO_INCLUDE_DIR ${LIBOPENSHOT_AUDIO_BASE_DIR} )
+set(LIBOPENSHOT_AUDIO_INCLUDE_DIRS ${LIBOPENSHOT_AUDIO_BASE_DIR} )
 
 include(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set LIBJUCE_FOUND to TRUE
+# handle the QUIETLY and REQUIRED arguments and set LIBOPENSHOT_AUDIO_FOUND to TRUE
 # if all listed variables are TRUE
-find_package_handle_standard_args(LIBJUCE  DEFAULT_MSG
-                                  LIBJUCE_LIBRARY LIBJUCE_INCLUDE_DIR)
+find_package_handle_standard_args(LIBOPENSHOT_AUDIO  DEFAULT_MSG
+                                  LIBOPENSHOT_AUDIO_LIBRARY LIBOPENSHOT_AUDIO_INCLUDE_DIR)

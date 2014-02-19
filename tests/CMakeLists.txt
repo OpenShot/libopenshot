@@ -51,7 +51,7 @@ include_directories(${FFMPEG_INCLUDE_DIR})
 FIND_PACKAGE(OpenShotAudio REQUIRED)
 
 # Include Juce headers (needed for compile)
-include_directories(${LIBJUCE_INCLUDE_DIRS})
+include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 ################# SDL ###################
 # Find SDL libraries
