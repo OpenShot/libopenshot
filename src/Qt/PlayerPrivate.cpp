@@ -72,8 +72,10 @@ namespace openshot
 
 	    videoPlayback->frame = frame;
 	    videoPlayback->render.signal();
+
 	    position = audioPlayback->getCurrentFramePosition();
 	    frame = getFrame();
+
 	    videoPlayback->rendered.wait();
 
 	    int fd = position - audioPlayback->getCurrentFramePosition();
