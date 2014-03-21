@@ -37,7 +37,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
 	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), prev_samples(0), prev_pts(0),
-	  pts_total(0), pts_counter(0), display_debug(false), is_duration_known(false) {
+	  pts_total(0), pts_counter(0), display_debug(false), is_duration_known(false), largest_frame_processed(0) {
 
 	// Init FileInfo struct (clear all values)
 	InitFileInfo();
@@ -387,6 +387,15 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 	if (!is_open)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
+	// Adjust for a requested frame that is too small or too large
+	if (requested_frame < 1)
+		requested_frame = 1;
+	if (requested_frame > info.video_length && is_duration_known)
+		requested_frame = info.video_length;
+	if (info.has_video && info.video_length == 0)
+		// Invalid duration of video file
+		throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
+
 	// Check the cache for this frame
 	if (final_cache.Exists(requested_frame))
 		// Return the cached frame
@@ -395,15 +404,6 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 	else
 	{
 		// Frame is not in cache
-		// Adjust for a requested frame that is too small or too large
-		if (requested_frame < 1)
-			requested_frame = 1;
-		if (requested_frame > info.video_length && is_duration_known)
-			requested_frame = info.video_length;
-		if (info.has_video && info.video_length == 0)
-			// Invalid duration of video file
-			throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
-
 		// Reset seek count
 		seek_count = 0;
 
@@ -566,8 +566,9 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 		// Mark the any other working frames as 'finished'
 		CheckWorkingFrames(end_of_stream);
 
-		// Update readers video length (to a guess of the correct video length)
-		info.video_length = requested_frame - 1; // just a guess, but this frame is certainly out of bounds
+		// Update readers video length (to a largest processed frame number)
+		info.video_length = largest_frame_processed; // just a guess, but this frame is certainly out of bounds
+		is_duration_known = largest_frame_processed;
 	}
 
 	// Return requested frame (if found)
@@ -1294,6 +1295,10 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
 
 		working_cache.Add(requested_frame, f);
+
+		// Set the largest processed frame (if this is larger)
+		if (requested_frame > largest_frame_processed)
+			largest_frame_processed = requested_frame;
 
 		// Return new frame
 		return f;

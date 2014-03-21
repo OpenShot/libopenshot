@@ -53,6 +53,7 @@ namespace openshot
 	, source(NULL)
 	, sampleRate(0.0)
 	, numChannels(0)
+    , buffer_size(10000)
     {
     }
 
@@ -64,7 +65,7 @@ namespace openshot
     {
 	sampleRate = reader->info.sample_rate;
 	numChannels = reader->info.channels;
-	source = new AudioReaderSource(reader, 1, 10000);
+	source = new AudioReaderSource(reader, 1, buffer_size);
     }
 
     tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
@@ -97,7 +98,7 @@ namespace openshot
 	// Connect source to transport
 	transport.setSource(
 	    source,
-	    10000, // tells it to buffer this many samples ahead
+	    buffer_size, // tells it to buffer this many samples ahead
 	    &thread,
 	    sampleRate,
 	    numChannels);

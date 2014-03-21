@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for QtPlayer class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -51,8 +52,10 @@ namespace openshot
 	/// Default constructor
 	explicit QtPlayer(RendererBase *rb);
 
+	/// Default destructor
 	virtual ~QtPlayer();
 
+	/// Set the source URL/path of this player (which will create an internal Reader)
 	void SetSource(const std::string &source);
 	
 	/// Play the video

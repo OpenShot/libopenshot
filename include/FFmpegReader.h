@@ -138,6 +138,7 @@ namespace openshot
 		int audio_pts_offset;
 		int video_pts_offset;
 		int last_frame;
+		int largest_frame_processed;
 
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();

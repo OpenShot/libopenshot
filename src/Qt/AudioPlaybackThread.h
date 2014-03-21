@@ -45,6 +45,7 @@ namespace openshot
 	int numChannels;
 	WaitableEvent play;
 	WaitableEvent played;
+	int buffer_size;
 	
 	AudioPlaybackThread();
 	~AudioPlaybackThread();

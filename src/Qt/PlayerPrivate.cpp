@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for PlayerPrivate class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -34,7 +35,7 @@
 namespace openshot
 {
     PlayerPrivate::PlayerPrivate(RendererBase *rb)
-	: Thread("player"), position(0)
+	: Thread("player"), video_position(0), audio_position(0)
 	, audioPlayback(new AudioPlaybackThread())
 	, videoPlayback(new VideoPlaybackThread(rb))
     {
@@ -43,64 +44,93 @@ namespace openshot
     PlayerPrivate::~PlayerPrivate()
     {
 	if (isThreadRunning()) stopThread(500);
-	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(500);
-	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(500);
+	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(500);
+	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(500);
 	delete audioPlayback;
 	delete videoPlayback;
     }
 
     void PlayerPrivate::run()
     {
-	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
-	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
+	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
+	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
 
+	// Set the reader for the Audio thread
 	audioPlayback->setReader(reader);
-	audioPlayback->startThread(1);
-	videoPlayback->startThread(2);
 
-	tr1::shared_ptr<Frame> frame = getFrame();
+	// Start the threads
+	if (reader->info.has_audio)
+		audioPlayback->startThread(1);
+	if (reader->info.has_video)
+		videoPlayback->startThread(2);
+
+	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
+
+		// Get the start time (to track how long a frame takes to render)
 	    const Time t1 = Time::getCurrentTime();
 
-	    if (!(frame /*= audioPlayback->getFrame()*/)) {
-		if (true) {
-		    sleep(1); continue;
-		} else {
-		    break;
-		}
-	    }
-
-	    videoPlayback->frame = frame;
-	    videoPlayback->render.signal();
-
-	    position = audioPlayback->getCurrentFramePosition();
+	    // Get the current video frame
 	    frame = getFrame();
 
+	    // Set the video frame on the video thread and render frame
+	    videoPlayback->frame = frame;
+	    videoPlayback->render.signal();
 	    videoPlayback->rendered.wait();
 
-	    int fd = position - audioPlayback->getCurrentFramePosition();
+	    // How many frames ahead or behind is the video thread?
+	    int video_frame_diff = 0;
+	    if (reader->info.has_audio && reader->info.has_video)
+	    	// Only calculate this if a reader contains both an audio and video thread
+	    	audio_position = audioPlayback->getCurrentFramePosition();
+	    	video_frame_diff = video_position - audio_position;
 
+	    // Get the end time (to track how long a frame takes to render)
 	    const Time t2 = Time::getCurrentTime();
-	    double ft = (1000.0 / reader->info.fps.ToDouble());
-	    int64 d = t2.toMilliseconds() - t1.toMilliseconds();
-	    int st = int(ft - d + 0.5);
 
-	    st += fd * reader->info.fps.ToDouble();
+	    // Calculate the milliseconds a single frame should stay on the screen
+	    double frame_time = (1000.0 / reader->info.fps.ToDouble());
 
-	    if (0 < st) sleep(st);
+	    // Determine how many milliseconds it took to render the frame
+	    int64 render_time = t2.toMilliseconds() - t1.toMilliseconds();
 
-	    //std::cout << "frametime: " << ft << " - " << d << " = " << st << std::endl;
-	    std::cout << "drift: " << fd << std::endl;
+	    // Calculate the amount of time to sleep (by subtracting the render time)
+	    int sleep_time = int(frame_time - render_time);
+
+	    // Adjust drift (if more than a few frames off between audio and video)
+	    if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video)
+	    	// Since the audio and video threads are running independently, they will quickly get out of sync.
+	    	// To fix this, we calculate how far ahead or behind the video frame is, and adjust the amount of time
+	    	// the frame is displayed on the screen (i.e. the sleep time). If a frame is ahead of the audio,
+	    	// we sleep for longer. If a frame is behind the audio, we sleep less (or not at all), in order for
+	    	// the video to catch up.
+	    	sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
+
+	    // Sleep (leaving the video frame on the screen for the correct amount of time)
+	    if (sleep_time > 0) sleep(sleep_time);
+
+	    // Debug output
+	    std::cout << "video frame diff: " << video_frame_diff << std::endl;
+
+	    // Determine if the next frame will be the end of stream
+	    //if ((video_position + 1) > reader->info.video_length)
+	    //{
+	    	// End threads at END OF STREAM
+	    	//if (reader->info.has_audio)
+	    	//	audioPlayback->stopThread(1);
+	    	//if (reader->info.has_video)
+	    	//	videoPlayback->stopThread(2);
+	    //}
 	}
 	
-	if (videoPlayback->isThreadRunning()) videoPlayback->stopThread(-1);
-	if (audioPlayback->isThreadRunning()) audioPlayback->stopThread(-1);
+	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
+	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
     }
 
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
-	    return reader->GetFrameSafe(position++);
+	    return reader->GetFrameSafe(video_position++);
 	} catch (const ReaderClosed & e) {
 	    // ...
 	} catch (const TooManySeeks & e) {
@@ -113,7 +143,7 @@ namespace openshot
 
     bool PlayerPrivate::startPlayback()
     {
-	if (position < 0) return false;
+	if (video_position < 0) return false;
 	stopPlayback(-1);
 	startThread(1);
 	return true;

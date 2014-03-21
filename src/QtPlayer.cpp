@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for QtPlayer class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -54,7 +55,7 @@ void QtPlayer::Play()
 {
     mode = PLAYBACK_PLAY;
     p->stopPlayback();
-    p->position = 0;
+    p->video_position = 0;
     p->reader = reader;
     p->startPlayback();
 }
@@ -71,12 +72,13 @@ void QtPlayer::Pause()
 
 int QtPlayer::Position()
 {
-    return p->position;
+    return p->video_position;
 }
 
 void QtPlayer::Seek(int new_frame)
 {
-    p->position = new_frame;
+	// Seek the reader to a new position
+    p->video_position = new_frame;
 }
 
 void QtPlayer::Stop()

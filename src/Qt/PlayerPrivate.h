@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for PlayerPrivate class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -36,7 +37,8 @@ namespace openshot
      */
     class PlayerPrivate : Thread
     {
-	int position; /// The current frame position.
+	int video_position; /// The current frame position.
+	int audio_position; /// The current frame position.
 	ReaderBase *reader;
 	AudioPlaybackThread *audioPlayback;
 	VideoPlaybackThread *videoPlayback;

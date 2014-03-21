@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for VideoPlaybackThread class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -38,6 +39,14 @@ namespace openshot
 
     VideoPlaybackThread::~VideoPlaybackThread()
     {
+    }
+
+    int VideoPlaybackThread::getCurrentFramePosition()
+    {
+    	if (frame)
+    		return frame->number;
+    	else
+    		return 0;
     }
 
     void VideoPlaybackThread::run()
