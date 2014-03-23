@@ -31,16 +31,19 @@
 
 namespace openshot
 {
+	// Constructor
     VideoPlaybackThread::VideoPlaybackThread(RendererBase *rb)
 	: Thread("video-playback"), renderer(rb)
 	, render(), reset(false)
     {
     }
 
+    // Destructor
     VideoPlaybackThread::~VideoPlaybackThread()
     {
     }
 
+    // Get the currently playing frame number (if any)
     int VideoPlaybackThread::getCurrentFramePosition()
     {
     	if (frame)
@@ -49,11 +52,15 @@ namespace openshot
     		return 0;
     }
 
+    // Start the thread
     void VideoPlaybackThread::run()
     {
 	while (!threadShouldExit()) {
-	    render.wait();
+	    // Make other threads wait on the render event
+		render.wait();
+		// Render the frame to the screen
 	    renderer->paint(frame);
+	    // Signal to other threads that the rendered event has completed
 	    rendered.signal();
 	}
     }

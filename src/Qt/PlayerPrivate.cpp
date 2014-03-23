@@ -25,22 +25,20 @@
  * You should have received a copy of the GNU General Public License
  * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "../include/ReaderBase.h"
-#include "../include/RendererBase.h"
-#include "../include/AudioReaderSource.h"
+
 #include "PlayerPrivate.h"
-#include "AudioPlaybackThread.h"
-#include "VideoPlaybackThread.h"
 
 namespace openshot
 {
+	// Constructor
     PlayerPrivate::PlayerPrivate(RendererBase *rb)
 	: Thread("player"), video_position(0), audio_position(0)
 	, audioPlayback(new AudioPlaybackThread())
 	, videoPlayback(new VideoPlaybackThread(rb))
-    {
-    }
+    , speed(1), reader(NULL)
+    {       }
 
+    // Destructor
     PlayerPrivate::~PlayerPrivate()
     {
 	if (isThreadRunning()) stopThread(500);
@@ -50,13 +48,15 @@ namespace openshot
 	delete videoPlayback;
     }
 
+    // Start thread
     void PlayerPrivate::run()
     {
+    // Kill audio and video threads (if they are currently running)
 	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
 
 	// Set the reader for the Audio thread
-	audioPlayback->setReader(reader);
+	audioPlayback->Reader(reader);
 
 	// Start the threads
 	if (reader->info.has_audio)
@@ -66,6 +66,15 @@ namespace openshot
 
 	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
+
+	    // Calculate the milliseconds a single frame should stay on the screen
+	    double frame_time = (1000.0 / reader->info.fps.ToDouble());
+
+	    // Experimental Pausing Code
+	    if (speed == 0) {
+	    	sleep(frame_time);
+	    	continue;
+	    }
 
 		// Get the start time (to track how long a frame takes to render)
 	    const Time t1 = Time::getCurrentTime();
@@ -88,9 +97,6 @@ namespace openshot
 	    // Get the end time (to track how long a frame takes to render)
 	    const Time t2 = Time::getCurrentTime();
 
-	    // Calculate the milliseconds a single frame should stay on the screen
-	    double frame_time = (1000.0 / reader->info.fps.ToDouble());
-
 	    // Determine how many milliseconds it took to render the frame
 	    int64 render_time = t2.toMilliseconds() - t1.toMilliseconds();
 
@@ -112,25 +118,24 @@ namespace openshot
 	    // Debug output
 	    std::cout << "video frame diff: " << video_frame_diff << std::endl;
 
-	    // Determine if the next frame will be the end of stream
-	    //if ((video_position + 1) > reader->info.video_length)
-	    //{
-	    	// End threads at END OF STREAM
-	    	//if (reader->info.has_audio)
-	    	//	audioPlayback->stopThread(1);
-	    	//if (reader->info.has_video)
-	    	//	videoPlayback->stopThread(2);
-	    //}
 	}
 	
+	std::cout << "stopped thread" << endl;
+
+	// Kill audio and video threads (if they are still running)
 	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
     }
 
+    // Get the next displayed frame (based on speed and direction)
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
-	    return reader->GetFrameSafe(video_position++);
+
+		// Get the next frame (based on speed)
+		video_position = video_position + speed;
+	    return reader->GetFrameSafe(video_position);
+
 	} catch (const ReaderClosed & e) {
 	    // ...
 	} catch (const TooManySeeks & e) {
@@ -141,6 +146,7 @@ namespace openshot
 	return tr1::shared_ptr<Frame>();
     }
 
+    // Start video/audio playback
     bool PlayerPrivate::startPlayback()
     {
 	if (video_position < 0) return false;
@@ -149,9 +155,39 @@ namespace openshot
 	return true;
     }
 
+    // Stop video/audio playback
     void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
     {
+    	std::cout << "stop playback!!!" << std::endl;
 	if (isThreadRunning()) stopThread(timeOutMilliseconds);
     }
+
+    // Seek to a frame
+    void PlayerPrivate::Seek(int new_position)
+    {
+		// Check for seek
+		if (new_position > 0) {
+			// Update current position
+			video_position = new_position;
+
+			// Notify audio thread that seek has occured
+			audioPlayback->Seek(video_position);
+		}
+    }
+
+	// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	void PlayerPrivate::Speed(int new_speed)
+	{
+		speed = new_speed;
+		if (reader->info.has_audio)
+			audioPlayback->setSpeed(new_speed);
+	}
+
+	// Set the reader object
+	void PlayerPrivate::Reader(ReaderBase *new_reader)
+	{
+		reader = new_reader;
+		audioPlayback->Reader(new_reader);
+	}
 
 }

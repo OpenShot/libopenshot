@@ -58,6 +58,7 @@ namespace openshot
 		bool repeat; /// Repeat the audio source when finished
 		int size; /// The size of the internal buffer
 		AudioSampleBuffer *buffer; /// The audio sample buffer
+		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
 		int64 original_frame_number; /// The current frame to read from
@@ -69,6 +70,9 @@ namespace openshot
 
 		/// Get more samples from the reader
 		void GetMoreSamplesFromReader();
+
+		/// Reverse an audio buffer (for backwards audio)
+		juce::AudioSampleBuffer* reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
 
@@ -111,9 +115,26 @@ namespace openshot
 		void setBuffer (AudioSampleBuffer *audio_buffer);
 
 	    const ReaderInfo & getReaderInfo() const { return reader->info; }
+
+	    /// Return the current frame object
 	    tr1::shared_ptr<Frame> getFrame() const { return frame; }
-	    int getFramePosition() const { return frame_position; }
+
+	    /// Get the estimate frame that is playing at this moment
 	    int getEstimatedFrame() const { return int(estimated_frame); }
+
+	    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	    void setSpeed(int new_speed) { speed = new_speed; }
+	    /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	    int getSpeed() const { return speed; }
+
+	    /// Set Reader
+	    void Reader(ReaderBase *audio_reader) { reader = audio_reader; }
+	    /// Get Reader
+	    ReaderBase* Reader() const { return reader; }
+
+	    /// Seek to a specific frame
+	    int Seek(int64 new_position) { frame_number = new_position; }
+
 	};
 
 }

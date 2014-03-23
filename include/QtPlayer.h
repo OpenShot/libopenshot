@@ -47,6 +47,7 @@ namespace openshot
     class QtPlayer : public PlayerBase
     {
 	PlayerPrivate *p;
+	bool threads_started;
 
     public:
 	/// Default constructor
@@ -64,6 +65,9 @@ namespace openshot
 	/// Display a loading animation
 	void Loading();
 	
+	/// Get the current mode
+	PlaybackMode Mode();
+
 	/// Pause the video
 	void Pause();
 	
@@ -73,8 +77,26 @@ namespace openshot
 	/// Seek to a specific frame in the player
 	void Seek(int new_frame);
 	
+	/// Get the Playback speed
+	float Speed();
+
+	/// Set the Playback speed (1.0 = normal speed, <1.0 = slower, >1.0 faster)
+	void Speed(float new_speed);
+
 	/// Stop the video player and clear the cached frames
 	void Stop();
+
+	/// Set the current reader
+	void Reader(ReaderBase *new_reader);
+
+	/// Get the current reader, such as a FFmpegReader
+	ReaderBase* Reader();
+
+	/// Get the Volume
+	float Volume();
+
+	/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
+	void Volume(float new_volume);
     };
 
 }

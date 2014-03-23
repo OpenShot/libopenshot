@@ -9,6 +9,7 @@
 #include <QtWidgets/QBoxLayout>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMenu>
+#include <QtGui/qevent.h>
 
 namespace openshot
 {
@@ -25,6 +26,9 @@ class PlayerDemo : public QWidget
 public:
     PlayerDemo(QWidget *parent = 0);
     ~PlayerDemo();
+
+protected:
+    void keyPressEvent(QKeyEvent *event);
 
 private slots:
     void open(bool checked);

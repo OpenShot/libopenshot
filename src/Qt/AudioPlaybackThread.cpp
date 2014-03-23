@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for AudioPlaybackThread class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org> *
  *
  * @section LICENSE
  *
@@ -44,6 +45,7 @@ namespace openshot
 	}
     };
 
+    // Construtor
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
 	, audioDeviceManager()
@@ -57,28 +59,41 @@ namespace openshot
     {
     }
 
+    // Destructor
     AudioPlaybackThread::~AudioPlaybackThread()
     {
     }
 
-    void AudioPlaybackThread::setReader(ReaderBase *reader)
+    // Set the reader object
+    void AudioPlaybackThread::Reader(ReaderBase *reader)
     {
-	sampleRate = reader->info.sample_rate;
-	numChannels = reader->info.channels;
-	source = new AudioReaderSource(reader, 1, buffer_size);
+    	if (!source) {
+			sampleRate = reader->info.sample_rate;
+			numChannels = reader->info.channels;
+			source = new AudioReaderSource(reader, 1, buffer_size);
+    	}
     }
 
+    // Get the current frame object (which is filling the buffer)
     tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
     {
 	if (source) return source->getFrame();
 	return tr1::shared_ptr<Frame>();
     }
 
+    // Get the currently playing frame number
     int AudioPlaybackThread::getCurrentFramePosition()
     {
 	return source ? source->getEstimatedFrame() : 0;
     }
 
+	// Seek the audio thread
+	void AudioPlaybackThread::Seek(int new_position)
+	{
+		source->Seek(new_position);
+	}
+
+	// Start audio thread
     void AudioPlaybackThread::run()
     {
 	// Init audio device
@@ -113,7 +128,7 @@ namespace openshot
 	transport.start();
 
 	while (!threadShouldExit() && transport.isPlaying()) {
-	    sleep(1);
+	    sleep(100);
 	}
 
 	transport.stop();
@@ -124,5 +139,9 @@ namespace openshot
 	audioDeviceManager.closeAudioDevice();
 	audioDeviceManager.removeAllChangeListeners();
 	audioDeviceManager.dispatchPendingMessages();
+
+	// Remove source
+	delete source;
+	source = NULL;
     }
 }

@@ -68,6 +68,9 @@ namespace openshot
 		/// Display a loading animation
 		virtual void Loading() = 0;
 
+		/// Get the current mode
+		virtual PlaybackMode Mode() = 0;
+
 		/// Play the video
 		virtual void Play() = 0;
 
@@ -81,25 +84,25 @@ namespace openshot
 		virtual void Seek(int new_frame) = 0;
 
 		/// Get the Playback speed
-		float Speed();
+		virtual float Speed() = 0;
 
 		/// Set the Playback speed (1.0 = normal speed, <1.0 = slower, >1.0 faster)
-		void Speed(float new_speed);
+		virtual void Speed(float new_speed) = 0;
 
 		/// Stop the video player and clear the cached frames
 		virtual void Stop() = 0;
 
 		/// Get the current reader, such as a FFmpegReader
-		ReaderBase* Reader();
+		virtual ReaderBase* Reader() = 0;
 
 		/// Set the current reader, such as a FFmpegReader
-		void Reader(ReaderBase *new_reader);
+		virtual void Reader(ReaderBase *new_reader) = 0;
 
 		/// Get the Volume
-		float Volume();
+		virtual float Volume() = 0;
 
 		/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
-		void Volume(float new_volume);
+		virtual void Volume(float new_volume) = 0;
 
 	};
 

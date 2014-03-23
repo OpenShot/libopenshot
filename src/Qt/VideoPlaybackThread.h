@@ -42,12 +42,18 @@ namespace openshot
 	WaitableEvent rendered;
 	bool reset;
 
+	/// Constructor
 	VideoPlaybackThread(RendererBase *rb);
+	/// Destructor
 	~VideoPlaybackThread();
+
+	/// Get the currently playing frame number (if any)
 	int getCurrentFramePosition();
 
+	/// Start the thread
 	void run();
 
+	/// Parent class of VideoPlaybackThread
 	friend class PlayerPrivate;
     };
 

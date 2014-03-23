@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for AudioPlaybackThread class
  * @author Duzy Chan <code@duzy.info>
+ * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
  *
@@ -31,7 +32,7 @@ namespace openshot
     using juce::WaitableEvent;
 
     /**
-     *  @brief The audio playback class.
+     *  @brief The audio playback thread
      */
     class AudioPlaybackThread : Thread
     {
@@ -47,15 +48,32 @@ namespace openshot
 	WaitableEvent played;
 	int buffer_size;
 	
+	/// Constructor
 	AudioPlaybackThread();
+	/// Destructor
 	~AudioPlaybackThread();
 
-	void setReader(ReaderBase *reader);
+	/// Set the current thread's reader
+	void Reader(ReaderBase *reader);
+
+	/// Get the current frame object (which is filling the buffer)
 	tr1::shared_ptr<Frame> getFrame();
+
+	/// Get the current frame number being played
 	int getCurrentFramePosition();
 
+	/// Seek the audio thread
+	void Seek(int new_position);
+
+	/// Start thread
 	void run();
 	
+    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+    void setSpeed(int new_speed) { if (source) source->setSpeed(new_speed); }
+
+    /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+    int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
+
 	friend class PlayerPrivate;
     };
 
