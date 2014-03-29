@@ -13,10 +13,10 @@
  * on stability, performance, and ease-of-use, we believe libopenshot is the best cross-platform,
  * open-source video editing library in the world. This library powers
  * <a href="http://www.openshot.org">OpenShot Video Editor</a> (version 2.0+), the highest rated video
- * editor available on Linux. It could also <b>power</b> your next video editing project!
+ * editor available on Linux (and soon Windows & Mac). It could also <b>power</b> your next video editing project!
  *
  * Our documentation is quite extensive, including descriptions and examples of almost every class, method,
- * and parameter. However, getting started is easy.
+ * and parameter. Getting started is easy.
  *
  * All you need is a <b>single</b> include to get started:
  * @code
@@ -72,26 +72,43 @@
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  *
  * ### License & Copyright ###
- * Copyright (c) 2008-2013 OpenShot Studios, LLC
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
+ * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
  *
- * OpenShot Library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Affero General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
- * OpenShot Library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with OpenShot Library.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Also, if your software can interact with users remotely through a computer
+ * network, you should also make sure that it provides a way for users to
+ * get its source. For example, if your program is a web application, its
+ * interface could display a "Source" link that leads users to an archive
+ * of the code. There are many ways you could offer source, and different
+ * solutions will be better for different programs; see section 13 for the
+ * specific requirements.
+ *
+ * You should also get your employer (if you work as a programmer) or school,
+ * if any, to sign a "copyright disclaimer" for the program, if necessary.
+ * For more information on this, and how to apply and follow the GNU AGPL, see
+ * <http://www.gnu.org/licenses/>.
  */
 
+// Include the version number of OpenShot Library
+#include "Version.h"
+
+// Include all other classes
 #include "AudioBufferSource.h"
 #include "AudioReaderSource.h"
 #include "AudioResampler.h"
@@ -126,10 +143,5 @@
 #include "Sleep.h"
 #include "TextReader.h"
 #include "Timeline.h"
-
-/* Qt Video Player */
-//#include "Qt/videoplayer.h"
-//#include "Qt/videowidget.h"
-//#include "Qt/videowidgetsurface.h"
 
 #endif

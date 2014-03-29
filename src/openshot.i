@@ -47,6 +47,7 @@
 %shared_ptr(Frame)
 
 %{
+#include "../include/Version.h"
 #include "../include/ReaderBase.h"
 #include "../include/WriterBase.h"
 #include "../include/Cache.h"
@@ -83,6 +84,7 @@
 	%}
 #endif
 
+%include "../include/Version.h"
 %include "../include/ReaderBase.h"
 %include "../include/WriterBase.h"
 %include "../include/Cache.h"
