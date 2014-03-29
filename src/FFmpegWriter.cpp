@@ -341,7 +341,7 @@ void FFmpegWriter::write_queued_frames()
 	spooled_video_frames.clear();
 	spooled_audio_frames.clear();
 
-	omp_set_num_threads(4);
+	omp_set_num_threads(omp_get_num_procs() / 2);
 	omp_set_nested(true);
 	#pragma omp parallel
 	{
@@ -410,10 +410,9 @@ void FFmpegWriter::write_queued_frames()
 					// Get AVFrame
 					AVFrame *av_frame = av_frames[frame];
 
-					// deallocate AVFrame
+					// deallocate AVPicture and AVFrame
 					av_free(av_frame->data[0]);
 					av_free(av_frame);
-
 					av_frames.erase(frame);
 				}
 
@@ -812,20 +811,48 @@ AVStream* FFmpegWriter::add_video_stream()
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
-	c->pix_fmt = PIX_FMT_YUV420P;
-	if (c->codec_id == CODEC_ID_MPEG2VIDEO) {
+	if (c->codec_id == CODEC_ID_MPEG2VIDEO)
 		/* just for testing, we also add B frames */
 		c->max_b_frames = 2;
-	}
-	if (c->codec_id == CODEC_ID_MPEG1VIDEO) {
+	if (c->codec_id == CODEC_ID_MPEG1VIDEO)
 		/* Needed to avoid using macroblocks in which some coeffs overflow.
 		 This does not happen with normal video, it just happens here as
 		 the motion of the chroma plane does not match the luma plane. */
 		c->mb_decision = 2;
-	}
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+
+	// Find all supported pixel formats for this codec
+    const PixelFormat* supported_pixel_formats = codec->pix_fmts;
+    while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
+        cout << "supported pixel format: " << av_get_pix_fmt_name(*supported_pixel_formats) << endl;
+        // Assign the 1st valid pixel format (if one is missing)
+        if (c->pix_fmt == PIX_FMT_NONE)
+        	c->pix_fmt = *supported_pixel_formats;
+        ++supported_pixel_formats;
+    }
+
+    // Codec doesn't have any pix formats?
+    if (c->pix_fmt == PIX_FMT_NONE) {
+        if(fmt->video_codec == CODEC_ID_RAWVIDEO) {
+            // Raw video should use RGB24
+        	c->pix_fmt = PIX_FMT_RGB24;
+        	// Set raw picture flag (so we don't encode this video)
+        	oc->oformat->flags |= AVFMT_RAWPICTURE;
+        } else {
+        	// Set the default codec
+        	c->pix_fmt = PIX_FMT_YUV420P;
+        }
+    }
+
+    // Override Gif Support (TODO: Find a better way to accomplish this)
+    if (c->codec_id == CODEC_ID_GIF) {
+    	// Force rgb24 which seems to be required for GIF
+		c->pix_fmt = PIX_FMT_RGB24;
+		// Set raw picture flag (so we don't encode the image)
+		oc->oformat->flags |= AVFMT_RAWPICTURE;
+    }
 
 	return st;
 }
@@ -837,7 +864,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_codec = st->codec;
 
 	// Set number of threads equal to number of processors + 1
-	audio_codec->thread_count = omp_get_num_procs();
+	audio_codec->thread_count = omp_get_num_procs() / 2;
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder(audio_codec->codec_id);
@@ -888,7 +915,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	video_codec = st->codec;
 
 	// Set number of threads equal to number of processors + 1
-	video_codec->thread_count = omp_get_num_procs();
+	video_codec->thread_count = omp_get_num_procs() / 2;
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder(video_codec->codec_id);
@@ -1166,15 +1193,24 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		frame_source = allocate_avframe(PIX_FMT_RGB24, source_image_width, source_image_height, &bytes_source);
 		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final);
 
+		// Determine how many colors we are copying (3 or 4)
+		int step = 3; // rgb
+		if ( video_st->codec->pix_fmt == PIX_FMT_RGBA || video_st->codec->pix_fmt == PIX_FMT_ARGB || video_st->codec->pix_fmt == PIX_FMT_BGRA )
+			step = 4; // rgba
+
 		// Fill the AVFrame with RGB image data
 		int source_total_pixels = source_image_width * source_image_height;
-		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=3)
+		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=step)
 		{
 			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
 			// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
 			frame_source->data[0][row] = pixel_packets[packet].red >> 8;
 			frame_source->data[0][row+1] = pixel_packets[packet].green >> 8;
 			frame_source->data[0][row+2] = pixel_packets[packet].blue >> 8;
+
+			// Copy alpha channel (if needed)
+			if (step == 4)
+				frame_source->data[0][row+3] = pixel_packets[packet].opacity >> 8;
 		}
 
 		// Resize & convert pixel format
@@ -1203,7 +1239,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index= video_st->index;
-		pkt.data= (uint8_t *)frame_final;
+		pkt.data= (uint8_t*)frame_final;
 		pkt.size= sizeof(AVPicture);
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
@@ -1215,6 +1251,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		if (error_code != 0)
 		{
 			string error_description = av_err2str(error_code);
+			cout << "error: " << error_code << ": " << error_description << endl;
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
 

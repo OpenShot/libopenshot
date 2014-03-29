@@ -40,6 +40,8 @@
 		#include <libavformat/avformat.h>
 		#include <libswscale/swscale.h>
 		#include <libavutil/mathematics.h>
+		#include <libavutil/pixfmt.h>
+		#include <libavutil/pixdesc.h>
 
 		// libavutil changed folders at some point
 		#if LIBAVFORMAT_VERSION_MAJOR >= 53
