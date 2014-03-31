@@ -70,7 +70,9 @@
 #include "../include/PlayerBase.h"
 #include "../include/Point.h"
 #include "../include/Profile.h"
+#include "../include/QtPlayer.h"
 #include "../include/KeyFrame.h"
+#include "../include/RendererBase.h"
 #include "../include/SDLPlayer.h"
 #include "../include/TextReader.h"
 #include "../include/Timeline.h"
@@ -110,7 +112,9 @@
 %include "../include/PlayerBase.h"
 %include "../include/Point.h"
 %include "../include/Profile.h"
+%include "../include/QtPlayer.h"
 %include "../include/KeyFrame.h"
+%include "../include/RendererBase.h"
 %include "../include/SDLPlayer.h"
 %include "../include/TextReader.h"
 %include "../include/Timeline.h"
@@ -130,5 +134,4 @@ namespace std {
  %template(PointsVector) vector<Point>;
  %template(FieldVector) vector<Field>;
  %template(MappedFrameVector) vector<MappedFrame>;
- 
 }

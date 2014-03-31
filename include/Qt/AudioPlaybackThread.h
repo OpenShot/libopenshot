@@ -39,6 +39,13 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#ifndef OPENSHOT_AUDIO_PLAYBACK_THREAD_H
+#define OPENSHOT_AUDIO_PLAYBACK_THREAD_H
+
+#include "../include/ReaderBase.h"
+#include "../include/RendererBase.h"
+#include "../include/AudioReaderSource.h"
+
 namespace openshot
 {
     using juce::Thread;
@@ -91,3 +98,5 @@ namespace openshot
     };
 
 }
+
+#endif // OPENSHOT_AUDIO_PLAYBACK_THREAD_H

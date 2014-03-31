@@ -39,13 +39,13 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "PlayerPrivate.h"
+#include "../include/Qt/PlayerPrivate.h"
 
 namespace openshot
 {
 	// Constructor
     PlayerPrivate::PlayerPrivate(RendererBase *rb)
-	: Thread("player"), video_position(0), audio_position(0)
+	: renderer(rb), Thread("player"), video_position(0), audio_position(0)
 	, audioPlayback(new AudioPlaybackThread())
 	, videoPlayback(new VideoPlaybackThread(rb))
     , speed(1), reader(NULL)

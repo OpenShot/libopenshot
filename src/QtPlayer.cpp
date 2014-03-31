@@ -41,9 +41,15 @@
 
 #include "../include/FFmpegReader.h"
 #include "../include/QtPlayer.h"
-#include "Qt/PlayerPrivate.h"
+#include "../include/Qt/PlayerPrivate.h"
+#include "../include/Qt/VideoRenderer.h"
 
 using namespace openshot;
+
+QtPlayer::QtPlayer() : PlayerBase(), p(new PlayerPrivate(new VideoRenderer())), threads_started(false)
+{
+	reader = NULL;
+}
 
 QtPlayer::QtPlayer(RendererBase *rb) : PlayerBase(), p(new PlayerPrivate(rb)), threads_started(false)
 {
@@ -125,6 +131,12 @@ void QtPlayer::Reader(ReaderBase *new_reader)
 // Get the current reader, such as a FFmpegReader
 ReaderBase* QtPlayer::Reader() {
 	return reader;
+}
+
+// Set the QWidget pointer to display the video on (as a LONG pointer id)
+void QtPlayer::SetQWidget(long qwidget_address) {
+	// Update override QWidget address on the video renderer
+	p->renderer->OverrideWidget(qwidget_address);
 }
 
 // Get the Playback speed

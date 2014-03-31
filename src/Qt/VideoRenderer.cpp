@@ -53,12 +53,13 @@ VideoRenderer::~VideoRenderer()
 {
 }
 
-/*
-void VideoRenderer::paint(QPainter *painter, const QRect &rect)
+/// Override QWidget which needs to be painted
+void VideoRenderer::OverrideWidget(long qwidget_address)
 {
-    // TODO: draw current video frame
+	// re-cast QWidget pointer (long) as an actual QWidget
+	override_widget = reinterpret_cast<QWidget*>(qwidget_address);
+
 }
-*/
 
 void VideoRenderer::render(PixelFormat /*format*/, int width, int height, int bytesPerLine, unsigned char *data)
 {

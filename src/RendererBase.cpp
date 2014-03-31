@@ -65,7 +65,7 @@ void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
 #if false
     // Not sure if this is actually faster... but it works now
     image->getPixels(0,0, width, height); // load pixels into cache
-    image->depth( 8 ); // this is required of it crashes
+    image->depth( 8 ); // this is required or it crashes
     image->writePixels(Magick::RGBQuantum, buffer); // write pixel data to our buffer
 #else
     // Iterate through the pixel packets, and load our own buffer

@@ -38,8 +38,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __VIDEO_RENDERER__
-#define __VIDEO_RENDERER__
+#ifndef OPENSHOT_VIDEO_RENDERER_H
+#define OPENSHOT_VIDEO_RENDERER_H
 
 #include "../RendererBase.h"
 #include <QtCore/QObject>
@@ -56,7 +56,8 @@ public:
     VideoRenderer(QObject *parent = 0);
     ~VideoRenderer();
 
-    //void paint(QPainter *painter, const QRect &rect);
+    /// Override QWidget which needs to be painted
+    void OverrideWidget(long qwidget_address);
 
 signals:
     void present(const QImage & image);
@@ -67,6 +68,7 @@ protected:
 private slots:
 
 private:
+	QWidget* override_widget;
 };
 
-#endif //__VIDEO_RENDERER__
+#endif //OPENSHOT_VIDEO_RENDERER_H

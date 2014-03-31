@@ -38,8 +38,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_PLAYER_H
-#define OPENSHOT_PLAYER_H
+#ifndef OPENSHOT_PLAYER_DEMO_H
+#define OPENSHOT_PLAYER_DEMO_H
 
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QBoxLayout>
@@ -47,13 +47,15 @@
 #include <QtWidgets/QMenu>
 #include <QtGui/qevent.h>
 
+#include "VideoRenderWidget.h"
+
+// Define the QtPlayer without including it (due to build issues with Qt moc / Qt macros)
 namespace openshot
 {
     class QtPlayer;
 }
 
 using openshot::QtPlayer;
-class VideoRenderWidget;
 
 class PlayerDemo : public QWidget
 {

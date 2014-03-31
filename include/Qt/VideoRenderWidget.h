@@ -38,13 +38,13 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __VIDEO_RENDER_WIDGET__
-#define __VIDEO_RENDER_WIDGET__
+#ifndef OPENSHOT_VIDEO_RENDERER_WIDGET_H
+#define OPENSHOT_VIDEO_RENDERER_WIDGET_H
 
 #include <QtWidgets/QWidget>
 #include <QImage>
+#include "VideoRenderer.h"
 
-class VideoRenderer;
 
 class VideoRenderWidget : public QWidget
 {
@@ -67,4 +67,4 @@ private:
     QImage image;
 };
 
-#endif //__VIDEO_RENDER_WIDGET__
+#endif // OPENSHOT_VIDEO_RENDERER_WIDGET_H

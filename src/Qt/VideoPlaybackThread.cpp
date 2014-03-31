@@ -38,9 +38,8 @@
  * For more information on this, and how to apply and follow the GNU AGPL, see
  * <http://www.gnu.org/licenses/>.
  */
-#include "../include/ReaderBase.h"
-#include "../include/RendererBase.h"
-#include "VideoPlaybackThread.h"
+
+#include "../include/Qt/VideoPlaybackThread.h"
 
 namespace openshot
 {

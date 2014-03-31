@@ -39,16 +39,17 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#ifndef OPENSHOT_PLAYER_PRIVATE_H
+#define OPENSHOT_PLAYER_PRIVATE_H
+
 #include "../include/ReaderBase.h"
 #include "../include/RendererBase.h"
 #include "../include/AudioReaderSource.h"
-#include "AudioPlaybackThread.h"
-#include "VideoPlaybackThread.h"
+#include "../include/Qt/AudioPlaybackThread.h"
+#include "../include/Qt/VideoPlaybackThread.h"
 
 namespace openshot
 {
-    class AudioPlaybackThread;
-    class VideoPlaybackThread;
     using juce::Thread;
 
     /**
@@ -63,6 +64,7 @@ namespace openshot
 	AudioPlaybackThread *audioPlayback; /// The audio thread
 	VideoPlaybackThread *videoPlayback; /// The video thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	RendererBase *renderer;
 
 	/// Constructor
 	PlayerPrivate(RendererBase *rb);
@@ -97,3 +99,5 @@ namespace openshot
     };
 
 }
+
+#endif // OPENSHOT_PLAYER_PRIVATE_H

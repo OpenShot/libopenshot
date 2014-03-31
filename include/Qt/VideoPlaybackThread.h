@@ -39,6 +39,12 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+#ifndef OPENSHOT_VIDEO_PLAYBACK_THREAD_H
+#define OPENSHOT_VIDEO_PLAYBACK_THREAD_H
+
+#include "../include/ReaderBase.h"
+#include "../include/RendererBase.h"
+
 namespace openshot
 {
     using juce::Thread;
@@ -71,3 +77,5 @@ namespace openshot
     };
 
 }
+
+#endif // OPENSHOT_VIDEO_PLAYBACK_THREAD_H

@@ -45,14 +45,13 @@
 #include <iostream>
 #include <vector>
 #include "../include/PlayerBase.h"
+#include "../include/Qt/PlayerPrivate.h"
+#include "../include/RendererBase.h"
 
 using namespace std;
 
 namespace openshot
 {
-    class RendererBase;
-    class PlayerPrivate;
-
     /**
      * @brief This class is used to playback a video from a reader.
      *
@@ -64,14 +63,12 @@ namespace openshot
 
     public:
 	/// Default constructor
+	explicit QtPlayer();
 	explicit QtPlayer(RendererBase *rb);
 
 	/// Default destructor
 	virtual ~QtPlayer();
 
-	/// Set the source URL/path of this player (which will create an internal Reader)
-	void SetSource(const std::string &source);
-	
 	/// Play the video
 	void Play();
 	
@@ -89,7 +86,15 @@ namespace openshot
 	
 	/// Seek to a specific frame in the player
 	void Seek(int new_frame);
-	
+
+	/// Set the source URL/path of this player (which will create an internal Reader)
+	void SetSource(const std::string &source);
+
+	/// Set the QWidget which will be used as the display (note: QLabel works well). This does not take a
+	/// normal pointer, but rather a LONG pointer id (and it re-casts the QWidget pointer inside libopenshot).
+	/// This is required due to SIP and SWIG incompatibility in the Python bindings.
+	void SetQWidget(long qwidget_address);
+
 	/// Get the Playback speed
 	float Speed();
 
