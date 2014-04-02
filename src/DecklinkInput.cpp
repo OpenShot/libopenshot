@@ -201,7 +201,7 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 
 			// Process frames once we have a few (to take advantage of multiple threads)
 			int number_to_process = raw_video_frames.size();
-			if (number_to_process >= omp_get_num_procs())
+			if (number_to_process >= OPEN_MP_NUM_PROCESSORS)
 			{
 
 //omp_set_num_threads(1);

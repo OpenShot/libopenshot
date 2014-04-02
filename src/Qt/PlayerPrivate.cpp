@@ -64,12 +64,13 @@ namespace openshot
     // Start thread
     void PlayerPrivate::run()
     {
+	// bail if no reader set
+	if (!reader)
+		return;
+
     // Kill audio and video threads (if they are currently running)
 	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
 	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
-
-	// Set the reader for the Audio thread
-	audioPlayback->Reader(reader);
 
 	// Start the threads
 	if (reader->info.has_audio)
@@ -125,6 +126,10 @@ namespace openshot
 	    	// the video to catch up.
 	    	sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
 
+	    //else if (video_frame_diff < 4)
+	    	// Video is too far behind, so skip to the current frame
+	    	//video_position += (abs(video_frame_diff) - speed);
+
 	    // Sleep (leaving the video frame on the screen for the correct amount of time)
 	    if (sleep_time > 0) sleep(sleep_time);
 
@@ -132,8 +137,6 @@ namespace openshot
 	    std::cout << "video frame diff: " << video_frame_diff << std::endl;
 
 	}
-	
-	std::cout << "stopped thread" << endl;
 
 	// Kill audio and video threads (if they are still running)
 	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
@@ -144,7 +147,6 @@ namespace openshot
     tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
-
 		// Get the next frame (based on speed)
 		video_position = video_position + speed;
 	    return reader->GetFrameSafe(video_position);
@@ -171,36 +173,8 @@ namespace openshot
     // Stop video/audio playback
     void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
     {
-    	std::cout << "stop playback!!!" << std::endl;
 	if (isThreadRunning()) stopThread(timeOutMilliseconds);
     }
 
-    // Seek to a frame
-    void PlayerPrivate::Seek(int new_position)
-    {
-		// Check for seek
-		if (new_position > 0) {
-			// Update current position
-			video_position = new_position;
-
-			// Notify audio thread that seek has occured
-			audioPlayback->Seek(video_position);
-		}
-    }
-
-	// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-	void PlayerPrivate::Speed(int new_speed)
-	{
-		speed = new_speed;
-		if (reader->info.has_audio)
-			audioPlayback->setSpeed(new_speed);
-	}
-
-	// Set the reader object
-	void PlayerPrivate::Reader(ReaderBase *new_reader)
-	{
-		reader = new_reader;
-		audioPlayback->Reader(new_reader);
-	}
 
 }

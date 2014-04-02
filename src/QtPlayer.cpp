@@ -68,7 +68,8 @@ void QtPlayer::SetSource(const std::string &source)
 {
     reader = new FFmpegReader(source);
     reader->Open();
-	p->Reader(reader);
+    //reader->info.has_video = false;
+	Reader(reader);
 }
 
 void QtPlayer::Play()
@@ -76,7 +77,6 @@ void QtPlayer::Play()
 	cout << "PLAY() on QTPlayer" << endl;
 	if (reader && !threads_started) {
 		mode = PLAYBACK_PLAY;
-		p->Reader(reader);
 		p->startPlayback();
 		threads_started = true;
 	} else {
@@ -109,8 +109,14 @@ int QtPlayer::Position()
 
 void QtPlayer::Seek(int new_frame)
 {
-	// Seek the reader to a new position
-    p->Seek(new_frame);
+	// Check for seek
+	if (new_frame > 0) {
+		// Update current position
+		p->video_position = new_frame;
+
+		// Notify audio thread that seek has occured
+		p->audioPlayback->Seek(new_frame);
+	}
 }
 
 void QtPlayer::Stop()
@@ -124,8 +130,10 @@ void QtPlayer::Stop()
 // Set the reader object
 void QtPlayer::Reader(ReaderBase *new_reader)
 {
+	cout << "Reader SET: " << new_reader << endl;
 	reader = new_reader;
-	p->Reader(new_reader);
+	p->reader = new_reader;
+	p->audioPlayback->Reader(new_reader);
 }
 
 // Get the current reader, such as a FFmpegReader
@@ -139,6 +147,11 @@ void QtPlayer::SetQWidget(long qwidget_address) {
 	p->renderer->OverrideWidget(qwidget_address);
 }
 
+// Get the Renderer pointer address (for Python to cast back into a QObject)
+long QtPlayer::GetRendererQObject() {
+	return (long) (VideoRenderer*)p->renderer;
+}
+
 // Get the Playback speed
 float QtPlayer::Speed() {
 	return speed;
@@ -147,7 +160,9 @@ float QtPlayer::Speed() {
 // Set the Playback speed multiplier (1.0 = normal speed, <1.0 = slower, >1.0 faster)
 void QtPlayer::Speed(float new_speed) {
 	speed = new_speed;
-	p->Speed(new_speed);
+	p->speed = new_speed;
+	if (p->reader->info.has_audio)
+		p->audioPlayback->setSpeed(new_speed);
 }
 
 // Get the Volume

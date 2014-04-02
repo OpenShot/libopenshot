@@ -73,12 +73,12 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <omp.h>
 #include "Magick++.h"
 
 #include "DeckLinkAPI.h"
 #include "../include/Cache.h"
 #include "../include/Frame.h"
+#include "../include/OpenMPUtilities.h"
 
 enum OutputSignal {
 	kOutputSignalPip		= 0,

@@ -74,6 +74,7 @@ namespace openshot
 
 	/// Parent class of VideoPlaybackThread
 	friend class PlayerPrivate;
+	friend class QtPlayer;
     };
 
 }

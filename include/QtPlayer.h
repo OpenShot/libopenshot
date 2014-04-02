@@ -95,6 +95,9 @@ namespace openshot
 	/// This is required due to SIP and SWIG incompatibility in the Python bindings.
 	void SetQWidget(long qwidget_address);
 
+	/// Get the Renderer pointer address (for Python to cast back into a QObject)
+	long GetRendererQObject();
+
 	/// Get the Playback speed
 	float Speed();
 

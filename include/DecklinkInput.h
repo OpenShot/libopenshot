@@ -73,11 +73,11 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <omp.h>
 
 #include "DeckLinkAPI.h"
 #include "../include/Frame.h"
 #include "../include/Cache.h"
+#include "../include/OpenMPUtilities.h"
 
 /// Implementation of the Blackmagic Decklink API (used by the DecklinkReader)
 class DeckLinkInputDelegate : public IDeckLinkInputCallback

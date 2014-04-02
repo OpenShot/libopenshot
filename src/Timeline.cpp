@@ -452,11 +452,11 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	else
 	{
 		// Minimum number of packets to process (for performance reasons)
-		//int minimum_frames = omp_get_num_procs() / 2;
+		//int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 		int minimum_frames = 1;
-
 		//omp_set_num_threads(1);
 		omp_set_nested(true);
+
 		#pragma xx omp parallel
 		{
 			#pragma xx omp single

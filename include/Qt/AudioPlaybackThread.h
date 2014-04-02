@@ -95,6 +95,7 @@ namespace openshot
     int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
 	friend class PlayerPrivate;
+	friend class QtPlayer;
     };
 
 }

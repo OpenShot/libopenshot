@@ -1,7 +1,6 @@
 /**
  * @file
- * @brief Source file for PlayerPrivate class
- * @author Duzy Chan <code@duzy.info>
+ * @brief Header file for OpenMPUtilities (set some common macros)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -39,54 +38,13 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_PLAYER_PRIVATE_H
-#define OPENSHOT_PLAYER_PRIVATE_H
+#ifndef OPENSHOT_OPENMP_UTILITIES_H
+#define OPENSHOT_OPENMP_UTILITIES_H
 
-#include "../include/ReaderBase.h"
-#include "../include/RendererBase.h"
-#include "../include/AudioReaderSource.h"
-#include "../include/Qt/AudioPlaybackThread.h"
-#include "../include/Qt/VideoPlaybackThread.h"
+#include <omp.h>
 
-namespace openshot
-{
-    using juce::Thread;
+	// Calculate the # of OpenMP Threads to allow (HACK / WORK-AROUND for an ImageMagick bug: preventing use of all 8 cores)
+	#define OPEN_MP_NUM_PROCESSORS (omp_get_num_procs() <= 4 ? omp_get_num_procs() : 4)
+	//#define OPEN_MP_NUM_PROCESSORS 1
 
-    /**
-     *  @brief The private part of QtPlayer class, which contains an audio thread and video thread,
-     *  and controls the video timing and audio synchronization code.
-     */
-    class PlayerPrivate : Thread
-    {
-	int video_position; /// The current frame position.
-	int audio_position; /// The current frame position.
-	ReaderBase *reader; /// The reader which powers this player
-	AudioPlaybackThread *audioPlayback; /// The audio thread
-	VideoPlaybackThread *videoPlayback; /// The video thread
-	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-	RendererBase *renderer;
-
-	/// Constructor
-	PlayerPrivate(RendererBase *rb);
-	/// Destructor
-	virtual ~PlayerPrivate();
-
-	/// Start thread
-	void run();
-
-	/// Start the video/audio playback
-	bool startPlayback();
-
-	/// Stop the video/audio playback
-	void stopPlayback(int timeOutMilliseconds = -1);
-
-	/// Get the next frame (based on speed and direction)
-	tr1::shared_ptr<Frame> getFrame();
-
-	/// The parent class of PlayerPrivate
-	friend class QtPlayer;
-    };
-
-}
-
-#endif // OPENSHOT_PLAYER_PRIVATE_H
+#endif

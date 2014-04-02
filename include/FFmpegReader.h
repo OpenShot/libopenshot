@@ -52,12 +52,12 @@
 #include <cmath>
 #include <ctime>
 #include <iostream>
-#include <omp.h>
 #include <stdio.h>
 #include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
+#include "OpenMPUtilities.h"
 #include "Sleep.h"
 
 

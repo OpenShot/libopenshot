@@ -124,12 +124,12 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 
 		// Load all of its samples into the buffer
 		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-			if (speed >= 0)
+			//if (speed >= 0)
 				// playback normal
 				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
-			else
+			//else
 				// reverse playback
-				new_buffer->addFrom(channel, position, *reverse_buffer(frame->GetAudioSampleBuffer()), channel, frame_position, amount_to_copy);
+				//new_buffer->addFrom(channel, position, *reverse_buffer(frame->GetAudioSampleBuffer()), channel, frame_position, amount_to_copy);
 
 		// Adjust remaining samples
 		position += amount_to_copy;

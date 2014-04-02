@@ -217,7 +217,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 
 
 	// Process frames once we have a few (to take advantage of multiple threads)
-	if (raw_video_frames.size() >= omp_get_num_procs())
+	if (raw_video_frames.size() >= OPEN_MP_NUM_PROCESSORS)
 	{
 
 		//omp_set_num_threads(1);

@@ -354,8 +354,11 @@ void FFmpegWriter::write_queued_frames()
 	spooled_video_frames.clear();
 	spooled_audio_frames.clear();
 
-	omp_set_num_threads(omp_get_num_procs() / 2);
+	// Set the number of threads in OpenMP
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested OpenMP sections
 	omp_set_nested(true);
+
 	#pragma omp parallel
 	{
 		#pragma omp single
@@ -877,7 +880,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_codec = st->codec;
 
 	// Set number of threads equal to number of processors + 1
-	audio_codec->thread_count = omp_get_num_procs() / 2;
+	audio_codec->thread_count = OPEN_MP_NUM_PROCESSORS;
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder(audio_codec->codec_id);
@@ -928,7 +931,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	video_codec = st->codec;
 
 	// Set number of threads equal to number of processors + 1
-	video_codec->thread_count = omp_get_num_procs() / 2;
+	video_codec->thread_count = OPEN_MP_NUM_PROCESSORS;
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder(video_codec->codec_id);

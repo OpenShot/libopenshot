@@ -172,7 +172,7 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 			pCodecCtx = pFormatCtx->streams[videoStream]->codec;
 
 			// Set number of threads equal to number of processors + 1
-			pCodecCtx->thread_count = omp_get_num_procs() / 2;
+			pCodecCtx->thread_count = OPEN_MP_NUM_PROCESSORS;
 
 			// Find the decoder for the video stream
 			AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
@@ -201,7 +201,7 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 			aCodecCtx = pFormatCtx->streams[audioStream]->codec;
 
 			// Set number of threads equal to number of processors + 1
-			aCodecCtx->thread_count = omp_get_num_procs() / 2;
+			aCodecCtx->thread_count = OPEN_MP_NUM_PROCESSORS;
 
 			// Find the decoder for the audio stream
 			AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
@@ -466,13 +466,15 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = omp_get_num_procs() / 2; // DEBUG, WORK-AROUND for an ImageMagick bug (preventing use of all 8 cores)
-	omp_set_num_threads(minimum_packets); // DEBUG, WORK-AROUND for an ImageMagick bug (preventing use of all 8 cores)
+	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
+
+	// Set the number of threads in OpenMP
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested OpenMP sections
 	omp_set_nested(true);
 
 	#pragma omp parallel
 	{
-
 		#pragma omp single
 		{
 			// Loop through the stream until the correct frame is found

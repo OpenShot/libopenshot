@@ -50,7 +50,6 @@
 #endif
 
 #include <list>
-#include <omp.h>
 #include <tr1/memory>
 #include "Magick++.h"
 #include "Cache.h"
@@ -62,6 +61,7 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
+#include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 
 using namespace std;
