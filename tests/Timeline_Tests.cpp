@@ -96,3 +96,50 @@ TEST(Timeline_Framerate)
 	// Check values
 	CHECK_CLOSE(24.0f, t1.info.fps.ToFloat(), 0.00001);
 }
+
+TEST(Timeline_Check_Two_Track_Video)
+{
+	// Create a reader
+	Clip clip_video("../../src/examples/test.mp4");
+	clip_video.Layer(0);
+
+	Clip clip_overlay("../../src/examples/front3.png");
+	clip_overlay.Layer(1);
+
+	// Create a timeline
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2);
+
+	// Add clips
+	t.AddClip(&clip_video);
+	t.AddClip(&clip_overlay);
+
+	// Open Timeline
+	t.Open();
+
+	// Get frame 1
+	tr1::shared_ptr<Frame> f = t.GetFrame(1);
+
+	// Get the image data
+	const Magick::PixelPacket* pixels = f->GetPixels(200);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(34256, pixels[400].red);
+	CHECK_EQUAL(0, pixels[400].blue);
+	CHECK_EQUAL(57460, pixels[400].green);
+	CHECK_EQUAL(0, pixels[400].opacity);
+
+	// Get frame 1
+	f = t.GetFrame(2);
+
+	// Get the next frame
+	pixels = f->GetPixels(200);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(63861, pixels[400].red);
+	CHECK_EQUAL(31871, pixels[400].blue);
+	CHECK_EQUAL(65151, pixels[400].green);
+	CHECK_EQUAL(0, pixels[400].opacity);
+
+	// Close reader
+	t.Close();
+}
