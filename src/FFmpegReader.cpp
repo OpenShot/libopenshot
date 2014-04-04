@@ -436,7 +436,7 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 		{
 			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
 			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM (diff: " << diff << ", requested_frame: " << requested_frame << ", last_frame: " << last_frame << ")" << endl;
-			final_cache.Display();
+			//final_cache.Display();
 			if (enable_seek)
 				// Only seek if enabled
 				Seek(requested_frame);
@@ -485,7 +485,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
-					Sleep(1);
+					usleep(20 * 1000);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)
@@ -495,7 +495,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 					// Wait for all frames to be processed
 					while (processing_video_frames.size() + processing_audio_frames.size() == 0)
-						Sleep(1);
+						usleep(20 * 1000);
 
 					break;
 				}
@@ -1076,7 +1076,7 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		throw TooManySeeks("Too many seek attempts... something seems wrong.", path);
 
 	// If seeking to frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 10;
+	int buffer_amount = 6;
 	if (requested_frame - buffer_amount <= 1)
 	{
 		// Close and re-open file (basically seeking to frame 1)
@@ -1328,8 +1328,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 	int smallest_audio_frame = 1;
 	#pragma omp critical (processing_list)
 	{
-		smallest_video_frame = GetSmallestVideoFrame() - 8; // Adjust to be sure the frame is completed
-		smallest_audio_frame = GetSmallestAudioFrame() - 8; // Adjust to be sure the frame is completed
+		smallest_video_frame = GetSmallestVideoFrame(); // Adjust to be sure the frame is completed
+		smallest_audio_frame = GetSmallestAudioFrame(); // Adjust to be sure the frame is completed
 
 		// Adjust for video only, or audio only
 		if (!info.has_video)

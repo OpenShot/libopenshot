@@ -119,5 +119,82 @@ TEST(FFmpegReader_Check_Video_File)
 
 	// Close reader
 	r.Close();
+}
+
+TEST(FFmpegReader_Seek)
+{
+	// Create a reader
+	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	r.Open();
+
+	// Get frame
+	tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	CHECK_EQUAL(1, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(300);
+	CHECK_EQUAL(300, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(301);
+	CHECK_EQUAL(301, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(315);
+	CHECK_EQUAL(315, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(275);
+	CHECK_EQUAL(275, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(270);
+	CHECK_EQUAL(270, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(500);
+	CHECK_EQUAL(500, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(100);
+	CHECK_EQUAL(100, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(600);
+	CHECK_EQUAL(600, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(1);
+	CHECK_EQUAL(1, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Get frame
+	f = r.GetFrame(700);
+	CHECK_EQUAL(700, f->number);
+	//f->Display();
+	//f->DisplayWaveform();
+
+	// Close reader
+	r.Close();
 
 }
+

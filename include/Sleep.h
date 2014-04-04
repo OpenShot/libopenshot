@@ -43,8 +43,24 @@
 
 	#ifdef _WINDOWS
 		#include <windows.h>
+
+		// Define a Windows-compatible usleep method (which sleeps for X microseconds). Linux/Mac already have a method for this.
+		void usleep(__int64 usec)
+		{
+			HANDLE timer;
+			LARGE_INTEGER ft;
+
+			ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+			timer = CreateWaitableTimer(NULL, TRUE, NULL);
+			SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+			WaitForSingleObject(timer, INFINITE);
+			CloseHandle(timer);
+		}
 	#else
 		#include <unistd.h>
+
+		// Define a Linux/Mac compatible Sleep method (which sleeps for x seconds). Windows already has a method for this.
 		#define Sleep(x) usleep((x)*1000)
 	#endif
 
