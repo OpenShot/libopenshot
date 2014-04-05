@@ -692,8 +692,10 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		{
 			// Seek worked, and we are "before" the requested frame
 			is_seeking = false;
-			seeking_pts = 0;
 			seeking_frame = 0;
+			seeking_pts = -1;
+			seek_audio_frame_found = -1; // used to detect which frames to throw away after a seek
+			seek_video_frame_found = -1; // used to detect which frames to throw away after a seek
 		}
 	}
 
@@ -1093,31 +1095,33 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 	else
 	{
 		// Seek to nearest key-frame (aka, i-frame)
-		bool seek_worked = true;
+		bool seek_worked = false;
 
 		// Seek video stream (if any)
 		int64_t seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
-		if (info.has_video && av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-			seek_worked = false;
-			fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
-		} else
-		{
-			// VIDEO SEEK
-			is_video_seek = true;
+		if (info.has_video) {
+			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
+				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
+			} else
+			{
+				// VIDEO SEEK
+				is_video_seek = true;
+				seek_worked = true;
+			}
 		}
 
 		// Seek audio stream (if not already seeked... and if an audio stream is found)
 		if (!seek_worked && info.has_audio)
 		{
 			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
+
 			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				seek_worked = false;
 				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
 			} else
 			{
 				// AUDIO SEEK
-				seek_worked = true;
 				is_video_seek = false;
+				seek_worked = true;
 			}
 		}
 
@@ -1138,10 +1142,12 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 
 			// init seek flags
 			is_seeking = true;
-			seeking_pts = seek_target;
-			seeking_frame = requested_frame;
-			seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
-			seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
+			if (seeking_pts != 0) {
+				seeking_pts = seek_target;
+				seeking_frame = requested_frame;
+				seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
+				seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
+			}
 		}
 		else
 		{
@@ -1174,7 +1180,6 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 			// Find the difference between PTS and frame number
 			video_pts_offset = 0 - GetVideoPTS();
-
 	}
 	else
 	{
@@ -1323,6 +1328,7 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 // Check the working queue, and move finished frames to the finished queue
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
+
 	// Get the smallest processing video and audio frame numbers
 	int smallest_video_frame = 1;
 	int smallest_audio_frame = 1;
@@ -1370,6 +1376,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 				// Update last frame processed
 				last_frame = f->number;
+
 			} else {
 				// Seek trash, so delete the frame from the working cache, and never add it to the final cache.
 				working_cache.Remove(f->number);

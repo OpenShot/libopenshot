@@ -129,21 +129,24 @@ int main(int argc, char* argv[])
 
 
 	// Reader
-	FFmpegReader r1("/home/jonathan/Videos/New_OpenShot_Timeline.webm");
+	FFmpegReader r1("/home/jonathan/Videos/marina-cam_20140221_1006.ts");
 	r1.Open();
+	r1.DisplayInfo();
+	r1.info.has_audio = false;
+	//r1.enable_seek = true;
 
 	// FrameMapper
 	//FrameMapper r(&r1, Fraction(24,1), PULLDOWN_ADVANCED);
 	//r.PrintMapping();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w("/home/jonathan/output.mp4");
+	FFmpegWriter w("/home/jonathan/output.mp3");
 
 	// Set options
 	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
-	//w.SetAudioOptions(true, "libmp3lame", 44100, 2, 128000);
-	//w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
-	w.SetVideoOptions(true, "mpeg4", openshot::Fraction(3,1), 720, 360, Fraction(1,1), false, false, 3000000);
+	w.SetAudioOptions(true, "libmp3lame", 44100, 1, 12800);
+	w.SetVideoOptions(true, "mpeg4", Fraction(30,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+	//w.SetVideoOptions(true, "libmp3lame", openshot::Fraction(30,1), 720, 360, Fraction(1,1), false, false, 3000000);
 
 	// Prepare Streams
 	w.PrepareStreams();
@@ -155,7 +158,7 @@ int main(int argc, char* argv[])
 	w.OutputStreamInfo();
 
 	//for (int frame = 3096; frame <= 3276; frame++)
-	for (int frame = 1; frame <= 100; frame++)
+	for (int frame = 1; frame <= 200; frame++)
 	{
 //		tr1::shared_ptr<Frame> f(new Frame(frame, 1280, 720, "#000000", 44100, 2));
 //		if (frame % 2 == 0)
