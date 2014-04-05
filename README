@@ -1,14 +1,14 @@
 ####################################################################
-                           OpenShot Library
+                          OpenShot Library
 ####################################################################
 
-OpenShot Library (libopenshot) is an open-source project dedicated
-to delivering high quality video editing and animation solutions to the 
-world. For more information visit <http://www.openshot.org/>.
+OpenShot Library (libopenshot) is an open-source project dedicated to
+delivering high quality video editing, animation, and playback solutions
+to the world. For more information visit <http://www.openshot.org/>.
 
-#################
-     License
-#################
+####################################################################
+                              License
+####################################################################
 
 Copyright (c) 2008-2014 OpenShot Studios, LLC 
 <http://www.openshotstudios.com/>.
@@ -40,18 +40,16 @@ For more information on this, and how to apply and follow the GNU AGPL, see
 <http://www.gnu.org/licenses/>.
 
 ####################################################################
-
-
-#################
-     Install
-#################
+                              Install
+####################################################################
 
 Please see /doc/InstallationGuide.pdf for a very detailed  
-Linux and Windows compiling instruction guide.
+Linux, Mac, and Windows compiling instruction guide. An online version
+is also available: https://docs.google.com/document/d/1V6nq-IuS9zxqO1-OSt8iTS_cw_HMCpsUNofHLYtUNjM/pub.
 
-#################
-     Authors
-#################
+####################################################################
+                              Authors
+####################################################################
 
 Please see AUTHORS file for a full list of authors.
 
