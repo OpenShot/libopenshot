@@ -45,10 +45,10 @@
 #define STRINGIZE_(x) #x
 #define STRINGIZE(x) STRINGIZE_(x)
 
-#define OPENSHOT_VERSION_MAJOR 1; /// Major version number is incremented when huge features are added or improved.
-#define OPENSHOT_VERSION_MINOR 2; /// Minor version is incremented when smaller (but still very important) improvements are added.
-#define OPENSHOT_VERSION_BUILD 3; /// Build number is incremented when minor bug fixes and less important improvements are added.
-#define OPENSHOT_VERSION_SO 4; /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
+#define OPENSHOT_VERSION_MAJOR 0; /// Major version number is incremented when huge features are added or improved.
+#define OPENSHOT_VERSION_MINOR 0; /// Minor version is incremented when smaller (but still very important) improvements are added.
+#define OPENSHOT_VERSION_BUILD 1; /// Build number is incremented when minor bug fixes and less important improvements are added.
+#define OPENSHOT_VERSION_SO 1; /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 #define OPENSHOT_VERSION_MAJOR_MINOR STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR); /// A string of the "Major.Minor" version
 #define OPENSHOT_VERSION_ALL STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR) "." STRINGIZE(OPENSHOT_VERSION_BUILD); /// A string of the entire version "Major.Minor.Build"
 
