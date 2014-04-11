@@ -138,7 +138,7 @@
 #include "KeyFrame.h"
 #include "PlayerBase.h"
 #include "Point.h"
-#include "Profile.h"
+#include "Profiles.h"
 #include "SDLPlayer.h"
 #include "Sleep.h"
 #include "TextReader.h"

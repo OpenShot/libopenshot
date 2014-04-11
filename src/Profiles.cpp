@@ -38,7 +38,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Profile.h"
+#include "../include/Profiles.h"
 
 using namespace openshot;
 

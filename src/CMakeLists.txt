@@ -175,7 +175,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		ImageReader.cpp
 		PlayerBase.cpp
 		Point.cpp
-		Profile.cpp
+		Profiles.cpp
 		SDLPlayer.cpp
 		QtPlayer.cpp
 		TextReader.cpp
