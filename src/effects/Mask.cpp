@@ -38,7 +38,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/effects/Mask.h"
+#include "../../include/effects/Mask.h"
 
 using namespace openshot;
 

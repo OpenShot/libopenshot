@@ -42,8 +42,10 @@
 #define OPENSHOT_VERSION_H
 
 // Crazy c++ macro to convert an integer into a string
-#define STRINGIZE_(x) #x
-#define STRINGIZE(x) STRINGIZE_(x)
+#ifndef STRINGIZE
+	#define STRINGIZE_(x) #x
+	#define STRINGIZE(x) STRINGIZE_(x)
+#endif
 
 #define OPENSHOT_VERSION_MAJOR 0; /// Major version number is incremented when huge features are added or improved.
 #define OPENSHOT_VERSION_MINOR 0; /// Minor version is incremented when smaller (but still very important) improvements are added.

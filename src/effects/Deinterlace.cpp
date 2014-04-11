@@ -38,7 +38,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/effects/Deinterlace.h"
+#include "../../include/effects/Deinterlace.h"
 
 using namespace openshot;
 

@@ -38,7 +38,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/effects/ChromaKey.h"
+#include "../../include/effects/ChromaKey.h"
 
 using namespace openshot;
 

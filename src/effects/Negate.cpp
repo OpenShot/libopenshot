@@ -38,7 +38,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/effects/Negate.h"
+#include "../../include/effects/Negate.h"
 
 using namespace openshot;
 

@@ -39,7 +39,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Qt/AudioPlaybackThread.h"
+#include "../../include/Qt/AudioPlaybackThread.h"
 
 namespace openshot
 {

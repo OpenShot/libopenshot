@@ -39,7 +39,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Qt/PlayerPrivate.h"
+#include "../../include/Qt/PlayerPrivate.h"
 
 namespace openshot
 {
