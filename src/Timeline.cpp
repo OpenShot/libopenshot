@@ -451,6 +451,9 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		return final_cache.GetFrame(requested_frame);
 	else
 	{
+		// Re-Sort Clips (since the likely changed)
+		SortClips();
+
 		// Minimum number of packets to process (for performance reasons)
 		//int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 		int minimum_frames = 1;
@@ -505,20 +508,20 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								#pragma omp critical (timeline_output)
 								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", clip->Position(): " << clip->Position() << ", requested_time: " << requested_time << ", clip_duration: " << clip_duration << endl;
 
-							// Check for empty frame image (and fill with color)
-							if (new_frame->GetImage()->columns() == 1)
-							{
-								int red = color.red.GetInt(frame_number);
-								int green = color.green.GetInt(frame_number);
-								int blue = color.blue.GetInt(frame_number);
-								new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue));
-							}
-
-							// Add final frame to cache
-							#pragma omp critical (timeline_cache)
-							final_cache.Add(frame_number, new_frame);
-
 						} // end clip loop
+
+						// Check for empty frame image (and fill with color)
+						if (new_frame->GetImage()->columns() == 1)
+						{
+							int red = color.red.GetInt(frame_number);
+							int green = color.green.GetInt(frame_number);
+							int blue = color.blue.GetInt(frame_number);
+							new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue));
+						}
+
+						// Add final frame to cache
+						#pragma omp critical (timeline_cache)
+						final_cache.Add(frame_number, new_frame);
 
 					} // end omp task
 				} // end frame loop
@@ -669,6 +672,9 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
 void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
+
+	// Clear internal cache (since things are about to change)
+	final_cache.Clear();
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
