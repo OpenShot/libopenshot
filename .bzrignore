@@ -3,5 +3,3 @@ build/*
 *.DS_Store
 .pydevproject
 .settings
-.cproject
-.project
