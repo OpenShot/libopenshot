@@ -111,10 +111,12 @@ void Coordinate::SetJsonValue(Json::Value root) {
 		Y = root["Y"].asDouble();
 	if (!root["increasing"].isNull())
 		increasing = root["increasing"].asBool();
-	if (!root["repeated"].isNull())
+	if (!root["repeated"].isNull() && root["repeated"].isObject())
 	{
-		repeated.num = root["repeated"]["num"].asInt();
-		repeated.den = root["repeated"]["den"].asInt();
+		if (!root["repeated"]["num"].isNull())
+			repeated.num = root["repeated"]["num"].asInt();
+		if (!root["repeated"]["den"].isNull())
+			repeated.den = root["repeated"]["den"].asInt();
 	}
 	if (!root["delta"].isNull())
 		delta = root["delta"].asDouble();

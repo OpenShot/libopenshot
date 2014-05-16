@@ -236,19 +236,25 @@ void WriterBase::SetJsonValue(Json::Value root) {
 		info.width = root["width"].asInt();
 	if (!root["pixel_format"].isNull())
 		info.pixel_format = root["pixel_format"].asInt();
-	if (!root["fps"].isNull()) {
-		info.fps.num = root["fps"]["num"].asInt();
+	if (!root["fps"].isNull() && root["fps"].isObject()) {
+		if (!root["fps"]["num"].isNull())
+			info.fps.num = root["fps"]["num"].asInt();
+		if (!root["fps"]["den"].isNull())
 		info.fps.den = root["fps"]["den"].asInt();
 	}
 	if (!root["video_bit_rate"].isNull())
 		info.video_bit_rate = root["video_bit_rate"].asInt();
-	if (!root["pixel_ratio"].isNull()) {
-		info.pixel_ratio.num = root["pixel_ratio"]["num"].asInt();
-		info.pixel_ratio.den = root["pixel_ratio"]["den"].asInt();
+	if (!root["pixel_ratio"].isNull() && root["pixel_ratio"].isObject()) {
+		if (!root["pixel_ratio"]["num"].isNull())
+			info.pixel_ratio.num = root["pixel_ratio"]["num"].asInt();
+		if (!root["pixel_ratio"]["den"].isNull())
+			info.pixel_ratio.den = root["pixel_ratio"]["den"].asInt();
 	}
-	if (!root["display_ratio"].isNull()) {
-		info.display_ratio.num = root["display_ratio"]["num"].asInt();
-		info.display_ratio.den = root["display_ratio"]["den"].asInt();
+	if (!root["display_ratio"].isNull() && root["display_ratio"].isObject()) {
+		if (!root["display_ratio"]["num"].isNull())
+			info.display_ratio.num = root["display_ratio"]["num"].asInt();
+		if (!root["display_ratio"]["den"].isNull())
+			info.display_ratio.den = root["display_ratio"]["den"].asInt();
 	}
 	if (!root["vcodec"].isNull())
 		info.vcodec = root["vcodec"].asString();
@@ -256,9 +262,11 @@ void WriterBase::SetJsonValue(Json::Value root) {
 		info.video_length = (long int) root["video_length"].asUInt();
 	if (!root["video_stream_index"].isNull())
 		info.video_stream_index = root["video_stream_index"].asInt();
-	if (!root["video_timebase"].isNull()) {
-		info.video_timebase.num = root["video_timebase"]["num"].asInt();
-		info.video_timebase.den = root["video_timebase"]["den"].asInt();
+	if (!root["video_timebase"].isNull() && root["video_timebase"].isObject()) {
+		if (!root["video_timebase"]["num"].isNull())
+			info.video_timebase.num = root["video_timebase"]["num"].asInt();
+		if (!root["video_timebase"]["den"].isNull())
+			info.video_timebase.den = root["video_timebase"]["den"].asInt();
 	}
 	if (!root["interlaced_frame"].isNull())
 		info.interlaced_frame = root["interlaced_frame"].asBool();
@@ -275,8 +283,10 @@ void WriterBase::SetJsonValue(Json::Value root) {
 		info.channels = root["channels"].asInt();
 	if (!root["audio_stream_index"].isNull())
 		info.audio_stream_index = root["audio_stream_index"].asInt();
-	if (!root["audio_timebase"].isNull()) {
-		info.audio_timebase.num = root["audio_timebase"]["num"].asInt();
-		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
+	if (!root["audio_timebase"].isNull() && root["audio_timebase"].isObject()) {
+		if (!root["audio_timebase"]["num"].isNull())
+			info.audio_timebase.num = root["audio_timebase"]["num"].asInt();
+		if (!root["audio_timebase"]["den"].isNull())
+			info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 	}
 }
