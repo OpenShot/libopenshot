@@ -258,16 +258,16 @@ namespace openshot
 		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 		void Save(string path, float scale);
 
-		/// Save the frame image with tons of options to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG).
-		/// This method allows for masks, overlays, background color, and much more accurate resizing (including padding and centering)
-		void Save(string path, int new_width, int new_height, string mask_path, string overlay_path,
-				string background_color, bool ignore_aspect) throw(InvalidFile);
-
 		/// Set frame number
 		void SetFrameNumber(int number);
 
 		/// Set Pixel Aspect Ratio
 		void SetPixelRatio(int num, int den);
+
+		/// Thumbnail the frame image with tons of options to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG).
+		/// This method allows for masks, overlays, background color, and much more accurate resizing (including padding and centering)
+		void Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
+				string background_color, bool ignore_aspect) throw(InvalidFile);
 
 		/// Make colors in a specific range transparent
 		void TransparentColors(string color, double fuzz);

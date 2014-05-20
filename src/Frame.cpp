@@ -505,8 +505,8 @@ void Frame::Save(string path, float scale)
 	copy.write(path);
 }
 
-// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
-void Frame::Save(string path, int new_width, int new_height, string mask_path, string overlay_path,
+// Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
+void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
 		string background_color, bool ignore_aspect) throw(InvalidFile) {
 
 	// Make a copy of the image (since we might resize it)
