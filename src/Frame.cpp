@@ -505,6 +505,146 @@ void Frame::Save(string path, float scale)
 	copy.write(path);
 }
 
+// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
+void Frame::Save(string path, int new_width, int new_height, string mask_path, string overlay_path,
+		string background_color, bool ignore_aspect) throw(InvalidFile) {
+
+	// Make a copy of the image (since we might resize it)
+	tr1::shared_ptr<Magick::Image> copy = tr1::shared_ptr<Magick::Image>(new Magick::Image(*image));
+
+	// Set background color
+	if (background_color != "")
+		copy->backgroundColor(Magick::Color(background_color));
+	else
+	{
+		copy->backgroundColor(Magick::Color("none"));
+		background_color = "none";
+	}
+
+	// Maintain alpha channel
+	copy->matte(true);
+
+	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
+	if (copy->size().width() > 1 && copy->size().height() > 1)
+	{
+		// Resize image (if needed)
+		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+		{
+			// Calculate correct DAR (display aspect ratio)
+			int new_width = copy->size().width();
+			int new_height = copy->size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+			// Resize image
+			Magick::Geometry new_size(new_width, new_height);
+			new_size.aspect(true); // ignore aspect
+			new_size.greater(false); // don't resize past size
+			new_size.less(true); // okay to resize less than requested size
+			copy->resize(new_size);
+		}
+	}
+
+	// scale image if needed
+	if (width != new_width || height != new_height)
+	{
+		// Resize image
+		Magick::Geometry new_size(new_width, new_height);
+		new_size.aspect(ignore_aspect);
+		copy->resize(new_size);
+	}
+
+	// extend image if too small
+	if (copy->size().width() != new_width || copy->size().height() != new_height )
+	{
+		// extend canvas size and center image
+		//copy.extent(Magick::Geometry(new_width, new_height), background_color, Magick::EastGravity);
+
+		// Create new background image
+		tr1::shared_ptr<Magick::Image> background = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(new_width, new_height), Magick::Color(background_color)));
+		background->matte(true);
+
+		// Determine offset
+		int x = (new_width - copy->size().width()) / 2.0; // center
+		int y = (new_height - copy->size().height()) / 2.0; // center
+
+		// Composite resized frame image onto background image
+		background->composite(*copy.get(), x, y, Magick::OverCompositeOp);
+
+		// Update copy image
+		copy = background;
+	}
+
+
+	// apply overlay (if any)
+	if (overlay_path != "") {
+
+		// Attempt to open overlay_path file
+		tr1::shared_ptr<Magick::Image> overlay;
+		try {
+			// load image
+			overlay = tr1::shared_ptr<Magick::Image>(new Magick::Image(overlay_path));
+
+			// Give image a transparent background color
+			overlay->backgroundColor(Magick::Color("none"));
+			overlay->matte(true);
+
+		} catch (Magick::Exception e) {
+			// raise exception
+			throw InvalidFile("Overlay could not be opened.", overlay_path);
+		}
+
+		// Resize overlay to match this frame size (if different)
+		if (copy->size() != overlay->size())
+		{
+			Magick::Geometry new_size(copy->size().width(), copy->size().height());
+			new_size.aspect(true); // ignore aspect
+			overlay->resize(new_size);
+		}
+
+		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+		copy->composite(*overlay.get(), 0, 0, Magick::OverCompositeOp);
+	}
+
+	// apply mask (if any)
+	if (mask_path != "") {
+
+		// Attempt to open mask file
+		tr1::shared_ptr<Magick::Image> mask;
+		try {
+			// load image
+			mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask_path));
+
+			// Give image a transparent background color
+			mask->backgroundColor(Magick::Color("none"));
+			mask->matte(true);
+
+		} catch (Magick::Exception e) {
+			// raise exception
+			throw InvalidFile("Mask could not be opened.", mask_path);
+		}
+
+		// Resize mask to match this frame size (if different)
+		if (copy->size() != mask->size())
+		{
+			Magick::Geometry new_size(copy->size().width(), copy->size().height());
+			new_size.aspect(true); // ignore aspect
+			mask->resize(new_size);
+		}
+
+		// Apply mask to frame image
+		tr1::shared_ptr<Magick::Image> copy_source = tr1::shared_ptr<Magick::Image>(new Magick::Image(*copy));
+		copy_source->channel(Magick::MatteChannel); // extract alpha channel as grayscale image
+		copy_source->matte(false); // remove alpha channel
+		copy_source->negate(true); // negate source alpha channel before multiplying mask
+		copy_source->composite(*mask.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
+
+		// Copy the combined alpha channel back to the frame
+		copy->composite(*copy_source.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+	}
+
+	// save the image
+	copy->write(path);
+}
+
 // Add (or replace) pixel data to the frame (based on a solid color)
 void Frame::AddColor(int width, int height, string color)
 {
