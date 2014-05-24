@@ -60,13 +60,13 @@ namespace openshot
 	AudioSourcePlayer player;
 	AudioTransportSource transport;
 	MixerAudioSource mixer;
-	//AudioBufferSource source;
 	AudioReaderSource *source;
 	double sampleRate;
 	int numChannels;
 	WaitableEvent play;
 	WaitableEvent played;
 	int buffer_size;
+	bool is_playing;
 	
 	/// Constructor
 	AudioPlaybackThread();
@@ -82,8 +82,14 @@ namespace openshot
 	/// Get the current frame number being played
 	int getCurrentFramePosition();
 
+	/// Play the audio
+	void Play();
+
 	/// Seek the audio thread
 	void Seek(int new_position);
+
+	/// Stop the audio playback
+	void Stop();
 
 	/// Start thread
 	void run();

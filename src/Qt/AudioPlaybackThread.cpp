@@ -67,6 +67,7 @@ namespace openshot
 	, sampleRate(0.0)
 	, numChannels(0)
     , buffer_size(10000)
+    , is_playing(false)
     {
     }
 
@@ -78,11 +79,42 @@ namespace openshot
     // Set the reader object
     void AudioPlaybackThread::Reader(ReaderBase *reader)
     {
-    	if (!source) {
-			sampleRate = reader->info.sample_rate;
-			numChannels = reader->info.channels;
-			source = new AudioReaderSource(reader, 1, buffer_size);
-    	}
+		// Stop any existing audio
+		if (source) {
+			// Stop playing
+			Stop();
+			transport.stop();
+
+			// Wait for transport to stop
+			while (transport.isPlaying()) {
+				cout << "waiting for transport to stop" << endl;
+			    sleep(25);
+			}
+
+			// Kill previous audio
+			transport.setSource(0);
+
+			player.setSource(0);
+			audioDeviceManager.removeAudioCallback(&player);
+			audioDeviceManager.closeAudioDevice();
+			audioDeviceManager.removeAllChangeListeners();
+			audioDeviceManager.dispatchPendingMessages();
+
+			// Remove source
+			delete source;
+			source = NULL;
+		}
+
+		// Set local vars
+		sampleRate = reader->info.sample_rate;
+		numChannels = reader->info.channels;
+
+		// Create new audio source reader
+		source = new AudioReaderSource(reader, 1, buffer_size);
+
+		// Play the video
+		Play();
+
     }
 
     // Get the current frame object (which is filling the buffer)
@@ -104,55 +136,69 @@ namespace openshot
 		source->Seek(new_position);
 	}
 
+	// Play the audio
+	void AudioPlaybackThread::Play() {
+		// Start playing
+		is_playing = true;
+	}
+
+	// Stop the audio
+	void AudioPlaybackThread::Stop() {
+		// Stop playing
+		is_playing = false;
+	}
+
 	// Start audio thread
     void AudioPlaybackThread::run()
     {
-	// Init audio device
-	audioDeviceManager.initialise (
-	    0, /* number of input channels */
-	    numChannels, /* number of output channels */
-	    0, /* no XML settings.. */
-	    true  /* select default device on failure */);
+    	while (!threadShouldExit())
+    	{
+    		if (source && !transport.isPlaying() && is_playing) {
 
-	// Add callback
-	audioDeviceManager.addAudioCallback(&player);
+    			// Start new audio device
+    			// Init audio device
+    			audioDeviceManager.initialise (
+    			    0, /* number of input channels */
+    			    numChannels, /* number of output channels */
+    			    0, /* no XML settings.. */
+    			    true  /* select default device on failure */);
 
-	// Create TimeSliceThread for audio buffering
-	SafeTimeSliceThread thread("audio-buffer");
-	thread.startThread();
+    			// Add callback
+    			audioDeviceManager.addAudioCallback(&player);
 
-	// Connect source to transport
-	transport.setSource(
-	    source,
-	    buffer_size, // tells it to buffer this many samples ahead
-	    &thread,
-	    sampleRate,
-	    numChannels);
-	transport.setPosition(0);
-	transport.setGain(1.0);
+    			// Create TimeSliceThread for audio buffering
+    			SafeTimeSliceThread thread("audio-buffer");
+    			thread.startThread();
 
-	// Connect transport to mixer and player
-	mixer.addInputSource(&transport, false);
-	player.setSource(&mixer);
+    			// Connect source to transport
+    			transport.setSource(
+    			    source,
+    			    buffer_size, // tells it to buffer this many samples ahead
+    			    &thread,
+    			    sampleRate,
+    			    numChannels);
+    			transport.setPosition(0);
+    			transport.setGain(1.0);
 
-	cout << "starting transport" << endl;
-	transport.start();
+    			// Connect transport to mixer and player
+    			mixer.addInputSource(&transport, false);
+    			player.setSource(&mixer);
 
-	while (!threadShouldExit() && transport.isPlaying()) {
-	    sleep(100);
-	}
+    			// Start playing
+    			is_playing = true;
 
-	transport.stop();
-	transport.setSource(0);
+    			// Start the transport
+    			transport.start();
 
-	player.setSource(0);
-	audioDeviceManager.removeAudioCallback(&player);
-	audioDeviceManager.closeAudioDevice();
-	audioDeviceManager.removeAllChangeListeners();
-	audioDeviceManager.dispatchPendingMessages();
+    			while (!threadShouldExit() && transport.isPlaying() && is_playing) {
+    				sleep(250);
+    			}
 
-	// Remove source
-	delete source;
-	source = NULL;
+    			is_playing = false;
+    		}
+
+    		sleep(250);
+    	}
+
     }
 }
