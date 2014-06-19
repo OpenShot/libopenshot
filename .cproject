@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="0.458309483">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.458309483" moduleId="org.eclipse.cdt.core.settings" name="Debug">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -75,13 +73,13 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.458309483.953603139" moduleId="org.eclipse.cdt.core.settings" name="Release">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -115,13 +113,13 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.458309483.1429240563" moduleId="org.eclipse.cdt.core.settings" name="Windows Debug">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -181,13 +179,13 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.458309483.953603139.259067692" moduleId="org.eclipse.cdt.core.settings" name="Windows Release">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -340,7 +338,8 @@
 			</target>
 			<target name="Linux: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-G "Unix Makefiles" ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildArguments>-G "Unix Makefiles" ../ -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -369,7 +368,6 @@
 			<target name="Mac: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
 				<buildArguments>-DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.1.1/ -DPYTHON_INCLUDE_DIR=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/include/python3.3m/ -DPYTHON_LIBRARY=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/lib/libpython3.3.dylib -DPython_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/ ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
-				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -377,7 +375,6 @@
 			<target name="Mac: CMake Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
 				<buildArguments>-DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.1.1/ -DPYTHON_INCLUDE_DIR=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/include/python3.3m/ -DPYTHON_LIBRARY=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/lib/libpython3.3.dylib -DPython_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/ ../ -D"CMAKE_BUILD_TYPE:STRING=Release"</buildArguments>
-				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -399,5 +396,3 @@
 		</buildTargets>
 	</storageModule>
 </cproject>
-
-

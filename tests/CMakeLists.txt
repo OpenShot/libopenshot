@@ -106,13 +106,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
 
 ################# BLACKMAGIC DECKLINK ###################
-# Find BlackMagic DeckLinkAPI libraries
-FIND_PACKAGE(BlackMagic)
-
-IF (BLACKMAGIC_FOUND)
-	# Include SDL headers (needed for compile)
-	include_directories(${BLACKMAGIC_INCLUDE_DIR})
-ENDIF (BLACKMAGIC_FOUND)
+IF (ENABLE_BLACKMAGIC)
+	# Find BlackMagic DeckLinkAPI libraries
+	FIND_PACKAGE(BlackMagic)
+	
+	IF (BLACKMAGIC_FOUND)
+		# Include SDL headers (needed for compile)
+		include_directories(${BLACKMAGIC_INCLUDE_DIR})
+	ENDIF (BLACKMAGIC_FOUND)
+ENDIF (ENABLE_BLACKMAGIC)
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)

@@ -114,17 +114,19 @@ qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
 
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
-FIND_PACKAGE(BlackMagic)
-
-IF (BLACKMAGIC_FOUND)
-	# Include headers (needed for compile)
-	include_directories(${BLACKMAGIC_INCLUDE_DIR})
+IF (ENABLE_BLACKMAGIC)
+	FIND_PACKAGE(BlackMagic)
 	
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_BLACKMAGIC=1 )
-	SET(CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
-	
-ENDIF (BLACKMAGIC_FOUND)
+	IF (BLACKMAGIC_FOUND)
+		# Include headers (needed for compile)
+		include_directories(${BLACKMAGIC_INCLUDE_DIR})
+		
+		# define a global var (used in the C++)
+		add_definitions( -DUSE_BLACKMAGIC=1 )
+		SET(CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
+		
+	ENDIF (BLACKMAGIC_FOUND)
+ENDIF (ENABLE_BLACKMAGIC)
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
