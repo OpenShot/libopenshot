@@ -63,6 +63,10 @@
 			#include <libavcodec/opt.h>
 		#endif
 
+		// channel header refactored
+		#if LIBAVFORMAT_VERSION_MAJOR >= 54
+			#include <libavutil/channel_layout.h>
+		#endif
 	}
 
 	// This was removed from newer versions of FFmpeg (but still used in libopenshot)

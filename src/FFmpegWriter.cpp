@@ -217,7 +217,11 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 	// Was a codec / stream found?
 	if (c)
 		// Find AVOption (if it exists)
-		option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
+		#if LIBAVFORMAT_VERSION_MAJOR <= 53
+			option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
+		#else
+			option = av_opt_find(c->priv_data, name.c_str(), NULL, 0, 0);
+		#endif
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
@@ -266,7 +270,11 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 		else
 			// Set AVOption
-			av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
+			#if LIBAVFORMAT_VERSION_MAJOR <= 53
+				av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
+			#else
+				av_opt_set (c->priv_data, name.c_str(), value.c_str(), 0);
+			#endif
 	}
 	else
 		throw InvalidOptions("The option is not valid for this codec.", path);
