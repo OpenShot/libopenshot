@@ -127,13 +127,6 @@ int main(int argc, char* argv[])
 	*/
 
 
-//	SDLPlayer p;
-//	p.Reader(&r2);
-//	p.Play();
-//	return 0;
-
-
-
 	// Image of interlaced frame
 //	ImageReader ir("/home/jonathan/apps/libopenshot/src/examples/interlaced.png");
 //	ir.Open();

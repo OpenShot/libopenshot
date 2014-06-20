@@ -89,7 +89,6 @@
 #include "../../../include/QtPlayer.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
-#include "../../../include/SDLPlayer.h"
 #include "../../../include/TextReader.h"
 #include "../../../include/Timeline.h"
 
@@ -132,7 +131,6 @@
 %include "../../../include/QtPlayer.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
-%include "../../../include/SDLPlayer.h"
 %include "../../../include/TextReader.h"
 %include "../../../include/Timeline.h"
 

@@ -66,13 +66,6 @@ FIND_PACKAGE(OpenShotAudio REQUIRED)
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
-################# SDL ###################
-# Find SDL libraries
-FIND_PACKAGE(SDL REQUIRED)
-
-# Include SDL headers (needed for compile)
-include_directories(${SDL_INCLUDE_DIR})
-
 ################# QT5 ###################
 set(CMAKE_AUTOMOC ON)
 
@@ -111,7 +104,7 @@ IF (ENABLE_BLACKMAGIC)
 	FIND_PACKAGE(BlackMagic)
 	
 	IF (BLACKMAGIC_FOUND)
-		# Include SDL headers (needed for compile)
+		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)

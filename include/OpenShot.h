@@ -139,7 +139,6 @@
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"
-#include "SDLPlayer.h"
 #include "Sleep.h"
 #include "TextReader.h"
 #include "Timeline.h"

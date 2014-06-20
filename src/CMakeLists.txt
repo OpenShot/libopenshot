@@ -59,14 +59,6 @@ FIND_PACKAGE(OpenShotAudio REQUIRED)
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
-################# SDL ###################
-# Find SDL libraries
-SET(SDL_BUILDING_LIBRARY "True") # This prevents SDL_main from being linked
-FIND_PACKAGE(SDL REQUIRED)
-
-# Include SDL headers (needed for compile)
-include_directories(${SDL_INCLUDE_DIR})
-
 ################# QT5 ###################
 # As moc files are generated in the binary dir, tell CMake
 # to always look for includes there:
@@ -178,7 +170,6 @@ SET ( OPENSHOT_SOURCE_FILES
 		PlayerBase.cpp
 		Point.cpp
 		Profiles.cpp
-		SDLPlayer.cpp
 		QtPlayer.cpp
 		TextReader.cpp
 		Timeline.cpp
@@ -217,7 +208,6 @@ SET ( REQUIRED_LIBRARIES
   		${ImageMagick_LIBRARIES}
 		${FFMPEG_LIBRARIES}
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
-		${SDL_LIBRARY}
 		${QT_LIBRARIES}
 		${PROFILER}
 		)
