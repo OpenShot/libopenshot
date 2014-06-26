@@ -63,7 +63,7 @@ TEST(FFmpegWriter_Test_Webm)
 	// Write header
 	w.WriteHeader();
 
-	w.WriteFrame(&r, 1, 24);
+	w.WriteFrame(&r, 24, 50);
 
 	// Write Footer
 	w.WriteTrailer();
@@ -81,14 +81,14 @@ TEST(FFmpegWriter_Test_Webm)
 	CHECK_EQUAL(1, r1.info.fps.den);
 
 	// Check frame 20
-	tr1::shared_ptr<Frame> f = r1.GetFrame(20);
+	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
 
 	// Get the image data for row 50
 	const Magick::PixelPacket* pixels = f->GetPixels(500);
 
 	// Check pixel values on scanline 500, pixel 600
-	CHECK_EQUAL(1028, pixels[600].red);
-	CHECK_EQUAL(1028, pixels[600].blue);
-	CHECK_EQUAL(1028, pixels[600].green);
+	CHECK_EQUAL(2056, pixels[600].red);
+	CHECK_EQUAL(2056, pixels[600].blue);
+	CHECK_EQUAL(2056, pixels[600].green);
 	CHECK_EQUAL(0, pixels[600].opacity);
 }
