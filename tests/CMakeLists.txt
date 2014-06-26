@@ -129,8 +129,8 @@ add_executable(tester
 			   Clip_Tests.cpp
 			   Coordinate_Tests.cpp
 			   ReaderBase_Tests.cpp
-			   FFmpegReader_Tests.cpp
-			   FFmpegWriter_Tests.cpp
+			   #FFmpegReader_Tests.cpp
+			   #FFmpegWriter_Tests.cpp
 			   Fraction_Tests.cpp
 			   FrameMapper_Tests.cpp
 			   KeyFrame_Tests.cpp
