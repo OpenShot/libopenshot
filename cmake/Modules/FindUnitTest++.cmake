@@ -14,6 +14,7 @@ FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
     /usr/local/include
     /usr/include
     /usr/include/unittest++
+    /usr/include/UnitTest++ # Fedora
     /sw/include # Fink
     /opt/local/include # DarwinPorts
     /opt/local/include/UnitTest++
@@ -24,7 +25,7 @@ FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
 )
 
 FIND_LIBRARY(UNITTEST++_LIBRARY 
-    NAMES unittest++
+    NAMES unittest++ UnitTest++
     PATHS
     ${UNITTEST_DIR}/lib
     $ENV{UNITTEST_DIR}/lib
@@ -34,6 +35,7 @@ FIND_LIBRARY(UNITTEST++_LIBRARY
     /Library/Frameworks
     /usr/local/lib
     /usr/lib
+    /usr/lib64/ # Fedora
     /sw/lib
     /opt/local/lib
     /opt/csw/lib
