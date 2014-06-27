@@ -338,7 +338,7 @@
 			</target>
 			<target name="Linux: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-G "Unix Makefiles" ../ -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildArguments>-G "Unix Makefiles" ../ -D"ENABLE_TESTS=1" -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>

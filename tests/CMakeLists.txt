@@ -121,21 +121,29 @@ endif(OPENMP_FOUND)
 # Include jsoncpp headers (needed for JSON parsing)
 include_directories("../thirdparty/jsoncpp/include")
 
+###############  SET TEST SOURCE FILES  #################
+SET ( OPENSHOT_TEST_FILES tests.cpp )
+
+IF (ENABLE_TESTS)
+	SET ( OPENSHOT_TEST_FILES ${OPENSHOT_TEST_FILES} 
+		   Cache_Tests.cpp
+		   Clip_Tests.cpp
+		   Coordinate_Tests.cpp
+		   ReaderBase_Tests.cpp
+		   FFmpegReader_Tests.cpp
+		   FFmpegWriter_Tests.cpp
+		   Fraction_Tests.cpp
+		   FrameMapper_Tests.cpp
+		   KeyFrame_Tests.cpp
+		   Point_Tests.cpp
+		   Timeline_Tests.cpp )
+ENDIF (ENABLE_TESTS)
+
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (tester)
 add_executable(tester
 			   tests.cpp
-			   Cache_Tests.cpp
-			   Clip_Tests.cpp
-			   Coordinate_Tests.cpp
-			   ReaderBase_Tests.cpp
-			   #FFmpegReader_Tests.cpp
-			   #FFmpegWriter_Tests.cpp
-			   Fraction_Tests.cpp
-			   FrameMapper_Tests.cpp
-			   KeyFrame_Tests.cpp
-			   Point_Tests.cpp
-			   Timeline_Tests.cpp)
+			   ${OPENSHOT_TEST_FILES} )
 
 # Link libraries to the new executable
 target_link_libraries(tester openshot ${UNITTEST++_LIBRARY})
