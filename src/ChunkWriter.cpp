@@ -85,6 +85,8 @@ string ChunkWriter::get_chunk_path(int chunk_number, string folder, string exten
 	else if (folder.length() != 0 && extension.length() == 0)
 		// Return path with FOLDER and NO EXTENSION
 		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str()).toStdString();
+	else
+		return "";
 }
 
 // Add a frame to the queue waiting to be encoded.
@@ -288,7 +290,7 @@ void ChunkWriter::write_json_meta_data()
 }
 
 // check for chunk folder
-bool ChunkWriter::create_folder(string path)
+void ChunkWriter::create_folder(string path)
 {
 	QDir dir(path.c_str());
 	if (!dir.exists()) {
@@ -299,7 +301,7 @@ bool ChunkWriter::create_folder(string path)
 // check for valid chunk json
 bool ChunkWriter::is_chunk_valid()
 {
-
+	return true;
 }
 
 

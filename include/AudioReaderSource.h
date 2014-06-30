@@ -146,7 +146,7 @@ namespace openshot
 	    ReaderBase* Reader() const { return reader; }
 
 	    /// Seek to a specific frame
-	    int Seek(int64 new_position) { frame_number = new_position; }
+	    void Seek(int64 new_position) { frame_number = new_position; }
 
 	};
 

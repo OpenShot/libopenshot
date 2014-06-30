@@ -15,6 +15,7 @@ FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
     /usr/include
     /usr/include/unittest++
     /usr/include/UnitTest++ # Fedora
+    /usr/include/unittest-cpp # openSUSE
     /sw/include # Fink
     /opt/local/include # DarwinPorts
     /opt/local/include/UnitTest++

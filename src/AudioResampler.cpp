@@ -86,7 +86,7 @@ AudioResampler::~AudioResampler()
 }
 
 // Sets the audio buffer and updates the key settings
-int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate)
+void AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate)
 {
 	if (sample_rate <= 0)
 		sample_rate == 44100;
@@ -101,7 +101,7 @@ int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate,
 }
 
 // Sets the audio buffer and key settings
-int AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double ratio)
+void AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double ratio)
 {
 	// Update buffer & buffer source
 	buffer = new_buffer;

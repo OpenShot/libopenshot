@@ -107,7 +107,7 @@ namespace openshot
 	    string default_acodec;
 
 		/// check for chunk folder
-		bool create_folder(string path);
+		void create_folder(string path);
 
 		/// get a formatted path of a specific chunk
 		string get_chunk_path(int chunk_number, string folder, string extension);
@@ -133,7 +133,7 @@ namespace openshot
 
 		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size The number of frames to write in this chunk file
-		int SetChunkSize(int new_size) { chunk_size = new_size; };
+		void SetChunkSize(int new_size) { chunk_size = new_size; };
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.

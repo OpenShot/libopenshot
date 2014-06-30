@@ -176,6 +176,12 @@ tr1::shared_ptr<Frame> TextReader::GetFrame(int requested_frame) throw(ReaderClo
 
 		// return frame object
 		return image_frame;
+	} else {
+		// return empty frame
+		tr1::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
+
+		// return frame object
+		return image_frame;
 	}
 
 }

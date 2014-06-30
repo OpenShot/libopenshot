@@ -198,6 +198,8 @@ string ChunkReader::get_chunk_path(int chunk_number, string folder, string exten
 	else if (folder.length() != 0 && extension.length() == 0)
 		// Return path with FOLDER and NO EXTENSION
 		return QDir::cleanPath(QString(path.c_str()) + QDir::separator() + folder.c_str()).toStdString();
+	else
+		return "";
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
