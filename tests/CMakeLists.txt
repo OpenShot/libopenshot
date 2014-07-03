@@ -52,6 +52,16 @@ FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
 # Include ImageMagick++ headers (needed for compile)
 include_directories(${ImageMagick_INCLUDE_DIRS})
 
+# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+IF (MAGICKCORE_QUANTUM_DEPTH)
+	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+	MESSAGE("-- MAGICKCORE_QUANTUM_DEPTH = ${MAGICKCORE_QUANTUM_DEPTH}")
+ENDIF (MAGICKCORE_QUANTUM_DEPTH)
+IF (MAGICKCORE_HDRI_ENABLE)
+	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+	MESSAGE("-- MAGICKCORE_HDRI_ENABLE = ${MAGICKCORE_HDRI_ENABLE}")
+ENDIF (MAGICKCORE_HDRI_ENABLE)
+
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
 FIND_PACKAGE(FFmpeg REQUIRED)
