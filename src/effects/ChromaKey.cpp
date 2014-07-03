@@ -67,9 +67,13 @@ ChromaKey::ChromaKey(Color color, Keyframe fuzz) : color(color), fuzz(fuzz)
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
+	// Get the max quantum size (i.e. 255, 65535, etc...)
+	using namespace Magick;
+	Magick::Quantum max_range = QuantumRange;
+
 	// Make this range of colors transparent
-	frame->GetImage()->colorFuzz(fuzz.GetValue(frame_number) * 65535 / 100.0);
-	frame->GetImage()->transparent(Magick::Color(color.red.GetInt(frame_number), color.green.GetInt(frame_number), color.blue.GetInt(frame_number)));
+	frame->GetImage()->colorFuzz(fuzz.GetValue(frame_number) * max_range / 100.0);
+	frame->GetImage()->transparent(Magick::Color((Magick::Quantum)color.red.GetInt(frame_number), (Magick::Quantum)color.green.GetInt(frame_number), (Magick::Quantum)color.blue.GetInt(frame_number)));
 
 	// return the modified frame
 	return frame;

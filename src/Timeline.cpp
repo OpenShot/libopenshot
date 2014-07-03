@@ -334,7 +334,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
 		int blue = color.blue.GetInt(timeline_frame_number);
-		new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue, 0));
+		new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue, 0));
 
 		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
@@ -516,7 +516,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							int red = color.red.GetInt(frame_number);
 							int green = color.green.GetInt(frame_number);
 							int blue = color.blue.GetInt(frame_number);
-							new_frame->AddColor(info.width, info.height, Magick::Color(red, green, blue));
+							new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue));
 						}
 
 						// Add final frame to cache

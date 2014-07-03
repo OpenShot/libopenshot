@@ -1222,19 +1222,22 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		if ( video_st->codec->pix_fmt == PIX_FMT_RGBA || video_st->codec->pix_fmt == PIX_FMT_ARGB || video_st->codec->pix_fmt == PIX_FMT_BGRA )
 			step = 4; // rgba
 
+		// Determine how many bits to shift the color (from ImageMagick to 8bit FFmpeg)
+		int bit_shift = MAGICKCORE_QUANTUM_DEPTH - 8;
+
 		// Fill the AVFrame with RGB image data
 		int source_total_pixels = source_image_width * source_image_height;
 		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=step)
 		{
 			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
 			// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
-			frame_source->data[0][row] = pixel_packets[packet].red >> 8;
-			frame_source->data[0][row+1] = pixel_packets[packet].green >> 8;
-			frame_source->data[0][row+2] = pixel_packets[packet].blue >> 8;
+			frame_source->data[0][row] = pixel_packets[packet].red >> bit_shift;
+			frame_source->data[0][row+1] = pixel_packets[packet].green >> bit_shift;
+			frame_source->data[0][row+2] = pixel_packets[packet].blue >> bit_shift;
 
 			// Copy alpha channel (if needed)
 			if (step == 4)
-				frame_source->data[0][row+3] = pixel_packets[packet].opacity >> 8;
+				frame_source->data[0][row+3] = pixel_packets[packet].opacity >> bit_shift;
 		}
 
 		// Resize & convert pixel format

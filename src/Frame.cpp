@@ -179,7 +179,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red
 
 	// Init a list of lines
 	list<Magick::Drawable> lines;
-	lines.push_back(Magick::DrawableFillColor(Magick::Color(Red, Green, Blue)));
+	lines.push_back(Magick::DrawableFillColor(Magick::Color((Magick::Quantum)Red, (Magick::Quantum)Green, (Magick::Quantum)Blue)));
 	lines.push_back(Magick::DrawablePointSize(16));
 
 	// Calculate 1/2 the width of an image based on the # of samples
@@ -206,7 +206,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red
 			int X = 0;
 
 			// Change stroke and color
-			lines.push_back(Magick::DrawableStrokeColor(Magick::Color(Red, Green, Blue)));
+			lines.push_back(Magick::DrawableStrokeColor(Magick::Color((Magick::Quantum)Red, (Magick::Quantum)Green, (Magick::Quantum)Blue)));
 			lines.push_back(Magick::DrawableStrokeWidth(1));
 
 			// Get audio for this channel
@@ -452,8 +452,12 @@ int Frame::GetWidth()
 // Make colors in a specific range transparent
 void Frame::TransparentColors(string color, double fuzz)
 {
+	// Get the max quantum size (i.e. 255, 65535, etc...)
+	using namespace Magick;
+	Magick::Quantum max_range = QuantumRange;
+
 	// Make this range of colors transparent
-	image->colorFuzz(fuzz * 65535 / 100.0);
+	image->colorFuzz(fuzz * max_range / 100.0);
 	image->transparent(Magick::Color(color));
 	//image->colorFuzz(0);
 	image->negate();
@@ -720,17 +724,21 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lin
 // Composite a new image on top of the existing image
 void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 {
+	// Get the max quantum size (i.e. 255, 65535, etc...)
+	using namespace Magick;
+	Magick::Quantum max_range = QuantumRange;
+
 	// Replace image (if needed)
 	if (image->columns() == 1)
 		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
 	else
 	{
 		// Calculate opacity of new image
-		int new_opacity = 65535.0f * (1.0 - alpha);
+		int new_opacity = max_range * (1.0 - alpha);
 		if (new_opacity < 0)
 			new_opacity = 0; // completely invisible
-		else if (new_opacity > 65535)
-			new_opacity = 65535;
+		else if (new_opacity > max_range)
+			new_opacity = max_range;
 
 		// Set opacity
 		new_image->opacity(new_opacity);

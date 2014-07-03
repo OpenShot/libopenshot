@@ -52,6 +52,7 @@
 #include <list>
 #include <tr1/memory>
 #include "Magick++.h"
+#include <ImageMagick/magick/quantum.h>
 #include "Cache.h"
 #include "Color.h"
 #include "Clip.h"
