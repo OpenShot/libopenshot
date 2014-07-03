@@ -75,9 +75,9 @@ void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
     // Iterate through the pixel packets, and load our own buffer
     const Magick::PixelPacket *pixels = frame->GetPixels();
     for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
-		buffer[i+0] = pixels[n].red   >> bit_shift;
-		buffer[i+1] = pixels[n].green >> bit_shift;
-		buffer[i+2] = pixels[n].blue  >> bit_shift;
+		buffer[i+0] = (int) pixels[n].red   >> bit_shift;
+		buffer[i+1] = (int) pixels[n].green >> bit_shift;
+		buffer[i+2] = (int) pixels[n].blue  >> bit_shift;
     }
 #endif
 

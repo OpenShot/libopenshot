@@ -1231,13 +1231,13 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		{
 			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
 			// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
-			frame_source->data[0][row] = pixel_packets[packet].red >> bit_shift;
-			frame_source->data[0][row+1] = pixel_packets[packet].green >> bit_shift;
-			frame_source->data[0][row+2] = pixel_packets[packet].blue >> bit_shift;
+			frame_source->data[0][row] = (int) pixel_packets[packet].red >> bit_shift;
+			frame_source->data[0][row+1] = (int) pixel_packets[packet].green >> bit_shift;
+			frame_source->data[0][row+2] = (int) pixel_packets[packet].blue >> bit_shift;
 
 			// Copy alpha channel (if needed)
 			if (step == 4)
-				frame_source->data[0][row+3] = pixel_packets[packet].opacity >> bit_shift;
+				frame_source->data[0][row+3] = (int) pixel_packets[packet].opacity >> bit_shift;
 		}
 
 		// Resize & convert pixel format

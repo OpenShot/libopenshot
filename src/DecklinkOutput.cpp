@@ -265,9 +265,9 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 					{
 						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
 						castBytes[row] = 0; // alpha
-						castBytes[row+1] = pixel_packets[packet].red >> bit_shift;
-						castBytes[row+2] = pixel_packets[packet].green >> bit_shift;
-						castBytes[row+3] = pixel_packets[packet].blue >> bit_shift;
+						castBytes[row+1] = (int) pixel_packets[packet].red >> bit_shift;
+						castBytes[row+2] = (int) pixel_packets[packet].green >> bit_shift;
+						castBytes[row+3] = (int) pixel_packets[packet].blue >> bit_shift;
 					}
 
 					#pragma omp critical (blackmagic_output_queue)
