@@ -69,15 +69,13 @@ void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
     image->depth( 8 ); // this is required or it crashes
     image->writePixels(Magick::RGBQuantum, buffer); // write pixel data to our buffer
 #else
-	// Determine how many bits to shift the color (from ImageMagick to 8bit colors)
-	int bit_shift = MAGICKCORE_QUANTUM_DEPTH - 8;
-
     // Iterate through the pixel packets, and load our own buffer
+	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
     const Magick::PixelPacket *pixels = frame->GetPixels();
     for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
-		buffer[i+0] = (int) pixels[n].red   >> bit_shift;
-		buffer[i+1] = (int) pixels[n].green >> bit_shift;
-		buffer[i+2] = (int) pixels[n].blue  >> bit_shift;
+		buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
+		buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
+		buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
     }
 #endif
 

@@ -1222,22 +1222,19 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		if ( video_st->codec->pix_fmt == PIX_FMT_RGBA || video_st->codec->pix_fmt == PIX_FMT_ARGB || video_st->codec->pix_fmt == PIX_FMT_BGRA )
 			step = 4; // rgba
 
-		// Determine how many bits to shift the color (from ImageMagick to 8bit FFmpeg)
-		int bit_shift = MAGICKCORE_QUANTUM_DEPTH - 8;
-
 		// Fill the AVFrame with RGB image data
 		int source_total_pixels = source_image_width * source_image_height;
 		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=step)
 		{
 			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-			// Each color needs to be 8 bit (so I'm bit shifting the 16 bit ints)
-			frame_source->data[0][row] = (int) pixel_packets[packet].red >> bit_shift;
-			frame_source->data[0][row+1] = (int) pixel_packets[packet].green >> bit_shift;
-			frame_source->data[0][row+2] = (int) pixel_packets[packet].blue >> bit_shift;
+			// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
+			frame_source->data[0][row] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].red);
+			frame_source->data[0][row+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].green);
+			frame_source->data[0][row+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].blue);
 
 			// Copy alpha channel (if needed)
 			if (step == 4)
-				frame_source->data[0][row+3] = (int) pixel_packets[packet].opacity >> bit_shift;
+				frame_source->data[0][row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].opacity);
 		}
 
 		// Resize & convert pixel format

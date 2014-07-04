@@ -256,18 +256,16 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 					// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
 					const Magick::PixelPacket *pixel_packets = frame->GetPixels();
 
-					// Determine how many bits to shift the color (from ImageMagick to 8bit colors)
-					int bit_shift = MAGICKCORE_QUANTUM_DEPTH - 8;
-
 					// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
 					// colors around to match the Decklink order (ARGB).
 					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
 					{
 						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-						castBytes[row] = 0; // alpha
-						castBytes[row+1] = (int) pixel_packets[packet].red >> bit_shift;
-						castBytes[row+2] = (int) pixel_packets[packet].green >> bit_shift;
-						castBytes[row+3] = (int) pixel_packets[packet].blue >> bit_shift;
+						// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
+						castBytes[row] = MagickCore::ScaleQuantumToChar((Magick::Quantum) 0); // alpha
+						castBytes[row+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].red);
+						castBytes[row+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].green);
+						castBytes[row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].blue);
 					}
 
 					#pragma omp critical (blackmagic_output_queue)
