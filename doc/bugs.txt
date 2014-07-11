@@ -1,6 +1,0 @@
-These are the known bugs in the OpenShot Library
--------------------------------------------------
-1) (CRITICAL) FFmpegReader - Issues with OpenMP and the nested ImageMagick++ OpenMP implementation. On my 8 core system,
-   If I don't call omp_set_num_threads(4... or less), an ImageMagick++ error is raised. I have posted this 
-   issue on the ImageMagick forum: http://www.imagemagick.org/discourse-server/viewtopic.php?f=23&t=24036
-2) 
