@@ -25,6 +25,14 @@
 ################################################################################
 
 
+################ WINDOWS ##################
+# Set some compiler options for Windows
+# required for libopenshot-audio headers
+IF (WIN32)
+	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
+	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -march=i686 -include cmath -std=c++0x")
+ENDIF(WIN32)
+
 ################ IMAGE MAGICK ##################
 # Find the ImageMagick++ library
 FIND_PACKAGE(ImageMagick REQUIRED COMPONENTS Magick++ MagickWand MagickCore)
