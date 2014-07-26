@@ -99,6 +99,9 @@ void ImageReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
+		
+		// Delete the image
+		image.reset();
 	}
 }
 

@@ -265,6 +265,25 @@ INSTALL(FILES ${headers} DESTINATION include/libopenshot)
 # Install primary library
 INSTALL(TARGETS openshot DESTINATION ${LIB_INSTALL_DIR})
 
+# Install related libraries for Windows and Mac
+IF (WIN32 OR APPLE)
+	# Find location of Qt Libraries
+	get_target_property(Qt5Widgets_location ${Qt5Widgets_LIBRARIES}  LOCATION)
+	get_target_property(Qt5Core_location ${Qt5Core_LIBRARIES} LOCATION)
+	get_target_property(Qt5Gui_location ${Qt5Gui_LIBRARIES} LOCATION)
+	get_target_property(Qt5Multimedia_location ${Qt5Multimedia_LIBRARIES} LOCATION)
+	get_target_property(Qt5MultimediaWidgets_location ${Qt5MultimediaWidgets_LIBRARIES} LOCATION)
+	
+	INSTALL(FILES ${ImageMagick_LIBRARIES}
+				  ${FFMPEG_LIBRARIES}
+				  ${LIBOPENSHOT_AUDIO_LIBRARIES}
+				  ${Qt5Widgets_location}
+				  ${Qt5Core_location}
+				  ${Qt5Gui_location}
+				  ${Qt5Multimedia_location}
+				  ${Qt5MultimediaWidgets_location}
+				DESTINATION ${LIB_INSTALL_DIR})
+ENDIF(WIN32 OR APPLE)
 
 ############### CPACK PACKAGING ##############
 IF(MINGW)

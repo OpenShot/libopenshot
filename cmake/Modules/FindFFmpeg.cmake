@@ -14,11 +14,13 @@ FIND_PATH( AVFORMAT_INCLUDE_DIR libavformat/avformat.h
 		   	$ENV{FFMPEGDIR}/include/
 		   	$ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVFORMAT_LIBRARY avformat
+FIND_LIBRARY( AVFORMAT_LIBRARY avformat avformat-55
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
-		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/bin/ )
+			 
 #FindAvcodec
 FIND_PATH( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h
 		   PATHS /usr/include/
@@ -26,11 +28,13 @@ FIND_PATH( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVCODEC_LIBRARY avcodec
+FIND_LIBRARY( AVCODEC_LIBRARY avcodec avcodec-55
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
-		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/bin/ )
+
 #FindAvutil
 FIND_PATH( AVUTIL_INCLUDE_DIR libavutil/avutil.h
 		   PATHS /usr/include/
@@ -38,11 +42,12 @@ FIND_PATH( AVUTIL_INCLUDE_DIR libavutil/avutil.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVUTIL_LIBRARY avutil
+FIND_LIBRARY( AVUTIL_LIBRARY avutil avutil-52
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
-		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/bin/ )
 
 #FindAvdevice
 FIND_PATH( AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h
@@ -51,11 +56,12 @@ FIND_PATH( AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVDEVICE_LIBRARY avdevice
+FIND_LIBRARY( AVDEVICE_LIBRARY avdevice avdevice-55
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
-		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/bin/ )
 
 #FindSwscale
 FIND_PATH( SWSCALE_INCLUDE_DIR libswscale/swscale.h
@@ -64,11 +70,12 @@ FIND_PATH( SWSCALE_INCLUDE_DIR libswscale/swscale.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( SWSCALE_LIBRARY swscale
+FIND_LIBRARY( SWSCALE_LIBRARY swscale swscale-2
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
-		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/ )
+		   	 $ENV{FFMPEGDIR}/lib/ffmpeg/
+		   	 $ENV{FFMPEGDIR}/bin/ )
 
 SET( FFMPEG_FOUND FALSE )
 

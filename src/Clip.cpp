@@ -183,8 +183,13 @@ void Clip::Open() throw(InvalidFile, ReaderClosed)
 // Close the internal reader
 void Clip::Close() throw(ReaderClosed)
 {
-	if (reader)
+	if (reader) {
 		reader->Close();
+
+		// Delete the reader
+		delete reader;
+		reader = NULL;
+	}
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
