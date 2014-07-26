@@ -32,6 +32,16 @@ IF (WIN32)
 	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
 	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -march=i686 -include cmath -std=c++0x")
 ENDIF(WIN32)
+IF (APPLE)
+    SET_PROPERTY(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
+    ADD_DEFINITIONS(-DNDEBUG)
+    SET(EXTENSION "mm")
+    
+    SET(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
+    SET(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
+
+    SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -std=c++0x")
+ENDIF(APPLE)
 
 ################ IMAGE MAGICK ##################
 # Find the ImageMagick++ library
