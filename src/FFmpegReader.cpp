@@ -44,6 +44,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
+	avcodec_register_all();
 
 	// Init cache
 	int64 bytes = 720 * 1280 * 4 + (44100 * 2 * 4);

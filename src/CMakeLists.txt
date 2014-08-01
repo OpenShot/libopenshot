@@ -204,17 +204,26 @@ SET ( OPENSHOT_SOURCE_FILES
 				DecklinkWriter.cpp)
 		ENDIF (BLACKMAGIC_FOUND)
 		
+		
+# Get list of headers
+file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
+
+# Disable RPATH
+SET(CMAKE_MACOSX_RPATH 0)
 
 ############### CREATE LIBRARY #################
 # Create shared openshot library
-add_library(openshot SHARED
-			${OPENSHOT_SOURCE_FILES})
-			
+add_library(openshot SHARED 
+			${OPENSHOT_SOURCE_FILES}
+			${headers} )
+
 # Set SONAME and other library properties
 set_target_properties(openshot
 			PROPERTIES
 			VERSION ${PROJECT_VERSION}
-			SOVERSION ${SO_VERSION})
+			SOVERSION ${SO_VERSION} 
+			INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+            )
 
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
@@ -268,32 +277,15 @@ add_subdirectory(bindings)
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
 
-# Headers
-file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
-INSTALL(FILES ${headers} DESTINATION include/libopenshot)
-
 # Install primary library
-INSTALL(TARGETS openshot DESTINATION ${LIB_INSTALL_DIR})
-
-# Install related libraries for Windows and Mac
-IF (WIN32 OR APPLE)
-	# Find location of Qt Libraries
-	get_target_property(Qt5Widgets_location ${Qt5Widgets_LIBRARIES}  LOCATION)
-	get_target_property(Qt5Core_location ${Qt5Core_LIBRARIES} LOCATION)
-	get_target_property(Qt5Gui_location ${Qt5Gui_LIBRARIES} LOCATION)
-	get_target_property(Qt5Multimedia_location ${Qt5Multimedia_LIBRARIES} LOCATION)
-	get_target_property(Qt5MultimediaWidgets_location ${Qt5MultimediaWidgets_LIBRARIES} LOCATION)
+INSTALL(TARGETS openshot 
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR} 
+	FRAMEWORK DESTINATION . 
+	INCLUDES DESTINATION include )
 	
-	INSTALL(FILES ${ImageMagick_LIBRARIES}
-				  ${FFMPEG_LIBRARIES}
-				  ${LIBOPENSHOT_AUDIO_LIBRARIES}
-				  ${Qt5Widgets_location}
-				  ${Qt5Core_location}
-				  ${Qt5Gui_location}
-				  ${Qt5Multimedia_location}
-				  ${Qt5MultimediaWidgets_location}
-				DESTINATION ${LIB_INSTALL_DIR})
-ENDIF(WIN32 OR APPLE)
+INSTALL(FILES ${headers} 
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/include/libopenshot )
+
 
 ############### CPACK PACKAGING ##############
 IF(MINGW)
@@ -302,9 +294,9 @@ ENDIF(MINGW)
 IF(UNIX AND NOT APPLE)
 	SET(CPACK_GENERATOR "DEB")
 ENDIF(UNIX AND NOT APPLE)
-IF(UNIX AND APPLE)
-	SET(CPACK_GENERATOR "DragNDrop")
-ENDIF(UNIX AND APPLE)
+#IF(UNIX AND APPLE)
+#	SET(CPACK_GENERATOR "DragNDrop")
+#ENDIF(UNIX AND APPLE)
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 INCLUDE(CPack)
