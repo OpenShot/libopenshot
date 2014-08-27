@@ -33,10 +33,6 @@ using namespace openshot;
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType pulldown) :
 		reader(reader), target(target), pulldown(pulldown), final_cache(820 * 1024)
 {
-
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
 

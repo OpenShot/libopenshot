@@ -39,9 +39,6 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
 		original_sample_rate(0), original_channels(0)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
 	info.has_video = false;

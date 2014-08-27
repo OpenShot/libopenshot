@@ -32,9 +32,6 @@ using namespace openshot;
 DecklinkReader::DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError)
 	: device(device), is_open(false), g_videoModeIndex(video_mode), g_audioChannels(channels), g_audioSampleDepth(sample_depth)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Init decklink variables
 	inputFlags = 0;
 	selectedDisplayMode = bmdModeNTSC;

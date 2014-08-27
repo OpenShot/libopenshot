@@ -32,9 +32,6 @@ using namespace openshot;
 ChunkReader::ChunkReader(string path, ChunkVersion chunk_version) throw(InvalidFile, InvalidJSON)
 		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Check if folder exists?
 	if (!does_folder_exist(path))
 		// Raise exception

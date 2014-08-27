@@ -33,9 +33,6 @@ ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, In
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
 		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Change codecs to default
 	info.vcodec = default_vcodec;
 	info.acodec = default_acodec;

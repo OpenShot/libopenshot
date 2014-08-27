@@ -29,9 +29,10 @@
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
-void ReaderBase::InitFileInfo()
+/// Constructor for the base reader, where many things are initialized.
+ReaderBase::ReaderBase()
 {
+	// Initialize info struct
 	info.has_video = false;
 	info.has_audio = false;
 	info.duration = 0.0;
@@ -55,6 +56,75 @@ void ReaderBase::InitFileInfo()
 	info.channels = 0;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
+
+	// Initialize debug mode
+	debug = false;
+}
+
+// Output debug information as JSON
+string ReaderBase::OutputDebugJSON()
+{
+	// Return formatted string
+	return debug_root.toStyledString();
+}
+
+
+// Append debug information as JSON
+void ReaderBase::AppendDebugItem(Json::Value debug_item)
+{
+	// Append item to root array
+	debug_root.append(debug_item);
+}
+
+// Append debug information as JSON
+void ReaderBase::AppendDebugMethod(string method_name, string arg1_name, int arg1_value,
+														 string arg2_name, int arg2_value,
+														 string arg3_name, int arg3_value,
+														 string arg4_name, int arg4_value,
+														 string arg5_name, int arg5_value,
+														 string arg6_name, int arg6_value)
+{
+	if (!debug)
+		// Don't do anything
+		return;
+
+	Json::Value debug_item;
+	debug_item["method"] = method_name;
+
+	// Output to standard output
+	cout << "Debug: Method: " << method_name << " (";
+
+	// Add attributes to method JSON
+	if (arg1_name.length() > 0) {
+		debug_item[arg1_name] = arg1_value;
+		cout << arg1_name << "=" << arg1_value;
+	}
+	if (arg2_name.length() > 0) {
+		debug_item[arg2_name] = arg2_value;
+		cout << ", " << arg2_name << "=" << arg2_value;
+	}
+	if (arg3_name.length() > 0) {
+		debug_item[arg3_name] = arg3_value;
+		cout << ", " << arg3_name << "=" << arg3_value;
+	}
+	if (arg4_name.length() > 0) {
+		debug_item[arg4_name] = arg4_value;
+		cout << ", " << arg4_name << "=" << arg4_value;
+	}
+	if (arg5_name.length() > 0) {
+		debug_item[arg5_name] = arg5_value;
+		cout << ", " << arg5_name << "=" << arg5_value;
+	}
+	if (arg6_name.length() > 0) {
+		debug_item[arg6_name] = arg6_value;
+		cout << ", " << arg6_name << "=" << arg6_value;
+	}
+
+	// Output to standard output
+	cout << ")" << endl;
+
+	// Append method to root array
+	debug_root.append(debug_item);
 }
 
 // Display file information
@@ -225,6 +295,7 @@ void ReaderBase::DrawFrameOnScene(string path, long _graphics_scene_address) {
 
 }
 
+// Lock reader and get a frame
 tr1::shared_ptr<Frame> ReaderBase::GetFrameSafe(int number)
 {
     const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);

@@ -118,10 +118,11 @@ namespace openshot
 		map<AVPicture*, AVPicture*> frames;
 		map<int, int> processing_video_frames;
 		map<int, int> processing_audio_frames;
+		map<int, int> processed_video_frames;
+		map<int, int> processed_audio_frames;
 		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
-		bool display_debug;
 		int prev_samples;
 		int prev_pts;
 		int pts_total;

@@ -37,10 +37,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
 	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), prev_samples(0), prev_pts(0),
-	  pts_total(0), pts_counter(0), display_debug(false), is_duration_known(false), largest_frame_processed(0) {
-
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
+	  pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
@@ -241,6 +238,13 @@ void FFmpegReader::Close()
 		final_cache.Clear();
 		working_cache.Clear();
 
+		// Clear processed lists
+		processed_video_frames.clear();
+		processed_audio_frames.clear();
+
+		// Clear debug json
+		debug_root.clear();
+
 		// Close the video file
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
@@ -381,9 +385,6 @@ void FFmpegReader::UpdateVideoInfo()
 
 tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks)
 {
-	if (display_debug)
-		cout << "GET FRAME " << requested_frame << ", last_frame: " << last_frame << endl;
-
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
@@ -397,11 +398,17 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 		// Invalid duration of video file
 		throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
+	// Debug output
+	AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
+
 	// Check the cache for this frame
-	if (final_cache.Exists(requested_frame))
+	if (final_cache.Exists(requested_frame)) {
+		// Debug output
+		AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		// Return the cached frame
 		return final_cache.GetFrame(requested_frame);
-
+	}
 	else
 	{
 		// Frame is not in cache
@@ -423,8 +430,6 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 		else
 		{
 			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-			cout << " >> TOO FAR, SO SEEK FIRST AND THEN WALK THE STREAM (diff: " << diff << ", requested_frame: " << requested_frame << ", last_frame: " << last_frame << ")" << endl;
-			//final_cache.Display();
 			if (enable_seek)
 				// Only seek if enabled
 				Seek(requested_frame);
@@ -460,6 +465,9 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 	// Allow nested OpenMP sections
 	omp_set_nested(true);
+
+	// Debug output
+	AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1, "", -1);
 
 	#pragma omp parallel
 	{
@@ -563,6 +571,9 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 		} // end omp single
 	} // end omp parallel
 
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "", -1, "", -1, "", -1);
 
 	// End of stream?
 	if (end_of_stream) {
@@ -657,6 +668,11 @@ bool FFmpegReader::CheckSeek(bool is_video)
 	// Are we seeking for a specific frame?
 	if (is_seeking)
 	{
+		// Determine if both an audio and video packet have been decoded since the seek happened.
+		// If not, allow the ReadStream method to keep looping
+		if ((is_video_seek && seek_video_frame_found == 0) || (!is_video_seek && seek_audio_frame_found == 0))
+			return false;
+
 		// CHECK VIDEO SEEK?
 		int current_pts = 0;
 		if (is_video && is_video_seek)
@@ -665,19 +681,22 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		else if (!is_video && !is_video_seek)
 			current_pts = packet->pts;
 
-		cout << "current_pts: " << current_pts << ", seeking_pts: " << seeking_pts << endl;
-
 		// determine if we are "before" the requested frame
 		if (current_pts > seeking_pts)
 		{
 			// SEEKED TOO FAR
-			cout << "Woops!  Need to seek backwards further..." << endl;
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "current_pts", current_pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "", -1, "", -1, "", -1);
 
 			// Seek again... to the nearest Keyframe
 			Seek(seeking_frame - 10);
 		}
 		else
 		{
+			// SEEKED TOO FAR
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "current_pts", current_pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "", -1, "", -1, "", -1);
+
 			// Seek worked, and we are "before" the requested frame
 			is_seeking = false;
 			seeking_frame = 0;
@@ -707,9 +726,17 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 			RemoveAVPacket(packet);
 		}
 
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Skipped)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
+
 		// Skip to next frame without decoding or caching
 		return;
 	}
+
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Before)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Init some things local (for OpenMP)
 	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
@@ -784,7 +811,14 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 
 		// Remove video frame from list of processing video frames
 		#pragma omp critical (processing_list)
+		{
 		processing_video_frames.erase(current_frame);
+		processed_video_frames[current_frame] = current_frame;
+		}
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number, "", -1, "", -1, "", -1);
 
 	} // end omp task
 
@@ -801,6 +835,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		// Remove packet
 		RemoveAVPacket(packet);
 
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Skipped)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
+
 		// Skip to next frame without decoding or caching
 		return;
 	}
@@ -816,6 +854,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Track 1st audio packet after a successful seek
 	if (!seek_audio_frame_found)
 		seek_audio_frame_found = target_frame;
+
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
 
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -847,8 +889,12 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	double audio_seconds = double(adjusted_pts) * info.audio_timebase.ToDouble();
 	double sample_seconds = float(pts_total) / info.sample_rate;
 
-	if (display_debug)
-		cout << pts_counter << ") PTS: " << adjusted_pts << ", Offset: " << audio_pts_offset << ", PTS Diff: " << (adjusted_pts - prev_pts) << ", Samples: " << pts_remaining_samples << ", Sample PTS ratio: " << (float(adjusted_pts - prev_pts) / pts_remaining_samples) << ", Sample Diff: " << (pts_remaining_samples - prev_samples) << ", Total: " << pts_total << ", PTS Seconds: " << audio_seconds << ", Sample Seconds: " << sample_seconds << ", Seconds Diff: " << (audio_seconds - sample_seconds) << ", raw samples: " << packet_samples << endl;
+	// Debug output
+	#pragma omp critical (debug_output)
+	{
+	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info A)", "pts_counter", pts_counter, "PTS", adjusted_pts, "Offset", audio_pts_offset, "PTS Diff", adjusted_pts - prev_pts, "Samples", pts_remaining_samples, "Sample PTS ratio", float(adjusted_pts - prev_pts) / pts_remaining_samples);
+	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info B)", "Sample Diff", pts_remaining_samples - prev_samples - prev_pts, "Total", pts_total, "PTS Seconds", audio_seconds, "Sample Seconds", sample_seconds, "Seconds Diff", audio_seconds - sample_seconds, "raw samples", packet_samples);
+	}
 
 	// DEBUG (FOR AUDIO ISSUES)
 	prev_pts = adjusted_pts;
@@ -1031,9 +1077,15 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		#pragma omp critical (processing_list)
 		{
 			// Update all frames as completed
-			for (int f = target_frame; f < starting_frame_number; f++)
+			for (int f = target_frame; f < starting_frame_number; f++) {
 				processing_audio_frames.erase(f);
+				processed_audio_frames[f] = f;
+			}
 		}
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number, "", -1, "", -1, "", -1);
 
 	} // end task
 
@@ -1044,16 +1096,22 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 // Seek to a specific frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 {
-	cout << "SEEK TO " << requested_frame << endl;
-
 	// Adjust for a requested frame that is too small or too large
 	if (requested_frame < 1)
 		requested_frame = 1;
 	if (requested_frame > info.video_length)
 		requested_frame = info.video_length;
 
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "", -1, "", -1, "", -1);
+
 	// Clear working cache (since we are seeking to another location in the file)
 	working_cache.Clear();
+
+	// Clear processed lists
+	processed_video_frames.clear();
+	processed_audio_frames.clear();
 
 	// Reset the last frame variable
 	last_frame = 0;
@@ -1254,7 +1312,8 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	AudioLocation location = {whole_frame, sample_start};
 
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
+	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame) &&
+		(location.frame != previous_packet_location.frame && location.sample_start != previous_packet_location.sample_start))
 	{
 		int orig_frame = location.frame;
 		int orig_start = location.sample_start;
@@ -1272,11 +1331,11 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 			location.frame++;
 		}
 
-		if (display_debug)
-			cout << "AUDIO GAP DETECTED!!! Changing frame " << orig_frame << ":" << orig_start << " to frame " << location.frame << ":" << location.sample_start << endl;
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
+
 	}
-	else if (display_debug)
-		cout << "NOT NEAR!!!  frame " << location.frame << ":" << location.sample_start << "  prev frame " << previous_packet_location.frame << ":" << previous_packet_location.sample_start << endl;
 
 	// Set previous location
 	previous_packet_location = location;
@@ -1317,21 +1376,6 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
 
-	// Get the smallest processing video and audio frame numbers
-	int smallest_video_frame = 1;
-	int smallest_audio_frame = 1;
-	#pragma omp critical (processing_list)
-	{
-		smallest_video_frame = GetSmallestVideoFrame(); // Adjust to be sure the frame is completed
-		smallest_audio_frame = GetSmallestAudioFrame(); // Adjust to be sure the frame is completed
-
-		// Adjust for video only, or audio only
-		if (!info.has_video)
-			smallest_video_frame = smallest_audio_frame;
-		if (!info.has_audio)
-			smallest_audio_frame = smallest_video_frame;
-	}
-
 	// Loop through all working queue frames
 	while (true)
 	{
@@ -1342,8 +1386,12 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Get the front frame of working cache
 		tr1::shared_ptr<Frame> f(working_cache.GetSmallestFrame());
 
-		bool is_video_ready = (f->number < smallest_video_frame);
-		bool is_audio_ready = (f->number < smallest_audio_frame);
+		bool is_video_ready = processed_video_frames.count(f->number);
+		bool is_audio_ready = processed_audio_frames.count(f->number);
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "processed_video_frames.count(f->number)", processed_video_frames.count(f->number), "processed_audio_frames.count(f->number)", processed_audio_frames.count(f->number), "", -1);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || working_cache.Count() >= 200)
@@ -1353,6 +1401,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 			if ((info.has_audio && seek_audio_frame_found != 0 && seek_audio_frame_found >= f->number) ||
 			   (info.has_video && seek_video_frame_found != 0 && seek_video_frame_found >= f->number))
 			   seek_trash = true;
+
+			// Debug output
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "seek_trash", seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "seek_trash", seek_trash, "", -1);
 
 			if (!seek_trash)
 			{

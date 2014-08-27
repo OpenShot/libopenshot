@@ -80,7 +80,30 @@ namespace openshot
 	 */
 	class WriterBase
 	{
+	protected:
+
+	    /// Debug JSON root
+	    Json::Value debug_root;
+
+		/// Append debug information as JSON
+		void AppendDebugItem(Json::Value debug_item);
+
+		/// Append debug information as JSON
+		void AppendDebugMethod(string method_name, string arg1_name, int arg1_value,
+												   string arg2_name, int arg2_value,
+												   string arg3_name, int arg3_value,
+												   string arg4_name, int arg4_value,
+												   string arg5_name, int arg5_value,
+												   string arg6_name, int arg6_value);
+
 	public:
+		/// Constructor for WriterBase class, many things are initilized here
+		WriterBase();
+
+		/// Enable or disable debug output. Output will display on the standard output, and you can
+		/// optionally invoke the OutputDebugJSON() method, which will format the debug output as JSON.
+		bool debug;
+
 		/// Information about the current media file
 		WriterInfo info;
 
@@ -93,10 +116,6 @@ namespace openshot
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
 		virtual void WriteFrame(ReaderBase* reader, int start, int length) = 0;
 
-		/// Initialize the values of the WriterInfo struct.  It is important for derived classes to call
-		/// this method, or the WriterInfo struct values will not be initialized.
-		void InitFileInfo();
-
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
@@ -105,6 +124,9 @@ namespace openshot
 
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
+
+		/// Output debug information as JSON
+		string OutputDebugJSON();
 	};
 
 }

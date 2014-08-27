@@ -279,9 +279,7 @@ set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
 
 # Install primary library
 INSTALL(TARGETS openshot 
-	LIBRARY DESTINATION ${LIB_INSTALL_DIR} 
-	FRAMEWORK DESTINATION . 
-	INCLUDES DESTINATION include )
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR} )
 	
 INSTALL(FILES ${headers} 
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/include/libopenshot )

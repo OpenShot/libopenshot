@@ -88,9 +88,33 @@ namespace openshot
 	 */
 	class ReaderBase
 	{
+	protected:
+		/// Section lock for multiple threads
 	    CriticalSection getFrameCriticalSection;
 
+	    /// Debug JSON root
+	    Json::Value debug_root;
+
+		/// Append debug information as JSON
+		void AppendDebugItem(Json::Value debug_item);
+
+		/// Append debug information as JSON
+		void AppendDebugMethod(string method_name, string arg1_name, int arg1_value,
+												   string arg2_name, int arg2_value,
+												   string arg3_name, int arg3_value,
+												   string arg4_name, int arg4_value,
+												   string arg5_name, int arg5_value,
+												   string arg6_name, int arg6_value);
+
 	public:
+
+		/// Constructor for the base reader, where many things are initialized.
+	    ReaderBase();
+
+		/// Enable or disable debug output. Output will display on the standard output, and you can
+		/// optionally invoke the OutputDebugJSON() method, which will format the debug output as JSON.
+		bool debug;
+
 		/// Information about the current media file
 		ReaderInfo info;
 
@@ -99,6 +123,9 @@ namespace openshot
 
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
+
+		/// Test method to draw a bitmap on a Qt QGraphicsScene
+		void DrawFrameOnScene(string path, long _graphics_scene_address);
 
 		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that
@@ -111,13 +138,6 @@ namespace openshot
 	    /// A thread safe version of GetFrame.
 	    tr1::shared_ptr<Frame> GetFrameSafe(int number);
 
-		/// Test method to draw a bitmap on a Qt QGraphicsScene
-		void DrawFrameOnScene(string path, long _graphics_scene_address);
-
-		/// Initialize the values of the ReaderInfo struct.  It is important for derived classes to call
-		/// this method, or the ReaderInfo struct values will not be initialized.
-		void InitFileInfo();
-
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;
 
@@ -129,6 +149,10 @@ namespace openshot
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;
+
+		/// Output debug information as JSON
+		string OutputDebugJSON();
+
 	};
 
 }

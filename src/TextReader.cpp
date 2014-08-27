@@ -32,9 +32,6 @@ using namespace openshot;
 /// Default constructor (blank text)
 TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER) {
 
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
@@ -43,9 +40,6 @@ TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), t
 TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();

@@ -39,9 +39,6 @@ DummyReader::DummyReader() {
 // Constructor for DummyReader.  Pass a framerate and samplerate.
 DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
 
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Set key info settings
 	info.has_audio = false;
 	info.has_video = true;

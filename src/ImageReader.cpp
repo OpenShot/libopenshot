@@ -31,9 +31,6 @@ using namespace openshot;
 
 ImageReader::ImageReader(string path) throw(InvalidFile) : path(path), is_open(false)
 {
-	// Init FileInfo struct (clear all values)
-	InitFileInfo();
-
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();

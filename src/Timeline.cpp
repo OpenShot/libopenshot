@@ -47,7 +47,6 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	final_cache = Cache(2 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
 
 	// Init FileInfo struct (clear all values)
-	InitFileInfo();
 	info.width = width;
 	info.height = height;
 	info.fps = fps;
