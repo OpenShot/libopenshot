@@ -72,36 +72,43 @@ FIND_PACKAGE(OpenShotAudio REQUIRED)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 ################# QT5 ###################
-set(CMAKE_AUTOMOC ON)
-
 # Find QT5 libraries
-find_package(Qt5Widgets)
-find_package(Qt5Core)
-find_package(Qt5Gui)
-find_package(Qt5Multimedia)
+find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Core REQUIRED)
+find_package(Qt5Gui REQUIRED)
+find_package(Qt5Multimedia REQUIRED)
+find_package(Qt5MultimediaWidgets REQUIRED)
 
 # Include Qt headers (needed for compile)
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Multimedia_INCLUDE_DIRS})
+include_directories(${Qt5MultimediaWidgets_INCLUDE_DIRS})
 
 add_definitions(${Qt5Widgets_DEFINITIONS})
 add_definitions(${Qt5Core_DEFINITIONS})
 add_definitions(${Qt5Gui_DEFINITIONS})
 add_definitions(${Qt5Multimedia_DEFINITIONS})
+add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
 
-# Add Multimedia library
 SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES} 
 				 ${Qt5Core_LIBRARIES}
 				 ${Qt5Gui_LIBRARIES}
-				 ${Qt5Multimedia_LIBRARIES})
+				 ${Qt5Multimedia_LIBRARIES}
+				 ${Qt5MultimediaWidgets_LIBRARIES})
 
 # Set compiler flags for Qt
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb ")
+
+# Manually moc Qt files
+qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
+
 
 ################# BLACKMAGIC DECKLINK ###################
 IF (ENABLE_BLACKMAGIC)

@@ -186,6 +186,9 @@ namespace openshot
 		/// Init a collection of software rescalers (thread safe)
 		void InitScalers();
 
+		/// Remove partial frames due to seek
+		bool IsPartialFrame(int requested_frame);
+
 		/// Process a video packet
 		void ProcessVideoPacket(int requested_frame);
 

@@ -47,18 +47,15 @@ int main(int argc, char* argv[])
 
 	sinelReader.GetFrame(300)->Display();
 	sinelReader.GetFrame(301)->Display();
-	sinelReader.GetFrame(302)->Display();
-	sinelReader.GetFrame(303)->Display();
 
 	sinelReader.GetFrame(100)->Display();
 	sinelReader.GetFrame(101)->Display();
-	sinelReader.GetFrame(102)->Display();
-	sinelReader.GetFrame(103)->Display();
 
-	sinelReader.GetFrame(500)->Display();
-	sinelReader.GetFrame(501)->Display();
-	sinelReader.GetFrame(502)->Display();
-	sinelReader.GetFrame(503)->Display();
+	sinelReader.GetFrame(600)->Display();
+	sinelReader.GetFrame(601)->Display();
+
+	sinelReader.GetFrame(380)->Display();
+	sinelReader.GetFrame(381)->Display();
 
 	cout << sinelReader.OutputDebugJSON() << endl;;
 	sinelReader.Close();

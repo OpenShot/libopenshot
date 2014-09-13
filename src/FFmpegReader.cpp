@@ -36,7 +36,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
-	  seek_audio_frame_found(-1), seek_video_frame_found(-1), resampleCtx(NULL), prev_samples(0), prev_pts(0),
+	  seek_audio_frame_found(0), seek_video_frame_found(0), resampleCtx(NULL), prev_samples(0), prev_pts(0),
 	  pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0) {
 
 	// Initialize FFMpeg, and register all formats and codecs
@@ -670,7 +670,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 	{
 		// Determine if both an audio and video packet have been decoded since the seek happened.
 		// If not, allow the ReadStream method to keep looping
-		if ((is_video_seek && seek_video_frame_found == 0) || (!is_video_seek && seek_audio_frame_found == 0))
+		if ((is_video_seek && !seek_video_frame_found) || (!is_video_seek && !seek_audio_frame_found))
 			return false;
 
 		// CHECK VIDEO SEEK?
@@ -693,7 +693,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		}
 		else
 		{
-			// SEEKED TOO FAR
+			// SEEK WORKED
 			#pragma omp critical (debug_output)
 			AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "current_pts", current_pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "", -1, "", -1, "", -1);
 
@@ -701,8 +701,8 @@ bool FFmpegReader::CheckSeek(bool is_video)
 			is_seeking = false;
 			seeking_frame = 0;
 			seeking_pts = -1;
-			seek_audio_frame_found = -1; // used to detect which frames to throw away after a seek
-			seek_video_frame_found = -1; // used to detect which frames to throw away after a seek
+			//seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
+			//seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
 		}
 	}
 
@@ -758,7 +758,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	processing_video_frames[current_frame] = current_frame;
 
 	// Track 1st video packet after a successful seek
-	if (!seek_video_frame_found)
+	if (!seek_video_frame_found && is_seeking)
 		seek_video_frame_found = current_frame;
 
 	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
@@ -852,7 +852,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	processing_audio_frames[target_frame] = target_frame;
 
 	// Track 1st audio packet after a successful seek
-	if (!seek_audio_frame_found)
+	if (!seek_audio_frame_found && is_seeking)
 		seek_audio_frame_found = target_frame;
 
 	// Debug output
@@ -1135,8 +1135,8 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 		is_seeking = false;
 		seeking_frame = 1;
 		seeking_pts = ConvertFrameToVideoPTS(1);
-		seek_audio_frame_found = -1; // used to detect which frames to throw away after a seek
-		seek_video_frame_found = -1; // used to detect which frames to throw away after a seek
+		seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
+		seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
 	}
 	else
 	{
@@ -1372,6 +1372,21 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 	}
 }
 
+// Determine if frame is partial due to seek
+bool FFmpegReader::IsPartialFrame(int requested_frame) {
+
+	// Sometimes a seek gets partial frames, and we need to remove them
+	bool seek_trash = false;
+	int max_seeked_frame = seek_audio_frame_found; // determine max seeked frame
+	if (seek_video_frame_found > max_seeked_frame)
+		max_seeked_frame = seek_video_frame_found;
+	if ((info.has_audio && seek_audio_frame_found && max_seeked_frame >= requested_frame) ||
+	   (info.has_video && seek_video_frame_found && max_seeked_frame >= requested_frame))
+	   seek_trash = true;
+
+	return seek_trash;
+}
+
 // Check the working queue, and move finished frames to the finished queue
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
@@ -1388,25 +1403,20 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 		bool is_video_ready = processed_video_frames.count(f->number);
 		bool is_audio_ready = processed_audio_frames.count(f->number);
+		bool is_seek_trash = IsPartialFrame(f->number);
 
 		// Debug output
 		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "processed_video_frames.count(f->number)", processed_video_frames.count(f->number), "processed_audio_frames.count(f->number)", processed_audio_frames.count(f->number), "", -1);
 
 		// Check if working frame is final
-		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || working_cache.Count() >= 200)
+		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash || working_cache.Count() >= 200)
 		{
-			// Sometimes a seek gets partial frames, and we need to remove them
-			bool seek_trash = false;
-			if ((info.has_audio && seek_audio_frame_found != 0 && seek_audio_frame_found >= f->number) ||
-			   (info.has_video && seek_video_frame_found != 0 && seek_video_frame_found >= f->number))
-			   seek_trash = true;
-
 			// Debug output
 			#pragma omp critical (debug_output)
-			AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "seek_trash", seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "seek_trash", seek_trash, "", -1);
+			AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1, "", -1);
 
-			if (!seek_trash)
+			if (!is_seek_trash)
 			{
 				// Move frame to final cache
 				final_cache.Add(f->number, f);
