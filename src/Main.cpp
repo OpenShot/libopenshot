@@ -45,19 +45,15 @@ int main(int argc, char* argv[])
 	sinelReader.debug = true;
 	sinelReader.Open();
 
-	sinelReader.GetFrame(300)->Display();
-	sinelReader.GetFrame(301)->Display();
+	// Seek test
+	int frames[15] = {1,624,585,222,333};
+	for (int x = 0; x<6; x++) {
+		tr1::shared_ptr<Frame> f = sinelReader.GetFrame(frames[x]);
+		f->AddOverlayNumber(frames[x]);
+		f->Display();
+	}
 
-	sinelReader.GetFrame(100)->Display();
-	sinelReader.GetFrame(101)->Display();
-
-	sinelReader.GetFrame(600)->Display();
-	sinelReader.GetFrame(601)->Display();
-
-	sinelReader.GetFrame(380)->Display();
-	sinelReader.GetFrame(381)->Display();
-
-	cout << sinelReader.OutputDebugJSON() << endl;;
+	cout << sinelReader.OutputDebugJSON() << endl;
 	sinelReader.Close();
 	return 0;
 

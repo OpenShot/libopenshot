@@ -701,8 +701,6 @@ bool FFmpegReader::CheckSeek(bool is_video)
 			is_seeking = false;
 			seeking_frame = 0;
 			seeking_pts = -1;
-			//seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
-			//seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
 		}
 	}
 
@@ -1380,8 +1378,8 @@ bool FFmpegReader::IsPartialFrame(int requested_frame) {
 	int max_seeked_frame = seek_audio_frame_found; // determine max seeked frame
 	if (seek_video_frame_found > max_seeked_frame)
 		max_seeked_frame = seek_video_frame_found;
-	if ((info.has_audio && seek_audio_frame_found && max_seeked_frame >= requested_frame) ||
-	   (info.has_video && seek_video_frame_found && max_seeked_frame >= requested_frame))
+	if ((info.has_audio && seek_audio_frame_found && max_seeked_frame > requested_frame) ||
+	   (info.has_video && seek_video_frame_found && max_seeked_frame > requested_frame))
 	   seek_trash = true;
 
 	return seek_trash;
