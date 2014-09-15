@@ -420,9 +420,9 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 			// Get first frame
 			ReadStream(1);
 
-		// Are we within 30 frames of the requested frame?
+		// Are we within X frames of the requested frame?
 		int diff = requested_frame - last_frame;
-		if (diff >= 1 && diff <= 30)
+		if (diff >= 1 && diff <= 20)
 		{
 			// Continue walking the stream
 			return ReadStream(requested_frame);
@@ -506,9 +506,13 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 					else
 						check_seek = false;
 
-					if (check_seek)
+					if (check_seek) {
+						// Remove packet (since this packet is pointless)
+						RemoveAVPacket(packet);
+
 						// Jump to the next iteration of this loop
 						continue;
+					}
 
 					#pragma omp critical (packet_cache)
 					frame_finished = GetAVFrame();
@@ -534,9 +538,13 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 					else
 						check_seek = false;
 
-					if (check_seek)
+					if (check_seek) {
+						// Remove packet (since this packet is pointless)
+						RemoveAVPacket(packet);
+
 						// Jump to the next iteration of this loop
 						continue;
+					}
 
 					// Update PTS / Frame Offset (if any)
 					UpdatePTSOffset(false);
@@ -608,6 +616,7 @@ int FFmpegReader::GetNextPacket()
 
 		// Update current packet pointer
 		packet = packets[next_packet];
+
 	}else
 	{
 		// Free packet, since it's unused
@@ -928,7 +937,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	#pragma omp critical (packet_cache)
 	{
 		// Remove packet
-		av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3()
+		av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3(). It causes a memory leak by not freeing pkt->data.
 		RemoveAVPacket(my_packet);
 	}
 
@@ -1572,6 +1581,9 @@ void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
 
 		// Remove from cache
 		frames.erase(remove_frame);
+
+		// Delete the object
+		delete remove_frame;
 	}
 }
 
@@ -1581,12 +1593,14 @@ void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 	// Remove packet (if any)
 	if (packets.count(remove_packet))
 	{
-		// Remove from cache
-		packets.erase(remove_packet);
-
 		// deallocate memory for packet
 		av_free_packet(remove_packet);
 
+		// Remove from cache
+		packets.erase(remove_packet);
+
+		// Delete the object
+		delete remove_packet;
 	}
 }
 

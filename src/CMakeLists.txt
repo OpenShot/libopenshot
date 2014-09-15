@@ -140,7 +140,7 @@ include_directories("../thirdparty/jsoncpp/include")
 
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so")
-#set(PROFILER "/usr/lib/libtcmalloc.so")
+#set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
 #### GET LIST OF EFFECT FILES ####
 FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")

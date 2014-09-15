@@ -33,6 +33,8 @@
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 #include <omp.h>
+#include <stdlib.h>
+#include <time.h>
 
 
 using namespace openshot;
@@ -42,15 +44,24 @@ int main(int argc, char* argv[])
 {
 
 	FFmpegReader sinelReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	sinelReader.debug = true;
+	//sinelReader.debug = true;
 	sinelReader.Open();
 
+	// init random #s
+	//srand(time(NULL));
+
 	// Seek test
-	int frames[15] = {1,624,585,222,333};
-	for (int x = 0; x<6; x++) {
-		tr1::shared_ptr<Frame> f = sinelReader.GetFrame(frames[x]);
-		f->AddOverlayNumber(frames[x]);
-		f->Display();
+	int x = 0;
+	while (true) {
+		x++;
+		int frame_number = (rand() % 625) + 1;
+		cout << "X: " << x << ", Frame: " << frame_number << endl;
+		tr1::shared_ptr<Frame> f = sinelReader.GetFrame(frame_number);
+		//f->AddOverlayNumber(frame_number);
+		//f->Display();
+
+		if (x == 5000)
+			break;
 	}
 
 	cout << sinelReader.OutputDebugJSON() << endl;
