@@ -52,6 +52,7 @@
 									<listOptionValue builtIn="false" value="/opt/local/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4/QtMultimedia/"/>
+									<listOptionValue builtIn="false" value="/usr/include/ImageMagick-6"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1807071462" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -338,7 +339,7 @@
 			</target>
 			<target name="Linux: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-G "Unix Makefiles" ../ -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildArguments>-G "Unix Makefiles" ../ -DMAGICKCORE_HDRI_ENABLE=0 -DMAGICKCORE_QUANTUM_DEPTH=16 -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>

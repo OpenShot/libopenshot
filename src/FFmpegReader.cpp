@@ -870,6 +870,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
 	int packet_samples = 0;
+	uint8_t *original_packet_data = my_packet->data;
+	int original_packet_size = my_packet->size;
+
 	while (my_packet->size > 0) {
 		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
 		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
@@ -887,6 +890,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		my_packet->data += used;
 		my_packet->size -= used;
 	}
+
+	// Restore packet size and data (to avoid crash in av_free_packet)
+	my_packet->data = original_packet_data;
+	my_packet->size = original_packet_size;
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
 	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
@@ -935,11 +942,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	}
 
 	#pragma omp critical (packet_cache)
-	{
-		// Remove packet
-		av_init_packet(my_packet);	// TODO: this is a hack, to prevent a bug calling av_free_packet after avcodec_decode_audio3(). It causes a memory leak by not freeing pkt->data.
-		RemoveAVPacket(my_packet);
-	}
+	RemoveAVPacket(my_packet);
 
 	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
 	{

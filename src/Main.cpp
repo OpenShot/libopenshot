@@ -60,7 +60,10 @@ int main(int argc, char* argv[])
 		//f->AddOverlayNumber(frame_number);
 		//f->Display();
 
-		if (x == 5000)
+		if (x == 32)
+			sinelReader.debug = true;
+
+		if (x == 50)
 			break;
 	}
 
