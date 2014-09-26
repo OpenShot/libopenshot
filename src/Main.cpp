@@ -60,11 +60,11 @@ int main(int argc, char* argv[])
 		//f->AddOverlayNumber(frame_number);
 		//f->Display();
 
-		if (x == 32)
+		//if (x == 7654)
 			sinelReader.debug = true;
 
-		if (x == 50)
-			break;
+		//if (x == 7655)
+		//	break;
 	}
 
 	cout << sinelReader.OutputDebugJSON() << endl;

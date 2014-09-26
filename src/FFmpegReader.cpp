@@ -682,20 +682,17 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		if ((is_video_seek && !seek_video_frame_found) || (!is_video_seek && !seek_audio_frame_found))
 			return false;
 
-		// CHECK VIDEO SEEK?
-		int current_pts = 0;
-		if (is_video && is_video_seek)
-			current_pts = GetVideoPTS();
-		// CHECK AUDIO SEEK?
-		else if (!is_video && !is_video_seek)
-			current_pts = packet->pts;
+		// Determine max seeked frame
+		int max_seeked_frame = seek_audio_frame_found; // determine max seeked frame
+		if (seek_video_frame_found > max_seeked_frame)
+			max_seeked_frame = seek_video_frame_found;
 
 		// determine if we are "before" the requested frame
-		if (current_pts > seeking_pts)
+		if (max_seeked_frame >= seeking_frame)
 		{
 			// SEEKED TOO FAR
 			#pragma omp critical (debug_output)
-			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "current_pts", current_pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "", -1, "", -1, "", -1);
+			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "current_pts", packet->pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek again... to the nearest Keyframe
 			Seek(seeking_frame - 10);
@@ -704,7 +701,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		{
 			// SEEK WORKED
 			#pragma omp critical (debug_output)
-			AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "current_pts", current_pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "", -1, "", -1, "", -1);
+			AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "is_video_seek", is_video_seek, "current_pts", packet->pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek worked, and we are "before" the requested frame
 			is_seeking = false;
@@ -1390,8 +1387,8 @@ bool FFmpegReader::IsPartialFrame(int requested_frame) {
 	int max_seeked_frame = seek_audio_frame_found; // determine max seeked frame
 	if (seek_video_frame_found > max_seeked_frame)
 		max_seeked_frame = seek_video_frame_found;
-	if ((info.has_audio && seek_audio_frame_found && max_seeked_frame > requested_frame) ||
-	   (info.has_video && seek_video_frame_found && max_seeked_frame > requested_frame))
+	if ((info.has_audio && seek_audio_frame_found && max_seeked_frame >= requested_frame) ||
+	   (info.has_video && seek_video_frame_found && max_seeked_frame >= requested_frame))
 	   seek_trash = true;
 
 	return seek_trash;
