@@ -41,21 +41,29 @@ FIND_PACKAGE(UnitTest++ REQUIRED)
 include_directories(${UNITTEST++_INCLUDE_DIR})
 
 ################ IMAGE MAGICK ##################
-# Find the ImageMagick++ library
-FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-
-# Include ImageMagick++ headers (needed for compile)
-include_directories(${ImageMagick_INCLUDE_DIRS})
-
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
 IF (MAGICKCORE_QUANTUM_DEPTH)
 	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-	MESSAGE("-- MAGICKCORE_QUANTUM_DEPTH = ${MAGICKCORE_QUANTUM_DEPTH}")
+ELSE (MAGICKCORE_QUANTUM_DEPTH)
+	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
 ENDIF (MAGICKCORE_QUANTUM_DEPTH)
 IF (MAGICKCORE_HDRI_ENABLE)
 	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-	MESSAGE("-- MAGICKCORE_HDRI_ENABLE = ${MAGICKCORE_HDRI_ENABLE}")
+ELSE (MAGICKCORE_HDRI_ENABLE)
+	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
 ENDIF (MAGICKCORE_HDRI_ENABLE)
+IF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
+ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
+ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+
+# Find the ImageMagick++ library
+FIND_PACKAGE(ImageMagick REQUIRED COMPONENTS Magick++ MagickWand MagickCore)
+
+# Include ImageMagick++ headers (needed for compile)
+include_directories(${ImageMagick_INCLUDE_DIRS})
+	
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
@@ -140,8 +148,10 @@ IF (ENABLE_TESTS)
 	SET ( OPENSHOT_TEST_FILES ${OPENSHOT_TEST_FILES} 
 		   Cache_Tests.cpp
 		   Clip_Tests.cpp
+		   Color_Tests.cpp
 		   Coordinate_Tests.cpp
 		   ReaderBase_Tests.cpp
+		   ImageWriter_Tests.cpp
 		   FFmpegReader_Tests.cpp
 		   FFmpegWriter_Tests.cpp
 		   Fraction_Tests.cpp

@@ -44,19 +44,28 @@ IF (APPLE)
 ENDIF(APPLE)
 
 ################ IMAGE MAGICK ##################
+# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+IF (MAGICKCORE_QUANTUM_DEPTH)
+	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+ELSE (MAGICKCORE_QUANTUM_DEPTH)
+	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
+ENDIF (MAGICKCORE_QUANTUM_DEPTH)
+IF (MAGICKCORE_HDRI_ENABLE)
+	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+ELSE (MAGICKCORE_HDRI_ENABLE)
+	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
+ENDIF (MAGICKCORE_HDRI_ENABLE)
+IF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
+ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
+ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+
 # Find the ImageMagick++ library
 FIND_PACKAGE(ImageMagick REQUIRED COMPONENTS Magick++ MagickWand MagickCore)
 
 # Include ImageMagick++ headers (needed for compile)
 include_directories(${ImageMagick_INCLUDE_DIRS})
-
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-IF (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-IF (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-ENDIF (MAGICKCORE_HDRI_ENABLE)
 	
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
@@ -173,6 +182,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		FrameMapper.cpp
 		KeyFrame.cpp
 		ImageReader.cpp
+		ImageWriter.cpp
 		PlayerBase.cpp
 		Point.cpp
 		Profiles.cpp
@@ -239,19 +249,19 @@ SET ( REQUIRED_LIBRARIES
 target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
 
-############### TEST EXECUTABLE ################
+############### CLI EXECUTABLE ################
 # Create test executable
 add_executable(example Main.cpp)
 
 # Link test executable to the new library
 target_link_libraries(example openshot)
 
-############### TEST QT EXECUTABLE ################
+############### PLAYER EXECUTABLE ################
 # Create test executable
-add_executable(demo_player Qt/demo/main.cpp)
+add_executable(openshot_player Qt/demo/main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(demo_player openshot)
+target_link_libraries(openshot_player openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)
