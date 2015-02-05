@@ -45,6 +45,7 @@ namespace openshot
      */
     class PlayerPrivate : Thread
     {
+    tr1::shared_ptr<Frame> frame; /// The current frame
 	int video_position; /// The current frame position.
 	int audio_position; /// The current frame position.
 	ReaderBase *reader; /// The reader which powers this player
@@ -52,6 +53,7 @@ namespace openshot
 	VideoPlaybackThread *videoPlayback; /// The video thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	RendererBase *renderer;
+	int last_video_position; /// The last frame actually displayed
 
 	/// Constructor
 	PlayerPrivate(RendererBase *rb);

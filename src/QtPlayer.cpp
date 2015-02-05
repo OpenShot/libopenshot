@@ -54,21 +54,23 @@ QtPlayer::~QtPlayer()
 void QtPlayer::SetSource(const std::string &source)
 {
     reader = new FFmpegReader(source);
+    reader->debug = true;
     reader->Open();
-    //reader->info.has_video = false;
 	Reader(reader);
 }
 
 void QtPlayer::Play()
 {
 	cout << "PLAY() on QTPlayer" << endl;
+
+	// Set mode to playing, and speed to normal
+	mode = PLAYBACK_PLAY;
+	Speed(1);
+
 	if (reader && !threads_started) {
-		mode = PLAYBACK_PLAY;
+		// Start thread only once
 		p->startPlayback();
 		threads_started = true;
-	} else {
-		mode = PLAYBACK_PLAY;
-		Speed(1);
 	}
 }
 

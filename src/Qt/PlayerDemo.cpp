@@ -41,12 +41,12 @@ PlayerDemo::PlayerDemo(QWidget *parent)
     , video(new VideoRenderWidget(this))
     , player(new QtPlayer(video->GetRenderer()))
 {
-    setWindowTitle("Qt Player Demo");
+    setWindowTitle("OpenShot Player");
 
-    menu->setNativeMenuBar(true);
+    menu->setNativeMenuBar(false);
 
     QAction *action = NULL;
-    action = menu->addAction("open");
+    action = menu->addAction("Choose File");
     connect(action, SIGNAL(triggered(bool)), this, SLOT(open(bool)));
 
     vbox->addWidget(menu, 0);
@@ -63,39 +63,65 @@ PlayerDemo::PlayerDemo(QWidget *parent)
 
 PlayerDemo::~PlayerDemo()
 {
+	player->Stop();
     delete player;
 }
 
 void PlayerDemo::keyPressEvent(QKeyEvent *event)
 {
-	string key = event->text().toStdString();
-	if (key == " ") {
-		cout << "START / STOP: " << player->Mode() << endl;
-		if (player->Mode() == openshot::PLAYBACK_PLAY)
-			player->Pause();
-		else if (player->Mode() == openshot::PLAYBACK_PAUSED)
+	if (event->key() == Qt::Key_Space || event->key() == Qt::Key_K) {
+
+		if (player->Mode() == openshot::PLAYBACK_PAUSED)
+		{
+			// paused, so start playing again
 			player->Play();
 
+		}
+		else if (player->Mode() == openshot::PLAYBACK_PLAY)
+		{
+
+			if (player->Speed() == 0)
+				// already playing, but speed is zero... so just speed up to normal
+				player->Speed(1);
+			else
+				// already playing... so pause
+				player->Pause();
+
+		}
+
 	}
-	else if (key == "j") {
+	else if (event->key() == Qt::Key_J) {
 		cout << "BACKWARD" << player->Speed() - 1 << endl;
-		int current_speed = player->Speed();
-		player->Speed(current_speed - 1); // backwards
+		if (player->Speed() - 1 != 0)
+			player->Speed(player->Speed() - 1);
+		else
+			player->Speed(player->Speed() - 2);
 
+		if (player->Mode() == openshot::PLAYBACK_PAUSED)
+			player->Play();
 	}
-	else if (key == "k") {
-		cout << "PAUSE" << endl;
-		if (player->Mode() == openshot::PLAYBACK_PLAY)
-			player->Pause();
-		else if (player->Mode() == openshot::PLAYBACK_PAUSED)
+	else if (event->key() == Qt::Key_L) {
+		cout << "FORWARD" << player->Speed() + 1 << endl;
+		if (player->Speed() + 1 != 0)
+			player->Speed(player->Speed() + 1);
+		else
+			player->Speed(player->Speed() + 2);
+
+		if (player->Mode() == openshot::PLAYBACK_PAUSED)
 			player->Play();
 
 	}
-	else if (key == "l") {
-		cout << "FORWARD" << player->Speed() + 1 << endl;
-		int current_speed = player->Speed();
-		player->Speed(current_speed + 1); // backwards
-
+	else if (event->key() == Qt::Key_Left) {
+		cout << "FRAME STEP -1" << endl;
+		if (player->Speed() != 0)
+			player->Speed(0);
+		player->Seek(player->Position() - 1);
+	}
+	else if (event->key() == Qt::Key_Right) {
+		cout << "FRAME STEP +1" << endl;
+		if (player->Speed() != 0)
+			player->Speed(0);
+		player->Seek(player->Position() + 1);
 	}
 
 	event->accept();
@@ -104,8 +130,16 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 void PlayerDemo::open(bool checked)
 {
+	// Get filename of media files
     const QString filename = QFileDialog::getOpenFileName(this, "Open Video File");
     if (filename.isEmpty()) return;
+
+    // Create FFmpegReader and open file
     player->SetSource(filename.toStdString());
+
+    // Set aspect ratio of widget
+    video->SetAspectRatio(player->Reader()->info.display_ratio, player->Reader()->info.pixel_ratio);
+
+    // Play video
     player->Play();
 }

@@ -98,6 +98,7 @@ namespace openshot
 
 		// Create new audio source reader
 		source = new AudioReaderSource(reader, 1, buffer_size);
+		source->setLooping(true); // prevent this source from terminating when it reaches the end
 
 		// Play the video
 		Play();
@@ -171,15 +172,11 @@ namespace openshot
     			mixer.addInputSource(&transport, false);
     			player.setSource(&mixer);
 
-    			// Start playing
-    			is_playing = true;
-
     			// Start the transport
     			transport.start();
 
-    			while (!threadShouldExit() && transport.isPlaying() && is_playing) {
-    				sleep(250);
-    			}
+    			while (!threadShouldExit() && transport.isPlaying() && is_playing)
+    				sleep(100);
 
     			is_playing = false;
     		}

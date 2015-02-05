@@ -38,7 +38,13 @@ VideoRenderWidget::VideoRenderWidget(QWidget *parent)
     p.setColor(QPalette::Window, Qt::black);
     setPalette(p);
     setAttribute(Qt::WA_OpaquePaintEvent);
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    // init aspect ratio settings (default values)
+    aspect_ratio.num = 16;
+    aspect_ratio.den = 9;
+    pixel_ratio.num = 1;
+    pixel_ratio.den = 1;
 
     connect(renderer, SIGNAL(present(const QImage &)), this, SLOT(present(const QImage &)));
 }
@@ -52,9 +58,32 @@ VideoRenderer *VideoRenderWidget::GetRenderer() const
     return renderer;
 }
 
+void VideoRenderWidget::SetAspectRatio(openshot::Fraction new_aspect_ratio, openshot::Fraction new_pixel_ratio)
+{
+	aspect_ratio = new_aspect_ratio;
+	pixel_ratio = new_pixel_ratio;
+}
+
+QRect VideoRenderWidget::centeredViewport(int width, int height)
+{
+	// calculate aspect ratio
+	float aspectRatio = aspect_ratio.ToFloat() * pixel_ratio.ToFloat();
+	int heightFromWidth = (int) (width / aspectRatio);
+	int widthFromHeight = (int) (height * aspectRatio);
+
+	if (heightFromWidth <= height) {
+		return QRect(0,(height - heightFromWidth) / 2, width, heightFromWidth);
+	} else {
+		return QRect((width - widthFromHeight) / 2.0, 0, widthFromHeight, height);
+  }
+}
+
 void VideoRenderWidget::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
+
+    // maintain aspect ratio
+    painter.setViewport(centeredViewport(width(), height()));
 
     if (testAttribute(Qt::WA_OpaquePaintEvent)) {
         painter.fillRect(event->rect(), palette().window());

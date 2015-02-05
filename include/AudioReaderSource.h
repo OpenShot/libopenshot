@@ -77,8 +77,9 @@ namespace openshot
 	public:
 
 		/// @brief Constructor that reads samples from a reader
-		/// @param reader This reader provides constant samples from a ReaderBase derived class
+		/// @param audio_reader This reader provides constant samples from a ReaderBase derived class
 		/// @param starting_frame_number This is the frame number to start reading samples from the reader.
+		/// @param buffer_size The max number of samples to keep in the buffer at one time.
 		AudioReaderSource(ReaderBase *audio_reader, int64 starting_frame_number, int buffer_size);
 
 		/// Destructor
@@ -133,7 +134,7 @@ namespace openshot
 	    ReaderBase* Reader() const { return reader; }
 
 	    /// Seek to a specific frame
-	    void Seek(int64 new_position) { frame_number = new_position; }
+	    void Seek(int64 new_position) { frame_number = new_position; estimated_frame = new_position; }
 
 	};
 

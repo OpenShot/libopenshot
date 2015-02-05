@@ -35,8 +35,8 @@ namespace openshot
 	: renderer(rb), Thread("player"), video_position(0), audio_position(0)
 	, audioPlayback(new AudioPlaybackThread())
 	, videoPlayback(new VideoPlaybackThread(rb))
-    , speed(1), reader(NULL)
-    {       }
+    , speed(1), reader(NULL), last_video_position(0)
+    { }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
@@ -65,35 +65,43 @@ namespace openshot
 	if (reader->info.has_video)
 		videoPlayback->startThread(2);
 
-	tr1::shared_ptr<Frame> frame;
 	while (!threadShouldExit()) {
 
 	    // Calculate the milliseconds a single frame should stay on the screen
 	    double frame_time = (1000.0 / reader->info.fps.ToDouble());
 
-	    // Experimental Pausing Code
-	    if (speed == 0) {
-	    	sleep(frame_time);
-	    	continue;
-	    }
-
 		// Get the start time (to track how long a frame takes to render)
 	    const Time t1 = Time::getCurrentTime();
 
-	    // Get the current video frame
+	    // Get the current video frame (if it's different)
 	    frame = getFrame();
+
+	    // Experimental Pausing Code (if frame has not changed)
+	    if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length)) {
+	    	speed = 0;
+	    	sleep(frame_time);
+	    	continue;
+	    }
 
 	    // Set the video frame on the video thread and render frame
 	    videoPlayback->frame = frame;
 	    videoPlayback->render.signal();
 	    videoPlayback->rendered.wait();
 
+	    // Keep track of the last displayed frame
+	    last_video_position = video_position;
+
 	    // How many frames ahead or behind is the video thread?
 	    int video_frame_diff = 0;
-	    if (reader->info.has_audio && reader->info.has_video)
-	    	// Only calculate this if a reader contains both an audio and video thread
-	    	audio_position = audioPlayback->getCurrentFramePosition();
-	    	video_frame_diff = video_position - audio_position;
+	    if (reader->info.has_audio && reader->info.has_video) {
+	    	if (speed != 1)
+	    		// Set audio frame again (since we are not in normal speed, and not paused)
+	    		audioPlayback->Seek(video_position);
+
+			// Only calculate this if a reader contains both an audio and video thread
+			audio_position = audioPlayback->getCurrentFramePosition();
+			video_frame_diff = video_position - audio_position;
+	    }
 
 	    // Get the end time (to track how long a frame takes to render)
 	    const Time t2 = Time::getCurrentTime();
@@ -113,9 +121,12 @@ namespace openshot
 	    	// the video to catch up.
 	    	sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
 
-	    //else if (video_frame_diff < 4)
-	    	// Video is too far behind, so skip to the current frame
-	    	//video_position += (abs(video_frame_diff) - speed);
+	    else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
+	    	// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
+	    	video_position++;
+	    	sleep_time = 0;
+	    }
+
 
 	    // Sleep (leaving the video frame on the screen for the correct amount of time)
 	    if (sleep_time > 0) sleep(sleep_time);
@@ -135,8 +146,16 @@ namespace openshot
     {
 	try {
 		// Get the next frame (based on speed)
-		video_position = video_position + speed;
-	    return reader->GetFrameSafe(video_position);
+		if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length)
+			video_position = video_position + speed;
+
+		if (frame && frame->number == video_position) {
+			// return cached frame
+			return frame;
+		}
+		else
+			// return frame from reader
+		    return reader->GetFrameSafe(video_position);
 
 	} catch (const ReaderClosed & e) {
 	    // ...
@@ -160,7 +179,8 @@ namespace openshot
     // Stop video/audio playback
     void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
     {
-	if (isThreadRunning()) stopThread(timeOutMilliseconds);
+    	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
+    	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
     }
 
 

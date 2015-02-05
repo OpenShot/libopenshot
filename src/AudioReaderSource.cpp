@@ -52,7 +52,7 @@ AudioReaderSource::~AudioReaderSource()
 
 // Get more samples from the reader
 void AudioReaderSource::GetMoreSamplesFromReader() {
-	cout << "GetMoreSamplesFromReader" << endl;
+
 	// Determine the amount of samples needed to fill up this buffer
 	int amount_needed = position; // replace these used samples
 	int amount_remaining = size - amount_needed; // these are unused samples, and need to be carried forward
@@ -73,13 +73,14 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 	if (amount_remaining > 0) {
 		for (int channel = 0; channel < buffer->getNumChannels(); channel++)
 		    new_buffer->addFrom(channel, 0, *buffer, channel, position, amount_remaining);
+
 		position = amount_remaining;
 	} else
 		// reset position to 0
 		position = 0;
 
 	// Loop through frames until buffer filled
-	while (amount_needed > 0 && speed != 0) {
+	while (amount_needed > 0 && speed == 1  && frame_number >= 1 && frame_number <= reader->info.video_length) {
 
 		// Get the next frame (if position is zero)
 		if (frame_position == 0) {
@@ -98,7 +99,7 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 		}
 
 		bool frame_completed = false;
-		int amount_to_copy = frame->GetAudioSamplesCount();
+		int amount_to_copy = frame->GetAudioSamplesCount() - frame_position;
 		if (amount_to_copy > amount_needed) {
 			// Don't copy too many samples (we don't want to overflow the buffer)
 			amount_to_copy = amount_needed;
@@ -111,12 +112,7 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 
 		// Load all of its samples into the buffer
 		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-			//if (speed >= 0)
-				// playback normal
-				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
-			//else
-				// reverse playback
-				//new_buffer->addFrom(channel, position, *reverse_buffer(frame->GetAudioSampleBuffer()), channel, frame_position, amount_to_copy);
+			new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
 
 		// Adjust remaining samples
 		position += amount_to_copy;
@@ -151,7 +147,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	{
 		int n=0;
 		for (int s = number_of_samples - 1; s >= 0; s--, n++)
-			reversed->getSampleData(channel)[n] = buffer->getSampleData(channel)[s];
+			reversed->getWritePointer(channel)[n] = buffer->getWritePointer(channel)[s];
 	}
 
 	// Copy the samples back to the original array
@@ -159,7 +155,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	// Loop through channels, and get audio samples
 	for (int channel = 0; channel < channels; channel++)
 		// Get the audio samples for this channel
-		buffer->addFrom(channel, 0, reversed->getSampleData(channel), number_of_samples, 1.0f);
+		buffer->addFrom(channel, 0, reversed->getReadPointer(channel), number_of_samples, 1.0f);
 
 	delete reversed;
 	reversed = NULL;
@@ -171,7 +167,6 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 // Get the next block of audio samples
 void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 {
-    //cout << "getNextAudioBlock" << endl;
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
 
@@ -206,6 +201,7 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 			number_to_copy = 0;
 		}
 
+
 		// Determine if any samples need to be copied
 		if (number_to_copy > 0)
 		{
@@ -219,7 +215,7 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 
 		// Adjust estimate frame number (the estimated frame number that is being played)
 		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate);
-		if (speed != 0)
+		if (speed == 1)
 			estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
 	}
 }
