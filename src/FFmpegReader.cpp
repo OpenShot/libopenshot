@@ -305,16 +305,8 @@ void FFmpegReader::UpdateVideoInfo()
 	if (!check_fps)
 	{
 		// set frames per second (fps)
-		info.fps.num = pStream->r_frame_rate.num;
-		info.fps.den = pStream->r_frame_rate.den;
-
-		// Check for blank fps
-		if (info.fps.den == 0)
-		{
-			// use average fps
-			info.fps.num = pStream->avg_frame_rate.num;
-			info.fps.den = pStream->avg_frame_rate.den;
-		}
+		info.fps.num = pStream->avg_frame_rate.num;
+		info.fps.den = pStream->avg_frame_rate.den;
 	}
 	if (pStream->sample_aspect_ratio.num != 0)
 	{

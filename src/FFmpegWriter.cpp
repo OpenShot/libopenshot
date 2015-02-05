@@ -84,11 +84,11 @@ void FFmpegWriter::auto_detect_format()
 	oc->oformat = fmt;
 
 	// Update codec names
-	if (fmt->video_codec != CODEC_ID_NONE)
+	if (fmt->video_codec != AV_CODEC_ID_NONE)
 		// Update video codec name
 		info.vcodec = avcodec_find_encoder(fmt->video_codec)->name;
 
-	if (fmt->audio_codec != CODEC_ID_NONE)
+	if (fmt->audio_codec != AV_CODEC_ID_NONE)
 		// Update audio codec name
 		info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
 }
@@ -97,16 +97,16 @@ void FFmpegWriter::auto_detect_format()
 void FFmpegWriter::initialize_streams()
 {
 	#pragma omp critical (debug_output)
-	AppendDebugMethod("FFmpegWriter::initialize_streams", "fmt->video_codec", fmt->video_codec, "fmt->audio_codec", fmt->audio_codec, "CODEC_ID_NONE", CODEC_ID_NONE, "", -1, "", -1, "", -1);
+	AppendDebugMethod("FFmpegWriter::initialize_streams", "fmt->video_codec", fmt->video_codec, "fmt->audio_codec", fmt->audio_codec, "AV_CODEC_ID_NONE", AV_CODEC_ID_NONE, "", -1, "", -1, "", -1);
 
 	// Add the audio and video streams using the default format codecs and initialize the codecs
 	video_st = NULL;
 	audio_st = NULL;
-	if (fmt->video_codec != CODEC_ID_NONE && info.has_video)
+	if (fmt->video_codec != AV_CODEC_ID_NONE && info.has_video)
 		// Add video stream
 		video_st = add_video_stream();
 
-	if (fmt->audio_codec != CODEC_ID_NONE && info.has_audio)
+	if (fmt->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
 		// Add audio stream
 		audio_st = add_audio_stream();
 }
@@ -539,7 +539,7 @@ void FFmpegWriter::flush_encoders()
 {
     if (info.has_audio && audio_codec && audio_st->codec->codec_type == AVMEDIA_TYPE_AUDIO && audio_codec->frame_size <= 1)
         return;
-    if (info.has_video && video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && video_codec->codec->id == CODEC_ID_RAWVIDEO)
+    if (info.has_video && video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && video_codec->codec->id == AV_CODEC_ID_RAWVIDEO)
         return;
 
     int error_code = 0;
@@ -899,10 +899,10 @@ AVStream* FFmpegWriter::add_video_stream()
 	c->time_base.den = info.video_timebase.den;
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
 	c->max_b_frames = 10;
-	if (c->codec_id == CODEC_ID_MPEG2VIDEO)
+	if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO)
 		/* just for testing, we also add B frames */
 		c->max_b_frames = 2;
-	if (c->codec_id == CODEC_ID_MPEG1VIDEO)
+	if (c->codec_id == AV_CODEC_ID_MPEG1VIDEO)
 		/* Needed to avoid using macroblocks in which some coeffs overflow.
 		 This does not happen with normal video, it just happens here as
 		 the motion of the chroma plane does not match the luma plane. */
@@ -922,7 +922,7 @@ AVStream* FFmpegWriter::add_video_stream()
 
     // Codec doesn't have any pix formats?
     if (c->pix_fmt == PIX_FMT_NONE) {
-        if(fmt->video_codec == CODEC_ID_RAWVIDEO) {
+        if(fmt->video_codec == AV_CODEC_ID_RAWVIDEO) {
             // Raw video should use RGB24
         	c->pix_fmt = PIX_FMT_RGB24;
 
@@ -967,10 +967,10 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 		audio_input_frame_size = 50000 / info.channels;
 
 		switch (st->codec->codec_id) {
-		case CODEC_ID_PCM_S16LE:
-		case CODEC_ID_PCM_S16BE:
-		case CODEC_ID_PCM_U16LE:
-		case CODEC_ID_PCM_U16BE:
+		case AV_CODEC_ID_PCM_S16LE:
+		case AV_CODEC_ID_PCM_S16BE:
+		case AV_CODEC_ID_PCM_U16LE:
+		case AV_CODEC_ID_PCM_U16BE:
 			audio_input_frame_size >>= 1;
 			break;
 		default:

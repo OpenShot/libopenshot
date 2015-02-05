@@ -54,7 +54,7 @@ QtPlayer::~QtPlayer()
 void QtPlayer::SetSource(const std::string &source)
 {
     reader = new FFmpegReader(source);
-    reader->debug = true;
+    //reader->debug = true;
     reader->Open();
 	Reader(reader);
 }
