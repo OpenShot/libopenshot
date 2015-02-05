@@ -26,10 +26,10 @@
  * ### The Basics ###
  * To understand libopenshot, we must first learn about the basic building blocks:.
  *  - <b>Readers</b> - A reader is used to read a video, audio, image file, or stream and return openshot::Frame objects.
- *    - A few common readers are openshot::FFmpegReader, openshot::TextReader, openshot::ImageReader, openshot::ChunkReader, openshot::FrameMapper
+ *    - A few common readers are openshot::FFmpegReader, openshot::TextReader, openshot::ImageReader, openshot::ChunkReader, and openshot::FrameMapper
  *
  *  - <b>Writers</b> - A writer consumes openshot::Frame objects, and is used to write / create a video, audio, image file, or stream.
- *    - A few common writers are openshot::FFmpegWriter, openshot::ChunkWriter
+ *    - A few common writers are openshot::FFmpegWriter, openshot::ImageWriter, and openshot::ChunkWriter
  *
  *  - <b>Timeline</b> - A timeline allows many openshot::Clip objects to be trimmed, arranged, and layered together.
  *    - The openshot::Timeline is a special kind of reader, built from openshot::Clip objects (each clip containing a reader)
@@ -122,6 +122,7 @@
 #include "Frame.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
+#include "ImageWriter.h"
 #include "KeyFrame.h"
 #include "PlayerBase.h"
 #include "Point.h"
