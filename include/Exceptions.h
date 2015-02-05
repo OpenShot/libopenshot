@@ -260,6 +260,15 @@ namespace openshot {
 		virtual ~TooManySeeks() throw () {}
 	};
 
+	/// Exception when a writer is closed, and a frame is requested
+	class WriterClosed : public BaseException
+	{
+	public:
+		string file_path;
+		WriterClosed(string message, string file_path)
+			: BaseException(message), file_path(file_path) { }
+		virtual ~WriterClosed() throw () {}
+	};
 }
 
 #endif

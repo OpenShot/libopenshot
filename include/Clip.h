@@ -143,7 +143,7 @@ namespace openshot {
 		void Open() throw(InvalidFile, ReaderClosed);
 
 		/// @brief Set the current reader
-		/// @param reader The reader to be used by this clip
+		/// @param new_reader The reader to be used by this clip
 		void Reader(ReaderBase* new_reader);
 
 		/// Get the current reader

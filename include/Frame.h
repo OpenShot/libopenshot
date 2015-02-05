@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include "Magick++.h"
 #include "JuceLibraryCode/JuceHeader.h"
+#include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
@@ -115,8 +116,10 @@ namespace openshot
 		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
 		Fraction pixel_ratio;
 		int channels;
+		ChannelLayout channel_layout;
 		int width;
 		int height;
+		int sample_rate;
 
 	public:
 		int number;	///< This is the frame number (starting at 1)
@@ -175,6 +178,13 @@ namespace openshot
 		/// Experimental method to add the frame number on top of the image
 		void AddOverlayNumber(int overlay_number);
 
+		/// Channel Layout of audio samples. A frame needs to keep track of this, since Writers do not always
+		/// know the original channel layout of a frame's audio samples (i.e. mono, stereo, 5 point surround, etc...)
+		ChannelLayout ChannelsLayout();
+
+		// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
+		void ChannelsLayout(ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
+
 		/// Clear the waveform image (and deallocate it's memory)
 		void ClearWaveform();
 
@@ -191,7 +201,10 @@ namespace openshot
 		float* GetAudioSamples(int channel);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
-		float* GetInterleavedAudioSamples(int original_sample_rate, int new_sample_rate, AudioResampler* resampler, int* sample_count);
+		float* GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
+
+		// Get a planar array of sample data, using any sample rate
+		float* GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
 
 		/// Get number of audio channels
 		int GetAudioChannelsCount();
@@ -206,6 +219,9 @@ namespace openshot
 
 		/// Get pointer to Magick++ image object
 		tr1::shared_ptr<Magick::Image> GetImage();
+
+		/// Set Pixel Aspect Ratio
+		Fraction GetPixelRatio() { return pixel_ratio; };
 
 		/// Get pixel data (as packets)
 		const Magick::PixelPacket* GetPixels();
@@ -234,6 +250,12 @@ namespace openshot
 		/// Rotate the image
 		void Rotate(float degrees);
 
+		/// Get the original sample rate of this frame's audio data
+		int SampleRate();
+
+		/// Set the original sample rate of this frame's audio data
+		void SampleRate(int orig_sample_rate) { sample_rate = orig_sample_rate; };
+
 		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 		void Save(string path, float scale);
 
@@ -252,7 +274,7 @@ namespace openshot
 		void TransparentColors(string color, double fuzz);
 
 		/// Play audio samples for this frame
-		void Play(int sample_rate);
+		void Play();
 	};
 
 }

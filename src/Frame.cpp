@@ -31,7 +31,8 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1)
+Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
+		channel_layout(LAYOUT_STEREO), sample_rate(44100)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
@@ -43,7 +44,8 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1)
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
-	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -55,7 +57,8 @@ Frame::Frame(int number, int width, int height, string color)
 
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
@@ -67,7 +70,8 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
-		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1)
+		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
+		channel_layout(LAYOUT_STEREO), sample_rate(44100)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
@@ -79,7 +83,8 @@ Frame::Frame(int number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
-	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height)
+	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -117,6 +122,7 @@ void Frame::DeepCopy(const Frame& other)
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	channels = other.channels;
+	channel_layout = other.channel_layout;
 
 	if (other.wave_image)
 		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.wave_image)));
@@ -197,7 +203,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red
 			lines.push_back(Magick::DrawableStrokeWidth(1));
 
 			// Get audio for this channel
-			float *samples = audio->getSampleData(channel);
+			const float *samples = audio->getReadPointer(channel);
 
 			for (int sample = 0; sample < audio->getNumSamples(); sample+=step, X++)
 			{
@@ -296,11 +302,11 @@ void Frame::DisplayWaveform()
 float* Frame::GetAudioSamples(int channel)
 {
 	// return JUCE audio data for this channel
-	return audio->getSampleData(channel);
+	return audio->getWritePointer(channel);
 }
 
-// Get an array of sample data (all channels interleaved together), using any sample rate
-float* Frame::GetInterleavedAudioSamples(int original_sample_rate, int new_sample_rate, AudioResampler* resampler, int* sample_count)
+// Get a planar array of sample data, using any sample rate
+float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
 	AudioSampleBuffer *buffer(audio.get());
@@ -308,10 +314,56 @@ float* Frame::GetInterleavedAudioSamples(int original_sample_rate, int new_sampl
 	int num_of_samples = audio->getNumSamples();
 
 	// Resample to new sample rate (if needed)
-	if (new_sample_rate != original_sample_rate)
+	if (new_sample_rate != sample_rate)
 	{
 		// YES, RESAMPLE AUDIO
-		resampler->SetBuffer(audio.get(), original_sample_rate, new_sample_rate);
+		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
+
+		// Resample data, and return new buffer pointer
+		buffer = resampler->GetResampledBuffer();
+
+		// Update num_of_samples
+		num_of_samples = buffer->getNumSamples();
+	}
+
+	// INTERLEAVE all samples together (channel 1 + channel 2 + channel 1 + channel 2, etc...)
+	output = new float[num_of_channels * num_of_samples];
+	int position = 0;
+
+	// Loop through samples in each channel (combining them)
+	for (int channel = 0; channel < num_of_channels; channel++)
+	{
+		for (int sample = 0; sample < num_of_samples; sample++)
+		{
+			// Add sample to output array
+			output[position] = buffer->getReadPointer(channel)[sample];
+
+			// increment position
+			position++;
+		}
+	}
+
+	// Update sample count (since it might have changed due to resampling)
+	*sample_count = num_of_samples;
+
+	// return combined array
+	return output;
+}
+
+
+// Get an array of sample data (all channels interleaved together), using any sample rate
+float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
+{
+	float *output = NULL;
+	AudioSampleBuffer *buffer(audio.get());
+	int num_of_channels = audio->getNumChannels();
+	int num_of_samples = audio->getNumSamples();
+
+	// Resample to new sample rate (if needed)
+	if (new_sample_rate != sample_rate)
+	{
+		// YES, RESAMPLE AUDIO
+		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
 
 		// Resample data, and return new buffer pointer
 		buffer = resampler->GetResampledBuffer();
@@ -330,7 +382,7 @@ float* Frame::GetInterleavedAudioSamples(int original_sample_rate, int new_sampl
 		for (int channel = 0; channel < num_of_channels; channel++)
 		{
 			// Add sample to output array
-			output[position] = buffer->getSampleData(channel)[sample];
+			output[position] = buffer->getReadPointer(channel)[sample];
 
 			// increment position
 			position++;
@@ -434,6 +486,18 @@ int Frame::GetWidth()
 {
 	return width;
 	//return image->columns();
+}
+
+// Get the original sample rate of this frame's audio data
+int Frame::SampleRate()
+{
+	return sample_rate;
+}
+
+// Get the original sample rate of this frame's audio data
+ChannelLayout Frame::ChannelsLayout()
+{
+	return channel_layout;
 }
 
 // Make colors in a specific range transparent
@@ -819,7 +883,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetImage()
 }
 
 // Play audio samples for this frame
-void Frame::Play(int sample_rate)
+void Frame::Play()
 {
 	// Check if samples are present
 	if (!audio->getNumSamples())

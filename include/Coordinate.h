@@ -70,21 +70,21 @@ namespace openshot {
 		Coordinate(float x, float y);
 
 		/// @brief Set the repeating Fraction (used internally on the timeline, to track changes to coordinates)
-		/// @param repeated The fraction representing how many times this coordinate Y value repeats (only used on the timeline)
+		/// @param is_repeated The fraction representing how many times this coordinate Y value repeats (only used on the timeline)
 		void Repeat(Fraction is_repeated) { repeated=is_repeated; }
 
 		/// Get the repeating Fraction (used internally on the timeline, to track changes to coordinates)
 		Fraction Repeat() { return repeated; }
 
 		/// @brief Set the increasing flag (used internally on the timeline, to track changes to coordinates)
-		/// @param increasing Indicates if this coorindate Y value is increasing (when compared to the previous coordinate)
+		/// @param is_increasing Indicates if this coorindate Y value is increasing (when compared to the previous coordinate)
 		void IsIncreasing(bool is_increasing) { increasing = is_increasing; }
 
 		/// Get the increasing flag (used internally on the timeline, to track changes to coordinates)
 		bool IsIncreasing() { return increasing; }
 
 		/// @brief Set the delta / difference between previous coordinate value (used internally on the timeline, to track changes to coordinates)
-		/// @param delta Indicates how much this Y value differs from the previous Y value
+		/// @param new_delta Indicates how much this Y value differs from the previous Y value
 		void Delta(float new_delta) { delta=new_delta; }
 
 		/// Get the delta / difference between previous coordinate value (used internally on the timeline, to track changes to coordinates)

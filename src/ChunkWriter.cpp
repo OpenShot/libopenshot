@@ -31,7 +31,7 @@ using namespace openshot;
 
 ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
-		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false)
+		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false), is_open(false)
 {
 	// Change codecs to default
 	info.vcodec = default_vcodec;
@@ -74,8 +74,12 @@ string ChunkWriter::get_chunk_path(int chunk_number, string folder, string exten
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
+void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw WriterClosed("The ChunkWriter is closed.  Call Open() before calling this method.", path);
+
 	// Check if currently writing chunks?
 	if (!is_writing)
 	{
@@ -85,19 +89,19 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 		// Create FFmpegWriter (FINAL quality)
 		create_folder(get_chunk_path(chunk_count, "final", ""));
 		writer_final = new FFmpegWriter(get_chunk_path(chunk_count, "final", default_extension));
-		writer_final->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
+		writer_final->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.channel_layout, 128000);
 		writer_final->SetVideoOptions(true, default_vcodec, info.fps, info.width, info.height, info.pixel_ratio, false, false, info.video_bit_rate);
 
 		// Create FFmpegWriter (PREVIEW quality)
 		create_folder(get_chunk_path(chunk_count, "preview", ""));
 		writer_preview = new FFmpegWriter(get_chunk_path(chunk_count, "preview", default_extension));
-		writer_preview->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
+		writer_preview->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.channel_layout, 128000);
 		writer_preview->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.5, info.height * 0.5, info.pixel_ratio, false, false, info.video_bit_rate * 0.5);
 
 		// Create FFmpegWriter (LOW quality)
 		create_folder(get_chunk_path(chunk_count, "thumb", ""));
 		writer_thumb = new FFmpegWriter(get_chunk_path(chunk_count, "thumb", default_extension));
-		writer_thumb->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, 128000);
+		writer_thumb->SetAudioOptions(true, default_acodec, info.sample_rate, info.channels, info.channel_layout, 128000);
 		writer_thumb->SetVideoOptions(true, default_vcodec, info.fps, info.width * 0.25, info.height * 0.25, info.pixel_ratio, false, false, info.video_bit_rate * 0.25);
 
 		// Prepare Streams
@@ -189,7 +193,7 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 
 
 // Write a block of frames from a reader
-void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length)
+void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)
@@ -203,7 +207,7 @@ void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length)
 }
 
 // Write a block of frames from the local cached reader
-void ChunkWriter::WriteFrame(int start, int length)
+void ChunkWriter::WriteFrame(int start, int length) throw(WriterClosed)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)
@@ -252,6 +256,9 @@ void ChunkWriter::Close()
 		is_writing = false;
 	}
 
+	// close writer
+	is_open = false;
+
 	// Reset frame counters
 	chunk_count = 0;
 	frame_count = 0;
@@ -286,6 +293,12 @@ void ChunkWriter::create_folder(string path)
 bool ChunkWriter::is_chunk_valid()
 {
 	return true;
+}
+
+// Open the writer
+void ChunkWriter::Open() throw(InvalidFile, InvalidCodec)
+{
+	is_open = true;
 }
 
 

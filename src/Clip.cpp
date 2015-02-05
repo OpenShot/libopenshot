@@ -265,7 +265,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 	{
 		int n=0;
 		for (int s = number_of_samples - 1; s >= 0; s--, n++)
-			reversed->getSampleData(channel)[n] = buffer->getSampleData(channel)[s];
+			reversed->getWritePointer(channel)[n] = buffer->getWritePointer(channel)[s];
 	}
 
 	// Copy the samples back to the original array
@@ -273,7 +273,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 	// Loop through channels, and get audio samples
 	for (int channel = 0; channel < channels; channel++)
 		// Get the audio samples for this channel
-		buffer->addFrom(channel, 0, reversed->getSampleData(channel), number_of_samples, 1.0f);
+		buffer->addFrom(channel, 0, reversed->getReadPointer(channel), number_of_samples, 1.0f);
 
 	delete reversed;
 	reversed = NULL;
@@ -349,7 +349,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				audio_cache->clear();
 				for (int channel = 0; channel < channels; channel++)
 					// Get the audio samples for this channel
-					audio_cache->addFrom(channel, 0, buffer->getSampleData(channel), buffer->getNumSamples(), 1.0f);
+					audio_cache->addFrom(channel, 0, buffer->getReadPointer(channel), buffer->getNumSamples(), 1.0f);
 			}
 
 			// Get the length of the resampled buffer
@@ -361,7 +361,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				start -= 1;
 			for (int channel = 0; channel < channels; channel++)
 				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(true, channel, 0, audio_cache->getSampleData(channel, start), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, audio_cache->getReadPointer(channel, start), number_of_samples, 1.0f);
 
 			// Clean up if the final section
 			if (time.GetRepeatFraction(frame_number).num == time.GetRepeatFraction(frame_number).den)
@@ -409,7 +409,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 					// Copy the samples to
 					for (int channel = 0; channel < channels; channel++)
 						// Get the audio samples for this channel
-						samples->addFrom(channel, start, delta_samples->getSampleData(channel), number_of_delta_samples, 1.0f);
+						samples->addFrom(channel, start, delta_samples->getReadPointer(channel), number_of_delta_samples, 1.0f);
 
 					// Clean up
 					delete delta_samples;
@@ -439,7 +439,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 					// Copy the samples to
 					for (int channel = 0; channel < channels; channel++)
 						// Get the audio samples for this channel
-						samples->addFrom(channel, start, delta_samples->getSampleData(channel), number_of_delta_samples, 1.0f);
+						samples->addFrom(channel, start, delta_samples->getReadPointer(channel), number_of_delta_samples, 1.0f);
 
 					// Clean up
 					delete delta_samples;
@@ -460,7 +460,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			// Add the newly resized audio samples to the current frame
 			for (int channel = 0; channel < channels; channel++)
 				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(true, channel, 0, buffer->getSampleData(channel), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
 
 			// Clean up
 			buffer = NULL;
@@ -482,7 +482,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 			// Add reversed samples to the frame object
 			for (int channel = 0; channel < channels; channel++)
-				new_frame->AddAudio(true, channel, 0, samples->getSampleData(channel), number_of_samples, 1.0f);
+				new_frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
 
 
 		}
