@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Unit tests for openshot::FFmpegWriter
+ * @brief Unit tests for openshot::Color
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -31,46 +31,33 @@
 using namespace std;
 using namespace openshot;
 
-TEST(FFmpegWriter_Test_Webm)
+TEST(Color_Default_Constructor)
 {
-	// Reader
-	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
-	r.Open();
+	// Create an empty color
+	Color c1;
 
-	/* WRITER ---------------- */
-	FFmpegWriter w("output1.webm");
+	CHECK_CLOSE(0.0f, c1.red.GetValue(0), 0.00001);
+	CHECK_CLOSE(0.0f, c1.green.GetValue(0), 0.00001);
+	CHECK_CLOSE(0.0f, c1.blue.GetValue(0), 0.00001);
+}
 
-	// Set options
-	w.SetAudioOptions(true, "libvorbis", 44100, 2, LAYOUT_STEREO, 188000);
-	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+TEST(Color_Animate_Colors)
+{
+	// Create an empty color
+	Color c1;
 
-	// Open writer
-	w.Open();
+	// Set starting color (on frame 0)
+	c1.red.AddPoint(0, 12000);
+	c1.green.AddPoint(0, 5000);
+	c1.blue.AddPoint(0, 1000);
 
-	// Write some frames
-	w.WriteFrame(&r, 24, 50);
+	// Set ending color (on frame 1000)
+	c1.red.AddPoint(1000, 32000);
+	c1.green.AddPoint(1000, 12000);
+	c1.blue.AddPoint(1000, 5000);
 
-	// Close writer & reader
-	w.Close();
-	r.Close();
-
-	FFmpegReader r1("output1.webm");
-	r1.Open();
-
-	// Verify various settings on new MP4
-	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(24, r1.info.fps.num);
-	CHECK_EQUAL(1, r1.info.fps.den);
-
-	// Get a specific frame
-	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
-
-	// Get the image data for row 500
-	const Magick::PixelPacket* pixels = f->GetPixels(500);
-
-	// Check pixel values on scanline 500, pixel 600
-	CHECK_EQUAL(2056, pixels[600].red);
-	CHECK_EQUAL(2056, pixels[600].blue);
-	CHECK_EQUAL(2056, pixels[600].green);
-	CHECK_EQUAL(0, pixels[600].opacity);
+	// Check the color at frame 500
+	CHECK_CLOSE(22011, c1.red.GetInt(500), 0.01);
+	CHECK_CLOSE(8504, c1.green.GetInt(500), 0.01);
+	CHECK_CLOSE(3002, c1.blue.GetInt(500), 0.01);
 }

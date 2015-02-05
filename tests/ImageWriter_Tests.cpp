@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Unit tests for openshot::FFmpegWriter
+ * @brief Unit tests for openshot::ImageWriter
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -31,36 +31,35 @@
 using namespace std;
 using namespace openshot;
 
-TEST(FFmpegWriter_Test_Webm)
+TEST(ImageWriter_Test_Webm)
 {
 	// Reader
 	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
 	r.Open();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w("output1.webm");
+	ImageWriter w("output1.gif");
 
-	// Set options
-	w.SetAudioOptions(true, "libvorbis", 44100, 2, LAYOUT_STEREO, 188000);
-	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+	// Set the image output settings (format, fps, width, height, quality, loops, combine)
+	w.SetVideoOptions("GIF", r.info.fps, r.info.width, r.info.height, 70, 1, true);
 
 	// Open writer
 	w.Open();
 
-	// Write some frames
-	w.WriteFrame(&r, 24, 50);
+	// Write some frames (start on frame 500 and go to frame 510)
+	w.WriteFrame(&r, 500, 510);
 
 	// Close writer & reader
 	w.Close();
 	r.Close();
 
-	FFmpegReader r1("output1.webm");
+	// Open up the 5th frame from the newly created GIF
+	ImageReader r1("output1.gif[5]");
 	r1.Open();
 
-	// Verify various settings on new MP4
-	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(24, r1.info.fps.num);
-	CHECK_EQUAL(1, r1.info.fps.den);
+	// Verify various settings
+	CHECK_EQUAL(r.info.width, r1.info.width);
+	CHECK_EQUAL(r.info.height, r1.info.height);
 
 	// Get a specific frame
 	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
@@ -69,8 +68,8 @@ TEST(FFmpegWriter_Test_Webm)
 	const Magick::PixelPacket* pixels = f->GetPixels(500);
 
 	// Check pixel values on scanline 500, pixel 600
-	CHECK_EQUAL(2056, pixels[600].red);
-	CHECK_EQUAL(2056, pixels[600].blue);
-	CHECK_EQUAL(2056, pixels[600].green);
+	CHECK_EQUAL(4883, pixels[600].red);
+	CHECK_EQUAL(2570, pixels[600].blue);
+	CHECK_EQUAL(3341, pixels[600].green);
 	CHECK_EQUAL(0, pixels[600].opacity);
 }

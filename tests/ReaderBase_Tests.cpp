@@ -39,7 +39,7 @@ TEST(ReaderBase_Derived_Class)
 	class TestReader : public ReaderBase
 	{
 	public:
-		TestReader() { InitFileInfo(); };
+		TestReader() { };
 		tr1::shared_ptr<Frame> GetFrame(int number) { tr1::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
