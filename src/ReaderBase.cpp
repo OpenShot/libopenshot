@@ -54,6 +54,7 @@ ReaderBase::ReaderBase()
 	info.audio_bit_rate = 0;
 	info.sample_rate = 0;
 	info.channels = 0;
+	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
 
@@ -160,6 +161,7 @@ void ReaderBase::DisplayInfo() {
 	cout << "--> Audio Bit Rate: " << info.audio_bit_rate/1000 << " kb/s" << endl;
 	cout << "--> Sample Rate: " << info.sample_rate << " Hz" << endl;
 	cout << "--> # of Channels: " << info.channels << endl;
+	cout << "--> Channel Layout: " << info.channel_layout << endl;
 	cout << "--> Audio Stream Index: " << info.audio_stream_index << endl;
 	cout << "--> Audio Timebase: " << info.audio_timebase.ToDouble() << " (" << info.audio_timebase.num << "/" << info.audio_timebase.den << ")" << endl;
 	cout << "----------------------------" << endl;
@@ -203,6 +205,7 @@ Json::Value ReaderBase::JsonValue() {
 	root["audio_bit_rate"] = info.audio_bit_rate;
 	root["sample_rate"] = info.sample_rate;
 	root["channels"] = info.channels;
+	root["channel_layout"] = info.channel_layout;
 	root["audio_stream_index"] = info.audio_stream_index;
 	root["audio_timebase"] = Json::Value(Json::objectValue);
 	root["audio_timebase"]["num"] = info.audio_timebase.num;
@@ -275,6 +278,8 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 		info.sample_rate = root["sample_rate"].asInt();
 	if (!root["channels"].isNull())
 		info.channels = root["channels"].asInt();
+	if (!root["channel_layout"].isNull())
+		info.channel_layout = (ChannelLayout) root["channel_layout"].asInt();
 	if (!root["audio_stream_index"].isNull())
 		info.audio_stream_index = root["audio_stream_index"].asInt();
 	if (!root["audio_timebase"].isNull() && root["audio_timebase"].isObject()) {

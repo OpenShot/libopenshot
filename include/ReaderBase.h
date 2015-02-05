@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <tr1/memory>
 #include <stdlib.h>
+#include "ChannelLayouts.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
@@ -75,6 +76,7 @@ namespace openshot
 		int audio_bit_rate;	///< The bit rate of the audio stream (in bytes)
 		int sample_rate;	///< The number of audio samples per second (44100 is a common sample rate)
 		int channels;		///< The number of audio channels used in the audio stream
+		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
 		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
 	};

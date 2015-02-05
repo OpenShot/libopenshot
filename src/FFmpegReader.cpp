@@ -35,8 +35,8 @@ using namespace openshot;
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
-	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(32), is_open(false),
-	  seek_audio_frame_found(0), seek_video_frame_found(0), resampleCtx(NULL), prev_samples(0), prev_pts(0),
+	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(OPEN_MP_NUM_PROCESSORS), is_open(false),
+	  seek_audio_frame_found(0), seek_video_frame_found(0), prev_samples(0), prev_pts(0),
 	  pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0) {
 
 	// Initialize FFMpeg, and register all formats and codecs
@@ -230,10 +230,6 @@ void FFmpegReader::Close()
 			avcodec_close(aCodecCtx);
 		}
 
-		// Close audio resample context
-		if (resampleCtx)
-			audio_resample_close(resampleCtx);
-
 		// Clear final cache
 		final_cache.Clear();
 		working_cache.Clear();
@@ -262,6 +258,9 @@ void FFmpegReader::UpdateAudioInfo()
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.acodec = aCodecCtx->codec->name;
 	info.channels = aCodecCtx->channels;
+	if (aCodecCtx->channel_layout == 0)
+		aCodecCtx->channel_layout = av_get_default_channel_layout( aCodecCtx->channels );;
+	info.channel_layout = (ChannelLayout) aCodecCtx->channel_layout;
 	info.sample_rate = aCodecCtx->sample_rate;
 	info.audio_bit_rate = aCodecCtx->bit_rate;
 
@@ -305,8 +304,17 @@ void FFmpegReader::UpdateVideoInfo()
 	info.video_bit_rate = pFormatCtx->bit_rate;
 	if (!check_fps)
 	{
+		// set frames per second (fps)
 		info.fps.num = pStream->r_frame_rate.num;
 		info.fps.den = pStream->r_frame_rate.den;
+
+		// Check for blank fps
+		if (info.fps.den == 0)
+		{
+			// use average fps
+			info.fps.num = pStream->avg_frame_rate.num;
+			info.fps.den = pStream->avg_frame_rate.den;
+		}
 	}
 	if (pStream->sample_aspect_ratio.num != 0)
 	{
@@ -399,11 +407,13 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 		throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
 	// Debug output
+	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Check the cache for this frame
 	if (final_cache.Exists(requested_frame)) {
 		// Debug output
+		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Return the cached frame
@@ -467,6 +477,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	omp_set_nested(true);
 
 	// Debug output
+	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1, "", -1);
 
 	#pragma omp parallel
@@ -481,20 +492,19 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
-					usleep(20 * 1000);
+					usleep(50);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)
 				{
 					// Break loop when no more packets found
 					end_of_stream = true;
-
-					// Wait for all frames to be processed
-					while (processing_video_frames.size() + processing_audio_frames.size() == 0)
-						usleep(20 * 1000);
-
 					break;
 				}
+
+				// Debug output
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "", -1);
 
 				// Video packet
 				if (packet->stream_index == videoStream)
@@ -581,7 +591,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 	// Debug output
 	#pragma omp critical (debug_output)
-	AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "", -1, "", -1, "", -1);
+	AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "Working Cache Count", working_cache.Count(), "", -1, "", -1);
 
 	// End of stream?
 	if (end_of_stream) {
@@ -597,9 +607,20 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	if (final_cache.Exists(requested_frame))
 		// Return prepared frame
 		return final_cache.GetFrame(requested_frame);
-	else
-		// Frame not found (possibily end of stream)
-		throw OutOfBoundsFrame("Frame not found in video (invalid frame requested)", requested_frame, info.video_length);
+	else {
+
+		// Check if largest frame is still cached
+		if (final_cache.Exists(largest_frame_processed)) {
+			// return the largest processed frame (assuming it was the last in the video file)
+			return final_cache.GetFrame(largest_frame_processed);
+		}
+		else {
+			// The largest processed frame is no longer in cache, return a blank frame
+			tr1::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
+			f->AddColor(info.width, info.height, "#000");
+			return f;
+		}
+	}
 
 }
 
@@ -692,7 +713,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		{
 			// SEEKED TOO FAR
 			#pragma omp critical (debug_output)
-			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "current_pts", packet->pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
+			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "max_seeked_frame", max_seeked_frame, "seeking_frame", seeking_frame, "seeking_pts", seeking_pts, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek again... to the nearest Keyframe
 			Seek(seeking_frame - 10);
@@ -779,7 +800,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 
 		// Determine required buffer size and allocate buffer
 		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
-		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t) * 2);
 
 		// Assign appropriate parts of buffer to image planes in pFrameRGB
 		// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
@@ -863,34 +884,38 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
 
+	// Init an AVFrame to hold the decoded audio samples
+	int frame_finished = 0;
+	AVFrame *audio_frame = avcodec_alloc_frame();
+	avcodec_get_frame_defaults(audio_frame);
+
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-
 	int packet_samples = 0;
-	uint8_t *original_packet_data = my_packet->data;
-	int original_packet_size = my_packet->size;
+	int data_size = 0;
 
-	while (my_packet->size > 0) {
-		// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-		int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
-		int used = avcodec_decode_audio3(aCodecCtx, (short *)audio_buf, &buf_size, my_packet);
+	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
+	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+	int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, my_packet);
 
-		if (used < 0) {
-			// Throw exception
-			throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
-		}
+	if (used <= 0) {
+		// Throw exception
+		throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
+
+	} else if (frame_finished) {
+
+		// determine how many samples were decoded
+		int planar = av_sample_fmt_is_planar(aCodecCtx->sample_fmt);
+		int plane_size = -1;
+		data_size = av_samples_get_buffer_size(&plane_size,
+				aCodecCtx->channels,
+				audio_frame->nb_samples,
+				aCodecCtx->sample_fmt, 1);
 
 		// Calculate total number of samples
-		packet_samples += (buf_size / av_get_bytes_per_sample(aCodecCtx->sample_fmt));
-
-		// process samples...
-		my_packet->data += used;
-		my_packet->size -= used;
+		packet_samples = audio_frame->nb_samples * aCodecCtx->channels;
 	}
 
-	// Restore packet size and data (to avoid crash in av_free_packet)
-	my_packet->data = original_packet_data;
-	my_packet->size = original_packet_size;
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
 	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
@@ -941,53 +966,59 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	#pragma omp critical (packet_cache)
 	RemoveAVPacket(my_packet);
 
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
+	// TODO: Disable OpenMP on audio packet processing. It is not currently possible to reassemble the packets
+	// in order without creating small gaps and/or overlapping sample values.
+	#pragma xxx omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
 	{
 
-		// create a new array (to hold the re-sampled audio)
-		int16_t *converted_audio = NULL;
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
-		// Re-sample audio samples (if needed)
-		if(aCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16) {
-			// Init resample buffer
-			converted_audio = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-			// Audio needs to be converted
-			// Create an audio resample context object (used to convert audio samples)
-			//if (!resampleCtx)
-			ReSampleContext *resampleCtx = av_audio_resample_init(
-						info.channels,
-						info.channels,
-						info.sample_rate,
-						info.sample_rate,
-						AV_SAMPLE_FMT_S16,
-						aCodecCtx->sample_fmt,
-						0, 0, 0, 0.0f);
+		// Create output frame
+		AVFrame *audio_converted = avcodec_alloc_frame();
+		avcodec_get_frame_defaults(audio_converted);
+		audio_converted->nb_samples = audio_frame->nb_samples;
+		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
 
-			if (!resampleCtx)
-				throw InvalidCodec("Failed to convert audio samples to 16 bit (SAMPLE_FMT_S16).", path);
-			else
-			{
-				// Re-sample audio
-				audio_resample(resampleCtx, (short *)converted_audio, (short *)audio_buf, packet_samples);
+		// setup resample context
+		AVAudioResampleContext *avr = avresample_alloc_context();
+		av_opt_set_int(avr,  "in_channel_layout", aCodecCtx->channel_layout, 0);
+		av_opt_set_int(avr, "out_channel_layout", aCodecCtx->channel_layout, 0);
+		av_opt_set_int(avr,  "in_sample_fmt",     aCodecCtx->sample_fmt,     0);
+		av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+		av_opt_set_int(avr,  "in_sample_rate",    info.sample_rate,    0);
+		av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
+		av_opt_set_int(avr,  "in_channels",       info.channels,    0);
+		av_opt_set_int(avr, "out_channels",       info.channels,    0);
+		int r = avresample_open(avr);
+		int nb_samples = 0;
 
-				// Copy audio samples over original samples
-				memcpy(audio_buf, converted_audio, packet_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+		// Convert audio samples
+		nb_samples = avresample_convert(avr, 	// audio resample context
+				audio_converted->data, 		// output data pointers
+				audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+				audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
+				audio_frame->data,				// input data pointers
+				audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+				audio_frame->nb_samples);		// number of input samples to convert
 
-				// Deallocate resample buffer
-				delete[] converted_audio;
-				converted_audio = NULL;
-			}
+		// Copy audio samples over original samples
+		memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
 
-			// Close audio resample context
-			if (resampleCtx)
-			{
-				audio_resample_close(resampleCtx);
-				resampleCtx = NULL;
-			}
-		}
+		// Deallocate resample buffer
+		avresample_close(avr);
+		avresample_free(&avr);
+		avr = NULL;
+
+		// Free frames
+		avcodec_free_frame(&audio_frame);
+		avcodec_free_frame(&audio_converted);
+
+
 
 		int starting_frame_number = -1;
+		bool partial_frame = true;
 		for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 		{
 			// Array of floats (to hold samples for each channel)
@@ -1005,7 +1036,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			int position = 0;
 			for (int sample = 0; sample < packet_samples; sample++)
 			{
-
 				// Only add samples for current channel
 				if (channel_filter == channel)
 				{
@@ -1052,6 +1082,16 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				// some louder samples from maxing out at 1.0 (not sure why this happens)
 				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
 
+				// Determine if this frame was "partially" filled in
+				if (samples_per_frame == start + samples)
+					partial_frame = false;
+				else
+					partial_frame = true;
+
+				// Debug output
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
+
 				#pragma omp critical (openshot_cache)
 					// Add or update cache
 					my_cache->Add(f->number, f);
@@ -1085,6 +1125,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		{
 			// Update all frames as completed
 			for (int f = target_frame; f < starting_frame_number; f++) {
+				if (f == (starting_frame_number - 1) && partial_frame)
+					// ignore partial frames (always the last frame processed)
+					break;
 				processing_audio_frames.erase(f);
 				processed_audio_frames[f] = f;
 			}
@@ -1117,6 +1160,8 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 	working_cache.Clear();
 
 	// Clear processed lists
+	processing_audio_frames.clear();
+	processing_video_frames.clear();
 	processed_video_frames.clear();
 	processed_audio_frames.clear();
 
@@ -1195,12 +1240,11 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 
 			// init seek flags
 			is_seeking = true;
-			if (seeking_pts != 0) {
-				seeking_pts = seek_target;
-				seeking_frame = requested_frame;
-				seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
-				seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
-			}
+			seeking_pts = seek_target;
+			seeking_frame = requested_frame;
+			seek_audio_frame_found = 0; // used to detect which frames to throw away after a seek
+			seek_video_frame_found = 0; // used to detect which frames to throw away after a seek
+
 		}
 		else
 		{
@@ -1319,8 +1363,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	AudioLocation location = {whole_frame, sample_start};
 
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame) &&
-		(location.frame != previous_packet_location.frame && location.sample_start != previous_packet_location.sample_start))
+	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
 	{
 		int orig_frame = location.frame;
 		int orig_start = location.sample_start;
@@ -1366,7 +1409,9 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 	{
 		// Create a new frame on the working cache
 		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate), info.channels));
-		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den);
+		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
+		f->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
+		f->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader
 
 		working_cache.Add(requested_frame, f);
 
@@ -1411,6 +1456,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		bool is_video_ready = processed_video_frames.count(f->number);
 		bool is_audio_ready = processed_audio_frames.count(f->number);
 		bool is_seek_trash = IsPartialFrame(f->number);
+
+		// Adjust for available streams
+		if (!info.has_video) is_video_ready = true;
+		if (!info.has_audio) is_audio_ready = true;
 
 		// Debug output
 		#pragma omp critical (debug_output)
@@ -1556,13 +1605,11 @@ void FFmpegReader::CheckFPS()
 		{
 			// Update FPS for this reader instance
 			info.fps = Fraction(avg_fps, 1);
-			cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << " (Average FPS)" << endl;
 		}
 		else
 		{
 			// Update FPS for this reader instance (to 1/2 the original framerate)
 			info.fps = Fraction(info.fps.num / 2, info.fps.den);
-			cout << "UPDATED FPS FROM " << fps << " to " << info.fps.ToDouble() << " (1/2 FPS)" << endl;
 		}
 	}
 

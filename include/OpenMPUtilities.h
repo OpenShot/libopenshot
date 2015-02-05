@@ -31,7 +31,10 @@
 #include <omp.h>
 
 	// Calculate the # of OpenMP Threads to allow (HACK / WORK-AROUND for an ImageMagick bug: preventing use of all 8 cores)
-	#define OPEN_MP_NUM_PROCESSORS (omp_get_num_procs() <= 4 ? omp_get_num_procs() : 4)
-	//#define OPEN_MP_NUM_PROCESSORS 1
+	#ifdef OPENSHOT_IMAGEMAGICK_COMPATIBILITY
+		#define OPEN_MP_NUM_PROCESSORS (omp_get_num_procs() <= 4 ? omp_get_num_procs() : 4)
+	#else
+		#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+	#endif
 
 #endif

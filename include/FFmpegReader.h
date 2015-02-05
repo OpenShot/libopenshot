@@ -111,7 +111,6 @@ namespace openshot
 		int num_of_rescalers;
 		int rescaler_position;
 		vector<SwsContext*> image_rescalers;
-		ReSampleContext *resampleCtx;
 
 		Cache working_cache;
 		map<AVPacket*, AVPacket*> packets;
