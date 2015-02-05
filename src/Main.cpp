@@ -43,6 +43,81 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
+	// Reader
+	FFmpegReader r9("/home/jonathan/Videos/sintel-1024-surround.mp4");
+	r9.Open();
+	//r9.info.has_audio = false;
+	//r9.enable_seek = false;
+	//r9.debug = true;
+
+	/* WRITER ---------------- */
+	//FFmpegWriter w9("/home/jonathan/output.webm");
+	//w9.debug = true;
+	ImageWriter w9("/home/jonathan/output.gif");
+
+	// Set options
+	//w9.SetAudioOptions(true, "libvorbis", 48000, r9.info.channels, r9.info.channel_layout, 120000);
+	//w9.SetVideoOptions(true, "libvpx", r9.info.fps, r9.info.width, r9.info.height, r9.info.pixel_ratio, false, false, 1500000);
+	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
+	w9.SetVideoOptions("GIF", r9.info.fps, r9.info.width, r9.info.height, 70, 1, true);
+
+	// Open writer
+	w9.Open();
+
+	// Prepare Streams
+	//w9.PrepareStreams();
+
+//	w9.SetOption(VIDEO_STREAM, "qmin", "2" );
+//	w9.SetOption(VIDEO_STREAM, "qmax", "30" );
+//	w9.SetOption(VIDEO_STREAM, "crf", "10" );
+//	w9.SetOption(VIDEO_STREAM, "rc_min_rate", "2000000" );
+//	w9.SetOption(VIDEO_STREAM, "rc_max_rate", "4000000" );
+//	w9.SetOption(VIDEO_STREAM, "max_b_frames", "10" );
+
+	// Write header
+	//w9.WriteHeader();
+
+	//r9.DisplayInfo();
+
+	// 147000 frames, 28100 frames
+	//for (int frame = 1; frame <= (r9.info.video_length - 1); frame++)
+	for (int frame = 500; frame <= 530; frame++)
+	//int frame = 1;
+	//while (true)
+	{
+		//int frame_number = (rand() % 750) + 1;
+		int frame_number = ( frame);
+
+		//cout << "queue " << frame << " (frame: " << frame_number << ") ";
+		tr1::shared_ptr<Frame> f = r9.GetFrame(frame_number);
+		//cout << "(" << f->number << ", " << f << ")" << endl;
+		//f->DisplayWaveform();
+		//f->AddColor(r9.info.width, r9.info.height, "blue");
+		w9.WriteFrame(f);
+
+		//frame++;
+	}
+
+	cout << "done looping" << endl;
+
+	// Write Footer
+	//w9.WriteTrailer();
+
+	// Close writer & reader
+	w9.Close();
+
+	// Close timeline
+	r9.Close();
+	/* ---------------- */
+	cout << "happy ending" << endl;
+
+	return 0;
+
+
+
+
+
+
 	FFmpegReader sinelReader("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	//sinelReader.debug = true;
 	sinelReader.Open();
@@ -59,15 +134,16 @@ int main(int argc, char* argv[])
 		tr1::shared_ptr<Frame> f = sinelReader.GetFrame(frame_number);
 		//f->AddOverlayNumber(frame_number);
 		//f->Display();
+		f->DisplayWaveform();
 
-		//if (x == 7654)
-			sinelReader.debug = true;
+		//f->DisplayWaveform();
+		//	sinelReader.debug = true;
 
 		//if (x == 7655)
 		//	break;
 	}
 
-	cout << sinelReader.OutputDebugJSON() << endl;
+	//cout << sinelReader.OutputDebugJSON() << endl;
 	sinelReader.Close();
 	return 0;
 
@@ -175,7 +251,7 @@ int main(int argc, char* argv[])
 
 	// Set options
 	//w.SetAudioOptions(true, "libvorbis", 48000, 2, 188000);
-	w.SetAudioOptions(true, "libmp3lame", 44100, 1, 12800);
+	w.SetAudioOptions(true, "libmp3lame", 44100, 1, LAYOUT_STEREO, 12800);
 	w.SetVideoOptions(true, "mpeg4", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
 	//w.SetVideoOptions(true, "libmp3lame", openshot::Fraction(30,1), 720, 360, Fraction(1,1), false, false, 3000000);
 

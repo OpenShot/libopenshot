@@ -37,8 +37,10 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
-		original_sample_rate(0), original_channels(0)
+		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
+		write_header(false), write_trailer(false)
 {
+
 	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
 	info.has_video = false;
@@ -48,6 +50,21 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 
 	// auto detect format
 	auto_detect_format();
+}
+
+// Open the writer
+void FFmpegWriter::Open() throw(InvalidFile, InvalidCodec)
+{
+	// Open the writer
+	is_open = true;
+
+	// Prepare streams (if needed)
+	if (!prepare_streams)
+		PrepareStreams();
+
+	// Write header (if needed)
+	if (!write_header)
+		WriteHeader();
 }
 
 // auto detect format (from path)
@@ -79,6 +96,9 @@ void FFmpegWriter::auto_detect_format()
 // initialize streams
 void FFmpegWriter::initialize_streams()
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::initialize_streams", "fmt->video_codec", fmt->video_codec, "fmt->audio_codec", fmt->audio_codec, "CODEC_ID_NONE", CODEC_ID_NONE, "", -1, "", -1, "", -1);
+
 	// Add the audio and video streams using the default format codecs and initialize the codecs
 	video_st = NULL;
 	audio_st = NULL;
@@ -144,12 +164,15 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::SetVideoOptions (" + codec + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
+
 	// Enable / Disable video
 	info.has_video = has_video;
 }
 
 // Set audio export options
-void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, int bit_rate)
+void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -172,6 +195,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 		info.channels = channels;
 	if (bit_rate > 999)
 		info.audio_bit_rate = bit_rate;
+	info.channel_layout = channel_layout;
 
 	// init resample options (if zero)
 	if (original_sample_rate == 0)
@@ -179,21 +203,26 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 	if (original_channels == 0)
 		original_channels = info.channels;
 
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::SetAudioOptions (" + codec + ")", "sample_rate", sample_rate, "channels", channels, "bit_rate", bit_rate, "", -1, "", -1, "", -1);
+
 	// Enable / Disable audio
 	info.has_audio = has_audio;
 }
 
 // Set custom options (some codecs accept additional params)
-void FFmpegWriter::SetOption(StreamType stream, string name, string value)
+void FFmpegWriter::SetOption(StreamType stream, string name, string value) throw(NoStreamsFound, InvalidOptions)
 {
 	// Declare codec context
 	AVCodecContext *c = NULL;
 	stringstream convert(value);
 
-	if (info.has_video && stream == VIDEO_STREAM)
+	if (info.has_video && stream == VIDEO_STREAM && video_st)
 		c = video_st->codec;
-	else if (info.has_audio && stream == AUDIO_STREAM)
+	else if (info.has_audio && stream == AUDIO_STREAM && audio_st)
 		c = audio_st->codec;
+	else
+		throw NoStreamsFound("The stream was not found. Be sure to call PrepareStreams() first.", path);
 
 	// Init AVOption
 	const AVOption *option = NULL;
@@ -259,6 +288,10 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			#else
 				av_opt_set (c->priv_data, name.c_str(), value.c_str(), 0);
 			#endif
+
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegWriter::SetOption (" + (string)name + ")", "stream == VIDEO_STREAM", stream == VIDEO_STREAM, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 	}
 	else
 		throw InvalidOptions("The option is not valid for this codec.", path);
@@ -271,6 +304,9 @@ void FFmpegWriter::PrepareStreams()
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::PrepareStreams [" + path + "]", "info.has_audio", info.has_audio, "info.has_video", info.has_video, "", -1, "", -1, "", -1, "", -1);
+
 	// Initialize the streams (i.e. add the streams)
 	initialize_streams();
 
@@ -279,6 +315,9 @@ void FFmpegWriter::PrepareStreams()
 		open_video(oc, video_st);
 	if (info.has_audio && audio_st)
 		open_audio(oc, audio_st);
+
+	// Mark as 'prepared'
+	prepare_streams = true;
 }
 
 // Write the file header (after the options are set)
@@ -296,11 +335,21 @@ void FFmpegWriter::WriteHeader()
 	// Write the stream header, if any
 	// TODO: add avoptions / parameters instead of NULL
 	avformat_write_header(oc, NULL);
+
+	// Mark as 'written'
+	write_header = true;
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::WriteHeader", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
+void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);
+
 	// Add frame pointer to "queue", waiting to be processed the next
 	// time the WriteFrames() method is called.
 	if (info.has_video && video_st)
@@ -308,6 +357,9 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 
 	if (info.has_audio && audio_st)
 		spooled_audio_frames.push_back(frame);
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "cache_size", cache_size, "is_writing", is_writing, "", -1);
 
 	// Write the frames once it reaches the correct cache size
 	if (spooled_video_frames.size() == cache_size || spooled_audio_frames.size() == cache_size)
@@ -335,6 +387,9 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame)
 // Write all frames in the queue to the video file.
 void FFmpegWriter::write_queued_frames()
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "", -1, "", -1, "", -1, "", -1);
+
 	// Flip writing flag
 	is_writing = true;
 
@@ -437,8 +492,11 @@ void FFmpegWriter::write_queued_frames()
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(ReaderBase* reader, int start, int length)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
+
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)
 	{
@@ -468,6 +526,12 @@ void FFmpegWriter::WriteTrailer()
 	 * header; otherwise write_trailer may try to use memory that
 	 * was freed on av_codec_close() */
 	av_write_trailer(oc);
+
+	// Mark as 'written'
+	write_trailer = true;
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::WriteTrailer", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
 // Flush encoders
@@ -484,8 +548,6 @@ void FFmpegWriter::flush_encoders()
     // FLUSH VIDEO ENCODER
     if (info.has_video)
 		for (;;) {
-
-			cout << "Flushing VIDEO buffer!" << endl;
 
 			// Increment PTS (in frames and scaled to the codec's timebase)
 			write_video_count += av_rescale_q(1, (AVRational){info.fps.den, info.fps.num}, video_codec->time_base);
@@ -529,9 +591,8 @@ void FFmpegWriter::flush_encoders()
 			#endif
 
 			if (error_code < 0) {
-				string error_description = av_err2str(error_code);
-				cout << "error encoding video: " << error_code << ": " << error_description << endl;
-				//throw ErrorEncodingVideo("Error while flushing video frame", -1);
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 			if (!got_packet) {
 				stop_encoding = 1;
@@ -553,9 +614,8 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				string error_description = av_err2str(error_code);
-				cout << "error writing video: " << error_code << ": " << error_description << endl;
-				//throw ErrorEncodingVideo("Error while writing video packet to flush encoder", -1);
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
 			// Deallocate memory (if needed)
@@ -566,8 +626,6 @@ void FFmpegWriter::flush_encoders()
     // FLUSH AUDIO ENCODER
     if (info.has_audio)
 		for (;;) {
-
-			cout << "Flushing AUDIO buffer!" << endl;
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
 #if LIBAVFORMAT_VERSION_MAJOR >= 54
@@ -587,9 +645,8 @@ void FFmpegWriter::flush_encoders()
 			int got_packet = 0;
 			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				string error_description = av_err2str(error_code);
-				cout << "error encoding audio (flush): " << error_code << ": " << error_description << endl;
-				//throw ErrorEncodingAudio("Error while flushing audio frame", -1);
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 			if (!got_packet) {
 				stop_encoding = 1;
@@ -615,9 +672,8 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				string error_description = av_err2str(error_code);
-				cout << "error writing audio: " << error_code << ": " << error_description << endl;
-				//throw ErrorEncodingAudio("Error while writing audio packet to flush encoder", -1);
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 		}
 
@@ -641,11 +697,20 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 	delete[] audio_outbuf;
 
 	delete resampler;
+
+	// Deallocate resample buffer
+	avresample_close(avr);
+	avresample_free(&avr);
+	avr = NULL;
 }
 
 // Close the writer
 void FFmpegWriter::Close()
 {
+	// Write trailer (if needed)
+	if (!write_trailer)
+		WriteTrailer();
+
 	// Close each codec
 	if (video_st)
 		close_video(oc, video_st);
@@ -673,6 +738,15 @@ void FFmpegWriter::Close()
 
 	// Free the stream
 	av_free(oc);
+
+	// Close writer
+	is_open = false;
+	prepare_streams = false;
+	write_header = false;
+	write_trailer = false;
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
 // Add an AVFrame to the cache
@@ -741,7 +815,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 
 	// Set a valid number of channels (or throw error)
-	int channel_layout = info.channels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+	int channel_layout = info.channel_layout;
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)
@@ -775,6 +849,9 @@ AVStream* FFmpegWriter::add_audio_stream()
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::add_audio_stream", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->channels", c->channels, "c->sample_fmt", c->sample_fmt, "c->channel_layout", c->channel_layout, "c->sample_rate", c->sample_rate);
+
 	return st;
 }
 
@@ -807,6 +884,8 @@ AVStream* FFmpegWriter::add_video_stream()
 
 	/* put sample parameters */
 	c->bit_rate = info.video_bit_rate;
+	c->rc_min_rate = info.video_bit_rate - (info.video_bit_rate / 6);
+	c->rc_max_rate = info.video_bit_rate;
 	/* resolution must be a multiple of two */
 	// TODO: require /2 height and width
 	c->width = info.width;
@@ -819,6 +898,7 @@ AVStream* FFmpegWriter::add_video_stream()
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
+	c->max_b_frames = 10;
 	if (c->codec_id == CODEC_ID_MPEG2VIDEO)
 		/* just for testing, we also add B frames */
 		c->max_b_frames = 2;
@@ -834,7 +914,6 @@ AVStream* FFmpegWriter::add_video_stream()
 	// Find all supported pixel formats for this codec
     const PixelFormat* supported_pixel_formats = codec->pix_fmts;
     while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
-        cout << "supported pixel format: " << av_get_pix_fmt_name(*supported_pixel_formats) << endl;
         // Assign the 1st valid pixel format (if one is missing)
         if (c->pix_fmt == PIX_FMT_NONE)
         	c->pix_fmt = *supported_pixel_formats;
@@ -846,21 +925,19 @@ AVStream* FFmpegWriter::add_video_stream()
         if(fmt->video_codec == CODEC_ID_RAWVIDEO) {
             // Raw video should use RGB24
         	c->pix_fmt = PIX_FMT_RGB24;
-        	// Set raw picture flag (so we don't encode this video)
-        	oc->oformat->flags |= AVFMT_RAWPICTURE;
+
+        if (strcmp(fmt->name, "gif") != 0)
+			// If not GIF format, skip the encoding process
+			// Set raw picture flag (so we don't encode this video)
+			oc->oformat->flags |= AVFMT_RAWPICTURE;
         } else {
         	// Set the default codec
         	c->pix_fmt = PIX_FMT_YUV420P;
         }
     }
 
-    // Override Gif Support (TODO: Find a better way to accomplish this)
-    if (c->codec_id == CODEC_ID_GIF) {
-    	// Force rgb24 which seems to be required for GIF
-		c->pix_fmt = PIX_FMT_RGB24;
-		// Set raw picture flag (so we don't encode the image)
-		oc->oformat->flags |= AVFMT_RAWPICTURE;
-    }
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE, "", -1);
 
 	return st;
 }
@@ -914,6 +991,9 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 	audio_outbuf = new uint8_t[audio_outbuf_size];
 
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
+
 }
 
 // open video codec
@@ -933,6 +1013,10 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 }
 
 // write all queued frames' audio to the video file
@@ -951,12 +1035,10 @@ void FFmpegWriter::write_audio_packets(bool final)
 		int channels_in_frame = 0;
 		int sample_rate_in_frame = 0;
 		int samples_in_frame = 0;
+		ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
 		int16_t* frame_samples = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
-
-		// create a new array (to hold all the re-sampled audio, for the current queued frames)
-		int16_t* converted_audio = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		// Loop through each queued audio frame
 		while (!queued_audio_frames.empty())
@@ -965,12 +1047,17 @@ void FFmpegWriter::write_audio_packets(bool final)
 			tr1::shared_ptr<Frame> frame = queued_audio_frames.front();
 
 			// Get the audio details from this frame
-			sample_rate_in_frame = info.sample_rate; // resampling happens when getting the interleaved audio samples below
-			samples_in_frame = frame->GetAudioSamplesCount(); // this is updated if resampling happens
+			sample_rate_in_frame = frame->SampleRate();
+			samples_in_frame = frame->GetAudioSamplesCount();
 			channels_in_frame = frame->GetAudioChannelsCount();
+			channel_layout_in_frame = frame->ChannelsLayout();
+
 
 			// Get audio sample array
-			float* frame_samples_float = frame->GetInterleavedAudioSamples(original_sample_rate, info.sample_rate, new_sampler, &samples_in_frame);
+			float* frame_samples_float = NULL;
+			// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
+			frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, new_sampler, &samples_in_frame);
+
 
 			// Calculate total samples
 			total_frame_samples = samples_in_frame * channels_in_frame;
@@ -979,6 +1066,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			for (int s = 0; s < total_frame_samples; s++, frame_position++)
 				// Translate sample value and copy into buffer
 				frame_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
+
 
 			// Deallocate float array
 			delete[] frame_samples_float;
@@ -994,38 +1082,97 @@ void FFmpegWriter::write_audio_packets(bool final)
 		int remaining_frame_samples = total_frame_samples;
 		int samples_position = 0;
 
-		// Re-sample audio samples (into additional channels or changing the sample format / number format)
-		// The sample rate has already been resampled using the GetInterleavedAudioSamples method.
-		if (!final && (audio_codec->sample_fmt != AV_SAMPLE_FMT_S16 || info.channels != channels_in_frame)) {
 
-			// Audio needs to be converted
-			// Create an audio resample context object (used to convert audio samples)
-			ReSampleContext *resampleCtx = av_audio_resample_init(
-					info.channels, channels_in_frame,
-					info.sample_rate, sample_rate_in_frame,
-					audio_codec->sample_fmt, AV_SAMPLE_FMT_S16, 0, 0, 0, 0.0f);
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegWriter::write_audio_packets", "final", final, "total_frame_samples", total_frame_samples, "remaining_frame_samples", remaining_frame_samples, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "", -1);
 
-			if (!resampleCtx)
-				throw ResampleError("Failed to resample & convert audio samples for encoding.", path);
-			else {
-				// FFmpeg audio resample & sample format conversion
-				audio_resample(resampleCtx, (short *) converted_audio, (short *) frame_samples, total_frame_samples);
+		// Keep track of the original sample format
+		AVSampleFormat output_sample_fmt = audio_codec->sample_fmt;
 
-				// Update total frames & input frame size (due to bigger or smaller data types)
-				total_frame_samples *= (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)); // adjust for different byte sizes
-				total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
-				audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+		if (!final) {
+			// Create input frame (and allocate arrays)
+			AVFrame *audio_frame = avcodec_alloc_frame();
+			avcodec_get_frame_defaults(audio_frame);
+			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
+			av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, total_frame_samples / channels_in_frame, AV_SAMPLE_FMT_S16, 0);
 
-				// Set remaining samples
-				remaining_frame_samples = total_frame_samples;
+			// Fill input frame with sample data
+			//memcpy(audio_frame->data[0], frame_samples, audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame);
+			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
+					audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 0);
 
-				// Copy audio samples over original samples
-				memcpy(frame_samples, converted_audio, total_frame_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+			// Update total samples & input frame size (due to bigger or smaller data types)
+			total_frame_samples *= (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)); // adjust for different byte sizes
+			total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
+			audio_input_frame_size = initial_audio_input_frame_size * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
-				// Close context
-				audio_resample_close(resampleCtx);
+			// Set remaining samples
+			remaining_frame_samples = total_frame_samples;
+
+			// Create output frame (and allocate arrays)
+			AVFrame *audio_converted = avcodec_alloc_frame();
+			avcodec_get_frame_defaults(audio_converted);
+			audio_converted->nb_samples = audio_frame->nb_samples;
+			av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, audio_codec->sample_fmt, 0);
+
+			// Do not convert audio to planar format (yet). We need to keep everything interleaved at this point.
+			switch (audio_codec->sample_fmt)
+			{
+				case AV_SAMPLE_FMT_FLTP:
+				{
+					output_sample_fmt = AV_SAMPLE_FMT_FLT;
+					break;
+				}
+				case AV_SAMPLE_FMT_S32P:
+				{
+					output_sample_fmt = AV_SAMPLE_FMT_S32;
+					break;
+				}
+				case AV_SAMPLE_FMT_S16P:
+				{
+					output_sample_fmt = AV_SAMPLE_FMT_S16;
+					break;
+				}
+				case AV_SAMPLE_FMT_U8P:
+				{
+					output_sample_fmt = AV_SAMPLE_FMT_U8;
+					break;
+				}
 			}
+
+			// setup resample context
+			if (!avr) {
+				avr = avresample_alloc_context();
+				av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
+				av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
+				av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+				av_opt_set_int(avr, "out_sample_fmt",     output_sample_fmt,     0); // planar not allowed here
+				av_opt_set_int(avr,  "in_sample_rate",    sample_rate_in_frame,    0);
+				av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
+				av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
+				av_opt_set_int(avr, "out_channels",       info.channels,    0);
+				avresample_open(avr);
+			}
+			int nb_samples = 0;
+
+			// Convert audio samples
+			nb_samples = avresample_convert(avr, 	// audio resample context
+					audio_converted->data, 		// output data pointers
+					audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+					audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
+					audio_frame->data,				// input data pointers
+					audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+					audio_frame->nb_samples);		// number of input samples to convert
+
+			// Copy audio samples over original samples
+			memcpy(frame_samples, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
+
+			// Free frames
+			avcodec_free_frame(&audio_frame);
+			avcodec_free_frame(&audio_converted);
 		}
+
+
 
 		// Loop until no more samples
 		while (remaining_frame_samples > 0 || final) {
@@ -1054,6 +1201,65 @@ void FFmpegWriter::write_audio_packets(bool final)
 				// Not enough samples to encode... so wait until the next frame
 				break;
 
+
+
+
+			// Convert to planar (if needed by audio codec)
+			AVFrame *frame_final = avcodec_alloc_frame();
+			avcodec_get_frame_defaults(frame_final);
+			if (av_sample_fmt_is_planar(audio_codec->sample_fmt))
+			{
+				// setup resample context
+				if (!avr_planar) {
+					avr_planar = avresample_alloc_context();
+					av_opt_set_int(avr_planar,  "in_channel_layout", info.channel_layout, 0);
+					av_opt_set_int(avr_planar, "out_channel_layout", info.channel_layout, 0);
+					av_opt_set_int(avr_planar,  "in_sample_fmt",     output_sample_fmt,     0);
+					av_opt_set_int(avr_planar, "out_sample_fmt",     audio_codec->sample_fmt,     0); // planar not allowed here
+					av_opt_set_int(avr_planar,  "in_sample_rate",    info.sample_rate,    0);
+					av_opt_set_int(avr_planar, "out_sample_rate",    info.sample_rate,    0);
+					av_opt_set_int(avr_planar,  "in_channels",       info.channels,    0);
+					av_opt_set_int(avr_planar, "out_channels",       info.channels,    0);
+					avresample_open(avr_planar);
+				}
+
+				// Create input frame (and allocate arrays)
+				AVFrame *audio_frame = avcodec_alloc_frame();
+				avcodec_get_frame_defaults(audio_frame);
+				audio_frame->nb_samples = audio_input_position / info.channels;
+				av_samples_alloc(audio_frame->data, audio_frame->linesize, info.channels, audio_input_position / info.channels, output_sample_fmt, 0);
+
+				// Fill input frame with sample data
+				avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt, (uint8_t *) samples,
+						audio_frame->nb_samples * av_get_bytes_per_sample(output_sample_fmt) * info.channels, 0);
+
+				// Create output frame (and allocate arrays)
+				frame_final->nb_samples = audio_frame->nb_samples;
+				av_samples_alloc(frame_final->data, frame_final->linesize, info.channels, audio_frame->nb_samples, audio_codec->sample_fmt, 0);
+
+				// Convert audio samples
+				int nb_samples = avresample_convert(avr_planar, 	// audio resample context
+						frame_final->data, 			// output data pointers
+						frame_final->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+						frame_final->nb_samples,	// maximum number of samples that the output buffer can hold
+						audio_frame->data,				// input data pointers
+						audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+						audio_frame->nb_samples);		// number of input samples to convert
+
+				// Copy audio samples over original samples
+				memcpy(samples, frame_final->data[0], frame_final->nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
+
+				// Free frames
+				avcodec_free_frame(&audio_frame);
+
+			} else {
+
+				// Fill the final_frame AVFrame with audio (non planar)
+				avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
+						audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 1);
+			}
+
+
 			// Increment PTS (in samples and scaled to the codec's timebase)
 #if LIBAVFORMAT_VERSION_MAJOR >= 54
 			// for some reason, it requires me to multiply channels X 2
@@ -1062,18 +1268,13 @@ void FFmpegWriter::write_audio_packets(bool final)
 			write_audio_count += av_rescale_q(audio_input_position / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
 #endif
 
-			// Create AVFrame (and fill it with samples)
-			AVFrame *frame_final = avcodec_alloc_frame();
+			// Set the # of samples
 #if LIBAVFORMAT_VERSION_MAJOR >= 54
-			// for some reason, it requires me to multiply channels X 2
 			frame_final->nb_samples = audio_input_position / (audio_codec->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 #else
 			frame_final->nb_samples = audio_input_frame_size / audio_codec->channels;
 #endif
-			//frame_final->nb_samples = audio_input_frame_size / audio_codec->channels; //av_get_bytes_per_sample(audio_codec->sample_fmt);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
-			avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) samples,
-					audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt), 1);
 
 			// Init the packet
 			AVPacket pkt;
@@ -1111,16 +1312,15 @@ void FFmpegWriter::write_audio_packets(bool final)
 				int error_code = av_interleaved_write_frame(oc, &pkt);
 				if (error_code != 0)
 				{
-					string error_description = av_err2str(error_code);
-					cout << "error: " << error_code << ": " << error_description << endl;
-					throw ErrorEncodingAudio("Error while writing compressed audio frame", write_audio_count);
+					#pragma omp critical (debug_output)
+					AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				}
 			}
 
 			if (error_code < 0)
 			{
-				string error_description = av_err2str(error_code);
-				cout << "Error encoding audio: " << error_code << ": " << error_description << endl;
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
 			// deallocate AVFrame
@@ -1137,7 +1337,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 		// Delete arrays
 		delete[] frame_samples;
-		delete[] converted_audio;
 
 	} // end task
 }
@@ -1221,6 +1420,10 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 				frame_source->data[0][row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].opacity);
 		}
 
+
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "step", step, "", -1, "", -1);
+
 		// Resize & convert pixel format
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
 				source_image_height, frame_final->data, frame_final->linesize);
@@ -1240,6 +1443,9 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 // write video frame
 void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
+
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 		// Raw video case.
 		AVPacket pkt;
@@ -1247,7 +1453,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index= video_st->index;
-		pkt.data= (uint8_t*)frame_final;
+		pkt.data= (uint8_t*)frame_final->data;
 		pkt.size= sizeof(AVPicture);
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
@@ -1258,8 +1464,8 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		int error_code = av_interleaved_write_frame(oc, &pkt);
 		if (error_code != 0)
 		{
-			string error_description = av_err2str(error_code);
-			cout << "error: " << error_code << ": " << error_description << endl;
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
 
@@ -1332,8 +1538,8 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			int error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0)
 			{
-				string error_description = av_err2str(error_code);
-				cout << "error: " << error_code << ": " << error_description << endl;
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
 		}
