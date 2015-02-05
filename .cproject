@@ -53,6 +53,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4/QtMultimedia/"/>
 									<listOptionValue builtIn="false" value="/usr/include/ImageMagick-6"/>
+									<listOptionValue builtIn="false" value="/usr/include/libavresample"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1807071462" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -328,6 +329,7 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
 		<buildTargets>
 			<target name="Linux: CMake Release" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
@@ -339,7 +341,7 @@
 			</target>
 			<target name="Linux: CMake Debug" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>cmake</buildCommand>
-				<buildArguments>-G "Unix Makefiles" ../ -DMAGICKCORE_HDRI_ENABLE=0 -DMAGICKCORE_QUANTUM_DEPTH=16 -D"ENABLE_BLACKMAGIC=0" -D"CMAKE_BUILD_TYPE:STRING=Debug"</buildArguments>
+				<buildArguments>-G "Unix Makefiles" ../ -D"MAGICKCORE_HDRI_ENABLE=0" -D"MAGICKCORE_QUANTUM_DEPTH=16" -D"OPENSHOT_IMAGEMAGICK_COMPATIBILITY=0" -D"ENABLE_BLACKMAGIC=1" -D"CMAKE_BUILD_TYPE:STRING=Debug" -D"ENABLE_TESTS=1"</buildArguments>
 				<buildTarget/>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>false</useDefaultCommand>

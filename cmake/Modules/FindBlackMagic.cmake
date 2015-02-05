@@ -15,7 +15,7 @@ IF (WIN32)
 	# WINDOWS
 	FIND_PATH( BLACKMAGIC_INCLUDE_DIR DeckLinkAPI.h
 			   PATHS $ENV{BLACKMAGIC_DIR}/Win/include/
-			   		 "/home/jonathan/Blackmagic DeckLink SDK 9.5/Win/include/" )
+			   		 "/home/jonathan/Blackmagic DeckLink SDK 10.3.1/Win/include/" )
 
 	FIND_LIBRARY( BLACKMAGIC_LIBRARY_DIR DeckLinkAPI
 			  PATHS /usr/lib/
@@ -28,7 +28,7 @@ ELSE (WIN32)
 			# APPLE
 			FIND_PATH( BLACKMAGIC_INCLUDE_DIR DeckLinkAPI.h
 					   PATHS $ENV{BLACKMAGIC_DIR}/Mac/include/
-					   		 "/home/jonathan/Blackmagic DeckLink SDK 9.5/Mac/include/" )
+					   		 "/home/jonathan/Blackmagic DeckLink SDK 10.3.1/Mac/include/" )
 
 			FIND_LIBRARY( BLACKMAGIC_LIBRARY_DIR DeckLinkAPI
 					  PATHS /usr/lib/
@@ -39,7 +39,7 @@ ELSE (WIN32)
 			# LINUX
 			FIND_PATH( BLACKMAGIC_INCLUDE_DIR DeckLinkAPI.h
 					   PATHS $ENV{BLACKMAGIC_DIR}/Linux/include/
-					   		 "/home/jonathan/Blackmagic DeckLink SDK 9.7/Linux/include/" )
+					   		 "/home/jonathan/Blackmagic DeckLink SDK 10.3.1/Linux/include/" )
 
 			FIND_LIBRARY( BLACKMAGIC_LIBRARY_DIR DeckLinkAPI
 					  PATHS /usr/lib/
