@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	ImageReader b2("/home/jonathan/Pictures/trees.jpg");
 	ImageReader b3("/home/jonathan/Pictures/clouds.jpg");
 	ImageReader b4("/home/jonathan/Pictures/minecraft.png");
-	ImageReader b5("/home/jonathan/Pictures/tux.jpg");
+	ImageReader b5("/home/jonathan/Pictures/colorpgg03.jpg");
 	Clip c1(&b1);
 
 	// Background counter
