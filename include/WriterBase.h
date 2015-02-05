@@ -30,6 +30,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include "ChannelLayouts.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "ReaderBase.h"
@@ -67,6 +68,7 @@ namespace openshot
 		int audio_bit_rate;	///< The bit rate of the audio stream (in bytes)
 		int sample_rate;	///< The number of audio samples per second (44100 is a common sample rate)
 		int channels;		///< The number of audio channels used in the audio stream
+		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
 		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
 	};
@@ -97,7 +99,7 @@ namespace openshot
 												   string arg6_name, int arg6_value);
 
 	public:
-		/// Constructor for WriterBase class, many things are initilized here
+		/// Constructor for WriterBase class, many things are initialized here
 		WriterBase();
 
 		/// Enable or disable debug output. Output will display on the standard output, and you can
@@ -107,14 +109,18 @@ namespace openshot
 		/// Information about the current media file
 		WriterInfo info;
 
-		/// This method copy's the info struct of a reader, and sets the writer with the same info
+		/// @brief This method copy's the info struct of a reader, and sets the writer with the same info
+		/// @param reader The source reader to copy
 		void CopyReaderInfo(ReaderBase* reader);
 
+		/// Determine if writer is open or closed
+		virtual bool IsOpen() = 0;
+
 		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) = 0;
+		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed) = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-		virtual void WriteFrame(ReaderBase* reader, int start, int length) = 0;
+		virtual void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed) = 0;
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
@@ -124,6 +130,9 @@ namespace openshot
 
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
+
+		/// Open the writer (and start initializing streams)
+		virtual void Open() = 0;
 
 		/// Output debug information as JSON
 		string OutputDebugJSON();
