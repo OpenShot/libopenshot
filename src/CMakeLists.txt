@@ -251,26 +251,26 @@ target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
 ############### CLI EXECUTABLE ################
 # Create test executable
-add_executable(example Main.cpp)
+add_executable(openshot-example examples/Example.cpp)
 
 # Link test executable to the new library
-target_link_libraries(example openshot)
+target_link_libraries(openshot-example openshot)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
-add_executable(openshot_player Qt/demo/main.cpp)
+add_executable(openshot-player Qt/demo/main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(openshot_player openshot)
+target_link_libraries(openshot-player openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 IF (BLACKMAGIC_FOUND)
 	# Create test executable
-	add_executable(blackmagic 
-				   Main_Blackmagic.cpp)
+	add_executable(openshot-blackmagic 
+				   examples/ExampleBlackmagic.cpp)
 	
 	# Link test executable to the new library
-	target_link_libraries(blackmagic openshot)
+	target_link_libraries(openshot-blackmagic openshot)
 ENDIF (BLACKMAGIC_FOUND)
 
 ############### INCLUDE SWIG BINDINGS ################

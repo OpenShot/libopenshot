@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Main class (example app for libopenshot)
+ * @brief Source file for Example Executable (example app for libopenshot)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -30,8 +30,8 @@
 #include <map>
 #include <queue>
 #include <tr1/memory>
-#include "../include/OpenShot.h"
-#include "../include/Json.h"
+#include "../../include/OpenShot.h"
+#include "../../include/Json.h"
 #include <omp.h>
 #include <stdlib.h>
 #include <time.h>

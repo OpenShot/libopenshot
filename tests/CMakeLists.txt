@@ -144,7 +144,7 @@ include_directories("../thirdparty/jsoncpp/include")
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES tests.cpp )
 
-IF (ENABLE_TESTS)
+IF (NOT DISABLE_TESTS)
 	SET ( OPENSHOT_TEST_FILES ${OPENSHOT_TEST_FILES} 
 		   Cache_Tests.cpp
 		   Clip_Tests.cpp
@@ -162,15 +162,15 @@ IF (ENABLE_TESTS)
 ENDIF (ENABLE_TESTS)
 
 ################ TESTER EXECUTABLE #################
-# Create unit test executable (tester)
-add_executable(tester
+# Create unit test executable (openshot-test)
+add_executable(openshot-test
 			   tests.cpp
 			   ${OPENSHOT_TEST_FILES} )
 
 # Link libraries to the new executable
-target_link_libraries(tester openshot ${UNITTEST++_LIBRARY})
+target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
 
 
 #################### MAKE TEST ######################
-# Hook up the 'make test' target to the 'tester' executable
-ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/tester)
+# Hook up the 'make test' target to the 'openshot-test' executable
+ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)

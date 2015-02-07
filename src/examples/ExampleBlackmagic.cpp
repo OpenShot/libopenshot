@@ -30,7 +30,7 @@
 #include <map>
 #include <queue>
 #include <tr1/memory>
-#include "../include/OpenShot.h"
+#include "../../include/OpenShot.h"
 #include <omp.h>
 #include <time.h>
 
