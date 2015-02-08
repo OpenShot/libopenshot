@@ -89,9 +89,12 @@ TEST(Timeline_Check_Two_Track_Video)
 	// Create a reader
 	Clip clip_video("../../src/examples/test.mp4");
 	clip_video.Layer(0);
+	clip_video.Position(0.0);
 
 	Clip clip_overlay("../../src/examples/front3.png");
 	clip_overlay.Layer(1);
+	clip_overlay.Position(0.05); // Delay the overlay by 0.05 seconds
+	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
 
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2);
@@ -103,29 +106,90 @@ TEST(Timeline_Check_Two_Track_Video)
 	// Open Timeline
 	t.Open();
 
-	// Get frame 1
+	// Get frame
 	tr1::shared_ptr<Frame> f = t.GetFrame(1);
 
 	// Get the image data
 	const Magick::PixelPacket* pixels = f->GetPixels(200);
 
-	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(34256, pixels[400].red);
-	CHECK_EQUAL(0, pixels[400].blue);
-	CHECK_EQUAL(57460, pixels[400].green);
-	CHECK_EQUAL(0, pixels[400].opacity);
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(5397, pixels[230].red);
+	CHECK_EQUAL(0, pixels[230].blue);
+	CHECK_EQUAL(49087, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
 
-	// Get frame 1
+	// Get frame
 	f = t.GetFrame(2);
 
-	// Get the next frame
-	pixels = f->GetPixels(200);
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
 
-	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(63861, pixels[400].red);
-	CHECK_EQUAL(31871, pixels[400].blue);
-	CHECK_EQUAL(65151, pixels[400].green);
-	CHECK_EQUAL(0, pixels[400].opacity);
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(64764, pixels[230].red);
+	CHECK_EQUAL(63993, pixels[230].blue);
+	CHECK_EQUAL(64764, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
+
+	// Get frame
+	f = t.GetFrame(3);
+
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
+
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(64771, pixels[230].red);
+	CHECK_EQUAL(63429, pixels[230].blue);
+	CHECK_EQUAL(64193, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
+
+
+	// Get frame
+	f = t.GetFrame(24);
+
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
+
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(64507, pixels[230].red);
+	CHECK_EQUAL(63736, pixels[230].blue);
+	CHECK_EQUAL(64507, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
+
+	// Get frame
+	f = t.GetFrame(5);
+
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
+
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(6437, pixels[230].red);
+	CHECK_EQUAL(0, pixels[230].blue);
+	CHECK_EQUAL(48399, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
+
+	// Get frame
+	f = t.GetFrame(25);
+
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
+
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(5397, pixels[230].red);
+	CHECK_EQUAL(0, pixels[230].blue);
+	CHECK_EQUAL(49087, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
+
+	// Get frame
+	f = t.GetFrame(4);
+
+	// Get scanline 190 of pixels
+	pixels = f->GetPixels(190);
+
+	// Check image properties on scanline, column 230
+	CHECK_EQUAL(64771, pixels[230].red);
+	CHECK_EQUAL(63429, pixels[230].blue);
+	CHECK_EQUAL(64193, pixels[230].green);
+	CHECK_EQUAL(0, pixels[230].opacity);
 
 	// Close reader
 	t.Close();

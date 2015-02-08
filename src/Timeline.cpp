@@ -354,6 +354,10 @@ void Timeline::update_open_clips(Clip *clip, bool is_open)
 		// Open the clip's reader
 		clip->Open();
 	}
+
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::update_open_clips", "clip_found", clip_found, "is_open", is_open, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1);
 }
 
 // Update the list of 'closed' clips
@@ -375,11 +379,19 @@ void Timeline::update_closed_clips()
 
 	// Clear list
 	closing_clips.clear();
+
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::update_closed_clips", "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1, "", -1, "", -1);
 }
 
 // Sort clips by position on the timeline
 void Timeline::SortClips()
 {
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::SortClips", "clips.size()", clips.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
+
 	// sort clips
 	clips.sort(CompareClips());
 }
@@ -433,33 +445,52 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		requested_frame = 1;
 
 	// Check cache
-	if (final_cache.Exists(requested_frame))
+	if (final_cache.Exists(requested_frame)) {
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		return final_cache.GetFrame(requested_frame);
+	}
 	else
 	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::GetFrame (Generating frame)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		// Re-Sort Clips (since the likely changed)
 		SortClips();
 
-		// Minimum number of packets to process (for performance reasons)
-		//int minimum_frames = OPEN_MP_NUM_PROCESSORS;
-		int minimum_frames = 1;
-		//omp_set_num_threads(1);
+		// Minimum number of frames to process (for performance reasons)
+		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+
+		// Set the number of threads in OpenMP
+		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+		// Allow nested OpenMP sections
 		omp_set_nested(true);
 
-		#pragma xx omp parallel
+		#pragma omp parallel
 		{
-			#pragma xx omp single
+			#pragma omp single
 			{
+				// Debug output
+				#pragma omp critical (debug_output)
+				AppendDebugMethod("Timeline::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
+
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma xx omp task firstprivate(frame_number)
+					#pragma omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
 
 						// Calculate time of frame
 						float requested_time = calculate_time(frame_number, info.fps);
+
+						// Debug output
+						#pragma omp critical (debug_output)
+						AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "", -1, "", -1, "", -1);
 
 						// Find Clips at this time
 						list<Clip*>::iterator clip_itr;
@@ -476,6 +507,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							float clip_duration = clip->End() - clip->Start();
 							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
 
+							// Debug output
+							#pragma omp critical (debug_output)
+							AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect, "", -1);
+
 							// Open (or schedule for closing) this clip, based on if it's intersecting or not
 							#pragma omp critical (reader_lock)
 							update_open_clips(clip, does_clip_intersect);
@@ -491,8 +526,9 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								add_layer(new_frame, clip, clip_frame_number, frame_number);
 
 							} else
-								#pragma omp critical (timeline_output)
-								cout << "FRAME NOT IN CLIP DURATION: frame: " << frame_number << ", clip->Position(): " << clip->Position() << ", requested_time: " << requested_time << ", clip_duration: " << clip_duration << endl;
+								// Debug output
+								#pragma omp critical (debug_output)
+								AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
 
 						} // end clip loop
 

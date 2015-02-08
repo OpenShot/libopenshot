@@ -102,6 +102,9 @@ Clip::Clip(ReaderBase* reader) : reader(reader)
 	// Open and Close the reader (to set the duration of the clip)
 	Open();
 	Close();
+
+	// Update duration
+	End(reader->info.duration);
 }
 
 // Constructor with filepath
@@ -144,6 +147,8 @@ Clip::Clip(string path)
 		}
 	}
 
+	// Update duration
+	End(reader->info.duration);
 }
 
 /// Set the current reader
@@ -184,11 +189,8 @@ void Clip::Open() throw(InvalidFile, ReaderClosed)
 void Clip::Close() throw(ReaderClosed)
 {
 	if (reader) {
+		// Close the reader
 		reader->Close();
-
-		// Delete the reader
-		delete reader;
-		reader = NULL;
 	}
 	else
 		// Throw error if reader not initialized
