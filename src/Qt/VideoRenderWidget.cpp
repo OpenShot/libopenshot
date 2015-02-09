@@ -83,12 +83,8 @@ void VideoRenderWidget::paintEvent(QPaintEvent *event)
     QPainter painter(this);
 
     // maintain aspect ratio
+    painter.fillRect(event->rect(), palette().window());
     painter.setViewport(centeredViewport(width(), height()));
-
-    if (testAttribute(Qt::WA_OpaquePaintEvent)) {
-        painter.fillRect(event->rect(), palette().window());
-    }
-
     painter.drawImage(QRect(0, 0, width(), height()), image);
 }
 
