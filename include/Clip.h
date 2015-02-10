@@ -102,6 +102,9 @@ namespace openshot {
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
 
+		/// Generate JSON for a property
+		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, float min_value, float max_value, bool readonly);
+
 		/// Get file extension
 		string get_file_extension(string path);
 
@@ -158,6 +161,9 @@ namespace openshot {
 		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+
+		/// Get all properties for a specific frame
+		string PropertiesJSON(int requested_frame);
 
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip

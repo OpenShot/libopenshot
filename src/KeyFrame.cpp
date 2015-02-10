@@ -171,6 +171,24 @@ int Keyframe::FindIndex(Point p) throw(OutOfBoundsPoint) {
 	throw OutOfBoundsPoint("Invalid point requested", -1, Points.size());
 }
 
+// Determine if point already exists
+bool Keyframe::Contains(Point p) {
+	// loop through points, and find a matching coordinate
+	for (int x = 0; x < Points.size(); x++) {
+		// Get each point
+		Point existing_point = Points[x];
+
+		// find a match
+		if (p.co.X == existing_point.co.X) {
+			// Remove the matching point, and break out of loop
+			return true;
+		}
+	}
+
+	// no matching point found
+	return false;
+}
+
 // Get the value at a specific index
 float Keyframe::GetValue(int index)
 {

@@ -107,6 +107,9 @@ namespace openshot {
 		/// Add a new point on the key-frame, with a specific interpolation type
 		void AddPoint(float x, float y, InterpolationType interpolate);
 
+		/// Does this keyframe contain a specific point
+		bool Contains(Point p);
+
 		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
 		void SetHandles(Point current);
 
