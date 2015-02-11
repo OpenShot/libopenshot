@@ -530,33 +530,33 @@ string Clip::PropertiesJSON(int requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, -1, -1, true);
-	root["position"] = add_property_json("Position", Position(), "int", "", false, 0, 1000 * 60 * 30, false);
-	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 1000, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 1000 * 60 * 30, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 1000 * 60 * 30, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 1000 * 60 * 30, false);
-	root["gravity"] = add_property_json("Gravity", gravity, "int", "", false, -1, -1, false);
-	root["scale"] = add_property_json("Scale", scale, "int", "", false, -1, -1, false);
-	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, -1, -1, false);
-	root["waveform"] = add_property_json("Waveform", waveform, "int", "", false, -1, -1, false);
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, true);
+	root["position"] = add_property_json("Position", Position(), "int", "", false, 0, 0, 1000 * 60 * 30, false);
+	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, false);
+	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, false);
+	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, false);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, false);
+	root["gravity"] = add_property_json("Gravity", gravity, "int", "", false, 0, -1, -1, false);
+	root["scale"] = add_property_json("Scale", scale, "int", "", false, 0, -1, -1, false);
+	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, 0, -1, -1, false);
+	root["waveform"] = add_property_json("Waveform", waveform, "int", "", false, 0, -1, -1, false);
 
 	// Keyframes
-	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), -10000, 10000, false);
-	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), -10000, 10000, false);
-	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), 0.0, 100.0, false);
-	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), 0.0, 100.0, false);
-	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), 0.0, 1.0, false);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), -10000, 10000, false);
-	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), 0.0, 1.0, false);
-	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), 0.0, 1000 * 60 * 30, false);
+	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), location_x.GetLength(), -10000, 10000, false);
+	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), location_y.GetLength(), -10000, 10000, false);
+	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), scale_x.GetLength(), 0.0, 100.0, false);
+	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), scale_y.GetLength(), 0.0, 100.0, false);
+	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), alpha.GetLength(), 0.0, 1.0, false);
+	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetLength(), -10000, 10000, false);
+	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetLength(), 0.0, 1.0, false);
+	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetLength(), 0.0, 1000 * 60 * 30, false);
 
 	// Return formatted string
 	return root.toStyledString();
 }
 
 // Generate JSON for a property
-Json::Value Clip::add_property_json(string name, float value, string type, string memo, bool contains_point, float min_value, float max_value, bool readonly) {
+Json::Value Clip::add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, bool readonly) {
 
 	// Create JSON Object
 	Json::Value prop = Json::Value(Json::objectValue);
@@ -567,6 +567,7 @@ Json::Value Clip::add_property_json(string name, float value, string type, strin
 	prop["min"] = min_value;
 	prop["max"] = max_value;
 	prop["keyframe"] = contains_point;
+	prop["points"] = number_of_points;
 	prop["readonly"] = max_value;
 
 	// return JsonValue
