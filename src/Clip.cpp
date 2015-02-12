@@ -148,7 +148,8 @@ Clip::Clip(string path)
 	}
 
 	// Update duration
-	End(reader->info.duration);
+	if (reader)
+		End(reader->info.duration);
 }
 
 /// Set the current reader
