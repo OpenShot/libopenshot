@@ -29,19 +29,23 @@
 #define OPENSHOT_COLOR_H
 
 #include "KeyFrame.h"
+#include <QtGui/QColor>
 
 namespace openshot {
 
 	/**
 	 * @brief This struct represents a color (used on the timeline and clips)
 	 *
-	 * Colors are represented by 4 curves, representing red, green, and blue.  The curves
+	 * Colors are represented by 3 curves, representing red, green, and blue.  The curves
 	 * can be used to animate colors over time.
 	 */
 	struct Color{
 		Keyframe red; ///<Curve representing the red value (0 - 65536)
 		Keyframe green; ///<Curve representing the green value (0 - 65536)
 		Keyframe blue; ///<Curve representing the red blue (0 - 65536)
+
+		/// Get the HEX value of a color at a specific frame
+		string GetColorHex(int frame_number);
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

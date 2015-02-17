@@ -29,6 +29,16 @@
 
 using namespace openshot;
 
+// Get the HEX value of a color at a specific frame
+string Color::GetColorHex(int frame_number) {
+
+	int r = red.GetInt(frame_number);
+	int g = green.GetInt(frame_number);
+	int b = blue.GetInt(frame_number);
+
+	return QColor( r,g,b ).name().toStdString();
+}
+
 // Generate JSON string of this object
 string Color::Json() {
 

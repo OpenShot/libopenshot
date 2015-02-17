@@ -42,7 +42,6 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
-
 	// Reader
 	FFmpegReader r9("/home/jonathan/Videos/sintel-1024-surround.mp4");
 	r9.Open();

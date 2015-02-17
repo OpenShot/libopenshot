@@ -91,6 +91,7 @@ namespace openshot {
 	class Clip : public ClipBase {
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
+		string previous_properties; ///< This string contains the previous JSON properties
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;

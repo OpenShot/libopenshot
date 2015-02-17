@@ -61,3 +61,23 @@ TEST(Color_Animate_Colors)
 	CHECK_CLOSE(8504, c1.green.GetInt(500), 0.01);
 	CHECK_CLOSE(3002, c1.blue.GetInt(500), 0.01);
 }
+
+TEST(Color_HEX_Value)
+{
+	// Color
+	openshot::Color c;
+	c.red = openshot::Keyframe(0);
+	c.red.AddPoint(100, 255);
+	c.green = openshot::Keyframe(0);
+	c.green.AddPoint(100, 255);
+	c.blue = openshot::Keyframe(0);
+	c.blue.AddPoint(100, 255);
+
+	CHECK_EQUAL("#000000", c.GetColorHex(1));
+	CHECK_EQUAL("#818181", c.GetColorHex(50));
+	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
+
+}
+
+
+

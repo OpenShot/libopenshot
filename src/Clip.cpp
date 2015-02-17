@@ -41,6 +41,7 @@ void Clip::init_settings()
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
 	waveform = false;
+	previous_properties = "";
 
 	// Init scale curves
 	scale_x = Keyframe(1.0);
@@ -551,6 +552,24 @@ string Clip::PropertiesJSON(int requested_frame) {
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetLength(), -10000, 10000, false);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetLength(), 0.0, 1.0, false);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetLength(), 0.0, 1000 * 60 * 30, false);
+
+	// Keep track of settings string
+	stringstream properties;
+	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() << gravity << scale << anchor << waveform <<
+			location_x.GetValue(requested_frame) << location_y.GetValue(requested_frame) << scale_x.GetValue(requested_frame) <<
+			scale_y.GetValue(requested_frame) << alpha.GetValue(requested_frame) << rotation.GetValue(requested_frame) <<
+			volume.GetValue(requested_frame) << time.GetValue(requested_frame);
+
+	// Have they changed since the previous call?
+	bool changed = false;
+	if (properties.str() != previous_properties) {
+		changed = true;
+		previous_properties = properties.str();
+	}
+
+	// Mark JSON as changed
+	root["changed"] = add_property_json("changed", changed, "bool", "", false, 0, 0, 1, false);
+	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, false);
 
 	// Return formatted string
 	return root.toStyledString();

@@ -88,3 +88,118 @@ TEST(Clip_Basic_Gettings_and_Setters)
 	CHECK_CLOSE(3.5f, c1.Start(), 0.00001);
 	CHECK_CLOSE(10.5f, c1.End(), 0.00001);
 }
+
+TEST(Clip_Properties)
+{
+	// Create a empty clip
+	Clip c1;
+
+	// Change some properties
+	c1.Layer(1);
+	c1.Position(5.0);
+	c1.Start(3.5);
+	c1.End(10.5);
+	c1.alpha.AddPoint(1, 1.0);
+	c1.alpha.AddPoint(500, 0.0);
+
+	// Get properties JSON string at frame 1
+	string properties = c1.PropertiesJSON(1);
+
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::Reader reader;
+	bool success = reader.parse( properties, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Check for specific things
+		CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.00001);
+		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
+		CHECK_EQUAL(true, root["changed"].asBool());
+
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+
+
+	// Get properties JSON string at frame 250
+	properties = c1.PropertiesJSON(250);
+
+	// Parse JSON string into JSON objects
+	root.clear();
+	success = reader.parse( properties, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Check for specific things
+		CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.001);
+		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
+		CHECK_EQUAL(true, root["changed"].asBool());
+
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+
+
+	// Get properties JSON string at frame 250 (again)
+	properties = c1.PropertiesJSON(250); // again
+
+	// Parse JSON string into JSON objects
+	root.clear();
+	success = reader.parse( properties, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Check for specific things
+		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
+		CHECK_EQUAL(false, root["changed"].asBool());
+
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+
+
+	// Get properties JSON string at frame 500
+	properties = c1.PropertiesJSON(500);
+
+	// Parse JSON string into JSON objects
+	root.clear();
+	success = reader.parse( properties, root );
+	if (!success)
+		// Raise exception
+		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+
+	try
+	{
+		// Check for specific things
+		CHECK_CLOSE(0.0f, root["alpha"]["value"].asDouble(), 0.00001);
+		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
+		CHECK_EQUAL(true, root["changed"].asBool());
+
+	}
+	catch (exception e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+	}
+
+}
+
