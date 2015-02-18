@@ -115,10 +115,6 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 		// Get clip object from the iterator
 		EffectBase *effect = (*effect_itr);
 
-		// Have we gone past the requested time?
-		if (effect->Position() > requested_time)
-			break;
-
 		// Does clip intersect the current requested time
 		float effect_duration = effect->End() - effect->Start();
 		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
@@ -458,7 +454,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::GetFrame (Generating frame)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
-		// Re-Sort Clips (since the likely changed)
+		// Re-Sort Clips (since they likely changed)
 		SortClips();
 
 		// Minimum number of frames to process (for performance reasons)
@@ -498,10 +494,6 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 						{
 							// Get clip object from the iterator
 							Clip *clip = (*clip_itr);
-
-							// Have we gone past the requested time?
-							if (clip->Position() > requested_time)
-								break;
 
 							// Does clip intersect the current requested time
 							float clip_duration = clip->End() - clip->Start();

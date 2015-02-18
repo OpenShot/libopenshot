@@ -48,20 +48,24 @@ using namespace openshot;
 
 namespace openshot {
 
-	/// Comparison method for sorting clip pointers (by Position and Layer)
+	/// Comparison method for sorting clip pointers (by Layer and then Position). Clips are sorted
+	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
+	/// by position (left to right).
 	struct CompareClips{
 		bool operator()( Clip* lhs, Clip* rhs){
-			if( lhs->Position() < rhs->Position() ) return true;
-			if( lhs->Position() == rhs->Position() ) return lhs->Layer() < rhs->Layer();
+			if( lhs->Layer() < rhs->Layer() ) return true;
+			if( lhs->Layer() == rhs->Layer() && lhs->Position() <= rhs->Position() ) return true;
 			return false;
 	}};
 
-	/// Comparison method for sorting effect pointers (by Position, Layer, and Order)
+	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
+	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
+	/// position, and then by effect order.
 	struct CompareEffects{
 		bool operator()( EffectBase* lhs, EffectBase* rhs){
-			if( lhs->Position() < rhs->Position() ) return true;
-			if( lhs->Position() == rhs->Position() ) return lhs->Layer() < rhs->Layer();
-			if( lhs->Position() == rhs->Position() && lhs->Layer() == rhs->Layer() ) return lhs->Order() < rhs->Order();
+			if( lhs->Layer() < rhs->Layer() ) return true;
+			if( lhs->Layer() == rhs->Layer() && lhs->Position() < rhs->Position() ) return true;
+			if( lhs->Layer() == rhs->Layer() && lhs->Position() == rhs->Position() && lhs->Order() > rhs->Order() ) return true;
 			return false;
 	}};
 
