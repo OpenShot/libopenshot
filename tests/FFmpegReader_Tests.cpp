@@ -185,3 +185,37 @@ TEST(FFmpegReader_Seek)
 
 }
 
+TEST(FFmpegReader_Multiple_Open_and_Close)
+{
+	// Create a reader
+	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	r.Open();
+
+	// Get frame that requires a seek
+	tr1::shared_ptr<Frame> f = r.GetFrame(1200);
+	CHECK_EQUAL(1200, f->number);
+
+	// Close and Re-open the reader
+	r.Close();
+	r.Open();
+
+	// Get frame
+	f = r.GetFrame(1);
+	CHECK_EQUAL(1, f->number);
+	f = r.GetFrame(250);
+	CHECK_EQUAL(250, f->number);
+
+	// Close and Re-open the reader
+	r.Close();
+	r.Open();
+
+	// Get frame
+	f = r.GetFrame(750);
+	CHECK_EQUAL(750, f->number);
+	f = r.GetFrame(1000);
+	CHECK_EQUAL(1000, f->number);
+
+	// Close reader
+	r.Close();
+}
+

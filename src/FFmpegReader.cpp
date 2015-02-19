@@ -237,6 +237,8 @@ void FFmpegReader::Close()
 		// Clear processed lists
 		processed_video_frames.clear();
 		processed_audio_frames.clear();
+		processing_video_frames.clear();
+		processing_audio_frames.clear();
 
 		// Clear debug json
 		debug_root.clear();
@@ -247,7 +249,12 @@ void FFmpegReader::Close()
 
 		// Mark as "closed"
 		is_open = false;
+
+		// Reset some variables
 		last_frame = 0;
+		largest_frame_processed = 0;
+		seek_audio_frame_found = 0;
+		seek_video_frame_found = 0;
 	}
 }
 

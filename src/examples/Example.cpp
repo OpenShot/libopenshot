@@ -43,8 +43,10 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 	// Reader
-	FFmpegReader r9("/home/jonathan/Videos/sintel-1024-surround.mp4");
+	FFmpegReader r9("/home/jonathan/apps/libopenshot/src/examples/sintel_trailer-720p.mp4");
+	r9.debug = true;
 	r9.Open();
+
 	//r9.info.has_audio = false;
 	//r9.enable_seek = false;
 	//r9.debug = true;

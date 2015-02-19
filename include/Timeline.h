@@ -156,6 +156,14 @@ namespace openshot {
 		/// Calculate time of a frame number, based on a framerate
 		float calculate_time(int number, Fraction rate);
 
+		/// Find intersecting (or non-intersecting) openshot::Clip objects
+		///
+		/// @returns A list of openshot::Clip objects
+		/// @param requested_frame The frame number that is requested.
+		/// @param number_of_frames The number of frames to check
+		/// @param include Include or Exclude intersecting clips
+		list<Clip*> find_intersecting_clips(int requested_frame, int number_of_frames, bool include);
+
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
 

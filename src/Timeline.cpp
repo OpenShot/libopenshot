@@ -454,9 +454,6 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::GetFrame (Generating frame)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
-		// Re-Sort Clips (since they likely changed)
-		SortClips();
-
 		// Minimum number of frames to process (for performance reasons)
 		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
@@ -473,6 +470,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				#pragma omp critical (debug_output)
 				AppendDebugMethod("Timeline::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
 
+				// Get a list of clips that intersect with the requested section of timeline
+				// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
+				list<Clip*> nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
+
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
@@ -488,9 +489,9 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 						#pragma omp critical (debug_output)
 						AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "", -1, "", -1, "", -1);
 
-						// Find Clips at this time
+						// Find Clips near this time
 						list<Clip*>::iterator clip_itr;
-						for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+						for (clip_itr=nearby_clips.begin(); clip_itr != nearby_clips.end(); ++clip_itr)
 						{
 							// Get clip object from the iterator
 							Clip *clip = (*clip_itr);
@@ -502,10 +503,6 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							// Debug output
 							#pragma omp critical (debug_output)
 							AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect, "", -1);
-
-							// Open (or schedule for closing) this clip, based on if it's intersecting or not
-							#pragma omp critical (reader_lock)
-							update_open_clips(clip, does_clip_intersect);
 
 							// Clip is visible
 							if (does_clip_intersect)
@@ -552,6 +549,54 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	}
 }
 
+
+// Find intersecting clips (or non intersecting clips)
+list<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of_frames, bool include)
+{
+	// Find matching clips
+	list<Clip*> matching_clips;
+
+	// Calculate time of frame
+	float min_requested_time = calculate_time(requested_frame, info.fps);
+	float max_requested_time = calculate_time(requested_frame + (number_of_frames - 1), info.fps);
+
+	// Re-Sort Clips (since they likely changed)
+	SortClips();
+
+	// Find Clips at this time
+	list<Clip*>::iterator clip_itr;
+	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *clip = (*clip_itr);
+
+		// Does clip intersect the current requested time
+		float clip_duration = clip->End() - clip->Start();
+		bool does_clip_intersect = (clip->Position() <= min_requested_time && clip->Position() + clip_duration >= min_requested_time) ||
+								   (clip->Position() > min_requested_time && clip->Position() <= max_requested_time);
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_time", min_requested_time, "max_requested_time", max_requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect);
+
+		// Open (or schedule for closing) this clip, based on if it's intersecting or not
+		#pragma omp critical (reader_lock)
+		update_open_clips(clip, does_clip_intersect);
+
+		// Clip is visible
+		if (does_clip_intersect && include)
+			// Add the intersecting clip
+			matching_clips.push_back(clip);
+
+		else if (!does_clip_intersect && !include)
+			// Add the non-intersecting clip
+			matching_clips.push_back(clip);
+
+	} // end clip loop
+
+	// return list
+	return matching_clips;
+}
 
 // Generate JSON string of this object
 string Timeline::Json() {
