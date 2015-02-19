@@ -566,6 +566,8 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 
 	// Make a copy of the image (since we might resize it)
 	tr1::shared_ptr<Magick::Image> copy = tr1::shared_ptr<Magick::Image>(new Magick::Image(*image));
+	copy->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	copy->matte(true);
 
 	// Set background color
 	if (background_color != "")
@@ -708,6 +710,8 @@ void Frame::AddColor(int width, int height, string color)
 
 	// Give image a transparent background color
 	image->backgroundColor(Magick::Color("#000000ff"));
+	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	image->matte(true);
 
 	// Update height and width
 	width = image->columns();
@@ -722,6 +726,8 @@ void Frame::AddImage(int width, int height, const string map, const Magick::Stor
 
 	// Give image a transparent background color
 	image->backgroundColor(Magick::Color("none"));
+	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	image->matte(true);
 
 	// Update height and width
 	width = image->columns();
@@ -733,6 +739,8 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 {
 	// assign image data
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
+	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	image->matte(true);
 
 	// Update height and width
 	width = image->columns();
@@ -743,8 +751,11 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
 void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lines)
 {
 	// Replace image (if needed)
-	if (image->columns() == 1)
+	if (image->columns() == 1) {
 		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
+		image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+		image->matte(true);
+	}
 
 	// Loop through each odd or even line, and copy it to the image
 	int starting_row = 0;
@@ -780,8 +791,11 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 	Magick::Quantum max_range = QuantumRange;
 
 	// Replace image (if needed)
-	if (image->columns() == 1)
+	if (image->columns() == 1) {
 		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
+		image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+		image->matte(true);
+	}
 	else
 	{
 		// Calculate opacity of new image

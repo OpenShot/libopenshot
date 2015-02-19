@@ -108,6 +108,10 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 	// Calculate time of frame
 	float requested_time = calculate_time(timeline_frame_number, info.fps);
 
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::apply_effects", "requested_time", requested_time, "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
+
 	// Find Effects at this position and layer
 	list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
@@ -125,6 +129,10 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 			// Determine the frame needed for this clip (based on the position on the timeline)
 			float time_diff = (requested_time - effect->Position()) + effect->Start();
 			int effect_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+
+			// Debug output
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("Timeline::apply_effects (Process Effect)", "time_diff", time_diff, "effect_frame_number", effect_frame_number, "effect_duration", effect_duration, "does_effect_intersect", does_effect_intersect, "", -1, "", -1);
 
 			// Apply the effect to this frame
 			frame = effect->GetFrame(frame, effect_frame_number);
@@ -149,42 +157,69 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	if (!source_frame)
 		return;
 
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
+
 	/* Apply effects to the source frame (if any) */
 	source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
+	// Declare an image to hold the source frame's image
 	tr1::shared_ptr<Magick::Image> source_image;
 
 	/* COPY AUDIO - with correct volume */
-	if (source_clip->Reader()->info.has_audio)
-		for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
-		{
-			float initial_volume = 1.0f;
-			float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
-			float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
+	if (source_clip->Reader()->info.has_audio) {
 
-			// If no ramp needed, set initial volume = clip's volume
-			if (isEqual(previous_volume, volume))
-				initial_volume = volume;
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
-			// Apply ramp to source frame (if needed)
-			if (!isEqual(previous_volume, volume))
-				source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
+		if (source_frame->GetAudioChannelsCount() == info.channels)
+			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
+			{
+				float initial_volume = 1.0f;
+				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
+				float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
 
-			// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
-			// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
-			new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
-		}
+				// If no ramp needed, set initial volume = clip's volume
+				if (isEqual(previous_volume, volume))
+					initial_volume = volume;
+
+				// Apply ramp to source frame (if needed)
+				if (!isEqual(previous_volume, volume))
+					source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
+
+				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
+				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
+				new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+			}
+		else
+			// Debug output
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
+
+	}
 
 	/* GET IMAGE DATA - OR GENERATE IT */
 	if (!source_clip->Waveform())
+	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+
 		// Get actual frame image data
 		source_image = source_frame->GetImage();
+	}
 	else
 	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+
 		// Get the color of the waveform
-		int red = source_clip->wave_color.red.GetInt(timeline_frame_number);
-		int green = source_clip->wave_color.green.GetInt(timeline_frame_number);
-		int blue = source_clip->wave_color.blue.GetInt(timeline_frame_number);
+		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
+		int green = source_clip->wave_color.green.GetInt(clip_frame_number);
+		int blue = source_clip->wave_color.blue.GetInt(clip_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
 		source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue);
@@ -199,6 +234,10 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	{
 		float alpha = 1.0 - source_clip->alpha.GetValue(clip_frame_number);
 		source_image->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, alpha);
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -210,13 +249,23 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_image->resize(new_size);
 		source_width = source_image->size().width();
 		source_height = source_image->size().height();
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
+
 	case (SCALE_STRETCH):
 		new_size.aspect(true); // ignore aspect ratio
 		source_image->resize(new_size);
 		source_width = source_image->size().width();
 		source_height = source_image->size().height();
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
+
 	case (SCALE_CROP):
 		Magick::Geometry width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
 		Magick::Geometry height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
@@ -227,59 +276,75 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 			source_image->resize(height_size); // height is larger, so resize to it
 		source_width = source_image->size().width();
 		source_height = source_image->size().height();
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
 	float x = 0.0; // left
 	float y = 0.0; // top
+
+	// Adjust size for scale x and scale y
+	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
+	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
+	int scaled_source_width = source_width * sx;
+	int scaled_source_height = source_height * sy;
+
 	switch (source_clip->gravity)
 	{
 	case (GRAVITY_TOP):
-		x = (info.width - source_width) / 2.0; // center
+		x = (info.width - scaled_source_width) / 2.0; // center
 		break;
 	case (GRAVITY_TOP_RIGHT):
-		x = info.width - source_width; // right
+		x = info.width - scaled_source_width; // right
 		break;
 	case (GRAVITY_LEFT):
-		y = (info.height - source_height) / 2.0; // center
+		y = (info.height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_CENTER):
-		x = (info.width - source_width) / 2.0; // center
-		y = (info.height - source_height) / 2.0; // center
+		x = (info.width - scaled_source_width) / 2.0; // center
+		y = (info.height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_RIGHT):
-		x = info.width - source_width; // right
-		y = (info.height - source_height) / 2.0; // center
+		x = info.width - scaled_source_width; // right
+		y = (info.height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_BOTTOM_LEFT):
-		y = (info.height - source_height); // bottom
+		y = (info.height - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM):
-		x = (info.width - source_width) / 2.0; // center
-		y = (info.height - source_height); // bottom
+		x = (info.width - scaled_source_width) / 2.0; // center
+		y = (info.height - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM_RIGHT):
-		x = info.width - source_width; // right
-		y = (info.height - source_height); // bottom
+		x = info.width - scaled_source_width; // right
+		y = (info.height - scaled_source_height); // bottom
 		break;
 	}
+
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "source_width", source_width, "info.height", info.height, "source_height", source_height);
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
 	x += info.width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
 	y += info.height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
-	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
-	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
-	bool is_x_animated = source_clip->location_x.Points.size() > 2;
-	bool is_y_animated = source_clip->location_y.Points.size() > 2;
+	bool is_x_animated = source_clip->location_x.Points.size() > 1;
+	bool is_y_animated = source_clip->location_y.Points.size() > 1;
 
 	int offset_x = -1;
 	int offset_y = -1;
 	bool transformed = false;
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
-		//cout << "SIMPLE" << endl;
+		// SIMPLE OFFSET
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
 		offset_x = round(x);
 		offset_y = round(y);
@@ -287,31 +352,53 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
-		//cout << "COMPLEX" << endl;
+		// COMPLEX DISTORTION
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
 		if (source_width != info.width || source_height != info.height)
 		{
+			// Debug output
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Resize Source Canvas)", "source_frame->number", source_frame->number, "source_frame->GetWidth()", source_frame->GetWidth(), "info.width", info.width, "source_frame->GetHeight()", source_frame->GetHeight(), "info.height", info.height, "", -1);
+
 			source_image->borderColor(Magick::Color("none"));
 			source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
 			source_image->size(Magick::Geometry(info.width, info.height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
 		}
 
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Prepare for ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
 		// Use the distort operator, which is very CPU intensive
 		// origin X,Y     Scale     Angle  NewX,NewY
-		double distort_args[7] = {0,0,  sx,sy,  r,  x,y };
+		double distort_args[7] = {(source_width/2.0),(source_height/2.0),  sx,sy,  r,  x+(scaled_source_width/2.0),y+(scaled_source_height/2.0) };
 		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
 		transformed = true;
+
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 	}
 
 	/* Is this the 1st layer?  And the same size as this image? */
 	if (new_frame->GetImage()->columns() == 1 && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
 	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: Add Image: 1st Layer, Using Source Image", "source_frame->number", source_frame->number, "source_frame->GetHeight()", source_frame->GetHeight(), "source_frame->GetWidth()", source_frame->GetWidth(), "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+
 		// Just use this image as the background
 		new_frame->AddImage(source_image);
 	}
 	else if (new_frame->GetImage()->columns() == 1)
 	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: Composite Image: 1st Layer, Generate Solid Color Image", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+
 		/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
@@ -324,6 +411,10 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 	else
 	{
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::add_layer (Transform: Composite Image: Append Another Layer", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+
 		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
 		new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
@@ -455,19 +546,19 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		AppendDebugMethod("Timeline::GetFrame (Generating frame)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Minimum number of frames to process (for performance reasons)
-		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+		int minimum_frames = 1;
 
 		// Set the number of threads in OpenMP
 		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 		// Allow nested OpenMP sections
 		omp_set_nested(true);
 
-		#pragma omp parallel
+		#pragma xxx omp parallel
 		{
-			#pragma omp single
+			#pragma xxx omp single
 			{
 				// Debug output
-				#pragma omp critical (debug_output)
+				#pragma xxx omp critical (debug_output)
 				AppendDebugMethod("Timeline::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
 
 				// Get a list of clips that intersect with the requested section of timeline
@@ -477,7 +568,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 				// Loop through all requested frames
 				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 				{
-					#pragma omp task firstprivate(frame_number)
+					#pragma xxx omp task firstprivate(frame_number)
 					{
 						// Create blank frame (which will become the requested frame)
 						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
