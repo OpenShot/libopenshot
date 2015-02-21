@@ -104,7 +104,7 @@ namespace openshot {
 		int adjust_frame_number_minimum(int frame_number);
 
 		/// Generate JSON for a property
-		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, bool readonly);
+		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
 
 		/// Get file extension
 		string get_file_extension(string path);

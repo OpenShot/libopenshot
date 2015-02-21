@@ -131,6 +131,9 @@ namespace openshot {
 		/// Get a point at a specific index
 		Point& GetPoint(int index) throw(OutOfBoundsPoint);
 
+		/// Get current point (or closest point) from the X coordinate (i.e. the frame number)
+		Point GetClosestPoint(Point p);
+
 		// Get the number of values (i.e. coordinates on the X axis)
 		int GetLength();
 

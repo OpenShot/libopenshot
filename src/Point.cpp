@@ -34,7 +34,7 @@ using namespace openshot;
 Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 {
 	// set new coorinate
-	co = Coordinate(0, 0);
+	co = Coordinate(1, 0);
 
 	// set handles
 	Initialize_Handles();
@@ -44,7 +44,7 @@ Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 Point::Point(float y) :
 	interpolation(CONSTANT), handle_type(AUTO) {
 	// set new coorinate
-	co = Coordinate(0, y);
+	co = Coordinate(1, y);
 
 	// set handles
 	Initialize_Handles();

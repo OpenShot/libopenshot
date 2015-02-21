@@ -47,8 +47,6 @@ void Keyframe::ReorderPoints() {
 
 		// swap items
 		if (smallest_index != compare_index) {
-			cout << "swap item " << Points[compare_index].co.X << " with "
-					<< Points[smallest_index].co.X << endl;
 			swap(Points[compare_index], Points[smallest_index]);
 		}
 	}
@@ -187,6 +185,26 @@ bool Keyframe::Contains(Point p) {
 
 	// no matching point found
 	return false;
+}
+
+// Get current point (or closest point) from the X coordinate (i.e. the frame number)
+Point Keyframe::GetClosestPoint(Point p) {
+	Point closest(-1, -1);
+
+	// loop through points, and find a matching coordinate
+	for (int x = 0; x < Points.size(); x++) {
+		// Get each point
+		Point existing_point = Points[x];
+
+		// find a match
+		if ((p.co.X <= existing_point.co.X && p.co.X >= closest.co.X) || (closest.co.X == -1)) {
+			// New closest point found
+			closest = existing_point;
+		}
+	}
+
+	// no matching point found
+	return closest;
 }
 
 // Get the value at a specific index
