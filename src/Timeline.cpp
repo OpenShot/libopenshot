@@ -383,42 +383,28 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 	}
 
-	/* Is this the 1st layer?  And the same size as this image? */
-	if (new_frame->GetImage()->columns() == 1 && !transformed && source_frame->GetHeight() == new_frame->GetHeight() && source_frame->GetWidth() == new_frame->GetWidth())
-	{
-		// Debug output
-		#pragma omp critical (debug_output)
-		AppendDebugMethod("Timeline::add_layer (Transform: Add Image: 1st Layer, Using Source Image", "source_frame->number", source_frame->number, "source_frame->GetHeight()", source_frame->GetHeight(), "source_frame->GetWidth()", source_frame->GetWidth(), "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 
-		// Just use this image as the background
-		new_frame->AddImage(source_image);
-	}
-	else if (new_frame->GetImage()->columns() == 1)
+	/* Is this the 1st layer? If so, add a background color below the image */
+	if (new_frame->GetImage()->columns() == 1)
 	{
 		// Debug output
 		#pragma omp critical (debug_output)
-		AppendDebugMethod("Timeline::add_layer (Transform: Composite Image: 1st Layer, Generate Solid Color Image", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+		AppendDebugMethod("Timeline::add_layer (Transform: 1st Layer, Generate Solid Color Image", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 
 		/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
 		int red = color.red.GetInt(timeline_frame_number);
 		int green = color.green.GetInt(timeline_frame_number);
 		int blue = color.blue.GetInt(timeline_frame_number);
 		new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue, 0));
-
-		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-		new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
 	}
-	else
-	{
-		// Debug output
-		#pragma omp critical (debug_output)
-		AppendDebugMethod("Timeline::add_layer (Transform: Composite Image: Append Another Layer", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 
-		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-		tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-		new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
-	}
+	// Debug output
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+
+	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
+	new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
 
 }
 
