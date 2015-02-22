@@ -116,7 +116,7 @@ TEST(Clip_Properties)
 	try
 	{
 		// Check for specific things
-		CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.00001);
+		CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.01);
 		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
 		CHECK_EQUAL(true, root["changed"]["value"].asBool());
 
@@ -141,7 +141,7 @@ TEST(Clip_Properties)
 	try
 	{
 		// Check for specific things
-		CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.001);
+		CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.01);
 		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
 		CHECK_EQUAL(true, root["changed"]["value"].asBool());
 

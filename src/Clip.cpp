@@ -544,21 +544,21 @@ string Clip::PropertiesJSON(int requested_frame) {
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", false, 0, -1, -1, CONSTANT, -1, false);
 
 	// Keyframes
-	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), location_x.GetLength(), -10000, 10000, location_x.GetClosestPoint(requested_point).interpolation, location_x.GetClosestPoint(requested_point).co.X, false);
-	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), location_y.GetLength(), -10000, 10000, location_y.GetClosestPoint(requested_point).interpolation, location_y.GetClosestPoint(requested_point).co.X, false);
-	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), scale_x.GetLength(), 0.0, 100.0, scale_x.GetClosestPoint(requested_point).interpolation, scale_x.GetClosestPoint(requested_point).co.X, false);
-	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), scale_y.GetLength(), 0.0, 100.0, scale_y.GetClosestPoint(requested_point).interpolation, scale_y.GetClosestPoint(requested_point).co.X, false);
-	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), alpha.GetLength(), 0.0, 1.0, alpha.GetClosestPoint(requested_point).interpolation, alpha.GetClosestPoint(requested_point).co.X, false);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetLength(), -10000, 10000, rotation.GetClosestPoint(requested_point).interpolation, rotation.GetClosestPoint(requested_point).co.X, false);
-	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetLength(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
-	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetLength(), 0.0, 1000 * 60 * 30, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
+	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), location_x.GetCount(), -10000, 10000, location_x.GetClosestPoint(requested_point).interpolation, location_x.GetClosestPoint(requested_point).co.X, false);
+	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), location_y.GetCount(), -10000, 10000, location_y.GetClosestPoint(requested_point).interpolation, location_y.GetClosestPoint(requested_point).co.X, false);
+	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), scale_x.GetCount(), 0.0, 100.0, scale_x.GetClosestPoint(requested_point).interpolation, scale_x.GetClosestPoint(requested_point).co.X, false);
+	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), scale_y.GetCount(), 0.0, 100.0, scale_y.GetClosestPoint(requested_point).interpolation, scale_y.GetClosestPoint(requested_point).co.X, false);
+	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), alpha.GetCount(), 0.0, 1.0, alpha.GetClosestPoint(requested_point).interpolation, alpha.GetClosestPoint(requested_point).co.X, false);
+	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetCount(), -10000, 10000, rotation.GetClosestPoint(requested_point).interpolation, rotation.GetClosestPoint(requested_point).co.X, false);
+	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetCount(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
+	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetCount(), 0.0, 1000 * 60 * 30, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
 
 	// Keep track of settings string
 	stringstream properties;
 	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() << gravity << scale << anchor << waveform <<
 			location_x.GetValue(requested_frame) << location_y.GetValue(requested_frame) << scale_x.GetValue(requested_frame) <<
 			scale_y.GetValue(requested_frame) << alpha.GetValue(requested_frame) << rotation.GetValue(requested_frame) <<
-			volume.GetValue(requested_frame) << time.GetValue(requested_frame);
+			volume.GetValue(requested_frame) << time.GetValue(requested_frame) << alpha.GetCount() << alpha.GetClosestPoint(requested_point).interpolation << alpha.GetClosestPoint(requested_point).co.X;
 
 	// Have they changed since the previous call?
 	bool changed = false;

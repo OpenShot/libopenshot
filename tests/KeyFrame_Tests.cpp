@@ -223,3 +223,23 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 12);
 	CHECK_EQUAL(kf.GetDelta(391), -1);
 }
+
+
+TEST(Keyframe_Get_Closest_Point)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 0.0);
+	kf.AddPoint(1000, 1.0);
+	kf.AddPoint(2500, 0.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(900, 900)).co.X, 1000);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1, 1)).co.X, 1);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(5, 5)).co.X, 1000);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1000, 1000)).co.X, 1000);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1001, 1001)).co.X, 2500);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(2500, 2500)).co.X, 2500);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000)).co.X, 2500);
+
+}

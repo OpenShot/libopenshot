@@ -74,7 +74,7 @@ TEST(Color_HEX_Value)
 	c.blue.AddPoint(100, 255);
 
 	CHECK_EQUAL("#000000", c.GetColorHex(1));
-	CHECK_EQUAL("#818181", c.GetColorHex(50));
+	CHECK_EQUAL("#7f7f7f", c.GetColorHex(50));
 	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
 
 }

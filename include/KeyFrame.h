@@ -137,6 +137,9 @@ namespace openshot {
 		// Get the number of values (i.e. coordinates on the X axis)
 		int GetLength();
 
+		/// Get the number of points (i.e. # of points)
+		int GetCount();
+
 		/// Get the direction of the curve at a specific index (increasing or decreasing)
 		bool IsIncreasing(int index);
 

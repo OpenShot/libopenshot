@@ -197,10 +197,21 @@ Point Keyframe::GetClosestPoint(Point p) {
 		Point existing_point = Points[x];
 
 		// find a match
-		if ((p.co.X <= existing_point.co.X && p.co.X >= closest.co.X) || (closest.co.X == -1)) {
+		if (existing_point.co.X >= p.co.X) {
 			// New closest point found
 			closest = existing_point;
+			break;
 		}
+	}
+
+	// Handle edge cases (if no point was found)
+	if (closest.co.X == -1) {
+		if (p.co.X < 1)
+			// Assign 1st point
+			closest = Points[0];
+		else
+			// Assign last point
+			closest = Points[Points.size() - 1];
 	}
 
 	// no matching point found
@@ -414,6 +425,13 @@ int Keyframe::GetLength() {
 
 	// return the size of the Values vector
 	return Values.size();
+}
+
+// Get the number of points (i.e. # of points)
+int Keyframe::GetCount() {
+
+	// return the size of the Values vector
+	return Points.size();
 }
 
 // Remove a point by matching a coordinate
