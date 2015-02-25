@@ -533,7 +533,7 @@ string Clip::PropertiesJSON(int requested_frame) {
 	// Generate JSON properties list
 	Json::Value root;
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "int", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
+	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
 	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, CONSTANT, -1, false);
 	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
 	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
@@ -583,7 +583,7 @@ Json::Value Clip::add_property_json(string name, float value, string type, strin
 	prop["name"] = name;
 	prop["value"] = value;
 	prop["memo"] = memo;
-	prop["type"] = value;
+	prop["type"] = type;
 	prop["min"] = min_value;
 	prop["max"] = max_value;
 	prop["keyframe"] = contains_point;

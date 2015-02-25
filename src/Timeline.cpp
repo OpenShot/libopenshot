@@ -574,19 +574,22 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							Clip *clip = (*clip_itr);
 
 							// Does clip intersect the current requested time
-							float clip_duration = clip->End() - clip->Start();
-							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip_duration >= requested_time);
+							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
 
 							// Debug output
 							#pragma omp critical (debug_output)
-							AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect, "", -1);
+							AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
 
 							// Clip is visible
 							if (does_clip_intersect)
 							{
 								// Determine the frame needed for this clip (based on the position on the timeline)
 								float time_diff = (requested_time - clip->Position()) + clip->Start();
-								int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+								int clip_frame_number = (time_diff * info.fps.ToFloat()) + 1;
+
+								// Debug output
+								#pragma omp critical (debug_output)
+								AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
 
 								// Add clip's frame as layer
 								add_layer(new_frame, clip, clip_frame_number, frame_number);

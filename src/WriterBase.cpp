@@ -77,12 +77,12 @@ void WriterBase::AppendDebugItem(Json::Value debug_item)
 }
 
 // Append debug information as JSON
-void WriterBase::AppendDebugMethod(string method_name, string arg1_name, int arg1_value,
-														 string arg2_name, int arg2_value,
-														 string arg3_name, int arg3_value,
-														 string arg4_name, int arg4_value,
-														 string arg5_name, int arg5_value,
-														 string arg6_name, int arg6_value)
+void WriterBase::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
+														 string arg2_name, float arg2_value,
+														 string arg3_name, float arg3_value,
+														 string arg4_name, float arg4_value,
+														 string arg5_name, float arg5_value,
+														 string arg6_name, float arg6_value)
 {
 	if (!debug)
 		// Don't do anything
@@ -92,6 +92,7 @@ void WriterBase::AppendDebugMethod(string method_name, string arg1_name, int arg
 	debug_item["method"] = method_name;
 
 	// Output to standard output
+	cout << fixed << setprecision(4);
 	cout << "Debug: Method: " << method_name << " (";
 
 	// Add attributes to method JSON
