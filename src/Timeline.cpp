@@ -123,6 +123,10 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 		float effect_duration = effect->End() - effect->Start();
 		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
 
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "requested_time", requested_time, "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "effect_duration", effect_duration);
+
 		// Clip is visible
 		if (does_effect_intersect)
 		{

@@ -42,6 +42,9 @@
 #include "../Json.h"
 #include "../KeyFrame.h"
 #include "../ReaderBase.h"
+#include "../FFmpegReader.h"
+#include "../ImageReader.h"
+#include "../ChunkReader.h"
 
 using namespace std;
 
@@ -63,6 +66,9 @@ namespace openshot
 		Keyframe contrast;
 		tr1::shared_ptr<Magick::Image> mask;
 
+		/// Init effect settings
+		void init_effect_details();
+
 		/// Set brightness and contrast
 		void set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast);
 
@@ -76,8 +82,8 @@ namespace openshot
 		/// adjust the brightness and contrast of this file, to animate the effect.
 		///
 		/// @param mask_reader The reader of a grayscale mask image or video, to be used by the wipe transition
-		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask
-		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask
+		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask (between 100 and -100)
+		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask (3 is typical, 20 is a lot, 0 is invalid)
 		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a

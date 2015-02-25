@@ -31,40 +31,32 @@ using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
 Mask::Mask() : reader(NULL) {
-
+	// Init effect properties
+	init_effect_details();
 }
 
 // Default constructor
 Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed) :
 		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast)
 {
+	// Init effect properties
+	init_effect_details();
+}
+
+// Init effect settings
+void Mask::init_effect_details()
+{
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
 	info.name = "Alpha Mask / Wipe Transition";
-	info.description = "Uses a grayscale mask image file to gradually wipe / transition between 2 images.";
+	info.description = "Uses a grayscale mask image to gradually wipe / transition between 2 images.";
 	info.has_audio = false;
 	info.has_video = true;
-
-//	// Attempt to open mask file
-//	try
-//	{
-//		// load image
-//		mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
-//		//mask->type(Magick::GrayscaleType); // convert to grayscale
-//
-//		// Remove transparency support (so mask will sub color brightness for alpha)
-//		mask->matte(false); // This is required for the composite operator to copy the brightness of each pixel into the alpha channel
-//
-//	}
-//	catch (Magick::Exception e) {
-//		// raise exception
-//		throw InvalidFile("File could not be opened.", path);
-//	}
 }
 
-// Set brightness and contrast (brightness between -100 and 100)
+// Set brightness and contrast (brightness between 100 and -100)
 void Mask::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast)
 {
 	// Determine if white or black image is needed
@@ -110,6 +102,9 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 		mask->resize(new_size);
 	}
 
+	cout << "brightness.GetValue(" << frame_number << "): " << brightness.GetValue(frame_number) << endl;
+	cout << "contrast.GetValue(" << frame_number << "): " << contrast.GetValue(frame_number) << endl;
+
 	// Set the brightness of the mask (from a user-defined curve)
 	set_brightness_and_contrast(mask, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
@@ -142,7 +137,7 @@ Json::Value Mask::JsonValue() {
 	root["type"] = "Mask";
 	root["brightness"] = brightness.JsonValue();
 	root["contrast"] = contrast.JsonValue();
-	//root["reader"] = reader.JsonValue();
+	root["reader"] = reader->JsonValue();
 
 	// return JsonValue
 	return root;
@@ -182,5 +177,46 @@ void Mask::SetJsonValue(Json::Value root) {
 		brightness.SetJsonValue(root["brightness"]);
 	if (!root["contrast"].isNull())
 		contrast.SetJsonValue(root["contrast"]);
+	if (!root["reader"].isNull()) // does Json contain a reader?
+	{
+		if (!root["reader"]["type"].isNull()) // does the reader Json contain a 'type'?
+		{
+			// Close previous reader (if any)
+			if (reader)
+			{
+				// Close and delete existing reader (if any)
+				reader->Close();
+				delete reader;
+				reader = NULL;
+			}
+
+			// Create new reader (and load properties)
+			string type = root["reader"]["type"].asString();
+
+			if (type == "FFmpegReader") {
+
+				// Create new reader
+				reader = new FFmpegReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "ImageReader") {
+
+				// Create new reader
+				reader = new ImageReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "ChunkReader") {
+
+				// Create new reader
+				reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
+				reader->SetJsonValue(root["reader"]);
+
+			}
+
+			// Always Open reader
+			reader->Open();
+
+		}
+	}
 }
 
