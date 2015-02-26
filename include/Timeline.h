@@ -146,7 +146,7 @@ namespace openshot {
 		Cache final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
-		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number);
+		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number, bool is_top_clip);
 
 		/// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to clips

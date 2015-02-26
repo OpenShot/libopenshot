@@ -149,7 +149,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number)
+void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
@@ -165,8 +165,10 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	#pragma omp critical (debug_output)
 	AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
 
-	/* Apply effects to the source frame (if any) */
-	source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
+	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
+	 * effects on the top clip. */
+	if (is_top_clip)
+		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
 	// Declare an image to hold the source frame's image
 	tr1::shared_ptr<Magick::Image> source_image;
@@ -587,6 +589,20 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 							// Clip is visible
 							if (does_clip_intersect)
 							{
+								// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
+								bool is_top_clip = true;
+								list<Clip*>::iterator clip_itr1;
+								for (clip_itr1=nearby_clips.begin(); clip_itr1 != nearby_clips.end(); ++clip_itr1)
+								{
+									Clip *nearby_clip = (*clip_itr1);
+									if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
+											nearby_clip->Position() <= requested_time && nearby_clip->Position() + nearby_clip->Duration() >= requested_time &&
+											nearby_clip->Position() > clip->Position()) {
+										is_top_clip = false;
+										break;
+									}
+								}
+
 								// Determine the frame needed for this clip (based on the position on the timeline)
 								float time_diff = (requested_time - clip->Position()) + clip->Start();
 								int clip_frame_number = (time_diff * info.fps.ToFloat()) + 1;
@@ -596,7 +612,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 								AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
 
 								// Add clip's frame as layer
-								add_layer(new_frame, clip, clip_frame_number, frame_number);
+								add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
 
 							} else
 								// Debug output
