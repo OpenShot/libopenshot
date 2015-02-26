@@ -30,8 +30,9 @@
 using namespace std;
 using namespace openshot;
 
-FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType pulldown) :
-		reader(reader), target(target), pulldown(pulldown), final_cache(820 * 1024)
+FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
+		reader(reader), target(target), pulldown(target_pulldown), sample_rate(target_sample_rate), channels(target_channels), channel_layout(target_channel_layout),
+		final_cache(820 * 1024), is_dirty(true)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -79,6 +80,12 @@ void FrameMapper::Init()
 	// Clear the fields & frames lists
 	fields.clear();
 	frames.clear();
+
+	// Mark as not dirty
+	is_dirty = false;
+
+	// Clear cache
+	final_cache.Clear();
 
 	// Some framerates are handled special, and some use a generic Keyframe curve to
 	// map the framerates. These are the special framerates:
@@ -290,12 +297,25 @@ MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBounds
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderClosed)
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Check final cache, and just return the frame (if it's available)
 	if (final_cache.Exists(requested_frame))
 		return final_cache.GetFrame(requested_frame);
 
 	// Get the mapped frame
 	MappedFrame mapped = GetMappedFrame(requested_frame);
+
+	// Return the original frame if no mapping is needed
+	if (reader->info.fps.num == target.num && reader->info.fps.den == target.den &&
+		reader->info.sample_rate == sample_rate && reader->info.channels == channels &&
+		reader->info.channel_layout == channel_layout)
+		// Return original frame (performance optimization)
+		return reader->GetFrame(mapped.Odd.Frame);
+
 
 	// Init some basic properties about this frame
 	int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, target, info.sample_rate);
@@ -484,3 +504,18 @@ void FrameMapper::SetJsonValue(Json::Value root) throw(InvalidFile) {
 		Open();
 	}
 }
+
+// Change frame rate or audio mapping details
+void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
+{
+	// Mark as dirty
+	is_dirty = true;
+
+	// Update mapping details
+	target = target_fps;
+	pulldown = target_pulldown;
+	sample_rate = target_sample_rate;
+	channels = target_channels;
+	channel_layout = target_channel_layout;
+}
+

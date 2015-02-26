@@ -132,10 +132,14 @@ namespace openshot
 		bool is_open;
 		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
 		Fraction original;		// The original frame rate
-		Fraction target;			// The target frame rate
+		Fraction target;	// The target frame rate
+		int sample_rate;	// The target sample rate
+		int channels;	// The target channels
+		ChannelLayout channel_layout; // The layout of audio channels
 		PulldownType pulldown;	// The pull-down technique
 		ReaderBase *reader;	// The source video reader
 		Cache final_cache; // Cache of actual Frame objects
+		bool is_dirty; // When this is true, the next call to GetFrame will re-init the mapping
 
 		// Internal methods used by init
 		void AddField(int frame);
@@ -153,7 +157,7 @@ namespace openshot
 		vector<MappedFrame> frames;	// List of all frames
 
 		/// Default constructor for FrameMapper class
-		FrameMapper(ReaderBase *reader, Fraction target, PulldownType pulldown);
+		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		/// Close the internal reader
 		void Close();
@@ -178,23 +182,14 @@ namespace openshot
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
 
-		/// Get the target framerate
-		Fraction TargetFPS() { return target; };
-
-		/// Get the source framerate
-		Fraction SourceFPS() { return original; };
-
-		/// Set the target framerate
-		void TargetFPS(Fraction new_fps) { target = new_fps; };
-
-		/// Set the source framerate
-		void SourceFPS(Fraction new_fps) { original = new_fps; };
-
 		/// Open the internal reader
 		void Open() throw(InvalidFile);
 
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();
+
+		/// Change frame rate or audio mapping details
+		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 	};
 }

@@ -77,7 +77,7 @@ namespace openshot
 	 *
 	 * // Create a reader for a video
 	 * FFmpegReader r("MyAwesomeVideo.webm");
-	 * r.Open(); // Open the reader
+	 * r.Open(); // Open thetarget_ reader
 	 *
 	 * // Create a writer (which will create a WebM video)
 	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
@@ -173,7 +173,6 @@ namespace openshot
 	    int audio_input_frame_size;
 	    int initial_audio_input_frame_size;
 	    int audio_input_position;
-	    AudioResampler *resampler;
 	    AVAudioResampleContext *avr;
 	    AVAudioResampleContext *avr_planar;
 

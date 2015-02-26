@@ -35,7 +35,7 @@ using namespace openshot;
 FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), resampler(NULL), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
+		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
 		write_header(false), write_trailer(false)
@@ -696,8 +696,6 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 	delete[] samples;
 	delete[] audio_outbuf;
 
-	delete resampler;
-
 	// Deallocate resample buffer
 	avresample_close(avr);
 	avresample_free(&avr);
@@ -1022,12 +1020,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 // write all queued frames' audio to the video file
 void FFmpegWriter::write_audio_packets(bool final)
 {
-	// Create a resampler (only once)
-	if (!resampler)
-		resampler = new AudioResampler();
-	AudioResampler *new_sampler = resampler;
-
-	#pragma omp task firstprivate(new_sampler)
+	#pragma omp task firstprivate(final)
 	{
 		// Init audio buffers / variables
 		int total_frame_samples = 0;
@@ -1056,7 +1049,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			// Get audio sample array
 			float* frame_samples_float = NULL;
 			// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
-			frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, new_sampler, &samples_in_frame);
+			frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
 
 
 			// Calculate total samples
