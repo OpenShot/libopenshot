@@ -89,6 +89,10 @@ void Mask::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, flo
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
+	// Check if reader is open
+	if (!reader->IsOpen())
+		reader->Open();
+
 	// Get the mask image (from the mask reader)
 	mask = reader->GetFrame(frame_number)->GetImage();
 	mask->type(Magick::GrayscaleType); // convert to grayscale
@@ -179,6 +183,7 @@ void Mask::SetJsonValue(Json::Value root) {
 		contrast.SetJsonValue(root["contrast"]);
 	if (!root["reader"].isNull()) // does Json contain a reader?
 	{
+
 		if (!root["reader"]["type"].isNull()) // does the reader Json contain a 'type'?
 		{
 			// Close previous reader (if any)
@@ -213,11 +218,9 @@ void Mask::SetJsonValue(Json::Value root) {
 
 			}
 
-			// Always Open reader
-			reader->Open();
-
 		}
 	}
+
 }
 
 // Get all properties for a specific frame
