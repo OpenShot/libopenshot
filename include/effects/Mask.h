@@ -102,6 +102,11 @@ namespace openshot
 		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
+		string PropertiesJSON(int requested_frame);
+
 	};
 
 }

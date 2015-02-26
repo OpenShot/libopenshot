@@ -91,7 +91,6 @@ namespace openshot {
 	class Clip : public ClipBase {
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
-		string previous_properties; ///< This string contains the previous JSON properties
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -102,9 +101,6 @@ namespace openshot {
 
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
-
-		/// Generate JSON for a property
-		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
 
 		/// Get file extension
 		string get_file_extension(string path);
@@ -163,7 +159,8 @@ namespace openshot {
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
-		/// Get all properties for a specific frame
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
 		string PropertiesJSON(int requested_frame);
 
 		/// Waveform property

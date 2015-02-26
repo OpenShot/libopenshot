@@ -537,7 +537,7 @@ string Clip::PropertiesJSON(int requested_frame) {
 	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, CONSTANT, -1, false);
 	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
 	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", false, 0, -1, -1, CONSTANT, -1, false);
 	root["scale"] = add_property_json("Scale", scale, "int", "", false, 0, -1, -1, CONSTANT, -1, false);
 	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, 0, -1, -1, CONSTANT, -1, false);
@@ -560,40 +560,11 @@ string Clip::PropertiesJSON(int requested_frame) {
 			scale_y.GetValue(requested_frame) << alpha.GetValue(requested_frame) << rotation.GetValue(requested_frame) <<
 			volume.GetValue(requested_frame) << time.GetValue(requested_frame) << alpha.GetCount() << alpha.GetClosestPoint(requested_point).interpolation << alpha.GetClosestPoint(requested_point).co.X;
 
-	// Have they changed since the previous call?
-	bool changed = false;
-	if (properties.str() != previous_properties) {
-		changed = true;
-		previous_properties = properties.str();
-	}
-
-	// Mark JSON as changed
-	root["changed"] = add_property_json("changed", changed, "bool", "", false, 0, 0, 1, CONSTANT, -1, true);
+	// Add hash of all property values
 	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, CONSTANT, -1, true);
 
 	// Return formatted string
 	return root.toStyledString();
-}
-
-// Generate JSON for a property
-Json::Value Clip::add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly) {
-
-	// Create JSON Object
-	Json::Value prop = Json::Value(Json::objectValue);
-	prop["name"] = name;
-	prop["value"] = value;
-	prop["memo"] = memo;
-	prop["type"] = type;
-	prop["min"] = min_value;
-	prop["max"] = max_value;
-	prop["keyframe"] = contains_point;
-	prop["points"] = number_of_points;
-	prop["readonly"] = max_value;
-	prop["interpolation"] = intepolation;
-	prop["closest_point_x"] = closest_point_x;
-
-	// return JsonValue
-	return prop;
 }
 
 // Generate Json::JsonValue for this object

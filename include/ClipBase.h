@@ -34,7 +34,9 @@
 #endif
 
 #include <tr1/memory>
+#include <sstream>
 #include "Exceptions.h"
+#include "Point.h"
 #include "Json.h"
 
 using namespace std;
@@ -54,6 +56,10 @@ namespace openshot {
 		int layer; ///< The layer this clip is on. Lower clips are covered up by higher clips.
 		float start; ///< The position in seconds to start playing (used to trim the beginning of a clip)
 		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
+		string previous_properties; ///< This string contains the previous JSON properties
+
+		/// Generate JSON for a property
+		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
 
 	public:
 
@@ -83,6 +89,10 @@ namespace openshot {
 		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
+		virtual string PropertiesJSON(int requested_frame) = 0;
 
 	};
 

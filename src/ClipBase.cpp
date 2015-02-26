@@ -60,3 +60,24 @@ void ClipBase::SetJsonValue(Json::Value root) {
 	if (!root["end"].isNull())
 		End(root["end"].asDouble());
 }
+
+// Generate JSON for a property
+Json::Value ClipBase::add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly) {
+
+	// Create JSON Object
+	Json::Value prop = Json::Value(Json::objectValue);
+	prop["name"] = name;
+	prop["value"] = value;
+	prop["memo"] = memo;
+	prop["type"] = type;
+	prop["min"] = min_value;
+	prop["max"] = max_value;
+	prop["keyframe"] = contains_point;
+	prop["points"] = number_of_points;
+	prop["readonly"] = max_value;
+	prop["interpolation"] = intepolation;
+	prop["closest_point_x"] = closest_point_x;
+
+	// return JsonValue
+	return prop;
+}

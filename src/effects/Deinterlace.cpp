@@ -123,3 +123,30 @@ void Deinterlace::SetJsonValue(Json::Value root) {
 	if (!root["isOdd"].isNull())
 		isOdd = root["isOdd"].asBool();
 }
+
+// Get all properties for a specific frame
+string Deinterlace::PropertiesJSON(int requested_frame) {
+
+	// Requested Point
+	Point requested_point(requested_frame, requested_frame);
+
+	// Generate JSON properties list
+	Json::Value root;
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
+	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
+	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, CONSTANT, -1, false);
+	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
+	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
+	root["isOdd"] = add_property_json("Is Odd Frame", isOdd, "bool", "", false, 0, 0, 1, CONSTANT, -1, true);
+
+	// Keep track of settings string
+	stringstream properties;
+	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() << isOdd;
+
+	// Add Hash of All property values
+	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, CONSTANT, -1, true);
+
+	// Return formatted string
+	return root.toStyledString();
+}
