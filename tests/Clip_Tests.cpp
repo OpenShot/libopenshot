@@ -118,7 +118,6 @@ TEST(Clip_Properties)
 		// Check for specific things
 		CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.01);
 		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
-		CHECK_EQUAL(true, root["changed"]["value"].asBool());
 
 	}
 	catch (exception e)
@@ -143,7 +142,6 @@ TEST(Clip_Properties)
 		// Check for specific things
 		CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.01);
 		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
-		CHECK_EQUAL(true, root["changed"]["value"].asBool());
 
 	}
 	catch (exception e)
@@ -167,7 +165,6 @@ TEST(Clip_Properties)
 	{
 		// Check for specific things
 		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
-		CHECK_EQUAL(false, root["changed"]["value"].asBool());
 
 	}
 	catch (exception e)
@@ -192,7 +189,6 @@ TEST(Clip_Properties)
 		// Check for specific things
 		CHECK_CLOSE(0.0f, root["alpha"]["value"].asDouble(), 0.00001);
 		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
-		CHECK_EQUAL(true, root["changed"]["value"].asBool());
 
 	}
 	catch (exception e)
