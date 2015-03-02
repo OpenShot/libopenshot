@@ -40,6 +40,10 @@
 #include "../include/Exceptions.h"
 #include "../include/KeyFrame.h"
 
+// Include FFmpeg headers and macros
+#include "FFmpegUtilities.h"
+
+
 using namespace std;
 
 namespace openshot
@@ -121,25 +125,25 @@ namespace openshot
 	 *
 	 * Please see the following <b>Example Code</b>:
 	 * \code
-	 * // Create a frame mapper for a clip with 100 frames, and convert the frame rate (from 24 fps to 29.97 fps)
-	 * FrameMapper mapping(100, Fraction(24, 1), Fraction(30000, 1001), PULLDOWN_CLASSIC);
-	 * Frame frame2 = mapping.GetFrame(2);
-	 * assert(frame2.Odd.Frame == 2);
+	 * // Create a frame mapper for a reader, and convert the frame rate (from 24 fps to 29.97 fps)
+	 * FrameMapper mapping(reader, Fraction(30000, 1001), PULLDOWN_CLASSIC, 44100, 2, LAYOUT_STEREO);
+	 * tr1::shared_ptr<Frame> frame2 = mapping.GetFrame(2);
+
+	 * // If you need to change the mapping...
+	 * mapping.ChangeMapping(Fraction(24, 1), PULLDOWN_CLASSIC, 48000, 2, LAYOUT_MONO)
 	 * \endcode
 	 */
 	class FrameMapper : public ReaderBase {
 	private:
 		bool is_open;
-		bool field_toggle;			// Internal odd / even toggle (used when building the mapping)
+		bool field_toggle;		// Internal odd / even toggle (used when building the mapping)
 		Fraction original;		// The original frame rate
-		Fraction target;	// The target frame rate
-		int sample_rate;	// The target sample rate
-		int channels;	// The target channels
-		ChannelLayout channel_layout; // The layout of audio channels
+		Fraction target;		// The target frame rate
 		PulldownType pulldown;	// The pull-down technique
-		ReaderBase *reader;	// The source video reader
-		Cache final_cache; // Cache of actual Frame objects
-		bool is_dirty; // When this is true, the next call to GetFrame will re-init the mapping
+		ReaderBase *reader;		// The source video reader
+		Cache final_cache; 		// Cache of actual Frame objects
+		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
+		AVAudioResampleContext *avr;	// Audio resampling context object
 
 		// Internal methods used by init
 		void AddField(int frame);
@@ -156,10 +160,13 @@ namespace openshot
 		vector<Field> fields;		// List of all fields
 		vector<MappedFrame> frames;	// List of all frames
 
-		/// Default constructor for FrameMapper class
+		/// Default constructor for openshot::FrameMapper class
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
-		/// Close the internal reader
+		/// Change frame rate or audio mapping details
+		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
+
+		/// Close the openshot::FrameMapper and internal reader
 		void Close();
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
@@ -188,8 +195,8 @@ namespace openshot
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();
 
-		/// Change frame rate or audio mapping details
-		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
+		/// Resample audio and map channels (if needed)
+		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame);
 
 	};
 }

@@ -817,14 +817,27 @@ void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
 	height = image->rows();
 }
 
+// Resize audio container to hold more (or less) samples and channels
+void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
+{
+	// Resize JUCE audio buffer
+	audio->setSize(channels, length, true, true, false);
+	channel_layout = layout;
+	sample_rate = rate;
+}
+
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
 {
-	// Extend audio buffer (if needed)
-	if (destStartSample + numSamples > audio->getNumSamples())
-		audio->setSize(audio->getNumChannels(), destStartSample + numSamples, true, true, false);
+	// Extend audio container to hold more (or less) samples and channels.. if needed
+	int new_length = destStartSample + numSamples;
+	int new_channel_length = audio->getNumChannels();
+	if (destChannel >= new_channel_length)
+		new_channel_length = destChannel + 1;
+	if (new_length > audio->getNumSamples() || new_channel_length >= audio->getNumChannels())
+		audio->setSize(new_channel_length, new_length, true, true, false);
 
-	// Always clear the range of samples first
+	// Clear the range of samples first (if needed)
 	if (replaceSamples)
 		audio->clear(destChannel, destStartSample, numSamples);
 

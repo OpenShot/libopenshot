@@ -685,7 +685,7 @@ bool FFmpegReader::GetAVFrame()
 	}
 
 	// deallocate the frame
-	av_free(next_frame);
+	avcodec_free_frame(&next_frame);
 
 	// Did we get a video frame?
 	return frameFinished;
@@ -824,7 +824,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 
 		// Free the RGB image
 		av_free(buffer);
-		av_free(pFrameRGB);
+		avcodec_free_frame(&pFrameRGB);
 
 		#pragma omp critical (packet_cache)
 		{
@@ -978,7 +978,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		AVFrame *audio_converted = avcodec_alloc_frame();
 		avcodec_get_frame_defaults(audio_converted);
 		audio_converted->nb_samples = audio_frame->nb_samples;
-		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
+		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 		// setup resample context
 		AVAudioResampleContext *avr = avresample_alloc_context();
@@ -1010,8 +1010,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		avresample_free(&avr);
 		avr = NULL;
 
-		// Free frames
+		// Free AVFrames
 		avcodec_free_frame(&audio_frame);
+		av_freep(&audio_converted[0]);
 		avcodec_free_frame(&audio_converted);
 
 

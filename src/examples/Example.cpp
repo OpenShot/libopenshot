@@ -43,24 +43,27 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 	// Reader
-	FFmpegReader r9("/home/jonathan/apps/libopenshot/src/examples/sintel_trailer-720p.mp4");
-	r9.debug = true;
+	FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r9.Open();
+	r9.debug = false;
 
-	//r9.info.has_audio = false;
-	//r9.enable_seek = false;
-	//r9.debug = true;
+	// Mapper
+	FrameMapper map(&r9, Fraction(24,1), PULLDOWN_NONE, 44100, 2, LAYOUT_STEREO);
+	map.DisplayInfo();
+	map.debug = false;
+	map.Open();
 
 	/* WRITER ---------------- */
-	//FFmpegWriter w9("/home/jonathan/output.webm");
-	//w9.debug = true;
-	ImageWriter w9("/home/jonathan/output.gif");
+	FFmpegWriter w9("/home/jonathan/output1.mp3");
+	w9.debug = false;
+	//ImageWriter w9("/home/jonathan/output.gif");
 
 	// Set options
-	//w9.SetAudioOptions(true, "libvorbis", 48000, r9.info.channels, r9.info.channel_layout, 120000);
-	//w9.SetVideoOptions(true, "libvpx", r9.info.fps, r9.info.width, r9.info.height, r9.info.pixel_ratio, false, false, 1500000);
+	w9.SetAudioOptions(true, "libmp3lame", map.info.sample_rate, map.info.channels, map.info.channel_layout, 120000);
+	//w9.SetAudioOptions(true, "libmp3lame", 44100, r9.info.channels, r9.info.channel_layout, 120000);
+	//w9.SetVideoOptions(true, "libvpx", map.info.fps, map.info.width, map.info.height, map.info.pixel_ratio, false, false, 1500000);
 	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
-	w9.SetVideoOptions("GIF", r9.info.fps, r9.info.width, r9.info.height, 70, 1, true);
+	//w9.SetVideoOptions("GIF", r9.info.fps, r9.info.width, r9.info.height, 70, 1, true);
 
 	// Open writer
 	w9.Open();
@@ -77,24 +80,24 @@ int main(int argc, char* argv[])
 
 	// Write header
 	//w9.WriteHeader();
-
 	//r9.DisplayInfo();
 
 	// 147000 frames, 28100 frames
 	//for (int frame = 1; frame <= (r9.info.video_length - 1); frame++)
-	for (int frame = 500; frame <= 530; frame++)
+	for (int frame = 1; frame <= 1000; frame++)
 	//int frame = 1;
 	//while (true)
 	{
 		//int frame_number = (rand() % 750) + 1;
 		int frame_number = ( frame);
 
-		//cout << "queue " << frame << " (frame: " << frame_number << ") ";
-		tr1::shared_ptr<Frame> f = r9.GetFrame(frame_number);
-		//cout << "(" << f->number << ", " << f << ")" << endl;
+		cout << "get " << frame << " (frame: " << frame_number << ") " << endl;
+		tr1::shared_ptr<Frame> f = map.GetFrame(frame_number);
+		//cout << "display it (" << f->number << ", " << f << ")" << endl;
+		//r9.GetFrame(frame_number)->DisplayWaveform();
 		//f->DisplayWaveform();
 		//f->AddColor(r9.info.width, r9.info.height, "blue");
-		w9.WriteFrame(f);
+		//w9.WriteFrame(f);
 
 		//frame++;
 	}

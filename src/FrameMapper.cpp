@@ -31,8 +31,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), sample_rate(target_sample_rate), channels(target_channels), channel_layout(target_channel_layout),
-		final_cache(820 * 1024), is_dirty(true)
+		reader(reader), target(target), pulldown(target_pulldown), final_cache(820 * 1024), is_dirty(true), avr(NULL)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -44,8 +43,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	info.video_timebase.num = target.den;
 	info.video_timebase.den = target.num;
 	info.video_length = round(info.duration * info.fps.ToDouble());
-	info.sample_rate = reader->info.sample_rate;
-	info.channels = reader->info.channels;
+	info.sample_rate = target_sample_rate;
+	info.channels = target_channels;
+	info.channel_layout = target_channel_layout;
 	info.width = reader->info.width;
 	info.height = reader->info.height;
 
@@ -77,6 +77,9 @@ void FrameMapper::AddField(Field field)
 // whether the frame rate is increasing or decreasing.
 void FrameMapper::Init()
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::Init (Calculate frame mappings)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 	// Clear the fields & frames lists
 	fields.clear();
 	frames.clear();
@@ -222,15 +225,17 @@ void FrameMapper::Init()
 			else
 				Even = f;
 
-			// Determine the range of samples (from the original rate, to the new rate)
+			// Determine the range of samples (from the original rate). Resampling happens in real-time when
+			// calling the GetFrame() method. So this method only needs to redistribute the original samples with
+			// the original sample rate.
 			int end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
-			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, info.sample_rate);
+			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate);
 
 			while (remaining_samples > 0)
 			{
 				// get original samples
-				int original_samples = Frame::GetSamplesPerFrame(end_samples_frame, original, info.sample_rate) - end_samples_position;
+				int original_samples = Frame::GetSamplesPerFrame(end_samples_frame, original, reader->info.sample_rate) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -250,12 +255,12 @@ void FrameMapper::Init()
 
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(frame_number, target, info.sample_rate)};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate)};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
 			start_samples_position = end_samples_position + 1;
-			if (start_samples_position >= Frame::GetSamplesPerFrame(start_samples_frame, original, info.sample_rate))
+			if (start_samples_position >= Frame::GetSamplesPerFrame(start_samples_frame, original, reader->info.sample_rate))
 			{
 				start_samples_frame += 1; // increment the frame (since we need to wrap onto the next one)
 				start_samples_position = 0; // reset to 0, since we wrapped
@@ -308,22 +313,28 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 	// Get the mapped frame
 	MappedFrame mapped = GetMappedFrame(requested_frame);
+	tr1::shared_ptr<Frame> mapped_frame = reader->GetFrame(mapped.Odd.Frame);
+	int channels_in_frame = mapped_frame->GetAudioChannelsCount();
 
 	// Return the original frame if no mapping is needed
-	if (reader->info.fps.num == target.num && reader->info.fps.den == target.den &&
-		reader->info.sample_rate == sample_rate && reader->info.channels == channels &&
-		reader->info.channel_layout == channel_layout)
+	if (original.num == info.fps.num && original.den == info.fps.den &&
+		info.sample_rate == mapped_frame->SampleRate() && info.channels == mapped_frame->GetAudioChannelsCount() &&
+		info.channel_layout == mapped_frame->ChannelsLayout())
 		// Return original frame (performance optimization)
-		return reader->GetFrame(mapped.Odd.Frame);
+		return mapped_frame;
 
 
 	// Init some basic properties about this frame
-	int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, target, info.sample_rate);
+	int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, target, mapped_frame->SampleRate());
 
 	// Create a new frame
-	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, info.channels));
+	tr1::shared_ptr<Frame> frame(new Frame(requested_frame, 1, 1, "#000000", samples_in_frame, channels_in_frame));
+	frame->SampleRate(mapped_frame->SampleRate());
 
-	// Copy the image from the odd field (TODO: make this copy each field from the correct frames)
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::GetFrame", "requested_frame", requested_frame, "target.num", target.num, "target.den", target.den, "mapped_frame->SampleRate()", mapped_frame->SampleRate(), "samples_in_frame", samples_in_frame, "mapped_frame->GetAudioSamplesCount()", mapped_frame->GetAudioSamplesCount());
+
+	// Copy the image from the odd field
 	frame->AddImage(reader->GetFrame(mapped.Odd.Frame)->GetImage(), true);
 	if (mapped.Odd.Frame != mapped.Even.Frame)
 		// Add even lines (if different than the previous image)
@@ -334,12 +345,12 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	int starting_frame = mapped.Samples.frame_start;
 	while (samples_copied < mapped.Samples.total)
 	{
-		// init number of samples to copy this iteration
+		// Init number of samples to copy this iteration
 		int remaining_samples = mapped.Samples.total - samples_copied;
 		int number_to_copy = 0;
 
 		// Loop through each channel
-		for (int channel = 0; channel < info.channels; channel++)
+		for (int channel = 0; channel < channels_in_frame; channel++)
 		{
 			// number of original samples on this frame
 			tr1::shared_ptr<Frame> original_frame = reader->GetFrame(starting_frame);
@@ -373,7 +384,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 					number_to_copy = remaining_samples;
 
 				// Add samples to new frame
-				frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+				frame->AddAudio(false, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 			}
 		}
 
@@ -381,6 +392,13 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 		samples_copied += number_to_copy;
 		starting_frame++;
 	}
+
+
+	// Resample audio on frame (if needed)
+	if (info.sample_rate != frame->SampleRate() || info.channels != frame->GetAudioChannelsCount() ||
+		info.channel_layout != frame->ChannelsLayout())
+		// Resample audio and correct # of channels if needed
+		ResampleMappedAudio(frame);
 
 	// Add frame to final cache
 	final_cache.Add(frame->number, frame);
@@ -406,18 +424,12 @@ void FrameMapper::PrintMapping()
 		frame_interval = field_interval * 2.0f;
 	}
 
-	// print header
-	cout << "Convert " << original.ToInt() << " fps to " << target.ToInt() << " fps" << endl;
-	cout << "Difference of " << difference << " frames per second" << endl;
-	cout << "Field Interval: " << field_interval << "th field" << endl;
-	cout << "Frame Interval: " << frame_interval << "th field" << endl << endl;
-
 	// Loop through frame mappings
 	for (float map = 1; map <= frames.size(); map++)
 	{
 		MappedFrame frame = frames[map - 1];
-		//cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
-		//cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
+		cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
+		cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
 	}
 
 }
@@ -437,6 +449,9 @@ void FrameMapper::Open() throw(InvalidFile)
 {
 	if (reader)
 	{
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		// Open the reader
 		reader->Open();
 	}
@@ -446,7 +461,20 @@ void FrameMapper::Open() throw(InvalidFile)
 void FrameMapper::Close()
 {
 	if (reader)
+	{
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+		// Deallocate resample buffer
+		if (avr) {
+			avresample_close(avr);
+			avresample_free(&avr);
+			avr = NULL;
+		}
+
+		// Close internal reader
 		reader->Close();
+	}
 }
 
 
@@ -508,14 +536,176 @@ void FrameMapper::SetJsonValue(Json::Value root) throw(InvalidFile) {
 // Change frame rate or audio mapping details
 void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
 {
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.num, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
+
 	// Mark as dirty
 	is_dirty = true;
 
 	// Update mapping details
 	target = target_fps;
 	pulldown = target_pulldown;
-	sample_rate = target_sample_rate;
-	channels = target_channels;
-	channel_layout = target_channel_layout;
+	info.sample_rate = target_sample_rate;
+	info.channels = target_channels;
+	info.channel_layout = target_channel_layout;
 }
 
+// Resample audio and map channels (if needed)
+void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
+{
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+	// Init audio buffers / variables
+	int total_frame_samples = 0;
+	int channels_in_frame = frame->GetAudioChannelsCount();
+	int sample_rate_in_frame = frame->SampleRate();
+	int samples_in_frame = frame->GetAudioSamplesCount();
+	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
+
+	// Create a new array (to hold all S16 audio samples, for the current queued frames
+	int16_t* frame_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
+	// Get audio sample array
+	float* frame_samples_float = NULL;
+	// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
+	frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
+
+
+	// Calculate total samples
+	total_frame_samples = samples_in_frame * channels_in_frame;
+
+	// Translate audio sample values back to 16 bit integers
+	for (int s = 0; s < total_frame_samples; s++)
+		// Translate sample value and copy into buffer
+		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
+		//frame_samples[s] = s * 3;
+
+	// Deallocate float array
+	delete[] frame_samples_float;
+	frame_samples_float = NULL;
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::ResampleMappedAudio (got sample data from frame)", "frame->number", frame->number, "total_frame_samples", total_frame_samples, "target channels", info.channels, "channels_in_frame", channels_in_frame, "target sample_rate", info.sample_rate, "samples_in_frame", samples_in_frame);
+
+
+	// Create input frame (and allocate arrays)
+	AVFrame *audio_frame = avcodec_alloc_frame();
+	avcodec_get_frame_defaults(audio_frame);
+	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
+	//audio_frame->sample_rate = frame->SampleRate();
+	av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+
+	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
+			audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
+
+	if (error_code != 0)
+	{
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
+		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
+	}
+
+	// Update total samples & input frame size (due to bigger or smaller data types)
+	total_frame_samples *= (float(info.sample_rate) / sample_rate_in_frame); // adjust for different byte sizes
+	total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
+
+	// Create output frame (and allocate arrays)
+	AVFrame *audio_converted = avcodec_alloc_frame();
+	avcodec_get_frame_defaults(audio_converted);
+	audio_converted->nb_samples = audio_frame->nb_samples;
+	//audio_converted->sample_rate = info.sample_rate;
+	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::ResampleMappedAudio (preparing for resample)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", AV_SAMPLE_FMT_S16, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
+
+	// setup resample context
+	if (!avr) {
+		avr = avresample_alloc_context();
+		av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
+		av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
+		av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+		av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+		av_opt_set_int(avr,  "in_sample_rate",    sample_rate_in_frame,    0);
+		av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
+		av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
+		av_opt_set_int(avr, "out_channels",       info.channels,    0);
+		avresample_open(avr);
+	}
+	int nb_samples = 0;
+
+	// Convert audio samples
+	nb_samples = avresample_convert(avr, 	// audio resample context
+			audio_converted->data, 		// output data pointers
+			audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+			audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
+			audio_frame->data,				// input data pointers
+			audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+			audio_frame->nb_samples);		// number of input samples to convert
+
+
+	// Copy audio samples over original samples
+	memcpy(frame_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
+
+	// Free frames
+	avcodec_free_frame(&audio_frame); // TODO: Find a way to clear the memory inside this frame (memory leak)
+	av_freep(&audio_converted[0]);
+	avcodec_free_frame(&audio_converted);
+
+	// Resize the frame to hold the right # of channels and samples
+	int channel_buffer_size = nb_samples;
+	frame->ResizeAudio(info.channels, channel_buffer_size, info.sample_rate, info.channel_layout);
+
+	#pragma omp critical (debug_output)
+	AppendDebugMethod("FrameMapper::ResampleMappedAudio (Audio successfully resampled)", "nb_samples", nb_samples, "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "channels_in_frame", channels_in_frame, "info.channels", info.channels, "info.channel_layout", info.channel_layout);
+
+	// Array of floats (to hold samples for each channel)
+	float *channel_buffer = new float[channel_buffer_size];
+
+	// Divide audio into channels. Loop through each channel
+	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
+	{
+		// Init array
+		for (int z = 0; z < channel_buffer_size; z++)
+			channel_buffer[z] = 0.0f;
+
+		// Loop through all samples and add them to our Frame based on channel.
+		// Toggle through each channel number, since channel data is stored like (left right left right)
+		int channel = 0;
+		int position = 0;
+		for (int sample = 0; sample < (nb_samples * info.channels); sample++)
+		{
+			// Only add samples for current channel
+			if (channel_filter == channel)
+			{
+				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
+				channel_buffer[position] = frame_samples[sample] * (1.0f / (1 << 15));
+
+				// Increment audio position
+				position++;
+			}
+
+			// increment channel (if needed)
+			if ((channel + 1) < info.channels)
+				// move to next channel
+				channel ++;
+			else
+				// reset channel
+				channel = 0;
+		}
+
+		// Add samples to frame for this channel
+		frame->AddAudio(true, channel_filter, 0, channel_buffer, position - 1, 1.0f);
+
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position - 1, "channel_filter", channel_filter, "", -1, "", -1, "", -1, "", -1);
+	}
+
+	// clear channel buffer
+	delete[] channel_buffer;
+	channel_buffer = NULL;
+
+	// Delete arrays
+	delete[] frame_samples;
+}

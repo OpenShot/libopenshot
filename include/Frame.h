@@ -247,6 +247,9 @@ namespace openshot
 		/// Get height of image
 		int GetWidth();
 
+		/// Resize audio container to hold more (or less) samples and channels
+		void ResizeAudio(int channels, int length, int sample_rate, ChannelLayout channel_layout);
+
 		/// Rotate the image
 		void Rotate(float degrees);
 
