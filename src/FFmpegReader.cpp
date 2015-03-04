@@ -995,7 +995,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 		// Convert audio samples
 		nb_samples = avresample_convert(avr, 	// audio resample context
-				audio_converted->data, 		// output data pointers
+				audio_converted->data, 			// output data pointers
 				audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 				audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
 				audio_frame->data,				// input data pointers

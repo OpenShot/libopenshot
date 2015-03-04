@@ -548,6 +548,13 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
 	info.channel_layout = target_channel_layout;
+
+	// Deallocate resample buffer
+	if (avr) {
+		avresample_close(avr);
+		avresample_free(&avr);
+		avr = NULL;
+	}
 }
 
 // Resample audio and map channels (if needed)
@@ -563,23 +570,21 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 	int samples_in_frame = frame->GetAudioSamplesCount();
 	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
 
-	// Create a new array (to hold all S16 audio samples, for the current queued frames
-	int16_t* frame_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
-
 	// Get audio sample array
 	float* frame_samples_float = NULL;
 	// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
 	frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
 
-
 	// Calculate total samples
 	total_frame_samples = samples_in_frame * channels_in_frame;
+
+	// Create a new array (to hold all S16 audio samples for the current queued frames)
+	int16_t* frame_samples = new int16_t[total_frame_samples];
 
 	// Translate audio sample values back to 16 bit integers
 	for (int s = 0; s < total_frame_samples; s++)
 		// Translate sample value and copy into buffer
 		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
-		//frame_samples[s] = s * 3;
 
 	// Deallocate float array
 	delete[] frame_samples_float;
@@ -593,8 +598,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 	AVFrame *audio_frame = avcodec_alloc_frame();
 	avcodec_get_frame_defaults(audio_frame);
 	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
-	//audio_frame->sample_rate = frame->SampleRate();
-	av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	//av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
 			audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
@@ -614,7 +618,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 	AVFrame *audio_converted = avcodec_alloc_frame();
 	avcodec_get_frame_defaults(audio_converted);
 	audio_converted->nb_samples = audio_frame->nb_samples;
-	//audio_converted->sample_rate = info.sample_rate;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 	#pragma omp critical (debug_output)
@@ -644,12 +647,16 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 			audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
 			audio_frame->nb_samples);		// number of input samples to convert
 
+	// Create a new array (to hold all resampled S16 audio samples)
+	int16_t* resampled_samples = new int16_t[nb_samples * info.channels];
 
 	// Copy audio samples over original samples
-	memcpy(frame_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
+	memcpy(resampled_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
 
 	// Free frames
+	av_freep(&audio_frame[0]);
 	avcodec_free_frame(&audio_frame); // TODO: Find a way to clear the memory inside this frame (memory leak)
+	frame_samples = NULL;
 	av_freep(&audio_converted[0]);
 	avcodec_free_frame(&audio_converted);
 
@@ -680,7 +687,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 			if (channel_filter == channel)
 			{
 				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
-				channel_buffer[position] = frame_samples[sample] * (1.0f / (1 << 15));
+				channel_buffer[position] = resampled_samples[sample] * (1.0f / (1 << 15));
 
 				// Increment audio position
 				position++;
@@ -707,5 +714,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 	channel_buffer = NULL;
 
 	// Delete arrays
-	delete[] frame_samples;
+	delete[] resampled_samples;
+	resampled_samples = NULL;
 }

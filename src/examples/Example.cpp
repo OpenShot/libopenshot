@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 		//r9.GetFrame(frame_number)->DisplayWaveform();
 		//f->DisplayWaveform();
 		//f->AddColor(r9.info.width, r9.info.height, "blue");
-		//w9.WriteFrame(f);
+		w9.WriteFrame(f);
 
 		//frame++;
 	}
@@ -112,6 +112,7 @@ int main(int argc, char* argv[])
 
 	// Close timeline
 	r9.Close();
+	map.Close();
 	/* ---------------- */
 	cout << "happy ending" << endl;
 

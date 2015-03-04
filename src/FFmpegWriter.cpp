@@ -1031,7 +1031,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 		ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
-		int16_t* frame_samples = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t* queued_samples = new int16_t[(queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE) + FF_INPUT_BUFFER_PADDING_SIZE];
+		int16_t* resampled_samples = NULL;
 
 		// Loop through each queued audio frame
 		while (!queued_audio_frames.empty())
@@ -1058,7 +1059,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			// Translate audio sample values back to 16 bit integers
 			for (int s = 0; s < total_frame_samples; s++, frame_position++)
 				// Translate sample value and copy into buffer
-				frame_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
+				queued_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
 
 
 			// Deallocate float array
@@ -1082,15 +1083,16 @@ void FFmpegWriter::write_audio_packets(bool final)
 		// Keep track of the original sample format
 		AVSampleFormat output_sample_fmt = audio_codec->sample_fmt;
 
+		AVFrame *audio_frame = NULL;
 		if (!final) {
 			// Create input frame (and allocate arrays)
-			AVFrame *audio_frame = avcodec_alloc_frame();
+			audio_frame = avcodec_alloc_frame();
 			avcodec_get_frame_defaults(audio_frame);
 			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
-			av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, total_frame_samples / channels_in_frame, AV_SAMPLE_FMT_S16, 0);
+			//av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, total_frame_samples / channels_in_frame, AV_SAMPLE_FMT_S16, 0);
 
 			// Fill input frame with sample data
-			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
+			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) queued_samples,
 					audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
 
 			// Do not convert audio to planar format (yet). We need to keep everything interleaved at this point.
@@ -1159,19 +1161,21 @@ void FFmpegWriter::write_audio_packets(bool final)
 					audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
 					audio_frame->nb_samples);		// number of input samples to convert
 
+			// Create a new array (to hold all resampled S16 audio samples)
+			resampled_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+
 			// Copy audio samples over original samples
-			memcpy(frame_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(output_sample_fmt) * info.channels);
+			memcpy(resampled_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(output_sample_fmt) * info.channels);
 
 			// Update remaining samples (since we just resampled the audio, and things might have changed)
 			remaining_frame_samples = nb_samples * (float(av_get_bytes_per_sample(output_sample_fmt)) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)) * info.channels;
 
-			#pragma omp critical (debug_output)
-			AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)", "nb_samples", nb_samples, "remaining_frame_samples", remaining_frame_samples, "", -1, "", -1, "", -1, "", -1);
-
-			// Free AVFrames
-			avcodec_free_frame(&audio_frame); // TODO: Find a way to clear the memory inside this frame (memory leak)
+			// Remove converted audio
 			av_freep(&audio_converted[0]);
 			avcodec_free_frame(&audio_converted);
+
+			#pragma omp critical (debug_output)
+			AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)", "nb_samples", nb_samples, "remaining_frame_samples", remaining_frame_samples, "", -1, "", -1, "", -1, "", -1);
 		}
 
 		// Loop until no more samples
@@ -1188,7 +1192,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// Copy frame samples into the packet samples array
 			if (!final)
-				memcpy(samples + audio_input_position, frame_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
+				memcpy(samples + audio_input_position, resampled_samples + samples_position, diff * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 
 			// Increment counters
 			audio_input_position += diff;
@@ -1228,7 +1232,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				AVFrame *audio_frame = avcodec_alloc_frame();
 				avcodec_get_frame_defaults(audio_frame);
 				audio_frame->nb_samples = audio_input_position / info.channels;
-				av_samples_alloc(audio_frame->data, audio_frame->linesize, info.channels, audio_input_position / info.channels, output_sample_fmt, 0);
+				//av_samples_alloc(audio_frame->data, audio_frame->linesize, info.channels, audio_input_position / info.channels, output_sample_fmt, 0);
 
 				// Fill input frame with sample data
 				avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt, (uint8_t *) samples,
@@ -1339,8 +1343,15 @@ void FFmpegWriter::write_audio_packets(bool final)
 			final = false;
 		}
 
-		// Delete arrays
-		delete[] frame_samples;
+		// Free AVFrames
+		if (audio_frame) {
+			av_freep(&audio_frame[0]);
+			avcodec_free_frame(&audio_frame);
+		}
+		if (resampled_samples) {
+			delete[] resampled_samples;
+			resampled_samples = NULL;
+		}
 
 	} // end task
 }
