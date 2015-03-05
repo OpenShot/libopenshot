@@ -176,3 +176,30 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 	CHECK_EQUAL(6, frame5.Even.Frame);
 }
 
+TEST(FrameMapper_resample_audio_48000_to_41000)
+{
+	// Create a reader: 24 fps, 2 channels, 48000 sample rate
+	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+
+	// Map to 30 fps, 3 channels surround, 44100 sample rate
+	FrameMapper map(&r, Fraction(30,1), PULLDOWN_NONE, 44100, 3, LAYOUT_SURROUND);
+	map.Open();
+
+	// Check details
+	CHECK_EQUAL(3, map.GetFrame(1)->GetAudioChannelsCount());
+	CHECK_EQUAL(1459, map.GetFrame(1)->GetAudioSamplesCount());
+	CHECK_EQUAL(1469, map.GetFrame(2)->GetAudioSamplesCount());
+	CHECK_EQUAL(1469, map.GetFrame(50)->GetAudioSamplesCount());
+
+	// Change mapping data
+	map.ChangeMapping(Fraction(25,1), PULLDOWN_NONE, 22050, 1, LAYOUT_MONO);
+
+	// Check details
+	CHECK_EQUAL(1, map.GetFrame(1)->GetAudioChannelsCount());
+	CHECK_EQUAL(871, map.GetFrame(1)->GetAudioSamplesCount());
+	CHECK_EQUAL(881, map.GetFrame(2)->GetAudioSamplesCount());
+	CHECK_EQUAL(881, map.GetFrame(50)->GetAudioSamplesCount());
+
+	// Close mapper
+	map.Close();
+}

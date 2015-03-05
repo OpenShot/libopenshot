@@ -598,7 +598,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 	AVFrame *audio_frame = avcodec_alloc_frame();
 	avcodec_get_frame_defaults(audio_frame);
 	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
-	//av_samples_alloc(audio_frame->data, audio_frame->linesize, channels_in_frame, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
 			audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
@@ -655,7 +654,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame)
 
 	// Free frames
 	av_freep(&audio_frame[0]);
-	avcodec_free_frame(&audio_frame); // TODO: Find a way to clear the memory inside this frame (memory leak)
+	avcodec_free_frame(&audio_frame);
 	frame_samples = NULL;
 	av_freep(&audio_converted[0]);
 	avcodec_free_frame(&audio_converted);

@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
 
 	// 147000 frames, 28100 frames
 	//for (int frame = 1; frame <= (r9.info.video_length - 1); frame++)
+	//for (int z = 0; z < 2; z++)
 	for (int frame = 1; frame <= 1000; frame++)
 	//int frame = 1;
 	//while (true)
