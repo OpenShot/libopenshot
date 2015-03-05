@@ -1163,7 +1163,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 					audio_frame->nb_samples);		// number of input samples to convert
 
 			// Create a new array (to hold all resampled S16 audio samples)
-			all_resampled_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+			all_resampled_samples = new int16_t[nb_samples * info.channels * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) + FF_INPUT_BUFFER_PADDING_SIZE)];
 
 			// Copy audio samples over original samples
 			memcpy(all_resampled_samples, audio_converted->data[0], nb_samples * av_get_bytes_per_sample(output_sample_fmt) * info.channels);
@@ -1237,7 +1237,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				audio_frame->nb_samples = audio_input_position / info.channels;
 
 				// Create a new array
-				final_samples_planar = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+				final_samples_planar = new int16_t[audio_frame->nb_samples * info.channels * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) + FF_INPUT_BUFFER_PADDING_SIZE)];
 
 				// Copy audio into buffer for frame
 				memcpy(final_samples_planar, samples, audio_frame->nb_samples * av_get_bytes_per_sample(output_sample_fmt) * info.channels);
@@ -1272,7 +1272,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			} else {
 
 				// Create a new array
-				final_samples = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+				final_samples = new int16_t[audio_input_position * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) + FF_INPUT_BUFFER_PADDING_SIZE)];
 
 				// Copy audio into buffer for frame
 				memcpy(final_samples, samples, audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt));
