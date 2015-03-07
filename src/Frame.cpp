@@ -834,7 +834,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 	int new_channel_length = audio->getNumChannels();
 	if (destChannel >= new_channel_length)
 		new_channel_length = destChannel + 1;
-	if (new_length > audio->getNumSamples() || new_channel_length >= audio->getNumChannels())
+	if (new_length > audio->getNumSamples() || new_channel_length > audio->getNumChannels())
 		audio->setSize(new_channel_length, new_length, true, true, false);
 
 	// Clear the range of samples first (if needed)

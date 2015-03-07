@@ -871,10 +871,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	Cache *my_cache = &working_cache;
 	AVPacket *my_packet = packets[packet];
 
-	// Add audio frame to list of processing audio frames
-	#pragma omp critical (processing_list)
-	processing_audio_frames[target_frame] = target_frame;
-
 	// Track 1st audio packet after a successful seek
 	if (!seek_audio_frame_found && is_seeking)
 		seek_audio_frame_found = target_frame;
@@ -888,8 +884,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	AVFrame *audio_frame = avcodec_alloc_frame();
 	avcodec_get_frame_defaults(audio_frame);
 
-	// Allocate audio buffer
-	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 	int packet_samples = 0;
 	int data_size = 0;
 
@@ -915,7 +909,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		packet_samples = audio_frame->nb_samples * aCodecCtx->channels;
 	}
 
-
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
 	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
 
@@ -937,6 +930,9 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	pts_counter++;
 	prev_samples = pts_remaining_samples;
 
+	// Add audio frame to list of processing audio frames
+	#pragma omp critical (processing_list)
+	processing_audio_frames.insert(pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 
 	while (pts_remaining_samples)
 	{
@@ -955,24 +951,28 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			// next frame
 			previous_packet_location.frame++;
 			previous_packet_location.sample_start = 0;
+
+			// Add audio frame to list of processing audio frames
+			#pragma omp critical (processing_list)
+			processing_audio_frames.insert(pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
+
 		} else {
 			// Increment sample start
 			previous_packet_location.sample_start += samples;
 		}
-
 	}
 
-	#pragma omp critical (packet_cache)
-	RemoveAVPacket(my_packet);
 
-	// TODO: Disable OpenMP on audio packet processing. It is not currently possible to reassemble the packets
-	// in order without creating small gaps and/or overlapping sample values.
-	#pragma xxx omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, audio_buf)
+
+	// Process the audio samples in a separate thread (this includes resampling to 16 bit integer, and storing
+	// in a openshot::Frame object).
+	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, my_packet, audio_frame)
 	{
+		// Allocate audio buffer
+		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
 		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
-
 
 		// Create output frame
 		AVFrame *audio_converted = avcodec_alloc_frame();
@@ -1014,7 +1014,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		avcodec_free_frame(&audio_frame);
 		av_freep(&audio_converted[0]);
 		avcodec_free_frame(&audio_converted);
-
 
 
 		int starting_frame_number = -1;
@@ -1069,18 +1068,10 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				if (samples > remaining_samples)
 					samples = remaining_samples;
 
-				// Add audio frame to list of processing audio frames
-				#pragma omp critical (processing_list)
-				processing_audio_frames[starting_frame_number] = starting_frame_number;
-
 				tr1::shared_ptr<Frame> f;
 				#pragma omp critical (openshot_cache)
 					// Create or get frame object
 					f = CreateFrame(starting_frame_number);
-
-				// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
-				// some louder samples from maxing out at 1.0 (not sure why this happens)
-				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
 
 				// Determine if this frame was "partially" filled in
 				if (samples_per_frame == start + samples)
@@ -1088,13 +1079,18 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				else
 					partial_frame = true;
 
+				// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
+				// some louder samples from maxing out at 1.0 (not sure why this happens)
+				#pragma omp critical (openshot_adding_audio)
+				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
+
 				// Debug output
 				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
 
+				// Add or update cache
 				#pragma omp critical (openshot_cache)
-					// Add or update cache
-					my_cache->Add(f->number, f);
+				my_cache->Add(f->number, f);
 
 				// Decrement remaining samples
 				remaining_samples -= samples;
@@ -1120,25 +1116,36 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		delete[] audio_buf;
 		audio_buf = NULL;
 
-		// Add video frame to list of processing video frames
+		// Remove audio frame from list of processing audio frames
 		#pragma omp critical (processing_list)
 		{
 			// Update all frames as completed
 			for (int f = target_frame; f < starting_frame_number; f++) {
-				if (f == (starting_frame_number - 1) && partial_frame)
-					// ignore partial frames (always the last frame processed)
-					break;
-				processing_audio_frames.erase(f);
-				processed_audio_frames[f] = f;
+				// Remove the frame # from the processing list. NOTE: If more than one thread is
+				// processing this frame, the frame # will be in this list multiple times. We are only
+				// removing a single instance of it here.
+				processing_audio_frames.erase(processing_audio_frames.find(f));
+
+				// Check and see if this frame is also being processed by another thread
+				if (processing_audio_frames.count(f) == 0)
+					// No other thread is processing it. Mark the audio as processed (final)
+					processed_audio_frames[f] = f;
 			}
 		}
 
+		#pragma omp critical (packet_cache)
+		RemoveAVPacket(my_packet);
+
 		// Debug output
 		#pragma omp critical (debug_output)
-		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number, "", -1, "", -1, "", -1);
+		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number - 1, "", -1, "", -1, "", -1);
 
 	} // end task
 
+
+	// TODO: Fix this bug. Wait on the task to complete. This is not ideal, but solves an issue with the
+	// audio_frame being modified by the next call to this method. I think this is a scope issue with OpenMP.
+	#pragma omp taskwait
 }
 
 

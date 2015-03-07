@@ -104,7 +104,6 @@ namespace openshot
 		AVPicture *pFrame;
 		bool is_open;
 		bool is_duration_known;
-
 		bool check_interlace;
 		bool check_fps;
 
@@ -116,7 +115,7 @@ namespace openshot
 		map<AVPacket*, AVPacket*> packets;
 		map<AVPicture*, AVPicture*> frames;
 		map<int, int> processing_video_frames;
-		map<int, int> processing_audio_frames;
+		multimap<int, int> processing_audio_frames;
 		map<int, int> processed_video_frames;
 		map<int, int> processed_audio_frames;
 		AudioLocation previous_packet_location;

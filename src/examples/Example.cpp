@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 	//ImageWriter w9("/home/jonathan/output.gif");
 
 	// Set options
-	w9.SetAudioOptions(true, "libmp3lame", map.info.sample_rate, map.info.channels, map.info.channel_layout, 120000);
+	w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 120000);
 	//w9.SetAudioOptions(true, "libmp3lame", 44100, r9.info.channels, r9.info.channel_layout, 120000);
 	//w9.SetVideoOptions(true, "libvpx", map.info.fps, map.info.width, map.info.height, map.info.pixel_ratio, false, false, 1500000);
 	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
@@ -93,10 +93,11 @@ int main(int argc, char* argv[])
 		int frame_number = ( frame);
 
 		cout << "get " << frame << " (frame: " << frame_number << ") " << endl;
-		tr1::shared_ptr<Frame> f = map.GetFrame(frame_number);
-		//cout << "display it (" << f->number << ", " << f << ")" << endl;
+		tr1::shared_ptr<Frame> f = r9.GetFrame(frame_number);
+		cout << "display it (" << f->number << ", " << f << ")" << endl;
 		//r9.GetFrame(frame_number)->DisplayWaveform();
-		//f->DisplayWaveform();
+		//if (frame == 49)
+		//	f->DisplayWaveform();
 		//f->AddColor(r9.info.width, r9.info.height, "blue");
 		w9.WriteFrame(f);
 
