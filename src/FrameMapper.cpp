@@ -577,6 +577,16 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.channels = target_channels;
 	info.channel_layout = target_channel_layout;
 
+	// Clear cache
+	final_cache.Clear();
+
+	// Deallocate resample buffer
+	if (avr) {
+		avresample_close(avr);
+		avresample_free(&avr);
+		avr = NULL;
+	}
+
 }
 
 // Resample audio and map channels (if needed)
