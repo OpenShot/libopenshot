@@ -322,19 +322,14 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 	#pragma omp parallel
 	{
-		#pragma omp single
+		// Debug output
+		#pragma omp critical (debug_output)
+		AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
+
+		// Loop through all requested frames, each frame gets it's own thread
+		#pragma omp for ordered
+		for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
-			// Debug output
-			#pragma omp critical (debug_output)
-			AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
-
-			// Loop through all requested frames
-			for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
-			{
-				#pragma omp task firstprivate(frame_number)
-				{
-
-
 			// Get the mapped frame
 			MappedFrame mapped = GetMappedFrame(frame_number);
 			tr1::shared_ptr<Frame> mapped_frame = reader->GetFrameSafe(mapped.Odd.Frame);
@@ -414,24 +409,16 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 			if (info.sample_rate != frame->SampleRate() || info.channels != frame->GetAudioChannelsCount() ||
 				info.channel_layout != frame->ChannelsLayout())
 				// Resample audio and correct # of channels if needed
-				#pragma ordered
 				ResampleMappedAudio(frame, mapped.Odd.Frame);
 
 			// Add frame to final cache
 			#pragma omp critical (openshot_cache)
 			final_cache.Add(frame->number, frame);
 
-			} // omp task
-
-			// TODO: Fix this bug. Wait on the task to complete. This is not ideal, but solves an issue with the
-			// audio_frame being modified by the next call to this method. I think this is a scope issue with OpenMP.
-			#pragma omp taskwait
-
 		} // for loop
-		} // omp single
 	} // omp parallel
 
-	// Return processed 'frame'
+	// Return processed openshot::Frame
 	return final_cache.GetFrame(requested_frame);
 }
 
@@ -600,7 +587,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
 
 	#pragma omp critical (debug_output)
-	AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame, "", -1, "", -1);
+	AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "original_frame_number", original_frame_number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame, "", -1);
 
 	// Get audio sample array
 	float* frame_samples_float = NULL;
@@ -617,6 +604,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	for (int s = 0; s < total_frame_samples; s++)
 		// Translate sample value and copy into buffer
 		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
+
 
 	// Deallocate float array
 	delete[] frame_samples_float;
@@ -642,7 +630,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	//total_frame_samples = round((float)total_frame_samples * (float(info.sample_rate) / sample_rate_in_frame) * (float(info.channels) / channels_in_frame)) + 1; // adjust for different byte sizes and channels
 	total_frame_samples = Frame::GetSamplesPerFrame(original_frame_number, target, info.sample_rate, info.channels);
 
 	#pragma omp critical (debug_output)
@@ -658,7 +645,9 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (preparing for resample)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", AV_SAMPLE_FMT_S16, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
 
 	int nb_samples = 0;
-	#pragma omp critical (openshot_audio_resample)
+	// Force the audio resampling to happen in order (1st thread to last thread), so the waveform
+	// is smooth and continuous.
+	#pragma omp ordered
 	{
 		// setup resample context
 		if (!avr) {
