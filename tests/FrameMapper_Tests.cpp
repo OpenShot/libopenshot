@@ -187,18 +187,18 @@ TEST(FrameMapper_resample_audio_48000_to_41000)
 
 	// Check details
 	CHECK_EQUAL(3, map.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(1459, map.GetFrame(1)->GetAudioSamplesCount());
-	CHECK_EQUAL(1469, map.GetFrame(2)->GetAudioSamplesCount());
-	CHECK_EQUAL(1469, map.GetFrame(50)->GetAudioSamplesCount());
+	CHECK_EQUAL(1460, map.GetFrame(1)->GetAudioSamplesCount());
+	CHECK_EQUAL(1470, map.GetFrame(2)->GetAudioSamplesCount());
+	CHECK_EQUAL(1470, map.GetFrame(50)->GetAudioSamplesCount());
 
 	// Change mapping data
 	map.ChangeMapping(Fraction(25,1), PULLDOWN_NONE, 22050, 1, LAYOUT_MONO);
 
 	// Check details
 	CHECK_EQUAL(1, map.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(871, map.GetFrame(1)->GetAudioSamplesCount());
-	CHECK_EQUAL(881, map.GetFrame(2)->GetAudioSamplesCount());
-	CHECK_EQUAL(881, map.GetFrame(50)->GetAudioSamplesCount());
+	CHECK_EQUAL(872, map.GetFrame(1)->GetAudioSamplesCount());
+	CHECK_EQUAL(882, map.GetFrame(2)->GetAudioSamplesCount());
+	CHECK_EQUAL(882, map.GetFrame(50)->GetAudioSamplesCount());
 
 	// Close mapper
 	map.Close();

@@ -60,7 +60,7 @@ TEST(FFmpegReader_Check_Audio_File)
 
 	// Check audio properties
 	CHECK_EQUAL(2, f->GetAudioChannelsCount());
-	CHECK_EQUAL(333, f->GetAudioSamplesCount());
+	CHECK_EQUAL(332, f->GetAudioSamplesCount());
 
 	// Check actual sample values (to be sure the waveform is correct)
 	CHECK_CLOSE(0.0f, samples[0], 0.00001);
