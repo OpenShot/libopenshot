@@ -214,7 +214,7 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 		}
 
 		// Adjust estimate frame number (the estimated frame number that is being played)
-		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate);
+		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate, buffer_channels);
 		if (speed == 1)
 			estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
 	}

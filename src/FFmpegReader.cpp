@@ -937,7 +937,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	while (pts_remaining_samples)
 	{
 		// Get Samples per frame (for this frame number)
-		int samples_per_frame = Frame::GetSamplesPerFrame(previous_packet_location.frame, info.fps, info.sample_rate);
+		int samples_per_frame = Frame::GetSamplesPerFrame(previous_packet_location.frame, info.fps, info.sample_rate, info.channels);
 
 		// Calculate # of samples to add to this frame
 		int samples = samples_per_frame - previous_packet_location.sample_start;
@@ -980,8 +980,11 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		audio_converted->nb_samples = audio_frame->nb_samples;
 		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
+		AVAudioResampleContext *avr = NULL;
+		#pragma ordered
+		{
 		// setup resample context
-		AVAudioResampleContext *avr = avresample_alloc_context();
+		avr = avresample_alloc_context();
 		av_opt_set_int(avr,  "in_channel_layout", aCodecCtx->channel_layout, 0);
 		av_opt_set_int(avr, "out_channel_layout", aCodecCtx->channel_layout, 0);
 		av_opt_set_int(avr,  "in_sample_fmt",     aCodecCtx->sample_fmt,     0);
@@ -1001,6 +1004,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				audio_frame->data,				// input data pointers
 				audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
 				audio_frame->nb_samples);		// number of input samples to convert
+		}
 
 		// Copy audio samples over original samples
 		memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
@@ -1061,7 +1065,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			while (remaining_samples > 0)
 			{
 				// Get Samples per frame (for this frame number)
-				int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate);
+				int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate, info.channels);
 
 				// Calculate # of samples to add to this frame
 				int samples = samples_per_frame - start;
@@ -1355,7 +1359,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 	double sample_start_percentage = frame - double(whole_frame);
 
 	// Get Samples per frame
-	int samples_per_frame = Frame::GetSamplesPerFrame(whole_frame, info.fps, info.sample_rate);
+	int samples_per_frame = Frame::GetSamplesPerFrame(whole_frame, info.fps, info.sample_rate, info.channels);
 
 	// Calculate the sample # to start on
 	int sample_start = round(double(samples_per_frame) * sample_start_percentage);
@@ -1415,7 +1419,7 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 	else
 	{
 		// Create a new frame on the working cache
-		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate), info.channels));
+		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
 		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
 		f->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
 		f->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader

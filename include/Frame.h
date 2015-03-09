@@ -233,10 +233,10 @@ namespace openshot
 		int GetHeight();
 
 		/// Calculate the # of samples per video frame (for the current frame number)
-		int GetSamplesPerFrame(Fraction fps, int sample_rate);
+		int GetSamplesPerFrame(Fraction fps, int sample_rate, int channels);
 
 		/// Calculate the # of samples per video frame (for a specific frame number and frame rate)
-		static int GetSamplesPerFrame(int frame_number, Fraction fps, int sample_rate);
+		static int GetSamplesPerFrame(int frame_number, Fraction fps, int sample_rate, int channels);
 
 		/// Get an audio waveform image
 		tr1::shared_ptr<Magick::Image> GetWaveform(int width, int height, int Red, int Green, int Blue);

@@ -454,23 +454,31 @@ void Frame::SetFrameNumber(int new_number)
 }
 
 // Calculate the # of samples per video frame (for a specific frame number and frame rate)
-int Frame::GetSamplesPerFrame(int number, Fraction fps, int sample_rate)
+int Frame::GetSamplesPerFrame(int number, Fraction fps, int sample_rate, int channels)
 {
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps_rate = fps.Reciprocal().ToDouble();
-	double previous_samples = round((sample_rate * fps_rate) * (number - 1));
-	double total_samples = round((sample_rate * fps_rate) * number);
+
+	// Determine previous samples total, and make sure it's evenly divisible by the # of channels
+	double previous_samples = (sample_rate * fps_rate) * (number - 1);
+	double previous_samples_remainder = fmod(previous_samples, (double)channels); // subtract the remainder to the total (to make it evenly divisible)
+	previous_samples -= previous_samples_remainder;
+
+	// Determine the current samples total, and make sure it's evenly divisible by the # of channels
+	double total_samples = (sample_rate * fps_rate) * number;
+	double total_samples_remainder = fmod(total_samples, (double)channels); // subtract the remainder to the total (to make it evenly divisible)
+	total_samples -= total_samples_remainder;
 
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
-	double samples_per_frame = total_samples - previous_samples;
+	int samples_per_frame = round(total_samples - previous_samples);
 	return samples_per_frame;
 }
 
 // Calculate the # of samples per video frame (for the current frame number)
-int Frame::GetSamplesPerFrame(Fraction fps, int sample_rate)
+int Frame::GetSamplesPerFrame(Fraction fps, int sample_rate, int channels)
 {
-	return GetSamplesPerFrame(number, fps, sample_rate);
+	return GetSamplesPerFrame(number, fps, sample_rate, channels);
 }
 
 // Get height of image

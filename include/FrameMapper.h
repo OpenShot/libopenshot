@@ -40,8 +40,11 @@
 #include "../include/Exceptions.h"
 #include "../include/KeyFrame.h"
 
+
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
+#include "OpenMPUtilities.h"
+
 
 
 using namespace std;
@@ -196,7 +199,7 @@ namespace openshot
 		void PrintMapping();
 
 		/// Resample audio and map channels (if needed)
-		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame);
+		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original_frame_number);
 
 	};
 }
