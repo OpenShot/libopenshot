@@ -42,6 +42,33 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	// Test getting lots of JSON
+	cout << "starting..." << endl;
+
+	Json::Value root;
+	root = Json::Value(Json::arrayValue);
+	for (int outer = 0; outer < 1000; outer++) {
+		openshot::Keyframe k;
+		//cout << "creating " << outer << endl;
+		for (int z = 0; z<10; z++) {
+			openshot::Point p(z * 10, 1 * z * outer);
+			k.AddPoint(p);
+		}
+		root.append(k.JsonValue());
+	}
+	//cout << root.toStyledString() << endl;
+
+	// Test loading lots of JSON
+	for (int z = 0; z<1000; z++) {
+		//cout << "loading " << z << endl;
+		Json::Value keyframe_json = root[z];
+		openshot::Keyframe k;
+		k.SetJsonValue(keyframe_json);
+	}
+
+	cout << "Successfully ended" << endl;
+	return 0;
+
 	// Reader
 	FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
 	r9.Open();

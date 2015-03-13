@@ -81,10 +81,6 @@ void Keyframe::AddPoint(Point p) {
 
 	// Set Handles (used for smooth curves).
 	SetHandles(p);
-
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
 }
 
 // Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
