@@ -42,6 +42,18 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+
+	Clip c10("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	c10.Open();
+
+	Negate n;
+	c10.AddEffect(&n);
+
+	tr1::shared_ptr<Frame> f =c10.GetFrame(500);
+	f->Display();
+	return 0;
+
+
 	// Test getting lots of JSON
 	cout << "starting..." << endl;
 

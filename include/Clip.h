@@ -40,6 +40,8 @@
 #include "ClipBase.h"
 #include "Color.h"
 #include "Enums.h"
+#include "EffectBase.h"
+#include "Effects.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "FrameMapper.h"
@@ -54,6 +56,17 @@ using namespace std;
 using namespace openshot;
 
 namespace openshot {
+
+	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
+	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
+	/// position, and then by effect order.
+	struct CompareClipEffects{
+		bool operator()( EffectBase* lhs, EffectBase* rhs){
+			if( lhs->Layer() < rhs->Layer() ) return true;
+			if( lhs->Layer() == rhs->Layer() && lhs->Position() < rhs->Position() ) return true;
+			if( lhs->Layer() == rhs->Layer() && lhs->Position() == rhs->Position() && lhs->Order() > rhs->Order() ) return true;
+			return false;
+	}};
 
 	/**
 	 * @brief This class represents a clip (used to arrange readers on the timeline)
@@ -91,6 +104,7 @@ namespace openshot {
 	class Clip : public ClipBase {
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
+		list<EffectBase*> effects; ///<List of clips on this timeline
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -102,6 +116,9 @@ namespace openshot {
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
 
+		/// Apply effects to the source frame (if any)
+		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame);
+
 		/// Get file extension
 		string get_file_extension(string path);
 
@@ -110,6 +127,9 @@ namespace openshot {
 
 		/// Init default settings for a clip
 		void init_settings();
+
+		/// Sort effects by order
+		void sort_effects();
 
 		/// Reverse an audio buffer
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
@@ -130,8 +150,15 @@ namespace openshot {
 		/// @param reader The reader to be used by this clip
 		Clip(ReaderBase* reader);
 
+		/// @brief Add an effect to the clip
+		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.
+		void AddEffect(EffectBase* effect);
+
 		/// Close the internal reader
 		void Close() throw(ReaderClosed);
+
+		/// Return the list of effects on the timeline
+		list<EffectBase*> Effects() { return effects; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
 		///
@@ -162,6 +189,10 @@ namespace openshot {
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		string PropertiesJSON(int requested_frame);
+
+		/// @brief Remove an effect from the clip
+		/// @param effect Remove an effect from the clip.
+		void RemoveEffect(EffectBase* effect);
 
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip

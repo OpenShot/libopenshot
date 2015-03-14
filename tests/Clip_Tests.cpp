@@ -199,3 +199,48 @@ TEST(Clip_Properties)
 
 }
 
+TEST(Clip_Effects)
+{
+	// Load clip with video
+	Clip c10("../../src/examples/sintel_trailer-720p.mp4");
+	c10.Open();
+
+	Negate n;
+	c10.AddEffect(&n);
+
+	// Get frame 1
+	tr1::shared_ptr<Frame> f = c10.GetFrame(500);
+
+	// Get the image data
+	const Magick::PixelPacket* pixels = f->GetPixels(10);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(65535, pixels[112].red);
+	CHECK_EQUAL(65535, pixels[112].blue);
+	CHECK_EQUAL(65535, pixels[112].green);
+	CHECK_EQUAL(0, pixels[112].opacity);
+
+	// Check the # of Effects
+	CHECK_EQUAL(1, c10.Effects().size());
+
+
+	// Add a 2nd negate effect
+	Negate n1;
+	c10.AddEffect(&n1);
+
+	// Get frame 1
+	f = c10.GetFrame(500);
+
+	// Get the image data
+	pixels = f->GetPixels(10);
+
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(0, pixels[112].red);
+	CHECK_EQUAL(0, pixels[112].blue);
+	CHECK_EQUAL(0, pixels[112].green);
+	CHECK_EQUAL(0, pixels[112].opacity);
+
+	// Check the # of Effects
+	CHECK_EQUAL(2, c10.Effects().size());
+
+}

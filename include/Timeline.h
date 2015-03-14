@@ -170,6 +170,12 @@ namespace openshot {
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
 
+		/// Sort clips by position on the timeline
+		void sort_clips();
+
+		/// Sort effects by position on the timeline
+		void sort_effects();
+
 		/// Update the list of 'opened' clips
 		void update_open_clips(Clip *clip, bool is_open);
 
@@ -242,12 +248,6 @@ namespace openshot {
 		/// @brief Remove an effect from the timeline
 		/// @param effect Remove an effect from the timeline.
 		void RemoveEffect(EffectBase* effect);
-
-		/// Sort clips by position on the timeline
-		void SortClips();
-
-		/// Sort effects by position on the timeline
-		void SortEffects();
 
 	};
 

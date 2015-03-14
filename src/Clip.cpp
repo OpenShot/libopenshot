@@ -234,11 +234,29 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 		if (time.Values.size() > 1)
 			new_frame_number = time.GetInt(requested_frame);
 
+
+
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		tr1::shared_ptr<Frame> frame = reader->GetFrame(new_frame_number);
+		tr1::shared_ptr<Frame> original_frame = reader->GetFrame(new_frame_number);
+
+		// Create a new frame
+		tr1::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
+		frame->SampleRate(original_frame->SampleRate());
+
+		// Copy the image from the odd field
+		frame->AddImage(original_frame->GetImage());
+
+		// Loop through each channel, add audio
+		for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
+			frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
+
+
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
+
+		// Apply effects to the frame (if any)
+		apply_effects(new_frame);
 
 		// Return processed 'frame'
 		return new_frame;
@@ -600,6 +618,18 @@ Json::Value Clip::JsonValue() {
 	root["perspective_c4_x"] = perspective_c4_x.JsonValue();
 	root["perspective_c4_y"] = perspective_c4_y.JsonValue();
 
+	// Add array of effects
+	root["effects"] = Json::Value(Json::arrayValue);
+
+	// loop through effects
+	list<EffectBase*>::iterator effect_itr;
+	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	{
+		// Get clip object from the iterator
+		EffectBase *existing_effect = (*effect_itr);
+		root["effects"].append(existing_effect->JsonValue());
+	}
+
 	if (reader)
 		root["reader"] = reader->JsonValue();
 
@@ -691,6 +721,39 @@ void Clip::SetJsonValue(Json::Value root) {
 		perspective_c4_x.SetJsonValue(root["perspective_c4_x"]);
 	if (!root["perspective_c4_y"].isNull())
 		perspective_c4_y.SetJsonValue(root["perspective_c4_y"]);
+	if (!root["effects"].isNull()) {
+		// Clear existing effects
+		effects.clear();
+
+		// loop through effects
+		for (int x = 0; x < root["effects"].size(); x++) {
+			// Get each effect
+			Json::Value existing_effect = root["effects"][x];
+
+			// Create Effect
+			EffectBase *e = NULL;
+
+			if (!existing_effect["type"].isNull())
+				// Init the matching effect object
+				if (existing_effect["type"].asString() == "ChromaKey")
+					e = new ChromaKey();
+
+				else if (existing_effect["type"].asString() == "Deinterlace")
+					e = new Deinterlace();
+
+				else if (existing_effect["type"].asString() == "Mask")
+					e = new Mask();
+
+				else if (existing_effect["type"].asString() == "Negate")
+					e = new Negate();
+
+			// Load Json into Effect
+			e->SetJsonValue(existing_effect);
+
+			// Add Effect to Timeline
+			AddEffect(e);
+		}
+	}
 	if (!root["reader"].isNull()) // does Json contain a reader?
 	{
 		if (!root["reader"]["type"].isNull()) // does the reader Json contain a 'type'?
@@ -748,4 +811,46 @@ void Clip::SetJsonValue(Json::Value root) {
 
 		}
 	}
+}
+
+// Sort effects by order
+void Clip::sort_effects()
+{
+	// sort clips
+	effects.sort(CompareClipEffects());
+}
+
+// Add an effect to the clip
+void Clip::AddEffect(EffectBase* effect)
+{
+	// Add effect to list
+	effects.push_back(effect);
+
+	// Sort effects
+	sort_effects();
+}
+
+// Remove an effect from the clip
+void Clip::RemoveEffect(EffectBase* effect)
+{
+	effects.remove(effect);
+}
+
+// Apply effects to the source frame (if any)
+tr1::shared_ptr<Frame> Clip::apply_effects(tr1::shared_ptr<Frame> frame)
+{
+	// Find Effects at this position and layer
+	list<EffectBase*>::iterator effect_itr;
+	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	{
+		// Get clip object from the iterator
+		EffectBase *effect = (*effect_itr);
+
+		// Apply the effect to this frame
+		frame = effect->GetFrame(frame, frame->number);
+
+	} // end effect loop
+
+	// Return modified frame
+	return frame;
 }

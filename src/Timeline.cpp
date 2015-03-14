@@ -67,7 +67,7 @@ void Timeline::AddClip(Clip* clip) throw(ReaderClosed)
 	clips.push_back(clip);
 
 	// Sort clips
-	SortClips();
+	sort_clips();
 }
 
 // Add an effect to the timeline
@@ -77,7 +77,7 @@ void Timeline::AddEffect(EffectBase* effect)
 	effects.push_back(effect);
 
 	// Sort effects
-	SortEffects();
+	sort_effects();
 }
 
 // Remove an effect from the timeline
@@ -465,7 +465,7 @@ void Timeline::update_closed_clips()
 }
 
 // Sort clips by position on the timeline
-void Timeline::SortClips()
+void Timeline::sort_clips()
 {
 	// Debug output
 	#pragma omp critical (debug_output)
@@ -476,7 +476,7 @@ void Timeline::SortClips()
 }
 
 // Sort effects by position on the timeline
-void Timeline::SortEffects()
+void Timeline::sort_effects()
 {
 	// sort clips
 	effects.sort(CompareEffects());
@@ -661,7 +661,7 @@ list<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of
 	float max_requested_time = calculate_time(requested_frame + (number_of_frames - 1), info.fps);
 
 	// Re-Sort Clips (since they likely changed)
-	SortClips();
+	sort_clips();
 
 	// Find Clips at this time
 	list<Clip*>::iterator clip_itr;
@@ -776,10 +776,10 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
 
-	// Clear existing clips
-	clips.clear();
+	if (!root["clips"].isNull()) {
+		// Clear existing clips
+		clips.clear();
 
-	if (!root["clips"].isNull())
 		// loop through clips
 		for (int x = 0; x < root["clips"].size(); x++) {
 			// Get each clip
@@ -794,11 +794,12 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			// Add Clip to Timeline
 			AddClip(c);
 		}
+	}
 
-	// Clear existing effects
-	effects.clear();
+	if (!root["effects"].isNull()) {
+		// Clear existing effects
+		effects.clear();
 
-	if (!root["effects"].isNull())
 		// loop through effects
 		for (int x = 0; x < root["effects"].size(); x++) {
 			// Get each effect
@@ -827,6 +828,7 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			// Add Effect to Timeline
 			AddEffect(e);
 		}
+	}
 }
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
