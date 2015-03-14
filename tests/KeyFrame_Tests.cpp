@@ -243,3 +243,81 @@ TEST(Keyframe_Get_Closest_Point)
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000)).co.X, 2500);
 
 }
+
+TEST(Keyframe_Scale_Keyframe)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.Auto_Handle_Percentage = 0.4f;
+	kf.AddPoint(openshot::Point(Coordinate(1, 1), BEZIER));
+	kf.AddPoint(openshot::Point(Coordinate(25, 8), BEZIER));
+	kf.AddPoint(openshot::Point(Coordinate(50, 2), BEZIER));
+
+	// Spot check values from the curve
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(3.84f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
+
+	// Resize / Scale the keyframe
+	kf.ScalePoints(2.0); // 100% larger
+
+	// Spot check values from the curve
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(6.25f, kf.GetValue(24), 0.01);
+	CHECK_CLOSE(6.38f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(7.80f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(7.99f, kf.GetValue(49), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(50), 0.01);
+	CHECK_CLOSE(2.06f, kf.GetValue(90), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(100), 0.01);
+
+	// Resize / Scale the keyframe
+	kf.ScalePoints(0.5); // 50% smaller, which should match the original size
+
+	// Spot check values from the curve
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(3.84f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
+
+}
+
+TEST(Keyframe_Flip_Keyframe)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.Auto_Handle_Percentage = 0.4f;
+	kf.AddPoint(openshot::Point(Coordinate(1, 1), LINEAR));
+	kf.AddPoint(openshot::Point(Coordinate(25, 8), LINEAR));
+	kf.AddPoint(openshot::Point(Coordinate(50, 2), LINEAR));
+	kf.AddPoint(openshot::Point(Coordinate(100, 10), LINEAR));
+
+	// Spot check values from the curve
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
+	CHECK_CLOSE(10.0f, kf.GetValue(100), 0.01);
+
+	// Flip the points
+	kf.FlipPoints();
+
+	// Spot check values from the curve
+	CHECK_CLOSE(10.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(50), 0.01);
+	CHECK_CLOSE(1.0f, kf.GetValue(100), 0.01);
+
+	// Flip the points again (back to the original)
+	kf.FlipPoints();
+
+	// Spot check values from the curve
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
+	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
+	CHECK_CLOSE(10.0f, kf.GetValue(100), 0.01);
+}

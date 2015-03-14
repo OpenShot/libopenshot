@@ -113,6 +113,9 @@ namespace openshot {
 		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
 		void SetHandles(Point current);
 
+		/// Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
+		void FlipPoints();
+
 		/// Get the index of a point by matching a coordinate
 		int FindIndex(Point p) throw(OutOfBoundsPoint);
 
@@ -162,6 +165,10 @@ namespace openshot {
 
 		/// Remove a point by index
 		void RemovePoint(int index) throw(OutOfBoundsPoint);
+
+		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
+		/// 1.0 = same size, 1.05 = 5% increase, etc...
+		void ScalePoints(float scale);
 
 		/// Replace an existing point with a new point
 		void UpdatePoint(int index, Point p);

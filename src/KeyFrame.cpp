@@ -818,3 +818,39 @@ double Keyframe::Bernstein(int n, int i, double t) {
 	return basis;
 }
 
+// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
+// 1.0 = same size, 1.05 = 5% increase, etc...
+void Keyframe::ScalePoints(float scale)
+{
+	// Loop through each point (skipping the 1st point)
+	for (int point_index = 0; point_index < Points.size(); point_index++) {
+		// Skip the 1st point
+		if (point_index == 0)
+			continue;
+
+		// Scale X value
+		Points[point_index].co.X = round(Points[point_index].co.X * scale);
+
+		// Mark for re-processing
+		needs_update = true;
+	}
+}
+
+// Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
+void Keyframe::FlipPoints()
+{
+	// Loop through each point
+	vector<Point> FlippedPoints;
+	for (int point_index = 0, reverse_index = Points.size() - 1; point_index < Points.size(); point_index++, reverse_index--) {
+		// Flip the points
+		Point p = Points[point_index];
+		p.co.Y = Points[reverse_index].co.Y;
+		FlippedPoints.push_back(p);
+	}
+
+	// Swap vectors
+	Points.swap(FlippedPoints);
+
+	// Mark for re-processing
+	needs_update = true;
+}

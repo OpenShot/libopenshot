@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 		openshot::Keyframe k;
 		//cout << "creating " << outer << endl;
 		for (int z = 0; z<10; z++) {
-			openshot::Point p(z * 10, 1 * z * outer);
+			openshot::Point p(z * 10, 1 * z * outer, BEZIER);
 			k.AddPoint(p);
 		}
 		root.append(k.JsonValue());
