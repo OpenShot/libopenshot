@@ -43,14 +43,24 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
+	Timeline t10(1280, 720, Fraction(24,1), 44100, 2);
+	t10.debug = false;
 	Clip c10("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	c10.rotation.AddPoint(1, 0.0);
+	c10.rotation.AddPoint(1000, 360.0);
 	c10.Open();
+	c10.Position(1.05);
 
 	Negate n;
 	c10.AddEffect(&n);
 
-	tr1::shared_ptr<Frame> f =c10.GetFrame(500);
-	f->Display();
+	// add clip to timeline
+	t10.AddClip(&c10);
+
+	for (int z = 0; z<1000; z++) {
+		t10.GetFrame(z);
+		cout << z << endl;
+	}
 	return 0;
 
 

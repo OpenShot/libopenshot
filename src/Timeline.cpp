@@ -109,7 +109,6 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 	float requested_time = calculate_time(timeline_frame_number, info.fps);
 
 	// Debug output
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("Timeline::apply_effects", "requested_time", requested_time, "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
 
 	// Find Effects at this position and layer
@@ -124,7 +123,6 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "requested_time", requested_time, "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "effect_duration", effect_duration);
 
 		// Clip is visible
@@ -135,7 +133,6 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 			int effect_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 			// Debug output
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("Timeline::apply_effects (Process Effect)", "time_diff", time_diff, "effect_frame_number", effect_frame_number, "effect_duration", effect_duration, "does_effect_intersect", does_effect_intersect, "", -1, "", -1);
 
 			// Apply the effect to this frame
@@ -162,7 +159,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		return;
 
 	// Debug output
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
@@ -177,7 +173,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	if (source_clip->Reader()->info.has_audio) {
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 		if (source_frame->GetAudioChannelsCount() == info.channels)
@@ -201,7 +196,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 			}
 		else
 			// Debug output
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 	}
@@ -210,7 +204,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	if (!source_clip->Waveform())
 	{
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 
 		// Get actual frame image data
@@ -219,7 +212,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	else
 	{
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 
 		// Get the color of the waveform
@@ -242,7 +234,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_image->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, alpha);
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 	}
 
@@ -257,7 +248,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_height = source_image->size().height();
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
 
@@ -268,7 +258,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_height = source_image->size().height();
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
 
@@ -284,7 +273,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_height = source_image->size().height();
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
 		break;
 	}
@@ -332,7 +320,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	// Debug output
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "source_width", source_width, "info.height", info.height, "source_height", source_height);
 
 	/* LOCATION, ROTATION, AND SCALE */
@@ -348,7 +335,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
 		// SIMPLE OFFSET
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
@@ -359,14 +345,12 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
 		// COMPLEX DISTORTION
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
 		if (source_width != info.width || source_height != info.height)
 		{
 			// Debug output
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Resize Source Canvas)", "source_frame->number", source_frame->number, "source_frame->GetWidth()", source_frame->GetWidth(), "info.width", info.width, "source_frame->GetHeight()", source_frame->GetHeight(), "info.height", info.height, "", -1);
 
 			source_image->borderColor(Magick::Color("none"));
@@ -375,7 +359,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		}
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Prepare for ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		// Use the distort operator, which is very CPU intensive
@@ -385,7 +368,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		transformed = true;
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 	}
 
@@ -394,7 +376,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	if (new_frame->GetImage()->columns() == 1)
 	{
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::add_layer (Transform: 1st Layer, Generate Solid Color Image", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 
 		/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
@@ -405,70 +386,49 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	// Debug output
-	#pragma omp critical (debug_output)
-	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
 	new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
 
+	// Debug output
+	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
 }
 
 // Update the list of 'opened' clips
-void Timeline::update_open_clips(Clip *clip, bool is_open)
+void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 {
+	AppendDebugMethod("Timeline::update_open_clips (before)", "does_clip_intersect", does_clip_intersect, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1, "", -1);
+
 	// is clip already in list?
 	bool clip_found = open_clips.count(clip);
 
-	if (clip_found && !is_open)
+	if (clip_found && !does_clip_intersect)
 	{
-		// Mark clip "to be removed"
-		closing_clips.push_back(clip);
+		// Remove clip from 'opened' list, because it's closed now
+		open_clips.erase(clip);
+
+		// Close clip
+		clip->Close();
 	}
-	else if (!clip_found && is_open)
+	else if (!clip_found && does_clip_intersect)
 	{
 		// Add clip to 'opened' list, because it's missing
 		open_clips[clip] = clip;
 
-		// Open the clip's reader
+		// Open the clip
 		clip->Open();
 	}
 
 	// Debug output
-	#pragma omp critical (debug_output)
-	AppendDebugMethod("Timeline::update_open_clips", "clip_found", clip_found, "is_open", is_open, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1);
-}
-
-// Update the list of 'closed' clips
-void Timeline::update_closed_clips()
-{
-	// Close all "to be closed" clips
-	list<Clip*>::iterator clip_itr;
-	for (clip_itr=closing_clips.begin(); clip_itr != closing_clips.end(); ++clip_itr)
-	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
-
-		// Close the clip's reader
-		clip->Close();
-
-		// Remove clip from 'opened' list, because it's closed now
-		open_clips.erase(clip);
-	}
-
-	// Clear list
-	closing_clips.clear();
-
-	// Debug output
-	#pragma omp critical (debug_output)
-	AppendDebugMethod("Timeline::update_closed_clips", "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1, "", -1, "", -1);
+	AppendDebugMethod("Timeline::update_open_clips (after)", "does_clip_intersect", does_clip_intersect, "clip_found", clip_found, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1);
 }
 
 // Sort clips by position on the timeline
 void Timeline::sort_clips()
 {
 	// Debug output
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("Timeline::SortClips", "clips.size()", clips.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
 
 	// sort clips
@@ -496,8 +456,7 @@ void Timeline::Close()
 		update_open_clips(clip, false);
 	}
 
-	// Actually close the clips
-	update_closed_clips();
+	// Mark timeline as closed
 	is_open = false;
 
 	// Clear cache
@@ -526,123 +485,117 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	// Check cache
 	if (final_cache.Exists(requested_frame)) {
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
+		// Return cached frame
 		return final_cache.GetFrame(requested_frame);
 	}
 	else
 	{
-		// Debug output
-		#pragma omp critical (debug_output)
-		AppendDebugMethod("Timeline::GetFrame (Generating frame)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
-
 		// Minimum number of frames to process (for performance reasons)
 		int minimum_frames = 1;
 
-		// Set the number of threads in OpenMP
-		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-		// Allow nested OpenMP sections
-		omp_set_nested(true);
+		// Get a list of clips that intersect with the requested section of timeline
+		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
+		vector<Clip*> nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
 
-		#pragma xxx omp parallel
-		{
-			#pragma xxx omp single
+		// TODO: OpenMP is disabled in this function, due to conditional calls the ImageMagick methods, which also
+		// contain OpenMP parallel regions. This is a violation of OpenMP, and causes the threads to hang in some cases.
+		// Set the number of threads in OpenMP
+		//omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+		// Allow nested OpenMP sections
+		//omp_set_nested(true);
+
+		// Debug output
+		AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1);
+
+		//#pragma omp parallel
+		//{
+			// Loop through all requested frames
+			//#pragma omp for firstprivate(nearby_clips, requested_frame, minimum_frames)
+			for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
-				#pragma xxx omp critical (debug_output)
-				AppendDebugMethod("Timeline::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
+				AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
 
-				// Get a list of clips that intersect with the requested section of timeline
-				// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
-				list<Clip*> nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
+				// Create blank frame (which will become the requested frame)
+				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
 
-				// Loop through all requested frames
-				for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+				// Calculate time of frame
+				float requested_time = calculate_time(frame_number, info.fps);
+
+				// Debug output
+				AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1);
+
+				// Find Clips near this time
+				for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
 				{
-					#pragma xxx omp task firstprivate(frame_number)
+					// Get clip object from the iterator
+					Clip *clip = nearby_clips[clip_index];
+
+					// Does clip intersect the current requested time
+					bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
+
+					// Debug output
+					AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
+
+					// Clip is visible
+					if (does_clip_intersect)
 					{
-						// Create blank frame (which will become the requested frame)
-						tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
-
-						// Calculate time of frame
-						float requested_time = calculate_time(frame_number, info.fps);
-
-						// Debug output
-						#pragma omp critical (debug_output)
-						AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "", -1, "", -1, "", -1);
-
-						// Find Clips near this time
-						list<Clip*>::iterator clip_itr;
-						for (clip_itr=nearby_clips.begin(); clip_itr != nearby_clips.end(); ++clip_itr)
+						// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
+						bool is_top_clip = true;
+						for (int top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
 						{
-							// Get clip object from the iterator
-							Clip *clip = (*clip_itr);
-
-							// Does clip intersect the current requested time
-							bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
-
-							// Debug output
-							#pragma omp critical (debug_output)
-							AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
-
-							// Clip is visible
-							if (does_clip_intersect)
-							{
-								// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
-								bool is_top_clip = true;
-								list<Clip*>::iterator clip_itr1;
-								for (clip_itr1=nearby_clips.begin(); clip_itr1 != nearby_clips.end(); ++clip_itr1)
-								{
-									Clip *nearby_clip = (*clip_itr1);
-									if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
-											nearby_clip->Position() <= requested_time && nearby_clip->Position() + nearby_clip->Duration() >= requested_time &&
-											nearby_clip->Position() > clip->Position()) {
-										is_top_clip = false;
-										break;
-									}
-								}
-
-								// Determine the frame needed for this clip (based on the position on the timeline)
-								float time_diff = (requested_time - clip->Position()) + clip->Start();
-								int clip_frame_number = (time_diff * info.fps.ToFloat()) + 1;
-
-								// Debug output
-								#pragma omp critical (debug_output)
-								AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
-
-								// Add clip's frame as layer
-								add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
-
-							} else
-								// Debug output
-								#pragma omp critical (debug_output)
-								AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
-
-						} // end clip loop
-
-						// Check for empty frame image (and fill with color)
-						if (new_frame->GetImage()->columns() == 1)
-						{
-							int red = color.red.GetInt(frame_number);
-							int green = color.green.GetInt(frame_number);
-							int blue = color.blue.GetInt(frame_number);
-							new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue));
+							Clip *nearby_clip = nearby_clips[top_clip_index];
+							if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
+									nearby_clip->Position() <= requested_time && nearby_clip->Position() + nearby_clip->Duration() >= requested_time &&
+									nearby_clip->Position() > clip->Position()) {
+								is_top_clip = false;
+								break;
+							}
 						}
 
-						// Add final frame to cache
-						#pragma omp critical (timeline_cache)
-						final_cache.Add(frame_number, new_frame);
+						// Determine the frame needed for this clip (based on the position on the timeline)
+						float time_diff = (requested_time - clip->Position()) + clip->Start();
+						int clip_frame_number = (time_diff * info.fps.ToFloat()) + 1;
 
-					} // end omp task
-				} // end frame loop
+						// Debug output
+						AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
 
-				// Actually close all clips no longer needed
-				#pragma omp critical (reader_lock)
-				update_closed_clips();
+						// Add clip's frame as layer
+						add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
 
-			} // end omp single
-		} // end omp parallel
+					} else
+						// Debug output
+						AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
+
+				} // end clip loop
+
+				// Check for empty frame image (and fill with color)
+				if (new_frame->GetImage()->columns() == 1)
+				{
+					// Debug output
+					AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+
+					int red = color.red.GetInt(frame_number);
+					int green = color.green.GetInt(frame_number);
+					int blue = color.blue.GetInt(frame_number);
+					#pragma omp critical (openshot_add_color)
+					new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue));
+				}
+
+				// Debug output
+				AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+
+				// Add final frame to cache
+				#pragma omp critical (timeline_cache)
+				final_cache.Add(frame_number, new_frame);
+
+			} // end frame loop
+		//} // end parallel
+
+		// Debug output
+		AppendDebugMethod("Timeline::GetFrame (end parallel region)", "requested_frame", requested_frame, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
 
 		// Return frame (or blank frame)
 		return final_cache.GetFrame(requested_frame);
@@ -651,10 +604,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 
 
 // Find intersecting clips (or non intersecting clips)
-list<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of_frames, bool include)
+vector<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of_frames, bool include)
 {
 	// Find matching clips
-	list<Clip*> matching_clips;
+	vector<Clip*> matching_clips;
 
 	// Calculate time of frame
 	float min_requested_time = calculate_time(requested_frame, info.fps);
@@ -676,12 +629,12 @@ list<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of
 								   (clip->Position() > min_requested_time && clip->Position() <= max_requested_time);
 
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_time", min_requested_time, "max_requested_time", max_requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect);
 
 		// Open (or schedule for closing) this clip, based on if it's intersecting or not
 		#pragma omp critical (reader_lock)
 		update_open_clips(clip, does_clip_intersect);
+
 
 		// Clip is visible
 		if (does_clip_intersect && include)

@@ -162,7 +162,7 @@ namespace openshot {
 		/// @param requested_frame The frame number that is requested.
 		/// @param number_of_frames The number of frames to check
 		/// @param include Include or Exclude intersecting clips
-		list<Clip*> find_intersecting_clips(int requested_frame, int number_of_frames, bool include);
+		vector<Clip*> find_intersecting_clips(int requested_frame, int number_of_frames, bool include);
 
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
@@ -177,10 +177,7 @@ namespace openshot {
 		void sort_effects();
 
 		/// Update the list of 'opened' clips
-		void update_open_clips(Clip *clip, bool is_open);
-
-		/// Update the list of 'closed' clips
-		void update_closed_clips();
+		void update_open_clips(Clip *clip, bool does_clip_intersect);
 
 	public:
 

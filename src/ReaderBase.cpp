@@ -93,40 +93,43 @@ void ReaderBase::AppendDebugMethod(string method_name, string arg1_name, float a
 	debug_item["method"] = method_name;
 
 	// Output to standard output
-	cout << fixed << setprecision(4);
-	cout << "Debug: Method: " << method_name << " (";
+	#pragma omp critical (debug_output)
+	{
+		cout << fixed << setprecision(4);
+		cout << "Debug: Method: " << method_name << " (";
 
-	// Add attributes to method JSON
-	if (arg1_name.length() > 0) {
-		debug_item[arg1_name] = arg1_value;
-		cout << arg1_name << "=" << arg1_value;
-	}
-	if (arg2_name.length() > 0) {
-		debug_item[arg2_name] = arg2_value;
-		cout << ", " << arg2_name << "=" << arg2_value;
-	}
-	if (arg3_name.length() > 0) {
-		debug_item[arg3_name] = arg3_value;
-		cout << ", " << arg3_name << "=" << arg3_value;
-	}
-	if (arg4_name.length() > 0) {
-		debug_item[arg4_name] = arg4_value;
-		cout << ", " << arg4_name << "=" << arg4_value;
-	}
-	if (arg5_name.length() > 0) {
-		debug_item[arg5_name] = arg5_value;
-		cout << ", " << arg5_name << "=" << arg5_value;
-	}
-	if (arg6_name.length() > 0) {
-		debug_item[arg6_name] = arg6_value;
-		cout << ", " << arg6_name << "=" << arg6_value;
-	}
+		// Add attributes to method JSON
+		if (arg1_name.length() > 0) {
+			debug_item[arg1_name] = arg1_value;
+			cout << arg1_name << "=" << arg1_value;
+		}
+		if (arg2_name.length() > 0) {
+			debug_item[arg2_name] = arg2_value;
+			cout << ", " << arg2_name << "=" << arg2_value;
+		}
+		if (arg3_name.length() > 0) {
+			debug_item[arg3_name] = arg3_value;
+			cout << ", " << arg3_name << "=" << arg3_value;
+		}
+		if (arg4_name.length() > 0) {
+			debug_item[arg4_name] = arg4_value;
+			cout << ", " << arg4_name << "=" << arg4_value;
+		}
+		if (arg5_name.length() > 0) {
+			debug_item[arg5_name] = arg5_value;
+			cout << ", " << arg5_name << "=" << arg5_value;
+		}
+		if (arg6_name.length() > 0) {
+			debug_item[arg6_name] = arg6_value;
+			cout << ", " << arg6_name << "=" << arg6_value;
+		}
 
-	// Output to standard output
-	cout << ")" << endl;
+		// Output to standard output
+		cout << ")" << endl;
 
-	// Append method to root array
-	debug_root.append(debug_item);
+		// Append method to root array
+		debug_root.append(debug_item);
+	}
 }
 
 // Display file information
