@@ -76,7 +76,6 @@ void ImageWriter::SetVideoOptions(string format, Fraction fps, int width, int he
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("ImageWriter::SetVideoOptions (" + format + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
 }
 
@@ -97,7 +96,6 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 	// time the WriteFrames() method is called.
 	spooled_video_frames.push_back(frame);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("ImageWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "cache_size", cache_size, "is_writing", is_writing, "", -1, "", -1);
 
 	// Write the frames once it reaches the correct cache size
@@ -126,7 +124,6 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 // Write all frames in the queue to the video file.
 void ImageWriter::write_queued_frames()
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("ImageWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
 
 	// Flip writing flag
@@ -222,7 +219,6 @@ void ImageWriter::write_queued_frames()
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
@@ -251,7 +247,6 @@ void ImageWriter::Close()
 	// Close writer
 	is_open = false;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 

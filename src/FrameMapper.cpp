@@ -77,7 +77,6 @@ void FrameMapper::AddField(Field field)
 // whether the frame rate is increasing or decreasing.
 void FrameMapper::Init()
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::Init (Calculate frame mappings)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 	// Clear the fields & frames lists
@@ -323,7 +322,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 	#pragma omp parallel
 	{
 		// Debug output
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
 
 		// Loop through all requested frames, each frame gets it's own thread
@@ -464,7 +462,6 @@ void FrameMapper::Open() throw(InvalidFile)
 {
 	if (reader)
 	{
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Open the reader
@@ -477,7 +474,6 @@ void FrameMapper::Close()
 {
 	if (reader)
 	{
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Close internal reader
@@ -551,7 +547,6 @@ void FrameMapper::SetJsonValue(Json::Value root) throw(InvalidFile) {
 // Change frame rate or audio mapping details
 void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.num, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
 
 	// Mark as dirty
@@ -586,7 +581,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	int samples_in_frame = frame->GetAudioSamplesCount();
 	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "original_frame_number", original_frame_number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame, "", -1);
 
 	// Get audio sample array
@@ -610,7 +604,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	delete[] frame_samples_float;
 	frame_samples_float = NULL;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (got sample data from frame)", "frame->number", frame->number, "total_frame_samples", total_frame_samples, "target channels", info.channels, "channels_in_frame", channels_in_frame, "target sample_rate", info.sample_rate, "samples_in_frame", samples_in_frame);
 
 
@@ -624,7 +617,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 
 	if (error_code != 0)
 	{
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
 	}
@@ -632,7 +624,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	// Update total samples & input frame size (due to bigger or smaller data types)
 	total_frame_samples = Frame::GetSamplesPerFrame(original_frame_number, target, info.sample_rate, info.channels);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
 	// Create output frame (and allocate arrays)
@@ -641,7 +632,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	audio_converted->nb_samples = total_frame_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_S16, 0);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (preparing for resample)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", AV_SAMPLE_FMT_S16, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
 
 	int nb_samples = 0;
@@ -691,7 +681,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 	#pragma omp critical (openshot_adding_audio)
 	frame->ResizeAudio(info.channels, channel_buffer_size, info.sample_rate, info.channel_layout);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (Audio successfully resampled)", "nb_samples", nb_samples, "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "channels_in_frame", channels_in_frame, "info.channels", info.channels, "info.channel_layout", info.channel_layout);
 
 	// Array of floats (to hold samples for each channel)
@@ -733,7 +722,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original
 		#pragma omp critical (openshot_adding_audio)
 		frame->AddAudio(true, channel_filter, 0, channel_buffer, position, 1.0f);
 
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position, "channel_filter", channel_filter, "", -1, "", -1, "", -1, "", -1);
 	}
 

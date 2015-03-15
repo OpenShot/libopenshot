@@ -96,7 +96,6 @@ void FFmpegWriter::auto_detect_format()
 // initialize streams
 void FFmpegWriter::initialize_streams()
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::initialize_streams", "fmt->video_codec", fmt->video_codec, "fmt->audio_codec", fmt->audio_codec, "AV_CODEC_ID_NONE", AV_CODEC_ID_NONE, "", -1, "", -1, "", -1);
 
 	// Add the audio and video streams using the default format codecs and initialize the codecs
@@ -164,7 +163,6 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::SetVideoOptions (" + codec + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
 
 	// Enable / Disable video
@@ -203,7 +201,6 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 	if (original_channels == 0)
 		original_channels = info.channels;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::SetAudioOptions (" + codec + ")", "sample_rate", sample_rate, "channels", channels, "bit_rate", bit_rate, "", -1, "", -1, "", -1);
 
 	// Enable / Disable audio
@@ -289,7 +286,6 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) throw
 				av_opt_set (c->priv_data, name.c_str(), value.c_str(), 0);
 			#endif
 
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegWriter::SetOption (" + (string)name + ")", "stream == VIDEO_STREAM", stream == VIDEO_STREAM, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 	}
@@ -304,7 +300,6 @@ void FFmpegWriter::PrepareStreams()
 	if (!info.has_audio && !info.has_video)
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::PrepareStreams [" + path + "]", "info.has_audio", info.has_audio, "info.has_video", info.has_video, "", -1, "", -1, "", -1, "", -1);
 
 	// Initialize the streams (i.e. add the streams)
@@ -339,7 +334,6 @@ void FFmpegWriter::WriteHeader()
 	// Mark as 'written'
 	write_header = true;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::WriteHeader", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
@@ -358,7 +352,6 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 	if (info.has_audio && audio_st)
 		spooled_audio_frames.push_back(frame);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "cache_size", cache_size, "is_writing", is_writing, "", -1);
 
 	// Write the frames once it reaches the correct cache size
@@ -387,7 +380,6 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 // Write all frames in the queue to the video file.
 void FFmpegWriter::write_queued_frames()
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "", -1, "", -1, "", -1, "", -1);
 
 	// Flip writing flag
@@ -493,7 +485,6 @@ void FFmpegWriter::write_queued_frames()
 // Write a block of frames from a reader
 void FFmpegWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
@@ -529,7 +520,6 @@ void FFmpegWriter::WriteTrailer()
 	// Mark as 'written'
 	write_trailer = true;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::WriteTrailer", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
@@ -590,7 +580,6 @@ void FFmpegWriter::flush_encoders()
 			#endif
 
 			if (error_code < 0) {
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 			if (!got_packet) {
@@ -613,7 +602,6 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
@@ -644,7 +632,6 @@ void FFmpegWriter::flush_encoders()
 			int got_packet = 0;
 			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
 			if (error_code < 0) {
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 			if (!got_packet) {
@@ -671,7 +658,6 @@ void FFmpegWriter::flush_encoders()
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0) {
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 		}
@@ -744,7 +730,6 @@ void FFmpegWriter::Close()
 	write_header = false;
 	write_trailer = false;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
@@ -847,7 +832,6 @@ AVStream* FFmpegWriter::add_audio_stream()
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::add_audio_stream", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->channels", c->channels, "c->sample_fmt", c->sample_fmt, "c->channel_layout", c->channel_layout, "c->sample_rate", c->sample_rate);
 
 	return st;
@@ -934,7 +918,6 @@ AVStream* FFmpegWriter::add_video_stream()
         }
     }
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE, "", -1);
 
 	return st;
@@ -989,7 +972,6 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 	audio_outbuf = new uint8_t[audio_outbuf_size];
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
 
 }
@@ -1012,7 +994,6 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	if (avcodec_open2(video_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
 
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 }
@@ -1079,7 +1060,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 		int samples_position = 0;
 
 
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegWriter::write_audio_packets", "final", final, "total_frame_samples", total_frame_samples, "remaining_frame_samples", remaining_frame_samples, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "", -1);
 
 		// Keep track of the original sample format
@@ -1135,7 +1115,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 			audio_converted->nb_samples = total_frame_samples / channels_in_frame;
 			av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_converted->nb_samples, output_sample_fmt, 0);
 
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("FFmpegWriter::write_audio_packets (1st resampling)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", output_sample_fmt, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
 
 			// setup resample context
@@ -1177,7 +1156,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 			av_freep(&audio_converted[0]);
 			avcodec_free_frame(&audio_converted);
 
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)", "nb_samples", nb_samples, "remaining_frame_samples", remaining_frame_samples, "", -1, "", -1, "", -1, "", -1);
 		}
 
@@ -1214,7 +1192,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 			avcodec_get_frame_defaults(frame_final);
 			if (av_sample_fmt_is_planar(audio_codec->sample_fmt))
 			{
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)", "in_sample_fmt", output_sample_fmt, "out_sample_fmt", audio_codec->sample_fmt, "in_sample_rate", info.sample_rate, "out_sample_rate", info.sample_rate, "in_channels", info.channels, "out_channels", info.channels);
 
 				// setup resample context
@@ -1266,7 +1243,6 @@ void FFmpegWriter::write_audio_packets(bool final)
 				av_freep(&audio_frame[0]); // delete final_samples_planar array
 				avcodec_free_frame(&audio_frame);
 
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 2nd resampling for Planar formats)", "nb_samples", nb_samples, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			} else {
@@ -1335,14 +1311,12 @@ void FFmpegWriter::write_audio_packets(bool final)
 				int error_code = av_interleaved_write_frame(oc, &pkt);
 				if (error_code != 0)
 				{
-					#pragma omp critical (debug_output)
 					AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				}
 			}
 
 			if (error_code < 0)
 			{
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
@@ -1447,7 +1421,6 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		}
 
 
-		#pragma omp critical (debug_output)
 		AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "step", step, "", -1, "", -1);
 
 		// Resize & convert pixel format
@@ -1468,7 +1441,6 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 // write video frame
 void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
-	#pragma omp critical (debug_output)
 	AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
 
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
@@ -1489,7 +1461,6 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		int error_code = av_interleaved_write_frame(oc, &pkt);
 		if (error_code != 0)
 		{
-			#pragma omp critical (debug_output)
 			AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
 		}
@@ -1563,7 +1534,6 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			int error_code = av_interleaved_write_frame(oc, &pkt);
 			if (error_code != 0)
 			{
-				#pragma omp critical (debug_output)
 				AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
 			}
