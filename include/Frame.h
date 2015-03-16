@@ -40,6 +40,7 @@
 #include <iomanip>
 #include <sstream>
 #include <queue>
+#include <QtGui/QImage>
 #include <tr1/memory>
 #include <unistd.h>
 #include "Magick++.h"
@@ -50,10 +51,23 @@
 #include "Fraction.h"
 #include "Sleep.h"
 
+
 using namespace std;
 
 namespace openshot
 {
+
+	/**
+	 *  @brief The pixel format supported by renderers.
+	 *
+	 *  Currently only RGB_888 is supported.
+	 *
+	 *  @see QuantumType
+	 */
+	enum OSPixelFormat {
+		RGB_888,
+	};
+
 	/**
 	 * @brief This class represents a single frame of video (i.e. image & audio data)
 	 *
@@ -114,6 +128,8 @@ namespace openshot
 		tr1::shared_ptr<Magick::Image> image;
 		tr1::shared_ptr<Magick::Image> wave_image;
 		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
+		tr1::shared_ptr<QImage> qimage;
+		unsigned char *qbuffer;
 		Fraction pixel_ratio;
 		int channels;
 		ChannelLayout channel_layout;
@@ -219,6 +235,9 @@ namespace openshot
 
 		/// Get pointer to Magick++ image object
 		tr1::shared_ptr<Magick::Image> GetImage();
+
+		/// Get pointer to QImage of frame
+		tr1::shared_ptr<QImage> GetQImage();
 
 		/// Set Pixel Aspect Ratio
 		Fraction GetPixelRatio() { return pixel_ratio; };

@@ -31,8 +31,7 @@
 #include <QtGui/QPainter>
 
 VideoRenderWidget::VideoRenderWidget(QWidget *parent)
-    : QWidget(parent)
-    , renderer(new VideoRenderer(this))
+    : QWidget(parent), renderer(new VideoRenderer(this))
 {
     QPalette p = palette();
     p.setColor(QPalette::Window, Qt::black);
@@ -86,9 +85,10 @@ void VideoRenderWidget::paintEvent(QPaintEvent *event)
     painter.fillRect(event->rect(), palette().window());
     painter.setViewport(centeredViewport(width(), height()));
     painter.drawImage(QRect(0, 0, width(), height()), image);
+
 }
 
-void VideoRenderWidget::present(const QImage & m)
+void VideoRenderWidget::present(const QImage &m)
 {
     image = m;
     repaint();

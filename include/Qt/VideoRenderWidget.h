@@ -29,7 +29,7 @@
 #define OPENSHOT_VIDEO_RENDERER_WIDGET_H
 
 #include <QtWidgets/QWidget>
-#include <QImage>
+#include <QtGui/QImage>
 #include "../Fraction.h"
 #include "VideoRenderer.h"
 
@@ -57,7 +57,7 @@ protected:
     QRect centeredViewport(int width, int height);
 
 private slots:
-    void present(const QImage & image);
+	void present(const QImage &image);
 
 };
 

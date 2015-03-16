@@ -30,9 +30,10 @@
 
 #include "../RendererBase.h"
 #include <QtCore/QObject>
+#include <QtGui/QImage>
 #include <tr1/memory>
 
-class QImage;
+
 class QPainter;
 
 class VideoRenderer : public QObject, public openshot::RendererBase
@@ -47,10 +48,11 @@ public:
     void OverrideWidget(long qwidget_address);
 
 signals:
-    void present(const QImage & image);
+	void present(const QImage &image);
 
 protected:
-    void render(openshot::PixelFormat format, int width, int height, int bytesPerLine, unsigned char *data);
+    //void render(openshot::OSPixelFormat format, int width, int height, int bytesPerLine, unsigned char *data);
+    void render(tr1::shared_ptr<QImage> image);
 
 private slots:
 

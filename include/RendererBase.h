@@ -28,22 +28,13 @@
 #ifndef OPENSHOT_RENDERER_BASE_H
 #define OPENSHOT_RENDERER_BASE_H
 
+#include "../include/Frame.h"
+#include <stdlib.h> // for realloc
 #include <tr1/memory>
 
 namespace openshot
 {
     class Frame;
-
-    /**
-     *  @brief The pixel format supported by renderers.
-     *
-     *  Currently only RGB_888 is supported.
-     *
-     *  @see QuantumType
-     */
-    enum PixelFormat {
-	RGB_888,
-    };
 
     /**
      * @brief This is the base class of all Renderers in libopenshot.
@@ -53,8 +44,6 @@ namespace openshot
      */
     class RendererBase
     {
-	unsigned char *buffer;
-
     public:
 
 	/// Paint(render) a video Frame.
@@ -67,7 +56,7 @@ namespace openshot
 	RendererBase();
 	virtual ~RendererBase();
 	
-	virtual void render(PixelFormat format, int width, int height, int bytesPerLine, unsigned char *data) = 0;
+	virtual void render(tr1::shared_ptr<QImage> image) = 0;
     };
 
 }

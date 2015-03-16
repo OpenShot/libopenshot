@@ -26,12 +26,9 @@
  */
 
 #include "../include/RendererBase.h"
-#include "../include/Frame.h"
-#include <stdlib.h> // for realloc
-
 using namespace openshot;
 
-RendererBase::RendererBase() : buffer(NULL)
+RendererBase::RendererBase()
 {
 }
 
@@ -41,30 +38,5 @@ RendererBase::~RendererBase()
 
 void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
 {
-    const int BPP = 3;
-    const tr1::shared_ptr<Magick::Image> image = frame->GetImage();
-    const std::size_t width = image->columns();
-    const std::size_t height = image->rows();
-    const std::size_t bufferSize = width * height * BPP;
-    /// Use realloc for fast memory allocation.    
-    /// TODO: consider locking the buffer for mt safety
-    buffer = reinterpret_cast<unsigned char*>(realloc(buffer, bufferSize));
-
-#if false
-    // Not sure if this is actually faster... but it works now
-    image->getPixels(0,0, width, height); // load pixels into cache
-    image->depth( 8 ); // this is required or it crashes
-    image->writePixels(Magick::RGBQuantum, buffer); // write pixel data to our buffer
-#else
-    // Iterate through the pixel packets, and load our own buffer
-	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-    const Magick::PixelPacket *pixels = frame->GetPixels();
-    for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
-		buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
-		buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
-		buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
-    }
-#endif
-
-    this->render(RGB_888, width, height, width * BPP, buffer);
+	this->render(frame->GetQImage());
 }

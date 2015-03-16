@@ -32,7 +32,7 @@ using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
@@ -45,7 +45,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int number, int width, int height, string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -58,7 +58,7 @@ Frame::Frame(int number, int width, int height, string color)
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
@@ -71,7 +71,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
@@ -84,7 +84,7 @@ Frame::Frame(int number, int samples, int channels) :
 // Constructor - image & audio
 Frame::Frame(int number, int width, int height, string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
 	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
@@ -101,18 +101,6 @@ Frame::Frame ( const Frame &other )
 	// copy pointers and data
 	DeepCopy(other);
 }
-
-// Assignment operator
-//Frame& Frame::operator= (const Frame& other)
-//{
-//	if (this != &other) {
-//		// copy pointers and data
-//		DeepCopy(other);
-//	}
-//
-//	// return this instance
-//	return *this;
-//  }
 
 // Copy data and pointers from another Frame instance
 void Frame::DeepCopy(const Frame& other)
@@ -134,6 +122,13 @@ Frame::~Frame() {
 	image.reset();
 	audio.reset();
 	audio.reset();
+	qimage.reset();
+
+	if (qbuffer)
+	{
+		delete qbuffer;
+		qbuffer = NULL;
+	}
 }
 
 // Display the frame image to the screen (primarily used for debugging reasons)
@@ -915,6 +910,33 @@ void Frame::AddOverlayNumber(int overlay_number)
 tr1::shared_ptr<Magick::Image> Frame::GetImage()
 {
 	return image;
+}
+
+// Get pointer to QImage of frame
+tr1::shared_ptr<QImage> Frame::GetQImage()
+{
+	const int BPP = 3;
+	const std::size_t bufferSize = width * height * BPP;
+
+	/// Use realloc for fast memory allocation.
+	/// TODO: consider locking the buffer for mt safety
+	//qbuffer = reinterpret_cast<unsigned char*>(realloc(qbuffer, bufferSize));
+	qbuffer = new unsigned char[bufferSize]();
+
+    // Iterate through the pixel packets, and load our own buffer
+	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
+    const Magick::PixelPacket *pixels = GetPixels();
+    for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
+    	qbuffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
+    	qbuffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
+    	qbuffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
+    }
+
+    // Create QImage of frame data
+    qimage = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGB888));
+
+    // Return QImage
+    return qimage;
 }
 
 // Play audio samples for this frame
