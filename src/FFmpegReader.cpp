@@ -1446,6 +1446,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 
 		bool is_video_ready = processed_video_frames.count(f->number);
 		bool is_audio_ready = processed_audio_frames.count(f->number);
+		if (previous_packet_location.frame == f->number && !end_of_stream)
+			is_audio_ready = false; // don't finalize the last processed audio frame
 		bool is_seek_trash = IsPartialFrame(f->number);
 
 		// Adjust for available streams

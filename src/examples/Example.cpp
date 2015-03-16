@@ -43,64 +43,64 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
-	Timeline t10(1280, 720, Fraction(24,1), 44100, 2);
-	t10.debug = false;
-	Clip c10("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-	c10.rotation.AddPoint(1, 0.0);
-	c10.rotation.AddPoint(1000, 360.0);
-	c10.Open();
-	c10.Position(1.05);
-
-	Negate n;
-	c10.AddEffect(&n);
-
-	// add clip to timeline
-	t10.AddClip(&c10);
-
-	for (int z = 0; z<1000; z++) {
-		t10.GetFrame(z);
-		cout << z << endl;
-	}
-	return 0;
-
-
-	// Test getting lots of JSON
-	cout << "starting..." << endl;
-
-	Json::Value root;
-	root = Json::Value(Json::arrayValue);
-	for (int outer = 0; outer < 1000; outer++) {
-		openshot::Keyframe k;
-		//cout << "creating " << outer << endl;
-		for (int z = 0; z<10; z++) {
-			openshot::Point p(z * 10, 1 * z * outer, BEZIER);
-			k.AddPoint(p);
-		}
-		root.append(k.JsonValue());
-	}
-	//cout << root.toStyledString() << endl;
-
-	// Test loading lots of JSON
-	for (int z = 0; z<1000; z++) {
-		//cout << "loading " << z << endl;
-		Json::Value keyframe_json = root[z];
-		openshot::Keyframe k;
-		k.SetJsonValue(keyframe_json);
-	}
-
-	cout << "Successfully ended" << endl;
-	return 0;
+//	Timeline t10(1280, 720, Fraction(24,1), 44100, 2);
+//	t10.debug = false;
+//	Clip c10("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+//	c10.rotation.AddPoint(1, 0.0);
+//	c10.rotation.AddPoint(1000, 360.0);
+//	c10.Open();
+//	c10.Position(1.05);
+//
+//	Negate n;
+//	c10.AddEffect(&n);
+//
+//	// add clip to timeline
+//	t10.AddClip(&c10);
+//
+//	for (int z = 0; z<1000; z++) {
+//		t10.GetFrame(z);
+//		cout << z << endl;
+//	}
+//	return 0;
+//
+//
+//	// Test getting lots of JSON
+//	cout << "starting..." << endl;
+//
+//	Json::Value root;
+//	root = Json::Value(Json::arrayValue);
+//	for (int outer = 0; outer < 1000; outer++) {
+//		openshot::Keyframe k;
+//		//cout << "creating " << outer << endl;
+//		for (int z = 0; z<10; z++) {
+//			openshot::Point p(z * 10, 1 * z * outer, BEZIER);
+//			k.AddPoint(p);
+//		}
+//		root.append(k.JsonValue());
+//	}
+//	//cout << root.toStyledString() << endl;
+//
+//	// Test loading lots of JSON
+//	for (int z = 0; z<1000; z++) {
+//		//cout << "loading " << z << endl;
+//		Json::Value keyframe_json = root[z];
+//		openshot::Keyframe k;
+//		k.SetJsonValue(keyframe_json);
+//	}
+//
+//	cout << "Successfully ended" << endl;
+//	return 0;
 
 	// Reader
-	FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	FFmpegReader r9("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
 	r9.Open();
-	r9.debug = false;
+	r9.debug = true;
 
 	// Mapper
-	FrameMapper map(&r9, Fraction(24,1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
-	map.DisplayInfo();
-	map.debug = true;
-	map.Open();
+	//FrameMapper map(&r9, Fraction(24,1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+	//map.DisplayInfo();
+	//map.debug = true;
+	//map.Open();
 
 	/* WRITER ---------------- */
 	FFmpegWriter w9("/home/jonathan/output1.mp3");
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 	//ImageWriter w9("/home/jonathan/output.gif");
 
 	// Set options
-	w9.SetAudioOptions(true, "libmp3lame", map.info.sample_rate, map.info.channels, map.info.channel_layout, 120000);
+	w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 120000);
 	//w9.SetAudioOptions(true, "libmp3lame", 44100, r9.info.channels, r9.info.channel_layout, 120000);
 	//w9.SetVideoOptions(true, "libvpx", map.info.fps, map.info.width, map.info.height, map.info.pixel_ratio, false, false, 1500000);
 	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
@@ -142,13 +142,13 @@ int main(int argc, char* argv[])
 		int frame_number = ( frame);
 
 		cout << "get " << frame << " (frame: " << frame_number << ") " << endl;
-		tr1::shared_ptr<Frame> f = map.GetFrame(frame_number);
+		tr1::shared_ptr<Frame> f = r9.GetFrame(frame_number);
 		cout << "display it (" << f->number << ", " << f << ")" << endl;
 		//r9.GetFrame(frame_number)->DisplayWaveform();
-		//if (frame >= 65)
-		//	f->DisplayWaveform();
+		if (frame >= 7)
+			f->DisplayWaveform();
 		//f->AddColor(r9.info.width, r9.info.height, "blue");
-		w9.WriteFrame(f);
+		//w9.WriteFrame(f);
 
 		//frame++;
 	}
@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
 
 	// Close timeline
 	r9.Close();
-	map.Close();
+	//map.Close();
 	/* ---------------- */
 	cout << "happy ending" << endl;
 
