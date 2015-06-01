@@ -35,7 +35,6 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1,1), Magick::Color("red")));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
@@ -48,7 +47,6 @@ Frame::Frame(int number, int width, int height, string color)
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
@@ -61,7 +59,6 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
@@ -74,7 +71,6 @@ Frame::Frame(int number, int samples, int channels) :
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color("white")));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
@@ -87,7 +83,6 @@ Frame::Frame(int number, int width, int height, string color, int samples, int c
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
 	// Init the image magic and audio buffer
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(1, 1), Magick::Color(color)));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
@@ -106,14 +101,14 @@ Frame::Frame ( const Frame &other )
 void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.image)));
+	image = tr1::shared_ptr<QImage>(new QImage(*(other.image)));
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	channels = other.channels;
 	channel_layout = other.channel_layout;
 
 	if (other.wave_image)
-		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*(other.wave_image)));
+		wave_image = tr1::shared_ptr<QImage>(new QImage(*(other.wave_image)));
 }
 
 // Descructor
@@ -121,64 +116,30 @@ Frame::~Frame() {
 	// Clear all pointers
 	image.reset();
 	audio.reset();
-	audio.reset();
-	qimage.reset();
-
-	if (qbuffer)
-	{
-		delete qbuffer;
-		qbuffer = NULL;
-	}
 }
 
 // Display the frame image to the screen (primarily used for debugging reasons)
 void Frame::Display()
 {
-	// Make a copy of the image (since we might resize it)
-	Magick::Image copy;
-	copy = *image;
+	// Create new image object, and fill with pixel data
+	tr1::shared_ptr<Magick::Image> magick_image = GetMagickImage();
 
-	// display the image (if any)
-	if (copy.size().width() > 1 && copy.size().height() > 1)
-	{
-		// Resize image (if needed)
-		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-		{
-			// Calculate correct DAR (display aspect ratio)
-			int new_width = copy.size().width();
-			int new_height = copy.size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-			// Resize image
-			Magick::Geometry new_size(new_width, new_height);
-			new_size.aspect(true);
-			copy.resize(new_size);
-		}
-
-		// Disply image
-		copy.display();
-	}
+	// Disply image
+	magick_image->display();
 }
 
 // Get an audio waveform image
-tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red, int Green, int Blue)
+tr1::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha)
 {
 	// Clear any existing waveform image
 	ClearWaveform();
 
 	// Init a list of lines
-	list<Magick::Drawable> lines;
-	lines.push_back(Magick::DrawableFillColor(Magick::Color((Magick::Quantum)Red, (Magick::Quantum)Green, (Magick::Quantum)Blue)));
-	lines.push_back(Magick::DrawablePointSize(16));
+	QVector<QPointF> lines;
+	QVector<QPointF> labels;
 
-	// Calculate 1/2 the width of an image based on the # of samples
+	// Calculate width of an image based on the # of samples
 	int total_samples = audio->getNumSamples();
-
-	// Determine how many samples can be skipped (to speed things up)
-	int step = 1;
-	if (total_samples > width)
-		// Set the # of samples to move forward for each pixel we draw
-		step = round((float) total_samples / (float) width) + 1;
-
 	if (total_samples > 0)
 	{
 		// If samples are present...
@@ -193,70 +154,69 @@ tr1::shared_ptr<Magick::Image> Frame::GetWaveform(int width, int height, int Red
 		{
 			int X = 0;
 
-			// Change stroke and color
-			lines.push_back(Magick::DrawableStrokeColor(Magick::Color((Magick::Quantum)Red, (Magick::Quantum)Green, (Magick::Quantum)Blue)));
-			lines.push_back(Magick::DrawableStrokeWidth(1));
-
 			// Get audio for this channel
 			const float *samples = audio->getReadPointer(channel);
 
-			for (int sample = 0; sample < audio->getNumSamples(); sample+=step, X++)
+			for (int sample = 0; sample < audio->getNumSamples(); sample++, X++)
 			{
 				// Sample value (scaled to -100 to 100)
 				float value = samples[sample] * 100;
 
 				// Append a line segment for each sample
-				if (value != 0.0)
+				if (value != 0.0) {
 					// LINE
-					lines.push_back(Magick::DrawableLine(X,Y, X,Y-value)); // sample=X coordinate, Y=100 is the middle
-				else
+					lines.push_back(QPointF(X,Y));
+					lines.push_back(QPointF(X,Y-value));
+				}
+				else {
 					// DOT
-					lines.push_back(Magick::DrawablePoint(X,Y));
+					lines.push_back(QPointF(X,Y));
+					lines.push_back(QPointF(X,Y));
+				}
 			}
 
-			// Add Channel Label
-//			stringstream label;
-//			label << "Channel " << channel;
-//			lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
-//			lines.push_back(Magick::DrawableFillColor("#ffffff"));
-//			lines.push_back(Magick::DrawableStrokeWidth(0.1));
-//			lines.push_back(Magick::DrawableText(5, Y - 5, label.str()));
+			// Add Channel Label Coordinate
+			labels.push_back(QPointF(5, Y - 5));
 
 			// Increment Y
 			Y += (200 + height_padding);
 			total_width = X;
 		}
 
-		// Create image
-		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(total_width, total_height), Magick::Color("none")));
-		wave_image->backgroundColor(Magick::Color("none"));
+		// Create blank image
+		wave_image = tr1::shared_ptr<QImage>(new QImage(total_width, total_height, QImage::Format_RGBA8888));
+		wave_image->fill(QColor(QString::fromStdString("#000000")));
+
+		// Load QPainter with wave_image device
+		QPainter painter(wave_image.get());
+
+		// Set pen color
+		painter.setPen(QColor(Red, Green, Blue, Alpha));
 
 		// Draw the waveform
-		wave_image->draw(lines);
+		painter.drawLines(lines);
+		painter.end();
+
+		// Loop through the channels labels (and draw the text)
+		// TODO: Configure Fonts in Qt5 correctly, so the drawText method does not crash
+//		painter.setFont(QFont(QString("Arial"), 16, 1, false));
+//		for (int channel = 0; channel < labels.size(); channel++) {
+//			stringstream label;
+//			label << "Channel " << channel;
+//		    painter.drawText(labels.at(channel), QString::fromStdString(label.str()));
+//		}
 
 		// Resize Image (if requested)
-		if (width != total_width || height != total_height)
-		{
-			Magick::Geometry new_size(width, height);
-			new_size.aspect(true);
-			wave_image->scale(new_size);
+		if (width != total_width || height != total_height) {
+			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+			wave_image = tr1::shared_ptr<QImage>(new QImage(scaled_wave_image));
 		}
-
 	}
 	else
 	{
 		// No audio samples present
-		wave_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color("none")));
-		wave_image->backgroundColor(Magick::Color("none"));
-
-		// Add Channel Label
-		lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
-		lines.push_back(Magick::DrawableFillColor("#ffffff"));
-		lines.push_back(Magick::DrawableStrokeWidth(0.1));
-		lines.push_back(Magick::DrawableText((width / 2) - 100, height / 2, "No Audio Samples Found"));
-
-		// Draw the waveform
-		wave_image->draw(lines);
+		wave_image = tr1::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+		wave_image->fill(QColor(QString::fromStdString("#000000")));
 	}
 
 	// Return new image
@@ -271,23 +231,46 @@ void Frame::ClearWaveform()
 }
 
 // Get an audio waveform image pixels
-const Magick::PixelPacket* Frame::GetWaveformPixels(int width, int height, int Red, int Green, int Blue)
+const unsigned char* Frame::GetWaveformPixels(int width, int height, int Red, int Green, int Blue, int Alpha)
 {
 	// Get audio wave form image
-	wave_image = GetWaveform(width, height, Red, Green, Blue);
+	wave_image = GetWaveform(width, height, Red, Green, Blue, Alpha);
 
 	// Return array of pixel packets
-	return wave_image->getConstPixels(0,0, wave_image->columns(), wave_image->rows());
+	return wave_image->bits();
 }
 
 // Display the wave form
 void Frame::DisplayWaveform()
 {
 	// Get audio wave form image
-	GetWaveform(720, 480, 0, 28672, 65280);
+	GetWaveform(720, 480, 0, 123, 255, 255);
 
-	// Display Image
-	wave_image->display();
+	QRgb const *tmpBits = (const QRgb*)wave_image->bits();
+
+	// Create new image object, and fill with pixel data
+	tr1::shared_ptr<Magick::Image> magick_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(wave_image->width(), wave_image->height(),"RGBA", Magick::CharPixel, tmpBits));
+
+	// Give image a transparent background color
+	magick_image->backgroundColor(Magick::Color("none"));
+	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	magick_image->matte(true);
+
+	// Resize image (if needed)
+	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+	{
+		// Calculate correct DAR (display aspect ratio)
+		int new_width = magick_image->size().width();
+		int new_height = magick_image->size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+		// Resize image
+		Magick::Geometry new_size(new_width, new_height);
+		new_size.aspect(true);
+		magick_image->resize(new_size);
+	}
+
+	// Disply image
+	magick_image->display();
 
 	// Deallocate waveform image
 	ClearWaveform();
@@ -355,7 +338,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 	int num_of_samples = audio->getNumSamples();
 
 	// Resample to new sample rate (if needed)
-	if (new_sample_rate != sample_rate)
+	if (new_sample_rate != sample_rate && resampler)
 	{
 		// YES, RESAMPLE AUDIO
 		resampler->SetBuffer(audio.get(), sample_rate, new_sample_rate);
@@ -422,17 +405,17 @@ int64 Frame::GetBytes()
 }
 
 // Get pixel data (as packets)
-const Magick::PixelPacket* Frame::GetPixels()
+const unsigned char* Frame::GetPixels()
 {
 	// Return array of pixel packets
-	return image->getConstPixels(0,0, image->columns(), image->rows());
+	return image->bits();
 }
 
 // Get pixel data (for only a single scan-line)
-const Magick::PixelPacket* Frame::GetPixels(int row)
+const unsigned char* Frame::GetPixels(int row)
 {
 	// Return array of pixel packets
-	return image->getConstPixels(0,row, image->columns(), 1);
+	return image->scanLine(row);
 }
 
 // Set Pixel Aspect Ratio
@@ -503,50 +486,27 @@ ChannelLayout Frame::ChannelsLayout()
 	return channel_layout;
 }
 
-// Make colors in a specific range transparent
-void Frame::TransparentColors(string color, double fuzz)
-{
-	// Get the max quantum size (i.e. 255, 65535, etc...)
-	using namespace Magick;
-	Magick::Quantum max_range = QuantumRange;
-
-	// Make this range of colors transparent
-	image->colorFuzz(fuzz * max_range / 100.0);
-	image->transparent(Magick::Color(color));
-	//image->colorFuzz(0);
-	image->negate();
-	//image->flip();
-	//image->flop();
-	//image->solarize(50.0);
-
-
-}
 
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Save(string path, float scale)
 {
-	// Make a copy of the image (since we might resize it)
-	Magick::Image copy;
-	copy = *image;
-
-	// Maintain alpha channel
-	copy.backgroundColor(Magick::Color("none"));
-	copy.matte(true);
+	// Create new image object, and fill with pixel data
+	tr1::shared_ptr<Magick::Image> copy = GetMagickImage();
 
 	// display the image (if any)
-	if (copy.size().width() > 1 && copy.size().height() > 1)
+	if (copy->size().width() > 1 && copy->size().height() > 1)
 	{
 		// Resize image (if needed)
 		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
 		{
 			// Calculate correct DAR (display aspect ratio)
-			int new_width = copy.size().width();
-			int new_height = copy.size().height() * pixel_ratio.Reciprocal().ToDouble();
+			int new_width = copy->size().width();
+			int new_height = copy->size().height() * pixel_ratio.Reciprocal().ToDouble();
 
 			// Resize image
 			Magick::Geometry new_size(new_width, new_height);
 			new_size.aspect(true);
-			copy.resize(new_size);
+			copy->resize(new_size);
 		}
 	}
 
@@ -554,23 +514,23 @@ void Frame::Save(string path, float scale)
 	if (abs(scale) > 1.001 || abs(scale) < 0.999)
 	{
 		// Resize image
-		Magick::Geometry new_size(copy.size().width() * scale, copy.size().height() * scale);
+		Magick::Geometry new_size(copy->size().width() * scale, copy->size().height() * scale);
 		new_size.aspect(true);
-		copy.resize(new_size);
+		copy->resize(new_size);
 	}
 
 	// save the image
-	copy.write(path);
+	copy->write(path);
 }
 
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
 		string background_color, bool ignore_aspect) throw(InvalidFile) {
 
-	// Make a copy of the image (since we might resize it)
-	tr1::shared_ptr<Magick::Image> copy = tr1::shared_ptr<Magick::Image>(new Magick::Image(*image));
+	// Create new image object, and fill with pixel data
+	tr1::shared_ptr<Magick::Image> copy = GetMagickImage();
 	copy->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	copy->matte(true);
+
 
 	// Set background color
 	if (background_color != "")
@@ -709,116 +669,91 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 void Frame::AddColor(int width, int height, string color)
 {
 	// Create new image object, and fill with pixel data
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width, height), Magick::Color(color)));
+	image = tr1::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 
-	// Give image a transparent background color
-	image->backgroundColor(Magick::Color("#000000ff"));
-	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	image->matte(true);
+	// Fill with solid color
+	image->fill(QColor(QString::fromStdString(color)));
 
 	// Update height and width
-	width = image->columns();
-	height = image->rows();
+	width = image->width();
+	height = image->height();
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(int width, int height, const string map, const Magick::StorageType type, const void *pixels)
+void Frame::AddImage(int width, int height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
 {
+	// Create new buffer
+	int buffer_size = width * height * bytes_per_pixel;
+	qbuffer = new unsigned char[buffer_size]();
+
+	// Copy buffer data
+	memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
+
 	// Create new image object, and fill with pixel data
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(width, height, map, type, pixels));
+	image = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
 
-	// Give image a transparent background color
-	image->backgroundColor(Magick::Color("none"));
-	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	image->matte(true);
+	// Always convert to RGBA8888 (if different)
+	if (image->format() != QImage::Format_RGBA8888)
+		image->convertToFormat(QImage::Format_RGBA8888);
 
 	// Update height and width
-	width = image->columns();
-	height = image->rows();
+	width = image->width();
+	height = image->height();
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image)
+void Frame::AddImage(tr1::shared_ptr<QImage> new_image)
 {
+	// Ignore blank images
+	if (!new_image)
+		return;
+
 	// assign image data
-	image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
-	image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	image->matte(true);
+	image = new_image;
+
+	// Always convert to RGBA8888 (if different)
+	if (image->format() != QImage::Format_RGBA8888)
+		image->convertToFormat(QImage::Format_RGBA8888);
 
 	// Update height and width
-	width = image->columns();
-	height = image->rows();
+	width = image->width();
+	height = image->height();
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
-void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, bool only_odd_lines)
+void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
 {
-	// Replace image (if needed)
-	if (image->columns() == 1) {
-		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
-		image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-		image->matte(true);
-	}
+	// Ignore blank new_image
+	if (!new_image)
+		return;
 
-	// Loop through each odd or even line, and copy it to the image
-	int starting_row = 0;
-	if (!only_odd_lines)
-		// even rows
-		starting_row = 1;
+	// Check for blank source image
+	if (!image)
+		// Replace the blank source image
+		AddImage(new_image);
 
-	// Replace some rows of pixels
-	for (int row = starting_row; row < new_image->rows(); row += 2)
-	{
-		// Get row of pixels from original image
-		Magick::PixelPacket* row_pixels = image->getPixels(0, row, image->columns(), 1);
-		const Magick::PixelPacket* new_row_pixels = new_image->getConstPixels(0, row, image->columns(), 1);
+	// Ignore image of different sizes or formats
+	if (image == new_image || image->size() != image->size() || image->format() != image->format())
+		return;
 
-		// Copy pixels
-		for (int col = 0; col < image->columns(); col++)
-			row_pixels[col] = new_row_pixels[col];
+	// Get the frame's image
+	const unsigned char* pixels = image->bits();
+	const unsigned char* new_pixels = new_image->bits();
 
-		// Replace them with updated pixels
-		image->syncPixels();
+	// Loop through the scanlines of the image (even or odd)
+	int start = 0;
+	if (only_odd_lines)
+		start = 1;
+	for (int row = start; row < image->height(); row += 2) {
+		memcpy((unsigned char*)pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+		new_pixels += image->bytesPerLine();
 	}
 
 	// Update height and width
-	width = image->columns();
-	height = image->rows();
+	width = image->width();
+	height = image->height();
 }
 
-// Composite a new image on top of the existing image
-void Frame::AddImage(tr1::shared_ptr<Magick::Image> new_image, float alpha)
-{
-	// Get the max quantum size (i.e. 255, 65535, etc...)
-	using namespace Magick;
-	Magick::Quantum max_range = QuantumRange;
-
-	// Replace image (if needed)
-	if (image->columns() == 1) {
-		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(*new_image.get()));
-		image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-		image->matte(true);
-	}
-	else
-	{
-		// Calculate opacity of new image
-		int new_opacity = max_range * (1.0 - alpha);
-		if (new_opacity < 0)
-			new_opacity = 0; // completely invisible
-		else if (new_opacity > max_range)
-			new_opacity = max_range;
-
-		// Set opacity
-		new_image->opacity(new_opacity);
-
-		// Composite image on top of current image
-		image->composite(*new_image.get(), 0, 0, Magick::DissolveCompositeOp);
-	}
-
-	// Update height and width
-	width = image->columns();
-	height = image->rows();
-}
 
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
@@ -855,88 +790,69 @@ void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, 
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
 }
 
-// Experimental method to add effects to this frame
-void Frame::AddEffect(string name)
-{
-	if (name == "negate")
-		image->negate(false);
-	else if (name == "flip")
-		image->flip();
-	else if (name == "oilPaint")
-		image->oilPaint(3.0);
-	else if (name == "swirl")
-		image->swirl(30.0);
-}
-
-// Rotate the image
-void Frame::Rotate(float degrees)
-{
-	image->rotate(degrees);
-}
-
-// Experimental method to add overlay images to this frame
-void Frame::AddOverlay(Frame* frame)
-{
-	// Get overlay image (if any)
-	tr1::shared_ptr<Magick::Image> overlay = frame->GetImage();
-
-	// Composite image onto this image
-	image->composite(*overlay, Magick::SouthEastGravity, Magick::OverCompositeOp);
-}
-
-// Experimental method to add the frame number on top of the image
-void Frame::AddOverlayNumber(int overlay_number)
-{
-	stringstream label;
-	if (overlay_number > 0)
-		label << overlay_number;
-	else
-		label << number;
-
-	// Drawable text
-	list<Magick::Drawable> lines;
-
-	lines.push_back(Magick::DrawableGravity(Magick::NorthWestGravity));
-	lines.push_back(Magick::DrawableStrokeColor("#ffffff"));
-	lines.push_back(Magick::DrawableFillColor("#ffffff"));
-	lines.push_back(Magick::DrawableStrokeWidth(0.1));
-	lines.push_back(Magick::DrawablePointSize(24));
-	lines.push_back(Magick::DrawableText(5, 5, label.str()));
-
-	image->draw(lines);
-}
-
 // Get pointer to Magick++ image object
-tr1::shared_ptr<Magick::Image> Frame::GetImage()
+tr1::shared_ptr<QImage> Frame::GetImage()
 {
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, "#000000");
+
 	return image;
 }
 
-// Get pointer to QImage of frame
-tr1::shared_ptr<QImage> Frame::GetQImage()
+// Get pointer to ImageMagick image object
+tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
 {
-	const int BPP = 3;
-	const std::size_t bufferSize = width * height * BPP;
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, "#000000");
+
+	// Get the pixels from the frame image
+	QRgb const *tmpBits = (const QRgb*)image->bits();
+
+	// Create new image object, and fill with pixel data
+	tr1::shared_ptr<Magick::Image> magick_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));
+
+	// Give image a transparent background color
+	magick_image->backgroundColor(Magick::Color("none"));
+	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	magick_image->matte(true);
+
+	return magick_image;
+}
+
+// Get pointer to QImage of frame
+void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
+{
+	const int BPP = 4;
+	const std::size_t bufferSize = new_image->columns() * new_image->rows() * BPP;
 
 	/// Use realloc for fast memory allocation.
 	/// TODO: consider locking the buffer for mt safety
 	//qbuffer = reinterpret_cast<unsigned char*>(realloc(qbuffer, bufferSize));
 	qbuffer = new unsigned char[bufferSize]();
+	unsigned char *buffer = (unsigned char*)qbuffer;
 
     // Iterate through the pixel packets, and load our own buffer
 	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-    const Magick::PixelPacket *pixels = GetPixels();
-    for (int n = 0, i = 0; n < width * height; n += 1, i += 3) {
-    	qbuffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
-    	qbuffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
-    	qbuffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
+	int numcopied = 0;
+    Magick::PixelPacket *pixels = new_image->getPixels(0,0, new_image->columns(), new_image->rows());
+    for (int n = 0, i = 0; n < new_image->columns() * new_image->rows(); n += 1, i += 4) {
+    	buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
+    	buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
+    	buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
+    	buffer[i+3] = 255 - MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].opacity);
+    	numcopied+=4;
     }
 
     // Create QImage of frame data
-    qimage = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGB888));
+    image = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
 
-    // Return QImage
-    return qimage;
+	// Update height and width
+	width = image->width();
+	height = image->height();
 }
 
 // Play audio samples for this frame
@@ -1003,4 +919,17 @@ void Frame::Play()
 	cout << "End of Play()" << endl;
 
 
+}
+
+
+// Clean up buffer after QImage is deleted
+void Frame::cleanUpBuffer(void *info)
+{
+	if (info)
+	{
+		// Remove buffer since QImage tells us to
+		unsigned char* ptr_to_qbuffer = (unsigned char*) info;
+		delete ptr_to_qbuffer;
+		ptr_to_qbuffer = NULL;
+	}
 }

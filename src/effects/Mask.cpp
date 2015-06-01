@@ -30,14 +30,14 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Mask::Mask() : reader(NULL) {
+Mask::Mask() : reader(NULL), replace_image(false) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
 Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed) :
-		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast)
+		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast), replace_image(false)
 {
 	// Init effect properties
 	init_effect_details();
@@ -56,71 +56,95 @@ void Mask::init_effect_details()
 	info.has_video = true;
 }
 
-// Set brightness and contrast (brightness between 100 and -100)
-void Mask::set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast)
+// Constrain a color value from 0 to 255
+int Mask::constrain(int color_value)
 {
-	// Determine if white or black image is needed
-	if (brightness >= -100.0 and brightness <= 0.0)
+	// Constrain new color from 0 to 255
+	if (color_value < 0)
+		color_value = 0;
+	else if (color_value > 255)
+		color_value = 255;
+
+	return color_value;
+}
+
+// Get grayscale mask image
+tr1::shared_ptr<QImage> Mask::get_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
+{
+	// Get pixels for mask image
+	unsigned char *pixels = (unsigned char *) mask_frame_image->bits();
+
+	// Convert the mask image to grayscale
+	// Loop through pixels
+	for (int pixel = 0, byte_index=0; pixel < mask_frame_image->width() * mask_frame_image->height(); pixel++, byte_index+=4)
 	{
-		// Make mask darker
-		double black_alpha = abs(brightness) / 100.0;
-		tr1::shared_ptr<Magick::Image> black = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("Black")));
-		black->matte(true);
-		black->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, black_alpha);
-		image->composite(*black.get(), 0, 0, Magick::OverCompositeOp);
+		// Get the RGB values from the pixel
+		int R = pixels[byte_index];
+		int G = pixels[byte_index + 1];
+		int B = pixels[byte_index + 2];
 
+		// Get the average luminosity
+		int gray_value = qGray(R, G, B);
+
+		// Adjust the contrast
+		int factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+		gray_value = constrain((factor * (gray_value - 128)) + 128);
+
+		// Adjust the brightness
+		gray_value += (255 * brightness);
+
+		// Constrain the value from 0 to 255
+		gray_value = constrain(gray_value);
+
+		// Set all pixels to gray value
+		pixels[byte_index] = gray_value;
+		pixels[byte_index + 1] = gray_value;
+		pixels[byte_index + 2] = gray_value;
+		pixels[byte_index + 3] = 255;
 	}
-	else if (brightness > 0.0 and brightness <= 100.0)
-	{
-		// Make mask whiter
-		double white_alpha = brightness / 100.0;
-		tr1::shared_ptr<Magick::Image> white = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask->size(), Magick::Color("White")));
-		white->matte(true);
-		white->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, white_alpha);
-		image->composite(*white.get(), 0, 0, Magick::OverCompositeOp);
-	}
 
-	// Set Contrast
-	image->sigmoidalContrast(true, contrast);
-
+	// Resize mask image to match frame size
+	return tr1::shared_ptr<QImage>(new QImage(mask_frame_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
-	// Check if reader is open
+	// Get the mask image (from the mask reader)
+	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
+
+	// Check if mask reader is open
 	if (!reader->IsOpen())
+		#pragma omp critical (open_mask_reader)
 		reader->Open();
 
 	// Get the mask image (from the mask reader)
-	mask = reader->GetFrame(frame_number)->GetImage();
-	mask->type(Magick::GrayscaleType); // convert to grayscale
-	mask->matte(false); // Remove transparency from the image. This is required for the composite operator to copy the brightness of each pixel into the alpha channel
+	tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
 
-	// Resize mask to match this frame size (if different)
-	if (frame->GetImage()->size() != mask->size())
+	// Convert mask to grayscale and resize to frame size
+	mask = get_grayscale_mask(mask, frame_image->width(), frame_image->height(), brightness.GetValue(frame_number), contrast.GetValue(frame_number));
+
+
+	// Get pixels for frame image
+	unsigned char *pixels = (unsigned char *) frame_image->bits();
+	unsigned char *mask_pixels = (unsigned char *) mask->bits();
+
+	// Convert the mask image to grayscale
+	// Loop through pixels
+	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
 	{
-		Magick::Geometry new_size(frame->GetImage()->size().width(), frame->GetImage()->size().height());
-		new_size.aspect(true);
-		mask->resize(new_size);
+		// Get the RGB values from the pixel
+		int Frame_Alpha = pixels[byte_index + 3];
+		int Mask_Value = constrain(Frame_Alpha - (int)mask_pixels[byte_index]); // Red pixel (all colors should have the same value here)
+
+		// Set all pixels to gray value
+		pixels[byte_index + 3] = Mask_Value;
 	}
 
-	cout << "brightness.GetValue(" << frame_number << "): " << brightness.GetValue(frame_number) << endl;
-	cout << "contrast.GetValue(" << frame_number << "): " << contrast.GetValue(frame_number) << endl;
-
-	// Set the brightness of the mask (from a user-defined curve)
-	set_brightness_and_contrast(mask, brightness.GetValue(frame_number), contrast.GetValue(frame_number));
-
-	// Get copy of our source frame's image
-	tr1::shared_ptr<Magick::Image> copy_source = tr1::shared_ptr<Magick::Image>(new Magick::Image(*frame->GetImage().get()));
-	copy_source->channel(Magick::MatteChannel); // extract alpha channel as grayscale image
-	copy_source->matte(false); // remove alpha channel
-	copy_source->negate(true); // negate source alpha channel before multiplying mask
-	copy_source->composite(*mask.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
-
-	// Copy the combined alpha channel back to the frame
-	frame->GetImage()->composite(*copy_source.get(), 0, 0, Magick::CopyOpacityCompositeOp);
+	// Replace the frame's image with the current mask (good for debugging)
+	if (replace_image)
+		frame->AddImage(mask); // not typically called when using a mask
 
 	// return the modified frame
 	return frame;
@@ -142,6 +166,7 @@ Json::Value Mask::JsonValue() {
 	root["brightness"] = brightness.JsonValue();
 	root["contrast"] = contrast.JsonValue();
 	root["reader"] = reader->JsonValue();
+	root["replace_image"] = replace_image;
 
 	// return JsonValue
 	return root;
@@ -177,6 +202,8 @@ void Mask::SetJsonValue(Json::Value root) {
 	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
+	if (!root["replace_image"].isNull())
+		replace_image = root["replace_image"].asBool();
 	if (!root["brightness"].isNull())
 		brightness.SetJsonValue(root["brightness"]);
 	if (!root["contrast"].isNull())
@@ -210,6 +237,12 @@ void Mask::SetJsonValue(Json::Value root) {
 				reader = new ImageReader(root["reader"]["path"].asString());
 				reader->SetJsonValue(root["reader"]);
 
+			} else if (type == "QtImageReader") {
+
+				// Create new reader
+				reader = new QtImageReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
 			} else if (type == "ChunkReader") {
 
 				// Create new reader
@@ -237,6 +270,7 @@ string Mask::PropertiesJSON(int requested_frame) {
 	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
 	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
+	root["replace_image"] = add_property_json("Replace Image", replace_image, "bool", "", false, 0, 0, 1, CONSTANT, -1, false);
 
 	// Keyframes
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", brightness.Contains(requested_point), brightness.GetCount(), -10000, 10000, brightness.GetClosestPoint(requested_point).interpolation, brightness.GetClosestPoint(requested_point).co.X, false);

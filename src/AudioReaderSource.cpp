@@ -51,8 +51,8 @@ AudioReaderSource::~AudioReaderSource()
 };
 
 // Get more samples from the reader
-void AudioReaderSource::GetMoreSamplesFromReader() {
-
+void AudioReaderSource::GetMoreSamplesFromReader()
+{
 	// Determine the amount of samples needed to fill up this buffer
 	int amount_needed = position; // replace these used samples
 	int amount_remaining = size - amount_needed; // these are unused samples, and need to be carried forward
@@ -86,7 +86,7 @@ void AudioReaderSource::GetMoreSamplesFromReader() {
 		if (frame_position == 0) {
 			try {
 				// Get frame object
-				frame = reader->GetFrameSafe(frame_number);
+				frame = reader->GetFrame(frame_number);
 				frame_number = frame_number + speed;
 
 			} catch (const ReaderClosed & e) {

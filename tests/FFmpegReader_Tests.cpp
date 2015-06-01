@@ -84,25 +84,27 @@ TEST(FFmpegReader_Check_Video_File)
 	tr1::shared_ptr<Frame> f = r.GetFrame(1);
 
 	// Get the image data
-	const Magick::PixelPacket* pixels = f->GetPixels(10);
+	const unsigned char* pixels = f->GetPixels(10);
+	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(5397, pixels[112].red);
-	CHECK_EQUAL(0, pixels[112].blue);
-	CHECK_EQUAL(49087, pixels[112].green);
-	CHECK_EQUAL(0, pixels[112].opacity);
+	CHECK_EQUAL(21, (int)pixels[pixel_index]);
+	CHECK_EQUAL(191, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame 1
 	f = r.GetFrame(2);
 
 	// Get the next frame
 	pixels = f->GetPixels(10);
+	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(0, pixels[112].red);
-	CHECK_EQUAL(48316, pixels[112].blue);
-	CHECK_EQUAL(24672, pixels[112].green);
-	CHECK_EQUAL(0, pixels[112].opacity);
+	CHECK_EQUAL(0, (int)pixels[pixel_index]);
+	CHECK_EQUAL(96, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(188, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Close reader
 	r.Close();
@@ -117,68 +119,46 @@ TEST(FFmpegReader_Seek)
 	// Get frame
 	tr1::shared_ptr<Frame> f = r.GetFrame(1);
 	CHECK_EQUAL(1, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(300);
 	CHECK_EQUAL(300, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(301);
 	CHECK_EQUAL(301, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(315);
 	CHECK_EQUAL(315, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(275);
 	CHECK_EQUAL(275, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(270);
 	CHECK_EQUAL(270, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(500);
 	CHECK_EQUAL(500, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(100);
 	CHECK_EQUAL(100, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(600);
 	CHECK_EQUAL(600, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(1);
 	CHECK_EQUAL(1, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Get frame
 	f = r.GetFrame(700);
 	CHECK_EQUAL(700, f->number);
-	//f->Display();
-	//f->DisplayWaveform();
 
 	// Close reader
 	r.Close();

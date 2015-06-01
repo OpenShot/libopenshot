@@ -239,21 +239,22 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 					int numBytes = frame->GetHeight() * frame->GetWidth() * 4;
 					uint8_t *castBytes = new uint8_t[numBytes];
 
+					// TODO: Fix Decklink support with QImage Upgrade
 					// Get a list of pixels in our frame's image.  Each pixel is represented by
 					// a PixelPacket struct, which has 4 properties: .red, .blue, .green, .alpha
-					const Magick::PixelPacket *pixel_packets = frame->GetPixels();
-
-					// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
-					// colors around to match the Decklink order (ARGB).
-					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
-					{
-						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-						// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-						castBytes[row] = MagickCore::ScaleQuantumToChar((Magick::Quantum) 0); // alpha
-						castBytes[row+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].red);
-						castBytes[row+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].green);
-						castBytes[row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].blue);
-					}
+//					const Magick::PixelPacket *pixel_packets = frame->GetPixels();
+//
+//					// loop through ImageMagic pixel structs, and put the colors in a regular array, and move the
+//					// colors around to match the Decklink order (ARGB).
+//					for (int packet = 0, row = 0; row < numBytes; packet++, row+=4)
+//					{
+//						// Update buffer (which is already linked to the AVFrame: pFrameRGB)
+//						// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
+//						castBytes[row] = MagickCore::ScaleQuantumToChar((Magick::Quantum) 0); // alpha
+//						castBytes[row+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].red);
+//						castBytes[row+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].green);
+//						castBytes[row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].blue);
+//					}
 
 					#pragma omp critical (blackmagic_output_queue)
 					{

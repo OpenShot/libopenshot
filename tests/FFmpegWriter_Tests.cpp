@@ -66,11 +66,12 @@ TEST(FFmpegWriter_Test_Webm)
 	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
 
 	// Get the image data for row 500
-	const Magick::PixelPacket* pixels = f->GetPixels(500);
+	const unsigned char* pixels = f->GetPixels(500);
+	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
-	// Check pixel values on scanline 500, pixel 600
-	CHECK_EQUAL(2056, pixels[600].red);
-	CHECK_EQUAL(2056, pixels[600].blue);
-	CHECK_EQUAL(2056, pixels[600].green);
-	CHECK_EQUAL(0, pixels[600].opacity);
+	// Check image properties on scanline 10, pixel 112
+	CHECK_EQUAL(23, (int)pixels[pixel_index]);
+	CHECK_EQUAL(23, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(23, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 }

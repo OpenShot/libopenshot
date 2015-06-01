@@ -35,6 +35,7 @@
 
 #include <tr1/memory>
 #include <string>
+#include <QtGui/QImage>
 #include "JuceLibraryCode/JuceHeader.h"
 #include "AudioResampler.h"
 #include "ClipBase.h"
@@ -46,6 +47,7 @@
 #include "Fraction.h"
 #include "FrameMapper.h"
 #include "ImageReader.h"
+#include "QtImageReader.h"
 #include "TextReader.h"
 #include "ChunkReader.h"
 #include "KeyFrame.h"
@@ -102,6 +104,10 @@ namespace openshot {
 	 * @endcode
 	 */
 	class Clip : public ClipBase {
+	protected:
+		/// Section lock for multiple threads
+	    CriticalSection getFrameCriticalSection;
+
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		list<EffectBase*> effects; ///<List of clips on this timeline
@@ -112,6 +118,7 @@ namespace openshot {
 
 		// File Reader object
 		ReaderBase* reader;
+		bool manage_reader;
 
 		/// Adjust frame number minimum value
 		int adjust_frame_number_minimum(int frame_number);
@@ -148,7 +155,10 @@ namespace openshot {
 
 		/// @brief Constructor with reader
 		/// @param reader The reader to be used by this clip
-		Clip(ReaderBase* reader);
+		Clip(ReaderBase* new_reader);
+
+		/// Destructor
+		~Clip();
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

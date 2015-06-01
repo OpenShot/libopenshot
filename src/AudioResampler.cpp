@@ -43,8 +43,6 @@ AudioResampler::AudioResampler()
 	isPrepared = false;
 
 	// Init buffer source
-	buffer = new AudioSampleBuffer(2, 1);
-	buffer->clear();
 	buffer_source = new AudioBufferSource(buffer);
 
 	// Init resampling source

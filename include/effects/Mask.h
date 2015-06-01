@@ -44,6 +44,7 @@
 #include "../ReaderBase.h"
 #include "../FFmpegReader.h"
 #include "../ImageReader.h"
+#include "../QtImageReader.h"
 #include "../ChunkReader.h"
 
 using namespace std;
@@ -62,17 +63,20 @@ namespace openshot
 	{
 	private:
 		ReaderBase *reader;
-		Keyframe brightness;
-		Keyframe contrast;
-		tr1::shared_ptr<Magick::Image> mask;
+
+		/// Constrain a color value from 0 to 255
+		int constrain(int color_value);
+
+		/// Get grayscale mask image
+		tr1::shared_ptr<QImage> get_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
 
 		/// Init effect settings
 		void init_effect_details();
 
-		/// Set brightness and contrast
-		void set_brightness_and_contrast(tr1::shared_ptr<Magick::Image> image, float brightness, float contrast);
-
 	public:
+		bool replace_image;		///< Replace the frame image with a grayscale image representing the mask. Great for debugging a mask.
+		Keyframe brightness;	///< Brightness keyframe to control the wipe / mask effect. A constant value here will prevent animation.
+		Keyframe contrast;		///< Contrast keyframe to control the hardness of the wipe effect / mask.
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Mask();
@@ -107,6 +111,11 @@ namespace openshot
 		/// of all properties at any time)
 		string PropertiesJSON(int requested_frame);
 
+		/// Get the reader object of the mask grayscale image
+		ReaderBase* Reader() { return reader; };
+
+		/// Set a new reader to be used by the mask effect (grayscale image)
+		void Reader(ReaderBase *new_reader) { reader = new_reader; };
 	};
 
 }

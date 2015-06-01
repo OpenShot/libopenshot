@@ -51,21 +51,32 @@ Deinterlace::Deinterlace(bool UseOddLines) : isOdd(UseOddLines)
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> Deinterlace::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
-	// Calculate the new size (used to shrink and expand the image, to remove interlacing)
-	Magick::Geometry original_size = frame->GetImage()->size();
-	Magick::Geometry frame_size = frame->GetImage()->size();
-	frame_size.aspect(false); // allow the image to be re-sized to an invalid aspect ratio
-	frame_size.height(frame_size.height() / 2.0); // height set to 50% of original height
+	// Get original size of frame's image
+	int original_width = frame->GetImage()->width();
+	int original_height = frame->GetImage()->height();
 
+	// Get the frame's image
+	tr1::shared_ptr<QImage> image = frame->GetImage();
+	const unsigned char* pixels = image->bits();
+
+	// Create a smaller, new image
+	QImage deinterlaced_image(image->width(), image->height() / 2, QImage::Format_RGBA8888);
+	const unsigned char* deinterlaced_pixels = deinterlaced_image.bits();
+
+	// Loop through the scanlines of the image (even or odd)
+	int start = 0;
 	if (isOdd)
-		// Roll the image by 1 pixel, to use the ODD horizontal lines (instead of the even ones)
-		frame->GetImage()->roll(0,1);
+		start = 1;
+	for (int row = start; row < image->height(); row += 2) {
+		memcpy((unsigned char*)deinterlaced_pixels, pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+		deinterlaced_pixels += image->bytesPerLine();
+	}
 
-	// Resample the image to 50% height (to remove every other line)
-	frame->GetImage()->sample(frame_size);
+	// Resize deinterlaced image back to original size, and update frame's image
+	image = tr1::shared_ptr<QImage>(new QImage(deinterlaced_image.scaled(original_width, original_height, Qt::IgnoreAspectRatio, Qt::FastTransformation)));
 
-	// Resize image back to original height
-	frame->GetImage()->resize(original_size);
+	// Update image on frame
+	frame->AddImage(image);
 
 	// return the modified frame
 	return frame;

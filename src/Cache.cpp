@@ -31,14 +31,34 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor, no max frames
-Cache::Cache() : max_bytes(0), total_bytes(0) { };
+Cache::Cache() : max_bytes(0) {
+	// Init the critical section
+	cacheCriticalSection = new CriticalSection();
+};
 
 // Constructor that sets the max frames to cache
-Cache::Cache(int64 max_bytes) : max_bytes(max_bytes), total_bytes(0) { };
+Cache::Cache(int64 max_bytes) : max_bytes(max_bytes) {
+	// Init the critical section
+	cacheCriticalSection = new CriticalSection();
+};
+
+// Default destructor
+Cache::~Cache()
+{
+	frames.clear();
+	frame_numbers.clear();
+
+	// remove critical section
+	delete cacheCriticalSection;
+	cacheCriticalSection = NULL;
+}
 
 // Add a Frame to the cache
 void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Remove frame if it already exists
 	if (Exists(frame_number))
 		// Move frame to front of queue
@@ -49,9 +69,6 @@ void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
 
-		// Increment total bytes (of cache)
-		total_bytes += frame->GetBytes();
-
 		// Clean up old frames
 		CleanUp();
 	}
@@ -60,6 +77,9 @@ void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 // Check for the existance of a frame in the cache
 bool Cache::Exists(int frame_number)
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Is frame number cached
 	if (frames.count(frame_number))
 		return true;
@@ -70,6 +90,9 @@ bool Cache::Exists(int frame_number)
 // Get a frame from the cache
 tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Does frame exists in cache?
 	if (Exists(frame_number))
 	{
@@ -87,6 +110,9 @@ tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
 // Get the smallest frame number
 tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	tr1::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
@@ -105,14 +131,31 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 	 return f;
 }
 
+// Gets the maximum bytes value
+int64 Cache::GetBytes()
+{
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
+	int64 total_bytes = 0;
+
+	// Loop through frames, and calculate total bytes
+	deque<int>::reverse_iterator itr;
+	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
+	{
+		//cout << "get bytes from frame " << *itr << ", frames.count(" << *itr << "): " << frames.count(*itr) << endl;
+		//if (frames.count(*itr) > 0)
+		total_bytes += frames[*itr]->GetBytes();
+	}
+
+	return total_bytes;
+}
+
 // Remove a specific frame
 void Cache::Remove(int frame_number)
 {
-	// Get the frame (or throw exception)
-	tr1::shared_ptr<Frame> f = GetFrame(frame_number);
-
-	// Decrement the total bytes (for this cache)
-	total_bytes -= f->GetBytes();
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
 	deque<int>::iterator itr;
@@ -133,6 +176,9 @@ void Cache::Remove(int frame_number)
 // Move frame to front of queue (so it lasts longer)
 void Cache::MoveToFront(int frame_number)
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Does frame exists in cache?
 	if (Exists(frame_number))
 	{
@@ -159,21 +205,19 @@ void Cache::MoveToFront(int frame_number)
 // Clear the cache of all frames
 void Cache::Clear()
 {
-	deque<int>::iterator itr;
-	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-		// Remove frame from map
-		frames.erase(*itr);
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
-	// pop each of the frames from the queue... which empties the queue
-	while(!frame_numbers.empty()) frame_numbers.pop_back();
-
-	// Reset total bytes (of cache)
-	total_bytes = 0;
+	frames.clear();
+	frame_numbers.clear();
 }
 
 // Count the frames in the queue
 int Cache::Count()
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Return the number of frames in the cache
 	return frames.size();
 }
@@ -181,11 +225,13 @@ int Cache::Count()
 // Clean up cached frames that exceed the number in our max_bytes variable
 void Cache::CleanUp()
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
-		// check against max bytes (and always leave at least 20 frames in the cache)
-		while (total_bytes > max_bytes && frame_numbers.size() > 20)
+		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Remove the oldest frame
 			int frame_to_remove = frame_numbers.back();
@@ -195,7 +241,6 @@ void Cache::CleanUp()
 		}
 	}
 }
-
 
 // Display a list of cached frame numbers
 void Cache::Display()
@@ -211,6 +256,11 @@ void Cache::Display()
 	}
 }
 
-
-
+// Set maximum bytes to a different amount based on a ReaderInfo struct
+void Cache::SetMaxBytesFromInfo(int number_of_frames, int width, int height, int sample_rate, int channels)
+{
+	// n frames X height X width X 4 colors of chars X audio channels X 4 byte floats
+	int64 bytes = number_of_frames * (height * width * 4 + (sample_rate * channels * 4));
+	SetMaxBytes(bytes);
+}
 

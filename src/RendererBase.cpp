@@ -38,5 +38,5 @@ RendererBase::~RendererBase()
 
 void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
 {
-	this->render(frame->GetQImage());
+	this->render(frame->GetImage());
 }

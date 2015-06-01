@@ -54,13 +54,33 @@ ChromaKey::ChromaKey(Color color, Keyframe fuzz) : color(color), fuzz(fuzz)
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
-	// Get the max quantum size (i.e. 255, 65535, etc...)
-	using namespace Magick;
-	Magick::Quantum max_range = QuantumRange;
+	// Determine the current HSL (Hue, Saturation, Lightness) for the Chrome
+	int threshold = fuzz.GetInt(frame_number);
+	long mask_R = color.red.GetInt(frame_number);
+	long mask_G = color.green.GetInt(frame_number);
+	long mask_B = color.blue.GetInt(frame_number);
 
-	// Make this range of colors transparent
-	frame->GetImage()->colorFuzz(fuzz.GetValue(frame_number) * max_range / 100.0);
-	frame->GetImage()->transparent(Magick::Color((Magick::Quantum)color.red.GetInt(frame_number), (Magick::Quantum)color.green.GetInt(frame_number), (Magick::Quantum)color.blue.GetInt(frame_number)));
+	// Get source image's pixels
+	tr1::shared_ptr<QImage> image = frame->GetImage();
+	unsigned char *pixels = (unsigned char *) image->bits();
+
+	// Loop through pixels
+	for (int pixel = 0, byte_index=0; pixel < image->width() * image->height(); pixel++, byte_index+=4)
+	{
+		// Get the RGB values from the pixel
+		unsigned char R = pixels[byte_index];
+		unsigned char G = pixels[byte_index + 1];
+		unsigned char B = pixels[byte_index + 2];
+		unsigned char A = pixels[byte_index + 3];
+
+		// Get distance between mask color and pixel color
+		long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
+
+		// Alpha out the pixel (if color similar)
+		if (distance <= threshold)
+			// MATCHED - Make pixel transparent
+			pixels[byte_index + 3] = 0;
+	}
 
 	// return the modified frame
 	return frame;

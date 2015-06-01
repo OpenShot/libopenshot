@@ -97,13 +97,6 @@ namespace openshot
 		bool combine_frames;
 
 	    tr1::shared_ptr<Frame> last_frame;
-	    deque<tr1::shared_ptr<Frame> > spooled_video_frames;
-	    deque<tr1::shared_ptr<Frame> > queued_video_frames;
-	    deque<tr1::shared_ptr<Frame> > processed_frames;
-	    deque<tr1::shared_ptr<Frame> > deallocate_frames;
-
-		/// write all queued frames
-		void write_queued_frames();
 
 	public:
 

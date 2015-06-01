@@ -1,7 +1,6 @@
 /**
  * @file
- * @brief Source file for VideoPlaybackThread class
- * @author Duzy Chan <code@duzy.info>
+ * @brief Source file for VideoCacheThread class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -26,24 +25,24 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoPlaybackThread.h"
+#include "../../include/Qt/VideoCacheThread.h"
 
 namespace openshot
 {
 	// Constructor
-    VideoPlaybackThread::VideoPlaybackThread(RendererBase *rb)
-	: Thread("video-playback"), renderer(rb)
-	, render(), reset(false)
+	VideoCacheThread::VideoCacheThread()
+	: Thread("video-cache"), speed(1), is_playing(false), position(1)
+	, reader(NULL), max_frames(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
     {
     }
 
     // Destructor
-    VideoPlaybackThread::~VideoPlaybackThread()
+	VideoCacheThread::~VideoCacheThread()
     {
     }
 
     // Get the currently playing frame number (if any)
-    int VideoPlaybackThread::getCurrentFramePosition()
+    int VideoCacheThread::getCurrentFramePosition()
     {
     	if (frame)
     		return frame->number;
@@ -51,21 +50,49 @@ namespace openshot
     		return 0;
     }
 
+    // Set the currently playing frame number (if any)
+    void VideoCacheThread::setCurrentFramePosition(int current_frame_number)
+    {
+    	current_display_frame = current_frame_number;
+    }
+
+	// Seek the audio thread
+	void VideoCacheThread::Seek(int new_position)
+	{
+		position = new_position;
+	}
+
+	// Play the audio
+	void VideoCacheThread::Play() {
+		// Start playing
+		is_playing = true;
+	}
+
+	// Stop the audio
+	void VideoCacheThread::Stop() {
+		// Stop playing
+		is_playing = false;
+	}
+
     // Start the thread
-    void VideoPlaybackThread::run()
+    void VideoCacheThread::run()
     {
 	while (!threadShouldExit()) {
-	    // Make other threads wait on the render event
-		bool need_render = render.wait(500);
 
-		if (need_render)
-		{
-			// Render the frame to the screen
-			renderer->paint(frame);
+		// Calculate sleep time for frame rate
+		double frame_time = (1000.0 / reader->info.fps.ToDouble());
 
-			// Signal to other threads that the rendered event has completed
-			rendered.signal();
-		}
+	    // Cache frames before the other threads need them
+	    // Cache frames up to the max frames
+	    while ((position - current_display_frame) < max_frames)
+	    {
+	    	// Only cache up till the max_frames amount... then sleep
+	    	if (reader)
+	    		reader->GetFrame(position);
+
+	    	// Increment frame number
+	    	position++;
+	    }
 	}
 
 	return;

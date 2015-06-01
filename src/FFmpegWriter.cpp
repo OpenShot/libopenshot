@@ -466,6 +466,7 @@ void FFmpegWriter::write_queued_frames()
 					AVFrame *av_frame = av_frames[frame];
 
 					// deallocate AVPicture and AVFrame
+					av_freep(&av_frame[0]); // picture buffer
 					avcodec_free_frame(&av_frame);
 					av_frames.erase(frame);
 				}
@@ -660,6 +661,9 @@ void FFmpegWriter::flush_encoders()
 			if (error_code != 0) {
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
+
+			// deallocate memory for packet
+			av_free_packet(&pkt);
 		}
 
 
@@ -686,6 +690,12 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 		avresample_close(avr);
 		avresample_free(&avr);
 		avr = NULL;
+	}
+
+	if (avr_planar) {
+		avresample_close(avr_planar);
+		avresample_free(&avr_planar);
+		avr_planar = NULL;
 	}
 }
 
@@ -721,8 +731,8 @@ void FFmpegWriter::Close()
 	write_video_count = 0;
 	write_audio_count = 0;
 
-	// Free the stream
-	av_free(oc);
+	// Free the context
+	av_freep(&oc);
 
 	// Close writer
 	is_open = false;
@@ -1060,7 +1070,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 		int samples_position = 0;
 
 
-		AppendDebugMethod("FFmpegWriter::write_audio_packets", "final", final, "total_frame_samples", total_frame_samples, "remaining_frame_samples", remaining_frame_samples, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "", -1);
+		AppendDebugMethod("FFmpegWriter::write_audio_packets", "final", final, "total_frame_samples", total_frame_samples, "channel_layout_in_frame", channel_layout_in_frame, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "LAYOUT_MONO", LAYOUT_MONO);
 
 		// Keep track of the original sample format
 		AVSampleFormat output_sample_fmt = audio_codec->sample_fmt;
@@ -1134,7 +1144,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// Convert audio samples
 			nb_samples = avresample_convert(avr, 	// audio resample context
-					audio_converted->data, 		// output data pointers
+					audio_converted->data, 			// output data pointers
 					audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 					audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
 					audio_frame->data,				// input data pointers
@@ -1149,9 +1159,11 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// Update remaining samples (since we just resampled the audio, and things might have changed)
 			remaining_frame_samples = nb_samples * (float(av_get_bytes_per_sample(output_sample_fmt)) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)) * info.channels;
+			//remaining_frame_samples = nb_samples * info.channels;
 
 			// Remove converted audio
 			av_freep(&audio_frame[0]); // this deletes the all_queued_samples array
+			all_queued_samples = NULL; // this array cleared with above call
 			avcodec_free_frame(&audio_frame);
 			av_freep(&audio_converted[0]);
 			avcodec_free_frame(&audio_converted);
@@ -1332,21 +1344,24 @@ void FFmpegWriter::write_audio_packets(bool final)
 			final = false;
 		}
 
-		// Delete arrays
+		// Delete arrays (if needed)
 		if (all_resampled_samples) {
 			delete[] all_resampled_samples;
 			all_resampled_samples = NULL;
+		}
+		if (all_queued_samples) {
+			delete[] all_queued_samples;
+			all_queued_samples = NULL;
 		}
 
 	} // end task
 }
 
 // Allocate an AVFrame object
-AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size)
+AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer)
 {
 	// Create an RGB AVFrame
 	AVFrame *new_av_frame = NULL;
-	uint8_t *new_buffer = NULL;
 
 	// Allocate an AVFrame structure
 	new_av_frame = avcodec_alloc_frame();
@@ -1355,10 +1370,15 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 
 	// Determine required buffer size and allocate buffer
 	*buffer_size = avpicture_get_size(pix_fmt, width, height);
-	new_buffer = new uint8_t[*buffer_size];
 
-	// Attach buffer to AVFrame
-	avpicture_fill((AVPicture *)new_av_frame, new_buffer, pix_fmt, width, height);
+	// Create buffer (if not provided)
+	if (!new_buffer)
+	{
+		// New Buffer
+		new_buffer = new uint8_t[*buffer_size];
+		// Attach buffer to AVFrame
+		avpicture_fill((AVPicture *)new_av_frame, new_buffer, pix_fmt, width, height);
+	}
 
 	// return AVFrame
 	return new_av_frame;
@@ -1391,37 +1411,18 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		int bytes_source = 0;
 		int bytes_final = 0;
 		AVFrame *frame_source = NULL;
-		const Magick::PixelPacket *pixel_packets = NULL;
+		const uchar *pixels = NULL;
 
 		// Get a list of pixels from source image
-		pixel_packets = frame->GetPixels();
+		pixels = frame->GetPixels();
 
 		// Init AVFrame for source image & final (converted image)
-		frame_source = allocate_avframe(PIX_FMT_RGB24, source_image_width, source_image_height, &bytes_source);
-		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final);
+		frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t*) pixels);
+		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final, NULL);
 
-		// Determine how many colors we are copying (3 or 4)
-		int step = 3; // rgb
-		if ( video_st->codec->pix_fmt == PIX_FMT_RGBA || video_st->codec->pix_fmt == PIX_FMT_ARGB || video_st->codec->pix_fmt == PIX_FMT_BGRA )
-			step = 4; // rgba
-
-		// Fill the AVFrame with RGB image data
-		int source_total_pixels = source_image_width * source_image_height;
-		for (int packet = 0, row = 0; packet < source_total_pixels; packet++, row+=step)
-		{
-			// Update buffer (which is already linked to the AVFrame: pFrameRGB)
-			// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-			frame_source->data[0][row] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].red);
-			frame_source->data[0][row+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].green);
-			frame_source->data[0][row+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].blue);
-
-			// Copy alpha channel (if needed)
-			if (step == 4)
-				frame_source->data[0][row+3] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixel_packets[packet].opacity);
-		}
-
-
-		AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "step", step, "", -1, "", -1);
+		// Fill with data
+		avpicture_fill((AVPicture *) frame_source, (uint8_t*)pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
+		AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "", -1, "", -1, "", -1);
 
 		// Resize & convert pixel format
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
@@ -1566,7 +1567,7 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 	for (int x = 0; x < num_of_rescalers; x++)
 	{
 		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGB24, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, c->pix_fmt, SWS_FAST_BILINEAR, NULL, NULL, NULL);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);

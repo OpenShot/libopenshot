@@ -100,6 +100,9 @@ namespace openshot
 		/// Close the device and video stream
 		void Close();
 
+		/// Get the cache object used by this reader (always returns NULL for this reader)
+		Cache* GetCache() { return NULL; };
+
 		/// Get an openshot::Frame object for a specific frame number of this reader.  Frame number
 		/// is ignored, since it always gets the latest LIVE frame.
 		///

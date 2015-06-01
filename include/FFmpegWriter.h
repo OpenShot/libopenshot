@@ -202,7 +202,7 @@ namespace openshot
 		AVStream* add_video_stream();
 
 		/// Allocate an AVFrame object
-		AVFrame* allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size);
+		AVFrame* allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);
 
 		/// Auto detect format (from path)
 		void auto_detect_format();

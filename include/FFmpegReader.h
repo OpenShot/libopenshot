@@ -232,6 +232,9 @@ namespace openshot
 		/// Close File
 		void Close();
 
+		/// Get the cache object used by this reader
+		Cache* GetCache() { return &final_cache; };
+
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video

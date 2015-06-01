@@ -47,19 +47,19 @@ TEST(Color_Animate_Colors)
 	Color c1;
 
 	// Set starting color (on frame 0)
-	c1.red.AddPoint(0, 12000);
-	c1.green.AddPoint(0, 5000);
-	c1.blue.AddPoint(0, 1000);
+	c1.red.AddPoint(1, 0);
+	c1.green.AddPoint(1, 120);
+	c1.blue.AddPoint(1, 255);
 
 	// Set ending color (on frame 1000)
-	c1.red.AddPoint(1000, 32000);
-	c1.green.AddPoint(1000, 12000);
-	c1.blue.AddPoint(1000, 5000);
+	c1.red.AddPoint(1000, 0);
+	c1.green.AddPoint(1000, 255);
+	c1.blue.AddPoint(1000, 65);
 
 	// Check the color at frame 500
-	CHECK_CLOSE(22011, c1.red.GetInt(500), 0.01);
-	CHECK_CLOSE(8504, c1.green.GetInt(500), 0.01);
-	CHECK_CLOSE(3002, c1.blue.GetInt(500), 0.01);
+	CHECK_CLOSE(0, c1.red.GetInt(500), 0.01);
+	CHECK_CLOSE(187, c1.green.GetInt(500), 0.01);
+	CHECK_CLOSE(160, c1.blue.GetInt(500), 0.01);
 }
 
 TEST(Color_HEX_Value)
@@ -79,5 +79,45 @@ TEST(Color_HEX_Value)
 
 }
 
+TEST(Color_HEX_Constructor)
+{
+	// Color
+	openshot::Color c("#4586db");
+	c.red.AddPoint(100, 255);
+	c.green.AddPoint(100, 255);
+	c.blue.AddPoint(100, 255);
 
+	CHECK_EQUAL("#4586db", c.GetColorHex(1));
+	CHECK_EQUAL("#a2c2ed", c.GetColorHex(50));
+	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
+}
 
+TEST(Color_Distance)
+{
+	// Color
+	openshot::Color c1("#040a0c");
+	openshot::Color c2("#0c0c04");
+	openshot::Color c3("#000000");
+	openshot::Color c4("#ffffff");
+
+	CHECK_CLOSE(19.0f, Color::GetDistance(c1.red.GetInt(1), c1.blue.GetInt(1), c1.green.GetInt(1), c2.red.GetInt(1), c2.blue.GetInt(1), c2.green.GetInt(1)), 0.001);
+	CHECK_CLOSE(764.0f, Color::GetDistance(c3.red.GetInt(1), c3.blue.GetInt(1), c3.green.GetInt(1), c4.red.GetInt(1), c4.blue.GetInt(1), c4.green.GetInt(1)), 0.001);
+}
+
+TEST(Color_RGBA_Constructor)
+{
+	// Color
+	openshot::Color c(69, 134, 219, 255);
+	c.red.AddPoint(100, 255);
+	c.green.AddPoint(100, 255);
+	c.blue.AddPoint(100, 255);
+
+	CHECK_EQUAL("#4586db", c.GetColorHex(1));
+	CHECK_EQUAL("#a2c2ed", c.GetColorHex(50));
+	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
+
+	// Color with alpha
+	openshot::Color c1(69, 134, 219, 128);
+	CHECK_EQUAL("#4586db", c1.GetColorHex(1));
+	CHECK_EQUAL(128, c1.alpha.GetInt(1));
+}

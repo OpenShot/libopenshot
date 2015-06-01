@@ -144,6 +144,9 @@ namespace openshot
 		/// @param new_size		The number of frames per chunk
 		void SetChunkSize(int new_size) { chunk_size = new_size; };
 
+		/// Get the cache object used by this reader (always return NULL for this reader)
+		Cache* GetCache() { return NULL; };
+
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve

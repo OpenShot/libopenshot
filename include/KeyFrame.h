@@ -29,6 +29,7 @@
 #define OPENSHOT_KEYFRAME_H
 
 #include <iostream>
+#include <iomanip>
 #include <math.h>
 #include <assert.h>
 #include <vector>

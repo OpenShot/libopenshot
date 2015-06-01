@@ -58,6 +58,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	{
 		// Add blank frame to the cache
 		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
+		f->AddColor(320, 240, "#000000");
 		c.Add(i, f);
 	}
 
@@ -69,6 +70,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	{
 		// Add blank frame to the cache
 		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
+		f->AddColor(320, 240, "#000000");
 		c.Add(i, f);
 	}
 

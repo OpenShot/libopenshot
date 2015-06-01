@@ -34,6 +34,7 @@
 #include "../../include/AudioReaderSource.h"
 #include "../../include/Qt/AudioPlaybackThread.h"
 #include "../../include/Qt/VideoPlaybackThread.h"
+#include "../../include/Qt/VideoCacheThread.h"
 
 namespace openshot
 {
@@ -51,6 +52,7 @@ namespace openshot
 	ReaderBase *reader; /// The reader which powers this player
 	AudioPlaybackThread *audioPlayback; /// The audio thread
 	VideoPlaybackThread *videoPlayback; /// The video thread
+	VideoCacheThread *videoCache; /// The cache thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	RendererBase *renderer;
 	int last_video_position; /// The last frame actually displayed

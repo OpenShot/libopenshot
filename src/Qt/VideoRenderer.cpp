@@ -29,7 +29,6 @@
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
 
-using openshot::OSPixelFormat;
 
 VideoRenderer::VideoRenderer(QObject *parent)
     : QObject(parent)
@@ -48,7 +47,6 @@ void VideoRenderer::OverrideWidget(long qwidget_address)
 
 }
 
-//void VideoRenderer::render(OSPixelFormat /*format*/, int width, int height, int bytesPerLine, unsigned char *data)
 void VideoRenderer::render(tr1::shared_ptr<QImage> image)
 {
     emit present(*image);

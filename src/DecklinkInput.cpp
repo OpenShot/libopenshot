@@ -245,10 +245,8 @@ omp_set_nested(true);
 						tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(copy_frameCount, width, height, "#000000", 2048, 2));
 
 						// Add Image data to openshot frame
-						f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
-
-						// TEST EFFECTS
-						f->TransparentColors("#2d751f", 10.0);
+						// TODO: Fix Decklink support with QImage Upgrade
+						//f->AddImage(width, height, "ARGB", Magick::CharPixel, (uint8_t*)frameBytes);
 
 						#pragma omp critical (blackmagic_input_queue)
 						{

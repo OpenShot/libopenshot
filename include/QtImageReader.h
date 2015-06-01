@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for ImageReader class
+ * @brief Header file for QtImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,8 +25,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_IMAGE_READER_H
-#define OPENSHOT_IMAGE_READER_H
+#ifndef OPENSHOT_QIMAGE_READER_H
+#define OPENSHOT_QIMAGE_READER_H
 
 #include "ReaderBase.h"
 
@@ -36,7 +36,9 @@
 #include <omp.h>
 #include <stdio.h>
 #include <tr1/memory>
-#include "Magick++.h"
+#include <QtCore/QString>
+#include <QtGui/QImage>
+#include <QtGui/QPainter>
 #include "Cache.h"
 #include "Exceptions.h"
 
@@ -46,12 +48,12 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to open image files, and return
+	 * @brief This class uses the Qt library, to open image files, and return
 	 * openshot::Frame objects containing the image.
 	 *
 	 * @code
 	 * // Create a reader for a video
-	 * ImageReader r("MyAwesomeImage.jpeg");
+	 * QtImageReader r("MyAwesomeImage.jpeg");
 	 * r.Open(); // Open the reader
 	 *
 	 * // Get frame number 1 from the video
@@ -64,18 +66,18 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class ImageReader : public ReaderBase
+	class QtImageReader : public ReaderBase
 	{
 	private:
 		string path;
-		tr1::shared_ptr<Magick::Image> image;
+		tr1::shared_ptr<QImage> image;
 		bool is_open;
 
 	public:
 
-		/// Constructor for ImageReader.  This automatically opens the media file and loads
+		/// Constructor for QtImageReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		ImageReader(string path) throw(InvalidFile);
+		QtImageReader(string path) throw(InvalidFile);
 
 		/// Close File
 		void Close();

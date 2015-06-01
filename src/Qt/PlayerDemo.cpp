@@ -63,8 +63,6 @@ PlayerDemo::PlayerDemo(QWidget *parent)
 
 PlayerDemo::~PlayerDemo()
 {
-	player->Stop();
-    delete player;
 }
 
 void PlayerDemo::keyPressEvent(QKeyEvent *event)
@@ -122,6 +120,15 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 		if (player->Speed() != 0)
 			player->Speed(0);
 		player->Seek(player->Position() + 1);
+	}
+	else if (event->key() == Qt::Key_Escape) {
+		cout << "QUIT PLAYER" << endl;
+		QWidget *pWin = QApplication::activeWindow();
+		pWin->hide();
+
+		player->Stop();
+
+		QApplication::quit();
 	}
 
 	event->accept();

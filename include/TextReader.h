@@ -116,6 +116,9 @@ namespace openshot
 		/// Close Reader
 		void Close();
 
+		/// Get the cache object used by this reader (always returns NULL for this object)
+		Cache* GetCache() { return NULL; };
+
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
 		///

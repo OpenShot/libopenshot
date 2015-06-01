@@ -34,18 +34,36 @@
 namespace openshot {
 
 	/**
-	 * @brief This struct represents a color (used on the timeline and clips)
+	 * @brief This class represents a color (used on the timeline and clips)
 	 *
-	 * Colors are represented by 3 curves, representing red, green, and blue.  The curves
+	 * Colors are represented by 4 curves, representing red, green, blue, and alpha.  The curves
 	 * can be used to animate colors over time.
 	 */
-	struct Color{
-		Keyframe red; ///<Curve representing the red value (0 - 65536)
-		Keyframe green; ///<Curve representing the green value (0 - 65536)
-		Keyframe blue; ///<Curve representing the red blue (0 - 65536)
+	class Color{
+
+	public:
+		Keyframe red; ///<Curve representing the red value (0 - 255)
+		Keyframe green; ///<Curve representing the green value (0 - 255)
+		Keyframe blue; ///<Curve representing the red value (0 - 255)
+		Keyframe alpha; ///<Curve representing the alpha value (0 - 255)
+
+		/// Default constructor
+		Color() {};
+
+		/// Constructor which takes a HEX color code
+		Color(string color_hex);
+
+		/// Constructor which takes R,G,B,A
+		Color(unsigned char Red, unsigned char Green, unsigned char Blue, unsigned char Alpha);
+
+		/// Constructor which takes 4 existing Keyframe curves
+		Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha);
 
 		/// Get the HEX value of a color at a specific frame
 		string GetColorHex(int frame_number);
+
+		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
+		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

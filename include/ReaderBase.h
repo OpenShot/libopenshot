@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <tr1/memory>
 #include <stdlib.h>
+#include "Cache.h"
 #include "ChannelLayouts.h"
 #include "Fraction.h"
 #include "Frame.h"
@@ -93,6 +94,7 @@ namespace openshot
 	protected:
 		/// Section lock for multiple threads
 	    CriticalSection getFrameCriticalSection;
+	    CriticalSection processingCriticalSection;
 
 	    /// Debug JSON root
 	    Json::Value debug_root;
@@ -129,6 +131,9 @@ namespace openshot
 		/// Test method to draw a bitmap on a Qt QGraphicsScene
 		void DrawFrameOnScene(string path, long _graphics_scene_address);
 
+		/// Get the cache object used by this reader (note: not all readers use cache)
+		virtual Cache* GetCache() = 0;
+
 		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.
@@ -138,7 +143,7 @@ namespace openshot
 		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
 
 	    /// A thread safe version of GetFrame.
-	    tr1::shared_ptr<Frame> GetFrameSafe(int number);
+	    //tr1::shared_ptr<Frame> GetFrameSafe(int number);
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;

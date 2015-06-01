@@ -46,8 +46,8 @@ Negate::Negate()
 // modified openshot::Frame object
 tr1::shared_ptr<Frame> Negate::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
 {
-	// Make this range of colors transparent
-	frame->GetImage()->negate();
+	// Make a negative of the images pixels
+	frame->GetImage()->invertPixels();
 
 	// return the modified frame
 	return frame;

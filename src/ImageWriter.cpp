@@ -90,130 +90,33 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);
+		throw WriterClosed("The ImageWriter is closed.  Call Open() before calling this method.", path);
 
-	// Add frame pointer to "queue", waiting to be processed the next
-	// time the WriteFrames() method is called.
-	spooled_video_frames.push_back(frame);
 
-	AppendDebugMethod("ImageWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "cache_size", cache_size, "is_writing", is_writing, "", -1, "", -1);
+	// Copy and resize image
+	tr1::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
+	frame_image->magick( info.vcodec );
+	frame_image->backgroundColor(Magick::Color("none"));
+	frame_image->matte(true);
+	frame_image->quality(image_quality);
+	frame_image->animationDelay(info.video_timebase.ToFloat() * 100);
+	frame_image->animationIterations(number_of_loops);
 
-	// Write the frames once it reaches the correct cache size
-	if (spooled_video_frames.size() == cache_size)
-	{
-		// Is writer currently writing?
-		if (!is_writing)
-			// Write frames to video file
-			write_queued_frames();
+	// Calculate correct DAR (display aspect ratio)
+	int new_width = info.width;
+	int new_height = info.height * frame->GetPixelRatio().Reciprocal().ToDouble();
 
-		else
-		{
-			// YES, WRITING... so wait until it finishes, before writing again
-			while (is_writing)
-				Sleep(1); // sleep for 250 milliseconds
+	// Resize image
+	Magick::Geometry new_size(new_width, new_height);
+	new_size.aspect(true);
+	frame_image->resize(new_size);
 
-			// Write frames to video file
-			write_queued_frames();
-		}
-	}
+
+	// Put resized frame in vector (waiting to be written)
+	frames.push_back(*frame_image.get());
 
 	// Keep track of the last frame added
 	last_frame = frame;
-}
-
-// Write all frames in the queue to the video file.
-void ImageWriter::write_queued_frames()
-{
-	AppendDebugMethod("ImageWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
-
-	// Flip writing flag
-	is_writing = true;
-
-	// Transfer spool to queue
-	queued_video_frames = spooled_video_frames;
-
-	// Empty spool
-	spooled_video_frames.clear();
-
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
-
-	#pragma omp parallel
-	{
-		#pragma omp single
-		{
-			// Loop through each queued image frame
-			while (!queued_video_frames.empty())
-			{
-				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = queued_video_frames.front();
-
-				// Add to processed queue
-				processed_frames.push_back(frame);
-
-				// Copy and resize image
-				tr1::shared_ptr<Magick::Image> frame_image = frame->GetImage();
-				frame_image->magick( info.vcodec );
-				frame_image->backgroundColor(Magick::Color("none"));
-				frame_image->matte(true);
-				frame_image->quality(image_quality);
-				frame_image->animationDelay(info.video_timebase.ToFloat() * 100);
-				frame_image->animationIterations(number_of_loops);
-
-				// Calculate correct DAR (display aspect ratio)
-				int new_width = info.width;
-				int new_height = info.height * frame->GetPixelRatio().Reciprocal().ToDouble();
-
-				// Resize image
-				Magick::Geometry new_size(new_width, new_height);
-				new_size.aspect(true);
-				frame_image->resize(new_size);
-
-				// Put resized frame in vector (waiting to be written)
-				frames.push_back(*frame_image.get());
-
-				// Remove front item
-				queued_video_frames.pop_front();
-
-			} // end while
-		} // end omp single
-
-		#pragma omp single
-		{
-			// Loop back through the frames (in order), and write them to the video file
-			while (!processed_frames.empty())
-			{
-				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = processed_frames.front();
-
-				// Add to deallocate queue (so we can remove the AVFrames when we are done)
-				deallocate_frames.push_back(frame);
-
-				// Write frame to video file
-				// write_video_packet(frame, frame_final);
-
-				// Remove front item
-				processed_frames.pop_front();
-			}
-
-			// Loop through, and deallocate AVFrames
-			while (!deallocate_frames.empty())
-			{
-				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = deallocate_frames.front();
-
-				// Remove front item
-				deallocate_frames.pop_front();
-			}
-
-			// Done writing
-			is_writing = false;
-
-		} // end omp single
-	} // end omp parallel
-
 }
 
 // Write a block of frames from a reader

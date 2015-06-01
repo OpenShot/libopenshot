@@ -60,7 +60,7 @@ void Clip::init_settings()
 	volume = Keyframe(1.0);
 
 	// Init audio waveform color
-	wave_color = (Color){Keyframe(0), Keyframe(28672), Keyframe(65280)};
+	wave_color = Color((unsigned char)0, (unsigned char)123, (unsigned char)255, (unsigned char)255);
 
 	// Init crop settings
 	crop_gravity = GRAVITY_CENTER;
@@ -85,6 +85,7 @@ void Clip::init_settings()
 	reader = NULL;
 	resampler = NULL;
 	audio_cache = NULL;
+	manage_reader = false;
 }
 
 // Default Constructor for a clip
@@ -95,10 +96,13 @@ Clip::Clip()
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* reader) : reader(reader)
+Clip::Clip(ReaderBase* new_reader)
 {
 	// Init all default settings
 	init_settings();
+
+	// Set the reader
+	reader = new_reader;
 
 	// Open and Close the reader (to set the duration of the clip)
 	Open();
@@ -136,7 +140,7 @@ Clip::Clip(string path)
 		try
 		{
 			// Try an image reader
-			reader = new ImageReader(path);
+			reader = new QtImageReader(path);
 
 		} catch(...) {
 			try
@@ -149,8 +153,26 @@ Clip::Clip(string path)
 	}
 
 	// Update duration
-	if (reader)
+	if (reader) {
 		End(reader->info.duration);
+		manage_reader = true;
+	}
+}
+
+// Destructor
+Clip::~Clip()
+{
+	// Delete the reader if clip created it
+	if (manage_reader && reader) {
+		delete reader;
+		reader = NULL;
+	}
+
+	// Close the resampler
+	if (resampler) {
+		delete resampler;
+		resampler = NULL;
+	}
 }
 
 /// Set the current reader
@@ -235,22 +257,20 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 			new_frame_number = time.GetInt(requested_frame);
 
 
-
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		tr1::shared_ptr<Frame> original_frame = reader->GetFrameSafe(new_frame_number);
+		tr1::shared_ptr<Frame> original_frame = reader->GetFrame(new_frame_number);
 
 		// Create a new frame
 		tr1::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
 		frame->SampleRate(original_frame->SampleRate());
+		frame->ChannelsLayout(original_frame->ChannelsLayout());
 
 		// Copy the image from the odd field
-		frame->AddImage(original_frame->GetImage());
+		frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
 
 		// Loop through each channel, add audio
 		for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
 			frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
-
-
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
@@ -320,7 +340,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			resampler = new AudioResampler();
 
 		// Get new frame number
-		int new_frame_number = time.GetInt(frame_number);
+		int new_frame_number = round(time.GetValue(frame_number));
 
 		// Create a new frame
 		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate, frame->GetAudioChannelsCount());
@@ -341,41 +361,32 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		// Determine if we are speeding up or slowing down
 		if (time.GetRepeatFraction(frame_number).den > 1)
 		{
+			// SLOWING DOWN AUDIO
 			// Resample data, and return new buffer pointer
-			AudioSampleBuffer *buffer = NULL;
+			AudioSampleBuffer *resampled_buffer = NULL;
 			int resampled_buffer_size = 0;
 
-			if (time.GetRepeatFraction(frame_number).num == 1)
-			{
-				// SLOW DOWN audio (split audio)
-				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
-				samples->clear();
+			// SLOW DOWN audio (split audio)
+			samples = new juce::AudioSampleBuffer(channels, number_of_samples);
+			samples->clear();
 
-				// Loop through channels, and get audio samples
-				for (int channel = 0; channel < channels; channel++)
-					// Get the audio samples for this channel
-					samples->addFrom(channel, 0, reader->GetFrame(new_frame_number)->GetAudioSamples(channel), number_of_samples, 1.0f);
+			// Loop through channels, and get audio samples
+			for (int channel = 0; channel < channels; channel++)
+				// Get the audio samples for this channel
+				samples->addFrom(channel, 0, reader->GetFrame(new_frame_number)->GetAudioSamples(channel), number_of_samples, 1.0f);
 
-				// Reverse the samples (if needed)
-				if (!time.IsIncreasing(frame_number))
-					reverse_buffer(samples);
+			// Reverse the samples (if needed)
+			if (!time.IsIncreasing(frame_number))
+				reverse_buffer(samples);
 
-				// Resample audio to be X times slower (where X is the denominator of the repeat fraction)
-				resampler->SetBuffer(samples, 1.0 / time.GetRepeatFraction(frame_number).den);
+			// Resample audio to be X times slower (where X is the denominator of the repeat fraction)
+			resampler->SetBuffer(samples, 1.0 / time.GetRepeatFraction(frame_number).den);
 
-				// Resample the data (since it's the 1st slice)
-				buffer = resampler->GetResampledBuffer();
+			// Resample the data (since it's the 1st slice)
+			resampled_buffer = resampler->GetResampledBuffer();
 
-				// Save the resampled data in the cache
-				audio_cache = new juce::AudioSampleBuffer(channels, buffer->getNumSamples());
-				audio_cache->clear();
-				for (int channel = 0; channel < channels; channel++)
-					// Get the audio samples for this channel
-					audio_cache->addFrom(channel, 0, buffer->getReadPointer(channel), buffer->getNumSamples(), 1.0f);
-			}
-
-			// Get the length of the resampled buffer
-			resampled_buffer_size = audio_cache->getNumSamples();
+			// Get the length of the resampled buffer (if one exists)
+			resampled_buffer_size = resampled_buffer->getNumSamples();
 
 			// Just take the samples we need for the requested frame
 			int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
@@ -383,25 +394,10 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 				start -= 1;
 			for (int channel = 0; channel < channels; channel++)
 				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(true, channel, 0, audio_cache->getReadPointer(channel, start), number_of_samples, 1.0f);
-
-			// Clean up if the final section
-			if (time.GetRepeatFraction(frame_number).num == time.GetRepeatFraction(frame_number).den)
-			{
-				// Clear, since we don't want it maintain state yet
-				delete audio_cache;
-				audio_cache = NULL;
-			}
+				new_frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start), number_of_samples, 1.0f);
 
 			// Clean up
-			buffer = NULL;
-
-
-			// Determine next unique frame (after these repeating frames)
-			//int next_unique_frame = time.GetInt(frame_number + (time.GetRepeatFraction(frame_number).den - time.GetRepeatFraction(frame_number).num) + 1);
-			//if (next_unique_frame != new_frame_number)
-			//	// Overlay the next frame on top of this frame (to create a smoother slow motion effect)
-			//	new_frame->AddImage(reader->GetFrame(next_unique_frame)->GetImage(), float(time.GetRepeatFraction(frame_number).num) / float(time.GetRepeatFraction(frame_number).den));
+			resampled_buffer = NULL;
 
 		}
 		else if (abs(delta) > 1 && abs(delta) < 100)
@@ -508,10 +504,6 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 
 		}
-
-		// clean up
-		//delete resampler;
-		//resampler = NULL;
 
 		delete samples;
 		samples = NULL;
@@ -780,6 +772,12 @@ void Clip::SetJsonValue(Json::Value root) {
 				reader = new FFmpegReader(root["reader"]["path"].asString());
 				reader->SetJsonValue(root["reader"]);
 
+			} else if (type == "QtImageReader") {
+
+				// Create new reader
+				reader = new QtImageReader(root["reader"]["path"].asString());
+				reader->SetJsonValue(root["reader"]);
+
 			} else if (type == "ImageReader") {
 
 				// Create new reader
@@ -804,6 +802,10 @@ void Clip::SetJsonValue(Json::Value root) {
 				reader = new DummyReader();
 				reader->SetJsonValue(root["reader"]);
 			}
+
+			// mark as managed reader
+			if (reader)
+				manage_reader = true;
 
 			// Re-Open reader (if needed)
 			if (already_open)

@@ -78,6 +78,8 @@ include_directories(${FFMPEG_INCLUDE_DIR})
 # Find JUCE-based openshot Audio libraries
 FIND_PACKAGE(OpenShotAudio REQUIRED)
 
+message('LIBOPENSHOT_AUDIO_INCLUDE_DIRS: ${LIBOPENSHOT_AUDIO_INCLUDE_DIRS}')
+
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
@@ -148,7 +150,7 @@ endif(OPENMP_FOUND)
 include_directories("../thirdparty/jsoncpp/include")
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib/libprofiler.so")
+#set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
 #### GET LIST OF EFFECT FILES ####
@@ -186,6 +188,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		PlayerBase.cpp
 		Point.cpp
 		Profiles.cpp
+		QtImageReader.cpp
 		QtPlayer.cpp
 		TextReader.cpp
 		Timeline.cpp

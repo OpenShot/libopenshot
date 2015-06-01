@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for DummyReader class
+ * @brief Source file for QtImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,60 +25,59 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DummyReader.h"
+#include "../include/QtImageReader.h"
 
 using namespace openshot;
 
-// Blank constructor for DummyReader, with default settings.
-DummyReader::DummyReader() {
-
-	// Call actual constructor with default values
-	DummyReader(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
-}
-
-// Constructor for DummyReader.  Pass a framerate and samplerate.
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
-
-	// Set key info settings
-	info.has_audio = false;
-	info.has_video = true;
-	info.file_size = width * height * sizeof(int);
-	info.vcodec = "raw";
-	info.fps = fps;
-	info.width = width;
-	info.height = height;
-	info.sample_rate = sample_rate;
-	info.channels = channels;
-	info.duration = duration;
-	info.video_length = duration * fps.ToFloat();
-	info.pixel_ratio.num = 1;
-	info.pixel_ratio.den = 1;
-	info.video_timebase = fps.Reciprocal();
-	info.acodec = "raw";
-
-	// Calculate the DAR (display aspect ratio)
-	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
-
-	// Reduce size fraction
-	size.Reduce();
-
-	// Set the ratio based on the reduced fraction
-	info.display_ratio.num = size.num;
-	info.display_ratio.den = size.den;
-
+QtImageReader::QtImageReader(string path) throw(InvalidFile) : path(path), is_open(false)
+{
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
 // Open image file
-void DummyReader::Open() throw(InvalidFile)
+void QtImageReader::Open() throw(InvalidFile)
 {
 	// Open reader if not already open
 	if (!is_open)
 	{
-		// Create or get frame object
-		image_frame = tr1::shared_ptr<Frame>(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+		// Attempt to open file
+		image = tr1::shared_ptr<QImage>(new QImage());
+		bool success = image->load(QString::fromStdString(path));
+
+		// Set pixel format
+		image = tr1::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
+
+		if (!success)
+			// raise exception
+			throw InvalidFile("File could not be opened.", path);
+
+		// Update image properties
+		info.has_audio = false;
+		info.has_video = true;
+		info.file_size = image->byteCount();
+		info.vcodec = "QImage";
+		info.width = image->width();
+		info.height = image->height();
+		info.pixel_ratio.num = 1;
+		info.pixel_ratio.den = 1;
+		info.duration = 60 * 60 * 24; // 24 hour duration
+		info.fps.num = 30;
+		info.fps.den = 1;
+		info.video_timebase.num = 1;
+		info.video_timebase.den = 30;
+		info.video_length = round(info.duration * info.fps.ToDouble());
+
+		// Calculate the DAR (display aspect ratio)
+		Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
+
+		// Reduce size fraction
+		size.Reduce();
+
+		// Set the ratio based on the reduced fraction
+		info.display_ratio.num = size.num;
+		info.display_ratio.den = size.den;
 
 		// Mark as "open"
 		is_open = true;
@@ -86,57 +85,60 @@ void DummyReader::Open() throw(InvalidFile)
 }
 
 // Close image file
-void DummyReader::Close()
+void QtImageReader::Close()
 {
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
 		// Mark as "closed"
 		is_open = false;
+		
+		// Delete the image
+		image.reset();
+
+		info.vcodec = "";
+		info.acodec = "";
 	}
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> DummyReader::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> QtImageReader::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The ImageReader is closed.  Call Open() before calling this method.", "dummy");
+		throw ReaderClosed("The Image is closed.  Call Open() before calling this method.", path);
 
-	if (image_frame)
-	{
-		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	// Create or get frame object
+	tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
 
-		// Always return same frame (regardless of which frame number was requested)
-		image_frame->number = requested_frame;
-		return image_frame;
-	}
-	else
-		// no frame loaded
-		throw InvalidFile("No frame could be created from this type of file.", "dummy");
+	// Add Image data to frame
+	image_frame->AddImage(image);
+
+	// return frame object
+	return image_frame;
 }
 
 // Generate JSON string of this object
-string DummyReader::Json() {
+string QtImageReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value DummyReader::JsonValue() {
+Json::Value QtImageReader::JsonValue() {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
-	root["type"] = "DummyReader";
+	root["type"] = "QtImageReader";
+	root["path"] = path;
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void DummyReader::SetJson(string value) throw(InvalidJSON) {
+void QtImageReader::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -159,9 +161,19 @@ void DummyReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void DummyReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void QtImageReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
 
+	// Set data from Json (if key is found)
+	if (!root["path"].isNull())
+		path = root["path"].asString();
+
+	// Re-Open path, and re-init everything (if needed)
+	if (is_open)
+	{
+		Close();
+		Open();
+	}
 }

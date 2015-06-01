@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	struct tm * timeinfo;
 
 	/* TIMELINE ---------------- */
-	Timeline t(1920, 1080, Fraction(30,1), 48000, 2);
+	Timeline t(1920, 1080, Fraction(30,1), 48000, 2, LAYOUT_STEREO);
 
 	// Create background video
 	ImageReader b1("/home/jonathan/Pictures/moon.jpg");

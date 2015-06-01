@@ -35,14 +35,14 @@ TEST(Timeline_Constructor)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
-	Timeline t1(640, 480, fps, 44100, 2);
+	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
 	CHECK_EQUAL(640, t1.info.width);
 	CHECK_EQUAL(480, t1.info.height);
 
 	// Create a default fraction (should be 1/1)
-	Timeline t2(300, 240, fps, 44100, 2);
+	Timeline t2(300, 240, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
 	CHECK_EQUAL(300, t2.info.width);
@@ -53,7 +53,7 @@ TEST(Timeline_Width_and_Height_Functions)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
-	Timeline t1(640, 480, fps, 44100, 2);
+	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
 	CHECK_EQUAL(640, t1.info.width);
@@ -78,7 +78,7 @@ TEST(Timeline_Framerate)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(24,1);
-	Timeline t1(640, 480, fps, 44100, 2);
+	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
 	CHECK_CLOSE(24.0f, t1.info.fps.ToFloat(), 0.00001);
@@ -97,7 +97,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
 
 	// Create a timeline
-	Timeline t(640, 480, Fraction(30, 1), 44100, 2);
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
 	// Add clips
 	t.AddClip(&clip_video);
@@ -110,37 +110,40 @@ TEST(Timeline_Check_Two_Track_Video)
 	tr1::shared_ptr<Frame> f = t.GetFrame(1);
 
 	// Get the image data
-	const Magick::PixelPacket* pixels = f->GetPixels(200);
+	const unsigned char* pixels = f->GetPixels(200);
+	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(5397, pixels[230].red);
-	CHECK_EQUAL(0, pixels[230].blue);
-	CHECK_EQUAL(49087, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(21, (int)pixels[pixel_index]);
+	CHECK_EQUAL(191, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(2);
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(64764, pixels[230].red);
-	CHECK_EQUAL(63993, pixels[230].blue);
-	CHECK_EQUAL(64764, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(252, (int)pixels[pixel_index]);
+	CHECK_EQUAL(252, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(249, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(3);
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(64771, pixels[230].red);
-	CHECK_EQUAL(63429, pixels[230].blue);
-	CHECK_EQUAL(64193, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(25, (int)pixels[pixel_index]);
+	CHECK_EQUAL(189, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 
 	// Get frame
@@ -148,48 +151,52 @@ TEST(Timeline_Check_Two_Track_Video)
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(64507, pixels[230].red);
-	CHECK_EQUAL(63736, pixels[230].blue);
-	CHECK_EQUAL(64507, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(251, (int)pixels[pixel_index]);
+	CHECK_EQUAL(251, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(248, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(5);
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(6437, pixels[230].red);
-	CHECK_EQUAL(0, pixels[230].blue);
-	CHECK_EQUAL(48399, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(25, (int)pixels[pixel_index]);
+	CHECK_EQUAL(189, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(25);
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(5397, pixels[230].red);
-	CHECK_EQUAL(0, pixels[230].blue);
-	CHECK_EQUAL(49087, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(251, (int)pixels[pixel_index]);
+	CHECK_EQUAL(251, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(248, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(4);
 
 	// Get scanline 190 of pixels
 	pixels = f->GetPixels(190);
+	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check image properties on scanline, column 230
-	CHECK_EQUAL(64771, pixels[230].red);
-	CHECK_EQUAL(63429, pixels[230].blue);
-	CHECK_EQUAL(64193, pixels[230].green);
-	CHECK_EQUAL(0, pixels[230].opacity);
+	// Check image properties
+	CHECK_EQUAL(252, (int)pixels[pixel_index]);
+	CHECK_EQUAL(250, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(247, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Close reader
 	t.Close();
@@ -198,7 +205,7 @@ TEST(Timeline_Check_Two_Track_Video)
 TEST(Timeline_Clip_Order)
 {
 	// Create a timeline
-	Timeline t(640, 480, Fraction(30, 1), 44100, 2);
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
 	// Add some clips out of order
 	Clip clip_top("../../src/examples/front3.png");
@@ -286,7 +293,7 @@ TEST(Timeline_Clip_Order)
 TEST(Timeline_Effect_Order)
 {
 	// Create a timeline
-	Timeline t(640, 480, Fraction(30, 1), 44100, 2);
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
 	// Add some effects out of order
 	Negate effect_top;

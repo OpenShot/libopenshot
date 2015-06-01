@@ -30,6 +30,8 @@
 
 #include <list>
 #include <tr1/memory>
+#include <QtGui/QImage>
+#include <QtGui/QPainter>
 #include "Magick++.h"
 #include "Cache.h"
 #include "Color.h"
@@ -39,6 +41,7 @@
 #include "Effects.h"
 #include "Fraction.h"
 #include "Frame.h"
+#include "FrameMapper.h"
 #include "KeyFrame.h"
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
@@ -139,6 +142,7 @@ namespace openshot {
 	class Timeline : public ReaderBase {
 	private:
 		bool is_open; ///<Is Timeline Open?
+		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips
 		list<Clip*> clips; ///<List of clips on this timeline
 		list<Clip*> closing_clips; ///<List of clips that need to be closed
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
@@ -147,6 +151,9 @@ namespace openshot {
 
 		/// Process a new layer of video or audio
 		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number, bool is_top_clip);
+
+		/// Apply a FrameMapper to a clip which matches the settings of this timeline
+		void apply_mapper_to_clip(Clip* clip);
 
 		/// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to clips
@@ -187,7 +194,7 @@ namespace openshot {
 		/// @param fps The frames rate of the timeline
 		/// @param sample_rate The sample rate of the timeline's audio
 		/// @param channels The number of audio channels of the timeline
-		Timeline(int width, int height, Fraction fps, int sample_rate, int channels);
+		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
@@ -197,6 +204,15 @@ namespace openshot {
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
 		void AddEffect(EffectBase* effect);
 
+		/// Apply the timeline's framerate and samplerate to all clips
+		void ApplyMapperToClips();
+
+		/// Determine if clips are automatically mapped to the timeline's framerate and samplerate
+		bool AutoMapClips() { return auto_map_clips; };
+
+		/// @brief Automatically map all clips to the timeline's framerate and samplerate
+		void AutoMapClips(bool auto_map) { auto_map_clips = auto_map; };
+
 		/// Return a list of clips on the timeline
 		list<Clip*> Clips() { return clips; };
 
@@ -205,6 +221,9 @@ namespace openshot {
 
 		/// Return the list of effects on the timeline
 		list<EffectBase*> Effects() { return effects; };
+
+		/// Get the cache object used by this reader
+		Cache* GetCache() { return &final_cache; };
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///

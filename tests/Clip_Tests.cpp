@@ -212,13 +212,14 @@ TEST(Clip_Effects)
 	tr1::shared_ptr<Frame> f = c10.GetFrame(500);
 
 	// Get the image data
-	const Magick::PixelPacket* pixels = f->GetPixels(10);
+	const unsigned char* pixels = f->GetPixels(10);
+	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(65535, pixels[112].red);
-	CHECK_EQUAL(65535, pixels[112].blue);
-	CHECK_EQUAL(65535, pixels[112].green);
-	CHECK_EQUAL(0, pixels[112].opacity);
+	CHECK_EQUAL(255, (int)pixels[pixel_index]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
 	CHECK_EQUAL(1, c10.Effects().size());
@@ -233,14 +234,14 @@ TEST(Clip_Effects)
 
 	// Get the image data
 	pixels = f->GetPixels(10);
+	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(0, pixels[112].red);
-	CHECK_EQUAL(0, pixels[112].blue);
-	CHECK_EQUAL(0, pixels[112].green);
-	CHECK_EQUAL(0, pixels[112].opacity);
+	CHECK_EQUAL(0, (int)pixels[pixel_index]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
 	CHECK_EQUAL(2, c10.Effects().size());
-
 }

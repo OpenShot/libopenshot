@@ -47,14 +47,14 @@ TEST(ImageWriter_Test_Webm)
 	w.Open();
 
 	// Write some frames (start on frame 500 and go to frame 510)
-	w.WriteFrame(&r, 500, 510);
+	w.WriteFrame(&r, 500, 504);
 
 	// Close writer & reader
 	w.Close();
 	r.Close();
 
 	// Open up the 5th frame from the newly created GIF
-	ImageReader r1("output1.gif[5]");
+	ImageReader r1("output1.gif[4]");
 	r1.Open();
 
 	// Verify various settings
@@ -65,11 +65,12 @@ TEST(ImageWriter_Test_Webm)
 	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
 
 	// Get the image data for row 500
-	const Magick::PixelPacket* pixels = f->GetPixels(500);
+	const unsigned char* pixels = f->GetPixels(500);
+	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
-	// Check pixel values on scanline 500, pixel 600
-	CHECK_EQUAL(4883, pixels[600].red);
-	CHECK_EQUAL(2570, pixels[600].blue);
-	CHECK_EQUAL(3341, pixels[600].green);
-	CHECK_EQUAL(0, pixels[600].opacity);
+	// Check image properties
+	CHECK_EQUAL(20, (int)pixels[pixel_index]);
+	CHECK_EQUAL(18, (int)pixels[pixel_index + 1]);
+	CHECK_EQUAL(11, (int)pixels[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 }

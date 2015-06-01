@@ -175,6 +175,9 @@ namespace openshot
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
 
+		/// Get the cache object used by this reader
+		Cache* GetCache() { return &final_cache; };
+
 		/// @brief This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.

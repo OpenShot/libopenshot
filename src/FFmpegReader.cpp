@@ -44,9 +44,8 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	avcodec_register_all();
 
 	// Init cache
-	int64 bytes = 720 * 1280 * 4 + (44100 * 2 * 4);
-	working_cache = Cache(0);
-	final_cache = Cache(20 * bytes);  // 20 frames X 720 video, 4 colors of chars, 2 audio channels of 4 byte floats
+	working_cache.SetMaxBytes(0);
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -204,6 +203,9 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 		// Init previous audio location to zero
 		previous_packet_location.frame = -1;
 		previous_packet_location.sample_start = 0;
+
+		// Adjust cache size based on size of frame and audio
+		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 
 		// Mark as "open"
 		is_open = true;
@@ -418,6 +420,18 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 	}
 	else
 	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		// Check the cache a 2nd time (due to a potential previous lock)
+		if (final_cache.Exists(requested_frame)) {
+			// Debug output
+			AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+			// Return the cached frame
+			return final_cache.GetFrame(requested_frame);
+		}
+
 		// Frame is not in cache
 		// Reset seek count
 		seek_count = 0;
@@ -483,7 +497,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 			// Loop through the stream until the correct frame is found
 			while (true)
 			{
-				#pragma omp critical (packet_cache)
+				// Get the next packet into a local variable called packet
 				packet_error = GetNextPacket();
 
 				// Wait if too many frames are being processed
@@ -506,7 +520,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 				{
 					// Check the status of a seek (if any)
 					if (is_seeking)
-						#pragma omp critical (openshot_cache)
+						#pragma omp critical (openshot_seek)
 						check_seek = CheckSeek(true);
 					else
 						check_seek = false;
@@ -519,7 +533,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 						continue;
 					}
 
-					#pragma omp critical (packet_cache)
+					// Get the AVFrame from the current packet
 					frame_finished = GetAVFrame();
 
 					// Check if the AVFrame is finished and set it
@@ -538,7 +552,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 				{
 					// Check the status of a seek (if any)
 					if (is_seeking)
-						#pragma omp critical (openshot_cache)
+						#pragma omp critical (openshot_seek)
 						check_seek = CheckSeek(false);
 					else
 						check_seek = false;
@@ -563,17 +577,14 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 
 				// Check if working frames are 'finished'
 				bool is_cache_found = false;
-				#pragma omp critical (openshot_cache)
-				{
-					if (!is_seeking)
-						CheckWorkingFrames(false);
+				if (!is_seeking)
+					CheckWorkingFrames(false);
 
-					// Check if requested 'final' frame is available
-					is_cache_found = final_cache.Exists(requested_frame);
+				// Check if requested 'final' frame is available
+				is_cache_found = final_cache.Exists(requested_frame);
 
-					// Increment frames processed
-					packets_processed++;
-				}
+				// Increment frames processed
+				packets_processed++;
 
 				// Break once the frame is found
 				if (is_cache_found && packets_processed >= minimum_packets)
@@ -621,18 +632,23 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 // Get the next packet (if any)
 int FFmpegReader::GetNextPacket()
 {
+	int found_packet = 0;
 	AVPacket *next_packet = new AVPacket();
-	int found_packet = av_read_frame(pFormatCtx, next_packet);
+	found_packet = av_read_frame(pFormatCtx, next_packet);
 
 	if (found_packet >= 0)
 	{
-		// Add packet to packet cache
-		packets[next_packet] = next_packet;
+		#pragma omp critical (packet_cache)
+		{
+			// Add packet to packet cache
+			packets[next_packet] = next_packet;
 
-		// Update current packet pointer
-		packet = packets[next_packet];
+			// Update current packet pointer
+			packet = packets[next_packet];
+		} // end omp critical
 
-	}else
+	}
+	else
 	{
 		// Free packet, since it's unused
 		av_free_packet(next_packet);
@@ -646,10 +662,11 @@ int FFmpegReader::GetNextPacket()
 // Get an AVFrame (if any)
 bool FFmpegReader::GetAVFrame()
 {
-	// Decode video frame
-	int frameFinished = 0;
+	int frameFinished = -1;
 
+	// Decode video frame
 	AVFrame *next_frame = avcodec_alloc_frame();
+	#pragma omp critical (packet_cache)
 	avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
 
 	// is frame finished
@@ -661,9 +678,12 @@ bool FFmpegReader::GetAVFrame()
 		avpicture_alloc(copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
 		av_picture_copy(copyFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width, info.height);
 
-		// add to AVFrame cache (if frame finished)
-		frames[copyFrame] = copyFrame;
-		pFrame = frames[copyFrame];
+		#pragma omp critical (packet_cache)
+		{
+			// add to AVFrame cache (if frame finished)
+			frames[copyFrame] = copyFrame;
+			pFrame = frames[copyFrame];
+		}
 
 		// Detect interlaced frame (only once)
 		if (!check_interlace)
@@ -672,6 +692,7 @@ bool FFmpegReader::GetAVFrame()
 			info.interlaced_frame = next_frame->interlaced_frame;
 			info.top_field_first = next_frame->top_field_first;
 		}
+
 	}
 	else
 	{
@@ -736,12 +757,9 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	// Are we close enough to decode the frame?
 	if ((current_frame) < (requested_frame - 20))
 	{
-		#pragma omp critical (packet_cache)
-		{
-			// Remove frame and packet
-			RemoveAVFrame(pFrame);
-			RemoveAVPacket(packet);
-		}
+		// Remove frame and packet
+		RemoveAVFrame(pFrame);
+		RemoveAVPacket(packet);
 
 		// Debug output
 		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Skipped)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
@@ -758,7 +776,6 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
-	Cache *my_cache = &working_cache;
 	AVPacket *my_packet = packets[packet];
 	AVPicture *my_frame = frames[pFrame];
 
@@ -776,7 +793,7 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 	if (!seek_video_frame_found && is_seeking)
 		seek_video_frame_found = current_frame;
 
-	#pragma omp task firstprivate(current_frame, my_cache, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
+	#pragma omp task firstprivate(current_frame, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -801,41 +818,34 @@ void FFmpegReader::ProcessVideoPacket(int requested_frame)
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
 				height, pFrameRGB->data, pFrameRGB->linesize);
 
-		tr1::shared_ptr<Frame> f;
-		#pragma omp critical (openshot_cache)
-			// Create or get frame object
-			f = CreateFrame(current_frame);
+		// Create or get the existing frame object
+		tr1::shared_ptr<Frame> f = CreateFrame(current_frame);
 
 		// Add Image data to frame
-		f->AddImage(width, height, "RGBA", Magick::CharPixel, buffer);
+		f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
 
-		#pragma omp critical (openshot_cache)
-			// Update working cache
-			my_cache->Add(f->number, f);
+		// Update working cache
+		working_cache.Add(f->number, f);
 
 		// Free the RGB image
 		av_free(buffer);
 		avcodec_free_frame(&pFrameRGB);
 
-		#pragma omp critical (packet_cache)
-		{
-			// Remove frame and packet
-			RemoveAVFrame(my_frame);
-			RemoveAVPacket(my_packet);
-		}
+		// Remove frame and packet
+		RemoveAVFrame(my_frame);
+		RemoveAVPacket(my_packet);
 
 		// Remove video frame from list of processing video frames
-		#pragma omp critical (processing_list)
 		{
-		processing_video_frames.erase(current_frame);
-		processed_video_frames[current_frame] = current_frame;
+			const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+			processing_video_frames.erase(current_frame);
+			processed_video_frames[current_frame] = current_frame;
 		}
 
 		// Debug output
 		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number, "", -1, "", -1, "", -1);
 
 	} // end omp task
-
 
 }
 
@@ -845,7 +855,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	// Are we close enough to decode the frame's audio?
 	if (target_frame < (requested_frame - 20))
 	{
-		#pragma omp critical (packet_cache)
 		// Remove packet
 		RemoveAVPacket(packet);
 
@@ -857,7 +866,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	}
 
 	// Init some local variables (for OpenMP)
-	Cache *my_cache = &working_cache;
 	AVPacket *my_packet = packets[packet];
 
 	// Track 1st audio packet after a successful seek
@@ -951,7 +959,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 	// Process the audio samples in a separate thread (this includes resampling to 16 bit integer, and storing
 	// in a openshot::Frame object).
-	#pragma omp task firstprivate(requested_frame, target_frame, my_cache, starting_sample, my_packet, audio_frame)
+	#pragma omp task firstprivate(requested_frame, target_frame, starting_sample, my_packet, audio_frame)
 	{
 		// Allocate audio buffer
 		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
@@ -965,6 +973,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 		AVAudioResampleContext *avr = NULL;
+		int nb_samples = 0;
 		#pragma ordered
 		{
 		// setup resample context
@@ -978,7 +987,6 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 		av_opt_set_int(avr,  "in_channels",       info.channels,    0);
 		av_opt_set_int(avr, "out_channels",       info.channels,    0);
 		int r = avresample_open(avr);
-		int nb_samples = 0;
 
 		// Convert audio samples
 		nb_samples = avresample_convert(avr, 	// audio resample context
@@ -1056,10 +1064,8 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 				if (samples > remaining_samples)
 					samples = remaining_samples;
 
-				tr1::shared_ptr<Frame> f;
-				#pragma omp critical (openshot_cache)
-					// Create or get frame object
-					f = CreateFrame(starting_frame_number);
+				// Create or get the existing frame object
+				tr1::shared_ptr<Frame> f = CreateFrame(starting_frame_number);
 
 				// Determine if this frame was "partially" filled in
 				if (samples_per_frame == start + samples)
@@ -1069,15 +1075,13 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 
 				// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
 				// some louder samples from maxing out at 1.0 (not sure why this happens)
-				#pragma omp critical (openshot_adding_audio)
 				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
 
 				// Debug output
 				AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
 
 				// Add or update cache
-				#pragma omp critical (openshot_cache)
-				my_cache->Add(f->number, f);
+				working_cache.Add(f->number, f);
 
 				// Decrement remaining samples
 				remaining_samples -= samples;
@@ -1120,7 +1124,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 			}
 		}
 
-		#pragma omp critical (packet_cache)
+		// Remove this packet
 		RemoveAVPacket(my_packet);
 
 		// Debug output
@@ -1152,10 +1156,13 @@ void FFmpegReader::Seek(int requested_frame) throw(TooManySeeks)
 	working_cache.Clear();
 
 	// Clear processed lists
-	processing_audio_frames.clear();
-	processing_video_frames.clear();
-	processed_video_frames.clear();
-	processed_audio_frames.clear();
+	{
+		const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+		processing_audio_frames.clear();
+		processing_video_frames.clear();
+		processed_video_frames.clear();
+		processed_audio_frames.clear();
+	}
 
 	// Reset the last frame variable
 	last_frame = 0;
@@ -1388,31 +1395,28 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int pts)
 // Create a new Frame (or return an existing one) and add it to the working queue.
 tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 {
+	tr1::shared_ptr<Frame> output;
 	// Check working cache
 	if (working_cache.Exists(requested_frame))
-	{
 		// Return existing frame
-		tr1::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
-
-		return output;
-	}
+		output = working_cache.GetFrame(requested_frame);
 	else
 	{
 		// Create a new frame on the working cache
-		tr1::shared_ptr<Frame> f(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
-		f->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
-		f->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
-		f->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader
+		output = tr1::shared_ptr<Frame>(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+		output->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
+		output->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
+		output->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader
 
-		working_cache.Add(requested_frame, f);
+		working_cache.Add(requested_frame, output);
 
 		// Set the largest processed frame (if this is larger)
 		if (requested_frame > largest_frame_processed)
 			largest_frame_processed = requested_frame;
-
-		// Return new frame
-		return f;
 	}
+
+	// Return new frame
+	return output;
 }
 
 // Determine if frame is partial due to seek
@@ -1433,7 +1437,6 @@ bool FFmpegReader::IsPartialFrame(int requested_frame) {
 // Check the working queue, and move finished frames to the finished queue
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 {
-
 	// Loop through all working queue frames
 	while (true)
 	{
@@ -1444,8 +1447,14 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		// Get the front frame of working cache
 		tr1::shared_ptr<Frame> f(working_cache.GetSmallestFrame());
 
-		bool is_video_ready = processed_video_frames.count(f->number);
-		bool is_audio_ready = processed_audio_frames.count(f->number);
+		bool is_video_ready = false;
+		bool is_audio_ready = false;
+		{ // limit scope of next few lines
+			const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+			is_video_ready = processed_video_frames.count(f->number);
+			is_audio_ready = processed_audio_frames.count(f->number);
+		}
+
 		if (previous_packet_location.frame == f->number && !end_of_stream)
 			is_audio_ready = false; // don't finalize the last processed audio frame
 		bool is_seek_trash = IsPartialFrame(f->number);
@@ -1455,7 +1464,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream)
 		if (!info.has_audio) is_audio_ready = true;
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "processed_video_frames.count(f->number)", processed_video_frames.count(f->number), "processed_audio_frames.count(f->number)", processed_audio_frames.count(f->number), "", -1);
+		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "", -1, "", -1, "", -1);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash || working_cache.Count() >= 200)
@@ -1611,35 +1620,43 @@ void FFmpegReader::CheckFPS()
 // Remove AVFrame from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
 {
-	// Remove pFrame (if exists)
-	if (frames.count(remove_frame))
+	#pragma omp critical (packet_cache)
 	{
-		// Free memory
-		avpicture_free(frames[remove_frame]);
+		// Remove pFrame (if exists)
+		if (frames.count(remove_frame))
+		{
+			// Free memory
+			avpicture_free(frames[remove_frame]);
 
-		// Remove from cache
-		frames.erase(remove_frame);
+			// Remove from cache
+			frames.erase(remove_frame);
 
-		// Delete the object
-		delete remove_frame;
-	}
+			// Delete the object
+			delete remove_frame;
+		}
+
+	} // end omp critical
 }
 
 // Remove AVPacket from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 {
-	// Remove packet (if any)
-	if (packets.count(remove_packet))
+	#pragma omp critical (packet_cache)
 	{
-		// deallocate memory for packet
-		av_free_packet(remove_packet);
+		// Remove packet (if any)
+		if (packets.count(remove_packet))
+		{
+			// deallocate memory for packet
+			av_free_packet(remove_packet);
 
-		// Remove from cache
-		packets.erase(remove_packet);
+			// Remove from cache
+			packets.erase(remove_packet);
 
-		// Delete the object
-		delete remove_packet;
-	}
+			// Delete the object
+			delete remove_packet;
+		}
+
+	} // end omp critical
 }
 
 /// Get the smallest video frame that is still being processed

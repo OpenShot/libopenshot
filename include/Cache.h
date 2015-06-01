@@ -36,6 +36,14 @@
 
 namespace openshot {
 
+//	struct ReaderInfo
+//	{
+//		int height;			///< The height of the video (in pixels)
+//		int width;			///< The width of the video (in pixesl)
+//		int sample_rate;	///< The number of audio samples per second (44100 is a common sample rate)
+//		int channels;		///< The number of audio channels used in the audio stream
+//	};
+
 	/**
 	 * @brief This class is a cache manager for Frame objects.
 	 *
@@ -44,15 +52,19 @@ namespace openshot {
 	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
 	 * is required.  You can set the max number of bytes to cache.
 	 */
-	class Cache {
+	class Cache
+	{
 	private:
-		int64 total_bytes;			///< This is the current total bytes (that are in this cache)
 		int64 max_bytes;			///< This is the max number of bytes to cache (0 = no limit)
 		map<int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
 		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
+
+		/// Section lock for multiple threads
+	    CriticalSection *cacheCriticalSection;
+
 
 	public:
 		/// Default constructor, no max bytes
@@ -61,6 +73,9 @@ namespace openshot {
 		/// @brief Constructor that sets the max bytes to cache
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		Cache(int64 max_bytes);
+
+		// Default destructor
+		~Cache();
 
 		/// @brief Add a Frame to the cache
 		/// @param frame_number The frame number of the cached frame
@@ -85,7 +100,7 @@ namespace openshot {
 		tr1::shared_ptr<Frame> GetFrame(int frame_number);
 
 		/// Gets the maximum bytes value
-		int64 GetBytes() { return total_bytes; };
+		int64 GetBytes();
 
 		/// Gets the maximum bytes value
 		int64 GetMaxBytes() { return max_bytes; };
@@ -104,6 +119,10 @@ namespace openshot {
 		/// @brief Set maximum bytes to a different amount
 		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
+
+		/// @brief Set maximum bytes to a different amount based on a ReaderInfo struct
+		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
+		void SetMaxBytesFromInfo(int number_of_frames, int width, int height, int sample_rate, int channels);
 
 
 	};

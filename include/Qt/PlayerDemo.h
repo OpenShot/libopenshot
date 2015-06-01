@@ -33,6 +33,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QMenu>
 #include <QtGui/qevent.h>
+#include <QApplication>
 
 #include "VideoRenderWidget.h"
 

@@ -30,7 +30,8 @@
 using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
-Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels) : is_open(false)
+Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
+		is_open(false), auto_map_clips(true)
 {
 	// Init viewport size (curve based, because it can be animated)
 	viewport_scale = Keyframe(100.0);
@@ -42,26 +43,30 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	color.green = Keyframe(0.0);
 	color.blue = Keyframe(0.0);
 
-	// Init cache
-	int64 bytes = height * width * 4 + (44100 * 2 * 4);
-	final_cache = Cache(2 * bytes);  // 20 frames, 4 colors of chars, 2 audio channels of 4 byte floats
-
 	// Init FileInfo struct (clear all values)
 	info.width = width;
 	info.height = height;
 	info.fps = fps;
 	info.sample_rate = sample_rate;
 	info.channels = channels;
+	info.channel_layout = channel_layout;
 	info.video_timebase = fps.Reciprocal();
 	info.duration = 60 * 30; // 30 minute default duration
+	info.has_audio = true;
+	info.has_video = true;
+	info.video_length = info.fps.ToFloat() * info.duration;
+
+	// Init cache
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 3, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip) throw(ReaderClosed)
 {
-	// All clips must be converted to the frame rate of this timeline,
-	// so assign the same frame rate to each clip.
-	clip->Reader()->info.fps = info.fps;
+	// All clips should be converted to the frame rate of this timeline
+	if (auto_map_clips)
+		// Apply framemapper (or update existing framemapper)
+		apply_mapper_to_clip(clip);
 
 	// Add clip to list
 	clips.push_back(clip);
@@ -90,6 +95,48 @@ void Timeline::RemoveEffect(EffectBase* effect)
 void Timeline::RemoveClip(Clip* clip)
 {
 	clips.remove(clip);
+}
+
+// Apply a FrameMapper to a clip which matches the settings of this timeline
+void Timeline::apply_mapper_to_clip(Clip* clip)
+{
+	// Determine type of reader
+	ReaderBase* clip_reader = NULL;
+	if (typeid(clip->Reader()) == typeid(FrameMapper))
+	{
+		// Get the existing reader
+		clip_reader = (ReaderBase*) clip->Reader();
+
+	} else {
+
+		// Create a new FrameMapper to wrap the current reader
+		clip_reader = (ReaderBase*) new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+	}
+
+	// Update the mapping
+	FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
+	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+
+	// Update clip reader
+	clip->Reader(clip_reader);
+}
+
+// Apply the timeline's framerate and samplerate to all clips
+void Timeline::ApplyMapperToClips()
+{
+	// Clear all cached frames
+	final_cache.Clear();
+
+	// Loop through all clips
+	list<Clip*>::iterator clip_itr;
+	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	{
+		// Get clip object from the iterator
+		Clip *clip = (*clip_itr);
+
+		// Apply framemapper (or update existing framemapper)
+		apply_mapper_to_clip(clip);
+	}
 }
 
 // Calculate time of a frame number, based on a framerate
@@ -151,7 +198,9 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
 
-	#pragma omp critical (reader_lock)
+
+
+	//#pragma omp ordered
 	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 
 	// No frame found... so bail
@@ -167,7 +216,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
 	// Declare an image to hold the source frame's image
-	tr1::shared_ptr<Magick::Image> source_image;
+	tr1::shared_ptr<QImage> source_image;
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
@@ -190,9 +239,19 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				if (!isEqual(previous_volume, volume))
 					source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
 
+				// TODO: Improve FrameMapper (or Timeline) to always get the correct number of samples per frame.
+				// Currently, the ResampleContext sometimes leaves behind a few samples for the next call, and the
+				// number of samples returned is variable... and does not match the number expected.
+				// This is a crude solution at best. =)
+				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount())
+					// Force timeline frame to match the source frame
+					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
+				#pragma omp critical (openshot_adding_audio)
 				new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+
 			}
 		else
 			// Debug output
@@ -218,62 +277,74 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
 		int green = source_clip->wave_color.green.GetInt(clip_frame_number);
 		int blue = source_clip->wave_color.blue.GetInt(clip_frame_number);
+		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue);
+		source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue, alpha);
 	}
 
 	// Get some basic image properties
-	int source_width = source_image->columns();
-	int source_height = source_image->rows();
+	int source_width = source_image->width();
+	int source_height = source_image->height();
 
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
 	{
-		float alpha = 1.0 - source_clip->alpha.GetValue(clip_frame_number);
-		source_image->quantumOperator(Magick::OpacityChannel, Magick::MultiplyEvaluateOperator, alpha);
+		float alpha = source_clip->alpha.GetValue(clip_frame_number);
+
+		// Get source image's pixels
+		unsigned char *pixels = (unsigned char *) source_image->bits();
+
+		// Loop through pixels
+		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
+		{
+			// Get the alpha values from the pixel
+			int A = pixels[byte_index + 3];
+
+			// Apply alpha to pixel
+			pixels[byte_index + 3] *= (1.0 - alpha);
+		}
 
 		// Debug output
 		AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
-	Magick::Geometry new_size(info.width, info.height);
 	switch (source_clip->scale)
 	{
 	case (SCALE_FIT):
-		new_size.aspect(false); // respect aspect ratio
-		source_image->resize(new_size);
-		source_width = source_image->size().width();
-		source_height = source_image->size().height();
+		// keep aspect ratio
+		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(info.width, info.height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+		source_width = source_image->width();
+		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_STRETCH):
-		new_size.aspect(true); // ignore aspect ratio
-		source_image->resize(new_size);
-		source_width = source_image->size().width();
-		source_height = source_image->size().height();
+		// ignore aspect ratio
+		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(info.width, info.height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		source_width = source_image->width();
+		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_CROP):
 		Magick::Geometry width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
 		Magick::Geometry height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
-		new_size.aspect(false); // respect aspect ratio
+		// respect aspect ratio
 		if (width_size.width() >= info.width && width_size.height() >= info.height)
-			source_image->resize(width_size); // width is larger, so resize to it
+			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		else
-			source_image->resize(height_size); // height is larger, so resize to it
-		source_width = source_image->size().width();
-		source_height = source_image->size().height();
+			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(height_size.width(), height_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation))); // height is larger, so resize to it
+		source_width = source_image->width();
+		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "new_size.aspect()", new_size.aspect(), "", -1, "", -1);
+		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 	}
 
@@ -324,76 +395,80 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
-	x += info.width * source_clip->location_x.GetValue(clip_frame_number); // move in percentage of final width
-	y += info.height * source_clip->location_y.GetValue(clip_frame_number); // move in percentage of final height
+	x += (info.width * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
+	y += (info.height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	bool is_x_animated = source_clip->location_x.Points.size() > 1;
 	bool is_y_animated = source_clip->location_y.Points.size() > 1;
 
 	int offset_x = -1;
 	int offset_y = -1;
 	bool transformed = false;
+	QTransform transform;
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
 		// SIMPLE OFFSET
 		AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
-		offset_x = round(x);
-		offset_y = round(y);
 		transformed = true;
+
+		// Set QTransform
+		transform.translate(x, y);
 
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
 		// COMPLEX DISTORTION
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
-		/* RESIZE SOURCE CANVAS - to the same size as timeline canvas */
-		if (source_width != info.width || source_height != info.height)
-		{
-			// Debug output
-			AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Resize Source Canvas)", "source_frame->number", source_frame->number, "source_frame->GetWidth()", source_frame->GetWidth(), "info.width", info.width, "source_frame->GetHeight()", source_frame->GetHeight(), "info.height", info.height, "", -1);
+		// Use the QTransform object, which can be very CPU intensive
+		transformed = true;
 
-			source_image->borderColor(Magick::Color("none"));
-			source_image->border(Magick::Geometry(1, 1, 0, 0, false, false)); // prevent stretching of edge pixels (during the canvas resize)
-			source_image->size(Magick::Geometry(info.width, info.height, 0, 0, false, false)); // resize the canvas (to prevent clipping)
+		// Set QTransform
+		if (!isEqual(r, 0)) {
+			// ROTATE CLIP
+			float origin_x = x + (source_width / 2.0);
+			float origin_y = y + (source_height / 2.0);
+			transform.translate(origin_x, origin_y);
+			transform.rotate(r);
+			transform.translate(-origin_x,-origin_y);
 		}
 
-		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Prepare for ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+		// Set QTransform
+		if (!isEqual(x, 0) || !isEqual(y, 0)) {
+			// TRANSLATE/MOVE CLIP
+			transform.translate(x, y);
+		}
 
-		// Use the distort operator, which is very CPU intensive
-		// origin X,Y     Scale     Angle  NewX,NewY
-		double distort_args[7] = {(source_width/2.0),(source_height/2.0),  sx,sy,  r,  x+(scaled_source_width/2.0),y+(scaled_source_height/2.0) };
-		source_image->distort(Magick::ScaleRotateTranslateDistortion, 7, distort_args, false);
-		transformed = true;
+		if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
+			// TRANSLATE/MOVE CLIP
+			transform.scale(sx, sy);
+		}
 
 		// Debug output
 		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 	}
 
-
-	/* Is this the 1st layer? If so, add a background color below the image */
-	if (new_frame->GetImage()->columns() == 1)
-	{
-		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Transform: 1st Layer, Generate Solid Color Image", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
-
-		/* CREATE BACKGROUND COLOR - needed if this is the 1st layer */
-		int red = color.red.GetInt(timeline_frame_number);
-		int green = color.green.GetInt(timeline_frame_number);
-		int blue = color.blue.GetInt(timeline_frame_number);
-		new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue, 0));
-	}
-
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	tr1::shared_ptr<Magick::Image> new_image = new_frame->GetImage();
-	new_image->composite(*source_image.get(), offset_x, offset_y, Magick::OverCompositeOp);
+	tr1::shared_ptr<QImage> new_image = new_frame->GetImage();
+
+	// Load timeline's new frame image into a QPainter
+	QPainter painter(new_image.get());
+
+	// Apply transform (translate, rotate, scale)... if any
+	if (transformed)
+		painter.setTransform(transform);
+
+	// Composite a new layer onto the image
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.drawImage(0, 0, *source_image);
+    painter.end();
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->columns()", new_frame->GetImage()->columns(), "transformed", transformed, "", -1);
+	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
 }
 
 // Update the list of 'opened' clips
@@ -478,6 +553,10 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");
+
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
@@ -492,8 +571,20 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 	}
 	else
 	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		// Check cache again (due to locking)
+		if (final_cache.Exists(requested_frame)) {
+			// Debug output
+			AppendDebugMethod("Timeline::GetFrame (Cached frame found on 2nd look)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+			// Return cached frame
+			return final_cache.GetFrame(requested_frame);
+		}
+
 		// Minimum number of frames to process (for performance reasons)
-		int minimum_frames = 1;
+		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
@@ -502,24 +593,36 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		// TODO: OpenMP is disabled in this function, due to conditional calls the ImageMagick methods, which also
 		// contain OpenMP parallel regions. This is a violation of OpenMP, and causes the threads to hang in some cases.
 		// Set the number of threads in OpenMP
-		//omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 		// Allow nested OpenMP sections
-		//omp_set_nested(true);
+		omp_set_nested(true);
 
 		// Debug output
 		AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1);
 
-		//#pragma omp parallel
-		//{
+		#pragma omp parallel
+		{
 			// Loop through all requested frames
-			//#pragma omp for firstprivate(nearby_clips, requested_frame, minimum_frames)
+			#pragma omp for firstprivate(nearby_clips, requested_frame, minimum_frames)
 			for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
 				AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
 
+				// Init some basic properties about this frame
+				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
+
 				// Create blank frame (which will become the requested frame)
-				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", 0, info.channels)));
+				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", samples_in_frame, info.channels)));
+				new_frame->SampleRate(info.sample_rate);
+				new_frame->ChannelsLayout(info.channel_layout);
+
+				// Debug output
+				AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+
+				// Add Background Color to 1st layer
+				new_frame->AddColor(info.width, info.height, color.GetColorHex(frame_number));
+
 
 				// Calculate time of frame
 				float requested_time = calculate_time(frame_number, info.fps);
@@ -571,28 +674,14 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 
 				} // end clip loop
 
-				// Check for empty frame image (and fill with color)
-				if (new_frame->GetImage()->columns() == 1)
-				{
-					// Debug output
-					AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
-
-					int red = color.red.GetInt(frame_number);
-					int green = color.green.GetInt(frame_number);
-					int blue = color.blue.GetInt(frame_number);
-					#pragma omp critical (openshot_add_color)
-					new_frame->AddColor(info.width, info.height, Magick::Color((Magick::Quantum)red, (Magick::Quantum)green, (Magick::Quantum)blue));
-				}
-
 				// Debug output
 				AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Add final frame to cache
-				#pragma omp critical (timeline_cache)
 				final_cache.Add(frame_number, new_frame);
 
 			} // end frame loop
-		//} // end parallel
+		} // end parallel
 
 		// Debug output
 		AppendDebugMethod("Timeline::GetFrame (end parallel region)", "requested_frame", requested_frame, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
@@ -826,6 +915,9 @@ void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
 	}
+
+	// Adjust cache (in case something changed)
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Apply JSON diff to clips

@@ -35,16 +35,16 @@ namespace openshot
 	: renderer(rb), Thread("player"), video_position(1), audio_position(0)
 	, audioPlayback(new AudioPlaybackThread())
 	, videoPlayback(new VideoPlaybackThread(rb))
+    , videoCache(new VideoCacheThread())
     , speed(1), reader(NULL), last_video_position(1)
     { }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
     {
-	if (isThreadRunning()) stopThread(500);
-	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(500);
-	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(500);
+	stopPlayback(1000);
 	delete audioPlayback;
+	delete videoCache;
 	delete videoPlayback;
     }
 
@@ -55,15 +55,13 @@ namespace openshot
 	if (!reader)
 		return;
 
-    // Kill audio and video threads (if they are currently running)
-	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
-	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
-
 	// Start the threads
 	if (reader->info.has_audio)
 		audioPlayback->startThread(1);
-	if (reader->info.has_video)
-		videoPlayback->startThread(2);
+	if (reader->info.has_video) {
+		videoCache->startThread(2);
+		videoPlayback->startThread(3);
+	}
 
 	while (!threadShouldExit()) {
 
@@ -74,7 +72,7 @@ namespace openshot
 	    const Time t1 = Time::getCurrentTime();
 
 	    // Get the current video frame (if it's different)
-	    frame = getFrame();
+    	frame = getFrame();
 
 	    // Experimental Pausing Code (if frame has not changed)
 	    if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length)) {
@@ -121,24 +119,19 @@ namespace openshot
 	    	// the video to catch up.
 	    	sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
 
+
 	    else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
 	    	// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
 	    	video_position++;
 	    	sleep_time = 0;
 	    }
 
-
 	    // Sleep (leaving the video frame on the screen for the correct amount of time)
 	    if (sleep_time > 0) sleep(sleep_time);
 
 	    // Debug output
 	    std::cout << "video frame diff: " << video_frame_diff << std::endl;
-
 	}
-
-	// Kill audio and video threads (if they are still running)
-	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
-	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
     }
 
     // Get the next displayed frame (based on speed and direction)
@@ -149,13 +142,18 @@ namespace openshot
 		if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length)
 			video_position = video_position + speed;
 
-		if (frame && frame->number == video_position) {
+		if (frame && frame->number == video_position && video_position == last_video_position) {
 			// return cached frame
 			return frame;
 		}
 		else
+		{
+			// Update cache on which frame was retrieved
+			videoCache->current_display_frame = video_position;
+
 			// return frame from reader
-		    return reader->GetFrameSafe(video_position);
+			return reader->GetFrame(video_position);
+		}
 
 	} catch (const ReaderClosed & e) {
 	    // ...
@@ -170,17 +168,21 @@ namespace openshot
     // Start video/audio playback
     bool PlayerPrivate::startPlayback()
     {
-	if (video_position < 0) return false;
-	stopPlayback(-1);
-	startThread(1);
-	return true;
+		if (video_position < 0) return false;
+
+		stopPlayback(-1);
+		startThread(1);
+		return true;
     }
 
     // Stop video/audio playback
     void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
     {
-    	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(-1);
-    	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(-1);
+    	if (isThreadRunning()) stopThread(timeOutMilliseconds);
+    	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(timeOutMilliseconds);
+    	if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(timeOutMilliseconds);
+    	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
+
     }
 
 

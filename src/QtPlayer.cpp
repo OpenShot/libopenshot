@@ -26,7 +26,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "../include/Clip.h"
 #include "../include/FFmpegReader.h"
+#include "../include/Timeline.h"
 #include "../include/QtPlayer.h"
 #include "../include/Qt/PlayerPrivate.h"
 #include "../include/Qt/VideoRenderer.h"
@@ -54,8 +56,27 @@ QtPlayer::~QtPlayer()
 void QtPlayer::SetSource(const std::string &source)
 {
     reader = new FFmpegReader(source);
-    //reader->debug = true;
+    reader->debug = false;
     reader->Open();
+
+    // experimental timeline code
+	//Clip *c = new Clip(source);
+	//c->scale = SCALE_NONE;
+	//c->rotation.AddPoint(1, 0.0);
+	//c->rotation.AddPoint(1000, 360.0);
+	//c->Waveform(true);
+
+    //Timeline *t = new Timeline(c->Reader()->info.width, c->Reader()->info.height, c->Reader()->info.fps, c->Reader()->info.sample_rate, c->Reader()->info.channels);
+	//Timeline *t = new Timeline(1280, 720, openshot::Fraction(24,1), 44100, 2, LAYOUT_STEREO);
+    //t->debug = true; openshot::Fraction(30,1)
+    //t->info = c->Reader()->info;
+    //t->info.fps = openshot::Fraction(12,1);
+    //t->GetCache()->SetMaxBytesFromInfo(40, c->Reader()->info.width, c->Reader()->info.height, c->Reader()->info.sample_rate, c->Reader()->info.channels);
+
+    //t->AddClip(c);
+    //t->Open();
+
+    // Set the reader
 	Reader(reader);
 }
 
@@ -100,10 +121,16 @@ void QtPlayer::Seek(int new_frame)
 {
 	// Check for seek
 	if (new_frame > 0) {
+		// Notify cache thread that seek has occurred
+		p->videoCache->Seek(new_frame);
+
 		// Update current position
 		p->video_position = new_frame;
 
-		// Notify audio thread that seek has occured
+		// Clear last position (to force refresh)
+		p->last_video_position = 1;
+
+		// Notify audio thread that seek has occurred
 		p->audioPlayback->Seek(new_frame);
 	}
 }
@@ -112,6 +139,7 @@ void QtPlayer::Stop()
 {
     mode = PLAYBACK_STOPPED;
 	p->stopPlayback();
+	p->videoCache->Stop();
 	p->video_position = 0;
 	threads_started = false;
 }
@@ -122,6 +150,7 @@ void QtPlayer::Reader(ReaderBase *new_reader)
 	cout << "Reader SET: " << new_reader << endl;
 	reader = new_reader;
 	p->reader = new_reader;
+	p->videoCache->Reader(new_reader);
 	p->audioPlayback->Reader(new_reader);
 }
 
@@ -150,6 +179,7 @@ float QtPlayer::Speed() {
 void QtPlayer::Speed(float new_speed) {
 	speed = new_speed;
 	p->speed = new_speed;
+	p->videoCache->setSpeed(new_speed);
 	if (p->reader->info.has_audio)
 		p->audioPlayback->setSpeed(new_speed);
 }
