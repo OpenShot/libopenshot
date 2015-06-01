@@ -317,6 +317,7 @@ void FFmpegReader::UpdateVideoInfo()
 		info.fps.num = pStream->avg_frame_rate.num;
 		info.fps.den = pStream->avg_frame_rate.den;
 	}
+
 	if (pStream->sample_aspect_ratio.num != 0)
 	{
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
@@ -379,8 +380,10 @@ void FFmpegReader::UpdateVideoInfo()
 		info.video_length = round(info.duration * info.fps.ToDouble());
 	}
 
+	cout << info.fps.ToFloat() << endl;
+
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 120.0f)
+	if (info.fps.ToFloat() > 120.0f || (info.fps.num == 0 || info.fps.den == 0))
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
 		info.fps.num = 24;
