@@ -1083,7 +1083,21 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 		else if (root_key == "viewport_y")
 			// Set viewport y offset
 			viewport_y.SetJsonValue(change["value"]);
+		else if (root_key == "width")
+			// Set width
+			info.width = change["value"].asInt();
+		else if (root_key == "height")
+			// Set height
+			info.height = change["value"].asInt();
+		else if (root_key == "fps" && change["key"][(uint)1].asString() == "num")
+			// Set fps.num
+			info.fps.num = change["value"].asInt();
+		else if (root_key == "fps" && change["key"][(uint)1].asString() == "den")
+			// Set fps.den
+			info.fps.den = change["value"].asInt();
+
 		else
+
 			// Error parsing JSON (or missing keys)
 			throw InvalidJSONKey("JSON change key is invalid", change.toStyledString());
 
