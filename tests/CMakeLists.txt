@@ -159,7 +159,7 @@ IF (NOT DISABLE_TESTS)
 		   KeyFrame_Tests.cpp
 		   Point_Tests.cpp
 		   Timeline_Tests.cpp )
-ENDIF (ENABLE_TESTS)
+ENDIF (NOT DISABLE_TESTS)
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
