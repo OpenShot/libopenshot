@@ -890,11 +890,7 @@ void FFmpegReader::ProcessAudioPacket(int requested_frame, int target_frame, int
 	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
 	int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, my_packet);
 
-	if (used <= 0) {
-		// Throw exception
-		throw ErrorDecodingAudio("Error decoding audio samples", target_frame);
-
-	} else if (frame_finished) {
+	if (frame_finished) {
 
 		// determine how many samples were decoded
 		int planar = av_sample_fmt_is_planar(aCodecCtx->sample_fmt);
