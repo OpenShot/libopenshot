@@ -121,7 +121,11 @@ namespace openshot {
 		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; CleanUp(); };
 
 		/// @brief Set maximum bytes to a different amount based on a ReaderInfo struct
-		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
+		/// @param number_of_frames The maximum number of frames to hold in cache
+		/// @param width The width of the frame's image
+		/// @param height The height of the frame's image
+		/// @param sample_rate The sample rate of the frame's audio data
+		/// @param channels The number of audio channels in the frame
 		void SetMaxBytesFromInfo(int number_of_frames, int width, int height, int sample_rate, int channels);
 
 

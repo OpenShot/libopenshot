@@ -194,6 +194,7 @@ namespace openshot {
 		/// @param fps The frames rate of the timeline
 		/// @param sample_rate The sample rate of the timeline's audio
 		/// @param channels The number of audio channels of the timeline
+		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
 		/// @brief Add an openshot::Clip to the timeline

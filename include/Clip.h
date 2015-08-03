@@ -154,7 +154,7 @@ namespace openshot {
 		Clip(string path);
 
 		/// @brief Constructor with reader
-		/// @param reader The reader to be used by this clip
+		/// @param new_reader The reader to be used by this clip
 		Clip(ReaderBase* new_reader);
 
 		/// Destructor
