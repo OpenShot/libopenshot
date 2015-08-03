@@ -27,14 +27,8 @@
 
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <queue>
 #include <tr1/memory>
 #include "../../include/OpenShot.h"
-#include "../../include/Json.h"
-#include <omp.h>
-#include <stdlib.h>
-#include <time.h>
 
 
 using namespace openshot;
@@ -44,66 +38,66 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
-	FFmpegReader r110("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
-	r110.Open();
+//	FFmpegReader r110("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
+//	r110.Open();
+//
+//	FrameMapper m110(&r110, Fraction(24,1), PULLDOWN_NONE, 22050, 2, LAYOUT_STEREO);
+//	m110.Open();
+//
+//	Clip c110(&m110);
+//	c110.Open();
+//
+//	Timeline t10(1280, 720, Fraction(24,1), 22050, 2, LAYOUT_STEREO);
+//	t10.debug = false;
+//	//Clip c20("/home/jonathan/Pictures/DSC00660.JPG");
+//	//c20.End(1000.0);
+//	//c20.Layer(-1);
+//	//c20.scale = SCALE_STRETCH;
+//	//c20.rotation.AddPoint(1, 0.0);
+//	//c20.rotation.AddPoint(1000, 360.0);
+//	Clip c10("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
+//	c10.volume.AddPoint(1, 0.0);
+//	c10.volume.AddPoint(100, 1.0);
+////	c10.time.AddPoint(1, 1);
+////	c10.time.AddPoint(300, 900);
+////	c10.time.AddPoint(600, 300);
+////	c10.time.PrintValues();
+//
+//	//Color background((unsigned char)0, (unsigned char)255, (unsigned char)0, (unsigned char)0);
+//	//background.red.AddPoint(1000, 255);
+//	//background.green.AddPoint(1000, 0);
+//	//t10.color = background;
+//
+//	Color black;
+//	black.red = Keyframe(0);
+//	black.green = Keyframe(0);
+//	black.blue = Keyframe(0);
+//
+//	Keyframe brightness;
+//	brightness.AddPoint(300, -1.0, BEZIER);
+//	brightness.AddPoint(370, 0.5, BEZIER);
+//	brightness.AddPoint(425, -0.5, BEZIER);
+//	brightness.AddPoint(600, 1.0, BEZIER);
+//
+//	//Negate e;
+//	//Deinterlace e(false);
+//	//ChromaKey e(black, Keyframe(30));
+//	//QtImageReader mask_reader("/home/jonathan/apps/openshot-qt/src/transitions/extra/big_cross_right_barr.png");
+//	//QtImageReader mask_reader1("/home/jonathan/apps/openshot-qt/src/transitions/extra/big_barr.png");
+//	//Mask e(&mask_reader, brightness, Keyframe(3.0));
+//	//c10.AddEffect(&e);
+//	//Mask e1(&mask_reader1, brightness, Keyframe(3.0));
+//	//c10.AddEffect(&e1);
+//
+//	// add clip to timeline
+//	t10.AddClip(&c10);
+//	//t10.AddClip(&c20);
+//	t10.Open();
 
-	FrameMapper m110(&r110, Fraction(24,1), PULLDOWN_NONE, 22050, 2, LAYOUT_STEREO);
-	m110.Open();
+	FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	r9.Open();
+	r9.DisplayInfo();
 
-	Clip c110(&m110);
-	c110.Open();
-
-	Timeline t10(1280, 720, Fraction(24,1), 22050, 2, LAYOUT_STEREO);
-	t10.debug = false;
-	//Clip c20("/home/jonathan/Pictures/DSC00660.JPG");
-	//c20.End(1000.0);
-	//c20.Layer(-1);
-	//c20.scale = SCALE_STRETCH;
-	//c20.rotation.AddPoint(1, 0.0);
-	//c20.rotation.AddPoint(1000, 360.0);
-	Clip c10("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
-	c10.volume.AddPoint(1, 0.0);
-	c10.volume.AddPoint(100, 1.0);
-//	c10.time.AddPoint(1, 1);
-//	c10.time.AddPoint(300, 900);
-//	c10.time.AddPoint(600, 300);
-//	c10.time.PrintValues();
-
-	//Color background((unsigned char)0, (unsigned char)255, (unsigned char)0, (unsigned char)0);
-	//background.red.AddPoint(1000, 255);
-	//background.green.AddPoint(1000, 0);
-	//t10.color = background;
-
-	Color black;
-	black.red = Keyframe(0);
-	black.green = Keyframe(0);
-	black.blue = Keyframe(0);
-
-	Keyframe brightness;
-	brightness.AddPoint(300, -1.0, BEZIER);
-	brightness.AddPoint(370, 0.5, BEZIER);
-	brightness.AddPoint(425, -0.5, BEZIER);
-	brightness.AddPoint(600, 1.0, BEZIER);
-
-	//Negate e;
-	//Deinterlace e(false);
-	//ChromaKey e(black, Keyframe(30));
-	//QtImageReader mask_reader("/home/jonathan/apps/openshot-qt/src/transitions/extra/big_cross_right_barr.png");
-	//QtImageReader mask_reader1("/home/jonathan/apps/openshot-qt/src/transitions/extra/big_barr.png");
-	//Mask e(&mask_reader, brightness, Keyframe(3.0));
-	//c10.AddEffect(&e);
-	//Mask e1(&mask_reader1, brightness, Keyframe(3.0));
-	//c10.AddEffect(&e1);
-
-	// add clip to timeline
-	t10.AddClip(&c10);
-	//t10.AddClip(&c20);
-	t10.Open();
-
-	// Reader
-//	FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-//	r9.Open();
-//	r9.debug = true;
 
 	// Mapper
 	//FrameMapper map(&r9, Fraction(24,1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
@@ -112,14 +106,16 @@ int main(int argc, char* argv[])
 	//map.Open();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w9("/home/jonathan/output-pops.mp3");
+	FFmpegWriter w9("/home/jonathan/output-pops.webm");
 	w9.debug = false;
 	//ImageWriter w9("/home/jonathan/output.gif");
 
 	// Set options
-	//w9.SetAudioOptions(true, "libvorbis", t10.info.sample_rate, t10.info.channels, t10.info.channel_layout, 120000);
-	w9.SetAudioOptions(true, "libmp3lame", 22050, t10.info.channels, t10.info.channel_layout, 120000);
-	//w9.SetVideoOptions(true, "libvpx", t10.info.fps, t10.info.width, t10.info.height, t10.info.pixel_ratio, false, false, 1500000);
+	//w9.SetVideoOptions(true, "libx264", r9.info.fps, 1024, 576, Fraction(1,1), false, false, 1000000);
+	//w9.SetAudioOptions(true, "mp2", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 64000);
+	w9.SetAudioOptions(true, "libvorbis", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
+	w9.SetVideoOptions(true, "libvpx", r9.info.fps, 1024, 576, Fraction(1,1), false, false, 3000000);
+	//w9.SetAudioOptions(true, "libmp3lame", 22050, t10.info.channels, t10.info.channel_layout, 120000);
 	//w9.SetVideoOptions(true, "libx264", t10.info.fps, t10.info.width, t10.info.height, t10.info.pixel_ratio, false, false, 1500000);
 	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
 	//w9.SetVideoOptions("GIF", r9.info.fps, r9.info.width, r9.info.height, 70, 1, true);
@@ -144,7 +140,7 @@ int main(int argc, char* argv[])
 	// 147000 frames, 28100 frames
 	//for (int frame = 1; frame <= (r9.info.video_length - 1); frame++)
 	//for (int z = 0; z < 2; z++)
-	for (int frame = 1; frame <= 120; frame++)
+	for (int frame = 1; frame <= 700; frame++)
 	//int frame = 1;
 	//while (true)
 	{
@@ -152,7 +148,7 @@ int main(int argc, char* argv[])
 		int frame_number = frame;
 
 		cout << "get " << frame << " (frame: " << frame_number << ") " << endl;
-		tr1::shared_ptr<Frame> f = t10.GetFrame(frame_number);
+		tr1::shared_ptr<Frame> f = r9.GetFrame(frame_number);
 		cout << "mapped frame channel layouts: " << f->ChannelsLayout() << endl;
 		cout << "display it (" << f->number << ", " << f << ")" << endl;
 		//r9.GetFrame(frame_number)->DisplayWaveform();
@@ -178,8 +174,8 @@ int main(int argc, char* argv[])
 	w9.Close();
 
 	// Close timeline
-	//r9.Close();
-	t10.Close();
+	r9.Close();
+	//t10.Close();
 	/* ---------------- */
 	cout << "happy ending" << endl;
 

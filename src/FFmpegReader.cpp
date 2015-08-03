@@ -380,8 +380,6 @@ void FFmpegReader::UpdateVideoInfo()
 		info.video_length = round(info.duration * info.fps.ToDouble());
 	}
 
-	cout << info.fps.ToFloat() << endl;
-
 	// Override an invalid framerate
 	if (info.fps.ToFloat() > 120.0f || (info.fps.num == 0 || info.fps.den == 0))
 	{

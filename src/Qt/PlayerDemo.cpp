@@ -26,11 +26,8 @@
  */
 
 #include "stdio.h"
-#include "string.h"
 #include "../../include/QtPlayer.h"
 #include "../../include/Qt/PlayerDemo.h"
-#include "../../include/Qt/VideoRenderWidget.h"
-#include "../../include/Qt/VideoRenderer.h"
 #include <QMessageBox>
 #include <QFileDialog>
 

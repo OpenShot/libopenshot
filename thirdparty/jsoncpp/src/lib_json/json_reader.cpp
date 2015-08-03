@@ -1,10 +1,8 @@
 #include <json/reader.h>
-#include <json/value.h>
 #include <utility>
 #include <cstdio>
 #include <cassert>
 #include <cstring>
-#include <iostream>
 #include <stdexcept>
 
 #if _MSC_VER >= 1400 // VC++ 8.0

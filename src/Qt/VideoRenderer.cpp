@@ -26,8 +26,6 @@
  */
 
 #include "../../include/Qt/VideoRenderer.h"
-#include <QtGui/QPainter>
-#include <QtGui/QImage>
 
 
 VideoRenderer::VideoRenderer(QObject *parent)

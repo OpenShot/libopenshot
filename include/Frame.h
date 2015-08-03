@@ -173,6 +173,9 @@ namespace openshot
 		/// Add audio samples to a specific channel
 		void AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
 
+		/// Add audio silence
+		void AddAudioSilence(int numSamples);
+
 		/// Apply gain ramp (i.e. fading volume)
 		void ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain, float final_gain);
 

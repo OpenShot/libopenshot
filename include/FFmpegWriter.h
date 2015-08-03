@@ -164,6 +164,7 @@ namespace openshot
 	    double audio_pts, video_pts;
 	    int16_t *samples;
 	    uint8_t *audio_outbuf;
+	    uint8_t *audio_encoder_buffer;
 
 	    int num_of_rescalers;
 		int rescaler_position;
@@ -173,6 +174,7 @@ namespace openshot
 	    int audio_input_frame_size;
 	    int initial_audio_input_frame_size;
 	    int audio_input_position;
+	    int audio_encoder_buffer_size;
 	    AVAudioResampleContext *avr;
 	    AVAudioResampleContext *avr_planar;
 

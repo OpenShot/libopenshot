@@ -933,3 +933,11 @@ void Frame::cleanUpBuffer(void *info)
 		ptr_to_qbuffer = NULL;
 	}
 }
+
+// Add audio silence
+void Frame::AddAudioSilence(int numSamples)
+{
+	// Resize audio container
+	audio->setSize(channels, numSamples, false, true, false);
+	audio->clear();
+}

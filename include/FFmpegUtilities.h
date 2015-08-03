@@ -64,13 +64,17 @@
 	#ifndef AV_ERROR_MAX_STRING_SIZE
 		#define AV_ERROR_MAX_STRING_SIZE 64
 	#endif
+	#ifndef AUDIO_PACKET_ENCODING_SIZE
+		#define AUDIO_PACKET_ENCODING_SIZE 768000		// 48khz * S16 (2 bytes) * max channels (8)
+	#endif
 
 	// This wraps an unsafe C macro to be C++ compatible function
 	static const std::string av_make_error_string(int errnum)
 	{
 		char errbuf[AV_ERROR_MAX_STRING_SIZE];
 		av_strerror(errnum, errbuf, AV_ERROR_MAX_STRING_SIZE);
-		return (std::string)errbuf;
+		std::string errstring(errbuf);
+		return errstring;
 	}
 
 	// Redefine the C macro to use our new C++ function
