@@ -78,13 +78,13 @@ TEST(Cache_Max_Bytes_Constructor)
 	CHECK_EQUAL(20, c.Count());
 
 	// Check which items the cache kept
-	CHECK_EQUAL(true, c.Exists(1));
-	CHECK_EQUAL(true, c.Exists(10));
-	CHECK_EQUAL(true, c.Exists(11));
-	CHECK_EQUAL(true, c.Exists(19));
-	CHECK_EQUAL(true, c.Exists(20));
-	CHECK_EQUAL(false, c.Exists(21));
-	CHECK_EQUAL(false, c.Exists(30));
+	CHECK_EQUAL(true, c.GetFrame(1) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(10) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(11) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(19) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(20) != NULL);
+	CHECK_EQUAL(false, c.GetFrame(21) != NULL);
+	CHECK_EQUAL(false, c.GetFrame(30) != NULL);
 }
 
 TEST(Cache_Clear)
@@ -141,13 +141,13 @@ TEST(Cache_Check_If_Frame_Exists)
 	}
 
 	// Check if certain frames exists (only 1-5 exist)
-	CHECK_EQUAL(false, c.Exists(0));
-	CHECK_EQUAL(true, c.Exists(1));
-	CHECK_EQUAL(true, c.Exists(2));
-	CHECK_EQUAL(true, c.Exists(3));
-	CHECK_EQUAL(true, c.Exists(4));
-	CHECK_EQUAL(true, c.Exists(5));
-	CHECK_EQUAL(false, c.Exists(6));
+	CHECK_EQUAL(false, c.GetFrame(0) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(1) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(2) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(3) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(4) != NULL);
+	CHECK_EQUAL(true, c.GetFrame(5) != NULL);
+	CHECK_EQUAL(false, c.GetFrame(6) != NULL);
 }
 
 TEST(Cache_GetFrame)
@@ -166,8 +166,8 @@ TEST(Cache_GetFrame)
 	c.Add(green->number, tr1::shared_ptr<Frame>(green));
 
 	// Get frames
-	CHECK_THROW(c.GetFrame(0), OutOfBoundsFrame);
-	CHECK_THROW(c.GetFrame(4), OutOfBoundsFrame);
+	CHECK_EQUAL(true, c.GetFrame(0) == NULL);
+	CHECK_EQUAL(true, c.GetFrame(4) == NULL);
 
 	// Check if certain frames exists (only 1-5 exist)
 	CHECK_EQUAL(1, c.GetFrame(1)->number);
@@ -222,13 +222,13 @@ TEST(Cache_Remove)
 	CHECK_EQUAL(3, c.Count());
 
 	// Check if frame 2 exists
-	CHECK_EQUAL(true, c.Exists(2));
+	CHECK_EQUAL(true, c.GetFrame(2) != NULL);
 
 	// Remove frame 2
 	c.Remove(2);
 
 	// Check if frame 2 exists
-	CHECK_EQUAL(false, c.Exists(2));
+	CHECK_EQUAL(false, c.GetFrame(2) != NULL);
 
 	// Check if count is 2
 	CHECK_EQUAL(2, c.Count());
@@ -237,7 +237,7 @@ TEST(Cache_Remove)
 	c.Remove(1);
 
 	// Check if frame 1 exists
-	CHECK_EQUAL(false, c.Exists(1));
+	CHECK_EQUAL(false, c.GetFrame(1) != NULL);
 
 	// Check if count is 1
 	CHECK_EQUAL(1, c.Count());

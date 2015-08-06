@@ -60,9 +60,10 @@ void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Remove frame if it already exists
-	if (Exists(frame_number))
+	if (frames.count(frame_number))
 		// Move frame to front of queue
 		MoveToFront(frame_number);
+
 	else
 	{
 		// Add frame to queue and map
@@ -74,40 +75,23 @@ void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 	}
 }
 
-// Check for the existance of a frame in the cache
-bool Cache::Exists(int frame_number)
-{
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
-	// Is frame number cached
-	if (frames.count(frame_number))
-		return true;
-	else
-		return false;
-}
-
-// Get a frame from the cache
+// Get a frame from the cache (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
-	if (Exists(frame_number))
-	{
-		// move it to the front of the cache
-		MoveToFront(frame_number);
-
+	if (frames.count(frame_number))
 		// return the Frame object
 		return frames[frame_number];
-	}
+
 	else
-		// throw an exception for the missing frame
-		throw OutOfBoundsFrame("Frame not found in the cache", frame_number, -1);
+		// no Frame found
+		return tr1::shared_ptr<Frame>();
 }
 
-// Get the smallest frame number
+// Get the smallest frame number (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
@@ -180,7 +164,7 @@ void Cache::MoveToFront(int frame_number)
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
-	if (Exists(frame_number))
+	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
 		deque<int>::iterator itr;
@@ -197,9 +181,6 @@ void Cache::MoveToFront(int frame_number)
 			}
 		}
 	}
-	else
-		// throw an exception for the missing frame
-		throw OutOfBoundsFrame("Frame not found in the cache", frame_number, -1);
 }
 
 // Clear the cache of all frames

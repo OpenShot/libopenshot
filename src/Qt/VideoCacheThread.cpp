@@ -87,8 +87,17 @@ namespace openshot
 	    while ((position - current_display_frame) < max_frames)
 	    {
 	    	// Only cache up till the max_frames amount... then sleep
-	    	if (reader)
-	    		reader->GetFrame(position);
+			try
+			{
+				if (reader)
+					// Force the frame to be generated
+					reader->GetFrame(position);
+
+			}
+			catch (const OutOfBoundsFrame & e)
+			{
+				// Ignore out of bounds frame exceptions
+			}
 
 	    	// Increment frame number
 	    	position++;

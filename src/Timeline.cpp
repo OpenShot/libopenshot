@@ -551,7 +551,7 @@ bool Timeline::isEqual(double a, double b)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -562,12 +562,13 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		requested_frame = 1;
 
 	// Check cache
-	if (final_cache.Exists(requested_frame)) {
+	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
+	if (frame) {
 		// Debug output
 		AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Return cached frame
-		return final_cache.GetFrame(requested_frame);
+		return frame;
 	}
 	else
 	{
@@ -575,12 +576,13 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 		// Check cache again (due to locking)
-		if (final_cache.Exists(requested_frame)) {
+		frame = final_cache.GetFrame(requested_frame);
+		if (frame) {
 			// Debug output
 			AppendDebugMethod("Timeline::GetFrame (Cached frame found on 2nd look)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			// Return cached frame
-			return final_cache.GetFrame(requested_frame);
+			return frame;
 		}
 
 		// Minimum number of frames to process (for performance reasons)

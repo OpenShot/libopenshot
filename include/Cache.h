@@ -91,10 +91,6 @@ namespace openshot {
 		/// Display a list of cached frame numbers
 		void Display();
 
-		/// @brief Check for the existence of a frame in the cache
-		/// @param frame_number The frame number of the cached frame
-		bool Exists(int frame_number);
-
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
 		tr1::shared_ptr<Frame> GetFrame(int frame_number);

@@ -302,8 +302,8 @@ MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBounds
 tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderClosed)
 {
 	// Check final cache, and just return the frame (if it's available)
-	if (final_cache.Exists(requested_frame))
-		return final_cache.GetFrame(requested_frame);
+	tr1::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
+	if (final_frame) return final_frame;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
@@ -314,8 +314,8 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 		Init();
 
 	// Check final cache a 2nd time (due to potential lock already generating this frame)
-	if (final_cache.Exists(requested_frame))
-		return final_cache.GetFrame(requested_frame);
+	final_frame = final_cache.GetFrame(requested_frame);
+	if (final_frame) return final_frame;
 
 	// Minimum number of frames to process (for performance reasons)
 	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
@@ -343,16 +343,21 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
 
 			// Create a new frame
-			tr1::shared_ptr<Frame> frame(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
+			tr1::shared_ptr<Frame> frame = tr1::shared_ptr<Frame>(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
 			frame->SampleRate(mapped_frame->SampleRate());
 			frame->ChannelsLayout(mapped_frame->ChannelsLayout());
 
 
 			// Copy the image from the odd field
-			frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(mapped.Odd.Frame)->GetImage())), true);
-			if (mapped.Odd.Frame != mapped.Even.Frame)
+			tr1::shared_ptr<Frame> odd_frame = reader->GetFrame(mapped.Odd.Frame);
+			if (odd_frame)
+				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+			if (mapped.Odd.Frame != mapped.Even.Frame) {
 				// Add even lines (if different than the previous image)
-				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(mapped.Even.Frame)->GetImage())), false);
+				tr1::shared_ptr<Frame> even_frame = reader->GetFrame(mapped.Even.Frame);
+				if (even_frame)
+					frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+			}
 
 
 			// Copy the samples

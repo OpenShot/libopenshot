@@ -230,7 +230,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)

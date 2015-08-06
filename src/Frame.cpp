@@ -407,6 +407,11 @@ int64 Frame::GetBytes()
 // Get pixel data (as packets)
 const unsigned char* Frame::GetPixels()
 {
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, "#000000");
+
 	// Return array of pixel packets
 	return image->bits();
 }
@@ -728,30 +733,33 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
 		return;
 
 	// Check for blank source image
-	if (!image)
+	if (!image) {
 		// Replace the blank source image
 		AddImage(new_image);
 
-	// Ignore image of different sizes or formats
-	if (image == new_image || image->size() != image->size() || image->format() != image->format())
-		return;
+	} else {
 
-	// Get the frame's image
-	const unsigned char* pixels = image->bits();
-	const unsigned char* new_pixels = new_image->bits();
+		// Ignore image of different sizes or formats
+		if (image == new_image || image->size() != image->size() || image->format() != image->format())
+			return;
 
-	// Loop through the scanlines of the image (even or odd)
-	int start = 0;
-	if (only_odd_lines)
-		start = 1;
-	for (int row = start; row < image->height(); row += 2) {
-		memcpy((unsigned char*)pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
-		new_pixels += image->bytesPerLine();
+		// Get the frame's image
+		const unsigned char *pixels = image->bits();
+		const unsigned char *new_pixels = new_image->bits();
+
+		// Loop through the scanlines of the image (even or odd)
+		int start = 0;
+		if (only_odd_lines)
+			start = 1;
+		for (int row = start; row < image->height(); row += 2) {
+			memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+			new_pixels += image->bytesPerLine();
+		}
+
+		// Update height and width
+		width = image->width();
+		height = image->height();
 	}
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
 }
 
 

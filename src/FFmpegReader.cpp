@@ -277,8 +277,8 @@ void FFmpegReader::UpdateAudioInfo()
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
 
-	// Get timebase of audio stream (if valid)
-	if (aStream->duration > 0.0f)
+	// Get timebase of audio stream (if valid) and greater than the current duration
+	if (aStream->duration > 0.0f && aStream->duration > info.duration)
 		info.duration = aStream->duration * info.audio_timebase.ToDouble();
 
 	// Check for an invalid video length
@@ -388,6 +388,9 @@ void FFmpegReader::UpdateVideoInfo()
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
 		info.video_timebase.den = 24;
+
+		// Calculate number of frames
+		info.video_length = round(info.duration * info.fps.ToDouble());
 	}
 
 }
@@ -412,12 +415,13 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 	AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Check the cache for this frame
-	if (final_cache.Exists(requested_frame)) {
+	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
+	if (frame) {
 		// Debug output
 		AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Return the cached frame
-		return final_cache.GetFrame(requested_frame);
+		return frame;
 	}
 	else
 	{
@@ -425,12 +429,13 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(int requested_frame) throw(OutOfBo
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 		// Check the cache a 2nd time (due to a potential previous lock)
-		if (final_cache.Exists(requested_frame)) {
+		frame = final_cache.GetFrame(requested_frame);
+		if (frame) {
 			// Debug output
 			AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			// Return the cached frame
-			return final_cache.GetFrame(requested_frame);
+			return frame;
 		}
 
 		// Frame is not in cache
@@ -582,7 +587,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 					CheckWorkingFrames(false);
 
 				// Check if requested 'final' frame is available
-				is_cache_found = final_cache.Exists(requested_frame);
+				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
 
 				// Increment frames processed
 				packets_processed++;
@@ -600,25 +605,22 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(int requested_frame)
 	AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "Working Cache Count", working_cache.Count(), "", -1, "", -1);
 
 	// End of stream?
-	if (end_of_stream) {
+	if (end_of_stream)
 		// Mark the any other working frames as 'finished'
 		CheckWorkingFrames(end_of_stream);
 
-		// Update readers video length (to a largest processed frame number)
-		info.video_length = largest_frame_processed; // just a guess, but this frame is certainly out of bounds
-		is_duration_known = largest_frame_processed;
-	}
-
 	// Return requested frame (if found)
-	if (final_cache.Exists(requested_frame))
+	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
+	if (frame)
 		// Return prepared frame
-		return final_cache.GetFrame(requested_frame);
+		return frame;
 	else {
 
 		// Check if largest frame is still cached
-		if (final_cache.Exists(largest_frame_processed)) {
+		frame = final_cache.GetFrame(largest_frame_processed);
+		if (frame) {
 			// return the largest processed frame (assuming it was the last in the video file)
-			return final_cache.GetFrame(largest_frame_processed);
+			return frame;
 		}
 		else {
 			// The largest processed frame is no longer in cache, return a blank frame
@@ -1394,9 +1396,10 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(int requested_frame)
 {
 	tr1::shared_ptr<Frame> output;
 	// Check working cache
-	if (working_cache.Exists(requested_frame))
+	tr1::shared_ptr<Frame> frame = working_cache.GetFrame(requested_frame);
+	if (frame)
 		// Return existing frame
-		output = working_cache.GetFrame(requested_frame);
+		output = frame;
 	else
 	{
 		// Create a new frame on the working cache
