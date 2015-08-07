@@ -30,13 +30,15 @@
 #include <tr1/memory>
 #include "../../include/OpenShot.h"
 
-
 using namespace openshot;
 using namespace tr1;
 
 
 int main(int argc, char* argv[])
 {
+
+	EffectInfo::Json();
+	return 0;
 
 //	FFmpegReader r110("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
 //	r110.Open();

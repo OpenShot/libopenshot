@@ -33,6 +33,9 @@ using namespace openshot;
 ChromaKey::ChromaKey() : fuzz(0.0) {
 	// Init default color
 	color = Color();
+
+	// Init effect properties
+	init_effect_details();
 }
 
 // Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
@@ -40,10 +43,18 @@ ChromaKey::ChromaKey() : fuzz(0.0) {
 // more colors are matched.
 ChromaKey::ChromaKey(Color color, Keyframe fuzz) : color(color), fuzz(fuzz)
 {
+	// Init effect properties
+	init_effect_details();
+}
+
+// Init effect settings
+void ChromaKey::init_effect_details()
+{
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
+	info.class_name = "ChromaKey";
 	info.name = "Chroma Key (Greenscreen)";
 	info.description = "Replaces the color (or chroma) of the frame with transparency (i.e. keys out the color).";
 	info.has_audio = false;
@@ -98,7 +109,7 @@ Json::Value ChromaKey::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
-	root["type"] = "ChromaKey";
+	root["type"] = info.class_name;
 	root["color"] = color.JsonValue();
 	root["fuzz"] = fuzz.JsonValue();
 
@@ -141,7 +152,6 @@ void ChromaKey::SetJsonValue(Json::Value root) {
 	if (!root["fuzz"].isNull())
 		fuzz.SetJsonValue(root["fuzz"]);
 }
-
 
 // Get all properties for a specific frame
 string ChromaKey::PropertiesJSON(int requested_frame) {

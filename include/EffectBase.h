@@ -46,8 +46,10 @@ namespace openshot
 	 * about the underlying effect. Derived classes of EffectBase should call the InitEffectInfo() method to initialize the
 	 * default values of this struct.
 	 */
-	struct EffectInfo
+	struct EffectInfoStruct
 	{
+		string class_name; ///< The class name of the effect
+		string short_name; ///< A short name of the effect, commonly used for icon names, etc...
 		string name; ///< The name of the effect
 		string description; ///< The description of this effect and what it does
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
@@ -68,7 +70,7 @@ namespace openshot
 	public:
 
 		/// Information about the current effect
-		EffectInfo info;
+		EffectInfoStruct info;
 
 		/// Display effect information in the standard output stream (stdout)
 		void DisplayInfo();
@@ -93,6 +95,7 @@ namespace openshot
 		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+		Json::Value JsonInfo(); ///< Generate JSON object of meta data / info
 
 		/// Get the order that this effect should be executed.
 		int Order() { return order; }

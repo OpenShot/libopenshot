@@ -59,6 +59,9 @@ namespace openshot
 	private:
 		bool isOdd;
 
+		/// Init effect settings
+		void init_effect_details();
+
 	public:
 
 		/// Blank constructor, useful when using Json to load the effect properties

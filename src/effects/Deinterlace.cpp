@@ -30,17 +30,27 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Deinterlace::Deinterlace() : isOdd(true) {
-
+Deinterlace::Deinterlace() : isOdd(true)
+{
+	// Init effect properties
+	init_effect_details();
 }
 
 // Default constructor
 Deinterlace::Deinterlace(bool UseOddLines) : isOdd(UseOddLines)
 {
+	// Init effect properties
+	init_effect_details();
+}
+
+// Init effect settings
+void Deinterlace::init_effect_details()
+{
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
+	info.class_name = "Deinterlace";
 	info.name = "Deinterlace";
 	info.description = "Remove interlacing from a video (i.e. even or odd horizontal lines)";
 	info.has_audio = false;
@@ -94,7 +104,7 @@ Json::Value Deinterlace::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
-	root["type"] = "Deinterlace";
+	root["type"] = info.class_name;
 	root["isOdd"] = isOdd;
 
 	// return JsonValue

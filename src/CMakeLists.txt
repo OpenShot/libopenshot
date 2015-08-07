@@ -177,6 +177,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		WriterBase.cpp
 		EffectBase.cpp
 		${EFFECT_FILES}
+		EffectInfo.cpp
 		FFmpegReader.cpp
 		FFmpegWriter.cpp
 		Fraction.cpp

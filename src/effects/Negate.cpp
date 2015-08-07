@@ -36,6 +36,7 @@ Negate::Negate()
 	InitEffectInfo();
 
 	/// Set the effect info
+	info.class_name = "Negate";
 	info.name = "Negative";
 	info.description = "Negates the colors, producing a negative of the image.";
 	info.has_audio = false;
@@ -65,7 +66,7 @@ Json::Value Negate::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
-	root["type"] = "Negate";
+	root["type"] = info.class_name;
 
 	// return JsonValue
 	return root;

@@ -64,6 +64,7 @@
 #include "../../../include/DummyReader.h"
 #include "../../../include/EffectBase.h"
 #include "../../../include/Effects.h"
+#include "../../../include/EffectInfo.h"
 #include "../../../include/Exceptions.h"
 #include "../../../include/FFmpegReader.h"
 #include "../../../include/FFmpegWriter.h"
@@ -109,6 +110,8 @@
 #endif
 %include "../../../include/DummyReader.h"
 %include "../../../include/EffectBase.h"
+%include "../../../include/Effects.h"
+%include "../../../include/EffectInfo.h"
 %include "../../../include/Exceptions.h"
 %include "../../../include/FFmpegReader.h"
 %include "../../../include/FFmpegWriter.h"

@@ -50,6 +50,7 @@ void Mask::init_effect_details()
 	InitEffectInfo();
 
 	/// Set the effect info
+	info.class_name = "Mask";
 	info.name = "Alpha Mask / Wipe Transition";
 	info.description = "Uses a grayscale mask image to gradually wipe / transition between 2 images.";
 	info.has_audio = false;
@@ -115,9 +116,12 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Check if mask reader is open
-	if (!reader->IsOpen())
+	if (reader && !reader->IsOpen())
 		#pragma omp critical (open_mask_reader)
 		reader->Open();
+	else
+		// No reader (bail on applying the mask)
+		return frame;
 
 	// Get the mask image (from the mask reader)
 	tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
@@ -162,10 +166,13 @@ Json::Value Mask::JsonValue() {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
-	root["type"] = "Mask";
+	root["type"] = info.class_name;
 	root["brightness"] = brightness.JsonValue();
 	root["contrast"] = contrast.JsonValue();
-	root["reader"] = reader->JsonValue();
+	if (reader)
+		root["reader"] = reader->JsonValue();
+	else
+		root["reader"] = Json::objectValue;
 	root["replace_image"] = replace_image;
 
 	// return JsonValue

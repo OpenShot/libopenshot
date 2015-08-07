@@ -714,6 +714,7 @@ void Clip::SetJsonValue(Json::Value root) {
 	if (!root["perspective_c4_y"].isNull())
 		perspective_c4_y.SetJsonValue(root["perspective_c4_y"]);
 	if (!root["effects"].isNull()) {
+
 		// Clear existing effects
 		effects.clear();
 

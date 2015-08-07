@@ -112,6 +112,7 @@
 #include "DummyReader.h"
 #include "EffectBase.h"
 #include "Effects.h"
+#include "EffectInfo.h"
 #include "Enums.h"
 #include "Exceptions.h"
 #include "ReaderBase.h"
