@@ -119,8 +119,9 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, int frame_nu
 	if (reader && !reader->IsOpen())
 		#pragma omp critical (open_mask_reader)
 		reader->Open();
-	else
-		// No reader (bail on applying the mask)
+
+	// No reader (bail on applying the mask)
+	if (!reader)
 		return frame;
 
 	// Get the mask image (from the mask reader)

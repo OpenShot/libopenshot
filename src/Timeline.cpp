@@ -162,7 +162,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 	list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
-		// Get clip object from the iterator
+		// Get effect object from the iterator
 		EffectBase *effect = (*effect_itr);
 
 		// Does clip intersect the current requested time
@@ -957,6 +957,39 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 		}
 	}
 
+	// Check for a more specific key (targetting this clip's effects)
+	// For example: ["clips", {"id:123}, "effects", {"id":432}]
+	if (existing_clip && change["key"].size() == 4 && change["key"][2] == "effects")
+	{
+		// This change is actually targetting a specific effect under a clip (and not the clip)
+		EffectBase *existing_effect = NULL;
+		Json::Value key_part = change["key"][3];
+
+		if (key_part.isObject()) {
+			// Check for id
+			if (!key_part["id"].isNull())
+			{
+				// Set the id
+				string effect_id = key_part["id"].asString();
+
+				// Find matching effect in timeline (if any)
+				list<EffectBase*>::iterator effect_itr;
+				for (effect_itr=existing_clip->Effects().begin(); effect_itr != existing_clip->Effects().end(); ++effect_itr)
+				{
+					// Get effect object from the iterator
+					EffectBase *e = (*effect_itr);
+					if (e->Id() == effect_id) {
+						existing_effect = e;
+
+						// Apply the change to the effect directly
+						apply_json_to_effects(change, existing_effect);
+						return; // effect found, don't update clip
+					}
+				}
+			}
+		}
+	}
+
 	// Determine type of change operation
 	if (change_type == "insert") {
 
@@ -986,7 +1019,6 @@ void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
 
 	// Get key and type of change
 	string change_type = change["type"].asString();
-	string effect_id = "";
 	EffectBase *existing_effect = NULL;
 
 	// Find id of an effect (if any)
@@ -999,7 +1031,7 @@ void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
 			if (!key_part["id"].isNull())
 			{
 				// Set the id
-				effect_id = key_part["id"].asString();
+				string effect_id = key_part["id"].asString();
 
 				// Find matching effect in timeline (if any)
 				list<EffectBase*>::iterator effect_itr;
@@ -1016,6 +1048,18 @@ void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
 			}
 		}
 	}
+
+	// Now that we found the effect, apply the change to it
+	if (existing_effect || change_type == "insert")
+		// Apply change to effect
+		apply_json_to_effects(change, existing_effect);
+}
+
+// Apply JSON diff to effects (if you already know which effect needs to be updated)
+void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_effect) throw(InvalidJSONKey) {
+
+	// Get key and type of change
+	string change_type = change["type"].asString();
 
 	// Determine type of change operation
 	if (change_type == "insert") {
@@ -1058,7 +1102,6 @@ void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
 			RemoveEffect(existing_effect); // Remove effect from timeline
 
 	}
-
 }
 
 // Apply JSON diff to timeline properties

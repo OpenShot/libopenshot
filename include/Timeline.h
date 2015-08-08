@@ -157,7 +157,8 @@ namespace openshot {
 
 		/// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to clips
-		void apply_json_to_effects(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to effects
+		void apply_json_to_effects(Json::Value change) throw(InvalidJSONKey); ///< Apply JSON diff to effects
+		void apply_json_to_effects(Json::Value change, EffectBase* existing_effect) throw(InvalidJSONKey); ///<Apply JSON diff to a specific effect
 		void apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to timeline properties
 
 		/// Calculate time of a frame number, based on a framerate
