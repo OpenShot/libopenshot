@@ -131,10 +131,12 @@
 %include "../../../include/Timeline.h"
 
 /* Effects */
+%include "../../../include/effects/Brightness.h"
 %include "../../../include/effects/ChromaKey.h"
 %include "../../../include/effects/Deinterlace.h"
 %include "../../../include/effects/Mask.h"
 %include "../../../include/effects/Negate.h"
+%include "../../../include/effects/Saturation.h"
 
 
 /* Wrap std templates (list, vector, etc...) */

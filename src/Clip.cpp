@@ -718,7 +718,10 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull())
 				// Init the matching effect object
-				if (existing_effect["type"].asString() == "ChromaKey")
+				if (existing_effect["type"].asString() == "Brightness")
+					e = new Brightness();
+
+				else if (existing_effect["type"].asString() == "ChromaKey")
 					e = new ChromaKey();
 
 				else if (existing_effect["type"].asString() == "Deinterlace")
@@ -729,6 +732,9 @@ void Clip::SetJsonValue(Json::Value root) {
 
 				else if (existing_effect["type"].asString() == "Negate")
 					e = new Negate();
+
+				else if (existing_effect["type"].asString() == "Saturation")
+					e = new Saturation();
 
 			// Load Json into Effect
 			e->SetJsonValue(existing_effect);

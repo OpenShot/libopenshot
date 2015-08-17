@@ -45,10 +45,12 @@ Json::Value EffectInfo::JsonValue() {
 	Json::Value root;
 
 	// Append info JSON from each supported effect
+	root.append(Brightness().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
 	root.append(Deinterlace().JsonInfo());
 	root.append(Mask().JsonInfo());
 	root.append(Negate().JsonInfo());
+	root.append(Saturation().JsonInfo());
 
 	// return JsonValue
 	return root;
