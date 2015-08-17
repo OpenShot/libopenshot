@@ -161,13 +161,6 @@ string Deinterlace::PropertiesJSON(int requested_frame) {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
 	root["isOdd"] = add_property_json("Is Odd Frame", isOdd, "bool", "", false, 0, 0, 1, CONSTANT, -1, true);
 
-	// Keep track of settings string
-	stringstream properties;
-	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() << isOdd;
-
-	// Add Hash of All property values
-	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, CONSTANT, -1, true);
-
 	// Return formatted string
 	return root.toStyledString();
 }

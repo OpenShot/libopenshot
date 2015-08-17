@@ -284,14 +284,6 @@ string Mask::PropertiesJSON(int requested_frame) {
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", brightness.Contains(requested_point), brightness.GetCount(), -10000, 10000, brightness.GetClosestPoint(requested_point).interpolation, brightness.GetClosestPoint(requested_point).co.X, false);
 	root["contrast"] = add_property_json("Contrast", contrast.GetValue(requested_frame), "float", "", contrast.Contains(requested_point), contrast.GetCount(), -10000, 10000, contrast.GetClosestPoint(requested_point).interpolation, contrast.GetClosestPoint(requested_point).co.X, false);
 
-	// Keep track of settings string
-	stringstream properties;
-	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() <<
-			brightness.GetValue(requested_frame) << contrast.GetValue(requested_frame);
-
-	// Add Hash of All property values
-	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, CONSTANT, -1, true);
-
 	// Return formatted string
 	return root.toStyledString();
 }

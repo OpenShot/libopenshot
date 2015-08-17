@@ -74,7 +74,7 @@ Json::Value ClipBase::add_property_json(string name, float value, string type, s
 	prop["max"] = max_value;
 	prop["keyframe"] = contains_point;
 	prop["points"] = number_of_points;
-	prop["readonly"] = max_value;
+	prop["readonly"] = readonly;
 	prop["interpolation"] = intepolation;
 	prop["closest_point_x"] = closest_point_x;
 

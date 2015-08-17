@@ -174,15 +174,6 @@ string ChromaKey::PropertiesJSON(int requested_frame) {
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", color.green.Contains(requested_point), color.green.GetCount(), -10000, 10000, color.green.GetClosestPoint(requested_point).interpolation, color.green.GetClosestPoint(requested_point).co.X, false);
 	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", fuzz.Contains(requested_point), fuzz.GetCount(), -10000, 10000, fuzz.GetClosestPoint(requested_point).interpolation, fuzz.GetClosestPoint(requested_point).co.X, false);
 
-	// Keep track of settings string
-	stringstream properties;
-	properties << 0.0f << Position() << Layer() << Start() << End() << Duration() <<
-			color.red.GetValue(requested_frame) << color.green.GetValue(requested_frame) <<
-			color.blue.GetValue(requested_frame) << fuzz.GetValue(requested_frame);
-
-	// Add Hash of All property values
-	root["hash"] = add_property_json("hash", 0.0, "string", properties.str(), false, 0, 0, 1, CONSTANT, -1, true);
-
 	// Return formatted string
 	return root.toStyledString();
 }
