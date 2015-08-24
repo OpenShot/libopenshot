@@ -140,7 +140,7 @@ void Timeline::ApplyMapperToClips()
 }
 
 // Calculate time of a frame number, based on a framerate
-float Timeline::calculate_time(int number, Fraction rate)
+float Timeline::calculate_time(long int number, Fraction rate)
 {
 	// Get float version of fps fraction
 	float raw_fps = rate.ToFloat();
@@ -150,7 +150,7 @@ float Timeline::calculate_time(int number, Fraction rate)
 }
 
 // Apply effects to the source frame (if any)
-tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer)
+tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer)
 {
 	// Calculate time of frame
 	float requested_time = calculate_time(timeline_frame_number, info.fps);
@@ -193,14 +193,14 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, int
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number, bool is_top_clip)
+void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
 
 
 
-	//#pragma omp ordered
+	#pragma omp ordered
 	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 
 	// No frame found... so bail
@@ -551,7 +551,7 @@ bool Timeline::isEqual(double a, double b)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
+tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -605,8 +605,8 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 		#pragma omp parallel
 		{
 			// Loop through all requested frames
-			#pragma omp for firstprivate(nearby_clips, requested_frame, minimum_frames)
-			for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames)
+			for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
 				AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
@@ -695,7 +695,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(int requested_frame) throw(ReaderClose
 
 
 // Find intersecting clips (or non intersecting clips)
-vector<Clip*> Timeline::find_intersecting_clips(int requested_frame, int number_of_frames, bool include)
+vector<Clip*> Timeline::find_intersecting_clips(long int requested_frame, int number_of_frames, bool include)
 {
 	// Find matching clips
 	vector<Clip*> matching_clips;

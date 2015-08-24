@@ -63,7 +63,7 @@ void ChromaKey::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
+tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Determine the current HSL (Hue, Saturation, Lightness) for the Chrome
 	int threshold = fuzz.GetInt(frame_number);
@@ -154,7 +154,7 @@ void ChromaKey::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string ChromaKey::PropertiesJSON(int requested_frame) {
+string ChromaKey::PropertiesJSON(long int requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);

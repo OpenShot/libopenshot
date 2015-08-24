@@ -484,12 +484,12 @@ void FFmpegWriter::write_queued_frames()
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed)
 {
 	AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
-	for (int number = start; number <= length; number++)
+	for (long int number = start; number <= length; number++)
 	{
 		// Get the frame
 		tr1::shared_ptr<Frame> f = reader->GetFrame(number);

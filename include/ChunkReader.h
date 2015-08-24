@@ -117,7 +117,7 @@ namespace openshot
 		bool does_folder_exist(string path);
 
 		/// Find the location of a frame in a chunk
-		ChunkLocation find_chunk_frame(int requested_frame);
+		ChunkLocation find_chunk_frame(long int requested_frame);
 
 		/// get a formatted path of a specific chunk
 		string get_chunk_path(int chunk_number, string folder, string extension);
@@ -150,7 +150,7 @@ namespace openshot
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, ChunkNotFound);
+		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

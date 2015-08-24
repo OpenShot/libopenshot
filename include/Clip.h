@@ -121,7 +121,7 @@ namespace openshot {
 		bool manage_reader;
 
 		/// Adjust frame number minimum value
-		int adjust_frame_number_minimum(int frame_number);
+		int adjust_frame_number_minimum(long int frame_number);
 
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame);
@@ -130,7 +130,7 @@ namespace openshot {
 		string get_file_extension(string path);
 
 		/// Adjust the audio and image of a time mapped frame
-		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -174,7 +174,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile, ReaderClosed);
@@ -198,7 +198,7 @@ namespace openshot {
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		string PropertiesJSON(int requested_frame);
+		string PropertiesJSON(long int requested_frame);
 
 		/// @brief Remove an effect from the clip
 		/// @param effect Remove an effect from the clip.

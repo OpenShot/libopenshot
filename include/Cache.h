@@ -56,8 +56,8 @@ namespace openshot {
 	{
 	private:
 		int64 max_bytes;			///< This is the max number of bytes to cache (0 = no limit)
-		map<int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
-		deque<int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+		map<long int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
+		deque<long int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
@@ -80,20 +80,20 @@ namespace openshot {
 		/// @brief Add a Frame to the cache
 		/// @param frame_number The frame number of the cached frame
 		/// @param frame The openshot::Frame object needing to be cached.
-		void Add(int frame_number, tr1::shared_ptr<Frame> frame);
+		void Add(long int frame_number, tr1::shared_ptr<Frame> frame);
 
 		/// Clear the cache of all frames
 		void Clear();
 
 		/// Count the frames in the queue
-		int Count();
+		long int Count();
 
 		/// Display a list of cached frame numbers
 		void Display();
 
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
-		tr1::shared_ptr<Frame> GetFrame(int frame_number);
+		tr1::shared_ptr<Frame> GetFrame(long int frame_number);
 
 		/// Gets the maximum bytes value
 		int64 GetBytes();
@@ -106,11 +106,11 @@ namespace openshot {
 
 		/// @brief Move frame to front of queue (so it lasts longer)
 		/// @param frame_number The frame number of the cached frame
-		void MoveToFront(int frame_number);
+		void MoveToFront(long int frame_number);
 
 		/// @brief Remove a specific frame
 		/// @param frame_number The frame number of the cached frame
-		void Remove(int frame_number);
+		void Remove(long int frame_number);
 
 		/// @brief Set maximum bytes to a different amount
 		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
@@ -122,7 +122,7 @@ namespace openshot {
 		/// @param height The height of the frame's image
 		/// @param sample_rate The sample rate of the frame's audio data
 		/// @param channels The number of audio channels in the frame
-		void SetMaxBytesFromInfo(int number_of_frames, int width, int height, int sample_rate, int channels);
+		void SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels);
 
 
 	};

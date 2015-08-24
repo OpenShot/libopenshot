@@ -45,7 +45,7 @@ Negate::Negate()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Negate::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
+tr1::shared_ptr<Frame> Negate::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Make a negative of the images pixels
 	frame->GetImage()->invertPixels();
@@ -104,7 +104,7 @@ void Negate::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Negate::PropertiesJSON(int requested_frame) {
+string Negate::PropertiesJSON(long int requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);

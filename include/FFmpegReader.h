@@ -106,38 +106,43 @@ namespace openshot
 		bool is_duration_known;
 		bool check_interlace;
 		bool check_fps;
+		bool has_missing_frames;
 
 		int num_of_rescalers;
 		int rescaler_position;
 		vector<SwsContext*> image_rescalers;
 
 		Cache working_cache;
+		Cache missing_frames;
 		map<AVPacket*, AVPacket*> packets;
 		map<AVPicture*, AVPicture*> frames;
-		map<int, int> processing_video_frames;
-		multimap<int, int> processing_audio_frames;
-		map<int, int> processed_video_frames;
-		map<int, int> processed_audio_frames;
+		map<long int, long int> processing_video_frames;
+		multimap<long int, long int> processing_audio_frames;
+		map<long int, long int> processed_video_frames;
+		map<long int, long int> processed_audio_frames;
+		multimap<long int, long int> missing_video_frames;
+		multimap<long int, long int> duplicate_video_frames;
 		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
 		int prev_samples;
-		int prev_pts;
-		int pts_total;
-		int pts_counter;
+		long int prev_pts;
+		long int pts_total;
+		long int pts_counter;
 
 		bool is_seeking;
-		int seeking_pts;
-		int seeking_frame;
+		long int seeking_pts;
+		long int seeking_frame;
 		bool is_video_seek;
 		int seek_count;
-		int seek_audio_frame_found;
-		int seek_video_frame_found;
+		long int seek_audio_frame_found;
+		long int seek_video_frame_found;
 
-		int audio_pts_offset;
-		int video_pts_offset;
-		int last_frame;
-		int largest_frame_processed;
+		long int audio_pts_offset;
+		long int video_pts_offset;
+		long int last_frame;
+		long int largest_frame_processed;
+		long int current_video_frame;	// can't reliably use PTS of video to determine this
 
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();
@@ -145,26 +150,29 @@ namespace openshot
 		/// Check the current seek position and determine if we need to seek again
 		bool CheckSeek(bool is_video);
 
+		/// Check if a frame is missing and attempt to replace it's frame image (and
+		bool CheckMissingFrame(long int requested_frame);
+
 		/// Check the working queue, and move finished frames to the finished queue
-		void CheckWorkingFrames(bool end_of_stream);
+		void CheckWorkingFrames(bool end_of_stream, long int requested_frame);
 
 		/// Convert image to RGB format
-		void convert_image(int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
+		void convert_image(long int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
 
 		/// Convert Frame Number into Audio PTS
-		int ConvertFrameToAudioPTS(int frame_number);
+		long int ConvertFrameToAudioPTS(long int frame_number);
 
 		/// Convert Frame Number into Video PTS
-		int ConvertFrameToVideoPTS(int frame_number);
+		long int ConvertFrameToVideoPTS(long int frame_number);
 
 		/// Convert Video PTS into Frame Number
-		int ConvertVideoPTStoFrame(int pts);
+		long int ConvertVideoPTStoFrame(long int pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		tr1::shared_ptr<Frame> CreateFrame(int requested_frame);
+		tr1::shared_ptr<Frame> CreateFrame(long int requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
-		AudioLocation GetAudioPTSLocation(int pts);
+		AudioLocation GetAudioPTSLocation(long int pts);
 
 		/// Get an AVFrame (if any)
 		bool GetAVFrame();
@@ -173,28 +181,28 @@ namespace openshot
 		int GetNextPacket();
 
 		/// Get the smallest video frame that is still being processed
-		int GetSmallestVideoFrame();
+		long int GetSmallestVideoFrame();
 
 		/// Get the smallest audio frame that is still being processed
-		int GetSmallestAudioFrame();
+		long int GetSmallestAudioFrame();
 
 		/// Get the PTS for the current video packet
-		int GetVideoPTS();
+		long int GetVideoPTS();
 
 		/// Init a collection of software rescalers (thread safe)
 		void InitScalers();
 
 		/// Remove partial frames due to seek
-		bool IsPartialFrame(int requested_frame);
+		bool IsPartialFrame(long int requested_frame);
 
 		/// Process a video packet
-		void ProcessVideoPacket(int requested_frame);
+		void ProcessVideoPacket(long int requested_frame);
 
 		/// Process an audio packet
-		void ProcessAudioPacket(int requested_frame, int target_frame, int starting_sample);
+		void ProcessAudioPacket(long int requested_frame, long int target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		tr1::shared_ptr<Frame> ReadStream(int requested_frame);
+		tr1::shared_ptr<Frame> ReadStream(long int requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
 		void RemoveAVFrame(AVPicture*);
@@ -206,7 +214,7 @@ namespace openshot
 		void RemoveScalers();
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-		void Seek(int requested_frame) throw(TooManySeeks);
+		void Seek(long int requested_frame) throw(TooManySeeks);
 
 		/// Update PTS Offset (if any)
 		void UpdatePTSOffset(bool is_video);
@@ -239,7 +247,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
+		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

@@ -92,7 +92,7 @@ namespace openshot {
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		virtual string PropertiesJSON(int requested_frame) = 0;
+		virtual string PropertiesJSON(long int requested_frame) = 0;
 
 	};
 

@@ -140,7 +140,7 @@ namespace openshot
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed);
 
 	};
 

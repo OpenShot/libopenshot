@@ -57,9 +57,9 @@ TEST(Color_Animate_Colors)
 	c1.blue.AddPoint(1000, 65);
 
 	// Check the color at frame 500
-	CHECK_CLOSE(0, c1.red.GetInt(500), 0.01);
-	CHECK_CLOSE(187, c1.green.GetInt(500), 0.01);
-	CHECK_CLOSE(160, c1.blue.GetInt(500), 0.01);
+	CHECK_CLOSE(0, c1.red.GetLong(500), 0.01);
+	CHECK_CLOSE(187, c1.green.GetLong(500), 0.01);
+	CHECK_CLOSE(160, c1.blue.GetLong(500), 0.01);
 }
 
 TEST(Color_HEX_Value)

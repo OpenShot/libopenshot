@@ -56,7 +56,7 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	Init();
 }
 
-void FrameMapper::AddField(int frame)
+void FrameMapper::AddField(long int frame)
 {
 	// Add a field, and toggle the odd / even field
 	AddField(Field(frame, field_toggle));
@@ -111,11 +111,11 @@ void FrameMapper::Init()
 
 
 		// Calculate # of fields to map
-		int frame = 1;
-		int number_of_fields = reader->info.video_length * 2;
+		long int frame = 1;
+		long int number_of_fields = reader->info.video_length * 2;
 
 		// Loop through all fields in the original video file
-		for (int field = 1; field <= number_of_fields; field++)
+		for (long int field = 1; field <= number_of_fields; field++)
 		{
 
 			if (difference == 0) // Same frame rate, NO pull-down or special techniques required
@@ -183,7 +183,7 @@ void FrameMapper::Init()
 		// Map the remaining framerates using a simple Keyframe curve
 		// Calculate the difference (to be used as a multiplier)
 		float rate_diff = target.ToFloat() / original.ToFloat();
-		int new_length = reader->info.video_length * rate_diff;
+		long int new_length = reader->info.video_length * rate_diff;
 
 		// Build curve for framerate mapping
 		Keyframe rate_curve;
@@ -191,7 +191,7 @@ void FrameMapper::Init()
 		rate_curve.AddPoint(new_length, reader->info.video_length, LINEAR);
 
 		// Loop through curve, and build list of frames
-		for (int frame_num = 1; frame_num <= new_length; frame_num++)
+		for (long int frame_num = 1; frame_num <= new_length; frame_num++)
 		{
 			// Add 2 fields per frame
 			AddField(rate_curve.GetInt(frame_num));
@@ -207,7 +207,7 @@ void FrameMapper::Init()
 	int start_samples_frame = 1;
 	int start_samples_position = 0;
 
-	for (unsigned int field = 1; field <= fields.size(); field++)
+	for (long int field = 1; field <= fields.size(); field++)
 	{
 		// Get the current field
 		Field f = fields[field - 1];
@@ -216,7 +216,7 @@ void FrameMapper::Init()
 		if (field % 2 == 0 && field > 0)
 		{
 			// New frame number
-			int frame_number = field / 2;
+			long int frame_number = field / 2;
 
 			// Set the bottom frame
 			if (f.isOdd)
@@ -283,7 +283,7 @@ void FrameMapper::Init()
 	fields.clear();
 }
 
-MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame)
+MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame)
 {
 	// Check if frame number is valid
 	if(TargetFrameNumber < 1 || frames.size() == 0)
@@ -299,7 +299,7 @@ MappedFrame FrameMapper::GetMappedFrame(int TargetFrameNumber) throw(OutOfBounds
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	// Check final cache, and just return the frame (if it's available)
 	tr1::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
@@ -332,11 +332,15 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 		// Loop through all requested frames, each frame gets it's own thread
 		#pragma omp for ordered
-		for (int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
 			// Get the mapped frame
 			MappedFrame mapped = GetMappedFrame(frame_number);
-			tr1::shared_ptr<Frame> mapped_frame = reader->GetFrame(mapped.Odd.Frame);
+			tr1::shared_ptr<Frame> mapped_frame;
+
+			#pragma omp ordered
+				mapped_frame = reader->GetFrame(mapped.Odd.Frame);
+
 			int channels_in_frame = mapped_frame->GetAudioChannelsCount();
 
 			// Init some basic properties about this frame
@@ -349,12 +353,16 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(int requested_frame) throw(ReaderCl
 
 
 			// Copy the image from the odd field
-			tr1::shared_ptr<Frame> odd_frame = reader->GetFrame(mapped.Odd.Frame);
+			tr1::shared_ptr<Frame> odd_frame;
+			#pragma omp ordered
+			odd_frame = reader->GetFrame(mapped.Odd.Frame);
 			if (odd_frame)
 				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
 			if (mapped.Odd.Frame != mapped.Even.Frame) {
 				// Add even lines (if different than the previous image)
-				tr1::shared_ptr<Frame> even_frame = reader->GetFrame(mapped.Even.Frame);
+				tr1::shared_ptr<Frame> even_frame;
+				#pragma omp ordered
+				even_frame = reader->GetFrame(mapped.Even.Frame);
 				if (even_frame)
 					frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
 			}
@@ -587,7 +595,7 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 }
 
 // Resample audio and map channels (if needed)
-void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original_frame_number)
+void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number)
 {
 	// Init audio buffers / variables
 	int total_frame_samples = 0;

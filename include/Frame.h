@@ -129,22 +129,22 @@ namespace openshot
 		int sample_rate;
 
 	public:
-		int number;	///< This is the frame number (starting at 1)
+		long int number;	///< This is the frame number (starting at 1)
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();
 
 		/// Constructor - image only (48kHz audio silence)
-		Frame(int number, int width, int height, string color);
+		Frame(long int number, int width, int height, string color);
 
 		/// Constructor - image only from pixel array (48kHz audio silence)
-		Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
+		Frame(long int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
 		/// Constructor - audio only (300x200 blank image)
-		Frame(int number, int samples, int channels);
+		Frame(long int number, int samples, int channels);
 
 		/// Constructor - image & audio
-		Frame(int number, int width, int height, string color, int samples, int channels);
+		Frame(long int number, int width, int height, string color, int samples, int channels);
 
 		/// Copy constructor
 		Frame ( const Frame &other );
@@ -243,7 +243,7 @@ namespace openshot
 		int GetSamplesPerFrame(Fraction fps, int sample_rate, int channels);
 
 		/// Calculate the # of samples per video frame (for a specific frame number and frame rate)
-		static int GetSamplesPerFrame(int frame_number, Fraction fps, int sample_rate, int channels);
+		static int GetSamplesPerFrame(long int frame_number, Fraction fps, int sample_rate, int channels);
 
 		/// Get an audio waveform image
 		tr1::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);

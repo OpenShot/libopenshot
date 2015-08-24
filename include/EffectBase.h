@@ -84,7 +84,7 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		virtual tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, int frame_number) = 0;
+		virtual tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number) = 0;
 
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.

@@ -42,7 +42,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 };
 
 // Constructor - image only (48kHz audio silence)
-Frame::Frame(int number, int width, int height, string color)
+Frame::Frame(long int number, int width, int height, string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
@@ -54,7 +54,7 @@ Frame::Frame(int number, int width, int height, string color)
 };
 
 // Constructor - image only from pixel array (48kHz audio silence)
-Frame::Frame(int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
+Frame::Frame(long int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
@@ -66,7 +66,7 @@ Frame::Frame(int number, int width, int height, const string map, const Magick::
 };
 
 // Constructor - audio only (300x200 blank image)
-Frame::Frame(int number, int samples, int channels) :
+Frame::Frame(long int number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
@@ -78,7 +78,7 @@ Frame::Frame(int number, int samples, int channels) :
 };
 
 // Constructor - image & audio
-Frame::Frame(int number, int width, int height, string color, int samples, int channels)
+Frame::Frame(long int number, int width, int height, string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
 {
@@ -437,7 +437,7 @@ void Frame::SetFrameNumber(int new_number)
 }
 
 // Calculate the # of samples per video frame (for a specific frame number and frame rate)
-int Frame::GetSamplesPerFrame(int number, Fraction fps, int sample_rate, int channels)
+int Frame::GetSamplesPerFrame(long int number, Fraction fps, int sample_rate, int channels)
 {
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps_rate = fps.Reciprocal().ToDouble();
@@ -938,7 +938,6 @@ void Frame::cleanUpBuffer(void *info)
 		// Remove buffer since QImage tells us to
 		unsigned char* ptr_to_qbuffer = (unsigned char*) info;
 		delete ptr_to_qbuffer;
-		ptr_to_qbuffer = NULL;
 	}
 }
 

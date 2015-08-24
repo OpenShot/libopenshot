@@ -120,12 +120,12 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 }
 
 // Write a block of frames from a reader
-void ImageWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
+void ImageWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed)
 {
 	AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
-	for (int number = start; number <= length; number++)
+	for (long int number = start; number <= length; number++)
 	{
 		// Get the frame
 		tr1::shared_ptr<Frame> f = reader->GetFrame(number);

@@ -211,13 +211,13 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 4);
 	CHECK_EQUAL(kf.GetDelta(24), 0);
 
-	CHECK_EQUAL(kf.GetInt(390), 101);
+	CHECK_EQUAL(kf.GetLong(390), 101);
 	CHECK_EQUAL(kf.IsIncreasing(390), false);
 	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 8);
 	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 8);
 	CHECK_EQUAL(kf.GetDelta(390), 0);
 
-	CHECK_EQUAL(kf.GetInt(391), 100);
+	CHECK_EQUAL(kf.GetLong(391), 100);
 	CHECK_EQUAL(kf.IsIncreasing(391), true);
 	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 1);
 	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 12);

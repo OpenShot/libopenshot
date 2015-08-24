@@ -120,7 +120,7 @@ namespace openshot
 		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed) = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-		virtual void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed) = 0;
+		virtual void WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed) = 0;
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

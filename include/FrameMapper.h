@@ -72,12 +72,12 @@ namespace openshot
 	 */
 	struct Field
 	{
-		int Frame;
+		long int Frame;
 		bool isOdd;
 
 		Field() : Frame(0), isOdd(true) { };
 
-		Field(int frame, bool isodd)
+		Field(long int frame, bool isodd)
 		{
 			Frame = frame;
 			isOdd = isodd;
@@ -149,7 +149,7 @@ namespace openshot
 		AVAudioResampleContext *avr;	// Audio resampling context object
 
 		// Internal methods used by init
-		void AddField(int frame);
+		void AddField(long int frame);
 		void AddField(Field field);
 
 		// Use the original and target frame rates and a pull-down technique to create
@@ -173,7 +173,7 @@ namespace openshot
 		void Close();
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
-		MappedFrame GetMappedFrame(int TargetFrameNumber) throw(OutOfBoundsFrame);
+		MappedFrame GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame);
 
 		/// Get the cache object used by this reader
 		Cache* GetCache() { return &final_cache; };
@@ -184,7 +184,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed);
+		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Determine if reader is open or closed
 		bool IsOpen();
@@ -202,7 +202,7 @@ namespace openshot
 		void PrintMapping();
 
 		/// Resample audio and map channels (if needed)
-		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame, int original_frame_number);
+		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number);
 
 	};
 }

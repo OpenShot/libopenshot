@@ -73,7 +73,7 @@ int Saturation::constrain(int color_value)
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Saturation::GetFrame(tr1::shared_ptr<Frame> frame, int frame_number)
+tr1::shared_ptr<Frame> Saturation::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Get the frame's image
 	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
@@ -173,7 +173,7 @@ void Saturation::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Saturation::PropertiesJSON(int requested_frame) {
+string Saturation::PropertiesJSON(long int requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);

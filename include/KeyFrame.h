@@ -80,13 +80,13 @@ namespace openshot {
 		void CreateFactorialTable();
 
 		// Get a factorial for a coordinate
-		double Factorial(int n);
+		double Factorial(long int n);
 
 		// Calculate the factorial function for Bernstein basis
-		double Ni(int n, int i);
+		double Ni(long int n, long int i);
 
 		// Calculate Bernstein Basis
-		double Bernstein(int n, int i, double t);
+		double Bernstein(long int n, long int i, double t);
 
 	public:
 		vector<Point> Points;			///< Vector of all Points
@@ -118,31 +118,34 @@ namespace openshot {
 		void FlipPoints();
 
 		/// Get the index of a point by matching a coordinate
-		int FindIndex(Point p) throw(OutOfBoundsPoint);
+		long int FindIndex(Point p) throw(OutOfBoundsPoint);
 
 		/// Get the value at a specific index
-		float GetValue(int index);
+		float GetValue(long int index);
 
 		/// Get the rounded INT value at a specific index
-		int GetInt(int index);
+		int GetInt(long int index);
+
+		/// Get the rounded LONG value at a specific index
+		long int GetLong(long int index);
 
 		/// Get the fraction that represents how many times this value is repeated in the curve
-		Fraction GetRepeatFraction(int index);
+		Fraction GetRepeatFraction(long int index);
 
 		/// Get the change in Y value (from the previous Y value)
-		float GetDelta(int index);
+		float GetDelta(long int index);
 
 		/// Get a point at a specific index
-		Point& GetPoint(int index) throw(OutOfBoundsPoint);
+		Point& GetPoint(long int index) throw(OutOfBoundsPoint);
 
 		/// Get current point (or closest point) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);
 
 		// Get the number of values (i.e. coordinates on the X axis)
-		int GetLength();
+		long int GetLength();
 
 		/// Get the number of points (i.e. # of points)
-		int GetCount();
+		long int GetCount();
 
 		/// Get the direction of the curve at a specific index (increasing or decreasing)
 		bool IsIncreasing(int index);
@@ -165,14 +168,14 @@ namespace openshot {
 		void RemovePoint(Point p) throw(OutOfBoundsPoint);
 
 		/// Remove a point by index
-		void RemovePoint(int index) throw(OutOfBoundsPoint);
+		void RemovePoint(long int index) throw(OutOfBoundsPoint);
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...
 		void ScalePoints(float scale);
 
 		/// Replace an existing point with a new point
-		void UpdatePoint(int index, Point p);
+		void UpdatePoint(long int index, Point p);
 
 		/// Print a list of points
 		void PrintPoints();

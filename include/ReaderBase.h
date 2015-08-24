@@ -140,7 +140,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
-		virtual tr1::shared_ptr<Frame> GetFrame(int number) = 0;
+		virtual tr1::shared_ptr<Frame> GetFrame(long int number) = 0;
 
 	    /// A thread safe version of GetFrame.
 	    //tr1::shared_ptr<Frame> GetFrameSafe(int number);

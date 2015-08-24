@@ -103,7 +103,7 @@ void ImageReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> ImageReader::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> ImageReader::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)

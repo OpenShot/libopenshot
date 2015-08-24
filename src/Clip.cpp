@@ -244,7 +244,7 @@ float Clip::End() throw(ReaderClosed)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
+tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	if (reader)
 	{
@@ -252,9 +252,9 @@ tr1::shared_ptr<Frame> Clip::GetFrame(int requested_frame) throw(ReaderClosed)
 		requested_frame = adjust_frame_number_minimum(requested_frame);
 
 		// Is a time map detected
-		int new_frame_number = requested_frame;
+		long int new_frame_number = requested_frame;
 		if (time.Values.size() > 1)
-			new_frame_number = time.GetInt(requested_frame);
+			new_frame_number = time.GetLong(requested_frame);
 
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
@@ -322,7 +322,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, int frame_number) throw(ReaderClosed)
+tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed)
 {
 	// Check for valid reader
 	if (!reader)
@@ -517,7 +517,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 }
 
 // Adjust frame number minimum value
-int Clip::adjust_frame_number_minimum(int frame_number)
+int Clip::adjust_frame_number_minimum(long int frame_number)
 {
 	// Never return a frame number 0 or below
 	if (frame_number < 1)
@@ -535,7 +535,7 @@ string Clip::Json() {
 }
 
 // Get all properties for a specific frame
-string Clip::PropertiesJSON(int requested_frame) {
+string Clip::PropertiesJSON(long int requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);

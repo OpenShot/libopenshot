@@ -54,7 +54,7 @@ Cache::~Cache()
 }
 
 // Add a Frame to the cache
-void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
+void Cache::Add(long int frame_number, tr1::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -76,7 +76,7 @@ void Cache::Add(int frame_number, tr1::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> Cache::GetFrame(int frame_number)
+tr1::shared_ptr<Frame> Cache::GetFrame(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -96,21 +96,19 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 	tr1::shared_ptr<openshot::Frame> f;
 
-	// Loop through frame numbers
-	 deque<int>::iterator itr;
-	 int smallest_frame = -1;
+	 // Loop through frame numbers
+	 deque<long int>::iterator itr;
+	 long int smallest_frame = -1;
 	 for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	 {
 		 if (*itr < smallest_frame || smallest_frame == -1)
 			 smallest_frame = *itr;
 	 }
 
-	 // Return frame (or error if no frame found)
-	 if (smallest_frame > 0)
-		 f = GetFrame(smallest_frame);
+	 // Return frame
+	 f = GetFrame(smallest_frame);
 
 	 return f;
 }
@@ -124,7 +122,7 @@ int64 Cache::GetBytes()
 	int64 total_bytes = 0;
 
 	// Loop through frames, and calculate total bytes
-	deque<int>::reverse_iterator itr;
+	deque<long int>::reverse_iterator itr;
 	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
 	{
 		//cout << "get bytes from frame " << *itr << ", frames.count(" << *itr << "): " << frames.count(*itr) << endl;
@@ -136,13 +134,13 @@ int64 Cache::GetBytes()
 }
 
 // Remove a specific frame
-void Cache::Remove(int frame_number)
+void Cache::Remove(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
-	deque<int>::iterator itr;
+	deque<long int>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	{
 		if (*itr == frame_number)
@@ -158,7 +156,7 @@ void Cache::Remove(int frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void Cache::MoveToFront(int frame_number)
+void Cache::MoveToFront(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -167,7 +165,7 @@ void Cache::MoveToFront(int frame_number)
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
-		deque<int>::iterator itr;
+		deque<long int>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 		{
 			if (*itr == frame_number)
@@ -194,7 +192,7 @@ void Cache::Clear()
 }
 
 // Count the frames in the queue
-int Cache::Count()
+long int Cache::Count()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -215,7 +213,7 @@ void Cache::CleanUp()
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Remove the oldest frame
-			int frame_to_remove = frame_numbers.back();
+			long int frame_to_remove = frame_numbers.back();
 
 			// Remove frame_number and frame
 			Remove(frame_to_remove);
@@ -227,7 +225,7 @@ void Cache::CleanUp()
 void Cache::Display()
 {
 	cout << "----- Cache List (" << frames.size() << ") ------" << endl;
-	deque<int>::iterator itr;
+	deque<long int>::iterator itr;
 
 	int i = 1;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
@@ -238,7 +236,7 @@ void Cache::Display()
 }
 
 // Set maximum bytes to a different amount based on a ReaderInfo struct
-void Cache::SetMaxBytesFromInfo(int number_of_frames, int width, int height, int sample_rate, int channels)
+void Cache::SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels)
 {
 	// n frames X height X width X 4 colors of chars X audio channels X 4 byte floats
 	int64 bytes = number_of_frames * (height * width * 4 + (sample_rate * channels * 4));

@@ -37,12 +37,80 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
-	EffectInfo::Json();
+	// Create a reader
+	Clip clip_video("/home/jonathan/apps/libopenshot-git/src/examples/test.mp4");
+	clip_video.Layer(0);
+	clip_video.Position(0.0);
+
+	Clip clip_overlay("/home/jonathan/apps/libopenshot-git/src/examples/front3.png");
+	clip_overlay.Layer(1);
+	//clip_overlay.Position(0.05); // Delay the overlay by 0.05 seconds
+	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
+
+	// Create a timeline
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	// Add clips
+	t.AddClip(&clip_video);
+	t.AddClip(&clip_overlay);
+
+	// Open Timeline
+	t.Open();
+
+	t.GetFrame(2)->Display();
+
+
+	return 0;
+//
+//	FFmpegReader r110("/home/jonathan/Videos/PlaysTV/Team Fortress 2/2015_07_06_22_43_16-ses.mp4");
+//	r110.Open();
+////	r110.debug = false;
+////	r110.DisplayInfo();
+////	FrameMapper m110(&r110, Fraction(24,1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+//
+//	Timeline t110(1280, 720, Fraction(24,1), 48000, 2, LAYOUT_STEREO);
+//	Clip c110("/home/jonathan/Videos/PlaysTV/Team Fortress 2/2015_07_06_22_43_16-ses.mp4");
+//	c110.Position(1.0);
+//	t110.AddClip(&c110);
+//	t110.Open();
+//
+////	m110.GetFrame(100);
+////	m110.GetFrame(85);
+////	m110.GetFrame(85);
+////	m110.GetFrame(86);
+////	m110.GetFrame(86);
+////	m110.GetFrame(86);
+////	m110.GetFrame(86);
+////	m110.GetFrame(87);
+////	m110.GetFrame(87);
+//
+//
+//	t110.GetFrame(1000);
+////	r110.GetFrame(96);
+////	r110.GetFrame(97);
+////	r110.GetFrame(95);
+////	r110.GetFrame(98);
+////	r110.GetFrame(100);
+////	r110.GetFrame(101);
+////	r110.GetFrame(103);
+//	return 0;
+
+//	for (int y = 600; y < 700; y++) {
+//		cout << y << endl;
+//		int random_frame_number = rand() % 1000;
+//		t110.GetFrame(y);
+//	}
+
+//	srand (time(NULL));
+//	for (int z = 0; z <= 1; z++)
+//	for (int y = 1000; y < 1300; y++) {
+//		cout << " --> " << y << endl;
+//		int random_frame_number = rand() % 1000;
+//		t110.GetFrame(y);
+//	}
+
 	return 0;
 
-//	FFmpegReader r110("/home/jonathan/apps/libopenshot/src/examples/piano-mono.wav");
-//	r110.Open();
-//
 //	FrameMapper m110(&r110, Fraction(24,1), PULLDOWN_NONE, 22050, 2, LAYOUT_STEREO);
 //	m110.Open();
 //
@@ -142,7 +210,7 @@ int main(int argc, char* argv[])
 	// 147000 frames, 28100 frames
 	//for (int frame = 1; frame <= (r9.info.video_length - 1); frame++)
 	//for (int z = 0; z < 2; z++)
-	for (int frame = 1; frame <= 700; frame++)
+	for (long int frame = 1; frame <= 700; frame++)
 	//int frame = 1;
 	//while (true)
 	{

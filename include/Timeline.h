@@ -150,7 +150,7 @@ namespace openshot {
 		Cache final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
-		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, int clip_frame_number, int timeline_frame_number, bool is_top_clip);
+		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip);
 
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(Clip* clip);
@@ -162,7 +162,7 @@ namespace openshot {
 		void apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to timeline properties
 
 		/// Calculate time of a frame number, based on a framerate
-		float calculate_time(int number, Fraction rate);
+		float calculate_time(long int number, Fraction rate);
 
 		/// Find intersecting (or non-intersecting) openshot::Clip objects
 		///
@@ -170,10 +170,10 @@ namespace openshot {
 		/// @param requested_frame The frame number that is requested.
 		/// @param number_of_frames The number of frames to check
 		/// @param include Include or Exclude intersecting clips
-		vector<Clip*> find_intersecting_clips(int requested_frame, int number_of_frames, bool include);
+		vector<Clip*> find_intersecting_clips(long int requested_frame, int number_of_frames, bool include);
 
 		/// Apply effects to the source frame (if any)
-		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, int timeline_frame_number, int layer);
+		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer);
 
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
@@ -231,7 +231,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(int requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
+		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
