@@ -489,6 +489,10 @@ void FrameMapper::Open() throw(InvalidFile)
 
 		// Open the reader
 		reader->Open();
+
+		// Set child reader in debug mode (if needed)
+		if (debug)
+			reader->debug = true;
 	}
 }
 

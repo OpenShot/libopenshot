@@ -492,6 +492,11 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		// Add clip to 'opened' list, because it's missing
 		open_clips[clip] = clip;
 
+		// Set debug mode (if needed)
+		if (debug)
+			// Also set each Clip's reader to debug mode
+			clip->Reader()->debug = true;
+
 		// Open the clip
 		clip->Open();
 	}

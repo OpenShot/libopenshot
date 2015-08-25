@@ -1218,31 +1218,32 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 	{
 		// Seek to nearest key-frame (aka, i-frame)
 		bool seek_worked = false;
-
-		// Seek audio stream (if not already seeked... and if an audio stream is found)
-		int64_t seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
-		if (!seek_worked && info.has_audio)
-		{
-			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
-
-			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
-			} else
-			{
-				// AUDIO SEEK
-				is_video_seek = false;
-				seek_worked = true;
-			}
-		}
+		int64_t seek_target = 0;
 
 		// Seek video stream (if any)
-		if (info.has_video) {
+		if (!seek_worked && info.has_video)
+		{
+			seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
 			} else
 			{
 				// VIDEO SEEK
 				is_video_seek = true;
+				seek_worked = true;
+			}
+		}
+
+		// Seek audio stream (if not already seeked... and if an audio stream is found)
+		if (!seek_worked && info.has_audio)
+		{
+			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
+			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
+				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
+			} else
+			{
+				// AUDIO SEEK
+				is_video_seek = false;
 				seek_worked = true;
 			}
 		}

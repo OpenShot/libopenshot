@@ -84,11 +84,11 @@ void FFmpegWriter::auto_detect_format()
 	oc->oformat = fmt;
 
 	// Update codec names
-	if (fmt->video_codec != AV_CODEC_ID_NONE)
+	if (fmt->video_codec != AV_CODEC_ID_NONE && info.has_video)
 		// Update video codec name
 		info.vcodec = avcodec_find_encoder(fmt->video_codec)->name;
 
-	if (fmt->audio_codec != AV_CODEC_ID_NONE)
+	if (fmt->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
 		// Update audio codec name
 		info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
 }
@@ -277,6 +277,10 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) throw
 		else if (name == "rc_max_rate")
 			// Maximum bitrate
 			convert >> c->rc_max_rate;
+
+		else if (name == "rc_buffer_size")
+			// Buffer size
+			convert >> c->rc_buffer_size;
 
 		else
 			// Set AVOption
@@ -879,10 +883,14 @@ AVStream* FFmpegWriter::add_video_stream()
 	c->codec_type = CODEC_TYPE_VIDEO;
 #endif
 
-	/* put sample parameters */
+	/* Init video encoder options */
 	c->bit_rate = info.video_bit_rate;
 	c->rc_min_rate = info.video_bit_rate - (info.video_bit_rate / 6);
 	c->rc_max_rate = info.video_bit_rate;
+	c->rc_buffer_size = FFMAX(c->rc_max_rate, 15000000) * 112L / 15000000 * 16384;
+	c->qmin = 2;
+	c->qmax = 30;
+
 	/* resolution must be a multiple of two */
 	// TODO: require /2 height and width
 	c->width = info.width;

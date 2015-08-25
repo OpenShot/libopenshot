@@ -1,4 +1,4 @@
-####################### src/openshot.i (libopenshot) ########################
+/* ####################### src/openshot.i (libopenshot) ########################
 # @brief SWIG configuration for libopenshot (to generate Python SWIG bindings)
 # @author Jonathan Thomas <jonathan@openshot.org>
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+################################################################################ */
 
 
 %module openshot
