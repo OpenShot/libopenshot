@@ -57,10 +57,10 @@ namespace openshot
 
 	// Start the threads
 	if (reader->info.has_audio)
-		audioPlayback->startThread(1);
+		audioPlayback->startThread(8);
 	if (reader->info.has_video) {
 		videoCache->startThread(2);
-		videoPlayback->startThread(3);
+		videoPlayback->startThread(4);
 	}
 
 	while (!threadShouldExit()) {
