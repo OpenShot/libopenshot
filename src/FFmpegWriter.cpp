@@ -469,9 +469,9 @@ void FFmpegWriter::write_queued_frames()
 					// Get AVFrame
 					AVFrame *av_frame = av_frames[frame];
 
-					// deallocate AVPicture and AVFrame
-					av_freep(&av_frame[0]); // picture buffer
-					avcodec_free_frame(&av_frame);
+					// Deallocate AVPicture and AVFrame
+					free(av_frame->data[0]); // TODO: Determine why av_free crashes on Windows
+					AV_FREE_FRAME(&av_frame);
 					av_frames.erase(frame);
 				}
 
@@ -764,7 +764,7 @@ void FFmpegWriter::add_avframe(tr1::shared_ptr<Frame> frame, AVFrame* av_frame)
 	else
 	{
 		// Do not add, and deallocate this AVFrame
-		avcodec_free_frame(&av_frame);
+		AV_FREE_FRAME(&av_frame);
 	}
 }
 
@@ -1095,8 +1095,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 		AVFrame *audio_frame = NULL;
 		if (!final) {
 			// Create input frame (and allocate arrays)
-			audio_frame = avcodec_alloc_frame();
-			avcodec_get_frame_defaults(audio_frame);
+			audio_frame = AV_ALLOCATE_FRAME();
+			AV_RESET_FRAME(audio_frame);
 			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 			// Fill input frame with sample data
@@ -1136,8 +1136,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 			remaining_frame_samples = total_frame_samples;
 
 			// Create output frame (and allocate arrays)
-			AVFrame *audio_converted = avcodec_alloc_frame();
-			avcodec_get_frame_defaults(audio_converted);
+			AVFrame *audio_converted = AV_ALLOCATE_FRAME();
+			AV_RESET_FRAME(audio_converted);
 			audio_converted->nb_samples = total_frame_samples / channels_in_frame;
 			av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_converted->nb_samples, output_sample_fmt, 0);
 
@@ -1174,11 +1174,11 @@ void FFmpegWriter::write_audio_packets(bool final)
 			memcpy(all_resampled_samples, audio_converted->data[0], nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
 
 			// Remove converted audio
-			av_freep(&audio_frame[0]); // this deletes the all_queued_samples array
+			free(audio_frame->data[0]); // TODO: Determine why av_free crashes on Windows
+            AV_FREE_FRAME(&audio_frame);
+            av_free(audio_converted->data[0]);
+            AV_FREE_FRAME(&audio_converted);
 			all_queued_samples = NULL; // this array cleared with above call
-			avcodec_free_frame(&audio_frame);
-			av_freep(&audio_converted[0]);
-			avcodec_free_frame(&audio_converted);
 
 			AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)", "nb_samples", nb_samples, "remaining_frame_samples", remaining_frame_samples, "", -1, "", -1, "", -1, "", -1);
 		}
@@ -1212,8 +1212,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 				break;
 
 			// Convert to planar (if needed by audio codec)
-			AVFrame *frame_final = avcodec_alloc_frame();
-			avcodec_get_frame_defaults(frame_final);
+			AVFrame *frame_final = AV_ALLOCATE_FRAME();
+			AV_RESET_FRAME(frame_final);
 			if (av_sample_fmt_is_planar(audio_codec->sample_fmt))
 			{
 				AppendDebugMethod("FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)", "in_sample_fmt", output_sample_fmt, "out_sample_fmt", audio_codec->sample_fmt, "in_sample_rate", info.sample_rate, "out_sample_rate", info.sample_rate, "in_channels", info.channels, "out_channels", info.channels);
@@ -1233,8 +1233,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 				}
 
 				// Create input frame (and allocate arrays)
-				audio_frame = avcodec_alloc_frame();
-				avcodec_get_frame_defaults(audio_frame);
+				audio_frame = AV_ALLOCATE_FRAME();
+				AV_RESET_FRAME(audio_frame);
 				audio_frame->nb_samples = audio_input_position / info.channels;
 
 				// Create a new array
@@ -1265,8 +1265,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 					memcpy(samples, frame_final->data[0], nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
 
 				// deallocate AVFrame
-				av_freep(&audio_frame[0]); // delete final_samples_planar array
-				avcodec_free_frame(&audio_frame);
+				free(audio_frame->data[0]); // TODO: Determine why av_free crashes on Windows
+                AV_FREE_FRAME(&audio_frame);
 
 				AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 2nd resampling for Planar formats)", "nb_samples", nb_samples, "", -1, "", -1, "", -1, "", -1, "", -1);
 
@@ -1286,7 +1286,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			}
 
 			// Increment PTS (in samples)
-			write_audio_count += audio_input_frame_size;
+			write_audio_count += FFMIN(audio_input_frame_size, audio_input_position);
 			frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 
 			// Init the packet
@@ -1335,8 +1335,8 @@ void FFmpegWriter::write_audio_packets(bool final)
 			}
 
 			// deallocate AVFrame
-			av_freep(&frame_final[0]); // delete AVFrame internal array OR final_samples array (depending on if its planar or not planar)
-			avcodec_free_frame(&frame_final);
+			free(frame_final->data[0]); // TODO: Determine why av_free crashes on Windows
+            AV_FREE_FRAME(&frame_final);
 
 			// deallocate memory for packet
 			av_free_packet(&pkt);
@@ -1366,7 +1366,7 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 	AVFrame *new_av_frame = NULL;
 
 	// Allocate an AVFrame structure
-	new_av_frame = avcodec_alloc_frame();
+	new_av_frame = AV_ALLOCATE_FRAME();
 	if (new_av_frame == NULL)
 		throw OutOfMemory("Could not allocate AVFrame", path);
 
@@ -1435,7 +1435,7 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 		add_avframe(frame, frame_final);
 
 		// Deallocate memory
-		avcodec_free_frame(&frame_source);
+		AV_FREE_FRAME(&frame_source);
 
 	} // end task
 

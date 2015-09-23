@@ -81,4 +81,15 @@
 	#undef av_err2str
 	#define av_err2str(errnum) av_make_error_string(errnum).c_str()
 
+	#if LIBAVFORMAT_VERSION_MAJOR >= 55
+		#define AV_ALLOCATE_FRAME() av_frame_alloc()
+		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
+    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+	#else
+		#define AV_ALLOCATE_FRAME() avcodec_alloc_frame()
+		#define AV_RESET_FRAME(av_frame) avcodec_get_frame_defaults(av_frame)
+		#define AV_FREE_FRAME(av_frame) avcodec_free_frame(av_frame)
+    #endif
+
+
 #endif

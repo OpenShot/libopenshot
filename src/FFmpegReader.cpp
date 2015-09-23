@@ -686,7 +686,7 @@ bool FFmpegReader::GetAVFrame()
 	int frameFinished = -1;
 
 	// Decode video frame
-	AVFrame *next_frame = avcodec_alloc_frame();
+	AVFrame *next_frame = AV_ALLOCATE_FRAME();
 	#pragma omp critical (packet_cache)
 	avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
 
@@ -722,7 +722,7 @@ bool FFmpegReader::GetAVFrame()
 	}
 
 	// deallocate the frame
-	avcodec_free_frame(&next_frame);
+	AV_FREE_FRAME(&next_frame);
 
 	// Did we get a video frame?
 	return frameFinished;
@@ -822,7 +822,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		uint8_t *buffer = NULL;
 
 		// Allocate an AVFrame structure
-		pFrameRGB = avcodec_alloc_frame();
+		pFrameRGB = AV_ALLOCATE_FRAME();
 		if (pFrameRGB == NULL)
 			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
@@ -850,7 +850,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 
 		// Free the RGB image
 		av_free(buffer);
-		avcodec_free_frame(&pFrameRGB);
+		AV_FREE_FRAME(&pFrameRGB);
 
 		// Remove frame and packet
 		RemoveAVFrame(my_frame);
@@ -898,8 +898,8 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 
 	// Init an AVFrame to hold the decoded audio samples
 	int frame_finished = 0;
-	AVFrame *audio_frame = avcodec_alloc_frame();
-	avcodec_get_frame_defaults(audio_frame);
+	AVFrame *audio_frame = AV_ALLOCATE_FRAME();
+	AV_RESET_FRAME(audio_frame);
 
 	int packet_samples = 0;
 	int data_size = 0;
@@ -988,8 +988,8 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
 		// Create output frame
-		AVFrame *audio_converted = avcodec_alloc_frame();
-		avcodec_get_frame_defaults(audio_converted);
+		AVFrame *audio_converted = AV_ALLOCATE_FRAME();
+		AV_RESET_FRAME(audio_converted);
 		audio_converted->nb_samples = audio_frame->nb_samples;
 		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
@@ -1028,10 +1028,9 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		avr = NULL;
 
 		// Free AVFrames
-		avcodec_free_frame(&audio_frame);
-		av_freep(&audio_converted[0]);
-		avcodec_free_frame(&audio_converted);
-
+		AV_FREE_FRAME(&audio_frame);
+		av_free(audio_converted->data[0]);
+		AV_FREE_FRAME(&audio_converted);
 
 		int starting_frame_number = -1;
 		bool partial_frame = true;

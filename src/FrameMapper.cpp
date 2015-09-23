@@ -635,8 +635,8 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 
 
 	// Create input frame (and allocate arrays)
-	AVFrame *audio_frame = avcodec_alloc_frame();
-	avcodec_get_frame_defaults(audio_frame);
+	AVFrame *audio_frame = AV_ALLOCATE_FRAME();
+	AV_RESET_FRAME(audio_frame);
 	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
@@ -654,8 +654,8 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
 	// Create output frame (and allocate arrays)
-	AVFrame *audio_converted = avcodec_alloc_frame();
-	avcodec_get_frame_defaults(audio_converted);
+	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
+	AV_RESET_FRAME(audio_converted);
 	audio_converted->nb_samples = total_frame_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_S16, 0);
 
@@ -697,11 +697,11 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	memcpy(resampled_samples, audio_converted->data[0], (nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels));
 
 	// Free frames
-	av_freep(&audio_frame[0]);
-	avcodec_free_frame(&audio_frame);
+	free(audio_frame->data[0]); // TODO: Determine why av_free crashes on Windows
+	AV_FREE_FRAME(&audio_frame);
+	av_free(audio_converted->data[0]);
+	AV_FREE_FRAME(&audio_converted);
 	frame_samples = NULL;
-	av_freep(&audio_converted[0]);
-	avcodec_free_frame(&audio_converted);
 
 	// Resize the frame to hold the right # of channels and samples
 	int channel_buffer_size = nb_samples;

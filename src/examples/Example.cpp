@@ -60,12 +60,12 @@ int main(int argc, char* argv[])
 	// Open Timeline
 	r9.Open();
 
-//	cout << " --> 1" << endl;
-//	t.GetFrame(1);
-//	cout << " --> 500" << endl;
-//	t.GetFrame(500);
-//	cout << "1034" << endl;
-//	t.GetFrame(1034);
+	cout << " --> 1" << endl;
+	r9.GetFrame(1);
+	cout << " --> 500" << endl;
+	r9.GetFrame(500);
+	cout << "1034" << endl;
+	r9.GetFrame(1034);
 //	cout << "1" << endl;
 //	t.GetFrame(1);
 //	cout << "1200" << endl;
@@ -186,15 +186,17 @@ int main(int argc, char* argv[])
 	//map.Open();
 
 	/* WRITER ---------------- */
-	FFmpegWriter w9("C:\\Users\\Jonathan\\test-output.webm");
-	w9.debug = true;
+	FFmpegWriter w9("C:\\Users\\Jonathan\\test-output.avi");
+	w9.debug = false;
 	//ImageWriter w9("/home/jonathan/output.gif");
 
 	// Set options
 	//w9.SetVideoOptions(true, "mpeg4", r9.info.fps, r9.info.width, r9.info.height, Fraction(1,1), false, false, 1000000);
 	//w9.SetAudioOptions(true, "mp2", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 64000);
-	w9.SetAudioOptions(true, "libvorbis", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
-	w9.SetVideoOptions(true, "libvpx", r9.info.fps, r9.info.width, r9.info.height, Fraction(1,1), false, false, 3000000);
+	w9.SetVideoOptions(true, "libx264", r9.info.fps, r9.info.width, r9.info.height, Fraction(1,1), false, false, 1000000);
+	w9.SetAudioOptions(true, "mp2", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 64000);
+	//w9.SetAudioOptions(true, "libvorbis", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
+	//w9.SetVideoOptions(true, "libvpx", r9.info.fps, r9.info.width, r9.info.height, Fraction(1,1), false, false, 3000000);
 	//w9.SetAudioOptions(true, "libmp3lame", 22050, r9.info.channels, r9.info.channel_layout, 120000);
 	//w9.SetVideoOptions(true, "libx264", t10.info.fps, t10.info.width, t10.info.height, t10.info.pixel_ratio, false, false, 1500000);
 	//w9.SetVideoOptions(true, "rawvideo", r9.info.fps, 400, 2, r9.info.pixel_ratio, false, false, 20000000);
@@ -208,7 +210,7 @@ int main(int argc, char* argv[])
 
 //	w9.SetOption(VIDEO_STREAM, "qmin", "2" );
 //	w9.SetOption(VIDEO_STREAM, "qmax", "30" );
-	w9.SetOption(VIDEO_STREAM, "crf", "10" );
+//	w9.SetOption(VIDEO_STREAM, "crf", "10" );
 //	w9.SetOption(VIDEO_STREAM, "rc_min_rate", "2000000" );
 //	w9.SetOption(VIDEO_STREAM, "rc_max_rate", "4000000" );
 //	w9.SetOption(VIDEO_STREAM, "max_b_frames", "10" );
