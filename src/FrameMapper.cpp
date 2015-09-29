@@ -79,6 +79,11 @@ void FrameMapper::Init()
 {
 	AppendDebugMethod("FrameMapper::Init (Calculate frame mappings)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
+	// Do not initialize anything if just a picture with no audio
+	if (info.has_video and !info.has_audio and info.has_single_image)
+		// Skip initialization
+		return;
+
 	// Clear the fields & frames lists
 	fields.clear();
 	frames.clear();
@@ -285,6 +290,20 @@ void FrameMapper::Init()
 
 MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame)
 {
+	// Ignore mapping on single image readers
+	if (info.has_video and !info.has_audio and info.has_single_image) {
+		// Return the same number
+		MappedFrame frame;
+		frame.Even.Frame = TargetFrameNumber;
+		frame.Odd.Frame = TargetFrameNumber;
+		frame.Samples.frame_start = 0;
+		frame.Samples.frame_end = 0;
+		frame.Samples.sample_start = 0;
+		frame.Samples.sample_end = 0;
+		frame.Samples.total = 0;
+		return frame;
+	}
+
 	// Check if frame number is valid
 	if(TargetFrameNumber < 1 || frames.size() == 0)
 		// frame too small, return error

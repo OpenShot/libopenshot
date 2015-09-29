@@ -40,7 +40,9 @@ TEST(FFmpegReader_Invalid_Path)
 TEST(FFmpegReader_GetFrame_Before_Opening)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/piano.wav");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "piano.wav";
+	FFmpegReader r(path.str());
 
 	// Check invalid path
 	CHECK_THROW(r.GetFrame(1), ReaderClosed);
@@ -49,7 +51,9 @@ TEST(FFmpegReader_GetFrame_Before_Opening)
 TEST(FFmpegReader_Check_Audio_File)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/piano.wav");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "piano.wav";
+	FFmpegReader r(path.str());
 	r.Open();
 
 	// Get frame 1
@@ -77,7 +81,9 @@ TEST(FFmpegReader_Check_Audio_File)
 TEST(FFmpegReader_Check_Video_File)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/test.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "test.mp4";
+	FFmpegReader r(path.str());
 	r.Open();
 
 	// Get frame 1
@@ -113,7 +119,9 @@ TEST(FFmpegReader_Check_Video_File)
 TEST(FFmpegReader_Seek)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
 	r.Open();
 
 	// Get frame
@@ -168,7 +176,9 @@ TEST(FFmpegReader_Seek)
 TEST(FFmpegReader_Multiple_Open_and_Close)
 {
 	// Create a reader
-	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
 	r.Open();
 
 	// Get frame that requires a seek

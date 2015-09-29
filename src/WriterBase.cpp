@@ -35,6 +35,7 @@ WriterBase::WriterBase()
 	// Initialized writer info
 	info.has_video = false;
 	info.has_audio = false;
+	info.has_single_image = false;
 	info.duration = 0.0;
 	info.file_size = 0;
 	info.height = 0;
@@ -133,6 +134,7 @@ void WriterBase::CopyReaderInfo(ReaderBase* reader)
 {
 	info.has_video = reader->info.has_video;
 	info.has_audio = reader->info.has_audio;
+	info.has_single_image = reader->info.has_single_image;
 	info.duration = reader->info.duration;
 	info.file_size = reader->info.file_size;
 	info.height = reader->info.height;
@@ -170,6 +172,7 @@ void WriterBase::DisplayInfo() {
 	cout << "----------------------------" << endl;
 	cout << "--> Has Video: " << info.has_video << endl;
 	cout << "--> Has Audio: " << info.has_audio << endl;
+	cout << "--> Has Single Image: " << info.has_single_image << endl;
 	cout << "--> Duration: " << info.duration << " Seconds" << endl;
 	cout << "--> File Size: " << double(info.file_size) / 1024 / 1024 << " MB" << endl;
 	cout << "----------------------------" << endl;
@@ -215,6 +218,7 @@ Json::Value WriterBase::JsonValue() {
 	Json::Value root;
 	root["has_video"] = info.has_video;
 	root["has_audio"] = info.has_audio;
+	root["has_single_image"] = info.has_single_image;
 	root["duration"] = info.duration;
 	stringstream filesize_stream;
 	filesize_stream << info.file_size;
@@ -287,6 +291,8 @@ void WriterBase::SetJsonValue(Json::Value root) {
 		info.has_video = root["has_video"].asBool();
 	if (!root["has_audio"].isNull())
 		info.has_audio = root["has_audio"].asBool();
+	if (!root["has_single_image"].isNull())
+		info.has_single_image = root["has_single_image"].asBool();
 	if (!root["duration"].isNull())
 		info.duration = root["duration"].asDouble();
 	if (!root["file_size"].isNull())

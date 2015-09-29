@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source code for Unit test executable (runs all tests and reports successes and failures)
+ * @brief Header file for UnitTests
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,26 +25,11 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef OPENSHOT_UNITTESTS_H
+#define OPENSHOT_UNITTESTS_H
 
-#include <iostream>
-#include "UnitTest++.h"
+    #ifndef TEST_MEDIA_PATH
+        #define TEST_MEDIA_PATH "../../src/examples/"
+    #endif
 
-using namespace std;
-using namespace UnitTest;
-
-#include "../include/Tests.h"
-
-
-int main()
-{
-	cout << "----------------------------" << endl;
-	cout << "     RUNNING ALL TESTS" << endl;
-	cout << "----------------------------" << endl;
-
-	// Run all unit tests
-	RunAllTests();
-
-	cout << "----------------------------" << endl;
-
-	return 0;
-}
+#endif

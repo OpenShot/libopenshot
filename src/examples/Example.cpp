@@ -38,41 +38,69 @@ int main(int argc, char* argv[])
 {
 
 	// Create a reader
-	string path = "C:\\Users\\Jonathan\\Apps\\libopenshot\\src\\examples\\sintel_trailer-720p.mp4";
+	string path = "C:\\Users\\Jonathan\\Apps\\libopenshot-git\\src\\examples\\sintel_trailer-720p.mp4";
 	cout << path << endl;
-	Clip clip_video("C:\\Users\\Jonathan\\Apps\\libopenshot\\src\\examples\\sintel_trailer-720p.mp4");
+	Clip clip_video(path);
 	clip_video.Layer(0);
 	clip_video.Position(0.0);
 
-////	Clip clip_overlay("/home/jonathan/apps/libopenshot-git/src/examples/front3.png");
-////	clip_overlay.Layer(1);
-////	//clip_overlay.Position(0.05); // Delay the overlay by 0.05 seconds
-////	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
-//
+	Clip clip_overlay("C:\\Users\\Jonathan\\Apps\\libopenshot-git\\src\\examples\\front3.png");
+	clip_overlay.Layer(1);
+	clip_overlay.Position(0.05);
+
 	// Create a timeline
 	Timeline r9(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 	r9.debug = false;
 //
 //	// Add clips
 	r9.AddClip(&clip_video);
-//	//t.AddClip(&clip_overlay);
+	r9.AddClip(&clip_overlay);
 
 	// Open Timeline
 	r9.Open();
 
 	cout << " --> 1" << endl;
-	r9.GetFrame(1);
+	r9.GetFrame(1)->Save("pic1.png", 1.0);
 	cout << " --> 500" << endl;
 	r9.GetFrame(500);
 	cout << "1034" << endl;
 	r9.GetFrame(1034);
-//	cout << "1" << endl;
-//	t.GetFrame(1);
-//	cout << "1200" << endl;
-//	t.GetFrame(1200);
+	cout << "1" << endl;
+	r9.GetFrame(1);
+	cout << "1200" << endl;
+	r9.GetFrame(1200)->Save("pic2.png", 1.0);
+
+
+	/* WRITER ---------------- */
+	FFmpegWriter w("output1.webm");
+
+	// Set options
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, LAYOUT_STEREO, 188000);
+	w.SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 3000000);
+
+	// Open writer
+	w.Open();
+
+	// Prepare Streams
+//	w.PrepareStreams();
 //
+//	w.SetOption(VIDEO_STREAM, "qmin", "2" );
+//	w.SetOption(VIDEO_STREAM, "qmax", "30" );
+//	w.SetOption(VIDEO_STREAM, "crf", "10" );
+//	w.SetOption(VIDEO_STREAM, "rc_min_rate", "2000000" );
+//	w.SetOption(VIDEO_STREAM, "rc_max_rate", "4000000" );
+//	w.SetOption(VIDEO_STREAM, "max_b_frames", "10" );
 //
-//	return 0;
+//	// Write header
+//	w.WriteHeader();
+
+	// Write some frames
+	w.WriteFrame(&r9, 24, 50);
+
+	// Close writer & reader
+	w.Close();
+
+	return 0;
 //
 //	FFmpegReader r110("/home/jonathan/Videos/PlaysTV/Team Fortress 2/2015_07_06_22_43_16-ses.mp4");
 //	r110.Open();

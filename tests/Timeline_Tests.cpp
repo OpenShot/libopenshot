@@ -87,11 +87,15 @@ TEST(Timeline_Framerate)
 TEST(Timeline_Check_Two_Track_Video)
 {
 	// Create a reader
-	Clip clip_video("../../src/examples/test.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "test.mp4";
+	Clip clip_video(path.str());
 	clip_video.Layer(0);
 	clip_video.Position(0.0);
 
-	Clip clip_overlay("../../src/examples/front3.png");
+	stringstream path_overlay;
+	path_overlay << TEST_MEDIA_PATH << "front3.png";
+	Clip clip_overlay(path_overlay.str());
 	clip_overlay.Layer(1);
 	clip_overlay.Position(0.05); // Delay the overlay by 0.05 seconds
 	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
@@ -208,15 +212,21 @@ TEST(Timeline_Clip_Order)
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
 	// Add some clips out of order
-	Clip clip_top("../../src/examples/front3.png");
+	stringstream path_top;
+	path_top << TEST_MEDIA_PATH << "front3.png";
+	Clip clip_top(path_top.str());
 	clip_top.Layer(2);
 	t.AddClip(&clip_top);
 
-	Clip clip_middle("../../src/examples/front.png");
+	stringstream path_middle;
+	path_middle << TEST_MEDIA_PATH << "front.png";
+	Clip clip_middle(path_middle.str());
 	clip_middle.Layer(0);
 	t.AddClip(&clip_middle);
 
-	Clip clip_bottom("../../src/examples/back.png");
+	stringstream path_bottom;
+	path_bottom << TEST_MEDIA_PATH << "back.png";
+	Clip clip_bottom(path_bottom.str());
 	clip_bottom.Layer(1);
 	t.AddClip(&clip_bottom);
 
@@ -250,7 +260,9 @@ TEST(Timeline_Clip_Order)
 	}
 
 	// Add another clip
-	Clip clip_middle1("../../src/examples/interlaced.png");
+	stringstream path_middle1;
+	path_middle1 << TEST_MEDIA_PATH << "interlaced.png";
+	Clip clip_middle1(path_middle1.str());
 	clip_middle1.Layer(1);
 	clip_middle1.Position(0.5);
 	t.AddClip(&clip_middle1);

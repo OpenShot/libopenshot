@@ -1335,7 +1335,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 			}
 
 			// deallocate AVFrame
-			free(frame_final->data[0]); // TODO: Determine why av_free crashes on Windows
+			//free(frame_final->data[0]); // TODO: Determine why av_free crashes on Windows
             AV_FREE_FRAME(&frame_final);
 
 			// deallocate memory for packet

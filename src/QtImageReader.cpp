@@ -56,6 +56,7 @@ void QtImageReader::Open() throw(InvalidFile)
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
+		info.has_single_image = true;
 		info.file_size = image->byteCount();
 		info.vcodec = "QImage";
 		info.width = image->width();

@@ -60,6 +60,7 @@ void ImageReader::Open() throw(InvalidFile)
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
+		info.has_single_image = true;
 		info.file_size = image->fileSize();
 		info.vcodec = image->format();
 		info.width = image->size().width();

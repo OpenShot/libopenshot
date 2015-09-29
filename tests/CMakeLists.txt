@@ -29,7 +29,8 @@
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
 IF (WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
+	STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
+	add_definitions( -DIGNORE_JUCE_HYPOT=1 -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -march=i686 -include cmath -std=c++0x")
 ENDIF(WIN32)
 

@@ -179,7 +179,9 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 TEST(FrameMapper_resample_audio_48000_to_41000)
 {
 	// Create a reader: 24 fps, 2 channels, 48000 sample rate
-	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
 
 	// Map to 30 fps, 3 channels surround, 44100 sample rate
 	FrameMapper map(&r, Fraction(30,1), PULLDOWN_NONE, 44100, 3, LAYOUT_SURROUND);

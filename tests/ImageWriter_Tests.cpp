@@ -31,10 +31,12 @@
 using namespace std;
 using namespace openshot;
 
-TEST(ImageWriter_Test_Webm)
+TEST(ImageWriter_Test_Gif)
 {
 	// Reader
-	FFmpegReader r("../../src/examples/sintel_trailer-720p.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
 	r.Open();
 
 	/* WRITER ---------------- */

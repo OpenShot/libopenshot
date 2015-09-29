@@ -49,7 +49,9 @@ TEST(Clip_Default_Constructor)
 TEST(Clip_Constructor)
 {
 	// Create a empty clip
-	Clip c1("../../src/examples/piano.wav");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "piano.wav";
+	Clip c1(path.str());
 	c1.Open();
 
 	// Check basic settings
@@ -202,7 +204,9 @@ TEST(Clip_Properties)
 TEST(Clip_Effects)
 {
 	// Load clip with video
-	Clip c10("../../src/examples/sintel_trailer-720p.mp4");
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	Clip c10(path.str());
 	c10.Open();
 
 	Negate n;
