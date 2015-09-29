@@ -25,15 +25,11 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <iostream>
 #include "UnitTest++.h"
 
 using namespace std;
 using namespace UnitTest;
-
-#include "../include/Tests.h"
-
 
 int main()
 {

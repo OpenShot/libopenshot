@@ -27,6 +27,7 @@
 
 #include "UnitTest++.h"
 #include "../include/OpenShot.h"
+#include "../include/Tests.h"
 
 using namespace std;
 using namespace openshot;
@@ -89,6 +90,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "test.mp4";
+	cout << "path: " << path.str() << endl;
 	Clip clip_video(path.str());
 	clip_video.Layer(0);
 	clip_video.Position(0.0);
