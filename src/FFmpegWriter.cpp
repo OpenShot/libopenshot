@@ -1380,6 +1380,9 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 		new_buffer = new uint8_t[*buffer_size];
 		// Attach buffer to AVFrame
 		avpicture_fill((AVPicture *)new_av_frame, new_buffer, pix_fmt, width, height);
+		new_av_frame->width = width;
+		new_av_frame->height = height;
+		new_av_frame->format = pix_fmt;
 	}
 
 	// return AVFrame
