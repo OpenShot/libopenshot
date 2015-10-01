@@ -99,7 +99,9 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 		}
 
 		bool frame_completed = false;
-		int amount_to_copy = frame->GetAudioSamplesCount() - frame_position;
+		int amount_to_copy = 0;
+		if (frame)
+			amount_to_copy = frame->GetAudioSamplesCount() - frame_position;
 		if (amount_to_copy > amount_needed) {
 			// Don't copy too many samples (we don't want to overflow the buffer)
 			amount_to_copy = amount_needed;
@@ -111,8 +113,9 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 		}
 
 		// Load all of its samples into the buffer
-		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-			new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
+		if (frame)
+			for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
+				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
 
 		// Adjust remaining samples
 		position += amount_to_copy;
