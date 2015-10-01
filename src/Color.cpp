@@ -136,5 +136,5 @@ void Color::SetJsonValue(Json::Value root) {
 	if (!root["blue"].isNull())
 		blue.SetJsonValue(root["blue"]);
 	if (!root["alpha"].isNull())
-		blue.SetJsonValue(root["alpha"]);
+		alpha.SetJsonValue(root["alpha"]);
 }

@@ -169,6 +169,7 @@ string ChromaKey::PropertiesJSON(long int requested_frame) {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
 
 	// Keyframes
+	root["color"] = add_property_json("Key Color", 0.0, "color", "", color.red.Contains(requested_point), color.red.GetCount(), -10000, 10000, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
 	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", color.red.Contains(requested_point), color.red.GetCount(), -10000, 10000, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
 	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", color.blue.Contains(requested_point), color.blue.GetCount(), -10000, 10000, color.blue.GetClosestPoint(requested_point).interpolation, color.blue.GetClosestPoint(requested_point).co.X, false);
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", color.green.Contains(requested_point), color.green.GetCount(), -10000, 10000, color.green.GetClosestPoint(requested_point).interpolation, color.green.GetClosestPoint(requested_point).co.X, false);

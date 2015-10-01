@@ -202,10 +202,10 @@ Point Keyframe::GetClosestPoint(Point p) {
 
 	// Handle edge cases (if no point was found)
 	if (closest.co.X == -1) {
-		if (p.co.X < 1)
+		if (p.co.X < 1 && Points.size() > 0)
 			// Assign 1st point
 			closest = Points[0];
-		else
+		else if (Points.size() > 0)
 			// Assign last point
 			closest = Points[Points.size() - 1];
 	}
