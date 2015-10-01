@@ -606,7 +606,7 @@ void FFmpegWriter::flush_encoders()
 
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
-			if (error_code != 0) {
+			if (error_code < 0) {
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
@@ -662,7 +662,7 @@ void FFmpegWriter::flush_encoders()
 
 			// Write packet
 			error_code = av_interleaved_write_frame(oc, &pkt);
-			if (error_code != 0) {
+			if (error_code < 0) {
 				AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
 
@@ -1323,7 +1323,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 				/* write the compressed frame in the media file */
 				int error_code = av_interleaved_write_frame(oc, &pkt);
-				if (error_code != 0)
+				if (error_code < 0)
 				{
 					AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				}
@@ -1465,7 +1465,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 		/* write the compressed frame in the media file */
 		int error_code = av_interleaved_write_frame(oc, &pkt);
-		if (error_code != 0)
+		if (error_code < 0)
 		{
 			AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
@@ -1538,7 +1538,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 			/* write the compressed frame in the media file */
 			int error_code = av_interleaved_write_frame(oc, &pkt);
-			if (error_code != 0)
+			if (error_code < 0)
 			{
 				AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);

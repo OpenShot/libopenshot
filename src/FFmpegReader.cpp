@@ -1142,6 +1142,11 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 					// No other thread is processing it. Mark the audio as processed (final)
 					processed_audio_frames[f] = f;
 			}
+
+			if (target_frame == starting_frame_number) {
+				// This typically never happens, but just in case, remove the currently processing number
+				processing_audio_frames.erase(processing_audio_frames.find(target_frame));
+			}
 		}
 
 		// Remove this packet

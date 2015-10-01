@@ -661,7 +661,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
 			audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
 
-	if (error_code != 0)
+	if (error_code < 0)
 	{
 		AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
