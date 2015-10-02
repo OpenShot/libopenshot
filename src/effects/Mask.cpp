@@ -280,6 +280,10 @@ string Mask::PropertiesJSON(long int requested_frame) {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
 	root["replace_image"] = add_property_json("Replace Image", replace_image, "bool", "", false, 0, 0, 1, CONSTANT, -1, false);
 
+	// Add replace_image choices (dropdown style)
+	root["replace_image"]["choices"].append(add_property_choice_json("Yes", true, replace_image));
+	root["replace_image"]["choices"].append(add_property_choice_json("No", false, replace_image));
+
 	// Keyframes
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", brightness.Contains(requested_point), brightness.GetCount(), -10000, 10000, brightness.GetClosestPoint(requested_point).interpolation, brightness.GetClosestPoint(requested_point).co.X, false);
 	root["contrast"] = add_property_json("Contrast", contrast.GetValue(requested_frame), "float", "", contrast.Contains(requested_point), contrast.GetCount(), -10000, 10000, contrast.GetClosestPoint(requested_point).interpolation, contrast.GetClosestPoint(requested_point).co.X, false);

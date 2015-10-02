@@ -30,12 +30,9 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Saturation::Saturation() {
+Saturation::Saturation() : saturation(1.0) {
 	// Init effect properties
 	init_effect_details();
-
-	// Init curves
-	saturation = Keyframe(1.0);
 }
 
 // Default constructor

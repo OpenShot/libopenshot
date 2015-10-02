@@ -377,7 +377,6 @@ void Keyframe::SetJsonValue(Json::Value root) {
 
 	if (!root["Auto_Handle_Percentage"].isNull())
 		Auto_Handle_Percentage = root["Auto_Handle_Percentage"].asBool();
-
 }
 
 // Get the fraction that represents how many times this value is repeated in the curve
@@ -534,9 +533,12 @@ void Keyframe::Process() {
 	#pragma omp critical (keyframe_process)
 	{
 		// only process if needed
-		if (needs_update && Points.size() > 0)
+		if (needs_update && Points.size() == 0) {
+			// Clear all values
+			Values.clear();
+		}
+		else if (needs_update && Points.size() > 0)
 		{
-
 			// Clear all values
 			Values.clear();
 

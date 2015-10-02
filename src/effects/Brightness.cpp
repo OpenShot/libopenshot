@@ -30,13 +30,9 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Brightness::Brightness() {
+Brightness::Brightness() : brightness(0.0), contrast(3.0) {
 	// Init effect properties
 	init_effect_details();
-
-	// Init curves
-	brightness = Keyframe(0.0);
-	contrast = Keyframe(3.0);
 }
 
 // Default constructor

@@ -61,6 +61,9 @@ namespace openshot {
 		/// Generate JSON for a property
 		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
 
+		/// Generate JSON choice for a property (dropdown properties)
+		Json::Value add_property_choice_json(string name, int value, int selected_value);
+
 	public:
 
 		// Compare a clip using the Position() property

@@ -30,7 +30,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-ChromaKey::ChromaKey() : fuzz(0.0) {
+ChromaKey::ChromaKey() : fuzz(5.0) {
 	// Init default color
 	color = Color();
 

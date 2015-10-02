@@ -77,7 +77,20 @@ Json::Value ClipBase::add_property_json(string name, float value, string type, s
 	prop["readonly"] = readonly;
 	prop["interpolation"] = intepolation;
 	prop["closest_point_x"] = closest_point_x;
+	prop["choices"] = Json::Value(Json::arrayValue);
 
 	// return JsonValue
 	return prop;
+}
+
+Json::Value ClipBase::add_property_choice_json(string name, int value, int selected_value) {
+
+	// Create choice
+	Json::Value new_choice = Json::Value(Json::objectValue);
+	new_choice["name"] = name;
+	new_choice["value"] = value;
+	new_choice["selected"] = (value == selected_value);
+
+	// return JsonValue
+	return new_choice;
 }

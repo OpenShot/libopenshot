@@ -553,6 +553,31 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, 0, -1, -1, CONSTANT, -1, false);
 	root["waveform"] = add_property_json("Waveform", waveform, "bool", "", false, 0, -1, -1, CONSTANT, -1, false);
 
+	// Add gravity choices (dropdown style)
+	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Top Center", GRAVITY_TOP, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Top Right", GRAVITY_TOP_RIGHT, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Left", GRAVITY_LEFT, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Center", GRAVITY_CENTER, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Right", GRAVITY_RIGHT, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Bottom Left", GRAVITY_BOTTOM_LEFT, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Bottom Center", GRAVITY_BOTTOM, gravity));
+	root["gravity"]["choices"].append(add_property_choice_json("Bottom Right", GRAVITY_BOTTOM_RIGHT, gravity));
+
+	// Add scale choices (dropdown style)
+	root["scale"]["choices"].append(add_property_choice_json("Crop", SCALE_CROP, scale));
+	root["scale"]["choices"].append(add_property_choice_json("Best Fit", SCALE_FIT, scale));
+	root["scale"]["choices"].append(add_property_choice_json("Stretch", SCALE_STRETCH, scale));
+	root["scale"]["choices"].append(add_property_choice_json("None", SCALE_NONE, scale));
+
+	// Add anchor choices (dropdown style)
+	root["anchor"]["choices"].append(add_property_choice_json("Canvas", ANCHOR_CANVAS, anchor));
+	root["anchor"]["choices"].append(add_property_choice_json("Viewport", ANCHOR_VIEWPORT, anchor));
+
+	// Add waveform choices (dropdown style)
+	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
+	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
+
 	// Keyframes
 	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), location_x.GetCount(), -10000, 10000, location_x.GetClosestPoint(requested_point).interpolation, location_x.GetClosestPoint(requested_point).co.X, false);
 	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), location_y.GetCount(), -10000, 10000, location_y.GetClosestPoint(requested_point).interpolation, location_y.GetClosestPoint(requested_point).co.X, false);
