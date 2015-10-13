@@ -33,6 +33,7 @@ IF (WIN32)
 	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -march=i686 -include cmath -std=c++0x")
 ENDIF(WIN32)
 IF (APPLE)
+	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
     SET_PROPERTY(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
     ADD_DEFINITIONS(-DNDEBUG)
     SET(EXTENSION "mm")
