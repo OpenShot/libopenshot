@@ -63,12 +63,13 @@ namespace openshot
 	{
 	private:
 		ReaderBase *reader;
+		tr1::shared_ptr<QImage> original_mask;
 
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
 
 		/// Get grayscale mask image
-		tr1::shared_ptr<QImage> get_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
+		void set_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
 
 		/// Init effect settings
 		void init_effect_details();

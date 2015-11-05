@@ -70,7 +70,7 @@ int Mask::constrain(int color_value)
 }
 
 // Get grayscale mask image
-tr1::shared_ptr<QImage> Mask::get_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
+void Mask::set_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
 {
 	// Get pixels for mask image
 	unsigned char *pixels = (unsigned char *) mask_frame_image->bits();
@@ -103,9 +103,6 @@ tr1::shared_ptr<QImage> Mask::get_grayscale_mask(tr1::shared_ptr<QImage> mask_fr
 		pixels[byte_index + 2] = gray_value;
 		pixels[byte_index + 3] = 255;
 	}
-
-	// Resize mask image to match frame size
-	return tr1::shared_ptr<QImage>(new QImage(mask_frame_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -124,12 +121,18 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, long int fra
 	if (!reader)
 		return frame;
 
-	// Get the mask image (from the mask reader)
-	tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
+	// Get mask image
+	if (!original_mask || !reader->info.has_single_image) {
+		// Only get mask if needed
+		original_mask = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
+
+		// Resize mask image to match frame size
+		original_mask = tr1::shared_ptr<QImage>(new QImage(original_mask->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+	}
 
 	// Convert mask to grayscale and resize to frame size
-	mask = get_grayscale_mask(mask, frame_image->width(), frame_image->height(), brightness.GetValue(frame_number), contrast.GetValue(frame_number));
-
+	tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage(*original_mask));
+	set_grayscale_mask(mask, frame_image->width(), frame_image->height(), brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
 	// Get pixels for frame image
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
