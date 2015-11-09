@@ -139,6 +139,7 @@ namespace tr1
 %include "../../../include/Timeline.h"
 
 /* Effects */
+%include "../../../include/effects/Blur.h"
 %include "../../../include/effects/Brightness.h"
 %include "../../../include/effects/ChromaKey.h"
 %include "../../../include/effects/Deinterlace.h"

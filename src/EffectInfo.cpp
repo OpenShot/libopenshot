@@ -45,6 +45,7 @@ Json::Value EffectInfo::JsonValue() {
 	Json::Value root;
 
 	// Append info JSON from each supported effect
+	root.append(Blur().JsonInfo());
 	root.append(Brightness().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
 	root.append(Deinterlace().JsonInfo());

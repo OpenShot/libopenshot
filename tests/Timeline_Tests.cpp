@@ -434,3 +434,34 @@ TEST(Timeline_Effect_Order)
 	// Close reader
 	t.Close();
 }
+
+TEST(Timeline_Effect_Blur)
+{
+	// Create a timeline
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	stringstream path_top;
+	path_top << TEST_MEDIA_PATH << "interlaced.png";
+	Clip clip_top(path_top.str());
+	clip_top.Layer(2);
+	t.AddClip(&clip_top);
+
+	// Add some effects out of order
+	Keyframe horizontal_radius(5.0);
+	Keyframe vertical_radius(5.0);
+	Keyframe sigma(3.0);
+	Keyframe iterations(3.0);
+	Blur blur(horizontal_radius, vertical_radius, sigma, iterations);
+	blur.Id("B");
+	blur.Layer(2);
+	t.AddEffect(&blur);
+
+	// Open Timeline
+	t.Open();
+
+	// Get frame
+	tr1::shared_ptr<Frame> f = t.GetFrame(1);
+
+	// Close reader
+	t.Close();
+}

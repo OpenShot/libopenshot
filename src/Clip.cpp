@@ -743,7 +743,10 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull())
 				// Init the matching effect object
-				if (existing_effect["type"].asString() == "Brightness")
+				if (existing_effect["type"].asString() == "Blur")
+					e = new Blur();
+
+				else if (existing_effect["type"].asString() == "Brightness")
 					e = new Brightness();
 
 				else if (existing_effect["type"].asString() == "ChromaKey")
