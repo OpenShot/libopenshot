@@ -128,7 +128,7 @@ void QtPlayer::Seek(int new_frame)
 		p->video_position = new_frame;
 
 		// Clear last position (to force refresh)
-		p->last_video_position = 1;
+		p->last_video_position = 0;
 
 		// Notify audio thread that seek has occurred
 		p->audioPlayback->Seek(new_frame);
