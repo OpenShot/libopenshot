@@ -588,6 +588,12 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetCount(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetCount(), 0.0, 1000 * 60 * 30, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
 
+	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), -10000, 10000, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
+	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), -10000, 10000, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
+	root["wave_color"]["blue"] = add_property_json("Blue", wave_color.blue.GetValue(requested_frame), "float", "", wave_color.blue.Contains(requested_point), wave_color.blue.GetCount(), -10000, 10000, wave_color.blue.GetClosestPoint(requested_point).interpolation, wave_color.blue.GetClosestPoint(requested_point).co.X, false);
+	root["wave_color"]["green"] = add_property_json("Green", wave_color.green.GetValue(requested_frame), "float", "", wave_color.green.Contains(requested_point), wave_color.green.GetCount(), -10000, 10000, wave_color.green.GetClosestPoint(requested_point).interpolation, wave_color.green.GetClosestPoint(requested_point).co.X, false);
+
+
 	// Return formatted string
 	return root.toStyledString();
 }

@@ -198,8 +198,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
 
-
-
 	#pragma omp ordered
 	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 
@@ -209,6 +207,23 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	// Debug output
 	AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
+
+	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
+	if (source_clip->Waveform())
+	{
+		// Debug output
+		AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+
+		// Get the color of the waveform
+		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
+		int green = source_clip->wave_color.green.GetInt(clip_frame_number);
+		int blue = source_clip->wave_color.blue.GetInt(clip_frame_number);
+		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
+
+		// Generate Waveform Dynamically (the size of the timeline)
+		tr1::shared_ptr<QImage> source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue, alpha);
+		source_frame->AddImage(tr1::shared_ptr<QImage>(source_image));
+	}
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
@@ -259,29 +274,11 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	}
 
-	/* GET IMAGE DATA - OR GENERATE IT */
-	if (!source_clip->Waveform())
-	{
-		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+	// Debug output
+	AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 
-		// Get actual frame image data
-		source_image = source_frame->GetImage();
-	}
-	else
-	{
-		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
-
-		// Get the color of the waveform
-		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
-		int green = source_clip->wave_color.green.GetInt(clip_frame_number);
-		int blue = source_clip->wave_color.blue.GetInt(clip_frame_number);
-		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
-
-		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue, alpha);
-	}
+	// Get actual frame image data
+	source_image = source_frame->GetImage();
 
 	// Get some basic image properties
 	int source_width = source_image->width();
@@ -1076,7 +1073,13 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		EffectBase *e = NULL;
 
 		// Init the matching effect object
-		if (effect_type == "ChromaKey")
+		if (effect_type == "Blur")
+			e = new Blur();
+
+		else if (effect_type == "Brightness")
+			e = new Brightness();
+
+		else if (effect_type == "ChromaKey")
 			e = new ChromaKey();
 
 		else if (effect_type == "Deinterlace")
@@ -1087,6 +1090,9 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 		else if (effect_type == "Negate")
 			e = new Negate();
+
+		else if (effect_type == "Saturation")
+			e = new Saturation();
 
 		// Load Json into Effect
 		e->SetJsonValue(change["value"]);

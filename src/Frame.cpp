@@ -185,7 +185,7 @@ tr1::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 
 		// Create blank image
 		wave_image = tr1::shared_ptr<QImage>(new QImage(total_width, total_height, QImage::Format_RGBA8888));
-		wave_image->fill(QColor(QString::fromStdString("#000000")));
+		wave_image->fill(QColor(0,0,0,0));
 
 		// Load QPainter with wave_image device
 		QPainter painter(wave_image.get());
