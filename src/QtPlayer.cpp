@@ -137,9 +137,16 @@ void QtPlayer::Seek(int new_frame)
 
 void QtPlayer::Stop()
 {
-    mode = PLAYBACK_STOPPED;
-	p->stopPlayback();
+	// Change mode to stopped
+	mode = PLAYBACK_STOPPED;
+
+	// Notify threads of stopping
 	p->videoCache->Stop();
+	p->audioPlayback->Stop();
+
+	// Kill all threads
+	p->stopPlayback();
+
 	p->video_position = 0;
 	threads_started = false;
 }

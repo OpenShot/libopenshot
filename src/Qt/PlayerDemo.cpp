@@ -62,6 +62,15 @@ PlayerDemo::~PlayerDemo()
 {
 }
 
+void PlayerDemo::closeEvent(QCloseEvent *event)
+{
+	// Close window, stop player, and quit
+	QWidget *pWin = QApplication::activeWindow();
+	pWin->hide();
+	player->Stop();
+	QApplication::quit();
+}
+
 void PlayerDemo::keyPressEvent(QKeyEvent *event)
 {
 	if (event->key() == Qt::Key_Space || event->key() == Qt::Key_K) {

@@ -55,6 +55,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *event);
+    void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
     void open(bool checked);

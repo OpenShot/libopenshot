@@ -80,7 +80,7 @@ namespace openshot
 	void run();
 
 	/// Set the current thread's reader
-	void Reader(ReaderBase *new_reader) { reader=new_reader; };
+	void Reader(ReaderBase *new_reader) { reader=new_reader; Play(); };
 
 	/// Parent class of VideoCacheThread
 	friend class PlayerPrivate;

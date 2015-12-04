@@ -130,7 +130,7 @@ namespace openshot
 	    if (sleep_time > 0) sleep(sleep_time);
 
 	    // Debug output
-	    std::cout << "video frame diff: " << video_frame_diff << std::endl;
+	    std::cout << "frame: " << video_position << ", video frame diff: " << video_frame_diff << std::endl;
 	}
     }
 

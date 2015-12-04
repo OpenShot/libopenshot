@@ -100,7 +100,7 @@ namespace openshot
 		source = new AudioReaderSource(reader, 1, buffer_size);
 		source->setLooping(true); // prevent this source from terminating when it reaches the end
 
-		// Play the video
+		// Mark as 'playing'
 		Play();
 
     }
@@ -176,12 +176,13 @@ namespace openshot
     			transport.start();
 
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
-    				sleep(100);
+					sleep(100);
 
     			is_playing = false;
-    		}
 
-    		sleep(250);
+				// Stop time slice thread
+				thread.stopThread(-1);
+    		}
     	}
 
     }

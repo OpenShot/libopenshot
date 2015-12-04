@@ -77,7 +77,7 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-	while (!threadShouldExit()) {
+	while (!threadShouldExit() && is_playing) {
 
 		// Calculate sleep time for frame rate
 		double frame_time = (1000.0 / reader->info.fps.ToDouble());
