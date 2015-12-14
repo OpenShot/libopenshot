@@ -72,7 +72,7 @@ function isLibsInstalled() {
     libs="$@"
     notfound=false
     for l in "${libs}"; do
-        ld -L/usr/local/lib -l"${l}"
+        ld -L/usr/local/lib -l"${l}" 2>/dev/null
         if [[ $? -ne 0 ]]; then
             notfound=true
         fi
@@ -150,8 +150,9 @@ function buildlibxml2() {
     fi
     extractIfNeeded libxml2-*.tar.gz
     cd libxml2-*/win32/
+    ised configure.js 's/dirSep = "\\\\";/dirSep = "\/";/'
     cscript.exe configure.js compiler=mingw prefix=/usr/local
-    ised ../dict.c '/typedef.*uint32_t;$/d'
+    # ised ../dict.c '/typedef.*uint32_t;$/d'
     ised Makefile.mingw 's/cmd.exe \/C "\?if not exist \(.*\) mkdir \1"\?/mkdir -p \1/'
     ised Makefile.mingw 's/cmd.exe \/C "copy\(.*\)"/cp\1/'
     ised Makefile.mingw '/cp/{y/\\/\//;}'
@@ -189,6 +190,57 @@ function buildjpegsrc() {
 
     cd jpeg-*/
     ./configure
+    make
+    make install
+    cd ..
+}
+
+function buildfreetype() {
+    if isLibsInstalled "freetype"; then
+        if ask "Found freetype installed. Do you want to reinstall it?"; then :
+        else
+            return 0
+        fi
+    fi
+    extract freetype*.tar.bz2
+
+    INCLUDE_PATH=/usr/local/include
+	LIBRARY_PATH=/usr/local/lib
+	BINARY_PATH=/usr/local/bin
+    cd freetype-*/
+    ./configure
+	make
+    make install
+    cd ..
+}
+
+function buildlibwmf() {
+    if isLibsInstalled "wmf"; then
+        if ask "Found libwmf installed. Do you want to reinstall it?"; then :
+        else
+            return 0
+        fi
+    fi
+    extract libwmf*.tar.gz
+
+    cd libwmf-*/
+    ./configure CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
+    make
+    make install
+    cd ..
+}
+
+function buildlibwebp() {
+    if isLibsInstalled "webp"; then
+        if ask "Found libwebp installed. Do you want to reinstall it?"; then :
+        else
+            return 0
+        fi
+    fi
+    extract libwebp*.tar.gz
+
+    cd libwebp-*/
+    ./configure CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib"
     make
     make install
     cd ..
