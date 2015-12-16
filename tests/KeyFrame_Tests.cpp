@@ -321,3 +321,16 @@ TEST(Keyframe_Flip_Keyframe)
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
 	CHECK_CLOSE(10.0f, kf.GetValue(100), 0.01);
 }
+
+TEST(Keyframe_Remove_Duplicate_Point)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 0.0);
+	kf.AddPoint(1, 1.0);
+	kf.AddPoint(1, 2.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetLength(), 1);
+	CHECK_CLOSE(kf.GetPoint(0).co.Y, 2.0, 0.01);
+}

@@ -73,6 +73,12 @@ void Keyframe::AddPoint(Point p) {
 	// mark as dirty
 	needs_update = true;
 
+	// Check for duplicate point (and remove it)
+	Point closest = GetClosestPoint(p);
+	if (closest.co.X == p.co.X)
+		// Remove existing point
+		RemovePoint(closest);
+
 	// Add point at correct spot
 	Points.push_back(p);
 
@@ -464,7 +470,7 @@ void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
 		if (p.co.X == existing_point.co.X && p.co.Y == existing_point.co.Y) {
 			// Remove the matching point, and break out of loop
 			Points.erase(Points.begin() + x);
-			break;
+			return;
 		}
 	}
 
