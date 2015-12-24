@@ -64,46 +64,22 @@ namespace openshot
     }
 
     // Set the reader object
-    void AudioPlaybackThread::Reader(ReaderBase *reader)
-    {
-		// Stop any existing audio
-		if (source) {
-			// Stop playing
-			Stop();
-			transport.stop();
-
-			// Wait for transport to stop
-			while (transport.isPlaying()) {
-				cout << "waiting for transport to stop" << endl;
-			    sleep(25);
-			}
-
-			// Kill previous audio
-			transport.setSource(0);
-
-			player.setSource(0);
-			audioDeviceManager.removeAudioCallback(&player);
-			audioDeviceManager.closeAudioDevice();
-			audioDeviceManager.removeAllChangeListeners();
-			audioDeviceManager.dispatchPendingMessages();
-
-			// Remove source
-			delete source;
-			source = NULL;
+    void AudioPlaybackThread::Reader(ReaderBase *reader) {
+		if (source)
+			source->Reader(reader);
+		else {
+			// Create new audio source reader
+			source = new AudioReaderSource(reader, 1, buffer_size);
+			source->setLooping(true); // prevent this source from terminating when it reaches the end
 		}
 
 		// Set local vars
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
-		// Create new audio source reader
-		source = new AudioReaderSource(reader, 1, buffer_size);
-		source->setLooping(true); // prevent this source from terminating when it reaches the end
-
 		// Mark as 'playing'
 		Play();
-
-    }
+	}
 
     // Get the current frame object (which is filling the buffer)
     tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
@@ -178,7 +154,23 @@ namespace openshot
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
 					sleep(100);
 
-    			is_playing = false;
+
+				// Stop audio and shutdown transport
+				Stop();
+				transport.stop();
+
+				// Kill previous audio
+				transport.setSource(NULL);
+
+				player.setSource(NULL);
+				audioDeviceManager.removeAudioCallback(&player);
+				audioDeviceManager.closeAudioDevice();
+				audioDeviceManager.removeAllChangeListeners();
+				audioDeviceManager.dispatchPendingMessages();
+
+				// Remove source
+				delete source;
+				source = NULL;
 
 				// Stop time slice thread
 				thread.stopThread(-1);

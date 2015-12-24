@@ -56,6 +56,13 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	Init();
 }
 
+// Destructor
+FrameMapper::~FrameMapper() {
+	if (is_open)
+		// Auto Close if not already
+		Close();
+}
+
 void FrameMapper::AddField(long int frame)
 {
 	// Add a field, and toggle the odd / even field
@@ -317,6 +324,36 @@ MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfB
 	return frames[TargetFrameNumber - 1];
 }
 
+// Get or generate a blank frame
+tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
+{
+	tr1::shared_ptr<Frame> new_frame;
+
+	// Init some basic properties about this frame
+	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, info.sample_rate, info.channels);
+
+	try {
+		// Attempt to get a frame (but this could fail if a reader has just been closed)
+		new_frame = reader->GetFrame(number);
+
+		// Return real frame
+		return new_frame;
+
+	} catch (const ReaderClosed & e) {
+		// ...
+	} catch (const TooManySeeks & e) {
+		// ...
+	} catch (const OutOfBoundsFrame & e) {
+		// ...
+	}
+
+	// Create blank frame
+	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
+	new_frame->SampleRate(info.sample_rate);
+	new_frame->ChannelsLayout(info.channel_layout);
+	return new_frame;
+}
+
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
@@ -337,7 +374,9 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	if (final_frame) return final_frame;
 
 	// Minimum number of frames to process (for performance reasons)
-	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+	// TODO: Find a safe way to deal with Closing the reader while multi-processing is happening
+	// In the meantime, I'm leaving this at 1
+	int minimum_frames =  OPEN_MP_NUM_PROCESSORS; //OPEN_MP_NUM_PROCESSORS
 
 	// Set the number of threads in OpenMP
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
@@ -358,11 +397,10 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			tr1::shared_ptr<Frame> mapped_frame;
 
 			#pragma omp ordered
-				mapped_frame = reader->GetFrame(mapped.Odd.Frame);
+			mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
+			// Get # of channels in the actual frame
 			int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-
-			// Init some basic properties about this frame
 			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
 
 			// Create a new frame
@@ -373,19 +411,19 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 			// Copy the image from the odd field
 			tr1::shared_ptr<Frame> odd_frame;
-			#pragma omp ordered
-			odd_frame = reader->GetFrame(mapped.Odd.Frame);
-			if (odd_frame)
-				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
-			if (mapped.Odd.Frame != mapped.Even.Frame) {
-				// Add even lines (if different than the previous image)
-				tr1::shared_ptr<Frame> even_frame;
-				#pragma omp ordered
-				even_frame = reader->GetFrame(mapped.Even.Frame);
-				if (even_frame)
-					frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
-			}
+            #pragma omp ordered
+            odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
+            if (odd_frame)
+                frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+            if (mapped.Odd.Frame != mapped.Even.Frame) {
+                // Add even lines (if different than the previous image)
+                tr1::shared_ptr<Frame> even_frame;
+                #pragma omp ordered
+                even_frame = GetOrCreateFrame(mapped.Even.Frame);
+                if (even_frame)
+                    frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+            }
 
 			// Copy the samples
 			int samples_copied = 0;
@@ -400,7 +438,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 				for (int channel = 0; channel < channels_in_frame; channel++)
 				{
 					// number of original samples on this frame
-					tr1::shared_ptr<Frame> original_frame = reader->GetFrame(starting_frame);
+					tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
 					int original_samples = original_frame->GetAudioSamplesCount();
 
 					if (starting_frame == mapped.Samples.frame_start)
@@ -520,6 +558,9 @@ void FrameMapper::Close()
 {
 	if (reader)
 	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
 		AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Close internal reader

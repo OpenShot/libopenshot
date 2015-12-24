@@ -152,6 +152,9 @@ namespace openshot
 		void AddField(long int frame);
 		void AddField(Field field);
 
+		// Get Frame or Generate Blank Frame
+		tr1::shared_ptr<Frame> GetOrCreateFrame(long int number);
+
 		// Use the original and target frame rates and a pull-down technique to create
 		// a mapping between the original fields and frames or a video to a new frame rate.
 		// This might repeat or skip fields and frames of the original video, depending on
@@ -165,6 +168,9 @@ namespace openshot
 
 		/// Default constructor for openshot::FrameMapper class
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
+
+		/// Destructor
+		~FrameMapper();
 
 		/// Change frame rate or audio mapping details
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);

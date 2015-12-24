@@ -59,23 +59,6 @@ void QtPlayer::SetSource(const std::string &source)
     reader->debug = false;
     reader->Open();
 
-    // experimental timeline code
-	//Clip *c = new Clip(source);
-	//c->scale = SCALE_NONE;
-	//c->rotation.AddPoint(1, 0.0);
-	//c->rotation.AddPoint(1000, 360.0);
-	//c->Waveform(true);
-
-    //Timeline *t = new Timeline(c->Reader()->info.width, c->Reader()->info.height, c->Reader()->info.fps, c->Reader()->info.sample_rate, c->Reader()->info.channels);
-	//Timeline *t = new Timeline(1280, 720, openshot::Fraction(24,1), 44100, 2, LAYOUT_STEREO);
-    //t->debug = true; openshot::Fraction(30,1)
-    //t->info = c->Reader()->info;
-    //t->info.fps = openshot::Fraction(12,1);
-    //t->GetCache()->SetMaxBytesFromInfo(40, c->Reader()->info.width, c->Reader()->info.height, c->Reader()->info.sample_rate, c->Reader()->info.channels);
-
-    //t->AddClip(c);
-    //t->Open();
-
     // Set the reader
 	Reader(reader);
 }
@@ -154,7 +137,7 @@ void QtPlayer::Stop()
 // Set the reader object
 void QtPlayer::Reader(ReaderBase *new_reader)
 {
-	cout << "Reader SET: " << new_reader << endl;
+	// Set new reader. Note: Be sure to close and dispose of the old reader after calling this
 	reader = new_reader;
 	p->reader = new_reader;
 	p->videoCache->Reader(new_reader);

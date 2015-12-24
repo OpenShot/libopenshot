@@ -54,6 +54,12 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	Close();
 }
 
+FFmpegReader::~FFmpegReader() {
+	if (is_open)
+		// Auto close reader if not already done
+		Close();
+}
+
 // Init a collection of software rescalers (thread safe)
 void FFmpegReader::InitScalers()
 {
@@ -221,6 +227,12 @@ void FFmpegReader::Close()
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
+		// Mark as "closed"
+		is_open = false;
+
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
 		// Close the codec
 		if (info.has_video)
 		{
@@ -257,9 +269,6 @@ void FFmpegReader::Close()
 		// Close the video file
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
-
-		// Mark as "closed"
-		is_open = false;
 
 		// Reset some variables
 		last_frame = 0;

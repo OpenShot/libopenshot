@@ -84,7 +84,7 @@ namespace openshot
 
 	    // Cache frames before the other threads need them
 	    // Cache frames up to the max frames
-	    while ((position - current_display_frame) < max_frames)
+	    while (speed == 1 && (position - current_display_frame) < max_frames)
 	    {
 	    	// Only cache up till the max_frames amount... then sleep
 			try
@@ -102,6 +102,9 @@ namespace openshot
 	    	// Increment frame number
 	    	position++;
 	    }
+
+		// Sleep for 1 frame length
+		sleep(frame_time);
 	}
 
 	return;

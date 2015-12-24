@@ -237,6 +237,9 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec);
 
+		/// Destructor
+		~FFmpegReader();
+
 		/// Close File
 		void Close();
 

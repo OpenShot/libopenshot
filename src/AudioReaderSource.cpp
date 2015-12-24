@@ -177,10 +177,17 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 		int number_to_copy = 0;
 
 		// Do we need more samples?
-		if ((reader && reader->IsOpen() && !frame) or
-		   (reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
-			// Refill buffer from reader
-			GetMoreSamplesFromReader();
+		if (speed == 1) {
+			// Only refill buffers if speed is normal
+			if ((reader && reader->IsOpen() && !frame) or
+				(reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
+				// Refill buffer from reader
+				GetMoreSamplesFromReader();
+		} else {
+			// Fill buffer with silence and clear current frame
+			info.buffer->clear();
+			return;
+		}
 
 		// Determine how many samples to copy
 		if (position + info.numSamples <= buffer_samples)
@@ -218,8 +225,7 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 
 		// Adjust estimate frame number (the estimated frame number that is being played)
 		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate, buffer_channels);
-		if (speed == 1)
-			estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
+		estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
 	}
 }
 
