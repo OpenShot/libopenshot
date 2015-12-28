@@ -264,7 +264,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
-				#pragma omp critical (openshot_adding_audio)
 				new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
 
 			}
@@ -594,9 +593,6 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
 		vector<Clip*> nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
 
-		// TODO: OpenMP is disabled in this function, due to conditional calls the ImageMagick methods, which also
-		// contain OpenMP parallel regions. This is a violation of OpenMP, and causes the threads to hang in some cases.
-		// Set the number of threads in OpenMP
 		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 		// Allow nested OpenMP sections
 		omp_set_nested(true);

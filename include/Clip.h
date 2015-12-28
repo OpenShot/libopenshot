@@ -121,13 +121,16 @@ namespace openshot {
 		bool manage_reader;
 
 		/// Adjust frame number minimum value
-		int adjust_frame_number_minimum(long int frame_number);
+		long int adjust_frame_number_minimum(long int frame_number);
 
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame);
 
 		/// Get file extension
 		string get_file_extension(string path);
+
+		/// Get a frame object or create a blank one
+		tr1::shared_ptr<Frame> GetOrCreateFrame(long int number);
 
 		/// Adjust the audio and image of a time mapped frame
 		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed);

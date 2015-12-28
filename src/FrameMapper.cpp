@@ -449,7 +449,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 							number_to_copy = remaining_samples;
 
 						// Add samples to new frame
-						#pragma omp critical (openshot_adding_audio)
 						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, number_to_copy, 1.0);
 					}
 					else if (starting_frame > mapped.Samples.frame_start && starting_frame < mapped.Samples.frame_end)
@@ -460,7 +459,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 							number_to_copy = remaining_samples;
 
 						// Add samples to new frame
-						#pragma omp critical (openshot_adding_audio)
 						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 					}
 					else
@@ -471,7 +469,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 							number_to_copy = remaining_samples;
 
 						// Add samples to new frame
-						#pragma omp critical (openshot_adding_audio)
 						frame->AddAudio(false, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
 					}
 				}
@@ -483,12 +480,11 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 			// Resample audio on frame (if needed)
 			if (info.has_audio &&
-					( info.sample_rate != frame->SampleRate() ||
-					  info.channels != frame->GetAudioChannelsCount() ||
-					  info.channel_layout != frame->ChannelsLayout()))
+				(info.sample_rate != frame->SampleRate() ||
+				 info.channels != frame->GetAudioChannelsCount() ||
+				 info.channel_layout != frame->ChannelsLayout()))
 				// Resample audio and correct # of channels if needed
 				ResampleMappedAudio(frame, mapped.Odd.Frame);
-
 
 			// Add frame to final cache
 			final_cache.Add(frame->number, frame);
@@ -765,7 +761,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 
 	// Resize the frame to hold the right # of channels and samples
 	int channel_buffer_size = nb_samples;
-	#pragma omp critical (openshot_adding_audio)
 	frame->ResizeAudio(info.channels, channel_buffer_size, info.sample_rate, info.channel_layout);
 
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (Audio successfully resampled)", "nb_samples", nb_samples, "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "channels_in_frame", channels_in_frame, "info.channels", info.channels, "info.channel_layout", info.channel_layout);
@@ -806,7 +801,6 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 		}
 
 		// Add samples to frame for this channel
-		#pragma omp critical (openshot_adding_audio)
 		frame->AddAudio(true, channel_filter, 0, channel_buffer, position, 1.0f);
 
 		AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position, "channel_filter", channel_filter, "", -1, "", -1, "", -1, "", -1);
