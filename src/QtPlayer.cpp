@@ -65,8 +65,6 @@ void QtPlayer::SetSource(const std::string &source)
 
 void QtPlayer::Play()
 {
-	cout << "PLAY() on QTPlayer" << endl;
-
 	// Set mode to playing, and speed to normal
 	mode = PLAYBACK_PLAY;
 	Speed(1);

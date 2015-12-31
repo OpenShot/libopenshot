@@ -51,87 +51,85 @@ namespace openshot
     // Start thread
     void PlayerPrivate::run()
     {
-	// bail if no reader set
-	if (!reader)
-		return;
+		// bail if no reader set
+		if (!reader)
+			return;
 
-	// Start the threads
-	if (reader->info.has_audio)
-		audioPlayback->startThread(8);
-	if (reader->info.has_video) {
-		videoCache->startThread(2);
-		videoPlayback->startThread(4);
-	}
+		// Start the threads
+		if (reader->info.has_audio)
+			audioPlayback->startThread(8);
+		if (reader->info.has_video) {
+			videoCache->startThread(2);
+			videoPlayback->startThread(4);
+		}
 
-	while (!threadShouldExit()) {
+		while (!threadShouldExit()) {
 
-	    // Calculate the milliseconds a single frame should stay on the screen
-	    double frame_time = (1000.0 / reader->info.fps.ToDouble());
+			// Calculate the milliseconds a single frame should stay on the screen
+			double frame_time = (1000.0 / reader->info.fps.ToDouble());
 
-		// Get the start time (to track how long a frame takes to render)
-	    const Time t1 = Time::getCurrentTime();
+			// Get the start time (to track how long a frame takes to render)
+			const Time t1 = Time::getCurrentTime();
 
-	    // Get the current video frame (if it's different)
-    	frame = getFrame();
+			// Get the current video frame (if it's different)
+			frame = getFrame();
 
-	    // Experimental Pausing Code (if frame has not changed)
-	    if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length)) {
-	    	speed = 0;
-	    	sleep(frame_time);
-	    	continue;
-	    }
+			// Experimental Pausing Code (if frame has not changed)
+			if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length)) {
+				speed = 0;
+				sleep(frame_time);
+				continue;
+			}
 
-	    // Set the video frame on the video thread and render frame
-	    videoPlayback->frame = frame;
-	    videoPlayback->render.signal();
-	    videoPlayback->rendered.wait();
+			// Set the video frame on the video thread and render frame
+			videoPlayback->frame = frame;
+			videoPlayback->render.signal();
+			videoPlayback->rendered.wait();
 
-	    // Keep track of the last displayed frame
-	    last_video_position = video_position;
+			// Keep track of the last displayed frame
+			last_video_position = video_position;
 
-	    // How many frames ahead or behind is the video thread?
-	    int video_frame_diff = 0;
-	    if (reader->info.has_audio && reader->info.has_video) {
-	    	if (speed != 1)
-	    		// Set audio frame again (since we are not in normal speed, and not paused)
-	    		audioPlayback->Seek(video_position);
+			// How many frames ahead or behind is the video thread?
+			int video_frame_diff = 0;
+			if (reader->info.has_audio && reader->info.has_video) {
+				if (speed != 1)
+					// Set audio frame again (since we are not in normal speed, and not paused)
+					audioPlayback->Seek(video_position);
 
-			// Only calculate this if a reader contains both an audio and video thread
-			audio_position = audioPlayback->getCurrentFramePosition();
-			video_frame_diff = video_position - audio_position;
-	    }
+				// Only calculate this if a reader contains both an audio and video thread
+				audio_position = audioPlayback->getCurrentFramePosition();
+				video_frame_diff = video_position - audio_position;
+			}
 
-	    // Get the end time (to track how long a frame takes to render)
-	    const Time t2 = Time::getCurrentTime();
+			// Get the end time (to track how long a frame takes to render)
+			const Time t2 = Time::getCurrentTime();
 
-	    // Determine how many milliseconds it took to render the frame
-	    int64 render_time = t2.toMilliseconds() - t1.toMilliseconds();
+			// Determine how many milliseconds it took to render the frame
+			int64 render_time = t2.toMilliseconds() - t1.toMilliseconds();
 
-	    // Calculate the amount of time to sleep (by subtracting the render time)
-	    int sleep_time = int(frame_time - render_time);
+			// Calculate the amount of time to sleep (by subtracting the render time)
+			int sleep_time = int(frame_time - render_time);
 
-	    // Adjust drift (if more than a few frames off between audio and video)
-	    if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video)
-	    	// Since the audio and video threads are running independently, they will quickly get out of sync.
-	    	// To fix this, we calculate how far ahead or behind the video frame is, and adjust the amount of time
-	    	// the frame is displayed on the screen (i.e. the sleep time). If a frame is ahead of the audio,
-	    	// we sleep for longer. If a frame is behind the audio, we sleep less (or not at all), in order for
-	    	// the video to catch up.
-	    	sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
+			// Adjust drift (if more than a few frames off between audio and video)
+			if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video)
+				// Since the audio and video threads are running independently, they will quickly get out of sync.
+				// To fix this, we calculate how far ahead or behind the video frame is, and adjust the amount of time
+				// the frame is displayed on the screen (i.e. the sleep time). If a frame is ahead of the audio,
+				// we sleep for longer. If a frame is behind the audio, we sleep less (or not at all), in order for
+				// the video to catch up.
+				sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
 
 
-	    else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
-	    	// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
-	    	video_position++;
-	    	sleep_time = 0;
-	    }
+			else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
+				// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
+				video_position++;
+				sleep_time = 0;
+			}
 
-	    // Sleep (leaving the video frame on the screen for the correct amount of time)
-	    if (sleep_time > 0) sleep(sleep_time);
+			// Sleep (leaving the video frame on the screen for the correct amount of time)
+			if (sleep_time > 0) sleep(sleep_time);
 
-	    // Debug output
-	    std::cout << "frame: " << video_position << ", video frame diff: " << video_frame_diff << std::endl;
-	}
+		}
     }
 
     // Get the next displayed frame (based on speed and direction)

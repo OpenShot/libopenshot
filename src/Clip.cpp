@@ -358,169 +358,181 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 		int channels = reader->info.channels;
 		int number_of_samples = GetOrCreateFrame(new_frame_number)->GetAudioSamplesCount();
 
-		// Determine if we are speeding up or slowing down
-		if (time.GetRepeatFraction(frame_number).den > 1)
-		{
-			// SLOWING DOWN AUDIO
-			// Resample data, and return new buffer pointer
-			AudioSampleBuffer *resampled_buffer = NULL;
-			int resampled_buffer_size = 0;
+		// Only resample audio if needed
+		if (reader->info.has_audio) {
+			// Determine if we are speeding up or slowing down
+			if (time.GetRepeatFraction(frame_number).den > 1) {
+				// SLOWING DOWN AUDIO
+				// Resample data, and return new buffer pointer
+				AudioSampleBuffer *resampled_buffer = NULL;
+				int resampled_buffer_size = 0;
 
-			// SLOW DOWN audio (split audio)
-			samples = new juce::AudioSampleBuffer(channels, number_of_samples);
-			samples->clear();
-
-			// Loop through channels, and get audio samples
-			for (int channel = 0; channel < channels; channel++)
-				// Get the audio samples for this channel
-				samples->addFrom(channel, 0, GetOrCreateFrame(new_frame_number)->GetAudioSamples(channel), number_of_samples, 1.0f);
-
-			// Reverse the samples (if needed)
-			if (!time.IsIncreasing(frame_number))
-				reverse_buffer(samples);
-
-			// Resample audio to be X times slower (where X is the denominator of the repeat fraction)
-			resampler->SetBuffer(samples, 1.0 / time.GetRepeatFraction(frame_number).den);
-
-			// Resample the data (since it's the 1st slice)
-			resampled_buffer = resampler->GetResampledBuffer();
-
-			// Get the length of the resampled buffer (if one exists)
-			resampled_buffer_size = resampled_buffer->getNumSamples();
-
-			// Just take the samples we need for the requested frame
-			int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
-			if (start > 0)
-				start -= 1;
-			for (int channel = 0; channel < channels; channel++)
-				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start), number_of_samples, 1.0f);
-
-			// Clean up
-			resampled_buffer = NULL;
-
-		}
-		else if (abs(delta) > 1 && abs(delta) < 100)
-		{
-			int start = 0;
-			if (delta > 0)
-			{
-				// SPEED UP (multiple frames of audio), as long as it's not more than X frames
-				int total_delta_samples = 0;
-				for (int delta_frame = new_frame_number - (delta - 1); delta_frame <= new_frame_number; delta_frame++)
-					total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps, reader->info.sample_rate, reader->info.channels);
-
-				// Allocate a new sample buffer for these delta frames
-				samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+				// SLOW DOWN audio (split audio)
+				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
 				samples->clear();
 
-				// Loop through each frame in this delta
-				for (int delta_frame = new_frame_number - (delta - 1); delta_frame <= new_frame_number; delta_frame++)
-				{
-					// buffer to hold detal samples
-					int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-					AudioSampleBuffer* delta_samples = new juce::AudioSampleBuffer(channels, number_of_delta_samples);
-					delta_samples->clear();
+				// Loop through channels, and get audio samples
+				for (int channel = 0; channel < channels; channel++)
+					// Get the audio samples for this channel
+					samples->addFrom(channel, 0, GetOrCreateFrame(new_frame_number)->GetAudioSamples(channel),
+									 number_of_samples, 1.0f);
 
-					for (int channel = 0; channel < channels; channel++)
-						delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
+				// Reverse the samples (if needed)
+				if (!time.IsIncreasing(frame_number))
+					reverse_buffer(samples);
 
-					// Reverse the samples (if needed)
-					if (!time.IsIncreasing(frame_number))
-						reverse_buffer(delta_samples);
+				// Resample audio to be X times slower (where X is the denominator of the repeat fraction)
+				resampler->SetBuffer(samples, 1.0 / time.GetRepeatFraction(frame_number).den);
 
-					// Copy the samples to
-					for (int channel = 0; channel < channels; channel++)
-						// Get the audio samples for this channel
-						samples->addFrom(channel, start, delta_samples->getReadPointer(channel), number_of_delta_samples, 1.0f);
+				// Resample the data (since it's the 1st slice)
+				resampled_buffer = resampler->GetResampledBuffer();
 
-					// Clean up
-					delete delta_samples;
-					delta_samples = NULL;
+				// Get the length of the resampled buffer (if one exists)
+				resampled_buffer_size = resampled_buffer->getNumSamples();
 
-					// Increment start position
-					start += number_of_delta_samples;
-				}
+				// Just take the samples we need for the requested frame
+				int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
+				if (start > 0)
+					start -= 1;
+				for (int channel = 0; channel < channels; channel++)
+					// Add new (slower) samples, to the frame object
+					new_frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
+										number_of_samples, 1.0f);
+
+				// Clean up
+				resampled_buffer = NULL;
+
 			}
-			else
-			{
-				// SPEED UP (multiple frames of audio), as long as it's not more than X frames
-				int total_delta_samples = 0;
-				for (int delta_frame = new_frame_number - (delta + 1); delta_frame >= new_frame_number; delta_frame--)
-					total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps, reader->info.sample_rate, reader->info.channels);
+			else if (abs(delta) > 1 && abs(delta) < 100) {
+				int start = 0;
+				if (delta > 0) {
+					// SPEED UP (multiple frames of audio), as long as it's not more than X frames
+					int total_delta_samples = 0;
+					for (int delta_frame = new_frame_number - (delta - 1);
+						 delta_frame <= new_frame_number; delta_frame++)
+						total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps,
+																		 reader->info.sample_rate,
+																		 reader->info.channels);
 
-				// Allocate a new sample buffer for these delta frames
-				samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+					// Allocate a new sample buffer for these delta frames
+					samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+					samples->clear();
+
+					// Loop through each frame in this delta
+					for (int delta_frame = new_frame_number - (delta - 1);
+						 delta_frame <= new_frame_number; delta_frame++) {
+						// buffer to hold detal samples
+						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
+						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+																					   number_of_delta_samples);
+						delta_samples->clear();
+
+						for (int channel = 0; channel < channels; channel++)
+							delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel),
+												   number_of_delta_samples, 1.0f);
+
+						// Reverse the samples (if needed)
+						if (!time.IsIncreasing(frame_number))
+							reverse_buffer(delta_samples);
+
+						// Copy the samples to
+						for (int channel = 0; channel < channels; channel++)
+							// Get the audio samples for this channel
+							samples->addFrom(channel, start, delta_samples->getReadPointer(channel),
+											 number_of_delta_samples, 1.0f);
+
+						// Clean up
+						delete delta_samples;
+						delta_samples = NULL;
+
+						// Increment start position
+						start += number_of_delta_samples;
+					}
+				}
+				else {
+					// SPEED UP (multiple frames of audio), as long as it's not more than X frames
+					int total_delta_samples = 0;
+					for (int delta_frame = new_frame_number - (delta + 1);
+						 delta_frame >= new_frame_number; delta_frame--)
+						total_delta_samples += Frame::GetSamplesPerFrame(delta_frame, reader->info.fps,
+																		 reader->info.sample_rate,
+																		 reader->info.channels);
+
+					// Allocate a new sample buffer for these delta frames
+					samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+					samples->clear();
+
+					// Loop through each frame in this delta
+					for (int delta_frame = new_frame_number - (delta + 1);
+						 delta_frame >= new_frame_number; delta_frame--) {
+						// buffer to hold delta samples
+						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
+						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+																					   number_of_delta_samples);
+						delta_samples->clear();
+
+						for (int channel = 0; channel < channels; channel++)
+							delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel),
+												   number_of_delta_samples, 1.0f);
+
+						// Reverse the samples (if needed)
+						if (!time.IsIncreasing(frame_number))
+							reverse_buffer(delta_samples);
+
+						// Copy the samples to
+						for (int channel = 0; channel < channels; channel++)
+							// Get the audio samples for this channel
+							samples->addFrom(channel, start, delta_samples->getReadPointer(channel),
+											 number_of_delta_samples, 1.0f);
+
+						// Clean up
+						delete delta_samples;
+						delta_samples = NULL;
+
+						// Increment start position
+						start += number_of_delta_samples;
+					}
+				}
+
+				// Resample audio to be X times faster (where X is the delta of the repeat fraction)
+				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
+
+				// Resample data, and return new buffer pointer
+				AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
+				int resampled_buffer_size = buffer->getNumSamples();
+
+				// Add the newly resized audio samples to the current frame
+				for (int channel = 0; channel < channels; channel++)
+					// Add new (slower) samples, to the frame object
+					new_frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
+
+				// Clean up
+				buffer = NULL;
+			}
+			else {
+				// Use the samples on this frame (but maybe reverse them if needed)
+				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
 				samples->clear();
 
-				// Loop through each frame in this delta
-				for (int delta_frame = new_frame_number - (delta + 1); delta_frame >= new_frame_number; delta_frame--)
-				{
-					// buffer to hold delta samples
-					int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-					AudioSampleBuffer* delta_samples = new juce::AudioSampleBuffer(channels, number_of_delta_samples);
-					delta_samples->clear();
+				// Loop through channels, and get audio samples
+				for (int channel = 0; channel < channels; channel++)
+					// Get the audio samples for this channel
+					samples->addFrom(channel, 0, frame->GetAudioSamples(channel), number_of_samples, 1.0f);
 
-					for (int channel = 0; channel < channels; channel++)
-						delta_samples->addFrom(channel, 0, GetOrCreateFrame(delta_frame)->GetAudioSamples(channel), number_of_delta_samples, 1.0f);
+				// reverse the samples
+				if (!time.IsIncreasing(frame_number))
+					reverse_buffer(samples);
 
-					// Reverse the samples (if needed)
-					if (!time.IsIncreasing(frame_number))
-						reverse_buffer(delta_samples);
+				// Add reversed samples to the frame object
+				for (int channel = 0; channel < channels; channel++)
+					new_frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
 
-					// Copy the samples to
-					for (int channel = 0; channel < channels; channel++)
-						// Get the audio samples for this channel
-						samples->addFrom(channel, start, delta_samples->getReadPointer(channel), number_of_delta_samples, 1.0f);
 
-					// Clean up
-					delete delta_samples;
-					delta_samples = NULL;
-
-					// Increment start position
-					start += number_of_delta_samples;
-				}
 			}
 
-			// Resample audio to be X times faster (where X is the delta of the repeat fraction)
-			resampler->SetBuffer(samples, float(start) / float(number_of_samples));
-
-			// Resample data, and return new buffer pointer
-			AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
-			int resampled_buffer_size = buffer->getNumSamples();
-
-			// Add the newly resized audio samples to the current frame
-			for (int channel = 0; channel < channels; channel++)
-				// Add new (slower) samples, to the frame object
-				new_frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
-
-			// Clean up
-			buffer = NULL;
+			delete samples;
+			samples = NULL;
 		}
-		else
-		{
-			// Use the samples on this frame (but maybe reverse them if needed)
-			samples = new juce::AudioSampleBuffer(channels, number_of_samples);
-			samples->clear();
-
-			// Loop through channels, and get audio samples
-			for (int channel = 0; channel < channels; channel++)
-				// Get the audio samples for this channel
-				samples->addFrom(channel, 0, frame->GetAudioSamples(channel), number_of_samples, 1.0f);
-
-			// reverse the samples
-			if (!time.IsIncreasing(frame_number))
-				reverse_buffer(samples);
-
-			// Add reversed samples to the frame object
-			for (int channel = 0; channel < channels; channel++)
-				new_frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
-
-
-		}
-
-        delete samples;
-        samples = NULL;
 
 		// Return new time mapped frame
 		return new_frame;
