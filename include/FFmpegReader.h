@@ -129,6 +129,8 @@ namespace openshot
 		long int prev_pts;
 		long int pts_total;
 		long int pts_counter;
+		long int num_packets_since_video_frame;
+		long int num_checks_since_final;
 
 		bool is_seeking;
 		long int seeking_pts;

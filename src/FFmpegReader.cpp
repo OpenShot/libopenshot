@@ -38,7 +38,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(OPEN_MP_NUM_PROCESSORS), is_open(false),
 	  seek_audio_frame_found(0), seek_video_frame_found(0), prev_samples(0), prev_pts(0),
 	  pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-	  current_video_frame(0), has_missing_frames(false) {
+	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
@@ -551,6 +551,9 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				// Video packet
 				if (packet->stream_index == videoStream)
 				{
+					// Reset this counter, since we have a video packet
+					num_packets_since_video_frame = 0;
+
 					// Check the status of a seek (if any)
 					if (is_seeking)
 						#pragma omp critical (openshot_seek)
@@ -583,6 +586,9 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				// Audio packet
 				else if (packet->stream_index == audioStream)
 				{
+					// Increment this (to track # of packets since the last video packet)
+					num_packets_since_video_frame++;
+
 					// Check the status of a seek (if any)
 					if (is_seeking)
 						#pragma omp critical (openshot_seek)
@@ -1365,7 +1371,6 @@ long int FFmpegReader::ConvertVideoPTStoFrame(long int pts)
 		// if we are missing a video frame.
 		while (current_video_frame < frame) {
 			missing_video_frames.insert(pair<int,int>(previous_video_frame, current_video_frame));
-			cout << "missing frame detected: " << current_video_frame << ", previous frame: " << previous_video_frame << endl;
 
 			// Mark this reader as containing missing frames
 			has_missing_frames = true;
@@ -1521,6 +1526,29 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 	// Debug output
 	AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "", -1, "", -1, "", -1);
 
+	// Determine if frames are missing (due to no more video packets)
+	if (info.has_video && num_packets_since_video_frame > 30)
+	{
+		// Force the creation of missing frames
+		long int previous_video_frame = current_video_frame;
+		while (current_video_frame < requested_frame) {
+			// Increment current frame
+			current_video_frame++;
+
+			missing_video_frames.insert(pair<int,int>(previous_video_frame, current_video_frame));
+
+			// Mark this reader as containing missing frames
+			has_missing_frames = true;
+
+			// Create missing frame (and copy image from previous frame)
+			tr1::shared_ptr<Frame> frame_object = final_cache.GetFrame(previous_video_frame);
+			if (frame_object) {
+				// Move this related frame to the missing frames cache (so the missing frames can use it later)
+				missing_frames.Add(frame_object->number, frame_object);
+			}
+		}
+	}
+
 	// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
 	map<long int, long int>::iterator itr;
 	bool found_missing_frame = false;
@@ -1540,17 +1568,7 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 				{
 					const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 					processed_video_frames[requested_frame] = requested_frame;
-					processed_audio_frames[requested_frame] = requested_frame;
 				}
-
-				// Move the frame manually to final cache
-				final_cache.Add(missing_frame->number, missing_frame);
-
-				// Remove frame from working cache
-				working_cache.Remove(missing_frame->number);
-
-				// Update last frame processed
-				last_frame = missing_frame->number;
 
 				// Remove missing frame from map
 				missing_video_frames.erase(itr);
@@ -1579,7 +1597,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 			// No frames found
 			break;
 
-		// Only process frames smaller than or near the requested frame
+		// Increment # of checks since last 'final' frame
+		num_checks_since_final++;
+
+			// Only process frames smaller than or near the requested frame
 		if (f->number > (requested_frame + OPEN_MP_NUM_PROCESSORS))
 			// This frame is too far in the future... ignore for now
 			break;
@@ -1599,6 +1620,21 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		// Adjust for available streams
 		if (!info.has_video) is_video_ready = true;
 		if (!info.has_audio) is_audio_ready = true;
+
+		// Make final any frames that get stuck (for whatever reason)
+		if (num_checks_since_final > 60 && (!is_video_ready || !is_audio_ready)) {
+			// Make this frame final
+			final_cache.Add(f->number, f);
+
+			// Remove frame from working cache
+			working_cache.Remove(f->number);
+
+			// Update last frame processed
+			last_frame = f->number;
+
+			// Skip to next iteration
+			continue;
+		}
 
 		// Debug output
 		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "", -1, "", -1, "", -1);
@@ -1626,6 +1662,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 
 			if (!is_seek_trash)
 			{
+				// Reset counter since last 'final' frame
+				num_checks_since_final = 0;
+
 				// Move frame to final cache
 				final_cache.Add(f->number, f);
 
