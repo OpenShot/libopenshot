@@ -91,6 +91,23 @@ tr1::shared_ptr<Frame> Cache::GetFrame(long int frame_number)
 		return tr1::shared_ptr<Frame>();
 }
 
+// Return a deque of all frame numbers in this queue (returns just a copy of the data)
+deque<long int> Cache::GetFrameNumbers() {
+
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
+	// Make copy of deque
+	deque<long int> copy_frame_numbers;
+
+	// Loop through frame numbers
+	deque<long int>::iterator itr;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+		copy_frame_numbers.push_back(*itr);
+
+	return copy_frame_numbers;
+}
+
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 {

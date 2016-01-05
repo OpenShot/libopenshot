@@ -129,7 +129,9 @@ namespace openshot
 		int sample_rate;
 
 	public:
-		long int number;	///< This is the frame number (starting at 1)
+		long int number;	 ///< This is the frame number (starting at 1)
+		bool has_audio_data; ///< This frame has been loaded with audio data
+		bool has_image_data; ///< This frame has been loaded with pixel data
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();

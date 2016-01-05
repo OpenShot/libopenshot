@@ -46,7 +46,6 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 
 	// Init cache
 	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 60, info.width, info.height, info.sample_rate, info.channels);
-	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
@@ -214,7 +213,6 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 
 		// Adjust cache size based on size of frame and audio
 		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 60, info.width, info.height, info.sample_rate, info.channels);
-		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
 
 		// Mark as "open"
@@ -229,9 +227,6 @@ void FFmpegReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
-
-		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 		// Close the codec
 		if (info.has_video)
@@ -251,7 +246,6 @@ void FFmpegReader::Close()
 		// Clear final cache
 		final_cache.Clear();
 		working_cache.Clear();
-		missing_frames.Clear();
 
 		// Clear processed lists
 		{
@@ -525,11 +519,6 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 			// Loop through the stream until the correct frame is found
 			while (true)
 			{
-				// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
-				if (has_missing_frames && CheckMissingFrame(requested_frame))
-					// Break this loop (found the requested missing frame)
-					break;
-
 				// Get the next packet into a local variable called packet
 				packet_error = GetNextPacket();
 
@@ -616,8 +605,13 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 
 				// Check if working frames are 'finished'
 				bool is_cache_found = false;
-				if (!is_seeking)
+				if (!is_seeking) {
+					// Check for any missing frames
+					CheckMissingFrame(requested_frame);
+
+					// Check for final frames
 					CheckWorkingFrames(false, requested_frame);
+				}
 
 				// Check if requested 'final' frame is available
 				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
@@ -625,8 +619,8 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				// Increment frames processed
 				packets_processed++;
 
-				// Break once the frame is found, or after way too many packets have been checked
-				if ((is_cache_found && packets_processed >= minimum_packets) or packets_processed > 4096)
+				// Break once the frame is found
+				if ((is_cache_found && packets_processed >= minimum_packets))
 					break;
 
 			} // end while
@@ -754,6 +748,10 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		if ((is_video_seek && !seek_video_frame_found) || (!is_video_seek && !seek_audio_frame_found))
 			return false;
 
+		// Check for both streams
+		if ((info.has_video && !seek_video_frame_found) || (info.has_audio && !seek_audio_frame_found))
+			return false;
+
 		// Determine max seeked frame
 		long int max_seeked_frame = seek_audio_frame_found; // determine max seeked frame
 		if (seek_video_frame_found > max_seeked_frame)
@@ -790,6 +788,10 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	// Calculate current frame #
 	long int current_frame = ConvertVideoPTStoFrame(GetVideoPTS());
 
+	// Track 1st video packet after a successful seek
+	if (!seek_video_frame_found && is_seeking)
+		seek_video_frame_found = current_frame;
+
 	// Are we close enough to decode the frame? and is this frame # valid?
 	if ((!has_missing_frames and current_frame < (requested_frame - 20)) or (current_frame == -1))
 	{
@@ -825,10 +827,6 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 	processing_video_frames[current_frame] = current_frame;
 
-	// Track 1st video packet after a successful seek
-	if (!seek_video_frame_found && is_seeking)
-		seek_video_frame_found = current_frame;
-
 	#pragma omp task firstprivate(current_frame, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
@@ -863,6 +861,9 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		// Update working cache
 		working_cache.Add(f->number, f);
 
+		// Keep track of last last_video_frame
+		last_video_frame = f;
+
 		// Free the RGB image
 		av_free(buffer);
 		AV_FREE_FRAME(&pFrameRGB);
@@ -888,6 +889,10 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 // Process an audio packet
 void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_frame, int starting_sample)
 {
+	// Track 1st audio packet after a successful seek
+	if (!seek_audio_frame_found && is_seeking)
+		seek_audio_frame_found = target_frame;
+
 	// Are we close enough to decode the frame's audio?
 	if (!has_missing_frames and target_frame < (requested_frame - 20))
 	{
@@ -903,10 +908,6 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 
 	// Init some local variables (for OpenMP)
 	AVPacket *my_packet = packets[packet];
-
-	// Track 1st audio packet after a successful seek
-	if (!seek_audio_frame_found && is_seeking)
-		seek_audio_frame_found = target_frame;
 
 	// Debug output
 	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
@@ -1210,6 +1211,8 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 	last_frame = 0;
 	current_video_frame = 0;
 	largest_frame_processed = 0;
+	num_checks_since_final = 0;
+	num_packets_since_video_frame = 0;
 	has_missing_frames = false;
 
 	// Increment seek count
@@ -1370,17 +1373,11 @@ long int FFmpegReader::ConvertVideoPTStoFrame(long int pts)
 		// Sometimes frames are missing due to varying timestamps, or they were dropped. Determine
 		// if we are missing a video frame.
 		while (current_video_frame < frame) {
-			missing_video_frames.insert(pair<int,int>(previous_video_frame, current_video_frame));
+			if (!missing_video_frames.count(current_video_frame))
+				missing_video_frames.insert(pair<int, int>(previous_video_frame, current_video_frame));
 
 			// Mark this reader as containing missing frames
 			has_missing_frames = true;
-
-			// Create missing frame (and copy image from previous frame)
-			tr1::shared_ptr<Frame> frame_object = final_cache.GetFrame(previous_video_frame);
-			if (frame_object) {
-				// Move this related frame to the missing frames cache (so the missing frames can use it later)
-				missing_frames.Add(frame_object->number, frame_object);
-			}
 
 			// Increment current frame
 			current_video_frame++;
@@ -1527,25 +1524,25 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 	AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "", -1, "", -1, "", -1);
 
 	// Determine if frames are missing (due to no more video packets)
-	if (info.has_video && num_packets_since_video_frame > 30)
+	if (info.has_video && !is_seeking && num_packets_since_video_frame > 60)
 	{
-		// Force the creation of missing frames
-		long int previous_video_frame = current_video_frame;
-		while (current_video_frame < requested_frame) {
-			// Increment current frame
-			current_video_frame++;
+		deque<long int>::iterator oldest_video_frame;
+		deque<long int> frame_numbers = working_cache.GetFrameNumbers();
 
-			missing_video_frames.insert(pair<int,int>(previous_video_frame, current_video_frame));
+		for(oldest_video_frame = frame_numbers.begin(); oldest_video_frame != frame_numbers.end(); ++oldest_video_frame)
+		{
+			tr1::shared_ptr<Frame> f(working_cache.GetFrame(*oldest_video_frame));
+
+			// Only add if not already in the working cache or if missing image
+			if ((f == NULL) || (f != NULL && !f->has_image_data))
+				if (!missing_video_frames.count(*oldest_video_frame))
+					missing_video_frames.insert(pair<int, int>(current_video_frame, *oldest_video_frame));
 
 			// Mark this reader as containing missing frames
 			has_missing_frames = true;
 
-			// Create missing frame (and copy image from previous frame)
-			tr1::shared_ptr<Frame> frame_object = final_cache.GetFrame(previous_video_frame);
-			if (frame_object) {
-				// Move this related frame to the missing frames cache (so the missing frames can use it later)
-				missing_frames.Add(frame_object->number, frame_object);
-			}
+			// Update current video frame
+			current_video_frame = *oldest_video_frame;
 		}
 	}
 
@@ -1554,30 +1551,23 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 	bool found_missing_frame = false;
 	for(itr = missing_video_frames.begin(); itr != missing_video_frames.end(); ++itr)
 	{
-		// Is requested frame missing?
-		if (requested_frame == itr->second)
-		{
-			// Create missing frame (and copy image from previous frame)
-			tr1::shared_ptr<Frame> missing_frame = CreateFrame(requested_frame);
-			tr1::shared_ptr<Frame> related_frame = missing_frames.GetFrame(itr->first);
-			if (related_frame != NULL) {
-				// Add the image from the related frame
-				missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*related_frame->GetImage())), true);
+        // Create missing frame (and copy image from previous frame)
+        tr1::shared_ptr<Frame> missing_frame = CreateFrame(itr->second);
+        if (last_video_frame != NULL && missing_frame != NULL) {
+            missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())), true);
 
-				// Add this frame to the processed map (since it's already done)
-				{
-					const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-					processed_video_frames[requested_frame] = requested_frame;
-				}
+            // Add this frame to the processed map (since it's already done)
+            {
+                const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+                processed_video_frames[itr->second] = itr->second;
+            }
 
-				// Remove missing frame from map
-				missing_video_frames.erase(itr);
+            // Remove missing frame from map
+            missing_video_frames.erase(itr);
 
-				// Break this loop
-				found_missing_frame = true;
-				break;
-			}
-		}
+            // Break this loop
+            found_missing_frame = true;
+        }
 	}
 
 	return found_missing_frame;
@@ -1600,11 +1590,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		// Increment # of checks since last 'final' frame
 		num_checks_since_final++;
 
-			// Only process frames smaller than or near the requested frame
-		if (f->number > (requested_frame + OPEN_MP_NUM_PROCESSORS))
-			// This frame is too far in the future... ignore for now
-			break;
-
 		bool is_video_ready = false;
 		bool is_audio_ready = false;
 		{ // limit scope of next few lines
@@ -1622,15 +1607,20 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		if (!info.has_audio) is_audio_ready = true;
 
 		// Make final any frames that get stuck (for whatever reason)
-		if (num_checks_since_final > 60 && (!is_video_ready || !is_audio_ready)) {
-			// Make this frame final
-			final_cache.Add(f->number, f);
+		if (num_checks_since_final > 90 && (!is_video_ready || !is_audio_ready)) {
+			if (info.has_video && !is_video_ready && last_video_frame != NULL) {
+				// Copy image from last frame
+				const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+				f->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())), true);
+				processed_video_frames[f->number] = f->number;
+			}
 
-			// Remove frame from working cache
-			working_cache.Remove(f->number);
-
-			// Update last frame processed
-			last_frame = f->number;
+			if (info.has_audio && !is_audio_ready) {
+				const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+				// Mark audio as processed, and indicate the frame has audio data
+				processed_audio_frames[f->number] = f->number;
+				f->has_audio_data = true;
+			}
 
 			// Skip to next iteration
 			continue;
@@ -1638,21 +1628,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 
 		// Debug output
 		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "", -1, "", -1, "", -1);
-
-		// Check if any missing frames need to be created
-		if (is_video_ready)
-		{
-			// Check if this frame is related to any missing frames
-			int is_related_to_missing_frames = missing_video_frames.count(f->number);
-
-			if (is_related_to_missing_frames > 0) {
-				// Move this related frame to the missing frames cache (so the missing frames can use it later)
-				missing_frames.Add(f->number, f);
-			}
-		}
-
-		// Check for a missing video frame
-		CheckMissingFrame(f->number);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash)

@@ -95,6 +95,9 @@ namespace openshot {
 		/// @param frame_number The frame number of the cached frame
 		tr1::shared_ptr<Frame> GetFrame(long int frame_number);
 
+		/// Return a deque of all frame numbers in this queue (returns just a copy of the data)
+		deque<long int> GetFrameNumbers();
+
 		/// Gets the maximum bytes value
 		int64 GetBytes();
 

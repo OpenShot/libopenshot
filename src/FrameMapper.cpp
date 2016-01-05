@@ -376,7 +376,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	// Minimum number of frames to process (for performance reasons)
 	// TODO: Find a safe way to deal with Closing the reader while multi-processing is happening
 	// In the meantime, I'm leaving this at 1
-	int minimum_frames =  OPEN_MP_NUM_PROCESSORS; //OPEN_MP_NUM_PROCESSORS
+	int minimum_frames =  OPEN_MP_NUM_PROCESSORS;
 
 	// Set the number of threads in OpenMP
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
@@ -651,7 +651,6 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 		avresample_free(&avr);
 		avr = NULL;
 	}
-
 }
 
 // Resample audio and map channels (if needed)

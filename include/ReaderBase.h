@@ -149,6 +149,9 @@ namespace openshot
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;
 
+		/// Return the type name of the class
+		virtual string Name() = 0;
+
 		/// Get and Set JSON methods
 		virtual string Json() = 0; ///< Generate JSON string of this object
 		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object

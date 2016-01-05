@@ -131,6 +131,7 @@ namespace openshot
 		long int pts_counter;
 		long int num_packets_since_video_frame;
 		long int num_checks_since_final;
+		tr1::shared_ptr<Frame> last_video_frame;
 
 		bool is_seeking;
 		long int seeking_pts;
@@ -256,6 +257,9 @@ namespace openshot
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
+
+		/// Return the type name of the class
+		string Name() { return "FFmpegReader"; };
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

@@ -32,7 +32,7 @@ using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
@@ -44,7 +44,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(long int number, int width, int height, string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
@@ -56,7 +56,7 @@ Frame::Frame(long int number, int width, int height, string color)
 // Constructor - image only from pixel array (48kHz audio silence)
 Frame::Frame(long int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
@@ -68,7 +68,7 @@ Frame::Frame(long int number, int width, int height, const string map, const Mag
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(long int number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
@@ -80,7 +80,7 @@ Frame::Frame(long int number, int samples, int channels) :
 // Constructor - image & audio
 Frame::Frame(long int number, int width, int height, string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
 	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
@@ -106,6 +106,10 @@ void Frame::DeepCopy(const Frame& other)
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	channels = other.channels;
 	channel_layout = other.channel_layout;
+	has_audio_data = other.has_image_data;
+	has_image_data = other.has_image_data;
+	sample_rate = other.sample_rate;
+
 
 	if (other.wave_image)
 		wave_image = tr1::shared_ptr<QImage>(new QImage(*(other.wave_image)));
@@ -682,6 +686,7 @@ void Frame::AddColor(int width, int height, string color)
 	// Update height and width
 	width = image->width();
 	height = image->height();
+	has_image_data = true;
 }
 
 // Add (or replace) pixel data to the frame
@@ -704,6 +709,7 @@ void Frame::AddImage(int width, int height, int bytes_per_pixel, QImage::Format 
 	// Update height and width
 	width = image->width();
 	height = image->height();
+	has_image_data = true;
 }
 
 // Add (or replace) pixel data to the frame
@@ -723,6 +729,7 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image)
 	// Update height and width
 	width = image->width();
 	height = image->height();
+	has_image_data = true;
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
@@ -759,6 +766,7 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
 		// Update height and width
 		width = image->width();
 		height = image->height();
+		has_image_data = true;
 	}
 }
 
@@ -789,6 +797,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 
 	// Add samples to frame's audio buffer
 	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
+	has_audio_data = true;
 }
 
 // Apply gain ramp (i.e. fading volume)
@@ -861,6 +870,7 @@ void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
 	// Update height and width
 	width = image->width();
 	height = image->height();
+	has_image_data = true;
 }
 
 // Play audio samples for this frame
@@ -947,4 +957,5 @@ void Frame::AddAudioSilence(int numSamples)
 	// Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);
 	audio->clear();
+	has_audio_data = true;
 }

@@ -102,7 +102,7 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 {
 	// Determine type of reader
 	ReaderBase* clip_reader = NULL;
-	if (typeid(clip->Reader()) == typeid(FrameMapper))
+	if (clip->Reader()->Name() == "FrameMapper")
 	{
 		// Get the existing reader
 		clip_reader = (ReaderBase*) clip->Reader();
@@ -452,6 +452,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
+	painter.setRenderHints(QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
 	// Apply transform (translate, rotate, scale)... if any
 	if (transformed)
@@ -459,7 +460,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	// Composite a new layer onto the image
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.drawImage(0, 0, *source_image);
     painter.end();
 
@@ -1135,6 +1135,8 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 		else if (root_key == "viewport_y")
 			// Set viewport y offset
 			viewport_y.SetJsonValue(change["value"]);
+		else if (root_key == "duration") { }
+			// Ignore for now
 		else if (root_key == "width")
 			// Set width
 			info.width = change["value"].asInt();
