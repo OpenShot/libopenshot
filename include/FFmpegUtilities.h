@@ -81,6 +81,23 @@
 	#undef av_err2str
 	#define av_err2str(errnum) av_make_error_string(errnum).c_str()
 
+	// Define this for compatibility
+	#ifndef PixelFormat
+		#define PixelFormat AVPixelFormat
+    #endif
+	#ifndef PIX_FMT_RGBA
+		#define PIX_FMT_RGBA AV_PIX_FMT_RGBA
+    #endif
+	#ifndef PIX_FMT_NONE
+		#define PIX_FMT_NONE AV_PIX_FMT_NONE
+    #endif
+	#ifndef PIX_FMT_RGB24
+		#define PIX_FMT_RGB24 AV_PIX_FMT_RGB24
+	#endif
+	#ifndef PIX_FMT_YUV420P
+		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
+	#endif
+
 	#if LIBAVFORMAT_VERSION_MAJOR >= 55
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)

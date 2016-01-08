@@ -14,7 +14,7 @@ FIND_PATH( AVFORMAT_INCLUDE_DIR libavformat/avformat.h
 		   	$ENV{FFMPEGDIR}/include/
 		   	$ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVFORMAT_LIBRARY avformat avformat-55
+FIND_LIBRARY( AVFORMAT_LIBRARY avformat avformat-55 avformat-57
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
@@ -28,7 +28,7 @@ FIND_PATH( AVCODEC_INCLUDE_DIR libavcodec/avcodec.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVCODEC_LIBRARY avcodec avcodec-55
+FIND_LIBRARY( AVCODEC_LIBRARY avcodec avcodec-55 avcodec-57
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
@@ -42,7 +42,7 @@ FIND_PATH( AVUTIL_INCLUDE_DIR libavutil/avutil.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVUTIL_LIBRARY avutil avutil-52
+FIND_LIBRARY( AVUTIL_LIBRARY avutil avutil-52 avutil-55
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
@@ -56,7 +56,7 @@ FIND_PATH( AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVDEVICE_LIBRARY avdevice avdevice-55
+FIND_LIBRARY( AVDEVICE_LIBRARY avdevice avdevice-55 avdevice-56
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
@@ -70,7 +70,7 @@ FIND_PATH( SWSCALE_INCLUDE_DIR libswscale/swscale.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( SWSCALE_LIBRARY swscale swscale-2
+FIND_LIBRARY( SWSCALE_LIBRARY swscale swscale-2 swscale-4
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
@@ -84,7 +84,7 @@ FIND_PATH( AVRESAMPLE_INCLUDE_DIR libavresample/avresample.h
 		   	 $ENV{FFMPEGDIR}/include/
 		   	 $ENV{FFMPEGDIR}/include/ffmpeg/ )
 
-FIND_LIBRARY( AVRESAMPLE_LIBRARY avresample avresample-2
+FIND_LIBRARY( AVRESAMPLE_LIBRARY avresample avresample-2 avresample-3
 		   PATHS /usr/lib/
 		   	 /usr/lib/ffmpeg/
 		   	 $ENV{FFMPEGDIR}/lib/
