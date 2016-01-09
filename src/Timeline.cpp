@@ -273,6 +273,11 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	}
 
+	// Skip out if only an audio frame
+	if (!source_clip->Waveform() && !source_clip->Reader()->info.has_video)
+		// Skip the rest of the image processing for performance reasons
+		return;
+
 	// Debug output
 	AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 

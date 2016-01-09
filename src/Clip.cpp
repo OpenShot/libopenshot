@@ -269,8 +269,9 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
 
 		// Loop through each channel, add audio
-		for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
-			frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
+		if (reader->info.has_audio)
+			for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
+				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);

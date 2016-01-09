@@ -311,6 +311,8 @@ void FFmpegReader::UpdateAudioInfo()
 		info.video_timebase.num = 1;
 		info.video_timebase.den = 24;
 		info.video_length = info.duration * info.fps.ToDouble();
+		info.width = 720;
+		info.height = 480;
 
 	}
 
