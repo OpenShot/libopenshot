@@ -1122,6 +1122,9 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 	// Get key and type of change
 	string change_type = change["type"].asString();
 	string root_key = change["key"][(uint)0].asString();
+	string sub_key = "";
+	if (change["key"].size() >= 2)
+		sub_key = change["key"][(uint)1].asString();
 
 	// Determine type of change operation
 	if (change_type == "insert" || change_type == "update") {
@@ -1148,12 +1151,28 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 		else if (root_key == "height")
 			// Set height
 			info.height = change["value"].asInt();
-		else if (root_key == "fps" && change["key"][(uint)1].asString() == "num")
+		else if (root_key == "fps" && sub_key == "" && change["value"].isObject()) {
+			// Set fps fraction
+			if (!change["value"]["num"].isNull())
+				info.fps.num = change["value"]["num"].asInt();
+			if (!change["value"]["den"].isNull())
+				info.fps.den = change["value"]["den"].asInt();
+		}
+		else if (root_key == "fps" && sub_key == "num")
 			// Set fps.num
 			info.fps.num = change["value"].asInt();
-		else if (root_key == "fps" && change["key"][(uint)1].asString() == "den")
+		else if (root_key == "fps" && sub_key == "den")
 			// Set fps.den
 			info.fps.den = change["value"].asInt();
+		else if (root_key == "sample_rate")
+			// Set sample rate
+			info.sample_rate = change["value"].asInt();
+		else if (root_key == "channels")
+			// Set channels
+			info.channels = change["value"].asInt();
+		else if (root_key == "channel_layout")
+			// Set channel layout
+			info.channel_layout = (ChannelLayout) change["value"].asInt();
 
 		else
 
