@@ -289,7 +289,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	int source_height = source_image->height();
 
 	/* ALPHA & OPACITY */
-	if (source_clip->alpha.GetValue(clip_frame_number) != 0)
+	if (source_clip->alpha.GetValue(clip_frame_number) != 1.0)
 	{
 		float alpha = source_clip->alpha.GetValue(clip_frame_number);
 
@@ -303,7 +303,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 			int A = pixels[byte_index + 3];
 
 			// Apply alpha to pixel
-			pixels[byte_index + 3] *= (1.0 - alpha);
+			pixels[byte_index + 3] *= alpha;
 		}
 
 		// Debug output

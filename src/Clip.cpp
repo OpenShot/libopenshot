@@ -52,7 +52,7 @@ void Clip::init_settings()
 	location_y = Keyframe(0.0);
 
 	// Init alpha & rotation
-	alpha = Keyframe(0.0);
+	alpha = Keyframe(1.0);
 	rotation = Keyframe(0.0);
 
 	// Init time & volume
