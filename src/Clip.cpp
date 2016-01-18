@@ -260,6 +260,12 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
 
+		// Check if frame needs to be modified by clip
+		if (time.Values.size() <= 1 && effects.size() == 0) {
+			// Return unmodified frame (must faster than copying it below)
+			return original_frame;
+		}
+
 		// Create a new frame
 		tr1::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
 		frame->SampleRate(original_frame->SampleRate());

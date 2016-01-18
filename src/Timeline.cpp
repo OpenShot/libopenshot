@@ -197,8 +197,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 {
 	// Get the clip's frame & image
 	tr1::shared_ptr<Frame> source_frame;
-
-	#pragma omp ordered
 	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
 
 	// No frame found... so bail
@@ -625,9 +623,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				// Debug output
 				AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
-				// Add Background Color to 1st layer
+				// Add Background Color to 1st layer (if animated or not black)
+				if ((color.red.Points.size() > 1 || color.green.Points.size() > 1 || color.blue.Points.size() > 1) ||
+					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
 				new_frame->AddColor(info.width, info.height, color.GetColorHex(frame_number));
-
 
 				// Calculate time of frame
 				float requested_time = calculate_time(frame_number, info.fps);

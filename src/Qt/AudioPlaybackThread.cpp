@@ -30,19 +30,6 @@
 
 namespace openshot
 {
-    struct SafeTimeSliceThread : TimeSliceThread
-    {
-	SafeTimeSliceThread(const String & s) : TimeSliceThread(s) {}
-	void run()
-	{
-	    try {
-		TimeSliceThread::run();
-	    } catch (const TooManySeeks & e) {
-		// ...
-	    }
-	}
-    };
-
     // Construtor
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
@@ -55,8 +42,9 @@ namespace openshot
 	, numChannels(0)
     , buffer_size(10000)
     , is_playing(false)
+	, time_thread("audio-buffer")
     {
-    }
+	}
 
     // Destructor
     AudioPlaybackThread::~AudioPlaybackThread()
@@ -76,6 +64,9 @@ namespace openshot
 		// Set local vars
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
+
+		// TODO: Update transport or audio source's sample rate, incase the sample rate
+		// is different than the original Reader
 
 		// Mark as 'playing'
 		Play();
@@ -131,14 +122,13 @@ namespace openshot
     			audioDeviceManager.addAudioCallback(&player);
 
     			// Create TimeSliceThread for audio buffering
-    			SafeTimeSliceThread thread("audio-buffer");
-    			thread.startThread();
+				time_thread.startThread();
 
     			// Connect source to transport
     			transport.setSource(
     			    source,
     			    buffer_size, // tells it to buffer this many samples ahead
-    			    &thread,
+    			    &time_thread,
     			    sampleRate,
     			    numChannels);
     			transport.setPosition(0);
@@ -173,7 +163,7 @@ namespace openshot
 				source = NULL;
 
 				// Stop time slice thread
-				thread.stopThread(-1);
+				time_thread.stopThread(-1);
     		}
     	}
 

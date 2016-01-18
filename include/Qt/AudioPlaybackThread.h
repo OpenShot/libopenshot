@@ -38,6 +38,19 @@ namespace openshot
     using juce::Thread;
     using juce::WaitableEvent;
 
+	struct SafeTimeSliceThread : TimeSliceThread
+	{
+		SafeTimeSliceThread(const String & s) : TimeSliceThread(s) {}
+		void run()
+		{
+			try {
+				TimeSliceThread::run();
+			} catch (const TooManySeeks & e) {
+				// ...
+			}
+		}
+	};
+
     /**
      *  @brief The audio playback thread
      */
@@ -54,6 +67,7 @@ namespace openshot
 	WaitableEvent played;
 	int buffer_size;
 	bool is_playing;
+	SafeTimeSliceThread time_thread;
 	
 	/// Constructor
 	AudioPlaybackThread();

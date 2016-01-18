@@ -376,7 +376,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	// Minimum number of frames to process (for performance reasons)
 	// TODO: Find a safe way to deal with Closing the reader while multi-processing is happening
 	// In the meantime, I'm leaving this at 1
-	int minimum_frames =  OPEN_MP_NUM_PROCESSORS;
+	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
 	// Set the number of threads in OpenMP
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
@@ -402,6 +402,17 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			// Get # of channels in the actual frame
 			int channels_in_frame = mapped_frame->GetAudioChannelsCount();
 			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
+
+			// Determine if mapped frame is identical to source frame
+			if (info.sample_rate == mapped_frame->SampleRate() &&
+				info.channels == mapped_frame->GetAudioChannelsCount() &&
+				info.channel_layout == mapped_frame->ChannelsLayout() &&
+				info.fps.num == reader->info.fps.num &&
+				info.fps.den == reader->info.fps.den) {
+					// Add original frame to cache, and skip the rest (for performance reasons)
+					final_cache.Add(frame_number, mapped_frame);
+					continue;
+			}
 
 			// Create a new frame
 			tr1::shared_ptr<Frame> frame = tr1::shared_ptr<Frame>(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
