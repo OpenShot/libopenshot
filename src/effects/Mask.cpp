@@ -123,11 +123,16 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, long int fra
 
 	// Get mask image
 	if (!original_mask || !reader->info.has_single_image) {
-		// Only get mask if needed
-		original_mask = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
+		#pragma omp critical (open_mask_reader)
+		{
+			// Only get mask if needed
+			tr1::shared_ptr<QImage> mask_without_sizing = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
 
-		// Resize mask image to match frame size
-		original_mask = tr1::shared_ptr<QImage>(new QImage(original_mask->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+			// Resize mask image to match frame size
+			original_mask = tr1::shared_ptr<QImage>(new QImage(
+					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
+										  Qt::SmoothTransformation)));
+		}
 	}
 
 	// Convert mask to grayscale and resize to frame size

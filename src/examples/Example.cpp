@@ -37,27 +37,29 @@ using namespace tr1;
 int main(int argc, char* argv[])
 {
 
-	// Create a reader
-	string path = "C:\\Users\\Jonathan\\Apps\\libopenshot-git\\src\\examples\\sintel_trailer-720p.mp4";
-	cout << path << endl;
-	Clip clip_video(path);
-	clip_video.Layer(0);
-	clip_video.Position(0.0);
-
-	Clip clip_overlay("C:\\Users\\Jonathan\\Apps\\libopenshot-git\\src\\examples\\front3.png");
-	clip_overlay.Layer(1);
-	clip_overlay.Position(0.05);
-
 	// Create a timeline
 	Timeline r9(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	r9.SetJson("{\"settings\": {}, \"clips\": [{\"perspective_c2_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"alpha\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 1.0}}]}, \"rotation\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"location_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"gravity\": 4, \"start\": 0, \"scale\": 1, \"scale_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 1.0}}]}, \"title\": \"MAH04194.MP4\", \"image\": \".openshot_qt\\\\thumbnail\\\\RW78V6EM7H.png\", \"perspective_c4_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"volume\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 1.0}}]}, \"duration\": 11.02933311462402, \"perspective_c1_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"effects\": [], \"waveform\": false, \"wave_color\": {\"green\": {\"Points\": [{\"handle_right\": {\"X\": 1.0, \"Y\": 123.0}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 1.0, \"Y\": 123.0}, \"handle_left\": {\"X\": 1.0, \"Y\": 123.0}}]}, \"blue\": {\"Points\": [{\"handle_right\": {\"X\": 1.0, \"Y\": 255.0}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 1.0, \"Y\": 255.0}, \"handle_left\": {\"X\": 1.0, \"Y\": 255.0}}]}, \"alpha\": {\"Points\": [{\"handle_right\": {\"X\": 1.0, \"Y\": 255.0}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 1.0, \"Y\": 255.0}, \"handle_left\": {\"X\": 1.0, \"Y\": 255.0}}]}, \"red\": {\"Points\": [{\"handle_right\": {\"X\": 1.0, \"Y\": 0.0}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 1.0, \"Y\": 0.0}, \"handle_left\": {\"X\": 1.0, \"Y\": 0.0}}]}}, \"layer\": 0, \"position\": 0, \"perspective_c4_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"anchor\": 0, \"perspective_c3_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"crop_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"crop_width\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"crop_height\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"shear_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"shear_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"end\": 11.02933311462402, \"file_id\": \"RW78V6EM7H\", \"perspective_c1_y\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"id\": \"L9S44F9NPE\", \"perspective_c2_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"perspective_c3_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": -1.0}}]}, \"reader\": {\"sample_rate\": 48000, \"duration\": 11.02933311462402, \"interlaced_frame\": false, \"video_stream_index\": 0, \"acodec\": \"aac\", \"video_bit_rate\": 12176893, \"pixel_format\": 0, \"top_field_first\": true, \"file_size\": \"16804113\", \"type\": \"FFmpegReader\", \"has_video\": true, \"audio_timebase\": {\"num\": 1, \"den\": 48000}, \"path\": \"\\\\Users\\\\Jonathan\\\\Videos\\\\MAH04194.MP4\", \"fps\": {\"num\": 25, \"den\": 1}, \"channel_layout\": 3, \"audio_bit_rate\": 127391, \"vcodec\": \"h264\", \"display_ratio\": {\"num\": 16, \"den\": 9}, \"video_length\": \"276\", \"has_audio\": true, \"audio_stream_index\": 1, \"video_timebase\": {\"num\": 1, \"den\": 25000}, \"has_single_image\": false, \"width\": 1440, \"height\": 1080, \"channels\": 2, \"pixel_ratio\": {\"num\": 4, \"den\": 3}}, \"time\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"scale_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 1.0}}]}, \"crop_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}, \"location_x\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1.0, \"Y\": 0.0}}]}}], \"id\": \"T0\", \"sample_rate\": 44100, \"duration\": 300, \"layers\": [{\"number\": 0, \"id\": \"L4\", \"label\": \"\", \"y\": 0}], \"fps\": {\"num\": 24, \"den\": 1}, \"export_path\": \"\", \"scale\": 16, \"channel_layout\": 3, \"version\": {\"openshot-qt\": \"2.0.5\", \"libopenshot\": \"0.0.9\"}, \"tick_pixels\": 100, \"files\": [{\"sample_rate\": 48000, \"duration\": 11.02933311462402, \"interlaced_frame\": false, \"media_type\": \"video\", \"acodec\": \"aac\", \"video_bit_rate\": 12176893, \"pixel_format\": 0, \"top_field_first\": true, \"file_size\": \"16804113\", \"channels\": 2, \"has_single_image\": false, \"has_video\": true, \"id\": \"RW78V6EM7H\", \"audio_timebase\": {\"num\": 1, \"den\": 48000}, \"path\": \"\\\\Users\\\\Jonathan\\\\Videos\\\\MAH04194.MP4\", \"fps\": {\"num\": 25, \"den\": 1}, \"channel_layout\": 3, \"audio_bit_rate\": 127391, \"vcodec\": \"h264\", \"display_ratio\": {\"num\": 16, \"den\": 9}, \"video_length\": \"276\", \"has_audio\": true, \"audio_stream_index\": 1, \"video_timebase\": {\"num\": 1, \"den\": 25000}, \"type\": \"FFmpegReader\", \"width\": 1440, \"height\": 1080, \"video_stream_index\": 0, \"pixel_ratio\": {\"num\": 4, \"den\": 3}}], \"playhead_position\": 0, \"width\": 1920, \"effects\": [{\"brightness\": {\"Points\": [{\"handle_right\": {\"X\": 96.5999984741211, \"Y\": 1}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 1, \"Y\": 1}, \"handle_left\": {\"X\": 1, \"Y\": 1}}, {\"handle_right\": {\"X\": 240, \"Y\": -1}, \"handle_type\": 0, \"interpolation\": 0, \"co\": {\"X\": 263.04, \"Y\": -1}, \"handle_left\": {\"X\": 144.3999938964844, \"Y\": -1}}]}, \"end\": 10.96, \"contrast\": {\"Points\": [{\"interpolation\": 2, \"co\": {\"X\": 1, \"Y\": 3}}]}, \"layer\": 0, \"replace_image\": false, \"id\": \"YDKTU9SEM4\", \"start\": 0, \"position\": 0, \"reader\": {\"sample_rate\": 0, \"duration\": 86400.0, \"interlaced_frame\": false, \"acodec\": \"\", \"video_bit_rate\": 0, \"pixel_format\": -1, \"top_field_first\": true, \"file_size\": \"1658880\", \"channels\": 0, \"has_single_image\": true, \"has_video\": true, \"audio_timebase\": {\"num\": 1, \"den\": 1}, \"path\": \"C:\\\\Users\\\\Jonathan\\\\Apps\\\\openshot-qt-git\\\\src\\\\transitions\\\\common\\\\circle_out_to_in.svg\", \"fps\": {\"num\": 30, \"den\": 1}, \"channel_layout\": 4, \"audio_bit_rate\": 0, \"vcodec\": \"\", \"display_ratio\": {\"num\": 5, \"den\": 4}, \"video_length\": \"2592000\", \"has_audio\": false, \"audio_stream_index\": -1, \"video_timebase\": {\"num\": 1, \"den\": 30}, \"type\": \"QtImageReader\", \"width\": 720, \"height\": 576, \"video_stream_index\": -1, \"pixel_ratio\": {\"num\": 1, \"den\": 1}}, \"type\": \"Mask\", \"title\": \"Transition\"}], \"progress\": [], \"profile\": \"HD 1080p 24 fps\", \"markers\": [], \"height\": 1080, \"channels\": 2}");
 	r9.debug = false;
-//
-//	// Add clips
-	r9.AddClip(&clip_video);
-	r9.AddClip(&clip_overlay);
+
+	// Add clips
+	//r9.AddClip(&clip_video);
+	//r9.AddClip(&clip_overlay);
 
 	// Open Timeline
 	r9.Open();
+
+	int frame_count = 1;
+	while (true) {
+		int frame_number = (rand() % 200) + 1;
+		cout << frame_count << ": reading frame " << frame_number << endl;
+		r9.GetFrame(frame_number);
+
+		frame_count++;
+//		if (frame_count == 500)
+//			return 0;
+	}
+
 
 	cout << " --> 1" << endl;
 	r9.GetFrame(1)->Save("pic1.png", 1.0);
