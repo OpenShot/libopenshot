@@ -172,6 +172,9 @@ namespace openshot {
 		/// @param include Include or Exclude intersecting clips
 		vector<Clip*> find_intersecting_clips(long int requested_frame, int number_of_frames, bool include);
 
+		/// Get or generate a blank frame
+		tr1::shared_ptr<Frame> GetOrCreateFrame(Clip* clip, long int number);
+
 		/// Apply effects to the source frame (if any)
 		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer);
 

@@ -192,12 +192,42 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 	return frame;
 }
 
+// Get or generate a blank frame
+tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
+{
+	tr1::shared_ptr<Frame> new_frame;
+
+	// Init some basic properties about this frame
+	int samples_in_frame = Frame::GetSamplesPerFrame(number, info.fps, info.sample_rate, info.channels);
+
+	try {
+		// Attempt to get a frame (but this could fail if a reader has just been closed)
+		//new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
+		new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
+
+		// Return real frame
+		return new_frame;
+
+	} catch (const ReaderClosed & e) {
+		// ...
+	} catch (const TooManySeeks & e) {
+		// ...
+	} catch (const OutOfBoundsFrame & e) {
+		// ...
+	}
+
+	// Create blank frame
+	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
+	new_frame->SampleRate(info.sample_rate);
+	new_frame->ChannelsLayout(info.channel_layout);
+	return new_frame;
+}
+
 // Process a new layer of video or audio
 void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
-	tr1::shared_ptr<Frame> source_frame;
-	source_frame = tr1::shared_ptr<Frame>(source_clip->GetFrame(clip_frame_number));
+	tr1::shared_ptr<Frame> source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
 
 	// No frame found... so bail
 	if (!source_frame)
@@ -602,6 +632,29 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 
 		// Debug output
 		AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1);
+
+		// GENERATE CACHE FOR CLIPS (IN FRAME # SEQUENCE)
+		// Determine all clip frames, and request them in order (to keep resampled audio in sequence)
+		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+		{
+			// Calculate time of timeline frame
+			float requested_time = calculate_time(frame_number, info.fps);
+			// Loop through clips
+			for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
+			{
+				// Get clip object from the iterator
+				Clip *clip = nearby_clips[clip_index];
+				bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
+				if (does_clip_intersect)
+				{
+					// Get clip frame #
+					float time_diff = (requested_time - clip->Position()) + clip->Start();
+					int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+					// Cache clip object
+					clip->GetFrame(clip_frame_number);
+				}
+			}
+		}
 
 		#pragma omp parallel
 		{

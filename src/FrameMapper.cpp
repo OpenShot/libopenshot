@@ -713,7 +713,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	total_frame_samples = Frame::GetSamplesPerFrame(frame->number, target, info.sample_rate, info.channels) + FF_INPUT_BUFFER_PADDING_SIZE;
+	total_frame_samples = Frame::GetSamplesPerFrame(frame->number, target, info.sample_rate, info.channels);
 
 	AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
@@ -755,7 +755,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	}
 
 	// Create a new array (to hold all resampled S16 audio samples)
-	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels) + FF_INPUT_BUFFER_PADDING_SIZE];
+	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels)];
 
 	// Copy audio samples over original samples
 	memcpy(resampled_samples, audio_converted->data[0], (nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels));
