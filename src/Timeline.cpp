@@ -664,7 +664,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 
 						// Determine the frame needed for this clip (based on the position on the timeline)
 						float time_diff = (requested_time - clip->Position()) + clip->Start();
-						int clip_frame_number = (time_diff * info.fps.ToFloat()) + 1;
+						int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 						// Debug output
 						AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);

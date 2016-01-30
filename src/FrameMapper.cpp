@@ -374,8 +374,6 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	if (final_frame) return final_frame;
 
 	// Minimum number of frames to process (for performance reasons)
-	// TODO: Find a safe way to deal with Closing the reader while multi-processing is happening
-	// In the meantime, I'm leaving this at 1
 	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
 	// Set the number of threads in OpenMP
