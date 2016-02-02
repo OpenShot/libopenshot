@@ -39,7 +39,7 @@ namespace openshot {
 	 * A custom error message field has been added to the std::exception base class.  All
 	 * OpenShot exception classes inherit from this class.
 	 */
-	class BaseException //: public exception
+	class BaseException : public std::exception //: public exception
 	{
 	protected:
 		string m_message;

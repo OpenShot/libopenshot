@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
+FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory):
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
@@ -53,7 +53,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 }
 
 // Open the writer
-void FFmpegWriter::Open() throw(InvalidFile, InvalidCodec)
+void FFmpegWriter::Open() throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels, InvalidSampleRate)
 {
 	// Open the writer
 	is_open = true;
@@ -111,8 +111,8 @@ void FFmpegWriter::initialize_streams()
 }
 
 // Set video export options
-void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
-		Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate)
+void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate)
+	throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels)
 {
 	// Set the video options
 	if (codec.length() > 0)
@@ -171,6 +171,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 
 // Set audio export options
 void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate)
+	throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -342,7 +343,7 @@ void FFmpegWriter::WriteHeader()
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
+void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -382,7 +383,7 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 }
 
 // Write all frames in the queue to the video file.
-void FFmpegWriter::write_queued_frames()
+void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 {
 	AppendDebugMethod("FFmpegWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "", -1, "", -1, "", -1, "", -1);
 
@@ -401,6 +402,9 @@ void FFmpegWriter::write_queued_frames()
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 	// Allow nested OpenMP sections
 	omp_set_nested(true);
+
+	// Create blank exception
+	bool has_error_encoding_video = false;
 
 	#pragma omp parallel
 	{
@@ -449,7 +453,9 @@ void FFmpegWriter::write_queued_frames()
 						AVFrame *frame_final = av_frames[frame];
 
 						// Write frame to video file
-						write_video_packet(frame, frame_final);
+						bool success = write_video_packet(frame, frame_final);
+						if (!success)
+							has_error_encoding_video = true;
 					}
 				}
 
@@ -485,10 +491,13 @@ void FFmpegWriter::write_queued_frames()
 		} // end omp single
 	} // end omp parallel
 
+	// Raise exception from main thread
+	if (has_error_encoding_video)
+		throw ErrorEncodingVideo("Error while writing raw video frame", -1);
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed)
 {
 	AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
@@ -1445,7 +1454,7 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 }
 
 // write video frame
-void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
+bool FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
 	AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
 
@@ -1468,7 +1477,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		if (error_code < 0)
 		{
 			AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
-			throw ErrorEncodingVideo("Error while writing raw video frame", frame->number);
+			return false;
 		}
 
 		// Deallocate packet
@@ -1541,7 +1550,7 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			if (error_code < 0)
 			{
 				AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
-				throw ErrorEncodingVideo("Error while writing compressed video frame", frame->number);
+				return false;
 			}
 		}
 
@@ -1552,6 +1561,9 @@ void FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		// Deallocate packet
 		av_free_packet(&pkt);
 	}
+
+	// Success
+	return true;
 }
 
 // Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)

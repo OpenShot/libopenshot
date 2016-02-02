@@ -40,6 +40,7 @@ IF (PYTHONLIBS_FOUND)
 		
 		### Enable C++ support in SWIG
 		SET_SOURCE_FILES_PROPERTIES(openshot.i PROPERTIES CPLUSPLUS ON)
+		SET(CMAKE_SWIG_FLAGS "")
 		
 		### Add the SWIG interface file (which defines all the SWIG methods)
 		SWIG_ADD_MODULE(openshot python openshot.i)

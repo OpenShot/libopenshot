@@ -239,10 +239,10 @@ namespace openshot
 		void write_audio_packets(bool final);
 
 		/// write video frame
-		void write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final);
+		bool write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final);
 
 		/// write all queued frames
-		void write_queued_frames();
+		void write_queued_frames() throw (ErrorEncodingVideo);
 
 	public:
 
@@ -260,7 +260,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Open writer
-		void Open() throw(InvalidFile, InvalidCodec);
+		void Open() throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels, InvalidSampleRate);
 
 		/// Output the ffmpeg info about this format, streams, and codecs (i.e. dump format)
 		void OutputStreamInfo();
@@ -284,7 +284,8 @@ namespace openshot
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
-		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate);
+		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate)
+				throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels);
 
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
@@ -300,8 +301,8 @@ namespace openshot
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,
-				Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate)
+				throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
@@ -316,13 +317,13 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
 		/// by the Close() method if this method has not yet been called.
