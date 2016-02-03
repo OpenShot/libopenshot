@@ -384,8 +384,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	// Adjust size for scale x and scale y
 	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
 	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
-	int scaled_source_width = source_width * sx;
-	int scaled_source_height = source_height * sy;
+	float scaled_source_width = source_width * sx;
+	float scaled_source_height = source_height * sy;
 
 	switch (source_clip->gravity)
 	{
@@ -485,7 +485,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
-	painter.setRenderHints(QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
 	// Apply transform (translate, rotate, scale)... if any
 	if (transformed)
