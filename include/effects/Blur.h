@@ -88,7 +88,7 @@ namespace openshot
 		/// @param new_horizontal_radius The curve to adjust the horizontal blur radius (between 0 and 100, rounded to int)
 		/// @param new_vertical_radius The curve to adjust the vertical blur radius (between 0 and 100, rounded to int)
 		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
-		/// @param iterations The curve to adjust the # of iterations (between 1 and 100)
+		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
 		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
