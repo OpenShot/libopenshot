@@ -44,7 +44,9 @@
 %include <std_shared_ptr.i>
 
 /* Mark these classes as shared_ptr classes */
-%shared_ptr(Magick::Image)
+#ifdef USE_IMAGEMAGICK
+	%shared_ptr(Magick::Image)
+#endif
 %shared_ptr(juce::AudioSampleBuffer)
 %shared_ptr(openshot::Frame)
 %shared_ptr(Frame)

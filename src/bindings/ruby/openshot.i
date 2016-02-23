@@ -49,7 +49,9 @@ namespace tr1
 }}
 
 /* Mark these classes as shared_ptr classes */
-%template(SPtrImage) std::tr1::shared_ptr<Magick::Image>;
+#ifdef USE_IMAGEMAGICK
+	%template(SPtrImage) std::tr1::shared_ptr<Magick::Image>;
+#endif
 %template(SPtrAudioBuffer) std::tr1::shared_ptr<juce::AudioSampleBuffer>;
 %template(SPtrOpenFrame) std::tr1::shared_ptr<openshot::Frame>;
 %template(SPtrFrame) std::tr1::shared_ptr<Frame>;
