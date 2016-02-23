@@ -44,6 +44,9 @@
 #include "../FFmpegReader.h"
 #include "../QtImageReader.h"
 #include "../ChunkReader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "../ImageReader.h"
+#endif
 
 using namespace std;
 
