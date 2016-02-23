@@ -37,14 +37,12 @@
 #include <stdio.h>
 #include <tr1/memory>
 #include <QRect>
-#include "Magick++.h"
 #include "../Color.h"
 #include "../Exceptions.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 #include "../ReaderBase.h"
 #include "../FFmpegReader.h"
-#include "../ImageReader.h"
 #include "../QtImageReader.h"
 #include "../ChunkReader.h"
 

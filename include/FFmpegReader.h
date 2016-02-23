@@ -41,7 +41,6 @@
 #include <iostream>
 #include <stdio.h>
 #include <tr1/memory>
-#include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"

@@ -41,7 +41,6 @@
 #include <stdio.h>
 #include <sstream>
 #include <unistd.h>
-#include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
 #include "Json.h"

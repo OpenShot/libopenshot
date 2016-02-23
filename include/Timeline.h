@@ -32,7 +32,6 @@
 #include <tr1/memory>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
-#include "Magick++.h"
 #include "Cache.h"
 #include "Color.h"
 #include "Clip.h"

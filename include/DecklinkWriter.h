@@ -42,7 +42,6 @@
 #include <tr1/memory>
 #include <unistd.h>
 
-#include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
 #include "Frame.h"

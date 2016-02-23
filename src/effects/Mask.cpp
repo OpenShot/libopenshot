@@ -247,11 +247,13 @@ void Mask::SetJsonValue(Json::Value root) {
 				reader = new FFmpegReader(root["reader"]["path"].asString());
 				reader->SetJsonValue(root["reader"]);
 
+#ifdef USE_IMAGEMAGICK
 			} else if (type == "ImageReader") {
 
 				// Create new reader
 				reader = new ImageReader(root["reader"]["path"].asString());
 				reader->SetJsonValue(root["reader"]);
+#endif
 
 			} else if (type == "QtImageReader") {
 

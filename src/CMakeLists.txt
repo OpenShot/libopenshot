@@ -63,10 +63,16 @@ ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
 ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
 
 # Find the ImageMagick++ library
-FIND_PACKAGE(ImageMagick REQUIRED COMPONENTS Magick++ MagickWand MagickCore)
+FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+IF (ImageMagick_FOUND)
+	# Include ImageMagick++ headers (needed for compile)
+	include_directories(${ImageMagick_INCLUDE_DIRS})
 
-# Include ImageMagick++ headers (needed for compile)
-include_directories(${ImageMagick_INCLUDE_DIRS})
+	# define a global var (used in the C++)
+	add_definitions( -DUSE_IMAGEMAGICK=1 )
+	SET(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+
+ENDIF (ImageMagick_FOUND)
 	
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
@@ -185,14 +191,11 @@ SET ( OPENSHOT_SOURCE_FILES
 		Frame.cpp
 		FrameMapper.cpp
 		KeyFrame.cpp
-		ImageReader.cpp
-		ImageWriter.cpp
 		PlayerBase.cpp
 		Point.cpp
 		Profiles.cpp
 		QtImageReader.cpp
 		QtPlayer.cpp
-		TextReader.cpp
 		Timeline.cpp
 		
 		# Qt Video Player
@@ -203,7 +206,16 @@ SET ( OPENSHOT_SOURCE_FILES
 		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
 		../thirdparty/jsoncpp/src/lib_json/json_value.cpp
 		../thirdparty/jsoncpp/src/lib_json/json_writer.cpp )
-		
+
+		# ImageMagic related files
+		IF (ImageMagick_FOUND)
+			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
+					ImageReader.cpp
+					ImageWriter.cpp
+					TextReader.cpp)
+		ENDIF (ImageMagick_FOUND)
+
+		# BlackMagic related files
 		IF (BLACKMAGIC_FOUND)
 			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES} 
 				DecklinkInput.cpp
@@ -235,7 +247,6 @@ set_target_properties(openshot
 
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
-  		${ImageMagick_LIBRARIES}
 		${FFMPEG_LIBRARIES}
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${QT_LIBRARIES}
@@ -246,6 +257,10 @@ SET ( REQUIRED_LIBRARIES
 			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )
 		ENDIF (OPENMP_FOUND)
 		
+		IF (ImageMagick_FOUND)
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${ImageMagick_LIBRARIES} )
+		ENDIF (ImageMagick_FOUND)
+
 		IF (BLACKMAGIC_FOUND)
 			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )
 		ENDIF (BLACKMAGIC_FOUND)

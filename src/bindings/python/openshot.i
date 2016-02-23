@@ -72,8 +72,6 @@
 #include "../../../include/Fraction.h"
 #include "../../../include/Frame.h"
 #include "../../../include/FrameMapper.h"
-#include "../../../include/ImageReader.h"
-#include "../../../include/ImageWriter.h"
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
@@ -81,7 +79,6 @@
 #include "../../../include/QtPlayer.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
-#include "../../../include/TextReader.h"
 #include "../../../include/Timeline.h"
 
 %}
@@ -90,6 +87,14 @@
 	%{
 		#include "../../../include/DecklinkReader.h"
 		#include "../../../include/DecklinkWriter.h"
+	%}
+#endif
+
+#ifdef USE_IMAGEMAGICK
+	%{
+		#include "../../../include/ImageReader.h"
+		#include "../../../include/ImageWriter.h"
+		#include "../../../include/TextReader.h"
 	%}
 #endif
 
@@ -130,8 +135,6 @@
 %include "../../../include/Fraction.h"
 %include "../../../include/Frame.h"
 %include "../../../include/FrameMapper.h"
-%include "../../../include/ImageReader.h"
-%include "../../../include/ImageWriter.h"
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
@@ -139,8 +142,12 @@
 %include "../../../include/QtPlayer.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
-%include "../../../include/TextReader.h"
 %include "../../../include/Timeline.h"
+#ifdef USE_IMAGEMAGICK
+	%include "../../../include/ImageReader.h"
+	%include "../../../include/ImageWriter.h"
+	%include "../../../include/TextReader.h"
+#endif
 
 /* Effects */
 %include "../../../include/effects/Blur.h"

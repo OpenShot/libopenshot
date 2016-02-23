@@ -41,7 +41,6 @@
 #include <stdlib.h>
 #include <tr1/memory>
 #include "Json.h"
-#include "Magick++.h"
 #include "Cache.h"
 #include "Exceptions.h"
 

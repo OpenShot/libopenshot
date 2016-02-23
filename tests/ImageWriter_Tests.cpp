@@ -32,6 +32,7 @@
 using namespace std;
 using namespace openshot;
 
+#ifdef USE_IMAGEMAGICK
 TEST(ImageWriter_Test_Gif)
 {
 	// Reader
@@ -77,3 +78,4 @@ TEST(ImageWriter_Test_Gif)
 	CHECK_EQUAL(11, (int)pixels[pixel_index + 2]);
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 }
+#endif

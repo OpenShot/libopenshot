@@ -122,15 +122,17 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "FrameMapper.h"
-#include "ImageReader.h"
-#include "ImageWriter.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+	#include "ImageWriter.h"
+	#include "TextReader.h"
+#endif
 #include "KeyFrame.h"
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"
 #include "QtImageReader.h"
 #include "Sleep.h"
-#include "TextReader.h"
 #include "Timeline.h"
 
 #endif

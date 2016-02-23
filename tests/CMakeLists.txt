@@ -60,11 +60,16 @@ ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
 ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
 
 # Find the ImageMagick++ library
-FIND_PACKAGE(ImageMagick REQUIRED COMPONENTS Magick++ MagickWand MagickCore)
+FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+IF (ImageMagick_FOUND)
+	# Include ImageMagick++ headers (needed for compile)
+	include_directories(${ImageMagick_INCLUDE_DIRS})
 
-# Include ImageMagick++ headers (needed for compile)
-include_directories(${ImageMagick_INCLUDE_DIRS})
-	
+	# define a global var (used in the C++)
+	add_definitions( -DUSE_IMAGEMAGICK=1 )
+	SET(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+
+ENDIF (ImageMagick_FOUND)
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)

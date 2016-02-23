@@ -362,8 +362,9 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		break;
 
 	case (SCALE_CROP):
-		Magick::Geometry width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
-		Magick::Geometry height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
+		QSize width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
+		QSize height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
+
 		// respect aspect ratio
 		if (width_size.width() >= info.width && width_size.height() >= info.height)
 			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));

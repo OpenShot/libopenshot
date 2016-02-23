@@ -36,9 +36,18 @@ using namespace tr1;
 
 int main(int argc, char* argv[])
 {
+	FFmpegReader rTest("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+	rTest.Open();
+	rTest.GetFrame(300)->Thumbnail("frame1.png", 300, 100, "/home/jonathan/apps/openshot-qt-git/src/images/mask.png", "/home/jonathan/apps/openshot-qt-git/src/images/overlay.png", "#001100", false);
+	rTest.GetFrame(310)->Thumbnail("frame2.png", 100, 300, "/home/jonathan/apps/openshot-qt-git/src/images/mask.png", "/home/jonathan/apps/openshot-qt-git/src/images/overlay.png", "Red", false);
+	rTest.GetFrame(320)->Thumbnail("frame3.png", 50, 100, "/home/jonathan/apps/openshot-qt-git/src/images/mask.png", "/home/jonathan/apps/openshot-qt-git/src/images/overlay.png", "#000000", false);
+	rTest.GetFrame(330)->Thumbnail("frame4.png", 1920, 1080, "/home/jonathan/apps/openshot-qt-git/src/images/mask.png", "/home/jonathan/apps/openshot-qt-git/src/images/overlay.png", "#ffffff", false);
+	return 0;
+
+
+
 
 	Timeline r9(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
-
 
 	int frame_count = 1;
 	while (true) {

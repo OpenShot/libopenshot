@@ -60,7 +60,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "Magick++.h"
 
 #include "DeckLinkAPI.h"
 #include "../include/Cache.h"

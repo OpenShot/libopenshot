@@ -866,6 +866,7 @@ void Clip::SetJsonValue(Json::Value root) {
 				reader = new QtImageReader(root["reader"]["path"].asString());
 				reader->SetJsonValue(root["reader"]);
 
+#ifdef USE_IMAGEMAGICK
 			} else if (type == "ImageReader") {
 
 				// Create new reader
@@ -877,6 +878,7 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new TextReader();
 				reader->SetJsonValue(root["reader"]);
+#endif
 
 			} else if (type == "ChunkReader") {
 

@@ -53,18 +53,6 @@ Frame::Frame(long int number, int width, int height, string color)
 	audio->clear();
 };
 
-// Constructor - image only from pixel array (48kHz audio silence)
-Frame::Frame(long int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels)
-	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
-{
-	// Init the image magic and audio buffer
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
-
-	// initialize the audio samples to zero (silence)
-	audio->clear();
-};
-
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(long int number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
@@ -125,11 +113,42 @@ Frame::~Frame() {
 // Display the frame image to the screen (primarily used for debugging reasons)
 void Frame::Display()
 {
-	// Create new image object, and fill with pixel data
-	tr1::shared_ptr<Magick::Image> magick_image = GetMagickImage();
+	if (!QApplication::instance()) {
+		// Only create the QApplication once
+		static int argc = 1;
+		static char* argv[1] = {NULL};
+		previewApp = tr1::shared_ptr<QApplication>(new QApplication(argc, argv));
+	}
 
-	// Disply image
-	magick_image->display();
+	// Get preview image
+	tr1::shared_ptr<QImage> previewImage = GetImage();
+
+	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
+	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+	{
+		// Calculate correct DAR (display aspect ratio)
+		int new_width = previewImage->size().width();
+		int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+		// Resize to fix DAR
+		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+	}
+
+	// Create window
+	QWidget previewWindow;
+	previewWindow.setStyleSheet("background-color: #000000;");
+	QHBoxLayout layout;
+
+	// Create label with current frame's image
+	QLabel previewLabel;
+	previewLabel.setPixmap(QPixmap::fromImage(*previewImage));
+	previewLabel.setMask(QPixmap::fromImage(*previewImage).mask());
+	layout.addWidget(&previewLabel);
+
+	// Show the window
+	previewWindow.setLayout(&layout);
+	previewWindow.show();
+	previewApp->exec();
 }
 
 // Get an audio waveform image
@@ -250,31 +269,28 @@ void Frame::DisplayWaveform()
 	// Get audio wave form image
 	GetWaveform(720, 480, 0, 123, 255, 255);
 
-	QRgb const *tmpBits = (const QRgb*)wave_image->bits();
-
-	// Create new image object, and fill with pixel data
-	tr1::shared_ptr<Magick::Image> magick_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(wave_image->width(), wave_image->height(),"RGBA", Magick::CharPixel, tmpBits));
-
-	// Give image a transparent background color
-	magick_image->backgroundColor(Magick::Color("none"));
-	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	magick_image->matte(true);
-
-	// Resize image (if needed)
-	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-	{
-		// Calculate correct DAR (display aspect ratio)
-		int new_width = magick_image->size().width();
-		int new_height = magick_image->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-		// Resize image
-		Magick::Geometry new_size(new_width, new_height);
-		new_size.aspect(true);
-		magick_image->resize(new_size);
+	if (!QApplication::instance()) {
+		// Only create the QApplication once
+		static int argc = 1;
+		static char* argv[1] = {NULL};
+		previewApp = tr1::shared_ptr<QApplication>(new QApplication(argc, argv));
 	}
 
-	// Disply image
-	magick_image->display();
+	// Create window
+	QWidget previewWindow;
+	previewWindow.setStyleSheet("background-color: #000000;");
+	QHBoxLayout layout;
+
+	// Create label with current frame's waveform image
+	QLabel previewLabel;
+	previewLabel.setPixmap(QPixmap::fromImage(*wave_image));
+	previewLabel.setMask(QPixmap::fromImage(*wave_image).mask());
+	layout.addWidget(&previewLabel);
+
+	// Show the window
+	previewWindow.setLayout(&layout);
+	previewWindow.show();
+	previewApp->exec();
 
 	// Deallocate waveform image
 	ClearWaveform();
@@ -497,181 +513,148 @@ ChannelLayout Frame::ChannelsLayout()
 
 
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
-void Frame::Save(string path, float scale)
+void Frame::Save(string path, float scale, string format, int quality)
 {
-	// Create new image object, and fill with pixel data
-	tr1::shared_ptr<Magick::Image> copy = GetMagickImage();
-
-	// display the image (if any)
-	if (copy->size().width() > 1 && copy->size().height() > 1)
-	{
-		// Resize image (if needed)
-		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-		{
-			// Calculate correct DAR (display aspect ratio)
-			int new_width = copy->size().width();
-			int new_height = copy->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-			// Resize image
-			Magick::Geometry new_size(new_width, new_height);
-			new_size.aspect(true);
-			copy->resize(new_size);
-		}
-	}
+	// Get preview image
+	tr1::shared_ptr<QImage> previewImage = GetImage();
 
 	// scale image if needed
 	if (abs(scale) > 1.001 || abs(scale) < 0.999)
 	{
+		int new_width = width;
+		int new_height = height;
+
+		// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
+		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+		{
+			// Calculate correct DAR (display aspect ratio)
+			int new_width = previewImage->size().width();
+			int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
+
+			// Resize to fix DAR
+			previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		}
+
 		// Resize image
-		Magick::Geometry new_size(copy->size().width() * scale, copy->size().height() * scale);
-		new_size.aspect(true);
-		copy->resize(new_size);
+		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width * scale, new_height * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 	}
 
-	// save the image
-	copy->write(path);
+	// Save image
+	previewImage->save(QString::fromStdString(path), format.c_str(), quality);
 }
 
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-		string background_color, bool ignore_aspect) throw(InvalidFile) {
+		string background_color, bool ignore_aspect, string format, int quality) throw(InvalidFile) {
 
-	// Create new image object, and fill with pixel data
-	tr1::shared_ptr<Magick::Image> copy = GetMagickImage();
-	copy->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
+	// Create blank thumbnail image & fill background color
+	tr1::shared_ptr<QImage> thumbnail = tr1::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
+	thumbnail->fill(QColor(QString::fromStdString(background_color)));
+
+	// Create transform and painter
+	QTransform transform;
+	QPainter painter(thumbnail.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
 
-	// Set background color
-	if (background_color != "")
-		copy->backgroundColor(Magick::Color(background_color));
-	else
-	{
-		copy->backgroundColor(Magick::Color("none"));
-		background_color = "none";
-	}
-
-	// Maintain alpha channel
-	copy->matte(true);
+	// Get preview image
+	tr1::shared_ptr<QImage> previewImage = GetImage();
 
 	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
-	if (copy->size().width() > 1 && copy->size().height() > 1)
+	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
 	{
-		// Resize image (if needed)
-		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-		{
-			// Calculate correct DAR (display aspect ratio)
-			int new_width = copy->size().width();
-			int new_height = copy->size().height() * pixel_ratio.Reciprocal().ToDouble();
+		// Calculate correct DAR (display aspect ratio)
+		int aspect_width = previewImage->size().width();
+		int aspect_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
 
-			// Resize image
-			Magick::Geometry new_size(new_width, new_height);
-			new_size.aspect(true); // ignore aspect
-			new_size.greater(false); // don't resize past size
-			new_size.less(true); // okay to resize less than requested size
-			copy->resize(new_size);
-		}
+		// Resize to fix DAR
+		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(aspect_width, aspect_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 	}
 
-	// scale image if needed
-	if (width != new_width || height != new_height)
-	{
-		// Resize image
-		Magick::Geometry new_size(new_width, new_height);
-		new_size.aspect(ignore_aspect);
-		copy->resize(new_size);
-	}
+	// Resize frame image
+	if (ignore_aspect)
+		// Ignore aspect ratio
+		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+	else
+		// Maintain aspect ratio
+		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 
-	// extend image if too small
-	if (copy->size().width() != new_width || copy->size().height() != new_height )
-	{
-		// extend canvas size and center image
-		//copy.extent(Magick::Geometry(new_width, new_height), background_color, Magick::EastGravity);
-
-		// Create new background image
-		tr1::shared_ptr<Magick::Image> background = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(new_width, new_height), Magick::Color(background_color)));
-		background->matte(true);
-
-		// Determine offset
-		int x = (new_width - copy->size().width()) / 2.0; // center
-		int y = (new_height - copy->size().height()) / 2.0; // center
-
-		// Composite resized frame image onto background image
-		background->composite(*copy.get(), x, y, Magick::OverCompositeOp);
-
-		// Update copy image
-		copy = background;
-	}
+	// Composite frame image onto background (centered)
+	int x = (new_width - previewImage->size().width()) / 2.0; // center
+	int y = (new_height - previewImage->size().height()) / 2.0; // center
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(x, y, *previewImage);
 
 
-	// apply overlay (if any)
+	// Overlay Image (if any)
 	if (overlay_path != "") {
+		// Open overlay
+		tr1::shared_ptr<QImage> overlay = tr1::shared_ptr<QImage>(new QImage());
+		overlay->load(QString::fromStdString(overlay_path));
 
-		// Attempt to open overlay_path file
-		tr1::shared_ptr<Magick::Image> overlay;
-		try {
-			// load image
-			overlay = tr1::shared_ptr<Magick::Image>(new Magick::Image(overlay_path));
+		// Set pixel format
+		overlay = tr1::shared_ptr<QImage>(new QImage(overlay->convertToFormat(QImage::Format_RGBA8888)));
 
-			// Give image a transparent background color
-			overlay->backgroundColor(Magick::Color("none"));
-			overlay->matte(true);
+		// Resize to fit
+		overlay = tr1::shared_ptr<QImage>(new QImage(overlay->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 
-		} catch (Magick::Exception e) {
-			// raise exception
-			throw InvalidFile("Overlay could not be opened.", overlay_path);
-		}
-
-		// Resize overlay to match this frame size (if different)
-		if (copy->size() != overlay->size())
-		{
-			Magick::Geometry new_size(copy->size().width(), copy->size().height());
-			new_size.aspect(true); // ignore aspect
-			overlay->resize(new_size);
-		}
-
-		/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-		copy->composite(*overlay.get(), 0, 0, Magick::OverCompositeOp);
+		// Composite onto thumbnail
+		painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+		painter.drawImage(0, 0, *overlay);
 	}
 
-	// apply mask (if any)
+
+	// Mask Image (if any)
 	if (mask_path != "") {
+		// Open mask
+		tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage());
+		mask->load(QString::fromStdString(mask_path));
 
-		// Attempt to open mask file
-		tr1::shared_ptr<Magick::Image> mask;
-		try {
-			// load image
-			mask = tr1::shared_ptr<Magick::Image>(new Magick::Image(mask_path));
+		// Set pixel format
+		mask = tr1::shared_ptr<QImage>(new QImage(mask->convertToFormat(QImage::Format_RGBA8888)));
 
-			// Give image a transparent background color
-			mask->backgroundColor(Magick::Color("none"));
-			mask->matte(true);
+		// Resize to fit
+		mask = tr1::shared_ptr<QImage>(new QImage(mask->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 
-		} catch (Magick::Exception e) {
-			// raise exception
-			throw InvalidFile("Mask could not be opened.", mask_path);
-		}
+		// Negate mask
+		mask->invertPixels();
 
-		// Resize mask to match this frame size (if different)
-		if (copy->size() != mask->size())
+		// Get pixels
+		unsigned char *pixels = (unsigned char *) thumbnail->bits();
+		unsigned char *mask_pixels = (unsigned char *) mask->bits();
+
+		// Convert the mask image to grayscale
+		// Loop through pixels
+		for (int pixel = 0, byte_index=0; pixel < new_width * new_height; pixel++, byte_index+=4)
 		{
-			Magick::Geometry new_size(copy->size().width(), copy->size().height());
-			new_size.aspect(true); // ignore aspect
-			mask->resize(new_size);
+			// Get the RGB values from the pixel
+			int gray_value = qGray(mask_pixels[byte_index], mask_pixels[byte_index] + 1, mask_pixels[byte_index] + 2);
+			int Frame_Alpha = pixels[byte_index + 3];
+			int Mask_Value = constrain(Frame_Alpha - gray_value);
+
+			// Set all alpha pixels to gray value
+			pixels[byte_index + 3] = Mask_Value;
 		}
-
-		// Apply mask to frame image
-		tr1::shared_ptr<Magick::Image> copy_source = tr1::shared_ptr<Magick::Image>(new Magick::Image(*copy));
-		copy_source->channel(Magick::MatteChannel); // extract alpha channel as grayscale image
-		copy_source->matte(false); // remove alpha channel
-		copy_source->negate(true); // negate source alpha channel before multiplying mask
-		copy_source->composite(*mask.get(), 0, 0, Magick::MultiplyCompositeOp); // multiply mask grayscale (i.e. combine the 2 grayscale images)
-
-		// Copy the combined alpha channel back to the frame
-		copy->composite(*copy_source.get(), 0, 0, Magick::CopyOpacityCompositeOp);
 	}
 
-	// save the image
-	copy->write(path);
+
+	// End painter
+	painter.end();
+
+	// Save image
+	thumbnail->save(QString::fromStdString(path), format.c_str(), quality);
+}
+
+// Constrain a color value from 0 to 255
+int Frame::constrain(int color_value)
+{
+	// Constrain new color from 0 to 255
+	if (color_value < 0)
+		color_value = 0;
+	else if (color_value > 255)
+		color_value = 255;
+
+	return color_value;
 }
 
 // Add (or replace) pixel data to the frame (based on a solid color)
@@ -818,6 +801,7 @@ tr1::shared_ptr<QImage> Frame::GetImage()
 	return image;
 }
 
+#ifdef USE_IMAGEMAGICK
 // Get pointer to ImageMagick image object
 tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
 {
@@ -839,7 +823,9 @@ tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
 
 	return magick_image;
 }
+#endif
 
+#ifdef USE_IMAGEMAGICK
 // Get pointer to QImage of frame
 void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
 {
@@ -872,6 +858,7 @@ void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
 	height = image->height();
 	has_image_data = true;
 }
+#endif
 
 // Play audio samples for this frame
 void Frame::Play()

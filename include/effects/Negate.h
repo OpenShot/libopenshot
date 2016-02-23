@@ -36,7 +36,6 @@
 #include <omp.h>
 #include <stdio.h>
 #include <tr1/memory>
-#include "Magick++.h"
 #include "../Color.h"
 #include "../Exceptions.h"
 #include "../KeyFrame.h"

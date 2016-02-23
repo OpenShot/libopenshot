@@ -46,9 +46,11 @@
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "FrameMapper.h"
-#include "ImageReader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+	#include "TextReader.h"
+#endif
 #include "QtImageReader.h"
-#include "TextReader.h"
 #include "ChunkReader.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"

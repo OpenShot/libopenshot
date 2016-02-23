@@ -78,8 +78,6 @@ namespace tr1
 #include "../../../include/Fraction.h"
 #include "../../../include/Frame.h"
 #include "../../../include/FrameMapper.h"
-#include "../../../include/ImageReader.h"
-#include "../../../include/ImageWriter.h"
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
@@ -87,7 +85,6 @@ namespace tr1
 #include "../../../include/QtPlayer.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
-#include "../../../include/TextReader.h"
 #include "../../../include/Timeline.h"
 
 %}
@@ -99,6 +96,13 @@ namespace tr1
 	%}
 #endif
 
+#ifdef USE_IMAGEMAGICK
+	%{
+		#include "../../../include/ImageReader.h"
+		#include "../../../include/ImageWriter.h"
+		#include "../../../include/TextReader.h"
+	%}
+#endif
 
 %include "../../../include/Version.h"
 %include "../../../include/ReaderBase.h"
@@ -126,8 +130,6 @@ namespace tr1
 %include "../../../include/Fraction.h"
 %include "../../../include/Frame.h"
 %include "../../../include/FrameMapper.h"
-%include "../../../include/ImageReader.h"
-%include "../../../include/ImageWriter.h"
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
@@ -135,8 +137,13 @@ namespace tr1
 %include "../../../include/QtPlayer.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
-%include "../../../include/TextReader.h"
 %include "../../../include/Timeline.h"
+
+#ifdef USE_IMAGEMAGICK
+	%include "../../../include/ImageReader.h"
+	%include "../../../include/ImageWriter.h"
+	%include "../../../include/TextReader.h"
+#endif
 
 /* Effects */
 %include "../../../include/effects/Blur.h"

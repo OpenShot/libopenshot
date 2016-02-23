@@ -40,14 +40,21 @@
 #include <iomanip>
 #include <sstream>
 #include <queue>
+#include <QtWidgets/QApplication>
 #include <QtGui/QImage>
 #include <QtGui/QColor>
+#include <QtGui/QBitmap>
 #include <QtCore/QString>
 #include <QtCore/QVector>
 #include <QtGui/QPainter>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QLabel>
 #include <tr1/memory>
 #include <unistd.h>
-#include "Magick++.h"
+#ifdef USE_IMAGEMAGICK
+	#include "Magick++.h"
+#endif
 #include "JuceLibraryCode/JuceHeader.h"
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
@@ -85,15 +92,6 @@ namespace openshot
 	 *       "#000000" // HTML color code of background color
 	 *       );
 	 *
-	 * // Image only from pixel array (48kHz audio silence)
-	 * Frame(number, // Frame number
-	 *       720, // Width of image
-	 *       480, // Height of image
-	 *       "RGBA", // Color format / map
-	 *       Magick::CharPixel, // Storage format / data type
-	 *       buffer // Array of image data (pixels)
-	 *       );
-	 *
 	 * // Audio only (300x200 blank image)
 	 * Frame(number, // Frame number
 	 *       44100, // Sample rate of audio stream
@@ -120,6 +118,7 @@ namespace openshot
 		tr1::shared_ptr<QImage> image;
 		tr1::shared_ptr<QImage> wave_image;
 		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
+		tr1::shared_ptr<QApplication> previewApp;
 		const unsigned char *qbuffer;
 		Fraction pixel_ratio;
 		int channels;
@@ -127,6 +126,9 @@ namespace openshot
 		int width;
 		int height;
 		int sample_rate;
+
+		/// Constrain a color value from 0 to 255
+		int constrain(int color_value);
 
 	public:
 		long int number;	 ///< This is the frame number (starting at 1)
@@ -138,9 +140,6 @@ namespace openshot
 
 		/// Constructor - image only (48kHz audio silence)
 		Frame(long int number, int width, int height, string color);
-
-		/// Constructor - image only from pixel array (48kHz audio silence)
-		Frame(long int number, int width, int height, const string map, const Magick::StorageType type, const void *pixels_);
 
 		/// Constructor - audio only (300x200 blank image)
 		Frame(long int number, int samples, int channels);
@@ -169,8 +168,10 @@ namespace openshot
 		/// Add (or replace) pixel data to the frame (for only the odd or even lines)
 		void AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines);
 
+#ifdef USE_IMAGEMAGICK
 		/// Add (or replace) pixel data to the frame from an ImageMagick Image
 		void AddMagickImage(tr1::shared_ptr<Magick::Image> new_image);
+#endif
 
 		/// Add audio samples to a specific channel
 		void AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
@@ -226,8 +227,10 @@ namespace openshot
 		/// Get pointer to Qt QImage image object
 		tr1::shared_ptr<QImage> GetImage();
 
+#ifdef USE_IMAGEMAGICK
 		/// Get pointer to ImageMagick image object
 		tr1::shared_ptr<Magick::Image> GetMagickImage();
+#endif
 
 		/// Set Pixel Aspect Ratio
 		Fraction GetPixelRatio() { return pixel_ratio; };
@@ -265,8 +268,8 @@ namespace openshot
 		/// Set the original sample rate of this frame's audio data
 		void SampleRate(int orig_sample_rate) { sample_rate = orig_sample_rate; };
 
-		/// Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
-		void Save(string path, float scale);
+		/// Save the frame image to the specified path.  The image format can be BMP, JPG, JPEG, PNG, PPM, XBM, XPM
+		void Save(string path, float scale, string format="PNG", int quality=100);
 
 		/// Set frame number
 		void SetFrameNumber(int number);
@@ -277,7 +280,7 @@ namespace openshot
 		/// Thumbnail the frame image with tons of options to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG).
 		/// This method allows for masks, overlays, background color, and much more accurate resizing (including padding and centering)
 		void Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-				string background_color, bool ignore_aspect) throw(InvalidFile);
+				string background_color, bool ignore_aspect, string format="png", int quality=100) throw(InvalidFile);
 
 		/// Play audio samples for this frame
 		void Play();
