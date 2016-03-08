@@ -119,6 +119,7 @@ namespace openshot
 		tr1::shared_ptr<QImage> wave_image;
 		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
 		tr1::shared_ptr<QApplication> previewApp;
+		CriticalSection addingImageSection;
 		const unsigned char *qbuffer;
 		Fraction pixel_ratio;
 		int channels;

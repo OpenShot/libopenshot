@@ -676,6 +676,7 @@ void Frame::AddColor(int width, int height, string color)
 void Frame::AddImage(int width, int height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
+	const GenericScopedLock<CriticalSection> lock(addingImageSection);
 	int buffer_size = width * height * bytes_per_pixel;
 	qbuffer = new unsigned char[buffer_size]();
 
