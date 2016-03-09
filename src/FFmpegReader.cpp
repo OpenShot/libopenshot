@@ -1304,6 +1304,14 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 			is_seeking = false;
 			seeking_pts = 0;
 			seeking_frame = 0;
+
+			// dislable seeking for this reader (since it failed)
+			// TODO: Find a safer way to do this... not sure how common it is for a seek to fail.
+			enable_seek = false;
+
+			// Close and re-open file (basically seeking to frame 1)
+			Close();
+			Open();
 		}
 	}
 }
