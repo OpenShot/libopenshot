@@ -33,14 +33,15 @@ using namespace UnitTest;
 
 int main()
 {
+	int exit_code = 0;
 	cout << "----------------------------" << endl;
 	cout << "     RUNNING ALL TESTS" << endl;
 	cout << "----------------------------" << endl;
 
 	// Run all unit tests
-	RunAllTests();
+	exit_code = RunAllTests();
 
 	cout << "----------------------------" << endl;
 
-	return 0;
+	return exit_code;
 }
