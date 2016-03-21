@@ -24,8 +24,20 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+IF(NOT DEFINED ENABLE_PYTHON)
+    SET(ENABLE_PYTHON 1)
+ENDIF()
+
+IF(NOT DEFINED ENABLE_RUBY)
+    SET(ENABLE_RUBY 1)
+ENDIF()
 
 ############### INCLUDE EACH LANGUAGE BINDING ################
-add_subdirectory(python)
-add_subdirectory(ruby)
+IF (ENABLE_PYTHON)
+    add_subdirectory(python)
+ENDIF (ENABLE_PYTHON)
+
+IF (ENABLE_RUBY)
+    add_subdirectory(ruby)
+ENDIF (ENABLE_RUBY)
 
