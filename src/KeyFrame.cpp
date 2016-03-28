@@ -367,7 +367,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 
 	if (!root["Points"].isNull())
 		// loop through points
-		for (long int x = 0; x < root["Points"].size(); x++) {
+		for (unsigned int x = 0; x < root["Points"].size(); x++) {
 			// Get each point
 			Json::Value existing_point = root["Points"][x];
 
