@@ -24,6 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -154,7 +155,13 @@ endif(OPENMP_FOUND)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
-include_directories("../thirdparty/jsoncpp/include")
+if (USE_SYSTEM_JSONCPP)
+	find_package(JsonCpp REQUIRED)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
+else()
+	message("Using embedded JsonCpp")
+	include_directories("../thirdparty/jsoncpp/include")
+endif(USE_SYSTEM_JSONCPP)
 
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
@@ -200,12 +207,15 @@ SET ( OPENSHOT_SOURCE_FILES
 		
 		# Qt Video Player
 		${QT_PLAYER_FILES}
-		${MOC_FILES}
-		
-		# Third Party JSON Parser
-		../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
-		../thirdparty/jsoncpp/src/lib_json/json_value.cpp
-		../thirdparty/jsoncpp/src/lib_json/json_writer.cpp )
+		${MOC_FILES})
+
+		IF (NOT USE_SYSTEM_JSONCPP)
+			# Third Party JSON Parser
+			SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
+				../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
+				../thirdparty/jsoncpp/src/lib_json/json_value.cpp
+				../thirdparty/jsoncpp/src/lib_json/json_writer.cpp)
+		ENDIF (NOT USE_SYSTEM_JSONCPP)
 
 		# ImageMagic related files
 		IF (ImageMagick_FOUND)
@@ -251,6 +261,7 @@ SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
+		${JSONCPP_LIBRARY}
 		)
 		
 		IF (OPENMP_FOUND)
