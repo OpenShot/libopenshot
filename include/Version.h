@@ -44,34 +44,34 @@
 #include <sstream>
 using namespace std;
 
-/// This struct holds version number information. Use the GetVersion() method to access the current version of libopenshot.
-struct OpenShotVersion
+namespace openshot
 {
-	int major; /// Major version number
-	int minor; /// Minor version number
-	int build; /// Build number
-	int so; /// Shared Object Number (incremented when API or ABI changes)
+	/// This struct holds version number information. Use the GetVersion() method to access the current version of libopenshot.
+	struct OpenShotVersion {
+		int major; /// Major version number
+		int minor; /// Minor version number
+		int build; /// Build number
+		int so; /// Shared Object Number (incremented when API or ABI changes)
 
-	/// Get a string version of the version (i.e. "Major.Minor.Build")
-	string ToString() {
-		stringstream version_string;
-		version_string << major << "." << minor << "." << build;
-		return version_string.str();
+		/// Get a string version of the version (i.e. "Major.Minor.Build")
+		string ToString() {
+			stringstream version_string;
+			version_string << major << "." << minor << "." << build;
+			return version_string.str();
+		}
+	};
+
+	/// Get the current version number of libopenshot (major, minor, and build number)
+	static OpenShotVersion GetVersion() {
+		OpenShotVersion version;
+
+		// Set version info
+		version.major = OPENSHOT_VERSION_MAJOR;
+		version.minor = OPENSHOT_VERSION_MINOR;
+		version.build = OPENSHOT_VERSION_BUILD;
+		version.so = OPENSHOT_VERSION_SO;
+
+		return version;
 	}
-};
-
-/// Get the current version number of libopenshot (major, minor, and build number)
-static OpenShotVersion GetVersion()
-{
-	OpenShotVersion version;
-
-	// Set version info
-	version.major = OPENSHOT_VERSION_MAJOR;
-	version.minor = OPENSHOT_VERSION_MINOR;
-	version.build = OPENSHOT_VERSION_BUILD;
-	version.so = OPENSHOT_VERSION_SO;
-
-	return version;
 }
-
 #endif

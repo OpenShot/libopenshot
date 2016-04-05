@@ -32,11 +32,13 @@
 #include <iomanip>
 #include <tr1/memory>
 #include <stdlib.h>
+#include <sstream>
 #include "Cache.h"
 #include "ChannelLayouts.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
+#include "ZmqLogger.h"
 #include <QtCore/qstring.h>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
@@ -97,12 +99,6 @@ namespace openshot
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
 
-	    /// Debug JSON root
-	    Json::Value debug_root;
-
-		/// Append debug information as JSON
-		void AppendDebugItem(Json::Value debug_item);
-
 		/// Append debug information as JSON
 		void AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
 												   string arg2_name, float arg2_value,
@@ -160,10 +156,6 @@ namespace openshot
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;
-
-		/// Output debug information as JSON
-		string OutputDebugJSON();
-
 	};
 
 }

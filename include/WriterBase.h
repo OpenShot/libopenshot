@@ -34,6 +34,7 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "ReaderBase.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 
@@ -85,12 +86,6 @@ namespace openshot
 	{
 	protected:
 
-	    /// Debug JSON root
-	    Json::Value debug_root;
-
-		/// Append debug information as JSON
-		void AppendDebugItem(Json::Value debug_item);
-
 		/// Append debug information as JSON
 		void AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
 												   string arg2_name, float arg2_value,
@@ -134,9 +129,6 @@ namespace openshot
 
 		/// Open the writer (and start initializing streams)
 		virtual void Open() = 0;
-
-		/// Output debug information as JSON
-		string OutputDebugJSON();
 	};
 
 }

@@ -152,6 +152,13 @@ if (OPENMP_FOUND)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
 endif(OPENMP_FOUND)
 
+################### ZEROMQ #####################
+# Find ZeroMQ library (used for socket communication & logging)
+FIND_PACKAGE(ZMQ REQUIRED)
+
+# Include FFmpeg headers (needed for compile)
+include_directories(${ZMQ_INCLUDE_DIRS})
+
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 include_directories("../thirdparty/jsoncpp/include")
@@ -191,6 +198,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Frame.cpp
 		FrameMapper.cpp
 		KeyFrame.cpp
+		ZmqLogger.cpp
 		PlayerBase.cpp
 		Point.cpp
 		Profiles.cpp
@@ -251,6 +259,7 @@ SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
+		${ZMQ_LIBRARIES}
 		)
 		
 		IF (OPENMP_FOUND)

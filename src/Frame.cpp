@@ -908,7 +908,7 @@ void Frame::Play()
 	while (transport1.isPlaying())
 	{
 		cout << "playing" << endl;
-		Sleep(1);
+		usleep(1000000);
 	}
 
 	cout << "DONE!!!" << endl;

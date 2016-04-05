@@ -257,9 +257,6 @@ void FFmpegReader::Close()
 			missing_video_frames.clear();
 		}
 
-		// Clear debug json
-		debug_root.clear();
-
 		// Close the video file
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
@@ -526,7 +523,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
-					usleep(50);
+					usleep(2500);
 
 				// Get the next packet (if any)
 				if (packet_error < 0)

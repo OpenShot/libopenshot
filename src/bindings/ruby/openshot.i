@@ -88,6 +88,7 @@ namespace tr1
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Timeline.h"
+#include "../../../include/ZmqLogger.h"
 
 %}
 
@@ -140,6 +141,7 @@ namespace tr1
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Timeline.h"
+%include "../../../include/ZmqLogger.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "../../../include/ImageReader.h"

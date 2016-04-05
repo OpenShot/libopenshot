@@ -132,7 +132,6 @@
 #include "Point.h"
 #include "Profiles.h"
 #include "QtImageReader.h"
-#include "Sleep.h"
 #include "Timeline.h"
 
 #endif

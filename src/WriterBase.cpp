@@ -63,20 +63,6 @@ WriterBase::WriterBase()
 	debug = false;
 }
 
-// Output debug information as JSON
-string WriterBase::OutputDebugJSON()
-{
-	// Return formatted string
-	return debug_root.toStyledString();
-}
-
-// Append debug information as JSON
-void WriterBase::AppendDebugItem(Json::Value debug_item)
-{
-	// Append item to root array
-	debug_root.append(debug_item);
-}
-
 // Append debug information as JSON
 void WriterBase::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
 														 string arg2_name, float arg2_value,
@@ -89,44 +75,38 @@ void WriterBase::AppendDebugMethod(string method_name, string arg1_name, float a
 		// Don't do anything
 		return;
 
-	Json::Value debug_item;
-	debug_item["method"] = method_name;
-
 	// Output to standard output
-	cout << fixed << setprecision(4);
-	cout << "Debug: Method: " << method_name << " (";
+	#pragma omp critical (debug_output)
+	{
+		stringstream message;
+		message << fixed << setprecision(4);
+		message << method_name << " (";
 
-	// Add attributes to method JSON
-	if (arg1_name.length() > 0) {
-		debug_item[arg1_name] = arg1_value;
-		cout << arg1_name << "=" << arg1_value;
-	}
-	if (arg2_name.length() > 0) {
-		debug_item[arg2_name] = arg2_value;
-		cout << ", " << arg2_name << "=" << arg2_value;
-	}
-	if (arg3_name.length() > 0) {
-		debug_item[arg3_name] = arg3_value;
-		cout << ", " << arg3_name << "=" << arg3_value;
-	}
-	if (arg4_name.length() > 0) {
-		debug_item[arg4_name] = arg4_value;
-		cout << ", " << arg4_name << "=" << arg4_value;
-	}
-	if (arg5_name.length() > 0) {
-		debug_item[arg5_name] = arg5_value;
-		cout << ", " << arg5_name << "=" << arg5_value;
-	}
-	if (arg6_name.length() > 0) {
-		debug_item[arg6_name] = arg6_value;
-		cout << ", " << arg6_name << "=" << arg6_value;
-	}
+		// Add attributes to method JSON
+		if (arg1_name.length() > 0)
+			message << arg1_name << "=" << arg1_value;
 
-	// Output to standard output
-	cout << ")" << endl;
+		if (arg2_name.length() > 0)
+			message << ", " << arg2_name << "=" << arg2_value;
 
-	// Append method to root array
-	debug_root.append(debug_item);
+		if (arg3_name.length() > 0)
+			message << ", " << arg3_name << "=" << arg3_value;
+
+		if (arg4_name.length() > 0)
+			message << ", " << arg4_name << "=" << arg4_value;
+
+		if (arg5_name.length() > 0)
+			message << ", " << arg5_name << "=" << arg5_value;
+
+		if (arg6_name.length() > 0)
+			message << ", " << arg6_name << "=" << arg6_value;
+
+		// Output to standard output
+		message << ")" << endl;
+
+		// Send message through ZMQ
+		ZmqLogger::Instance()->Log(message.str());
+	}
 }
 
 // This method copy's the info struct of a reader, and sets the writer with the same info

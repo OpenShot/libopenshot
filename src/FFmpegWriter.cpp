@@ -371,7 +371,7 @@ void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingV
 		{
 			// YES, WRITING... so wait until it finishes, before writing again
 			while (is_writing)
-				Sleep(1); // sleep for 250 milliseconds
+				usleep(250000); // sleep for 250 milliseconds
 
 			// Write frames to video file
 			write_queued_frames();

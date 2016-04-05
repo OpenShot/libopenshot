@@ -82,6 +82,7 @@
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Timeline.h"
+#include "../../../include/ZmqLogger.h"
 
 %}
 
@@ -145,6 +146,8 @@
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Timeline.h"
+%include "../../../include/ZmqLogger.h"
+
 #ifdef USE_IMAGEMAGICK
 	%include "../../../include/ImageReader.h"
 	%include "../../../include/ImageWriter.h"
