@@ -381,11 +381,11 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	// Allow nested OpenMP sections
 	omp_set_nested(true);
 
+	// Debug output
+	AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
+
 	#pragma omp parallel
 	{
-		// Debug output
-		AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
-
 		// Loop through all requested frames, each frame gets it's own thread
 		#pragma omp for ordered
 		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)

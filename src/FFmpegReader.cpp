@@ -1561,13 +1561,11 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
         // Create missing frame (and copy image from previous frame)
         tr1::shared_ptr<Frame> missing_frame = CreateFrame(itr->second);
         if (last_video_frame != NULL && missing_frame != NULL) {
-            missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())), true);
 
             // Add this frame to the processed map (since it's already done)
-            {
-                const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-                processed_video_frames[itr->second] = itr->second;
-            }
+			const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+			missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())), true);
+			processed_video_frames[itr->second] = itr->second;
 
             // Remove missing frame from map
             missing_video_frames.erase(itr);
