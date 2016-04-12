@@ -31,9 +31,12 @@
 
 #include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <string>
 #include <sstream>
+#include <stdio.h>
+#include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
 
@@ -53,6 +56,10 @@ namespace openshot {
 	private:
 		CriticalSection loggerCriticalSection;
 		string connection;
+
+		// Logfile related vars
+		string file_path;
+		ofstream log_file;
 
 		/// ZMQ Context
 		zmq::context_t *context;
@@ -76,8 +83,14 @@ namespace openshot {
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static ZmqLogger * Instance();
 
+		/// Close logger (sockets and/or files)
+		void Close();
+
 		/// Set or change connection info for logger (i.e. tcp://*:5556)
 		void Connection(string new_connection);
+
+		/// Set or change the file path (optional)
+		void Path(string new_path);
 
 		/// Log message to all subscribers of this logger (if any)
 		void Log(string message);

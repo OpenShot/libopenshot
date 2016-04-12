@@ -99,8 +99,46 @@ void ZmqLogger::Log(string message)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
-	// Send example message
+	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
 	memcpy (reply.data(), message.c_str(), message.length());
 	publisher->send(reply);
+
+	// Write to log file (if opened, and force it to write to disk in case of a crash)
+	if (log_file.is_open())
+		log_file << message << std::flush;;
+}
+
+void ZmqLogger::Path(string new_path)
+{
+	// Update path
+	file_path = new_path;
+
+	// Close file (if already open)
+	if (log_file.is_open())
+		log_file.close();
+
+	// Open file (write + append)
+	log_file.open (file_path.c_str(), ios::out | ios::app);
+
+	// Get current time and log first message
+	time_t now = time(0);
+	tm* localtm = localtime(&now);
+	log_file << "------------------------------------------" << endl;
+	log_file << "libopenshot logging: " << asctime(localtm);
+	log_file << "------------------------------------------" << endl;
+}
+
+void ZmqLogger::Close()
+{
+	// Close file (if already open)
+	if (log_file.is_open())
+		log_file.close();
+
+	// Close socket (if any)
+	if (publisher != NULL) {
+		// Close an existing bound publisher socket
+		publisher->close();
+		publisher = NULL;
+	}
 }
