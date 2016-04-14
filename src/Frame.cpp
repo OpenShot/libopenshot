@@ -704,6 +704,7 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image)
 		return;
 
 	// assign image data
+	const GenericScopedLock<CriticalSection> lock(addingImageSection);
 	image = new_image;
 
 	// Always convert to RGBA8888 (if different)
@@ -735,6 +736,7 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
 			return;
 
 		// Get the frame's image
+		const GenericScopedLock<CriticalSection> lock(addingImageSection);
 		const unsigned char *pixels = image->bits();
 		const unsigned char *new_pixels = new_image->bits();
 
