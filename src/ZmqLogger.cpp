@@ -48,6 +48,9 @@ ZmqLogger *ZmqLogger::Instance()
 
 		// Default connection
 		m_pInstance->Connection("tcp://*:5556");
+
+		// Init enabled to False (force user to call Enable())
+		m_pInstance->enabled = false;
 	}
 
 	return m_pInstance;
@@ -96,6 +99,10 @@ void ZmqLogger::Connection(string new_connection)
 
 void ZmqLogger::Log(string message)
 {
+	if (!enabled)
+		// Don't do anything
+		return;
+
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
@@ -141,4 +148,49 @@ void ZmqLogger::Close()
 		publisher->close();
 		publisher = NULL;
 	}
+}
+
+// Append debug information
+void ZmqLogger::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
+								   string arg2_name, float arg2_value,
+								   string arg3_name, float arg3_value,
+								   string arg4_name, float arg4_value,
+								   string arg5_name, float arg5_value,
+								   string arg6_name, float arg6_value)
+{
+	if (!enabled)
+		// Don't do anything
+		return;
+
+	// Create a scoped lock, allowing only a single thread to run the following code at one time
+	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+
+	stringstream message;
+	message << fixed << setprecision(4);
+	message << method_name << " (";
+
+	// Add attributes to method JSON
+	if (arg1_name.length() > 0)
+		message << arg1_name << "=" << arg1_value;
+
+	if (arg2_name.length() > 0)
+		message << ", " << arg2_name << "=" << arg2_value;
+
+	if (arg3_name.length() > 0)
+		message << ", " << arg3_name << "=" << arg3_value;
+
+	if (arg4_name.length() > 0)
+		message << ", " << arg4_name << "=" << arg4_value;
+
+	if (arg5_name.length() > 0)
+		message << ", " << arg5_name << "=" << arg5_value;
+
+	if (arg6_name.length() > 0)
+		message << ", " << arg6_name << "=" << arg6_value;
+
+	// Output to standard output
+	message << ")" << endl;
+
+	// Send message through ZMQ
+	Log(message.str());
 }

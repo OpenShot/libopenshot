@@ -76,7 +76,7 @@ void ImageWriter::SetVideoOptions(string format, Fraction fps, int width, int he
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	AppendDebugMethod("ImageWriter::SetVideoOptions (" + format + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::SetVideoOptions (" + format + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
 }
 
 // Open the writer
@@ -122,7 +122,7 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed)
 {
-	AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
 	for (long int number = start; number <= length; number++)
@@ -150,6 +150,6 @@ void ImageWriter::Close()
 	// Close writer
 	is_open = false;
 
-	AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 

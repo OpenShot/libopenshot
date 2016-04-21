@@ -31,6 +31,7 @@
 
 #include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <stdlib.h>
 #include <string>
@@ -60,6 +61,7 @@ namespace openshot {
 		// Logfile related vars
 		string file_path;
 		ofstream log_file;
+		bool enabled;
 
 		/// ZMQ Context
 		zmq::context_t *context;
@@ -83,11 +85,22 @@ namespace openshot {
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static ZmqLogger * Instance();
 
+		/// Append debug information
+		void AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
+							   string arg2_name, float arg2_value,
+							   string arg3_name, float arg3_value,
+							   string arg4_name, float arg4_value,
+							   string arg5_name, float arg5_value,
+							   string arg6_name, float arg6_value);
+
 		/// Close logger (sockets and/or files)
 		void Close();
 
 		/// Set or change connection info for logger (i.e. tcp://*:5556)
 		void Connection(string new_connection);
+
+		/// Enable/Disable logging
+		void Enable(bool is_enabled) { enabled = is_enabled;};
 
 		/// Set or change the file path (optional)
 		void Path(string new_path);

@@ -56,7 +56,6 @@ QtPlayer::~QtPlayer()
 void QtPlayer::SetSource(const std::string &source)
 {
 	FFmpegReader *ffreader = new FFmpegReader(source);
-	ffreader->debug = false;
 	ffreader->DisplayInfo();
 
 	//reader = new FrameMapper(ffreader, ffreader->info.fps, PULLDOWN_NONE, ffreader->info.sample_rate, ffreader->info.channels, ffreader->info.channel_layout);
@@ -66,7 +65,6 @@ void QtPlayer::SetSource(const std::string &source)
 	Timeline* tm = (Timeline*)reader;
 	tm->AddClip(c);
 	tm->Open();
-	tm->debug = false;
 
     // Set the reader
 	Reader(reader);

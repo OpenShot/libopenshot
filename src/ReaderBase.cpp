@@ -58,55 +58,6 @@ ReaderBase::ReaderBase()
 	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
-
-	// Initialize debug mode
-	debug = false;
-}
-
-// Append debug information as JSON
-void ReaderBase::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
-														 string arg2_name, float arg2_value,
-														 string arg3_name, float arg3_value,
-														 string arg4_name, float arg4_value,
-														 string arg5_name, float arg5_value,
-														 string arg6_name, float arg6_value)
-{
-	if (!debug)
-		// Don't do anything
-		return;
-
-	// Output to standard output
-	#pragma omp critical (debug_output)
-	{
-		stringstream message;
-		message << fixed << setprecision(4);
-		message << method_name << " (";
-
-		// Add attributes to method JSON
-		if (arg1_name.length() > 0)
-			message << arg1_name << "=" << arg1_value;
-
-		if (arg2_name.length() > 0)
-			message << ", " << arg2_name << "=" << arg2_value;
-
-		if (arg3_name.length() > 0)
-			message << ", " << arg3_name << "=" << arg3_value;
-
-		if (arg4_name.length() > 0)
-			message << ", " << arg4_name << "=" << arg4_value;
-
-		if (arg5_name.length() > 0)
-			message << ", " << arg5_name << "=" << arg5_value;
-
-		if (arg6_name.length() > 0)
-			message << ", " << arg6_name << "=" << arg6_value;
-
-		// Output to standard output
-		message << ")" << endl;
-
-		// Send message through ZMQ
-		ZmqLogger::Instance()->Log(message.str());
-	}
 }
 
 // Display file information

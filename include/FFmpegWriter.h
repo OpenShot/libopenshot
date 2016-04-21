@@ -50,6 +50,7 @@
 #include "Cache.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
 
 
 using namespace std;

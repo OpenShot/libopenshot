@@ -156,7 +156,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 	float requested_time = calculate_time(timeline_frame_number, info.fps);
 
 	// Debug output
-	AppendDebugMethod("Timeline::apply_effects", "requested_time", requested_time, "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "requested_time", requested_time, "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
 
 	// Find Effects at this position and layer
 	list<EffectBase*>::iterator effect_itr;
@@ -170,7 +170,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
 
 		// Debug output
-		AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "requested_time", requested_time, "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "effect_duration", effect_duration);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "requested_time", requested_time, "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "effect_duration", effect_duration);
 
 		// Clip is visible
 		if (does_effect_intersect)
@@ -180,7 +180,7 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 			int effect_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 			// Debug output
-			AppendDebugMethod("Timeline::apply_effects (Process Effect)", "time_diff", time_diff, "effect_frame_number", effect_frame_number, "effect_duration", effect_duration, "does_effect_intersect", does_effect_intersect, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Process Effect)", "time_diff", time_diff, "effect_frame_number", effect_frame_number, "effect_duration", effect_duration, "does_effect_intersect", does_effect_intersect, "", -1, "", -1);
 
 			// Apply the effect to this frame
 			frame = effect->GetFrame(frame, effect_frame_number);
@@ -234,13 +234,13 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		return;
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1, "", -1, "", -1);
 
 	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
 	if (source_clip->Waveform())
 	{
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 
 		// Get the color of the waveform
 		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
@@ -265,7 +265,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	if (source_clip->Reader()->info.has_audio) {
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 		if (source_frame->GetAudioChannelsCount() == info.channels)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
@@ -297,7 +297,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 			}
 		else
 			// Debug output
-			AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 	}
 
@@ -307,7 +307,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		return;
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 
 	// Get actual frame image data
 	source_image = source_frame->GetImage();
@@ -335,7 +335,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		}
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number, "", -1, "", -1, "", -1);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -348,7 +348,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_STRETCH):
@@ -358,7 +358,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_CROP):
@@ -374,7 +374,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		source_height = source_image->height();
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
 		break;
 	}
 
@@ -421,7 +421,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	}
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "source_width", source_width, "info.height", info.height, "source_height", source_height);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "source_width", source_width, "info.height", info.height, "source_height", source_height);
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
@@ -437,7 +437,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
 	{
 		// SIMPLE OFFSET
-		AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		// If only X and Y are different, and no animation is being used (just set the offset for speed)
 		transformed = true;
@@ -448,7 +448,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
 	{
 		// COMPLEX DISTORTION
-		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 		// Use the QTransform object, which can be very CPU intensive
 		transformed = true;
@@ -475,11 +475,11 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		}
 
 		// Debug output
-		AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 	}
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	tr1::shared_ptr<QImage> new_image = new_frame->GetImage();
@@ -498,13 +498,13 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
     painter.end();
 
 	// Debug output
-	AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
 }
 
 // Update the list of 'opened' clips
 void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 {
-	AppendDebugMethod("Timeline::update_open_clips (before)", "does_clip_intersect", does_clip_intersect, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::update_open_clips (before)", "does_clip_intersect", does_clip_intersect, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1, "", -1);
 
 	// is clip already in list?
 	bool clip_found = open_clips.count(clip);
@@ -522,24 +522,19 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		// Add clip to 'opened' list, because it's missing
 		open_clips[clip] = clip;
 
-		// Set debug mode (if needed)
-		if (debug)
-			// Also set each Clip's reader to debug mode
-			clip->Reader()->debug = true;
-
 		// Open the clip
 		clip->Open();
 	}
 
 	// Debug output
-	AppendDebugMethod("Timeline::update_open_clips (after)", "does_clip_intersect", does_clip_intersect, "clip_found", clip_found, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::update_open_clips (after)", "does_clip_intersect", does_clip_intersect, "clip_found", clip_found, "closing_clips.size()", closing_clips.size(), "open_clips.size()", open_clips.size(), "", -1, "", -1);
 }
 
 // Sort clips by position on the timeline
 void Timeline::sort_clips()
 {
 	// Debug output
-	AppendDebugMethod("Timeline::SortClips", "clips.size()", clips.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::SortClips", "clips.size()", clips.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
 
 	// sort clips
 	clips.sort(CompareClips());
@@ -600,7 +595,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
-		AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Return cached frame
 		return frame;
@@ -614,7 +609,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		frame = final_cache.GetFrame(requested_frame);
 		if (frame) {
 			// Debug output
-			AppendDebugMethod("Timeline::GetFrame (Cached frame found on 2nd look)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found on 2nd look)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			// Return cached frame
 			return frame;
@@ -632,7 +627,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		omp_set_nested(true);
 
 		// Debug output
-		AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1);
 
 		// GENERATE CACHE FOR CLIPS (IN FRAME # SEQUENCE)
 		// Determine all clip frames, and request them in order (to keep resampled audio in sequence)
@@ -664,7 +659,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 			for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
-				AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
 
 				// Init some basic properties about this frame
 				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
@@ -675,7 +670,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				new_frame->ChannelsLayout(info.channel_layout);
 
 				// Debug output
-				AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Add Background Color to 1st layer (if animated or not black)
 				if ((color.red.Points.size() > 1 || color.green.Points.size() > 1 || color.blue.Points.size() > 1) ||
@@ -686,7 +681,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				float requested_time = calculate_time(frame_number, info.fps);
 
 				// Debug output
-				AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1);
 
 				// Find Clips near this time
 				for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
@@ -698,7 +693,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 					bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
 
 					// Debug output
-					AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
+					ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
 
 					// Clip is visible
 					if (does_clip_intersect)
@@ -721,19 +716,19 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 						int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
 
 						// Debug output
-						AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
+						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
 
 						// Add clip's frame as layer
 						add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
 
 					} else
 						// Debug output
-						AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
+						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
 
 				} // end clip loop
 
 				// Debug output
-				AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Add final frame to cache
 				final_cache.Add(frame_number, new_frame);
@@ -742,7 +737,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		} // end parallel
 
 		// Debug output
-		AppendDebugMethod("Timeline::GetFrame (end parallel region)", "requested_frame", requested_frame, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (end parallel region)", "requested_frame", requested_frame, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
 
 		// Return frame (or blank frame)
 		return final_cache.GetFrame(requested_frame);
@@ -776,7 +771,7 @@ vector<Clip*> Timeline::find_intersecting_clips(long int requested_frame, int nu
 								   (clip->Position() > min_requested_time && clip->Position() <= max_requested_time);
 
 		// Debug output
-		AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_time", min_requested_time, "max_requested_time", max_requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_time", min_requested_time, "max_requested_time", max_requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect);
 
 		// Open (or schedule for closing) this clip, based on if it's intersecting or not
 		#pragma omp critical (reader_lock)

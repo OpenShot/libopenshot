@@ -99,22 +99,10 @@ namespace openshot
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
 
-		/// Append debug information as JSON
-		void AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
-												   string arg2_name, float arg2_value,
-												   string arg3_name, float arg3_value,
-												   string arg4_name, float arg4_value,
-												   string arg5_name, float arg5_value,
-												   string arg6_name, float arg6_value);
-
 	public:
 
 		/// Constructor for the base reader, where many things are initialized.
 	    ReaderBase();
-
-		/// Enable or disable debug output. Output will display on the standard output, and you can
-		/// optionally invoke the OutputDebugJSON() method, which will format the debug output as JSON.
-		bool debug;
 
 		/// Information about the current media file
 		ReaderInfo info;

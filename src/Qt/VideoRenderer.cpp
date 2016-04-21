@@ -47,5 +47,6 @@ void VideoRenderer::OverrideWidget(long qwidget_address)
 
 void VideoRenderer::render(tr1::shared_ptr<QImage> image)
 {
-    emit present(*image);
+    if (image)
+        emit present(*image);
 }

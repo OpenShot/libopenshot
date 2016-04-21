@@ -425,13 +425,13 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(Ou
 		throw InvalidFile("Could not detect the duration of the video or audio stream.", path);
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Check the cache for this frame
 	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
-		AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Return the cached frame
 		return frame;
@@ -447,7 +447,7 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(Ou
 		frame = final_cache.GetFrame(requested_frame);
 		if (frame) {
 			// Debug output
-			AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			// Return the cached frame
 			return frame;
@@ -509,7 +509,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 	omp_set_nested(true);
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS, "", -1, "", -1, "", -1, "", -1);
 
 	#pragma omp parallel
 	{
@@ -534,7 +534,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				}
 
 				// Debug output
-				AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "", -1);
 
 				// Video packet
 				if (packet->stream_index == videoStream)
@@ -628,7 +628,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 	} // end omp parallel
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "Working Cache Count", working_cache.Count(), "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "Working Cache Count", working_cache.Count(), "", -1, "", -1);
 
 	// End of stream?
 	if (end_of_stream)
@@ -760,7 +760,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		if (max_seeked_frame >= seeking_frame)
 		{
 			// SEEKED TOO FAR
-			AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "max_seeked_frame", max_seeked_frame, "seeking_frame", seeking_frame, "seeking_pts", seeking_pts, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "max_seeked_frame", max_seeked_frame, "seeking_frame", seeking_frame, "seeking_pts", seeking_pts, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek again... to the nearest Keyframe
 			Seek(seeking_frame - (20 * seek_count * seek_count));
@@ -768,7 +768,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 		else
 		{
 			// SEEK WORKED
-			AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "is_video_seek", is_video_seek, "current_pts", packet->pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckSeek (Successful)", "is_video_seek", is_video_seek, "current_pts", packet->pts, "seeking_pts", seeking_pts, "seeking_frame", seeking_frame, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek worked, and we are "before" the requested frame
 			is_seeking = false;
@@ -799,14 +799,14 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		RemoveAVPacket(packet);
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Skipped)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Skipped)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
 
 		// Skip to next frame without decoding or caching
 		return;
 	}
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Before)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Before)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Init some things local (for OpenMP)
 	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
@@ -879,7 +879,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		}
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number, "", -1, "", -1, "", -1);
 
 	} // end omp task
 
@@ -899,7 +899,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		RemoveAVPacket(packet);
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Skipped)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Skipped)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
 
 		// Skip to next frame without decoding or caching
 		return;
@@ -909,7 +909,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	AVPacket *my_packet = packets[packet];
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
 
 	// Init an AVFrame to hold the decoded audio samples
 	int frame_finished = 0;
@@ -946,8 +946,8 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	double sample_seconds = float(pts_total) / info.sample_rate;
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info A)", "pts_counter", pts_counter, "PTS", adjusted_pts, "Offset", audio_pts_offset, "PTS Diff", adjusted_pts - prev_pts, "Samples", pts_remaining_samples, "Sample PTS ratio", float(adjusted_pts - prev_pts) / pts_remaining_samples);
-	AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info B)", "Sample Diff", pts_remaining_samples - prev_samples - prev_pts, "Total", pts_total, "PTS Seconds", audio_seconds, "Sample Seconds", sample_seconds, "Seconds Diff", audio_seconds - sample_seconds, "raw samples", packet_samples);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info A)", "pts_counter", pts_counter, "PTS", adjusted_pts, "Offset", audio_pts_offset, "PTS Diff", adjusted_pts - prev_pts, "Samples", pts_remaining_samples, "Sample PTS ratio", float(adjusted_pts - prev_pts) / pts_remaining_samples);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info B)", "Sample Diff", pts_remaining_samples - prev_samples - prev_pts, "Total", pts_total, "PTS Seconds", audio_seconds, "Sample Seconds", sample_seconds, "Seconds Diff", audio_seconds - sample_seconds, "raw samples", packet_samples);
 
 	// DEBUG (FOR AUDIO ISSUES)
 	prev_pts = adjusted_pts;
@@ -1000,7 +1000,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		// Allocate audio buffer
 		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
 		// Create output frame
 		AVFrame *audio_converted = AV_ALLOCATE_FRAME();
@@ -1113,7 +1113,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
 
 				// Debug output
-				AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
 
 				// Add or update cache
 				working_cache.Add(f->number, f);
@@ -1168,7 +1168,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		RemoveAVPacket(my_packet);
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number - 1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number - 1, "", -1, "", -1, "", -1);
 
 	} // end task
 
@@ -1190,7 +1190,7 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		requested_frame = info.video_length;
 
 	// Debug output
-	AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "", -1, "", -1, "", -1);
 
 	// Clear working cache (since we are seeking to another location in the file)
 	working_cache.Clear();
@@ -1375,7 +1375,7 @@ long int FFmpegReader::ConvertVideoPTStoFrame(long int pts)
 
 		if (current_video_frame < frame)
 			// has missing frames
-			AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (detected missing frame)", "calculated frame", frame, "previous_video_frame", previous_video_frame, "current_video_frame", current_video_frame, "", -1, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (detected missing frame)", "calculated frame", frame, "previous_video_frame", previous_video_frame, "current_video_frame", current_video_frame, "", -1, "", -1, "", -1);
 
 		// Sometimes frames are missing due to varying timestamps, or they were dropped. Determine
 		// if we are missing a video frame.
@@ -1474,7 +1474,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 		}
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
 
 	}
 
@@ -1528,7 +1528,7 @@ bool FFmpegReader::IsPartialFrame(long int requested_frame) {
 bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 {
 	// Debug output
-	AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "", -1, "", -1, "", -1);
 
 	// Determine if frames are missing (due to no more video packets)
 	if (info.has_video && !is_seeking && num_packets_since_video_frame > 60)
@@ -1632,13 +1632,13 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		}
 
 		// Debug output
-		AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "", -1, "", -1, "", -1);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash)
 		{
 			// Debug output
-			AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1, "", -1);
 
 			if (!is_seek_trash)
 			{

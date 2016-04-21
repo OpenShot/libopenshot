@@ -62,6 +62,9 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 		amount_remaining = 0;
 	}
 
+	// Debug
+	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::GetMoreSamplesFromReader", "amount_needed", amount_needed, "amount_remaining", amount_remaining, "", -1, "", -1, "", -1, "", -1);
+
 	// Init estimated buffer equal to the current frame position (before getting more samples)
 	estimated_frame = frame_number;
 
@@ -142,6 +145,9 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	int number_of_samples = buffer->getNumSamples();
 	int channels = buffer->getNumChannels();
 
+	// Debug
+	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels, "", -1, "", -1, "", -1, "", -1);
+
 	// Reverse array (create new buffer to hold the reversed version)
 	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
@@ -168,7 +174,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 }
 
 // Get the next block of audio samples
-void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
+void AudioReaderSource::getNextAudioBlock(const AudioSourceChannelInfo& info)
 {
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
@@ -215,6 +221,9 @@ void AudioReaderSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 		// Determine if any samples need to be copied
 		if (number_to_copy > 0)
 		{
+			// Debug
+			ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::getNextAudioBlock", "number_to_copy", number_to_copy, "buffer_samples", buffer_samples, "buffer_channels", buffer_channels, "info.numSamples", info.numSamples, "speed", speed, "position", position);
+
 			// Loop through each channel and copy some samples
 			for (int channel = 0; channel < buffer_channels; channel++)
 				info.buffer->copyFrom(channel, info.startSample, *buffer, channel, position, number_to_copy);

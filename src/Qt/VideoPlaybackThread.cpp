@@ -60,11 +60,17 @@ namespace openshot
 
 		if (need_render)
 		{
+			// Debug
+			ZmqLogger::Instance()->AppendDebugMethod("VideoPlaybackThread::run (before render)", "frame->number", frame->number, "need_render", need_render, "", -1, "", -1, "", -1, "", -1);
+
 			// Render the frame to the screen
 			renderer->paint(frame);
 
 			// Signal to other threads that the rendered event has completed
 			rendered.signal();
+
+			// Debug
+			ZmqLogger::Instance()->AppendDebugMethod("VideoPlaybackThread::run (after render)", "frame->number", frame->number, "need_render", need_render, "", -1, "", -1, "", -1, "", -1);
 		}
 	}
 
