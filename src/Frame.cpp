@@ -296,6 +296,19 @@ void Frame::DisplayWaveform()
 	ClearWaveform();
 }
 
+// Get magnitude of range of samples (if channel is -1, return average of all channels for that sample)
+float Frame::GetAudioSample(int channel, int sample, int magnitude_range)
+{
+	if (channel > 0) {
+		// return average magnitude for a specific channel/sample range
+		return audio->getMagnitude(channel, sample, magnitude_range);
+
+	} else {
+		// Return average magnitude for all channels
+		return audio->getMagnitude(sample, magnitude_range);
+	}
+}
+
 // Get an array of sample data
 float* Frame::GetAudioSamples(int channel)
 {

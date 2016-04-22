@@ -204,6 +204,9 @@ namespace openshot
 		/// Display the wave form
 		void DisplayWaveform();
 
+		/// Get magnitude of range of samples (if channel is -1, return average of all channels for that sample)
+		float GetAudioSample(int channel, int sample, int magnitude_range);
+
 		/// Get an array of sample data
 		float* GetAudioSamples(int channel);
 
@@ -216,7 +219,7 @@ namespace openshot
 		/// Get number of audio channels
 		int GetAudioChannelsCount();
 
-		/// Get number of audio channels
+		/// Get number of audio samples
 		int GetAudioSamplesCount();
 
 	    juce::AudioSampleBuffer *GetAudioSampleBuffer();

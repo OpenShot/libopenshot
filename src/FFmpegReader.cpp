@@ -537,7 +537,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "", -1);
 
 				// Video packet
-				if (packet->stream_index == videoStream)
+				if (info.has_video && packet->stream_index == videoStream)
 				{
 					// Reset this counter, since we have a video packet
 					num_packets_since_video_frame = 0;
@@ -572,7 +572,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 
 				}
 				// Audio packet
-				else if (packet->stream_index == audioStream)
+				else if (info.has_audio && packet->stream_index == audioStream)
 				{
 					// Increment this (to track # of packets since the last video packet)
 					num_packets_since_video_frame++;
