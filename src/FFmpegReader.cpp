@@ -124,6 +124,9 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	// Open reader if not already open
 	if (!is_open)
 	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
 		// Initialize format context
 		pFormatCtx = NULL;
 
@@ -225,6 +228,11 @@ void FFmpegReader::Close()
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		// Mark as "closed"
 		is_open = false;
 

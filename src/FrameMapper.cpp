@@ -320,6 +320,9 @@ MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfB
 		// frame too large, set to end frame
 		TargetFrameNumber = frames.size();
 
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetMappedFrame", "TargetFrameNumber", TargetFrameNumber, "frames.size()", frames.size(), "frames[...].Odd", frames[TargetFrameNumber - 1].Odd.Frame, "frames[...].Even", frames[TargetFrameNumber - 1].Even.Frame, "", -1, "", -1);
+
 	// Return frame
 	return frames[TargetFrameNumber - 1];
 }
@@ -333,6 +336,9 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, info.sample_rate, info.channels);
 
 	try {
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -346,6 +352,9 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 	} catch (const OutOfBoundsFrame & e) {
 		// ...
 	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
 	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
@@ -387,14 +396,18 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	#pragma omp parallel
 	{
 		// Loop through all requested frames, each frame gets it's own thread
-		#pragma omp for ordered
+		#pragma omp for ordered firstprivate(requested_frame, minimum_frames)
 		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame, "", -1, "", -1, "", -1);
+
 			// Get the mapped frame
 			MappedFrame mapped = GetMappedFrame(frame_number);
 			tr1::shared_ptr<Frame> mapped_frame;
 
-			#pragma omp ordered
+            // Get the mapped frame
 			mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 			// Get # of channels in the actual frame
@@ -562,7 +575,7 @@ void FrameMapper::Close()
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Close internal reader
 		reader->Close();

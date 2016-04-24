@@ -162,35 +162,37 @@ void ZmqLogger::AppendDebugMethod(string method_name, string arg1_name, float ar
 		// Don't do anything
 		return;
 
-	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+	{
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
-	stringstream message;
-	message << fixed << setprecision(4);
-	message << method_name << " (";
+		stringstream message;
+		message << fixed << setprecision(4);
+		message << method_name << " (";
 
-	// Add attributes to method JSON
-	if (arg1_name.length() > 0)
-		message << arg1_name << "=" << arg1_value;
+		// Add attributes to method JSON
+		if (arg1_name.length() > 0)
+			message << arg1_name << "=" << arg1_value;
 
-	if (arg2_name.length() > 0)
-		message << ", " << arg2_name << "=" << arg2_value;
+		if (arg2_name.length() > 0)
+			message << ", " << arg2_name << "=" << arg2_value;
 
-	if (arg3_name.length() > 0)
-		message << ", " << arg3_name << "=" << arg3_value;
+		if (arg3_name.length() > 0)
+			message << ", " << arg3_name << "=" << arg3_value;
 
-	if (arg4_name.length() > 0)
-		message << ", " << arg4_name << "=" << arg4_value;
+		if (arg4_name.length() > 0)
+			message << ", " << arg4_name << "=" << arg4_value;
 
-	if (arg5_name.length() > 0)
-		message << ", " << arg5_name << "=" << arg5_value;
+		if (arg5_name.length() > 0)
+			message << ", " << arg5_name << "=" << arg5_value;
 
-	if (arg6_name.length() > 0)
-		message << ", " << arg6_name << "=" << arg6_value;
+		if (arg6_name.length() > 0)
+			message << ", " << arg6_name << "=" << arg6_value;
 
-	// Output to standard output
-	message << ")" << endl;
+		// Output to standard output
+		message << ")" << endl;
 
-	// Send message through ZMQ
-	Log(message.str());
+		// Send message through ZMQ
+		Log(message.str());
+	}
 }

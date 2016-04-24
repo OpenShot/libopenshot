@@ -89,9 +89,12 @@ namespace openshot
 	    	// Only cache up till the max_frames amount... then sleep
 			try
 			{
-				if (reader)
+				if (reader) {
+					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame), "", -1, "", -1);
+
 					// Force the frame to be generated
 					reader->GetFrame(position);
+				}
 
 			}
 			catch (const OutOfBoundsFrame & e)

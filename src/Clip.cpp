@@ -81,6 +81,14 @@ void Clip::init_settings()
 	perspective_c4_x = Keyframe(-1.0);
 	perspective_c4_y = Keyframe(-1.0);
 
+	// Init audio channel filter and mappings
+	channel_filter = Keyframe(-1.0);
+	channel_mapping = Keyframe(-1.0);
+
+	// Init audio and video overrides
+	has_audio = Keyframe(-1.0);
+	has_video = Keyframe(-1.0);
+
 	// Default pointers
 	reader = NULL;
 	resampler = NULL;
@@ -213,6 +221,8 @@ void Clip::Open() throw(InvalidFile, ReaderClosed)
 void Clip::Close() throw(ReaderClosed)
 {
 	if (reader) {
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 		// Close the reader
 		reader->Close();
 	}
@@ -251,6 +261,25 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		// Adjust out of bounds frame number
 		requested_frame = adjust_frame_number_minimum(requested_frame);
 
+		// Adjust has_video and has_audio overrides
+		int enabled_audio = has_audio.GetInt(requested_frame);
+		if (enabled_audio == -1 && reader && reader->info.has_audio)
+			enabled_audio = 1;
+		else if (enabled_audio == -1 && reader && !reader->info.has_audio)
+			enabled_audio = 0;
+		int enabled_video = has_video.GetInt(requested_frame);
+		if (enabled_video == -1 && reader && reader->info.has_video)
+			enabled_video = 1;
+		else if (enabled_video == -1 && reader && !reader->info.has_audio)
+			enabled_video = 0;
+
+		// Adjust parent reader with same settings (for performance gains)
+		if (reader) {
+			// Override parent reader
+			reader->info.has_audio = enabled_audio;
+			reader->info.has_video = enabled_video;
+		}
+
 		// Is a time map detected
 		long int new_frame_number = requested_frame;
 		if (time.Values.size() > 1)
@@ -266,10 +295,11 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		frame->ChannelsLayout(original_frame->ChannelsLayout());
 
 		// Copy the image from the odd field
-		frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+		if (enabled_video)
+			frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
 
 		// Loop through each channel, add audio
-		if (reader->info.has_audio)
+		if (enabled_audio && reader->info.has_audio)
 			for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
@@ -563,6 +593,9 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 	int samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
 
 	try {
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -576,6 +609,9 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 	} catch (const OutOfBoundsFrame & e) {
 		// ...
 	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
 	new_frame = tr1::shared_ptr<Frame>(new Frame(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels));
@@ -644,6 +680,10 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetCount(), -10000, 10000, rotation.GetClosestPoint(requested_point).interpolation, rotation.GetClosestPoint(requested_point).co.X, false);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetCount(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetCount(), 0.0, 1000 * 60 * 30, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
+	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "float", "", channel_filter.Contains(requested_point), channel_filter.GetCount(), 0.0, 1000 * 60 * 30, channel_filter.GetClosestPoint(requested_point).interpolation, channel_filter.GetClosestPoint(requested_point).co.X, false);
+	root["channel_mapping"] = add_property_json("Channel Mapping", channel_mapping.GetValue(requested_frame), "float", "", channel_mapping.Contains(requested_point), channel_mapping.GetCount(), 0.0, 1000 * 60 * 30, channel_mapping.GetClosestPoint(requested_point).interpolation, channel_mapping.GetClosestPoint(requested_point).co.X, false);
+	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "float", "", has_audio.Contains(requested_point), has_audio.GetCount(), 0.0, 1000 * 60 * 30, has_audio.GetClosestPoint(requested_point).interpolation, has_audio.GetClosestPoint(requested_point).co.X, false);
+	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "float", "", has_video.Contains(requested_point), has_video.GetCount(), 0.0, 1000 * 60 * 30, has_video.GetClosestPoint(requested_point).interpolation, has_video.GetClosestPoint(requested_point).co.X, false);
 
 	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), -10000, 10000, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
 	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), -10000, 10000, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
@@ -679,6 +719,10 @@ Json::Value Clip::JsonValue() {
 	root["crop_y"] = crop_y.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
 	root["shear_y"] = shear_y.JsonValue();
+	root["channel_filter"] = channel_filter.JsonValue();
+	root["channel_mapping"] = channel_mapping.JsonValue();
+	root["has_audio"] = has_audio.JsonValue();
+	root["has_video"] = has_video.JsonValue();
 	root["perspective_c1_x"] = perspective_c1_x.JsonValue();
 	root["perspective_c1_y"] = perspective_c1_y.JsonValue();
 	root["perspective_c2_x"] = perspective_c2_x.JsonValue();
@@ -775,6 +819,14 @@ void Clip::SetJsonValue(Json::Value root) {
 		shear_x.SetJsonValue(root["shear_x"]);
 	if (!root["shear_y"].isNull())
 		shear_y.SetJsonValue(root["shear_y"]);
+	if (!root["channel_filter"].isNull())
+		channel_filter.SetJsonValue(root["channel_filter"]);
+	if (!root["channel_mapping"].isNull())
+		channel_mapping.SetJsonValue(root["channel_mapping"]);
+	if (!root["has_audio"].isNull())
+		has_audio.SetJsonValue(root["has_audio"]);
+	if (!root["has_video"].isNull())
+		has_video.SetJsonValue(root["has_video"]);
 	if (!root["perspective_c1_x"].isNull())
 		perspective_c1_x.SetJsonValue(root["perspective_c1_x"]);
 	if (!root["perspective_c1_y"].isNull())

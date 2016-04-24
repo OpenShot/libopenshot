@@ -110,6 +110,9 @@ namespace openshot
 			// Calculate the amount of time to sleep (by subtracting the render time)
 			int sleep_time = int(frame_time - render_time);
 
+			// Debug
+			ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time", render_time, "sleep_time", sleep_time);
+
 			// Adjust drift (if more than a few frames off between audio and video)
 			if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video)
 				// Since the audio and video threads are running independently, they will quickly get out of sync.
@@ -122,8 +125,7 @@ namespace openshot
 
 			else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
 				// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
-				video_position++;
-				sleep_time = 0;
+				video_position += abs(video_frame_diff);
 			}
 
 			// Sleep (leaving the video frame on the screen for the correct amount of time)

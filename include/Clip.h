@@ -249,6 +249,13 @@ namespace openshot {
 		Keyframe perspective_c4_x; ///< Curves representing X for coordinate 4
 		Keyframe perspective_c4_y; ///< Curves representing Y for coordinate 4
 
+		/// Audio channel filter and mappings
+		Keyframe channel_filter; ///< A number representing an audio channel to filter (clears all other channels)
+		Keyframe channel_mapping; ///< A number representing an audio channel to output (only works when filtering a channel)
+
+		/// Override has_video and has_audio properties of clip (and their readers)
+		Keyframe has_audio; ///< An optional override to determine if this clip has audio (-1=undefined, 0=no, 1=yes)
+		Keyframe has_video; ///< An optional override to determine if this clip has video (-1=undefined, 0=no, 1=yes)
 	};
 
 

@@ -201,8 +201,10 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 	int samples_in_frame = Frame::GetSamplesPerFrame(number, info.fps, info.sample_rate, info.channels);
 
 	try {
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		//new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
 		new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
 
 		// Return real frame
@@ -215,6 +217,9 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 	} catch (const OutOfBoundsFrame & e) {
 		// ...
 	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
 	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
@@ -273,6 +278,16 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 				float initial_volume = 1.0f;
 				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
 				float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
+				int channel_filter = source_clip->channel_filter.GetInt(clip_frame_number); // optional channel to filter (if not -1)
+				int channel_mapping = source_clip->channel_mapping.GetInt(clip_frame_number); // optional channel to map this channel to (if not -1)
+
+				// If channel filter enabled, check for correct channel (and skip non-matching channels)
+				if (channel_filter != -1 && channel_filter != channel)
+					continue; // skip to next channel
+
+				// If channel mapping disabled, just use the current channel
+				if (channel_mapping == -1)
+					channel_mapping = channel;
 
 				// If no ramp needed, set initial volume = clip's volume
 				if (isEqual(previous_volume, volume))
@@ -280,7 +295,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 				// Apply ramp to source frame (if needed)
 				if (!isEqual(previous_volume, volume))
-					source_frame->ApplyGainRamp(channel, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
+					source_frame->ApplyGainRamp(channel_mapping, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
 
 				// TODO: Improve FrameMapper (or Timeline) to always get the correct number of samples per frame.
 				// Currently, the ResampleContext sometimes leaves behind a few samples for the next call, and the
@@ -292,7 +307,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
-				new_frame->AddAudio(false, channel, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+				new_frame->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
 
 			}
 		else
@@ -550,6 +565,8 @@ void Timeline::sort_effects()
 // Close the reader (and any resources it was consuming)
 void Timeline::Close()
 {
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+
 	// Close all open clips
 	list<Clip*>::iterator clip_itr;
 	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
