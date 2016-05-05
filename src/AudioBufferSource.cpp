@@ -38,7 +38,7 @@ AudioBufferSource::AudioBufferSource(AudioSampleBuffer *audio_buffer)
 // Destructor
 AudioBufferSource::~AudioBufferSource()
 {
-	// Clear and delete the buffer
+	// forget the AudioSampleBuffer.
 	buffer = NULL;
 };
 
@@ -130,7 +130,7 @@ void AudioBufferSource::setLooping (bool shouldLoop)
 	repeat = shouldLoop;
 }
 
-// Update the internal buffer used by this source
+// Use a different AudioSampleBuffer for this source
 void AudioBufferSource::setBuffer (AudioSampleBuffer *audio_buffer)
 {
 	buffer = audio_buffer;
