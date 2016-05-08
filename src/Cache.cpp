@@ -59,7 +59,7 @@ void Cache::Add(long int frame_number, tr1::shared_ptr<Frame> frame)
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
-	// Remove frame if it already exists
+	// Freshen frame if it already exists
 	if (frames.count(frame_number))
 		// Move frame to front of queue
 		MoveToFront(frame_number);
@@ -115,19 +115,19 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	tr1::shared_ptr<openshot::Frame> f;
 
-	 // Loop through frame numbers
-	 deque<long int>::iterator itr;
-	 long int smallest_frame = -1;
-	 for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-	 {
-		 if (*itr < smallest_frame || smallest_frame == -1)
-			 smallest_frame = *itr;
-	 }
+	// Loop through frame numbers
+	deque<long int>::iterator itr;
+	long int smallest_frame = -1;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
+	{
+		if (*itr < smallest_frame || smallest_frame == -1)
+			smallest_frame = *itr;
+	}
 
-	 // Return frame
-	 f = GetFrame(smallest_frame);
+	// Return frame
+	f = GetFrame(smallest_frame);
 
-	 return f;
+	return f;
 }
 
 // Gets the maximum bytes value
@@ -168,7 +168,7 @@ void Cache::Remove(long int frame_number)
 		}
 	}
 
-	// Remove frame from map
+	// Remove frame from map. If frame_number doesn't exist, frames.erase returns zero.
 	frames.erase(frame_number);
 }
 
@@ -179,6 +179,9 @@ void Cache::MoveToFront(long int frame_number)
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
+	/* FIXME if the frame number isn't present, the loop will do nothing, so why protect it?
+	 * Is it to save time by avoiding a loop?
+	 * Do we really need to optmize the case where we've been given a nonexisting frame_number? */
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
@@ -229,7 +232,7 @@ void Cache::CleanUp()
 	{
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
-			// Remove the oldest frame
+			// Get the oldest frame number.
 			long int frame_to_remove = frame_numbers.back();
 
 			// Remove frame_number and frame
