@@ -53,6 +53,9 @@ AudioReaderSource::~AudioReaderSource()
 // Get more samples from the reader
 void AudioReaderSource::GetMoreSamplesFromReader()
 {
+	// don't assume.
+	if (position > size) return; // FIXME: log error and crash.
+
 	// Determine the amount of samples needed to fill up this buffer
 	int amount_needed = position; // replace these used samples
 	int amount_remaining = size - amount_needed; // these are unused samples, and need to be carried forward
@@ -101,33 +104,28 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 			}
 		}
 
-		bool frame_completed = false;
-		int amount_to_copy = 0;
-		if (frame)
-			amount_to_copy = frame->GetAudioSamplesCount() - frame_position;
-		if (amount_to_copy > amount_needed) {
-			// Don't copy too many samples (we don't want to overflow the buffer)
-			amount_to_copy = amount_needed;
-			amount_needed = 0;
-		} else {
-			// Not enough to fill the buffer (so use the entire frame)
-			amount_needed -= amount_to_copy;
-			frame_completed = true;
+
+		if (!frame) { // we didn't get a frame.
+			frame_position = 0; // force a new frame to be read.
+			continue; // what stops us from looping forever until a frame can be gotten?
 		}
 
+		// copy the rest of this frame, 
+		int amount_to_copy = frame->GetAudioSamplesCount() - frame_position;
+		amount_to_copy = min(amount_to_copy, amount_needed); // but no more than needed.
+
 		// Load all of its samples into the buffer
-		if (frame)
-			for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
-				new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
+		for (int channel = 0; channel < new_buffer->getNumChannels(); channel++)
+			new_buffer->addFrom(channel, position, *frame->GetAudioSampleBuffer(), channel, frame_position, amount_to_copy);
 
 		// Adjust remaining samples
+		amount_needed -= amount_to_copy;
 		position += amount_to_copy;
-		if (frame_completed)
-			// Reset frame buffer position (which will load a new frame on the next loop)
-			frame_position = 0;
-		else
-			// Continue tracking the current frame's position
-			frame_position += amount_to_copy;
+		frame_position += amount_to_copy;
+
+		if (frame_position >= frame->GetAudioSamplesCount())
+			frame_position = 0; // force a new frame to be read if we ran out.
+
 	}
 
 	// Delete old buffer
@@ -185,6 +183,8 @@ void AudioReaderSource::getNextAudioBlock(const AudioSourceChannelInfo& info)
 		// Do we need more samples?
 		if (speed == 1) {
 			// Only refill buffers if speed is normal
+			// FIXME: does frame==NULL mean we need to load a new frame?
+			// FIXME: or does frame_position==0 mean we need to load a new frame?
 			if ((reader && reader->IsOpen() && !frame) or
 				(reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
 				// Refill buffer from reader
@@ -195,28 +195,16 @@ void AudioReaderSource::getNextAudioBlock(const AudioSourceChannelInfo& info)
 			return;
 		}
 
-		// Determine how many samples to copy
-		if (position + info.numSamples <= buffer_samples)
+		if (position > buffer_samples)
 		{
-			// copy the full amount requested
-			number_to_copy = info.numSamples;
-		}
-		else if (position > buffer_samples)
-		{
-			// copy nothing
-			number_to_copy = 0;
-		}
-		else if (buffer_samples - position > 0)
-		{
-			// only copy what is left in the buffer
-			number_to_copy = buffer_samples - position;
-		}
-		else
-		{
-			// copy nothing
-			number_to_copy = 0;
+			// FIXME: should log an error and crash.
+			return;
 		}
 
+		// copy only as much as we have
+		number_to_copy = buffer_samples - position;
+		// and only as much as they want.
+		number_to_copy = min(number_to_copy, info.numSamples);
 
 		// Determine if any samples need to be copied
 		if (number_to_copy > 0)
@@ -248,6 +236,7 @@ void AudioReaderSource::releaseResources() { }
 void AudioReaderSource::setNextReadPosition (long long newPosition)
 {
 	// set position (if the new position is in range)
+	// FIXME: doesn't get set if the buffer is empty. Is this bad?
 	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
 		position = newPosition;
 }
@@ -283,7 +272,7 @@ void AudioReaderSource::setLooping (bool shouldLoop)
 	repeat = shouldLoop;
 }
 
-// Update the internal buffer used by this source
+// Replace the internal buffer used by this source
 void AudioReaderSource::setBuffer (AudioSampleBuffer *audio_buffer)
 {
 	buffer = audio_buffer;
