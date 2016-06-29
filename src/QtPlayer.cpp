@@ -66,6 +66,9 @@ void QtPlayer::SetSource(const std::string &source)
 	tm->AddClip(c);
 	tm->Open();
 
+//	ZmqLogger::Instance()->Path("/home/jonathan/.openshot_qt/libopenshot.log");
+//	ZmqLogger::Instance()->Enable(true);
+
     // Set the reader
 	Reader(reader);
 }

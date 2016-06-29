@@ -430,8 +430,10 @@ int64 Frame::GetBytes()
 	int64 total_bytes = 0;
 	if (image)
 		total_bytes += (width * height * sizeof(char) * 4);
-	if (audio)
-		total_bytes += (audio->getNumSamples() * audio->getNumChannels() * sizeof(float));
+	if (audio) {
+		// approximate audio size (sample rate / 24 fps)
+		total_bytes += (sample_rate / 24.0) * sizeof(float);
+	}
 
 	// return size of this frame
 	return total_bytes;

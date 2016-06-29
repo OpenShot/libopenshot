@@ -142,8 +142,6 @@ int64 Cache::GetBytes()
 	deque<long int>::reverse_iterator itr;
 	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
 	{
-		//cout << "get bytes from frame " << *itr << ", frames.count(" << *itr << "): " << frames.count(*itr) << endl;
-		//if (frames.count(*itr) > 0)
 		total_bytes += frames[*itr]->GetBytes();
 	}
 
