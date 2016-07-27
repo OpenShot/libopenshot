@@ -952,7 +952,7 @@ void Frame::cleanUpBuffer(void *info)
 	{
 		// Remove buffer since QImage tells us to
 		unsigned char* ptr_to_qbuffer = (unsigned char*) info;
-		delete ptr_to_qbuffer;
+		delete[] ptr_to_qbuffer;
 	}
 }
 

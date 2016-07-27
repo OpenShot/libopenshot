@@ -71,8 +71,8 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC, 22000, 2, LAYOUT_STEREO);
+	// Create mapping 24 fps and 30 fps
+	FrameMapper mapping(&r, Fraction(30, 1), PULLDOWN_CLASSIC, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 
@@ -88,8 +88,8 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_ADVANCED, 22000, 2, LAYOUT_STEREO);
+	// Create mapping 24 fps and 30 fps
+	FrameMapper mapping(&r, Fraction(30, 1), PULLDOWN_ADVANCED, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
@@ -108,8 +108,8 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping 24 fps and 29.97 fps
-	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_NONE, 22000, 2, LAYOUT_STEREO);
+	// Create mapping 24 fps and 30 fps
+	FrameMapper mapping(&r, Fraction(30, 1), PULLDOWN_NONE, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 
@@ -123,9 +123,9 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 {
 	// Create a reader
-	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping between 29.97 fps and 24 fps
+	// Create mapping between 30 fps and 24 fps
 	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_CLASSIC, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
@@ -143,9 +143,9 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 {
 	// Create a reader
-	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping between 29.97 fps and 24 fps
+	// Create mapping between 30 fps and 24 fps
 	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_ADVANCED, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame2 = mapping.GetMappedFrame(2);
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
@@ -163,9 +163,9 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 {
 	// Create a reader
-	DummyReader r(Fraction(30000, 1001), 720, 480, 22000, 2, 5.0);
+	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping between 29.97 fps and 24 fps
+	// Create mapping between 30 fps and 24 fps
 	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_NONE, 22000, 2, LAYOUT_STEREO);
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 	MappedFrame frame5 = mapping.GetMappedFrame(5);

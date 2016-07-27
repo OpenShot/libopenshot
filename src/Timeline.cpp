@@ -57,7 +57,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.video_length = info.fps.ToFloat() * info.duration;
 
 	// Init cache
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 3, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Add an openshot::Clip to the timeline
@@ -987,7 +987,7 @@ void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
 	}
 
 	// Adjust cache (in case something changed)
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 4, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Apply JSON diff to clips

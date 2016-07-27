@@ -31,7 +31,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), final_cache(820 * 1024), is_dirty(true), avr(NULL)
+		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -51,6 +51,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 	// Used to toggle odd / even fields
 	field_toggle = true;
+
+	// Adjust cache size based on size of frame and audio
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
 	// init mapping between original and target frames
 	Init();
@@ -103,8 +106,8 @@ void FrameMapper::Init()
 
 	// Some framerates are handled special, and some use a generic Keyframe curve to
 	// map the framerates. These are the special framerates:
-	if ((original.ToInt() == 24 || original.ToInt() == 25 || original.ToInt() == 30) &&
-		(target.ToInt() == 24 || target.ToInt() == 25 || target.ToInt() == 30)) {
+	if ((fabs(original.ToFloat() - 24.0) < 1e-7 || fabs(original.ToFloat() - 25.0) < 1e-7 || fabs(original.ToFloat() - 30.0) < 1e-7) &&
+		(fabs(target.ToFloat() - 24.0) < 1e-7 || fabs(target.ToFloat() - 25.0) < 1e-7 || fabs(target.ToFloat() - 30.0) < 1e-7)) {
 
 		// Get the difference (in frames) between the original and target frame rates
 		float difference = target.ToInt() - original.ToInt();
@@ -332,8 +335,8 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 {
 	tr1::shared_ptr<Frame> new_frame;
 
-	// Init some basic properties about this frame
-	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, info.sample_rate, info.channels);
+	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
+	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, reader->info.sample_rate, reader->info.channels);
 
 	try {
 		// Debug output
@@ -357,8 +360,8 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
-	new_frame->SampleRate(info.sample_rate);
+	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels));
+	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
 	return new_frame;
 }
@@ -407,7 +410,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			MappedFrame mapped = GetMappedFrame(frame_number);
 			tr1::shared_ptr<Frame> mapped_frame;
 
-            // Get the mapped frame
+            // Get the mapped frame (keeping the sample rate and channels the same as the original... for the moment)
 			mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 			// Get # of channels in the actual frame
@@ -520,6 +523,11 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 void FrameMapper::PrintMapping()
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Get the difference (in frames) between the original and target frame rates
 	float difference = target.ToInt() - original.ToInt();
 
@@ -663,6 +671,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	// Clear cache
 	final_cache.Clear();
 
+	// Adjust cache size based on size of frame and audio
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+
 	// Deallocate resample buffer
 	if (avr) {
 		avresample_close(avr);
@@ -692,7 +703,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	total_frame_samples = samples_in_frame * channels_in_frame;
 
 	// Create a new array (to hold all S16 audio samples for the current queued frames)
-	int16_t* frame_samples = new int16_t[total_frame_samples];
+ 	int16_t* frame_samples = (int16_t*) av_malloc(sizeof(int16_t)*total_frame_samples);
 
 	// Translate audio sample values back to 16 bit integers
 	for (int s = 0; s < total_frame_samples; s++)
@@ -770,9 +781,9 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	memcpy(resampled_samples, audio_converted->data[0], (nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels));
 
 	// Free frames
-	free(audio_frame->data[0]); // TODO: Determine why av_free crashes on Windows
+	av_freep(&audio_frame->data[0]);
 	AV_FREE_FRAME(&audio_frame);
-	av_free(audio_converted->data[0]);
+	av_freep(&audio_converted->data[0]);
 	AV_FREE_FRAME(&audio_converted);
 	frame_samples = NULL;
 
