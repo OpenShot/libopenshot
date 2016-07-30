@@ -502,16 +502,13 @@ int Frame::GetSamplesPerFrame(Fraction fps, int sample_rate, int channels)
 // Get height of image
 int Frame::GetHeight()
 {
-	// return height
 	return height;
-	//return image->rows();
 }
 
 // Get height of image
 int Frame::GetWidth()
 {
 	return width;
-	//return image->columns();
 }
 
 // Get the original sample rate of this frame's audio data
@@ -676,6 +673,7 @@ int Frame::constrain(int color_value)
 void Frame::AddColor(int width, int height, string color)
 {
 	// Create new image object, and fill with pixel data
+	const GenericScopedLock<CriticalSection> lock(addingImageSection);
 	image = tr1::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 
 	// Fill with solid color
@@ -943,7 +941,6 @@ void Frame::Play()
 
 
 }
-
 
 // Clean up buffer after QImage is deleted
 void Frame::cleanUpBuffer(void *info)

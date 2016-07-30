@@ -847,7 +847,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 
 		// Determine required buffer size and allocate buffer
 		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
-		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t) * 2);
+		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
 		// Assign appropriate parts of buffer to image planes in pFrameRGB
 		// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
@@ -1710,10 +1710,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size(), "", -1);
 
-			if (info.has_video && !is_video_ready && last_video_frame != NULL) {
+			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
-				const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-				f->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())), true);
+				f->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
 				is_video_ready = true;
 			}
 
