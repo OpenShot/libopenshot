@@ -576,7 +576,6 @@ void FFmpegWriter::flush_encoders()
 
 				// Encode Picture and Write Frame
 				int video_outbuf_size = 0;
-				//video_outbuf = new uint8_t[200000];
 
 				/* encode the image */
 				int out_size = avcodec_encode_video(video_codec, NULL, video_outbuf_size, NULL);
@@ -621,7 +620,7 @@ void FFmpegWriter::flush_encoders()
 
 			// Deallocate memory (if needed)
 			if (video_outbuf)
-				delete[] video_outbuf;
+				av_freep(&video_outbuf);
 		}
 
     // FLUSH AUDIO ENCODER
@@ -1513,7 +1512,7 @@ bool FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 
 			// Encode Picture and Write Frame
 			int video_outbuf_size = 200000;
-			video_outbuf = new uint8_t[200000];
+			video_outbuf = (uint8_t*) av_malloc(200000);
 
 			/* encode the image */
 			int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
