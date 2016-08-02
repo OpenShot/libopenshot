@@ -28,6 +28,6 @@
 #ifndef OPENSHOT_JSON_H
 #define OPENSHOT_JSON_H
 
-#include "../thirdparty/jsoncpp/include/json/json.h"
+#include "json/json.h"
 
 #endif
