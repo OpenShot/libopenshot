@@ -369,7 +369,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 		// loop through points
 		for (long int x = 0; x < root["Points"].size(); x++) {
 			// Get each point
-			Json::Value existing_point = root["Points"][x];
+			Json::Value existing_point = root["Points"][(Json::UInt) x];
 
 			// Create Point
 			Point p;
