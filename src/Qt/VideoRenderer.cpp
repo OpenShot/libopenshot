@@ -38,7 +38,7 @@ VideoRenderer::~VideoRenderer()
 }
 
 /// Override QWidget which needs to be painted
-void VideoRenderer::OverrideWidget(long qwidget_address)
+void VideoRenderer::OverrideWidget(long long qwidget_address)
 {
 	// re-cast QWidget pointer (long) as an actual QWidget
 	override_widget = reinterpret_cast<QWidget*>(qwidget_address);

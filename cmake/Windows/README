@@ -1,12 +1,51 @@
-Installing ImageMagick on Windows using Qt's version of MinGW:
+####################################################################
+                  Install Dependencies for Windows
+####################################################################
 
-Step 1) Copy these files into your local MSYS environment
-Step 2) Run MSYS Shell
-Step 3) Install wget command (this requires your c:\mingw folder to be at the end of your PATH) 
-  $ mingw-get install msys-wget
-Step 4) Execute this command (this requires the C:\Qt\Qt5.2.1\Tools\mingw48_32\bin at the beginning of your PATH)
+Install MSYS2 (64 bit environment)
+Append PATH:
+  $ PATH=$PATH:/c/msys64/mingw64/bin:/c/msys64/mingw64/lib
+
+Sync pacman
+  $ pacman -Syu
+
+Install the following packages:
+  $ pacman -S mingw-w64-x86_64-toolchain
+  $ pacman -S mingw64/mingw-w64-x86_64-ffmpeg
+  $ pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
+  $ pacman -S mingw64/mingw-w64-x86_64-python3-pyqt5
+  $ pacman -S mingw64/mingw-w64-x86_64-swig
+  $ pacman -S mingw64/mingw-w64-x86_64-cmake
+  $ pacman -S mingw64/mingw-w64-x86_64-doxygen
+  $ pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
+  $ pacman -S mingw64/mingw-w64-x86_64-python3-pip
+  $ pacman -S git
+
+Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
+  $ pacman -S mingw64/mingw-w64-x86_64-imagemagick
+
+Install httplib2 for Python3
+  $ pip3 install httplib2
+  $ pip3 install slacker
+  $ pip3 install tinys3
+
+Download Unittest++ into /c/home/jonathan/unittest-cpp-master/
+Configure Unittest++:
+  $ cmake -G "MSYS Makefiles" ../ -DCMAKE_MAKE_PROGRAM=mingw32-make
+Build Unittest++ (as Administrator):
+  $ mingw32-make install   (NOTE: This installs to C:\Program Files (x86)\UnitTest++)
+
+ZMQ++ Header
+  NOTE: Download and copy zmq.hpp into the /c/msys64/mingw64/include/ folder
+
+
+####################################################################
+            OPTIONAL:  Installing ImageMagick on Windows
+####################################################################
+
+If you would rather install ImageMagick from source code yourself, follow these steps:
+
+Step 1) Copy [build-imagemagick.sh and urls.txt] into your local MSYS2 environment
+Step 2) Run MSYS2 Shell
+Step 3) Execute this command
   $ ./build-imagemagick.sh
-Step 5) Copy the MSYS /local/bin/ DLLs to your PATH
-
-These ImageMagick DLL's need to be found by the libopenshot build process,
-and linked and loaded at runtime.

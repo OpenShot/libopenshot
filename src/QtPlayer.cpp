@@ -158,14 +158,14 @@ ReaderBase* QtPlayer::Reader() {
 }
 
 // Set the QWidget pointer to display the video on (as a LONG pointer id)
-void QtPlayer::SetQWidget(long qwidget_address) {
+void QtPlayer::SetQWidget(long long qwidget_address) {
 	// Update override QWidget address on the video renderer
 	p->renderer->OverrideWidget(qwidget_address);
 }
 
 // Get the Renderer pointer address (for Python to cast back into a QObject)
-long QtPlayer::GetRendererQObject() {
-	return (long) (VideoRenderer*)p->renderer;
+long long QtPlayer::GetRendererQObject() {
+	return (long long)(VideoRenderer*)p->renderer;
 }
 
 // Get the Playback speed

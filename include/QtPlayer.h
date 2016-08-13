@@ -80,10 +80,10 @@ namespace openshot
 	/// Set the QWidget which will be used as the display (note: QLabel works well). This does not take a
 	/// normal pointer, but rather a LONG pointer id (and it re-casts the QWidget pointer inside libopenshot).
 	/// This is required due to SIP and SWIG incompatibility in the Python bindings.
-	void SetQWidget(long qwidget_address);
+	void SetQWidget(long long qwidget_address);
 
 	/// Get the Renderer pointer address (for Python to cast back into a QObject)
-	long GetRendererQObject();
+	long long GetRendererQObject();
 
 	/// Get the Playback speed
 	float Speed();

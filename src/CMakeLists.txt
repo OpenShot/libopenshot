@@ -33,7 +33,7 @@ OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
 # required for libopenshot-audio headers
 IF (WIN32)
 	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -march=i686 -include cmath -std=c++0x")
+	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath -std=c++0x")
 ENDIF(WIN32)
 IF (APPLE)
 	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/

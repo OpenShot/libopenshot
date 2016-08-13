@@ -45,7 +45,7 @@ public:
     ~VideoRenderer();
 
     /// Override QWidget which needs to be painted
-    void OverrideWidget(long qwidget_address);
+    void OverrideWidget(long long qwidget_address);
 
 signals:
 	void present(const QImage &image);

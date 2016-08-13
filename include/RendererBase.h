@@ -50,7 +50,7 @@ namespace openshot
 	void paint(const std::tr1::shared_ptr<Frame> & frame);
 
 	/// Allow manual override of the QWidget that is used to display
-	virtual void OverrideWidget(long qwidget_address) = 0;
+	virtual void OverrideWidget(long long qwidget_address) = 0;
 
     protected:
 	RendererBase();
