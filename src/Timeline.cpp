@@ -941,6 +941,12 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			AddEffect(e);
 		}
 	}
+
+	if (!root["duration"].isNull()) {
+		// Update duration of timeline
+		info.duration = root["duration"].asDouble();
+		info.video_length = info.fps.ToFloat() * info.duration;
+	}
 }
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
@@ -1208,8 +1214,11 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 		else if (root_key == "viewport_y")
 			// Set viewport y offset
 			viewport_y.SetJsonValue(change["value"]);
-		else if (root_key == "duration") { }
-			// Ignore for now
+		else if (root_key == "duration") {
+			// Update duration of timeline
+			info.duration = change["value"].asDouble();
+			info.video_length = info.fps.ToFloat() * info.duration;
+		}
 		else if (root_key == "width")
 			// Set width
 			info.width = change["value"].asInt();

@@ -1050,7 +1050,6 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		avr = NULL;
 
 		// Free AVFrames
-		AV_FREE_FRAME(&audio_frame);
 		av_free(audio_converted->data[0]);
 		AV_FREE_FRAME(&audio_converted);
 
@@ -1183,6 +1182,9 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	// TODO: Fix this bug. Wait on the task to complete. This is not ideal, but solves an issue with the
 	// audio_frame being modified by the next call to this method. I think this is a scope issue with OpenMP.
 	#pragma omp taskwait
+
+	// Free audio frame
+	AV_FREE_FRAME(&audio_frame);
 }
 
 
