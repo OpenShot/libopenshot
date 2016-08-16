@@ -214,10 +214,10 @@ namespace openshot {
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
 		// Scale and Location curves
-		Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 100)
-		Keyframe scale_y; ///< Curve representing the vertical scaling in percent (0 to 100)
-		Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-100 to 100)
-		Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-100 to 100)
+		Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)
+		Keyframe scale_y; ///< Curve representing the vertical scaling in percent (0 to 1)
+		Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-1 to 1)
+		Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-1 to 1)
 
 		// Alpha and Rotation curves
 		Keyframe alpha; ///< Curve representing the alpha (1 to 0)

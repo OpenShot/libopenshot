@@ -178,14 +178,14 @@ string Saturation::PropertiesJSON(long int requested_frame) {
 	// Generate JSON properties list
 	Json::Value root;
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, CONSTANT, -1, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
+	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 20, CONSTANT, -1, false);
+	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, true);
 
 	// Keyframes
-	root["saturation"] = add_property_json("Saturation", saturation.GetValue(requested_frame), "float", "", saturation.Contains(requested_point), saturation.GetCount(), -10000, 10000, saturation.GetClosestPoint(requested_point).interpolation, saturation.GetClosestPoint(requested_point).co.X, false);
+	root["saturation"] = add_property_json("Saturation", saturation.GetValue(requested_frame), "float", "", saturation.Contains(requested_point), saturation.GetCount(), 0.0, 4.0, saturation.GetClosestPoint(requested_point).interpolation, saturation.GetClosestPoint(requested_point).co.X, false);
 
 	// Return formatted string
 	return root.toStyledString();

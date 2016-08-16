@@ -162,18 +162,18 @@ string ChromaKey::PropertiesJSON(long int requested_frame) {
 	// Generate JSON properties list
 	Json::Value root;
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 1000, CONSTANT, -1, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
+	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["layer"] = add_property_json("Layer", Layer(), "int", "", false, 0, 0, 20, CONSTANT, -1, false);
+	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, true);
 
 	// Keyframes
-	root["color"] = add_property_json("Key Color", 0.0, "color", "", color.red.Contains(requested_point), color.red.GetCount(), -10000, 10000, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
-	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", color.red.Contains(requested_point), color.red.GetCount(), -10000, 10000, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
-	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", color.blue.Contains(requested_point), color.blue.GetCount(), -10000, 10000, color.blue.GetClosestPoint(requested_point).interpolation, color.blue.GetClosestPoint(requested_point).co.X, false);
-	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", color.green.Contains(requested_point), color.green.GetCount(), -10000, 10000, color.green.GetClosestPoint(requested_point).interpolation, color.green.GetClosestPoint(requested_point).co.X, false);
-	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", fuzz.Contains(requested_point), fuzz.GetCount(), -10000, 10000, fuzz.GetClosestPoint(requested_point).interpolation, fuzz.GetClosestPoint(requested_point).co.X, false);
+	root["color"] = add_property_json("Key Color", 0.0, "color", "", color.red.Contains(requested_point), color.red.GetCount(), 0, 255, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
+	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", color.red.Contains(requested_point), color.red.GetCount(), 0, 255, color.red.GetClosestPoint(requested_point).interpolation, color.red.GetClosestPoint(requested_point).co.X, false);
+	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", color.blue.Contains(requested_point), color.blue.GetCount(), 0, 255, color.blue.GetClosestPoint(requested_point).interpolation, color.blue.GetClosestPoint(requested_point).co.X, false);
+	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", color.green.Contains(requested_point), color.green.GetCount(), 0, 255, color.green.GetClosestPoint(requested_point).interpolation, color.green.GetClosestPoint(requested_point).co.X, false);
+	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", fuzz.Contains(requested_point), fuzz.GetCount(), 0, 25, fuzz.GetClosestPoint(requested_point).interpolation, fuzz.GetClosestPoint(requested_point).co.X, false);
 
 	// Return formatted string
 	return root.toStyledString();
