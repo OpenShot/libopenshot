@@ -45,6 +45,8 @@ namespace openshot
 	class EffectInfo
 	{
 	public:
+		// Create an instance of an effect (factory style)
+		EffectBase* CreateEffect(string effect_type);
 
 		/// JSON methods
 		static string Json(); ///< Generate JSON string of this object

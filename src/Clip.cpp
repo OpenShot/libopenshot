@@ -856,34 +856,16 @@ void Clip::SetJsonValue(Json::Value root) {
 			// Create Effect
 			EffectBase *e = NULL;
 
-			if (!existing_effect["type"].isNull())
-				// Init the matching effect object
-				if (existing_effect["type"].asString() == "Blur")
-					e = new Blur();
+			if (!existing_effect["type"].isNull()) {
+				// Create instance of effect
+				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
 
-				else if (existing_effect["type"].asString() == "Brightness")
-					e = new Brightness();
+				// Load Json into Effect
+				e->SetJsonValue(existing_effect);
 
-				else if (existing_effect["type"].asString() == "ChromaKey")
-					e = new ChromaKey();
-
-				else if (existing_effect["type"].asString() == "Deinterlace")
-					e = new Deinterlace();
-
-				else if (existing_effect["type"].asString() == "Mask")
-					e = new Mask();
-
-				else if (existing_effect["type"].asString() == "Negate")
-					e = new Negate();
-
-				else if (existing_effect["type"].asString() == "Saturation")
-					e = new Saturation();
-
-			// Load Json into Effect
-			e->SetJsonValue(existing_effect);
-
-			// Add Effect to Timeline
-			AddEffect(e);
+				// Add Effect to Timeline
+				AddEffect(e);
+			}
 		}
 	}
 	if (!root["reader"].isNull()) // does Json contain a reader?

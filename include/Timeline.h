@@ -38,6 +38,7 @@
 #include "Point.h"
 #include "EffectBase.h"
 #include "Effects.h"
+#include "EffectInfo.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "FrameMapper.h"

@@ -920,25 +920,16 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 			// Create Effect
 			EffectBase *e = NULL;
 
-			if (!existing_effect["type"].isNull())
-				// Init the matching effect object
-				if (existing_effect["type"].asString() == "ChromaKey")
-					e = new ChromaKey();
+			if (!existing_effect["type"].isNull()) {
+				// Create instance of effect
+				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
 
-				else if (existing_effect["type"].asString() == "Deinterlace")
-					e = new Deinterlace();
+				// Load Json into Effect
+				e->SetJsonValue(existing_effect);
 
-				else if (existing_effect["type"].asString() == "Mask")
-					e = new Mask();
-
-				else if (existing_effect["type"].asString() == "Negate")
-					e = new Negate();
-
-			// Load Json into Effect
-			e->SetJsonValue(existing_effect);
-
-			// Add Effect to Timeline
-			AddEffect(e);
+				// Add Effect to Timeline
+				AddEffect(e);
+			}
 		}
 	}
 
@@ -1036,7 +1027,6 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 	if (existing_clip && change["key"].size() == 4 && change["key"][2] == "effects")
 	{
 		// This change is actually targetting a specific effect under a clip (and not the clip)
-		EffectBase *existing_effect = NULL;
 		Json::Value key_part = change["key"][3];
 
 		if (key_part.isObject()) {
@@ -1047,16 +1037,15 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 				string effect_id = key_part["id"].asString();
 
 				// Find matching effect in timeline (if any)
+				list<EffectBase*> effect_list = existing_clip->Effects();
 				list<EffectBase*>::iterator effect_itr;
-				for (effect_itr=existing_clip->Effects().begin(); effect_itr != existing_clip->Effects().end(); ++effect_itr)
+				for (effect_itr=effect_list.begin(); effect_itr != effect_list.end(); ++effect_itr)
 				{
 					// Get effect object from the iterator
 					EffectBase *e = (*effect_itr);
 					if (e->Id() == effect_id) {
-						existing_effect = e;
-
 						// Apply the change to the effect directly
-						apply_json_to_effects(change, existing_effect);
+						apply_json_to_effects(change, e);
 						return; // effect found, don't update clip
 					}
 				}
@@ -1145,26 +1134,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		EffectBase *e = NULL;
 
 		// Init the matching effect object
-		if (effect_type == "Blur")
-			e = new Blur();
-
-		else if (effect_type == "Brightness")
-			e = new Brightness();
-
-		else if (effect_type == "ChromaKey")
-			e = new ChromaKey();
-
-		else if (effect_type == "Deinterlace")
-			e = new Deinterlace();
-
-		else if (effect_type == "Mask")
-			e = new Mask();
-
-		else if (effect_type == "Negate")
-			e = new Negate();
-
-		else if (effect_type == "Saturation")
-			e = new Saturation();
+		e = EffectInfo().CreateEffect(effect_type);
 
 		// Load Json into Effect
 		e->SetJsonValue(change["value"]);

@@ -38,6 +38,31 @@ string EffectInfo::Json() {
 	return JsonValue().toStyledString();
 }
 
+// Create a new effect instance
+EffectBase* EffectInfo::CreateEffect(string effect_type) {
+	// Init the matching effect object
+	if (effect_type == "Blur")
+		return new Blur();
+
+	else if (effect_type == "Brightness")
+		return new Brightness();
+
+	else if (effect_type == "ChromaKey")
+		return new ChromaKey();
+
+	else if (effect_type == "Deinterlace")
+		return new Deinterlace();
+
+	else if (effect_type == "Mask")
+		return new Mask();
+
+	else if (effect_type == "Negate")
+		return new Negate();
+
+	else if (effect_type == "Saturation")
+		return new Saturation();
+}
+
 // Generate Json::JsonValue for this object
 Json::Value EffectInfo::JsonValue() {
 

@@ -75,6 +75,12 @@ tr1::shared_ptr<Frame> Saturation::GetFrame(tr1::shared_ptr<Frame> frame, long i
 	// Get the frame's image
 	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
 
+	if (!frame_image)
+		return frame;
+
+	// Get keyframe values for this frame
+	float saturation_value = saturation.GetValue(frame_number);
+
 	// Constants used for color saturation formula
 	double pR = .299;
 	double pG = .587;
@@ -96,9 +102,9 @@ tr1::shared_ptr<Frame> Saturation::GetFrame(tr1::shared_ptr<Frame> frame, long i
 						 (B * B * pB) );
 
 		// Adjust the saturation
-		R = p + (R - p) * saturation.GetValue(frame_number);
-		G = p + (G - p) * saturation.GetValue(frame_number);
-		B = p + (B - p) * saturation.GetValue(frame_number);
+		R = p + (R - p) * saturation_value;
+		G = p + (G - p) * saturation_value;
+		B = p + (B - p) * saturation_value;
 
 		// Constrain the value from 0 to 255
 		R = constrain(R);

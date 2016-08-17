@@ -43,6 +43,7 @@
 #include "Enums.h"
 #include "EffectBase.h"
 #include "Effects.h"
+#include "EffectInfo.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "FrameMapper.h"
