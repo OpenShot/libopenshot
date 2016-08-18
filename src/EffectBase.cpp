@@ -70,6 +70,12 @@ Json::Value EffectBase::JsonValue() {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
+	root["name"] = info.name;
+	root["class_name"] = info.class_name;
+	root["short_name"] = info.short_name;
+	root["description"] = info.description;
+	root["has_video"] = info.has_video;
+	root["has_audio"] = info.has_audio;
 	root["order"] = Order();
 
 	// return JsonValue
