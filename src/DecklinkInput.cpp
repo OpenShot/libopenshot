@@ -251,7 +251,7 @@ omp_set_nested(true);
 						#pragma omp critical (blackmagic_input_queue)
 						{
 							// Add processed frame to cache (to be recalled in order after the thread pool is done)
-							final_frames.Add(copy_frameCount, f);
+							final_frames.Add(f);
 						}
 
 						// Release RGB data

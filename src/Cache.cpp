@@ -30,16 +30,14 @@
 using namespace std;
 using namespace openshot;
 
-// Default constructor, no max frames
-Cache::Cache() : max_bytes(0) {
-	// Init the critical section
-	cacheCriticalSection = new CriticalSection();
+// Default constructor, no max bytes
+Cache::Cache() : CacheBase(0) {
+
 };
 
-// Constructor that sets the max frames to cache
-Cache::Cache(int64 max_bytes) : max_bytes(max_bytes) {
-	// Init the critical section
-	cacheCriticalSection = new CriticalSection();
+// Constructor that sets the max bytes to cache
+Cache::Cache(int64 max_bytes) : CacheBase(max_bytes) {
+
 };
 
 // Default destructor
@@ -54,10 +52,11 @@ Cache::~Cache()
 }
 
 // Add a Frame to the cache
-void Cache::Add(long int frame_number, tr1::shared_ptr<Frame> frame)
+void Cache::Add(tr1::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	long int frame_number = frame->number;
 
 	// Freshen frame if it already exists
 	if (frames.count(frame_number))
@@ -89,23 +88,6 @@ tr1::shared_ptr<Frame> Cache::GetFrame(long int frame_number)
 	else
 		// no Frame found
 		return tr1::shared_ptr<Frame>();
-}
-
-// Return a deque of all frame numbers in this queue (returns just a copy of the data)
-deque<long int> Cache::GetFrameNumbers() {
-
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
-	// Make copy of deque
-	deque<long int> copy_frame_numbers;
-
-	// Loop through frame numbers
-	deque<long int>::iterator itr;
-	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-		copy_frame_numbers.push_back(*itr);
-
-	return copy_frame_numbers;
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
@@ -238,26 +220,3 @@ void Cache::CleanUp()
 		}
 	}
 }
-
-// Display a list of cached frame numbers
-void Cache::Display()
-{
-	cout << "----- Cache List (" << frames.size() << ") ------" << endl;
-	deque<long int>::iterator itr;
-
-	int i = 1;
-	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
-	{
-		cout << " " << i << ") --- Frame " << *itr << endl;
-		i++;
-	}
-}
-
-// Set maximum bytes to a different amount based on a ReaderInfo struct
-void Cache::SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels)
-{
-	// n frames X height X width X 4 colors of chars X audio channels X 4 byte floats
-	int64 bytes = number_of_frames * (height * width * 4 + (sample_rate * channels * 4));
-	SetMaxBytes(bytes);
-}
-

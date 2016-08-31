@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Cache class
+ * @brief Header file for CacheBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,73 +25,78 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_CACHE_H
-#define OPENSHOT_CACHE_H
+#ifndef OPENSHOT_CACHE_BASE_H
+#define OPENSHOT_CACHE_BASE_H
 
-#include <map>
-#include <deque>
 #include <tr1/memory>
-#include "CacheBase.h"
 #include "Frame.h"
 #include "Exceptions.h"
 
 namespace openshot {
 
 	/**
-	 * @brief This class is a cache manager for Frame objects.
+	 * @brief All cache managers in libopenshot are based on this CacheBase class
 	 *
-	 * It is used by FileReaders (such as FFmpegReader) to cache recently accessed frames. Due to the
-	 * high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
-	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
-	 * is required.  You can set the max number of bytes to cache.
+	 * Cache is a very important element of video editing, and is required to achieve a high degree
+	 * of performance. There are multiple derived cache objects based on this class, some which use
+	 * memory, and some which use disk to store the cache.
 	 */
-	class Cache : public CacheBase {
-	private:
-		map<long int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
-		deque<long int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+	class CacheBase
+	{
+	protected:
+		int64 max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
-		/// Clean up cached frames that exceed the max number of bytes
-		void CleanUp();
+		/// Section lock for multiple threads
+	    CriticalSection *cacheCriticalSection;
 
 
 	public:
 		/// Default constructor, no max bytes
-		Cache();
+		CacheBase();
 
 		/// @brief Constructor that sets the max bytes to cache
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
-		Cache(int64 max_bytes);
-
-		// Default destructor
-		~Cache();
+		CacheBase(int64 max_bytes);
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
-		void Add(tr1::shared_ptr<Frame> frame);
+		virtual void Add(tr1::shared_ptr<Frame> frame) = 0;
 
 		/// Clear the cache of all frames
-		void Clear();
+		virtual void Clear() = 0;
 
 		/// Count the frames in the queue
-		long int Count();
+		virtual long int Count() = 0;
 
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
-		tr1::shared_ptr<Frame> GetFrame(long int frame_number);
+		virtual tr1::shared_ptr<Frame> GetFrame(long int frame_number) = 0;
 
 		/// Gets the maximum bytes value
-		int64 GetBytes();
+		virtual int64 GetBytes() = 0;
 
 		/// Get the smallest frame number
-		tr1::shared_ptr<Frame> GetSmallestFrame();
-
-		/// @brief Move frame to front of queue (so it lasts longer)
-		/// @param frame_number The frame number of the cached frame
-		void MoveToFront(long int frame_number);
+		virtual tr1::shared_ptr<Frame> GetSmallestFrame() = 0;
 
 		/// @brief Remove a specific frame
 		/// @param frame_number The frame number of the cached frame
-		void Remove(long int frame_number);
+		virtual void Remove(long int frame_number) = 0;
+
+		/// Gets the maximum bytes value
+		int64 GetMaxBytes() { return max_bytes; };
+
+		/// @brief Set maximum bytes to a different amount
+		/// @param number_of_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
+		void SetMaxBytes(int64 number_of_bytes) { max_bytes = number_of_bytes; };
+
+		/// @brief Set maximum bytes to a different amount based on a ReaderInfo struct
+		/// @param number_of_frames The maximum number of frames to hold in cache
+		/// @param width The width of the frame's image
+		/// @param height The height of the frame's image
+		/// @param sample_rate The sample rate of the frame's audio data
+		/// @param channels The number of audio channels in the frame
+		void SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels);
+
 
 	};
 

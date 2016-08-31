@@ -424,7 +424,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 				info.fps.num == reader->info.fps.num &&
 				info.fps.den == reader->info.fps.den) {
 					// Add original frame to cache, and skip the rest (for performance reasons)
-					final_cache.Add(frame_number, mapped_frame);
+					final_cache.Add(mapped_frame);
 					continue;
 			}
 
@@ -512,7 +512,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 				ResampleMappedAudio(frame, mapped.Odd.Frame);
 
 			// Add frame to final cache
-			final_cache.Add(frame->number, frame);
+			final_cache.Add(frame);
 
 		} // for loop
 	} // omp parallel

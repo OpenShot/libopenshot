@@ -865,7 +865,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
 
 		// Update working cache
-		working_cache.Add(f->number, f);
+		working_cache.Add(f);
 
 		// Keep track of last last_video_frame
 		last_video_frame = f;
@@ -1122,7 +1122,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
 
 				// Add or update cache
-				working_cache.Add(f->number, f);
+				working_cache.Add(f);
 
 				// Decrement remaining samples
 				remaining_samples -= samples;
@@ -1524,7 +1524,7 @@ tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(long int requested_frame)
 		output->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
 		output->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader
 
-		working_cache.Add(requested_frame, output);
+		working_cache.Add(output);
 
 		// Set the largest processed frame (if this is larger)
 		if (requested_frame > largest_frame_processed)
@@ -1601,7 +1601,7 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 				processed_audio_frames[missing_frame->number] = missing_frame->number;
 
 				// Move frame to final cache
-				final_cache.Add(missing_frame->number, missing_frame);
+				final_cache.Add(missing_frame);
 
 				// Remove frame from working cache
 				working_cache.Remove(missing_frame->number);
@@ -1647,7 +1647,7 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 					processed_audio_frames[missing_frame->number] = missing_frame->number;
 
 					// Move frame to final cache
-					final_cache.Add(missing_frame->number, missing_frame);
+					final_cache.Add(missing_frame);
 
 					// Remove frame from working cache
 					working_cache.Remove(missing_frame->number);
@@ -1740,7 +1740,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 				num_checks_since_final = 0;
 
 				// Move frame to final cache
-				final_cache.Add(f->number, f);
+				final_cache.Add(f);
 
 				// Add to missing cache (if another frame depends on it)
 				{
@@ -1749,7 +1749,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 						// Debug output
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1);
 
-						missing_frames.Add(f->number, f);
+						missing_frames.Add(f);
 					}
 				}
 

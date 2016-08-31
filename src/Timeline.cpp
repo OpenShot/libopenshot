@@ -748,7 +748,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Add final frame to cache
-				final_cache.Add(frame_number, new_frame);
+				final_cache.Add(new_frame);
 
 			} // end frame loop
 		} // end parallel
