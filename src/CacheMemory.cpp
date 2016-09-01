@@ -25,23 +25,23 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Cache.h"
+#include "../include/CacheMemory.h"
 
 using namespace std;
 using namespace openshot;
 
 // Default constructor, no max bytes
-Cache::Cache() : CacheBase(0) {
+CacheMemory::CacheMemory() : CacheBase(0) {
 
 };
 
 // Constructor that sets the max bytes to cache
-Cache::Cache(int64 max_bytes) : CacheBase(max_bytes) {
+CacheMemory::CacheMemory(int64 max_bytes) : CacheBase(max_bytes) {
 
 };
 
 // Default destructor
-Cache::~Cache()
+CacheMemory::~CacheMemory()
 {
 	frames.clear();
 	frame_numbers.clear();
@@ -52,7 +52,7 @@ Cache::~Cache()
 }
 
 // Add a Frame to the cache
-void Cache::Add(tr1::shared_ptr<Frame> frame)
+void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -75,7 +75,7 @@ void Cache::Add(tr1::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> Cache::GetFrame(long int frame_number)
+tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -91,7 +91,7 @@ tr1::shared_ptr<Frame> Cache::GetFrame(long int frame_number)
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
+tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -113,7 +113,7 @@ tr1::shared_ptr<Frame> Cache::GetSmallestFrame()
 }
 
 // Gets the maximum bytes value
-int64 Cache::GetBytes()
+int64 CacheMemory::GetBytes()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -131,7 +131,7 @@ int64 Cache::GetBytes()
 }
 
 // Remove a specific frame
-void Cache::Remove(long int frame_number)
+void CacheMemory::Remove(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -153,7 +153,7 @@ void Cache::Remove(long int frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void Cache::MoveToFront(long int frame_number)
+void CacheMemory::MoveToFront(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -182,7 +182,7 @@ void Cache::MoveToFront(long int frame_number)
 }
 
 // Clear the cache of all frames
-void Cache::Clear()
+void CacheMemory::Clear()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -192,7 +192,7 @@ void Cache::Clear()
 }
 
 // Count the frames in the queue
-long int Cache::Count()
+long int CacheMemory::Count()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -202,7 +202,7 @@ long int Cache::Count()
 }
 
 // Clean up cached frames that exceed the number in our max_bytes variable
-void Cache::CleanUp()
+void CacheMemory::CleanUp()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);

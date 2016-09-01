@@ -62,7 +62,7 @@
 #include <fcntl.h>
 
 #include "DeckLinkAPI.h"
-#include "../include/Cache.h"
+#include "CacheMemory.h"
 #include "../include/Frame.h"
 #include "../include/OpenMPUtilities.h"
 

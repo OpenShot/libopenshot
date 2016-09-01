@@ -63,7 +63,7 @@
 
 #include "DeckLinkAPI.h"
 #include "../include/Frame.h"
-#include "../include/Cache.h"
+#include "CacheMemory.h"
 #include "../include/OpenMPUtilities.h"
 
 /// Implementation of the Blackmagic Decklink API (used by the DecklinkReader)
@@ -77,7 +77,7 @@ public:
 
 	// Queue of raw video frames
 	deque<IDeckLinkMutableVideoFrame*> raw_video_frames;
-	openshot::Cache final_frames;
+	openshot::CacheMemory final_frames;
 
 	// Convert between YUV and RGB
 	IDeckLinkOutput *deckLinkOutput;

@@ -47,7 +47,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
 #include "ZmqLogger.h"

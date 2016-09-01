@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <tr1/memory>
 #include "Json.h"
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Exceptions.h"
 
 using namespace std;
@@ -144,7 +144,7 @@ namespace openshot
 		void SetChunkSize(int new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		Cache* GetCache() { return NULL; };
+		CacheMemory* GetCache() { return NULL; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)

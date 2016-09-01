@@ -33,7 +33,7 @@
 #include <math.h>
 #include <vector>
 #include <tr1/memory>
-#include "../include/Cache.h"
+#include "CacheMemory.h"
 #include "../include/ReaderBase.h"
 #include "../include/Frame.h"
 #include "../include/Fraction.h"
@@ -144,7 +144,7 @@ namespace openshot
 		Fraction target;		// The target frame rate
 		PulldownType pulldown;	// The pull-down technique
 		ReaderBase *reader;		// The source video reader
-		Cache final_cache; 		// Cache of actual Frame objects
+		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		AVAudioResampleContext *avr;	// Audio resampling context object
 
@@ -182,7 +182,7 @@ namespace openshot
 		MappedFrame GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame);
 
 		/// Get the cache object used by this reader
-		Cache* GetCache() { return &final_cache; };
+		CacheMemory* GetCache() { return &final_cache; };
 
 		/// @brief This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that

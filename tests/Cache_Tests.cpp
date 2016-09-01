@@ -34,7 +34,7 @@ using namespace openshot;
 TEST(Cache_Default_Constructor)
 {
 	// Create cache object
-	Cache c;
+	CacheMemory c;
 
 	// Loop 50 times
 	for (int i = 0; i < 50; i++)
@@ -52,7 +52,7 @@ TEST(Cache_Default_Constructor)
 TEST(Cache_Max_Bytes_Constructor)
 {
 	// Create cache object (with a max of 5 previous items)
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Loop 20 times
 	for (int i = 30; i > 0; i--)
@@ -91,7 +91,7 @@ TEST(Cache_Max_Bytes_Constructor)
 TEST(Cache_Clear)
 {
 	// Create cache object
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Loop 10 times
 	for (int i = 0; i < 10; i++)
@@ -115,7 +115,7 @@ TEST(Cache_Clear)
 TEST(Cache_Add_Duplicate_Frames)
 {
 	// Create cache object
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Loop 10 times
 	for (int i = 0; i < 10; i++)
@@ -132,7 +132,7 @@ TEST(Cache_Add_Duplicate_Frames)
 TEST(Cache_Check_If_Frame_Exists)
 {
 	// Create cache object
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Loop 5 times
 	for (int i = 1; i < 6; i++)
@@ -156,7 +156,7 @@ TEST(Cache_Check_If_Frame_Exists)
 TEST(Cache_GetFrame)
 {
 	// Create cache object
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Create 3 frames
 	Frame *red = new Frame(1, 300, 300, "red");
@@ -181,7 +181,7 @@ TEST(Cache_GetFrame)
 TEST(Cache_GetSmallest)
 {
 	// Create cache object (with a max of 10 items)
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Create 3 frames
 	Frame *red = new Frame(1, 300, 300, "red");
@@ -209,7 +209,7 @@ TEST(Cache_GetSmallest)
 TEST(Cache_Remove)
 {
 	// Create cache object (with a max of 10 items)
-	Cache c(250 * 1024);
+	CacheMemory c(250 * 1024);
 
 	// Create 3 frames
 	Frame *red = new Frame(1, 300, 300, "red");
@@ -249,7 +249,7 @@ TEST(Cache_Remove)
 TEST(Cache_Set_Max_Bytes)
 {
 	// Create cache object
-	Cache c;
+	CacheMemory c;
 
 	// Loop 20 times
 	for (int i = 0; i < 20; i++)

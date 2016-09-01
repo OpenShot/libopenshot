@@ -45,7 +45,7 @@ namespace openshot {
 	 * it critical to keep these Frames cached for performance reasons.  However, the larger the cache, the more memory
 	 * is required.  You can set the max number of bytes to cache.
 	 */
-	class Cache : public CacheBase {
+	class CacheMemory : public CacheBase {
 	private:
 		map<long int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
 		deque<long int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
@@ -56,14 +56,14 @@ namespace openshot {
 
 	public:
 		/// Default constructor, no max bytes
-		Cache();
+		CacheMemory();
 
 		/// @brief Constructor that sets the max bytes to cache
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
-		Cache(int64 max_bytes);
+		CacheMemory(int64 max_bytes);
 
 		// Default destructor
-		~Cache();
+		~CacheMemory();
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.

@@ -41,7 +41,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <unistd.h>
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Exceptions.h"
 #include "Json.h"
 

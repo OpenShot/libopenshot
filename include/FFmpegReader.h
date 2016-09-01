@@ -41,7 +41,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <tr1/memory>
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
 
@@ -110,8 +110,8 @@ namespace openshot
 		int rescaler_position;
 		vector<SwsContext*> image_rescalers;
 
-		Cache working_cache;
-		Cache missing_frames;
+		CacheMemory working_cache;
+		CacheMemory missing_frames;
 		map<AVPacket*, AVPacket*> packets;
 		map<AVPicture*, AVPicture*> frames;
 		map<long int, long int> processing_video_frames;
@@ -230,7 +230,7 @@ namespace openshot
 
 	public:
 		/// Final cache object used to hold final frames
-		Cache final_cache;
+		CacheMemory final_cache;
 
 		/// Enable or disable seeking.  Seeking can more quickly locate the requested frame, but some
 		/// codecs have trouble seeking, and can introduce artifacts or blank images into the video.
@@ -247,7 +247,7 @@ namespace openshot
 		void Close();
 
 		/// Get the cache object used by this reader
-		Cache* GetCache() { return &final_cache; };
+		CacheMemory* GetCache() { return &final_cache; };
 
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///

@@ -32,7 +32,7 @@
 #include <tr1/memory>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Color.h"
 #include "Clip.h"
 #include "Point.h"
@@ -147,7 +147,7 @@ namespace openshot {
 		list<Clip*> closing_clips; ///<List of clips that need to be closed
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		list<EffectBase*> effects; ///<List of clips on this timeline
-		Cache final_cache; ///<Final cache of timeline frames
+		CacheMemory final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
 		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip);
@@ -228,7 +228,7 @@ namespace openshot {
 		list<EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
-		Cache* GetCache() { return &final_cache; };
+		CacheMemory* GetCache() { return &final_cache; };
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///

@@ -42,7 +42,7 @@
 #include <tr1/memory>
 #include <unistd.h>
 
-#include "Cache.h"
+#include "CacheMemory.h"
 #include "Exceptions.h"
 #include "Frame.h"
 #include "DecklinkOutput.h"
