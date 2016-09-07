@@ -27,6 +27,7 @@
 
 #include "UnitTest++.h"
 #include "../include/OpenShot.h"
+#include "../include/Json.h"
 
 using namespace std;
 using namespace openshot;
@@ -269,4 +270,117 @@ TEST(Cache_Set_Max_Bytes)
 	// Set max frames
 	c.SetMaxBytes(4 * 1024);
 	CHECK_EQUAL(4 * 1024, c.GetMaxBytes());
+}
+
+TEST(CacheDisk_Set_Max_Bytes)
+{
+	// Create cache object (using platform /temp/ directory)
+	CacheDisk c("", "PPM", 1.0, 0.25);
+
+	// Add frames to disk cache
+	for (int i = 0; i < 20; i++)
+	{
+		// Add blank frame to the cache
+		tr1::shared_ptr<Frame> f(new Frame());
+		f->number = i;
+		// Add some picture data
+		f->AddColor(1280, 720, "Blue");
+		f->ResizeAudio(2, 500, 44100, LAYOUT_STEREO);
+		f->AddAudioSilence(500);
+		c.Add(f);
+	}
+
+	CHECK_EQUAL(0, c.GetMaxBytes()); // Cache defaults max frames to -1, unlimited frames
+
+	// Set max frames
+	c.SetMaxBytes(8 * 1024);
+	CHECK_EQUAL(8 * 1024, c.GetMaxBytes());
+
+	// Set max frames
+	c.SetMaxBytes(4 * 1024);
+	CHECK_EQUAL(4 * 1024, c.GetMaxBytes());
+
+	// Read frames from disk cache
+	tr1::shared_ptr<Frame> f = c.GetFrame(5);
+	CHECK_EQUAL(320, f->GetWidth());
+	CHECK_EQUAL(180, f->GetHeight());
+	CHECK_EQUAL(2, f->GetAudioChannelsCount());
+	CHECK_EQUAL(500, f->GetAudioSamplesCount());
+	CHECK_EQUAL(LAYOUT_STEREO, f->ChannelsLayout());
+	CHECK_EQUAL(44100, f->SampleRate());
+
+}
+
+TEST(CacheDisk_JSON)
+{
+	// Create cache object (using platform /temp/ directory)
+	CacheDisk c("", "PPM", 1.0, 0.25);
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
+	c.Add(f3);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
+	c.Add(f1);
+	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
+	c.Add(f2);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
+	c.Add(f5);
+	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
+	c.Add(f4);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
+
+}
+
+TEST(CacheMemory_JSON)
+{
+	// Create memory cache object
+	CacheMemory c;
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
+	c.Add(f3);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
+	c.Add(f1);
+	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
+	c.Add(f2);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
+	c.Add(f5);
+	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
+
+	// Add some frames (out of order)
+	tr1::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
+	c.Add(f4);
+	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
+
 }
