@@ -50,11 +50,17 @@ namespace openshot {
 		map<long int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
 		deque<long int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
+		bool needs_range_processing; ///< Something has changed, and the range data needs to be re-calculated
+		Json::Value ranges; ///< JSON ranges of frame numbers
 		vector<long int> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
 		map<long int, long int> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
+		long int range_version; ///< The version of the JSON range data (incremented with each change)
 
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
+
+		/// Calculate ranges of frames
+		void CalculateRanges();
 
 	public:
 		/// Default constructor, no max bytes

@@ -34,12 +34,16 @@ using namespace openshot;
 CacheMemory::CacheMemory() : CacheBase(0) {
 	// Set cache type name
 	cache_type = "CacheMemory";
+	range_version = 0;
+	needs_range_processing = false;
 };
 
 // Constructor that sets the max bytes to cache
 CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
 	// Set cache type name
 	cache_type = "CacheMemory";
+	range_version = 0;
+	needs_range_processing = false;
 };
 
 // Default destructor
@@ -52,6 +56,71 @@ CacheMemory::~CacheMemory()
 	// remove critical section
 	delete cacheCriticalSection;
 	cacheCriticalSection = NULL;
+}
+
+// Calculate ranges of frames
+void CacheMemory::CalculateRanges() {
+	// Only calculate when something has changed
+	if (needs_range_processing) {
+
+		// Create a scoped lock, to protect the cache from multiple threads
+		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
+		// Sort ordered frame #s, and calculate JSON ranges
+		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
+
+		// Clear existing JSON variable
+		ranges.clear();
+		ranges = Json::Value(Json::arrayValue);
+
+		// Increment range version
+		range_version++;
+
+		vector<long int>::iterator itr_ordered;
+		long int starting_frame = *ordered_frame_numbers.begin();
+		long int ending_frame = *ordered_frame_numbers.begin();
+
+		// Loop through all known frames (in sequential order)
+		for (itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered) {
+			long int frame_number = *itr_ordered;
+			if (frame_number - ending_frame > 1) {
+				// End of range detected
+				Json::Value range;
+
+				// Add JSON object with start/end attributes
+				// Use strings, since long ints are supported in JSON
+				stringstream start_str;
+				start_str << starting_frame;
+				stringstream end_str;
+				end_str << ending_frame;
+				range["start"] = start_str.str();
+				range["end"] = end_str.str();
+				ranges.append(range);
+
+				// Set new starting range
+				starting_frame = frame_number;
+			}
+
+			// Set current frame as end of range, and keep looping
+			ending_frame = frame_number;
+		}
+
+		// APPEND FINAL VALUE
+		Json::Value range;
+
+		// Add JSON object with start/end attributes
+		// Use strings, since long ints are supported in JSON
+		stringstream start_str;
+		start_str << starting_frame;
+		stringstream end_str;
+		end_str << ending_frame;
+		range["start"] = start_str.str();
+		range["end"] = end_str.str();
+		ranges.append(range);
+
+		// Reset needs_range_processing
+		needs_range_processing = false;
+	}
 }
 
 // Add a Frame to the cache
@@ -72,6 +141,7 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
 		ordered_frame_numbers.push_back(frame_number);
+		needs_range_processing = true;
 
 		// Clean up old frames
 		CleanUp();
