@@ -40,6 +40,7 @@ CacheDisk::CacheDisk(string cache_path, string format, float quality, float scal
 	image_format = format;
 	image_quality = quality;
 	image_scale = scale;
+	max_bytes = 0;
 
 	// Init path directory
 	InitPath(cache_path);

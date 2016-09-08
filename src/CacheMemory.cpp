@@ -36,6 +36,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
+	max_bytes = 0;
 };
 
 // Constructor that sets the max bytes to cache
@@ -293,6 +294,7 @@ void CacheMemory::Clear()
 // Count the frames in the queue
 long int CacheMemory::Count()
 {
+	cout << "CacheMemory::Count" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
