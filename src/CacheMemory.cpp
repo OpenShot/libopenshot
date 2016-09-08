@@ -36,7 +36,6 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-	max_bytes = 0;
 };
 
 // Constructor that sets the max bytes to cache
@@ -50,6 +49,7 @@ CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
 // Default destructor
 CacheMemory::~CacheMemory()
 {
+	cout << "CacheMemory::~CacheMemory" << endl;
 	frames.clear();
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
@@ -155,6 +155,7 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 {
+	cout << "CacheMemory::GetFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -171,6 +172,7 @@ tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
+	cout << "CacheMemory::GetSmallestFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	tr1::shared_ptr<openshot::Frame> f;
@@ -193,6 +195,7 @@ tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 // Gets the maximum bytes value
 long long int CacheMemory::GetBytes()
 {
+	cout << "CacheMemory::GetBytes" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -253,6 +256,7 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 // Move frame to front of queue (so it lasts longer)
 void CacheMemory::MoveToFront(long int frame_number)
 {
+	cout << "CacheMemory::MoveToFront" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
