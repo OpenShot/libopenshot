@@ -70,8 +70,8 @@ void CacheMemory::CalculateRanges() {
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
 
 		// Clear existing JSON variable
-		ranges.clear();
-		ranges = Json::Value(Json::arrayValue);
+		//ranges.clear();
+		//ranges = Json::Value(Json::arrayValue);
 
 		// Increment range version
 		range_version++;
@@ -95,7 +95,7 @@ void CacheMemory::CalculateRanges() {
 				end_str << ending_frame;
 				range["start"] = start_str.str();
 				range["end"] = end_str.str();
-				ranges.append(range);
+				//ranges.append(range);
 
 				// Set new starting range
 				starting_frame = frame_number;
@@ -116,7 +116,7 @@ void CacheMemory::CalculateRanges() {
 		end_str << ending_frame;
 		range["start"] = start_str.str();
 		range["end"] = end_str.str();
-		ranges.append(range);
+		//ranges.append(range);
 
 		// Reset needs_range_processing
 		needs_range_processing = false;
