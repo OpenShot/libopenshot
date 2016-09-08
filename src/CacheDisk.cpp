@@ -339,21 +339,21 @@ void CacheDisk::Remove(long int start_frame_number, long int end_frame_number)
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
-	deque<long int>::iterator itr = frame_numbers.begin();
-	while (itr != frame_numbers.end())
+	deque<long int>::iterator itr;
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end();)
 	{
 		//deque<long int>::iterator current = itr++;
 		if (*itr >= start_frame_number && *itr <= end_frame_number)
 		{
 			// erase frame number
-			itr = frame_numbers.erase(itr++);
+			itr = frame_numbers.erase(itr);
 		} else
-			++itr;
+			itr++;
 	}
 
 	// Loop through ordered frame numbers
-	vector<long int>::iterator itr_ordered = ordered_frame_numbers.begin();
-	while (itr_ordered != ordered_frame_numbers.end())
+	vector<long int>::iterator itr_ordered;
+	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end();)
 	{
 		if (*itr_ordered >= start_frame_number && *itr_ordered <= end_frame_number)
 		{
@@ -372,9 +372,9 @@ void CacheDisk::Remove(long int start_frame_number, long int end_frame_number)
 			if (audio_file.exists())
 				audio_file.remove();
 
-			itr_ordered = ordered_frame_numbers.erase(itr_ordered++);
+			itr_ordered = ordered_frame_numbers.erase(itr_ordered);
 		} else
-			++itr_ordered;
+			itr_ordered++;
 	}
 
 	// Needs range processing (since cache has changed)
