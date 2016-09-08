@@ -310,12 +310,14 @@ long int CacheMemory::Count()
 void CacheMemory::CleanUp()
 {
 	cout << "CacheMemory::CleanUp" << endl;
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	cout << " -- max_bytes: " << max_bytes << endl;
 
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
+		// Create a scoped lock, to protect the cache from multiple threads
+		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Get the oldest frame number.

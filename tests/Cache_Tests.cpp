@@ -47,11 +47,8 @@ TEST(Cache_Default_Constructor)
 		c.Add(f);
 	}
 
-	cout << "Cache_Default_Constructor A" << endl;
 	CHECK_EQUAL(50, c.Count()); // Cache should have all frames, with no limit
-	cout << "Cache_Default_Constructor B" << endl;
 	CHECK_EQUAL(0, c.GetMaxBytes()); // Max frames should default to 0
-	cout << "Cache_Default_Constructor C" << endl;
 }
 
 TEST(Cache_Max_Bytes_Constructor)
