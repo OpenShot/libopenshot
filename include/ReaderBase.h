@@ -117,7 +117,7 @@ namespace openshot
 		void DrawFrameOnScene(string path, long _graphics_scene_address);
 
 		/// Get the cache object used by this reader (note: not all readers use cache)
-		virtual CacheBase* GetCache() = 0;
+		virtual CacheMemory* GetCache() = 0;
 
 		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that

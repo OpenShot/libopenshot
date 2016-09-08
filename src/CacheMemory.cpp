@@ -32,104 +32,28 @@ using namespace openshot;
 
 // Default constructor, no max bytes
 CacheMemory::CacheMemory() : CacheBase(0) {
-	// Set cache type name
-	cache_type = "CacheMemory";
-	range_version = 0;
-	needs_range_processing = false;
+
 };
 
 // Constructor that sets the max bytes to cache
-CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
-	// Set cache type name
-	cache_type = "CacheMemory";
-	range_version = 0;
-	needs_range_processing = false;
+CacheMemory::CacheMemory(int64 max_bytes) : CacheBase(max_bytes) {
+
 };
 
 // Default destructor
 CacheMemory::~CacheMemory()
 {
-	cout << "CacheMemory::~CacheMemory" << endl;
 	frames.clear();
 	frame_numbers.clear();
-	ordered_frame_numbers.clear();
 
 	// remove critical section
 	delete cacheCriticalSection;
 	cacheCriticalSection = NULL;
 }
 
-
-// Calculate ranges of frames
-void CacheMemory::CalculateRanges() {
-	// Only calculate when something has changed
-	if (needs_range_processing) {
-		cout << "CacheMemory::CalculateRanges" << endl;
-
-		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
-		// Sort ordered frame #s, and calculate JSON ranges
-		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
-
-		// Clear existing JSON variable
-		ranges.clear();
-		ranges = Json::Value(Json::arrayValue);
-
-		// Increment range version
-		range_version++;
-
-		vector<long int>::iterator itr_ordered;
-		long int starting_frame = *ordered_frame_numbers.begin();
-		long int ending_frame = *ordered_frame_numbers.begin();
-
-		// Loop through all known frames (in sequential order)
-		for (itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered) {
-			long int frame_number = *itr_ordered;
-			if (frame_number - ending_frame > 1) {
-				// End of range detected
-				Json::Value range;
-
-				// Add JSON object with start/end attributes
-				// Use strings, since long ints are supported in JSON
-				stringstream start_str;
-				start_str << starting_frame;
-				stringstream end_str;
-				end_str << ending_frame;
-				range["start"] = start_str.str();
-				range["end"] = end_str.str();
-				ranges.append(range);
-
-				// Set new starting range
-				starting_frame = frame_number;
-			}
-
-			// Set current frame as end of range, and keep looping
-			ending_frame = frame_number;
-		}
-
-		// APPEND FINAL VALUE
-		Json::Value range;
-
-		// Add JSON object with start/end attributes
-		// Use strings, since long ints are supported in JSON
-		stringstream start_str;
-		start_str << starting_frame;
-		stringstream end_str;
-		end_str << ending_frame;
-		range["start"] = start_str.str();
-		range["end"] = end_str.str();
-		ranges.append(range);
-
-		// Reset needs_range_processing
-		needs_range_processing = false;
-	}
-}
-
 // Add a Frame to the cache
 void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 {
-	cout << "CacheMemory::Add " << frame->number << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	long int frame_number = frame->number;
@@ -144,8 +68,6 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 		// Add frame to queue and map
 		frames[frame_number] = frame;
 		frame_numbers.push_front(frame_number);
-		ordered_frame_numbers.push_back(frame_number);
-		needs_range_processing = true;
 
 		// Clean up old frames
 		CleanUp();
@@ -155,7 +77,6 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 {
-	cout << "CacheMemory::GetFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -172,7 +93,6 @@ tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
-	cout << "CacheMemory::GetSmallestFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	tr1::shared_ptr<openshot::Frame> f;
@@ -193,13 +113,12 @@ tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 }
 
 // Gets the maximum bytes value
-long long int CacheMemory::GetBytes()
+int64 CacheMemory::GetBytes()
 {
-	cout << "CacheMemory::GetBytes" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
-	long long int total_bytes = 0;
+	int64 total_bytes = 0;
 
 	// Loop through frames, and calculate total bytes
 	deque<long int>::reverse_iterator itr;
@@ -214,56 +133,35 @@ long long int CacheMemory::GetBytes()
 // Remove a specific frame
 void CacheMemory::Remove(long int frame_number)
 {
-	Remove(frame_number, frame_number);
-}
-
-// Remove range of frames
-void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
-{
-	cout << "CacheMemory::Remove (" << start_frame_number << ", " << end_frame_number << ")" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
 	deque<long int>::iterator itr;
-	for(itr = frame_numbers.begin(); itr != frame_numbers.end();)
+	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	{
-		if (*itr >= start_frame_number && *itr <= end_frame_number)
+		if (*itr == frame_number)
 		{
 			// erase frame number
-			itr = frame_numbers.erase(itr);
-		}else
-			itr++;
+			frame_numbers.erase(itr);
+			break;
+		}
 	}
 
-	// Loop through ordered frame numbers
-	vector<long int>::iterator itr_ordered;
-	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end();)
-	{
-		if (*itr_ordered >= start_frame_number && *itr_ordered <= end_frame_number)
-		{
-			// erase frame number
-			frames.erase(*itr_ordered);
-			itr_ordered = ordered_frame_numbers.erase(itr_ordered);
-		}else
-			itr_ordered++;
-	}
-
-	// Needs range processing (since cache has changed)
-	needs_range_processing = true;
+	// Remove frame from map. If frame_number doesn't exist, frames.erase returns zero.
+	frames.erase(frame_number);
 }
 
 // Move frame to front of queue (so it lasts longer)
 void CacheMemory::MoveToFront(long int frame_number)
 {
-	cout << "CacheMemory::MoveToFront" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
 	/* FIXME if the frame number isn't present, the loop will do nothing, so why protect it?
 	 * Is it to save time by avoiding a loop?
-	 * Do we really need to optimize the case where we've been given a nonexisting frame_number? */
+	 * Do we really need to optmize the case where we've been given a nonexisting frame_number? */
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
@@ -286,19 +184,16 @@ void CacheMemory::MoveToFront(long int frame_number)
 // Clear the cache of all frames
 void CacheMemory::Clear()
 {
-	cout << "CacheMemory::Clear" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	frames.clear();
 	frame_numbers.clear();
-	ordered_frame_numbers.clear();
 }
 
 // Count the frames in the queue
 long int CacheMemory::Count()
 {
-	cout << "CacheMemory::Count" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -309,15 +204,12 @@ long int CacheMemory::Count()
 // Clean up cached frames that exceed the number in our max_bytes variable
 void CacheMemory::CleanUp()
 {
-	cout << "CacheMemory::CleanUp" << endl;
-	cout << " -- max_bytes: " << max_bytes << endl;
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
-		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Get the oldest frame number.
@@ -327,68 +219,4 @@ void CacheMemory::CleanUp()
 			Remove(frame_to_remove);
 		}
 	}
-}
-
-
-// Generate JSON string of this object
-string CacheMemory::Json() {
-
-	// Return formatted string
-	return JsonValue().toStyledString();
-}
-
-// Generate Json::JsonValue for this object
-Json::Value CacheMemory::JsonValue() {
-
-	// Proccess range data (if anything has changed)
-	CalculateRanges();
-
-	// Create root json object
-	Json::Value root = CacheBase::JsonValue(); // get parent properties
-	root["type"] = cache_type;
-	root["ranges"] = ranges;
-
-	Json::Value version;
-	stringstream range_version_str;
-	range_version_str << range_version;
-	root["version"] = range_version_str.str();
-
-	// return JsonValue
-	return root;
-}
-
-// Load JSON string into this object
-void CacheMemory::SetJson(string value) throw(InvalidJSON) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
-
-	try
-	{
-		// Set all values that match
-		SetJsonValue(root);
-	}
-	catch (exception e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
-	}
-}
-
-// Load Json::JsonValue into this object
-void CacheMemory::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
-
-	// Close timeline before we do anything (this also removes all open and closing clips)
-	Clear();
-
-	// Set parent data
-	CacheBase::SetJsonValue(root);
-
-	if (!root["type"].isNull())
-		cache_type = root["type"].asString();
 }

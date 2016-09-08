@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for CacheMemory class
+ * @brief Header file for Cache class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,8 +25,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_CACHE_MEMORY_H
-#define OPENSHOT_CACHE_MEMORY_H
+#ifndef OPENSHOT_CACHE_H
+#define OPENSHOT_CACHE_H
 
 #include <map>
 #include <deque>
@@ -38,7 +38,7 @@
 namespace openshot {
 
 	/**
-	 * @brief This class is a memory-based cache manager for Frame objects.
+	 * @brief This class is a cache manager for Frame objects.
 	 *
 	 * It is used by FileReaders (such as FFmpegReader) to cache recently accessed frames. Due to the
 	 * high cost of decoding streams, once a frame is decoded, converted to RGB, and a Frame object is created,
@@ -50,17 +50,9 @@ namespace openshot {
 		map<long int, tr1::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
 		deque<long int> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
-		bool needs_range_processing; ///< Something has changed, and the range data needs to be re-calculated
-		Json::Value ranges; ///< JSON ranges of frame numbers
-		vector<long int> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
-		map<long int, long int> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
-		long int range_version; ///< The version of the JSON range data (incremented with each change)
-
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
 
-		/// Calculate ranges of frames
-		void CalculateRanges();
 
 	public:
 		/// Default constructor, no max bytes
@@ -68,7 +60,7 @@ namespace openshot {
 
 		/// @brief Constructor that sets the max bytes to cache
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
-		CacheMemory(long long int max_bytes);
+		CacheMemory(int64 max_bytes);
 
 		// Default destructor
 		~CacheMemory();
@@ -88,7 +80,7 @@ namespace openshot {
 		tr1::shared_ptr<Frame> GetFrame(long int frame_number);
 
 		/// Gets the maximum bytes value
-		long long int GetBytes();
+		int64 GetBytes();
 
 		/// Get the smallest frame number
 		tr1::shared_ptr<Frame> GetSmallestFrame();
@@ -101,16 +93,6 @@ namespace openshot {
 		/// @param frame_number The frame number of the cached frame
 		void Remove(long int frame_number);
 
-		/// @brief Remove a range of frames
-		/// @param start_frame_number The starting frame number of the cached frame
-		/// @param end_frame_number The ending frame number of the cached frame
-		void Remove(long int start_frame_number, long int end_frame_number);
-
-		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed); ///< Load Json::JsonValue into this object
 	};
 
 }

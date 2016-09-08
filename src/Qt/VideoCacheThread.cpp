@@ -56,13 +56,13 @@ namespace openshot
     	current_display_frame = current_frame_number;
     }
 
-	// Seek the reader to a particular frame number
+	// Seek the audio thread
 	void VideoCacheThread::Seek(int new_position)
 	{
 		position = new_position;
 	}
 
-	// Play the video
+	// Play the audio
 	void VideoCacheThread::Play() {
 		// Start playing
 		is_playing = true;

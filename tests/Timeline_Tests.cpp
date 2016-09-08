@@ -34,7 +34,6 @@ using namespace openshot;
 
 TEST(Timeline_Constructor)
 {
-	cout << "Timeline_Constructor" << endl;
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
@@ -53,7 +52,6 @@ TEST(Timeline_Constructor)
 
 TEST(Timeline_Width_and_Height_Functions)
 {
-	cout << "Timeline_Width_and_Height_Functions" << endl;
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
@@ -79,7 +77,6 @@ TEST(Timeline_Width_and_Height_Functions)
 
 TEST(Timeline_Framerate)
 {
-	cout << "Timeline_Framerate" << endl;
 	// Create a default fraction (should be 1/1)
 	Fraction fps(24,1);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
@@ -90,7 +87,6 @@ TEST(Timeline_Framerate)
 
 TEST(Timeline_Check_Two_Track_Video)
 {
-	cout << "Timeline_Check_Two_Track_Video" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "test.mp4";
@@ -213,7 +209,6 @@ TEST(Timeline_Check_Two_Track_Video)
 
 TEST(Timeline_Clip_Order)
 {
-	cout << "Timeline_Clip_Order" << endl;
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
@@ -310,7 +305,6 @@ TEST(Timeline_Clip_Order)
 
 TEST(Timeline_Effect_Order)
 {
-	cout << "Timeline_Effect_Order" << endl;
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
@@ -443,7 +437,6 @@ TEST(Timeline_Effect_Order)
 
 TEST(Timeline_Effect_Blur)
 {
-	cout << "Timeline_Effect_Blur" << endl;
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 

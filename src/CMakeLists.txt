@@ -188,7 +188,6 @@ SET ( OPENSHOT_SOURCE_FILES
   		AudioReaderSource.cpp
 		AudioResampler.cpp
 		CacheBase.cpp
-		CacheDisk.cpp
 		CacheMemory.cpp
 		ChunkReader.cpp
 		ChunkWriter.cpp

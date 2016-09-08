@@ -99,7 +99,6 @@
 #include "AudioBufferSource.h"
 #include "AudioReaderSource.h"
 #include "AudioResampler.h"
-#include "CacheDisk.h"
 #include "CacheMemory.h"
 #include "ChunkReader.h"
 #include "ChunkWriter.h"

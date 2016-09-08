@@ -34,14 +34,12 @@ using namespace openshot;
 
 TEST(FFmpegReader_Invalid_Path)
 {
-	cout << "FFmpegReader_Invalid_Path" << endl;
 	// Check invalid path
 	CHECK_THROW(FFmpegReader(""), InvalidFile);
 }
 
 TEST(FFmpegReader_GetFrame_Before_Opening)
 {
-	cout << "FFmpegReader_GetFrame_Before_Opening" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
@@ -53,7 +51,6 @@ TEST(FFmpegReader_GetFrame_Before_Opening)
 
 TEST(FFmpegReader_Check_Audio_File)
 {
-	cout << "FFmpegReader_Check_Audio_File" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
@@ -84,7 +81,6 @@ TEST(FFmpegReader_Check_Audio_File)
 
 TEST(FFmpegReader_Check_Video_File)
 {
-	cout << "FFmpegReader_Check_Video_File" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "test.mp4";
@@ -123,7 +119,6 @@ TEST(FFmpegReader_Check_Video_File)
 
 TEST(FFmpegReader_Seek)
 {
-	cout << "FFmpegReader_Seek" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
@@ -181,7 +176,6 @@ TEST(FFmpegReader_Seek)
 
 TEST(FFmpegReader_Multiple_Open_and_Close)
 {
-	cout << "FFmpegReader_Multiple_Open_and_Close" << endl;
 	// Create a reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";

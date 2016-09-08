@@ -34,7 +34,6 @@ using namespace openshot;
 
 TEST(FFmpegWriter_Test_Webm)
 {
-	cout << "FFmpegWriter_Test_Webm" << endl;
 	// Reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
