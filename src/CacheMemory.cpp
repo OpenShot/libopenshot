@@ -63,6 +63,7 @@ CacheMemory::~CacheMemory()
 void CacheMemory::CalculateRanges() {
 	// Only calculate when something has changed
 	if (needs_range_processing) {
+		cout << "CacheMemory::CalculateRanges" << endl;
 
 		// Create a scoped lock, to protect the cache from multiple threads
 		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -127,6 +128,7 @@ void CacheMemory::CalculateRanges() {
 // Add a Frame to the cache
 void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 {
+	cout << "CacheMemory::Add " << frame->number << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	long int frame_number = frame->number;
@@ -214,6 +216,7 @@ void CacheMemory::Remove(long int frame_number)
 // Remove range of frames
 void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 {
+	cout << "CacheMemory::Remove (" << start_frame_number << ", " << end_frame_number << ")" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -278,6 +281,7 @@ void CacheMemory::MoveToFront(long int frame_number)
 // Clear the cache of all frames
 void CacheMemory::Clear()
 {
+	cout << "CacheMemory::Clear" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -299,6 +303,7 @@ long int CacheMemory::Count()
 // Clean up cached frames that exceed the number in our max_bytes variable
 void CacheMemory::CleanUp()
 {
+	cout << "CacheMemory::CleanUp" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
