@@ -35,6 +35,7 @@ using namespace openshot;
 #ifdef USE_IMAGEMAGICK
 TEST(ImageWriter_Test_Gif)
 {
+    cout << "ImageWriter_Test_Gif" << endl;
 	// Reader
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
