@@ -99,12 +99,6 @@ namespace openshot {
 		/// @param channels The number of audio channels in the frame
 		void SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels);
 
-		/// Get and Set JSON methods
-		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
-		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
-
 	};
 
 }
