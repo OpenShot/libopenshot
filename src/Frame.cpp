@@ -670,11 +670,11 @@ int Frame::constrain(int color_value)
 }
 
 // Add (or replace) pixel data to the frame (based on a solid color)
-void Frame::AddColor(int width, int height, string color)
+void Frame::AddColor(int new_width, int new_height, string color)
 {
 	// Create new image object, and fill with pixel data
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
-	image = tr1::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+	image = tr1::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
 
 	// Fill with solid color
 	image->fill(QColor(QString::fromStdString(color)));
@@ -686,18 +686,18 @@ void Frame::AddColor(int width, int height, string color)
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(int width, int height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
+void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
-	int buffer_size = width * height * bytes_per_pixel;
+	int buffer_size = new_width * new_height * bytes_per_pixel;
 	qbuffer = new unsigned char[buffer_size]();
 
 	// Copy buffer data
 	memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
 
 	// Create new image object, and fill with pixel data
-	image = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
+	image = tr1::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
 
 	// Always convert to RGBA8888 (if different)
 	if (image->format() != QImage::Format_RGBA8888)

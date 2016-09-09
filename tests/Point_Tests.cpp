@@ -33,6 +33,7 @@ using namespace openshot;
 
 TEST(Point_Default_Constructor)
 {
+	cout << "Point_Default_Constructor" << endl;
 	// Create a point with X and Y values
 	openshot::Point p1(2,9);
 
@@ -43,6 +44,7 @@ TEST(Point_Default_Constructor)
 
 TEST(Point_Constructor_With_Coordinate)
 {
+	cout << "Point_Constructor_With_Coordinate" << endl;
 	// Create a point with a coordinate
 	Coordinate c1(3,7);
 	openshot::Point p1(c1);
@@ -54,6 +56,7 @@ TEST(Point_Constructor_With_Coordinate)
 
 TEST(Point_Constructor_With_Coordinate_And_LINEAR_Interpolation)
 {
+	cout << "Point_Constructor_With_Coordinate_And_LINEAR_Interpolation" << endl;
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
 	InterpolationType interp = LINEAR;
@@ -66,6 +69,7 @@ TEST(Point_Constructor_With_Coordinate_And_LINEAR_Interpolation)
 
 TEST(Point_Constructor_With_Coordinate_And_BEZIER_Interpolation)
 {
+	cout << "Point_Constructor_With_Coordinate_And_BEZIER_Interpolation" << endl;
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
 	InterpolationType interp = BEZIER;
@@ -78,6 +82,7 @@ TEST(Point_Constructor_With_Coordinate_And_BEZIER_Interpolation)
 
 TEST(Point_Constructor_With_Coordinate_And_CONSTANT_Interpolation)
 {
+	cout << "Point_Constructor_With_Coordinate_And_CONSTANT_Interpolation" << endl;
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(2,8);
 	InterpolationType interp = CONSTANT;
@@ -90,6 +95,7 @@ TEST(Point_Constructor_With_Coordinate_And_CONSTANT_Interpolation)
 
 TEST(Point_Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle)
 {
+	cout << "Point_Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle" << endl;
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
 	openshot::Point p1(c1, BEZIER, AUTO);
@@ -102,6 +108,7 @@ TEST(Point_Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle)
 
 TEST(Point_Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle)
 {
+	cout << "Point_Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle" << endl;
 	// Create a point with a coordinate and interpolation
 	Coordinate c1(3,9);
 	openshot::Point p1(c1, BEZIER, MANUAL);
@@ -114,6 +121,7 @@ TEST(Point_Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle)
 
 TEST(Point_Set_Handles_Auto_No_Value)
 {
+	cout << "Point_Set_Handles_Auto_No_Value" << endl;
 	// Create a point with X and Y values
 	openshot::Point p1(2,8);
 	p1.Initialize_Handles();
@@ -126,6 +134,7 @@ TEST(Point_Set_Handles_Auto_No_Value)
 
 TEST(Point_Set_Handles_Auto_With_Values)
 {
+	cout << "Point_Set_Handles_Auto_With_Values" << endl;
 	// Create a point with X and Y values
 	openshot::Point p1(2,8);
 	p1.Initialize_Handles(4.2);

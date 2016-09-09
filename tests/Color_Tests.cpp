@@ -33,6 +33,7 @@ using namespace openshot;
 
 TEST(Color_Default_Constructor)
 {
+	cout << "Color_Default_Constructor" << endl;
 	// Create an empty color
 	Color c1;
 
@@ -43,6 +44,7 @@ TEST(Color_Default_Constructor)
 
 TEST(Color_Animate_Colors)
 {
+	cout << "Color_Animate_Colors" << endl;
 	// Create an empty color
 	Color c1;
 
@@ -64,6 +66,7 @@ TEST(Color_Animate_Colors)
 
 TEST(Color_HEX_Value)
 {
+	cout << "Color_HEX_Value" << endl;
 	// Color
 	openshot::Color c;
 	c.red = openshot::Keyframe(0);
@@ -81,6 +84,7 @@ TEST(Color_HEX_Value)
 
 TEST(Color_HEX_Constructor)
 {
+	cout << "Color_HEX_Constructor" << endl;
 	// Color
 	openshot::Color c("#4586db");
 	c.red.AddPoint(100, 255);
@@ -94,6 +98,7 @@ TEST(Color_HEX_Constructor)
 
 TEST(Color_Distance)
 {
+	cout << "Color_Distance" << endl;
 	// Color
 	openshot::Color c1("#040a0c");
 	openshot::Color c2("#0c0c04");
@@ -106,6 +111,7 @@ TEST(Color_Distance)
 
 TEST(Color_RGBA_Constructor)
 {
+	cout << "Color_RGBA_Constructor" << endl;
 	// Color
 	openshot::Color c(69, 134, 219, 255);
 	c.red.AddPoint(100, 255);

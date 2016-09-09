@@ -33,6 +33,7 @@ using namespace openshot;
 
 TEST(Fraction_Default_Constructor)
 {
+	cout << "Fraction_Default_Constructor" << endl;
 	// Create a default fraction (should be 1/1)
 	Fraction f1;
 
@@ -54,6 +55,7 @@ TEST(Fraction_Default_Constructor)
 
 TEST(Fraction_640_480)
 {
+	cout << "Fraction_640_480" << endl;
 	// Create fraction
 	Fraction f1(640, 480);
 
@@ -75,6 +77,7 @@ TEST(Fraction_640_480)
 
 TEST(Fraction_1280_720)
 {
+	cout << "Fraction_1280_720" << endl;
 	// Create fraction
 	Fraction f1(1280, 720);
 
@@ -96,6 +99,7 @@ TEST(Fraction_1280_720)
 
 TEST(Fraction_reciprocal)
 {
+	cout << "Fraction_reciprocal" << endl;
 	// Create fraction
 	Fraction f1(1280, 720);
 

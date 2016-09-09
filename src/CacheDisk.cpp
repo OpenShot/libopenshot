@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Cache class
+ * @brief Source file for CacheDisk class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,46 +25,68 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheMemory.h"
+#include "../include/CacheDisk.h"
 
 using namespace std;
 using namespace openshot;
 
 // Default constructor, no max bytes
-CacheMemory::CacheMemory() : CacheBase(0) {
+CacheDisk::CacheDisk(string cache_path, string format, float quality, float scale) : CacheBase(0) {
 	// Set cache type name
-	cache_type = "CacheMemory";
+	cache_type = "CacheDisk";
 	range_version = 0;
 	needs_range_processing = false;
+	frame_size_bytes = 0;
+	image_format = format;
+	image_quality = quality;
+	image_scale = scale;
+	max_bytes = 0;
+
+	// Init path directory
+	InitPath(cache_path);
 };
 
 // Constructor that sets the max bytes to cache
-CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
+CacheDisk::CacheDisk(string cache_path, string format, float quality, float scale, long long int max_bytes) : CacheBase(max_bytes) {
 	// Set cache type name
-	cache_type = "CacheMemory";
+	cache_type = "CacheDisk";
 	range_version = 0;
 	needs_range_processing = false;
+	frame_size_bytes = 0;
+	image_format = format;
+	image_quality = quality;
+	image_scale = scale;
+
+	// Init path directory
+	InitPath(cache_path);
 };
 
-// Default destructor
-CacheMemory::~CacheMemory()
-{
-	cout << "CacheMemory::~CacheMemory" << endl;
-	frames.clear();
-	frame_numbers.clear();
-	ordered_frame_numbers.clear();
+// Initialize cache directory
+void CacheDisk::InitPath(string cache_path) {
+	QString qpath;
 
-	// remove critical section
-	delete cacheCriticalSection;
-	cacheCriticalSection = NULL;
+	if (!cache_path.empty()) {
+		// Init QDir with cache directory
+		qpath = QString(cache_path.c_str());
+
+	} else {
+		// Init QDir with user's temp directory
+		qpath = QDir::tempPath() + QString("/preview-cache/");
+	}
+
+	// Init QDir with cache directory
+	path = QDir(qpath);
+
+	// Check if cache directory exists
+	if (!path.exists())
+		// Create
+		path.mkpath(qpath);
 }
 
-
 // Calculate ranges of frames
-void CacheMemory::CalculateRanges() {
+void CacheDisk::CalculateRanges() {
 	// Only calculate when something has changed
 	if (needs_range_processing) {
-		cout << "CacheMemory::CalculateRanges" << endl;
 
 		// Create a scoped lock, to protect the cache from multiple threads
 		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -126,10 +148,21 @@ void CacheMemory::CalculateRanges() {
 	}
 }
 
-// Add a Frame to the cache
-void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
+// Default destructor
+CacheDisk::~CacheDisk()
 {
-	cout << "CacheMemory::Add " << frame->number << endl;
+	frames.clear();
+	frame_numbers.clear();
+	ordered_frame_numbers.clear();
+
+	// remove critical section
+	delete cacheCriticalSection;
+	cacheCriticalSection = NULL;
+}
+
+// Add a Frame to the cache
+void CacheDisk::Add(tr1::shared_ptr<Frame> frame)
+{
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	long int frame_number = frame->number;
@@ -142,10 +175,44 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 	else
 	{
 		// Add frame to queue and map
-		frames[frame_number] = frame;
+		frames[frame_number] = frame_number;
 		frame_numbers.push_front(frame_number);
 		ordered_frame_numbers.push_back(frame_number);
 		needs_range_processing = true;
+
+		// Save image to disk (if needed)
+		QString frame_path(path.path() + "/" + QString("%1.").arg(frame_number) + QString(image_format.c_str()).toLower());
+		frame->Save(frame_path.toStdString(), image_scale, image_format, image_quality);
+		if (frame_size_bytes == 0) {
+			// Get compressed size of frame image (to correctly apply max size against)
+			QFile image_file(frame_path);
+			frame_size_bytes = image_file.size();
+		}
+
+		// Save audio data (if needed)
+		if (frame->has_audio_data) {
+			QString audio_path(path.path() + "/" + QString("%1").arg(frame_number) + ".audio");
+			QFile audio_file(audio_path);
+
+			if (audio_file.open(QIODevice::WriteOnly)) {
+				QTextStream audio_stream(&audio_file);
+				audio_stream << frame->SampleRate() << endl;
+				audio_stream << frame->GetAudioChannelsCount() << endl;
+				audio_stream << frame->GetAudioSamplesCount() << endl;
+				audio_stream << frame->ChannelsLayout() << endl;
+
+				// Loop through all samples
+				for (int channel = 0; channel < frame->GetAudioChannelsCount(); channel++)
+				{
+					// Get audio for this channel
+					float *samples = frame->GetAudioSamples(channel);
+					for (int sample = 0; sample < frame->GetAudioSamplesCount(); sample++)
+						audio_stream << samples[sample] << endl;
+				}
+
+			}
+
+		}
 
 		// Clean up old frames
 		CleanUp();
@@ -153,26 +220,78 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
+tr1::shared_ptr<Frame> CacheDisk::GetFrame(long int frame_number)
 {
-	cout << "CacheMemory::GetFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
-	if (frames.count(frame_number))
-		// return the Frame object
-		return frames[frame_number];
+	if (frames.count(frame_number)) {
+		// Does frame exist on disk
+		QString frame_path(path.path() + "/" + QString("%1.").arg(frame_number) + QString(image_format.c_str()).toLower());
+		if (path.exists(frame_path)) {
 
-	else
-		// no Frame found
-		return tr1::shared_ptr<Frame>();
+			// Load image file
+			tr1::shared_ptr<QImage> image = tr1::shared_ptr<QImage>(new QImage());
+			bool success = image->load(QString::fromStdString(frame_path.toStdString()));
+
+			// Set pixel formatimage->
+			image = tr1::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
+
+			// Create frame object
+			tr1::shared_ptr<Frame> frame(new Frame());
+			frame->number = frame_number;
+			frame->AddImage(image);
+
+			// Get audio data (if found)
+			QString audio_path(path.path() + "/" + QString("%1").arg(frame_number) + ".audio");
+			QFile audio_file(audio_path);
+			if (audio_file.exists()) {
+				// Open audio file
+				QTextStream in(&audio_file);
+				if (audio_file.open(QIODevice::ReadOnly)) {
+					int sample_rate = in.readLine().toInt();
+					int channels = in.readLine().toInt();
+					int sample_count = in.readLine().toInt();
+					int channel_layout = in.readLine().toInt();
+
+					// Set basic audio properties
+					frame->ResizeAudio(channels, sample_count, sample_rate, (ChannelLayout) channel_layout);
+
+					// Loop through audio samples and add to frame
+					int current_channel = 0;
+					int current_sample = 0;
+					float *channel_samples = new float[sample_count];
+					while (!in.atEnd()) {
+						// Add sample to channel array
+						channel_samples[current_sample] = in.readLine().toFloat();
+						current_sample++;
+
+						if (current_sample == sample_count) {
+							// Add audio to frame
+							frame->AddAudio(true, current_channel, 0, channel_samples, sample_count, 1.0);
+
+							// Increment channel, and reset sample position
+							current_channel++;
+							current_sample = 0;
+						}
+
+					}
+				}
+			}
+
+			// return the Frame object
+			return frame;
+		}
+	}
+
+	// no Frame found
+	return tr1::shared_ptr<Frame>();
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
+tr1::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
 {
-	cout << "CacheMemory::GetSmallestFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	tr1::shared_ptr<openshot::Frame> f;
@@ -193,34 +312,30 @@ tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 }
 
 // Gets the maximum bytes value
-long long int CacheMemory::GetBytes()
+long long int CacheDisk::GetBytes()
 {
-	cout << "CacheMemory::GetBytes" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
-	long long int total_bytes = 0;
+	long long  int total_bytes = 0;
 
 	// Loop through frames, and calculate total bytes
 	deque<long int>::reverse_iterator itr;
 	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
-	{
-		total_bytes += frames[*itr]->GetBytes();
-	}
+		total_bytes += frame_size_bytes;
 
 	return total_bytes;
 }
 
 // Remove a specific frame
-void CacheMemory::Remove(long int frame_number)
+void CacheDisk::Remove(long int frame_number)
 {
 	Remove(frame_number, frame_number);
 }
 
 // Remove range of frames
-void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
+void CacheDisk::Remove(long int start_frame_number, long int end_frame_number)
 {
-	cout << "CacheMemory::Remove (" << start_frame_number << ", " << end_frame_number << ")" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -228,11 +343,12 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 	deque<long int>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end();)
 	{
+		//deque<long int>::iterator current = itr++;
 		if (*itr >= start_frame_number && *itr <= end_frame_number)
 		{
 			// erase frame number
 			itr = frame_numbers.erase(itr);
-		}else
+		} else
 			itr++;
 	}
 
@@ -244,8 +360,21 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 		{
 			// erase frame number
 			frames.erase(*itr_ordered);
+
+			// Remove the image file (if it exists)
+			QString frame_path(path.path() + "/" + QString("%1.").arg(*itr_ordered) + QString(image_format.c_str()).toLower());
+			QFile image_file(frame_path);
+			if (image_file.exists())
+				image_file.remove();
+
+			// Remove audio file (if it exists)
+			QString audio_path(path.path() + "/" + QString("%1").arg(*itr_ordered) + ".audio");
+			QFile audio_file(audio_path);
+			if (audio_file.exists())
+				audio_file.remove();
+
 			itr_ordered = ordered_frame_numbers.erase(itr_ordered);
-		}else
+		} else
 			itr_ordered++;
 	}
 
@@ -254,16 +383,15 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void CacheMemory::MoveToFront(long int frame_number)
+void CacheDisk::MoveToFront(long int frame_number)
 {
-	cout << "CacheMemory::MoveToFront" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Does frame exists in cache?
 	/* FIXME if the frame number isn't present, the loop will do nothing, so why protect it?
 	 * Is it to save time by avoiding a loop?
-	 * Do we really need to optimize the case where we've been given a nonexisting frame_number? */
+	 * Do we really need to optmize the case where we've been given a nonexisting frame_number? */
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
@@ -284,21 +412,29 @@ void CacheMemory::MoveToFront(long int frame_number)
 }
 
 // Clear the cache of all frames
-void CacheMemory::Clear()
+void CacheDisk::Clear()
 {
-	cout << "CacheMemory::Clear" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
+	// Clear all containers
 	frames.clear();
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
+	needs_range_processing = true;
+	frame_size_bytes = 0;
+
+	// Delete cache directory, and recreate it
+	QString current_path = path.path();
+	path.removeRecursively();
+
+	// Re-init folder
+	InitPath(current_path.toStdString());
 }
 
 // Count the frames in the queue
-long int CacheMemory::Count()
+long int CacheDisk::Count()
 {
-	cout << "CacheMemory::Count" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -307,17 +443,14 @@ long int CacheMemory::Count()
 }
 
 // Clean up cached frames that exceed the number in our max_bytes variable
-void CacheMemory::CleanUp()
+void CacheDisk::CleanUp()
 {
-	cout << "CacheMemory::CleanUp" << endl;
-	cout << " -- max_bytes: " << max_bytes << endl;
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
-		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Get the oldest frame number.
@@ -329,16 +462,15 @@ void CacheMemory::CleanUp()
 	}
 }
 
-
 // Generate JSON string of this object
-string CacheMemory::Json() {
+string CacheDisk::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value CacheMemory::JsonValue() {
+Json::Value CacheDisk::JsonValue() {
 
 	// Proccess range data (if anything has changed)
 	CalculateRanges();
@@ -346,6 +478,7 @@ Json::Value CacheMemory::JsonValue() {
 	// Create root json object
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
+	root["path"] = path.path().toStdString();
 	root["ranges"] = ranges;
 
 	Json::Value version;
@@ -358,7 +491,7 @@ Json::Value CacheMemory::JsonValue() {
 }
 
 // Load JSON string into this object
-void CacheMemory::SetJson(string value) throw(InvalidJSON) {
+void CacheDisk::SetJson(string value) throw(InvalidJSON) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -381,7 +514,7 @@ void CacheMemory::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void CacheMemory::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
+void CacheDisk::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();
@@ -391,4 +524,7 @@ void CacheMemory::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed
 
 	if (!root["type"].isNull())
 		cache_type = root["type"].asString();
+	if (!root["path"].isNull())
+		// Update duration of timeline
+		InitPath(root["path"].asString());
 }

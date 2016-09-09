@@ -33,6 +33,7 @@ using namespace openshot;
 
 TEST(Coordinate_Default_Constructor)
 {
+	cout << "Coordinate_Default_Constructor" << endl;
 	// Create an empty coordinate
 	Coordinate c1;
 
@@ -42,6 +43,7 @@ TEST(Coordinate_Default_Constructor)
 
 TEST(Coordinate_X_Y_Constructor)
 {
+	cout << "Coordinate_X_Y_Constructor" << endl;
 	// Create an empty coordinate
 	Coordinate c1(2,8);
 

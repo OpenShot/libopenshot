@@ -33,6 +33,7 @@ using namespace openshot;
 
 TEST(Keyframe_GetPoint_With_No_Points)
 {
+	cout << "Keyframe_GetPoint_With_No_Points" << endl;
 	// Create an empty keyframe
 	Keyframe k1;
 
@@ -41,6 +42,7 @@ TEST(Keyframe_GetPoint_With_No_Points)
 
 TEST(Keyframe_GetPoint_With_1_Points)
 {
+	cout << "Keyframe_GetPoint_With_1_Points" << endl;
 	// Create an empty keyframe
 	Keyframe k1;
 	k1.AddPoint(openshot::Point(2,3));
@@ -55,6 +57,7 @@ TEST(Keyframe_GetPoint_With_1_Points)
 
 TEST(Keyframe_AddPoint_With_1_Point)
 {
+	cout << "Keyframe_AddPoint_With_1_Point" << endl;
 	// Create an empty keyframe
 	Keyframe k1;
 	k1.Auto_Handle_Percentage = 0.4f;
@@ -67,6 +70,7 @@ TEST(Keyframe_AddPoint_With_1_Point)
 
 TEST(Keyframe_AddPoint_With_2_Points)
 {
+	cout << "Keyframe_AddPoint_With_2_Points" << endl;
 	// Create an empty keyframe
 	Keyframe k1;
 	k1.Auto_Handle_Percentage = 0.4f;
@@ -81,6 +85,7 @@ TEST(Keyframe_AddPoint_With_2_Points)
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 {
+	cout << "Keyframe_GetValue_For_Bezier_Curve_2_Points" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -101,6 +106,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 {
+	cout << "Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -125,6 +131,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 {
+	cout << "Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.25f;
@@ -149,6 +156,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 
 TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 {
+	cout << "Keyframe_GetValue_For_Linear_Curve_3_Points" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -170,6 +178,7 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 
 TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 {
+	cout << "Keyframe_GetValue_For_Constant_Curve_3_Points" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -192,6 +201,7 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 
 TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 {
+	cout << "Keyframe_Check_Direction_and_Repeat_Fractions" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.AddPoint(1, 500);
@@ -227,6 +237,7 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 
 TEST(Keyframe_Get_Closest_Point)
 {
+	cout << "Keyframe_Get_Closest_Point" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.AddPoint(1, 0.0);
@@ -246,6 +257,7 @@ TEST(Keyframe_Get_Closest_Point)
 
 TEST(Keyframe_Scale_Keyframe)
 {
+	cout << "Keyframe_Scale_Keyframe" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -289,6 +301,7 @@ TEST(Keyframe_Scale_Keyframe)
 
 TEST(Keyframe_Flip_Keyframe)
 {
+	cout << "Keyframe_Flip_Keyframe" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.Auto_Handle_Percentage = 0.4f;
@@ -324,6 +337,7 @@ TEST(Keyframe_Flip_Keyframe)
 
 TEST(Keyframe_Remove_Duplicate_Point)
 {
+	cout << "Keyframe_Remove_Duplicate_Point" << endl;
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
 	kf.AddPoint(1, 0.0);

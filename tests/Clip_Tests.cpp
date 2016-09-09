@@ -34,6 +34,7 @@ using namespace openshot;
 
 TEST(Clip_Default_Constructor)
 {
+	cout << "Clip_Default_Constructor" << endl;
 	// Create a empty clip
 	Clip c1;
 
@@ -49,6 +50,7 @@ TEST(Clip_Default_Constructor)
 
 TEST(Clip_Constructor)
 {
+	cout << "Clip_Constructor" << endl;
 	// Create a empty clip
 	stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
@@ -67,6 +69,7 @@ TEST(Clip_Constructor)
 
 TEST(Clip_Basic_Gettings_and_Setters)
 {
+	cout << "Clip_Basic_Gettings_and_Setters" << endl;
 	// Create a empty clip
 	Clip c1;
 
@@ -94,6 +97,7 @@ TEST(Clip_Basic_Gettings_and_Setters)
 
 TEST(Clip_Properties)
 {
+	cout << "Clip_Properties" << endl;
 	// Create a empty clip
 	Clip c1;
 
@@ -204,6 +208,7 @@ TEST(Clip_Properties)
 
 TEST(Clip_Effects)
 {
+	cout << "Clip_Effects" << endl;
 	// Load clip with video
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";

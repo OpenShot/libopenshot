@@ -35,12 +35,13 @@ using namespace openshot;
 // a new derived class, in order to test the base class file info struct.
 TEST(ReaderBase_Derived_Class)
 {
+	cout << "ReaderBase_Derived_Class" << endl;
 	// Create a new derived class from type ReaderBase
 	class TestReader : public ReaderBase
 	{
 	public:
 		TestReader() { };
-		CacheMemory* GetCache() { return NULL; };
+		CacheBase* GetCache() { return NULL; };
 		tr1::shared_ptr<Frame> GetFrame(long int number) { tr1::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };

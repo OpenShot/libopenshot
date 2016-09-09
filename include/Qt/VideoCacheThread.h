@@ -61,10 +61,10 @@ namespace openshot
     /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     int getSpeed() const { return speed; }
 
-	/// Play the audio
+	/// Play the video
 	void Play();
 
-	/// Seek the audio thread
+	/// Seek the reader to a particular frame number
 	void Seek(int new_position);
 
 	/// Set the currently displaying frame number

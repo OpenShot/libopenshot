@@ -84,6 +84,11 @@ namespace openshot {
 		/// @param frame_number The frame number of the cached frame
 		virtual void Remove(long int frame_number) = 0;
 
+		/// @brief Remove a range of frames
+		/// @param start_frame_number The starting frame number of the cached frame
+		/// @param end_frame_number The ending frame number of the cached frame
+		virtual void Remove(long int start_frame_number, long int end_frame_number) = 0;
+
 		/// Gets the maximum bytes value
 		long long int GetMaxBytes() { return max_bytes; };
 
@@ -98,6 +103,12 @@ namespace openshot {
 		/// @param sample_rate The sample rate of the frame's audio data
 		/// @param channels The number of audio channels in the frame
 		void SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels);
+
+		/// Get and Set JSON methods
+		virtual string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
+		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 
 	};
 
