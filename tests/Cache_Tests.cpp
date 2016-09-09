@@ -34,7 +34,6 @@ using namespace openshot;
 
 TEST(Cache_Default_Constructor)
 {
-	cout << "Cache_Default_Constructor" << endl;
 	// Create cache object
 	CacheMemory c;
 
@@ -53,7 +52,6 @@ TEST(Cache_Default_Constructor)
 
 TEST(Cache_Max_Bytes_Constructor)
 {
-	cout << "Cache_Max_Bytes_Constructor" << endl;
 	// Create cache object (with a max of 5 previous items)
 	CacheMemory c(250 * 1024);
 
@@ -93,7 +91,6 @@ TEST(Cache_Max_Bytes_Constructor)
 
 TEST(Cache_Clear)
 {
-	cout << "Cache_Clear" << endl;
 	// Create cache object
 	CacheMemory c(250 * 1024);
 
@@ -118,7 +115,6 @@ TEST(Cache_Clear)
 
 TEST(Cache_Add_Duplicate_Frames)
 {
-	cout << "Cache_Add_Duplicate_Frames" << endl;
 	// Create cache object
 	CacheMemory c(250 * 1024);
 
@@ -136,7 +132,6 @@ TEST(Cache_Add_Duplicate_Frames)
 
 TEST(Cache_Check_If_Frame_Exists)
 {
-	cout << "Cache_Check_If_Frame_Exists" << endl;
 	// Create cache object
 	CacheMemory c(250 * 1024);
 
@@ -161,7 +156,6 @@ TEST(Cache_Check_If_Frame_Exists)
 
 TEST(Cache_GetFrame)
 {
-	cout << "Cache_GetFrame" << endl;
 	// Create cache object
 	CacheMemory c(250 * 1024);
 
@@ -187,7 +181,6 @@ TEST(Cache_GetFrame)
 
 TEST(Cache_GetSmallest)
 {
-	cout << "Cache_GetSmallest" << endl;
 	// Create cache object (with a max of 10 items)
 	CacheMemory c(250 * 1024);
 
@@ -216,7 +209,6 @@ TEST(Cache_GetSmallest)
 
 TEST(Cache_Remove)
 {
-	cout << "Cache_Remove" << endl;
 	// Create cache object (with a max of 10 items)
 	CacheMemory c(250 * 1024);
 
@@ -257,7 +249,6 @@ TEST(Cache_Remove)
 
 TEST(Cache_Set_Max_Bytes)
 {
-	cout << "Cache_Set_Max_Bytes" << endl;
 	// Create cache object
 	CacheMemory c;
 
@@ -283,7 +274,6 @@ TEST(Cache_Set_Max_Bytes)
 
 TEST(Cache_Multiple_Remove)
 {
-	cout << "Cache_Multiple_Remove" << endl;
 	// Create cache object (using platform /temp/ directory)
 	CacheMemory c;
 
@@ -312,7 +302,6 @@ TEST(Cache_Multiple_Remove)
 
 TEST(CacheDisk_Set_Max_Bytes)
 {
-	cout << "CacheDisk_Set_Max_Bytes" << endl;
 	// Create cache object (using platform /temp/ directory)
 	CacheDisk c("", "PPM", 1.0, 0.25);
 
@@ -352,7 +341,6 @@ TEST(CacheDisk_Set_Max_Bytes)
 
 TEST(CacheDisk_Multiple_Remove)
 {
-	cout << "CacheDisk_Multiple_Remove" << endl;
 	// Create cache object (using platform /temp/ directory)
 	CacheDisk c("", "PPM", 1.0, 0.25);
 
@@ -381,7 +369,6 @@ TEST(CacheDisk_Multiple_Remove)
 
 TEST(CacheDisk_JSON)
 {
-	cout << "CacheDisk_JSON" << endl;
 	// Create cache object (using platform /temp/ directory)
 	CacheDisk c("", "PPM", 1.0, 0.25);
 
@@ -419,7 +406,6 @@ TEST(CacheDisk_JSON)
 
 TEST(CacheMemory_JSON)
 {
-	cout << "CacheMemory_JSON" << endl;
 	// Create memory cache object
 	CacheMemory c;
 

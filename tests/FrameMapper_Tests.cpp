@@ -34,7 +34,6 @@ using namespace openshot;
 
 TEST(FrameMapper_Get_Valid_Frame)
 {
-	cout << "FrameMapper_Get_Valid_Frame" << endl;
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
@@ -56,7 +55,6 @@ TEST(FrameMapper_Get_Valid_Frame)
 
 TEST(FrameMapper_Invalid_Frame_Too_Small)
 {
-	cout << "FrameMapper_Invalid_Frame_Too_Small" << endl;
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
@@ -70,7 +68,6 @@ TEST(FrameMapper_Invalid_Frame_Too_Small)
 
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 {
-	cout << "FrameMapper_24_fps_to_30_fps_Pulldown_Classic" << endl;
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
@@ -88,7 +85,6 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 {
-	cout << "FrameMapper_24_fps_to_30_fps_Pulldown_Advanced" << endl;
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
@@ -109,7 +105,6 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 
 TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 {
-	cout << "FrameMapper_24_fps_to_30_fps_Pulldown_None" << endl;
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
@@ -127,7 +122,6 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 {
-	cout << "FrameMapper_30_fps_to_24_fps_Pulldown_Classic" << endl;
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
@@ -148,7 +142,6 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 {
-	cout << "FrameMapper_30_fps_to_24_fps_Pulldown_Advanced" << endl;
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
@@ -169,7 +162,6 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 
 TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 {
-	cout << "FrameMapper_30_fps_to_24_fps_Pulldown_None" << endl;
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
 
@@ -187,7 +179,6 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 
 TEST(FrameMapper_resample_audio_48000_to_41000)
 {
-	cout << "FrameMapper_resample_audio_48000_to_41000" << endl;
 	// Create a reader: 24 fps, 2 channels, 48000 sample rate
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
