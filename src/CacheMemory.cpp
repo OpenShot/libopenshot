@@ -49,7 +49,6 @@ CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
 // Default destructor
 CacheMemory::~CacheMemory()
 {
-	cout << "CacheMemory::~CacheMemory" << endl;
 	frames.clear();
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
@@ -64,7 +63,6 @@ CacheMemory::~CacheMemory()
 void CacheMemory::CalculateRanges() {
 	// Only calculate when something has changed
 	if (needs_range_processing) {
-		cout << "CacheMemory::CalculateRanges" << endl;
 
 		// Create a scoped lock, to protect the cache from multiple threads
 		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -73,8 +71,7 @@ void CacheMemory::CalculateRanges() {
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
 
 		// Clear existing JSON variable
-		ranges.clear();
-		ranges = Json::Value(Json::arrayValue);
+		Json::Value ranges = Json::Value(Json::arrayValue);
 
 		// Increment range version
 		range_version++;
@@ -121,6 +118,9 @@ void CacheMemory::CalculateRanges() {
 		range["end"] = end_str.str();
 		ranges.append(range);
 
+		// Cache range JSON as string
+		json_ranges = ranges.toStyledString();
+
 		// Reset needs_range_processing
 		needs_range_processing = false;
 	}
@@ -129,7 +129,6 @@ void CacheMemory::CalculateRanges() {
 // Add a Frame to the cache
 void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 {
-	cout << "CacheMemory::Add " << frame->number << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	long int frame_number = frame->number;
@@ -155,7 +154,6 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 {
-	cout << "CacheMemory::GetFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -172,7 +170,6 @@ tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
 tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
-	cout << "CacheMemory::GetSmallestFrame" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 	tr1::shared_ptr<openshot::Frame> f;
@@ -195,7 +192,6 @@ tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 // Gets the maximum bytes value
 long long int CacheMemory::GetBytes()
 {
-	cout << "CacheMemory::GetBytes" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -220,7 +216,6 @@ void CacheMemory::Remove(long int frame_number)
 // Remove range of frames
 void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 {
-	cout << "CacheMemory::Remove (" << start_frame_number << ", " << end_frame_number << ")" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -256,16 +251,12 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 // Move frame to front of queue (so it lasts longer)
 void CacheMemory::MoveToFront(long int frame_number)
 {
-	cout << "CacheMemory::MoveToFront" << endl;
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 	// Does frame exists in cache?
-	/* FIXME if the frame number isn't present, the loop will do nothing, so why protect it?
-	 * Is it to save time by avoiding a loop?
-	 * Do we really need to optimize the case where we've been given a nonexisting frame_number? */
 	if (frames.count(frame_number))
 	{
+		// Create a scoped lock, to protect the cache from multiple threads
+		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 		// Loop through frame numbers
 		deque<long int>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
@@ -286,7 +277,6 @@ void CacheMemory::MoveToFront(long int frame_number)
 // Clear the cache of all frames
 void CacheMemory::Clear()
 {
-	cout << "CacheMemory::Clear" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -298,7 +288,6 @@ void CacheMemory::Clear()
 // Count the frames in the queue
 long int CacheMemory::Count()
 {
-	cout << "CacheMemory::Count" << endl;
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
@@ -309,9 +298,6 @@ long int CacheMemory::Count()
 // Clean up cached frames that exceed the number in our max_bytes variable
 void CacheMemory::CleanUp()
 {
-	cout << "CacheMemory::CleanUp" << endl;
-	cout << " -- max_bytes: " << max_bytes << endl;
-
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
@@ -346,12 +332,18 @@ Json::Value CacheMemory::JsonValue() {
 	// Create root json object
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
-	root["ranges"] = ranges;
 
 	Json::Value version;
 	stringstream range_version_str;
 	range_version_str << range_version;
 	root["version"] = range_version_str.str();
+
+	// Parse and append range data (if any)
+	Json::Value ranges;
+	Json::Reader reader;
+	bool success = reader.parse( json_ranges, ranges );
+	if (success)
+		root["ranges"] = ranges;
 
 	// return JsonValue
 	return root;

@@ -95,8 +95,7 @@ void CacheDisk::CalculateRanges() {
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
 
 		// Clear existing JSON variable
-		ranges.clear();
-		ranges = Json::Value(Json::arrayValue);
+		Json::Value ranges = Json::Value(Json::arrayValue);
 
 		// Increment range version
 		range_version++;
@@ -142,6 +141,9 @@ void CacheDisk::CalculateRanges() {
 		range["start"] = start_str.str();
 		range["end"] = end_str.str();
 		ranges.append(range);
+
+		// Cache range JSON as string
+		json_ranges = ranges.toStyledString();
 
 		// Reset needs_range_processing
 		needs_range_processing = false;
@@ -385,15 +387,12 @@ void CacheDisk::Remove(long int start_frame_number, long int end_frame_number)
 // Move frame to front of queue (so it lasts longer)
 void CacheDisk::MoveToFront(long int frame_number)
 {
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 	// Does frame exists in cache?
-	/* FIXME if the frame number isn't present, the loop will do nothing, so why protect it?
-	 * Is it to save time by avoiding a loop?
-	 * Do we really need to optmize the case where we've been given a nonexisting frame_number? */
 	if (frames.count(frame_number))
 	{
+		// Create a scoped lock, to protect the cache from multiple threads
+		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 		// Loop through frame numbers
 		deque<long int>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
@@ -445,12 +444,12 @@ long int CacheDisk::Count()
 // Clean up cached frames that exceed the number in our max_bytes variable
 void CacheDisk::CleanUp()
 {
-	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 	// Do we auto clean up?
 	if (max_bytes > 0)
 	{
+		// Create a scoped lock, to protect the cache from multiple threads
+		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Get the oldest frame number.
@@ -479,12 +478,18 @@ Json::Value CacheDisk::JsonValue() {
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
 	root["path"] = path.path().toStdString();
-	root["ranges"] = ranges;
 
 	Json::Value version;
 	stringstream range_version_str;
 	range_version_str << range_version;
 	root["version"] = range_version_str.str();
+
+	// Parse and append range data (if any)
+	Json::Value ranges;
+	Json::Reader reader;
+	bool success = reader.parse( json_ranges, ranges );
+	if (success)
+		root["ranges"] = ranges;
 
 	// return JsonValue
 	return root;
