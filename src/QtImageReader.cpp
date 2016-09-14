@@ -109,14 +109,42 @@ tr1::shared_ptr<Frame> QtImageReader::GetFrame(long int requested_frame) throw(R
 	if (!is_open)
 		throw ReaderClosed("The Image is closed.  Call Open() before calling this method.", path);
 
-	// Create or get frame object
-	tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+	// Determine if we need to scale the image (for performance reasons)
+	// The timeline passes its size to the clips, which pass their size to the readers, and eventually here
+	// A max_width/max_height = 0 means do not scale (probably because we are scaling the image larger than 100%)
+	if (max_width != 0 && max_height != 0 && max_width < info.width && max_height < info.height)
+	{
+		// Scale image smaller (or use a previous scaled image)
+		if (!cached_image) {
+			// Create a scoped lock, allowing only a single thread to run the following code at one time
+			const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
-	// Add Image data to frame
-	image_frame->AddImage(image);
+			// We need to resize the original image to a smaller image (for performance reasons)
+			// Only do this once, to prevent tons of unneeded scaling operations
+			cached_image = tr1::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+			cached_image = tr1::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
+		}
 
-	// return frame object
-	return image_frame;
+		// Create or get frame object
+		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, cached_image->width(), cached_image->height(), "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+
+		// Add Image data to frame
+		image_frame->AddImage(cached_image);
+
+		// return frame object
+		return image_frame;
+
+	} else {
+		// Use original image (higher quality but slower)
+		// Create or get frame object
+		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+
+		// Add Image data to frame
+		image_frame->AddImage(image);
+
+		// return frame object
+		return image_frame;
+	}
 }
 
 // Generate JSON string of this object

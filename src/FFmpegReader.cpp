@@ -35,9 +35,8 @@ using namespace openshot;
 FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
-	  check_fps(false), enable_seek(true), rescaler_position(0), num_of_rescalers(OPEN_MP_NUM_PROCESSORS), is_open(false),
-	  seek_audio_frame_found(0), seek_video_frame_found(0), prev_samples(0), prev_pts(0),
-	  pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
+	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
+	  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
 	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0) {
 
 	// Initialize FFMpeg, and register all formats and codecs
@@ -58,20 +57,6 @@ FFmpegReader::~FFmpegReader() {
 	if (is_open)
 		// Auto close reader if not already done
 		Close();
-}
-
-// Init a collection of software rescalers (thread safe)
-void FFmpegReader::InitScalers()
-{
-	// Init software rescalers vector (many of them, one for each thread)
-	for (int x = 0; x < num_of_rescalers; x++)
-	{
-		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, info.width,
-				info.height, PIX_FMT_RGBA, SWS_FAST_BILINEAR, NULL, NULL, NULL);
-
-		// Add rescaler to vector
-		image_rescalers.push_back(img_convert_ctx);
-	}
 }
 
 // This struct holds the associated video frame and starting sample # for an audio packet.
@@ -107,17 +92,6 @@ int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int am
 
 	// not close
 	return false;
-}
-
-// Remove & deallocate all software scalers
-void FFmpegReader::RemoveScalers()
-{
-	// Close all rescalers
-	for (int x = 0; x < num_of_rescalers; x++)
-		sws_freeContext(image_rescalers[x]);
-
-	// Clear vector
-	image_rescalers.clear();
 }
 
 void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
@@ -177,9 +151,6 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 
 			// Update the File Info struct with video details (if a video stream is found)
 			UpdateVideoInfo();
-
-			// Init rescalers (if video stream detected)
-			InitScalers();
 		}
 
 		// Is there an audio stream?
@@ -235,9 +206,6 @@ void FFmpegReader::Close()
 		// Close the codec
 		if (info.has_video)
 		{
-			// Clear image scalers
-			RemoveScalers();
-
 			avcodec_flush_buffers(pCodecCtx);
 			avcodec_close(pCodecCtx);
 		}
@@ -823,17 +791,11 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	AVPacket *my_packet = packets[packet];
 	AVPicture *my_frame = frames[pFrame];
 
-	// Get a scaling context
-	SwsContext *img_convert_ctx = image_rescalers[rescaler_position];
-	rescaler_position++;
-	if (rescaler_position == num_of_rescalers)
-		rescaler_position = 0;
-
 	// Add video frame to list of processing video frames
 	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 	processing_video_frames[current_frame] = current_frame;
 
-	#pragma omp task firstprivate(current_frame, my_packet, my_frame, height, width, video_length, pix_fmt, img_convert_ctx)
+	#pragma omp task firstprivate(current_frame, my_packet, my_frame, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -845,6 +807,27 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		if (pFrameRGB == NULL)
 			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
+		// Determine if video needs to be scaled down (for performance reasons)
+		// Timelines pass their size to the clips, which pass their size to the readers (as max size)
+		// If a clip is being scaled larger, it will set max_width and max_height = 0 (which means don't down scale)
+		int original_height = height;
+		if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
+			// Override width and height (but maintain aspect ratio)
+			float ratio = float(width) / float(height);
+			int possible_width = round(max_height * ratio);
+			int possible_height = round(max_width / ratio);
+
+			if (possible_width <= max_width) {
+				// use calculated width, and max_height
+				width = possible_width;
+				height = max_height;
+			} else {
+				// use max_width, and calculated height
+				width = max_width;
+				height = possible_height;
+			}
+		}
+
 		// Determine required buffer size and allocate buffer
 		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
 		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
@@ -854,9 +837,12 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		// of AVPicture
 		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
+		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, width,
+													  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
-				height, pFrameRGB->data, pFrameRGB->linesize);
+				  original_height, pFrameRGB->data, pFrameRGB->linesize);
 
 		// Create or get the existing frame object
 		tr1::shared_ptr<Frame> f = CreateFrame(current_frame);
@@ -877,6 +863,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		// Remove frame and packet
 		RemoveAVFrame(my_frame);
 		RemoveAVPacket(my_packet);
+		sws_freeContext(img_convert_ctx);
 
 		// Remove video frame from list of processing video frames
 		{

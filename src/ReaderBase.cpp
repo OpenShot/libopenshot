@@ -58,6 +58,8 @@ ReaderBase::ReaderBase()
 	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
+	max_width = 0;
+	max_height = 0;
 }
 
 // Display file information

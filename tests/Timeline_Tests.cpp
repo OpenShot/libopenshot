@@ -102,7 +102,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	clip_overlay.End(0.5);	// Make the duration of the overlay 1/2 second
 
 	// Create a timeline
-	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+	Timeline t(1280, 720, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
 
 	// Add clips
 	t.AddClip(&clip_video);
@@ -115,93 +115,68 @@ TEST(Timeline_Check_Two_Track_Video)
 	tr1::shared_ptr<Frame> f = t.GetFrame(1);
 
 	// Get the image data
-	const unsigned char* pixels = f->GetPixels(200);
+	int pixel_row = 200;
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK_EQUAL(21, (int)pixels[pixel_index]);
-	CHECK_EQUAL(191, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(21, f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(191, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(2);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(252, (int)pixels[pixel_index]);
-	CHECK_EQUAL(252, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(249, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(176, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(3);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(25, (int)pixels[pixel_index]);
-	CHECK_EQUAL(189, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
-
+	CHECK_EQUAL(23, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(190, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(24);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(251, (int)pixels[pixel_index]);
-	CHECK_EQUAL(251, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(248, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(106, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(5);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(25, (int)pixels[pixel_index]);
-	CHECK_EQUAL(189, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(23, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(190, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(25);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(251, (int)pixels[pixel_index]);
-	CHECK_EQUAL(251, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(248, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(94, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame
 	f = t.GetFrame(4);
 
-	// Get scanline 190 of pixels
-	pixels = f->GetPixels(190);
-	pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
-
 	// Check image properties
-	CHECK_EQUAL(252, (int)pixels[pixel_index]);
-	CHECK_EQUAL(250, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(247, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_EQUAL(176, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Close reader
 	t.Close();

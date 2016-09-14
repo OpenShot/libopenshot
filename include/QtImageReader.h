@@ -70,7 +70,8 @@ namespace openshot
 	{
 	private:
 		string path;
-		tr1::shared_ptr<QImage> image;
+		tr1::shared_ptr<QImage> image; ///> Original image (full quality)
+		tr1::shared_ptr<QImage> cached_image; ///> Scaled for performance
 		bool is_open;
 
 	public:

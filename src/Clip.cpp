@@ -596,6 +596,14 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
+		// Set max image size (used for performance optimization)
+		if (scale_x.GetValue(number) > 1.000001 || scale_y.GetValue(number) > 1.000001)
+			// Scaling larger, use original image size (slower but better quality)
+			reader->SetMaxSize(0, 0);
+		else
+			// No scaling applied, use max_size (usually the size of the timeline)
+			reader->SetMaxSize(max_width, max_height);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 

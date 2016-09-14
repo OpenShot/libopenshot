@@ -342,6 +342,9 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
+		// Set max image size (used for performance optimization)
+		reader->SetMaxSize(max_width, max_height);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -423,6 +426,9 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 				info.channel_layout == mapped_frame->ChannelsLayout() &&
 				info.fps.num == reader->info.fps.num &&
 				info.fps.den == reader->info.fps.den) {
+					// Set frame # on mapped frame
+					mapped_frame->SetFrameNumber(frame_number);
+
 					// Add original frame to cache, and skip the rest (for performance reasons)
 					final_cache.Add(mapped_frame);
 					continue;

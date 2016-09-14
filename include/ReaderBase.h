@@ -99,6 +99,9 @@ namespace openshot
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
 
+		int max_width; ///< The maximum image width needed by this clip (used for optimizations)
+		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
+
 	public:
 
 		/// Constructor for the base reader, where many things are initialized.
@@ -141,6 +144,9 @@ namespace openshot
 		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+
+		/// Set Max Image Size (used for performance optimization)
+		void SetMaxSize(int width, int height) { max_width = width; max_height = height;  };
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

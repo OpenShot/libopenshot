@@ -106,10 +106,6 @@ namespace openshot
 		bool check_fps;
 		bool has_missing_frames;
 
-		int num_of_rescalers;
-		int rescaler_position;
-		vector<SwsContext*> image_rescalers;
-
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
 		map<AVPacket*, AVPacket*> packets;
@@ -192,9 +188,6 @@ namespace openshot
 		/// Get the PTS for the current video packet
 		long int GetVideoPTS();
 
-		/// Init a collection of software rescalers (thread safe)
-		void InitScalers();
-
 		/// Remove partial frames due to seek
 		bool IsPartialFrame(long int requested_frame);
 
@@ -212,9 +205,6 @@ namespace openshot
 
 		/// Remove AVPacket from cache (and deallocate it's memory)
 		void RemoveAVPacket(AVPacket*);
-
-		/// Remove & deallocate all software scalers
-		void RemoveScalers();
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 		void Seek(long int requested_frame) throw(TooManySeeks);

@@ -205,6 +205,9 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
+		// Set max image size (used for performance optimization)
+		clip->SetMaxSize(info.width, info.height);
+
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
 
@@ -748,6 +751,9 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
+
+				// Set frame # on mapped frame
+				new_frame->SetFrameNumber(frame_number);
 
 				// Add final frame to cache
 				final_cache->Add(new_frame);

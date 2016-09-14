@@ -57,6 +57,8 @@ namespace openshot {
 		float start; ///< The position in seconds to start playing (used to trim the beginning of a clip)
 		float end; ///< The position in seconds to end playing (used to trim the ending of a clip)
 		string previous_properties; ///< This string contains the previous JSON properties
+		int max_width; ///< The maximum image width needed by this clip (used for optimizations)
+		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
 
 		/// Generate JSON for a property
 		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
@@ -65,6 +67,9 @@ namespace openshot {
 		Json::Value add_property_choice_json(string name, int value, int selected_value);
 
 	public:
+
+		/// Constructor for the base clip
+		ClipBase() { max_width = 0; max_height = 0; };
 
 		// Compare a clip using the Position() property
 		bool operator< ( ClipBase& a) { return (Position() < a.Position()); }
@@ -86,6 +91,9 @@ namespace openshot {
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
+
+		/// Set Max Image Size (used for performance optimization)
+		void SetMaxSize(int width, int height) { max_width = width; max_height = height;  };
 
 		/// Get and Set JSON methods
 		virtual string Json() = 0; ///< Generate JSON string of this object
