@@ -333,11 +333,22 @@ TEST(CacheDisk_Set_Max_Bytes)
 	CHECK_EQUAL(320, f->GetWidth());
 	CHECK_EQUAL(180, f->GetHeight());
 	CHECK_EQUAL(2, f->GetAudioChannelsCount());
-	//TODO: Determine why GetAudioSamplesCount() is returning 0
-	//CHECK_EQUAL(500, f->GetAudioSamplesCount());
+	CHECK_EQUAL(500, f->GetAudioSamplesCount());
 	CHECK_EQUAL(LAYOUT_STEREO, f->ChannelsLayout());
 	CHECK_EQUAL(44100, f->SampleRate());
 
+	// Check count of cache
+	CHECK_EQUAL(20, c.Count());
+
+	// Clear cache
+	c.Clear();
+
+	// Check count of cache
+	CHECK_EQUAL(0, c.Count());
+
+	// Delete cache directory
+	QDir path = QDir::tempPath() + QString("/preview-cache/");
+	path.removeRecursively();
 }
 
 TEST(CacheDisk_Multiple_Remove)
@@ -366,6 +377,10 @@ TEST(CacheDisk_Multiple_Remove)
 
 	// Should have 20 frames
 	CHECK_EQUAL(0, c.Count());
+
+	// Delete cache directory
+	QDir path = QDir::tempPath() + QString("/preview-cache/");
+	path.removeRecursively();
 }
 
 TEST(CacheDisk_JSON)
@@ -403,6 +418,9 @@ TEST(CacheDisk_JSON)
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
 
+	// Delete cache directory
+	QDir path = QDir::tempPath() + QString("/preview-cache/");
+	path.removeRecursively();
 }
 
 TEST(CacheMemory_JSON)
