@@ -1062,9 +1062,11 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 	}
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
-	long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
-	long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
-	final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
+		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
+		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
+		final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+	}
 
 	// Determine type of change operation
 	if (change_type == "insert") {
@@ -1154,9 +1156,11 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 	string change_type = change["type"].asString();
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
-	long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
-	long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
-	final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
+		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
+		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
+		final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+	}
 
 	// Determine type of change operation
 	if (change_type == "insert") {
