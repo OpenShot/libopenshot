@@ -448,53 +448,43 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	y += (info.height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	bool is_x_animated = source_clip->location_x.Points.size() > 1;
 	bool is_y_animated = source_clip->location_y.Points.size() > 1;
+	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
+	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
 
 	int offset_x = -1;
 	int offset_y = -1;
 	bool transformed = false;
 	QTransform transform;
-	if ((!isEqual(x, 0) || !isEqual(y, 0)) && (isEqual(r, 0) && isEqual(sx, 1) && isEqual(sy, 1) && !is_x_animated && !is_y_animated))
-	{
-		// SIMPLE OFFSET
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: SIMPLE)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
-		// If only X and Y are different, and no animation is being used (just set the offset for speed)
+	// Transform source image (if needed)
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
+	if (!isEqual(r, 0)) {
+		// ROTATE CLIP
+		float origin_x = x + (source_width / 2.0);
+		float origin_y = y + (source_height / 2.0);
+		transform.translate(origin_x, origin_y);
+		transform.rotate(r);
+		transform.translate(-origin_x,-origin_y);
 		transformed = true;
+	}
 
-		// Set QTransform
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-
-	} else if (!isEqual(r, 0) || !isEqual(x, 0) || !isEqual(y, 0) || !isEqual(sx, 1) || !isEqual(sy, 1))
-	{
-		// COMPLEX DISTORTION
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
-
-		// Use the QTransform object, which can be very CPU intensive
 		transformed = true;
+	}
 
-		// Set QTransform
-		if (!isEqual(r, 0)) {
-			// ROTATE CLIP
-			float origin_x = x + (source_width / 2.0);
-			float origin_y = y + (source_height / 2.0);
-			transform.translate(origin_x, origin_y);
-			transform.rotate(r);
-			transform.translate(-origin_x,-origin_y);
-		}
+	if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.scale(sx, sy);
+		transformed = true;
+	}
 
-		// Set QTransform
-		if (!isEqual(x, 0) || !isEqual(y, 0)) {
-			// TRANSLATE/MOVE CLIP
-			transform.translate(x, y);
-		}
-
-		if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
-			// TRANSLATE/MOVE CLIP
-			transform.scale(sx, sy);
-		}
-
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: COMPLEX: Completed ScaleRotateTranslateDistortion)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+	if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
+		// SHEAR HEIGHT/WIDTH
+		transform.shear(shear_x, shear_y);
+		transformed = true;
 	}
 
 	// Debug output
@@ -514,6 +504,31 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	// Composite a new layer onto the image
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawImage(0, 0, *source_image);
+
+	// Draw transform selection handles (if needed)
+	if (source_clip->handles == TRANSFORM_HANDLE_SELECTION) {
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Add transform selection handles)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
+
+		// Draw 4 corners
+		painter.fillRect(0.0, 0.0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top left
+		painter.fillRect(source_width - (12.0/sx), 0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top right
+		painter.fillRect(0.0, source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom left
+		painter.fillRect(source_width - (12.0/sx), source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom right
+
+		// Draw 4 sides (centered)
+		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), 0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top center
+		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), source_height - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom center
+		painter.fillRect(0.0, (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // left center
+		painter.fillRect(source_width - (12.0/sx), (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // right center
+
+
+		// Draw origin  QPen(const QBrush &brush, qreal width, Qt::PenStyle style = Qt::SolidLine, Qt::PenCapStyle cap = Qt::SquareCap, Qt::PenJoinStyle join = Qt::BevelJoin)
+		painter.setBrush(QColor(83, 160, 237, 122));
+		painter.setPen(Qt::NoPen);
+		painter.drawEllipse((source_width / 2.0) - (25.0/sx), (source_height / 2.0) - (25.0/sy), 50.0/sx, 50.0/sy);
+	}
+
     painter.end();
 
 	// Debug output

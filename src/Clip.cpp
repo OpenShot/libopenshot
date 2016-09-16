@@ -40,6 +40,7 @@ void Clip::init_settings()
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
+	handles = TRANSFORM_HANDLE_NONE;
 	waveform = false;
 	previous_properties = "";
 
@@ -652,6 +653,7 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", false, 0, 0, 8, CONSTANT, -1, false);
 	root["scale"] = add_property_json("Scale", scale, "int", "", false, 0, 0, 3, CONSTANT, -1, false);
 	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
+	root["handles"] = add_property_json("Handles", handles, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
 
 	// Add gravity choices (dropdown style)
@@ -675,6 +677,10 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["anchor"]["choices"].append(add_property_choice_json("Canvas", ANCHOR_CANVAS, anchor));
 	root["anchor"]["choices"].append(add_property_choice_json("Viewport", ANCHOR_VIEWPORT, anchor));
 
+	// Add transform handles choices (dropdown style)
+	root["handles"]["choices"].append(add_property_choice_json("None", TRANSFORM_HANDLE_NONE, handles));
+	root["handles"]["choices"].append(add_property_choice_json("Selection", TRANSFORM_HANDLE_SELECTION, handles));
+
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
@@ -685,6 +691,8 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), scale_x.GetCount(), 0.0, 1.0, scale_x.GetClosestPoint(requested_point).interpolation, scale_x.GetClosestPoint(requested_point).co.X, false);
 	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), scale_y.GetCount(), 0.0, 1.0, scale_y.GetClosestPoint(requested_point).interpolation, scale_y.GetClosestPoint(requested_point).co.X, false);
 	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), alpha.GetCount(), 0.0, 1.0, alpha.GetClosestPoint(requested_point).interpolation, alpha.GetClosestPoint(requested_point).co.X, false);
+	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", shear_x.Contains(requested_point), shear_x.GetCount(), -1.0, 1.0, shear_x.GetClosestPoint(requested_point).interpolation, shear_x.GetClosestPoint(requested_point).co.X, false);
+	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", shear_y.Contains(requested_point), shear_y.GetCount(), -1.0, 1.0, shear_y.GetClosestPoint(requested_point).interpolation, shear_y.GetClosestPoint(requested_point).co.X, false);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetCount(), -360, 360, rotation.GetClosestPoint(requested_point).interpolation, rotation.GetClosestPoint(requested_point).co.X, false);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetCount(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetCount(), 0.0, 30 * 60 * 60 * 48, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
@@ -711,6 +719,7 @@ Json::Value Clip::JsonValue() {
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
+	root["handles"] = handles;
 	root["waveform"] = waveform;
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
@@ -795,6 +804,8 @@ void Clip::SetJsonValue(Json::Value root) {
 		scale = (ScaleType) root["scale"].asInt();
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
+	if (!root["handles"].isNull())
+		handles = (TransformHandleType) root["handles"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
 	if (!root["scale_x"].isNull())

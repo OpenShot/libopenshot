@@ -61,5 +61,11 @@ namespace openshot
 		ANCHOR_VIEWPORT	///< Anchor the clip to the viewport (which can be moved / animated around the canvas)
 	};
 
+	/// This enumeration determines what parent a clip should be aligned to.
+	enum TransformHandleType
+	{
+		TRANSFORM_HANDLE_NONE,		///< Do not add any transform handles to clip
+		TRANSFORM_HANDLE_SELECTION	///< Add selection handles to clip (useful for editors to display edges of clip)
+	};
 }
 #endif
