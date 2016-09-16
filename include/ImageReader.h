@@ -77,6 +77,11 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		ImageReader(string path) throw(InvalidFile);
 
+		/// Constructor for ImageReader.  This only opens the media file to inspect it's properties
+		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
+		/// when you are inflating the object using JSON after instantiating it.
+		ImageReader(string path, bool inspect_reader) throw(InvalidFile);
+
 		/// Close File
 		void Close();
 

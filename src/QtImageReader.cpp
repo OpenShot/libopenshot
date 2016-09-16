@@ -36,6 +36,15 @@ QtImageReader::QtImageReader(string path) throw(InvalidFile) : path(path), is_op
 	Close();
 }
 
+QtImageReader::QtImageReader(string path, bool inspect_reader) throw(InvalidFile) : path(path), is_open(false)
+{
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	if (inspect_reader) {
+		Open();
+		Close();
+	}
+}
+
 // Open image file
 void QtImageReader::Open() throw(InvalidFile)
 {

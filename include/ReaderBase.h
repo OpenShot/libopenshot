@@ -116,9 +116,6 @@ namespace openshot
 		/// Display file information in the standard output stream (stdout)
 		void DisplayInfo();
 
-		/// Test method to draw a bitmap on a Qt QGraphicsScene
-		void DrawFrameOnScene(string path, long _graphics_scene_address);
-
 		/// Get the cache object used by this reader (note: not all readers use cache)
 		virtual CacheBase* GetCache() = 0;
 
@@ -129,9 +126,6 @@ namespace openshot
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
 		virtual tr1::shared_ptr<Frame> GetFrame(long int number) = 0;
-
-	    /// A thread safe version of GetFrame.
-	    //tr1::shared_ptr<Frame> GetFrameSafe(int number);
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;
@@ -146,7 +140,7 @@ namespace openshot
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 
 		/// Set Max Image Size (used for performance optimization)
-		void SetMaxSize(int width, int height) { max_width = width; max_height = height;  };
+		void SetMaxSize(int width, int height) { max_width = width; max_height = height; };
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

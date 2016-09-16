@@ -53,6 +53,29 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	Close();
 }
 
+FFmpegReader::FFmpegReader(string path, bool inspect_reader) throw(InvalidFile, NoStreamsFound, InvalidCodec)
+		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
+		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
+		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
+		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
+		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0) {
+
+	// Initialize FFMpeg, and register all formats and codecs
+	av_register_all();
+	avcodec_register_all();
+
+	// Init cache
+	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 30, info.width, info.height, info.sample_rate, info.channels);
+	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	if (inspect_reader) {
+		Open();
+		Close();
+	}
+}
+
 FFmpegReader::~FFmpegReader() {
 	if (is_open)
 		// Auto close reader if not already done
@@ -198,10 +221,10 @@ void FFmpegReader::Close()
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-
 		// Mark as "closed"
 		is_open = false;
+
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
 		// Close the codec
 		if (info.has_video)

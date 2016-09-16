@@ -910,20 +910,20 @@ void Clip::SetJsonValue(Json::Value root) {
 			if (type == "FFmpegReader") {
 
 				// Create new reader
-				reader = new FFmpegReader(root["reader"]["path"].asString());
+				reader = new FFmpegReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "QtImageReader") {
 
 				// Create new reader
-				reader = new QtImageReader(root["reader"]["path"].asString());
+				reader = new QtImageReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
 
 #ifdef USE_IMAGEMAGICK
 			} else if (type == "ImageReader") {
 
 				// Create new reader
-				reader = new ImageReader(root["reader"]["path"].asString());
+				reader = new ImageReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "TextReader") {
