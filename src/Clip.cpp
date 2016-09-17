@@ -597,13 +597,32 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Set max image size (used for performance optimization)
-		if (scale_x.GetValue(number) > 1.000001 || scale_y.GetValue(number) > 1.000001)
-			// Scaling larger, use original image size (slower but better quality)
+		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
+		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
+		// without loosing quality.
+		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {
+			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
+			float max_scale_x = scale_x.GetMaxPoint().co.Y;
+			float max_scale_y = scale_y.GetMaxPoint().co.Y;
+			reader->SetMaxSize(max_width * max_scale_x, max_height * max_scale_y);
+
+		} else if (scale == SCALE_CROP) {
+			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
+			float max_scale_x = scale_x.GetMaxPoint().co.Y;
+			float max_scale_y = scale_y.GetMaxPoint().co.Y;
+			QSize width_size(max_width * max_scale_x, round(max_width / (float(reader->info.width) / float(reader->info.height))));
+			QSize height_size(round(max_height / (float(reader->info.height) / float(reader->info.width))), max_height * max_scale_y);
+
+			// respect aspect ratio
+			if (width_size.width() >= max_width && width_size.height() >= max_height)
+				reader->SetMaxSize(width_size.width(), width_size.height());
+			else
+				reader->SetMaxSize(height_size.width(), height_size.height());
+
+		} else {
+			// No scaling, use original image size (slower)
 			reader->SetMaxSize(0, 0);
-		else
-			// No scaling applied, use max_size (usually the size of the timeline)
-			reader->SetMaxSize(max_width, max_height);
+		}
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);

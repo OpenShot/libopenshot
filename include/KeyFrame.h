@@ -141,6 +141,9 @@ namespace openshot {
 		/// Get current point (or closest point) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);
 
+		/// Get max point (by Y coordinate)
+		Point GetMaxPoint();
+
 		// Get the number of values (i.e. coordinates on the X axis)
 		long int GetLength();
 

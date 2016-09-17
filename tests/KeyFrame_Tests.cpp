@@ -244,6 +244,32 @@ TEST(Keyframe_Get_Closest_Point)
 
 }
 
+
+TEST(Keyframe_Get_Max_Point)
+{
+	// Create a keyframe curve
+	Keyframe kf;
+	kf.AddPoint(1, 1.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 1.0);
+
+	kf.AddPoint(2, 0.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 1.0);
+
+	kf.AddPoint(3, 2.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 2.0);
+
+	kf.AddPoint(4, 1.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 2.0);
+}
+
 TEST(Keyframe_Scale_Keyframe)
 {
 	// Create a keyframe curve with 2 points

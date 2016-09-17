@@ -123,6 +123,11 @@ tr1::shared_ptr<Frame> QtImageReader::GetFrame(long int requested_frame) throw(R
 	// A max_width/max_height = 0 means do not scale (probably because we are scaling the image larger than 100%)
 	if (max_width != 0 && max_height != 0 && max_width < info.width && max_height < info.height)
 	{
+		// Remove cache that is no longer valid (if needed)
+		if (cached_image && !(cached_image->width() == max_width || cached_image->height() == max_height))
+			// Expire this cache
+			cached_image.reset();
+
 		// Scale image smaller (or use a previous scaled image)
 		if (!cached_image) {
 			// Create a scoped lock, allowing only a single thread to run the following code at one time

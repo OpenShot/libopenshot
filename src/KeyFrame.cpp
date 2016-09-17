@@ -220,6 +220,25 @@ Point Keyframe::GetClosestPoint(Point p) {
 	return closest;
 }
 
+// Get max point (by Y coordinate)
+Point Keyframe::GetMaxPoint() {
+	Point maxPoint(-1, -1);
+
+	// loop through points, and find the largest Y value
+	for (long int x = 0; x < Points.size(); x++) {
+		// Get each point
+		Point existing_point = Points[x];
+
+		// Is point larger than max point
+		if (existing_point.co.Y >= maxPoint.co.Y) {
+			// New max point found
+			maxPoint = existing_point;
+		}
+	}
+
+	return maxPoint;
+}
+
 // Get the value at a specific index
 float Keyframe::GetValue(long int index)
 {
