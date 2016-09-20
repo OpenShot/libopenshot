@@ -1080,7 +1080,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
 		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
 		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
-		final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
 	}
 
 	// Determine type of change operation
@@ -1099,7 +1099,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = existing_clip->Position() * info.fps.ToDouble();
 			long int old_ending_frame = (existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble();
-			final_cache->Remove(old_starting_frame - 1, old_ending_frame + 1);
+			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Update clip properties from JSON
 			existing_clip->SetJsonValue(change["value"]);
@@ -1113,7 +1113,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = existing_clip->Position() * info.fps.ToDouble();
 			long int old_ending_frame = (existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble();
-			final_cache->Remove(old_starting_frame - 1, old_ending_frame + 1);
+			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Remove clip from timeline
 			RemoveClip(existing_clip);
@@ -1174,7 +1174,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
 		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
 		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
-		final_cache->Remove(new_starting_frame - 1, new_ending_frame + 1);
+		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
 	}
 
 	// Determine type of change operation
@@ -1203,7 +1203,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = existing_effect->Position() * info.fps.ToDouble();
 			long int old_ending_frame = (existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble();
-			final_cache->Remove(old_starting_frame - 1, old_ending_frame + 1);
+			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Update effect properties from JSON
 			existing_effect->SetJsonValue(change["value"]);
@@ -1217,7 +1217,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = existing_effect->Position() * info.fps.ToDouble();
 			long int old_ending_frame = (existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble();
-			final_cache->Remove(old_starting_frame - 1, old_ending_frame + 1);
+			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Remove effect from timeline
 			RemoveEffect(existing_effect);

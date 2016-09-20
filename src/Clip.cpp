@@ -628,7 +628,8 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 		new_frame = reader->GetFrame(number);
 
 		// Return real frame
-		return new_frame;
+		if (new_frame)
+			return new_frame;
 
 	} catch (const ReaderClosed & e) {
 		// ...
