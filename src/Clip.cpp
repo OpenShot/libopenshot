@@ -659,22 +659,19 @@ string Clip::Json() {
 // Get all properties for a specific frame
 string Clip::PropertiesJSON(long int requested_frame) {
 
-	// Requested Point
-	Point requested_point(requested_frame, requested_frame);
-
 	// Generate JSON properties list
 	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", false, 0, 0, 20, CONSTANT, -1, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, true);
-	root["gravity"] = add_property_json("Gravity", gravity, "int", "", false, 0, 0, 8, CONSTANT, -1, false);
-	root["scale"] = add_property_json("Scale", scale, "int", "", false, 0, 0, 3, CONSTANT, -1, false);
-	root["anchor"] = add_property_json("Anchor", anchor, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
-	root["handles"] = add_property_json("Handles", handles, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
-	root["waveform"] = add_property_json("Waveform", waveform, "int", "", false, 0, 0, 1, CONSTANT, -1, false);
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
+	root["gravity"] = add_property_json("Gravity", gravity, "int", "", NULL, 0, 8, false, requested_frame);
+	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
+	root["anchor"] = add_property_json("Anchor", anchor, "int", "", NULL, 0, 1, false, requested_frame);
+	root["handles"] = add_property_json("Handles", handles, "int", "", NULL, 0, 1, false, requested_frame);
+	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
@@ -706,25 +703,25 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
 
 	// Keyframes
-	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", location_x.Contains(requested_point), location_x.GetCount(), -1.0, 1.0, location_x.GetClosestPoint(requested_point).interpolation, location_x.GetClosestPoint(requested_point).co.X, false);
-	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", location_y.Contains(requested_point), location_y.GetCount(), -1.0, 1.0, location_y.GetClosestPoint(requested_point).interpolation, location_y.GetClosestPoint(requested_point).co.X, false);
-	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", scale_x.Contains(requested_point), scale_x.GetCount(), 0.0, 1.0, scale_x.GetClosestPoint(requested_point).interpolation, scale_x.GetClosestPoint(requested_point).co.X, false);
-	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", scale_y.Contains(requested_point), scale_y.GetCount(), 0.0, 1.0, scale_y.GetClosestPoint(requested_point).interpolation, scale_y.GetClosestPoint(requested_point).co.X, false);
-	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", alpha.Contains(requested_point), alpha.GetCount(), 0.0, 1.0, alpha.GetClosestPoint(requested_point).interpolation, alpha.GetClosestPoint(requested_point).co.X, false);
-	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", shear_x.Contains(requested_point), shear_x.GetCount(), -1.0, 1.0, shear_x.GetClosestPoint(requested_point).interpolation, shear_x.GetClosestPoint(requested_point).co.X, false);
-	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", shear_y.Contains(requested_point), shear_y.GetCount(), -1.0, 1.0, shear_y.GetClosestPoint(requested_point).interpolation, shear_y.GetClosestPoint(requested_point).co.X, false);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", rotation.Contains(requested_point), rotation.GetCount(), -360, 360, rotation.GetClosestPoint(requested_point).interpolation, rotation.GetClosestPoint(requested_point).co.X, false);
-	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", volume.Contains(requested_point), volume.GetCount(), 0.0, 1.0, volume.GetClosestPoint(requested_point).interpolation, volume.GetClosestPoint(requested_point).co.X, false);
-	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", time.Contains(requested_point), time.GetCount(), 0.0, 30 * 60 * 60 * 48, time.GetClosestPoint(requested_point).interpolation, time.GetClosestPoint(requested_point).co.X, false);
-	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", channel_filter.Contains(requested_point), channel_filter.GetCount(), -1, 10, channel_filter.GetClosestPoint(requested_point).interpolation, channel_filter.GetClosestPoint(requested_point).co.X, false);
-	root["channel_mapping"] = add_property_json("Channel Mapping", channel_mapping.GetValue(requested_frame), "int", "", channel_mapping.Contains(requested_point), channel_mapping.GetCount(), -1, 10, channel_mapping.GetClosestPoint(requested_point).interpolation, channel_mapping.GetClosestPoint(requested_point).co.X, false);
-	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", has_audio.Contains(requested_point), has_audio.GetCount(), -1, 1.0, has_audio.GetClosestPoint(requested_point).interpolation, has_audio.GetClosestPoint(requested_point).co.X, false);
-	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", has_video.Contains(requested_point), has_video.GetCount(), -1, 1.0, has_video.GetClosestPoint(requested_point).interpolation, has_video.GetClosestPoint(requested_point).co.X, false);
+	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", &alpha, 0.0, 1.0, false, requested_frame);
+	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
+	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
+	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
+	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", &time, 0.0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", &channel_filter, -1, 10, false, requested_frame);
+	root["channel_mapping"] = add_property_json("Channel Mapping", channel_mapping.GetValue(requested_frame), "int", "", &channel_mapping, -1, 10, false, requested_frame);
+	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
+	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
 
-	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), 0, 255, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
-	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", wave_color.red.Contains(requested_point), wave_color.red.GetCount(), 0, 255, wave_color.red.GetClosestPoint(requested_point).interpolation, wave_color.red.GetClosestPoint(requested_point).co.X, false);
-	root["wave_color"]["blue"] = add_property_json("Blue", wave_color.blue.GetValue(requested_frame), "float", "", wave_color.blue.Contains(requested_point), wave_color.blue.GetCount(), 0, 255, wave_color.blue.GetClosestPoint(requested_point).interpolation, wave_color.blue.GetClosestPoint(requested_point).co.X, false);
-	root["wave_color"]["green"] = add_property_json("Green", wave_color.green.GetValue(requested_frame), "float", "", wave_color.green.Contains(requested_point), wave_color.green.GetCount(), 0, 255, wave_color.green.GetClosestPoint(requested_point).interpolation, wave_color.green.GetClosestPoint(requested_point).co.X, false);
+	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", &wave_color.red, 0, 255, false, requested_frame);
+	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", &wave_color.red, 0, 255, false, requested_frame);
+	root["wave_color"]["blue"] = add_property_json("Blue", wave_color.blue.GetValue(requested_frame), "float", "", &wave_color.blue, 0, 255, false, requested_frame);
+	root["wave_color"]["green"] = add_property_json("Green", wave_color.green.GetValue(requested_frame), "float", "", &wave_color.green, 0, 255, false, requested_frame);
 
 
 	// Return formatted string

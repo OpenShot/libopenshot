@@ -87,10 +87,21 @@ Point::Point(Coordinate co, InterpolationType interpolation, HandleType handle_t
 	Initialize_Handles();
 }
 
-void Point::Initialize_Handles(float Offset) {
-	// initialize left and right handles
-	handle_left = Coordinate(co.X - Offset, co.Y);
-	handle_right = Coordinate(co.X + Offset, co.Y);
+void Point::Initialize_Handles() {
+	// initialize left and right handles (in percentages from 0 to 1)
+	// default to a smooth curve
+	Initialize_LeftHandle(0.5, 1.0);
+	Initialize_RightHandle(0.5, 0.0);
+}
+
+void Point::Initialize_LeftHandle(float x, float y) {
+	// initialize left handle (in percentages from 0 to 1)
+	handle_left = Coordinate(x, y);
+}
+
+void Point::Initialize_RightHandle(float x, float y) {
+	// initialize right handle (in percentages from 0 to 1)
+	handle_right = Coordinate(x, y);
 }
 
 // Generate JSON string of this object

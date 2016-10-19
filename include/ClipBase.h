@@ -37,6 +37,7 @@
 #include <sstream>
 #include "Exceptions.h"
 #include "Point.h"
+#include "KeyFrame.h"
 #include "Json.h"
 
 using namespace std;
@@ -61,7 +62,7 @@ namespace openshot {
 		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
 
 		/// Generate JSON for a property
-		Json::Value add_property_json(string name, float value, string type, string memo, bool contains_point, int number_of_points, float min_value, float max_value, InterpolationType intepolation, int closest_point_x, bool readonly);
+		Json::Value add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, long int requested_frame);
 
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(string name, int value, int selected_value);

@@ -91,7 +91,6 @@ namespace openshot {
 	public:
 		vector<Point> Points;			///< Vector of all Points
 		vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
-		float Auto_Handle_Percentage;	///< Percentage the left and right handles should be adjusted to, to create a smooth curve
 
 		/// Default constructor for the Keyframe class
 		Keyframe();
@@ -102,7 +101,7 @@ namespace openshot {
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
-		/// Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
+		/// Add a new point on the key-frame, with some defaults set (BEZIER)
 		void AddPoint(float x, float y);
 
 		/// Add a new point on the key-frame, with a specific interpolation type
@@ -110,9 +109,6 @@ namespace openshot {
 
 		/// Does this keyframe contain a specific point
 		bool Contains(Point p);
-
-		/// Set the handles, used for smooth curves.  The handles are based on the surrounding points.
-		void SetHandles(Point current);
 
 		/// Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
 		void FlipPoints();
@@ -138,8 +134,15 @@ namespace openshot {
 		/// Get a point at a specific index
 		Point& GetPoint(long int index) throw(OutOfBoundsPoint);
 
-		/// Get current point (or closest point) from the X coordinate (i.e. the frame number)
+		/// Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);
+
+		/// Get current point (or closest point) from the X coordinate (i.e. the frame number)
+		/// Either use the closest left point, or right point
+		Point GetClosestPoint(Point p, bool useLeft);
+
+		/// Get previous point (
+		Point GetPreviousPoint(Point p);
 
 		/// Get max point (by Y coordinate)
 		Point GetMaxPoint();

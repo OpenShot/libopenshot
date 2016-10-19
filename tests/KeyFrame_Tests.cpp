@@ -57,7 +57,6 @@ TEST(Keyframe_AddPoint_With_1_Point)
 {
 	// Create an empty keyframe
 	Keyframe k1;
-	k1.Auto_Handle_Percentage = 0.4f;
 	k1.AddPoint(openshot::Point(2,9));
 
 	CHECK_CLOSE(2.0f, k1.GetPoint(0).co.X, 0.00001);
@@ -69,7 +68,6 @@ TEST(Keyframe_AddPoint_With_2_Points)
 {
 	// Create an empty keyframe
 	Keyframe k1;
-	k1.Auto_Handle_Percentage = 0.4f;
 	k1.AddPoint(openshot::Point(2,9));
 	k1.AddPoint(openshot::Point(5,20));
 
@@ -83,7 +81,6 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(50, 4), BEZIER));
 
@@ -91,9 +88,9 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
 	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(1.18398f, kf.GetValue(9), 0.0001);
-	CHECK_CLOSE(1.99988f, kf.GetValue(20), 0.0001);
-	CHECK_CLOSE(3.75424f, kf.GetValue(40), 0.0001);
+	CHECK_CLOSE(1.14025f, kf.GetValue(9), 0.0001);
+	CHECK_CLOSE(1.91492f, kf.GetValue(20), 0.0001);
+	CHECK_CLOSE(3.81602f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(4.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 51);
@@ -103,7 +100,6 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(50, 4), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(100, 10), BEZIER));
@@ -114,10 +110,10 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	CHECK_CLOSE(kf.GetValue(-1), 1.0f, 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
 	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(2.69174f, kf.GetValue(27), 0.0001);
-	CHECK_CLOSE(7.46386f, kf.GetValue(77), 0.0001);
-	CHECK_CLOSE(4.22691f, kf.GetValue(127), 0.0001);
-	CHECK_CLOSE(1.73193f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(2.73656f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.55139f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.08102f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 201);
@@ -127,7 +123,6 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.25f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(50, 4), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(100, 10), BEZIER));
@@ -137,11 +132,11 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	// Spot check values from the curve
 	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
-	CHECK_CLOSE(1.0009f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(2.64678f, kf.GetValue(27), 0.0001);
-	CHECK_CLOSE(7.37597f, kf.GetValue(77), 0.0001);
-	CHECK_CLOSE(4.37339f, kf.GetValue(127), 0.0001);
-	CHECK_CLOSE(1.68798f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(2.73656f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.55139f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.08102f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.Values.size(), 201);
@@ -151,7 +146,6 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), LINEAR));
 	kf.AddPoint(openshot::Point(Coordinate(25, 8), LINEAR));
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), LINEAR));
@@ -172,7 +166,6 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), CONSTANT));
 	kf.AddPoint(openshot::Point(Coordinate(25, 8), CONSTANT));
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), CONSTANT));
@@ -202,26 +195,26 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	CHECK_EQUAL(kf.GetInt(1), 500);
 	CHECK_EQUAL(kf.IsIncreasing(1), false);
 	CHECK_EQUAL(kf.GetRepeatFraction(1).num, 1);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 10);
+	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 12);
 	CHECK_EQUAL(kf.GetDelta(1), 500);
 
-	CHECK_EQUAL(kf.GetInt(24), 497);
+	CHECK_EQUAL(kf.GetInt(24), 498);
 	CHECK_EQUAL(kf.IsIncreasing(24), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 2);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 4);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 3);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 6);
 	CHECK_EQUAL(kf.GetDelta(24), 0);
 
-	CHECK_EQUAL(kf.GetLong(390), 101);
-	CHECK_EQUAL(kf.IsIncreasing(390), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 8);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 8);
+	CHECK_EQUAL(kf.GetLong(390), 100);
+	CHECK_EQUAL(kf.IsIncreasing(390), true);
+	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 3);
+	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 15);
 	CHECK_EQUAL(kf.GetDelta(390), 0);
 
 	CHECK_EQUAL(kf.GetLong(391), 100);
 	CHECK_EQUAL(kf.IsIncreasing(391), true);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 1);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 12);
-	CHECK_EQUAL(kf.GetDelta(391), -1);
+	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 4);
+	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 15);
+	CHECK_EQUAL(kf.GetDelta(388), -1);
 }
 
 
@@ -233,7 +226,7 @@ TEST(Keyframe_Get_Closest_Point)
 	kf.AddPoint(1000, 1.0);
 	kf.AddPoint(2500, 0.0);
 
-	// Spot check values from the curve
+	// Spot check values from the curve (to the right)
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(900, 900)).co.X, 1000);
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1, 1)).co.X, 1);
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(5, 5)).co.X, 1000);
@@ -242,8 +235,35 @@ TEST(Keyframe_Get_Closest_Point)
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(2500, 2500)).co.X, 2500);
 	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000)).co.X, 2500);
 
+	// Spot check values from the curve (to the left)
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(900, 900), true).co.X, 1);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1, 1), true).co.X, 1);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(5, 5), true).co.X, 1);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1000, 1000), true).co.X, 1);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1001, 1001), true).co.X, 1000);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(2500, 2500), true).co.X, 1000);
+	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000), true).co.X, 2500);
 }
 
+
+TEST(Keyframe_Get_Previous_Point)
+{
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 0.0);
+	kf.AddPoint(1000, 1.0);
+	kf.AddPoint(2500, 0.0);
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(900, 900))).co.X, 1);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1, 1))).co.X, 1);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(5, 5))).co.X, 1);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1000, 1000))).co.X, 1);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1001, 1001))).co.X, 1000);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(2500, 2500))).co.X, 1000);
+	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(3000, 3000))).co.X, 1000);
+
+}
 
 TEST(Keyframe_Get_Max_Point)
 {
@@ -274,7 +294,6 @@ TEST(Keyframe_Scale_Keyframe)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(25, 8), BEZIER));
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), BEZIER));
@@ -283,7 +302,7 @@ TEST(Keyframe_Scale_Keyframe)
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(3.84f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(3.68f, kf.GetValue(40), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
 
@@ -292,12 +311,12 @@ TEST(Keyframe_Scale_Keyframe)
 
 	// Spot check values from the curve
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
-	CHECK_CLOSE(6.25f, kf.GetValue(24), 0.01);
-	CHECK_CLOSE(6.38f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(7.80f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(4.21f, kf.GetValue(24), 0.01);
+	CHECK_CLOSE(4.47f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(7.57f, kf.GetValue(40), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(50), 0.01);
-	CHECK_CLOSE(2.06f, kf.GetValue(90), 0.01);
+	CHECK_CLOSE(2.35f, kf.GetValue(90), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(100), 0.01);
 
 	// Resize / Scale the keyframe
@@ -307,7 +326,7 @@ TEST(Keyframe_Scale_Keyframe)
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(3.84f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(3.68f, kf.GetValue(40), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
 
@@ -317,7 +336,6 @@ TEST(Keyframe_Flip_Keyframe)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
-	kf.Auto_Handle_Percentage = 0.4f;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), LINEAR));
 	kf.AddPoint(openshot::Point(Coordinate(25, 8), LINEAR));
 	kf.AddPoint(openshot::Point(Coordinate(50, 2), LINEAR));

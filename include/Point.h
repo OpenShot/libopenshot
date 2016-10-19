@@ -81,8 +81,8 @@ namespace openshot
 	class Point {
 	public:
 		Coordinate co; 						///< This is the primary coordinate
-		Coordinate handle_left; 			///< This is the left handle coordinate
-		Coordinate handle_right; 			///< This is the right handle coordinate
+		Coordinate handle_left; 			///< This is the left handle coordinate (in percentages from 0 to 1)
+		Coordinate handle_right; 			///< This is the right handle coordinate (in percentages from 0 to 1)
 		InterpolationType interpolation;	///< This is the interpolation mode
 		HandleType handle_type; 			///< This is the handle mode
 
@@ -98,21 +98,24 @@ namespace openshot
 		/// Constructor which also creates a Point and sets the X,Y, and interpolation of the Point.
 		Point(float x, float y, InterpolationType interpolation);
 
-		// Constructor which takes a coordinate
+		/// Constructor which takes a coordinate
 		Point(Coordinate co);
 
-		// Constructor which takes a coordinate and interpolation mode
+		/// Constructor which takes a coordinate and interpolation mode
 		Point(Coordinate co, InterpolationType interpolation);
 
-		// Constructor which takes a coordinate, interpolation mode, and handle type
+		/// Constructor which takes a coordinate, interpolation mode, and handle type
 		Point(Coordinate co, InterpolationType interpolation, HandleType handle_type);
 
-		/**
-		 * Set the left and right handles to the same Y coordinate as the primary
-		 * coordinate, but offset the X value by a given amount.  This is typically used
-		 * to smooth the curve (if BEZIER interpolation mode is used)
-		 */
-		void Initialize_Handles(float Offset = 0.0f);
+		/// Set the left and right handles to a percent of the primary coordinate (0 to 1)
+		/// Defaults to a smooth curve (Ease in and out)
+		void Initialize_Handles();
+
+		/// Set the left handle to a percent of the primary coordinate (0 to 1)
+		void Initialize_LeftHandle(float x, float y);
+
+		/// Set the right handle to a percent of the primary coordinate (0 to 1)
+		void Initialize_RightHandle(float x, float y);
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

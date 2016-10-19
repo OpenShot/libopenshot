@@ -53,7 +53,7 @@ void Keyframe::ReorderPoints() {
 }
 
 // Constructor which sets the default point & coordinate at X=0
-Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f), needs_update(true) {
+Keyframe::Keyframe(float value) : needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 
@@ -62,7 +62,7 @@ Keyframe::Keyframe(float value) : Auto_Handle_Percentage(0.4f), needs_update(tru
 }
 
 // Keyframe constructor
-Keyframe::Keyframe() : Auto_Handle_Percentage(0.4f), needs_update(true) {
+Keyframe::Keyframe() : needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 }
@@ -84,12 +84,9 @@ void Keyframe::AddPoint(Point p) {
 
 	// Sort / Re-order points based on X coordinate
 	ReorderPoints();
-
-	// Set Handles (used for smooth curves).
-	SetHandles(p);
 }
 
-// Add a new point on the key-frame, with some defaults set (BEZIER, AUTO Handles, etc...)
+// Add a new point on the key-frame, with some defaults set (BEZIER)
 void Keyframe::AddPoint(float x, float y)
 {
 	// Create a point
@@ -107,50 +104,6 @@ void Keyframe::AddPoint(float x, float y, InterpolationType interpolate)
 
 	// Add the point
 	AddPoint(new_point);
-}
-
-// Set the handles, used for smooth curves.  The handles are based
-// on the surrounding points.
-void Keyframe::SetHandles(Point current)
-{
-	// mark as dirty
-	needs_update = true;
-
-	// Lookup the index of this point
-	long int index = FindIndex(current);
-	Point *Current_Point = &Points[index];
-
-	// Find the previous point and next points (if any)
-	Point *Previous_Point = NULL;
-	Point *Next_Point = NULL;
-	float Previous_X_diff = 0.0f;
-	float Next_X_diff = 0.0f;
-
-	// If not the 1st point
-	if (index > 0)
-		Previous_Point = &Points[index - 1];
-
-	// If not the last point
-	if (index < (Points.size() - 1))
-		Next_Point = &Points[index + 1];
-
-	// Update the previous point's right handle
-	if (Previous_Point)
-		Previous_X_diff = (Current_Point->co.X - Previous_Point->co.X) * Auto_Handle_Percentage; // Use the keyframe handle percentage to size the handle
-	if (Previous_Point && Previous_Point->handle_type == AUTO)
-		Previous_Point->handle_right.X = Previous_Point->co.X + Previous_X_diff;
-	// Update the current point's left handle
-	if (Current_Point->handle_type == AUTO)
-		Current_Point->handle_left.X = Current_Point->co.X - Previous_X_diff;
-
-	// Update the next point's left handle
-	if (Next_Point)
-		Next_X_diff = (Next_Point->co.X - Current_Point->co.X) * Auto_Handle_Percentage; // Use the keyframe handle percentage to size the handle
-	if (Next_Point && Next_Point->handle_type == AUTO)
-		Next_Point->handle_left.X = Next_Point->co.X - Next_X_diff;
-	// Update the next point's right handle
-	if (Current_Point->handle_type == AUTO)
-		Current_Point->handle_right.X = Current_Point->co.X + Next_X_diff;
 }
 
 // Get the index of a point by matching a coordinate
@@ -190,7 +143,7 @@ bool Keyframe::Contains(Point p) {
 }
 
 // Get current point (or closest point) from the X coordinate (i.e. the frame number)
-Point Keyframe::GetClosestPoint(Point p) {
+Point Keyframe::GetClosestPoint(Point p, bool useLeft) {
 	Point closest(-1, -1);
 
 	// loop through points, and find a matching coordinate
@@ -199,16 +152,22 @@ Point Keyframe::GetClosestPoint(Point p) {
 		Point existing_point = Points[x];
 
 		// find a match
-		if (existing_point.co.X >= p.co.X) {
-			// New closest point found
+		if (existing_point.co.X >= p.co.X && !useLeft) {
+			// New closest point found (to the Right)
 			closest = existing_point;
+			break;
+		} else if (existing_point.co.X < p.co.X && useLeft) {
+			// New closest point found (to the Left)
+			closest = existing_point;
+		} else if (existing_point.co.X >= p.co.X && useLeft) {
+			// We've gone past the left point... so break
 			break;
 		}
 	}
 
 	// Handle edge cases (if no point was found)
 	if (closest.co.X == -1) {
-		if (p.co.X < 1 && Points.size() > 0)
+		if (p.co.X <= 1 && Points.size() > 0)
 			// Assign 1st point
 			closest = Points[0];
 		else if (Points.size() > 0)
@@ -218,6 +177,30 @@ Point Keyframe::GetClosestPoint(Point p) {
 
 	// no matching point found
 	return closest;
+}
+
+// Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
+Point Keyframe::GetClosestPoint(Point p) {
+	return GetClosestPoint(p, false);
+}
+
+// Get previous point (if any)
+Point Keyframe::GetPreviousPoint(Point p) {
+
+	// Lookup the index of this point
+	try {
+		long int index = FindIndex(p);
+
+		// If not the 1st point
+		if (index > 0)
+			return Points[index - 1];
+		else
+			return Points[0];
+
+	} catch (OutOfBoundsPoint) {
+		// No previous point
+		return Point(-1, -1);
+	}
 }
 
 // Get max point (by Y coordinate)
@@ -399,9 +382,6 @@ void Keyframe::SetJsonValue(Json::Value root) {
 			// Add Point to Keyframe
 			AddPoint(p);
 		}
-
-	if (!root["Auto_Handle_Percentage"].isNull())
-		Auto_Handle_Percentage = root["Auto_Handle_Percentage"].asBool();
 }
 
 // Get the fraction that represents how many times this value is repeated in the curve
@@ -709,10 +689,14 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 		number_of_values++;
 		number_of_values *= 4;	// We need a higher resolution curve (4X)
 
+		// Diff between points
+		float X_diff = p2.co.X - p1.co.X;
+		float Y_diff = p2.co.Y - p1.co.Y;
+
 		vector<Coordinate> segment_coordinates;
 		segment_coordinates.push_back(p1.co);
-		segment_coordinates.push_back(p1.handle_right);
-		segment_coordinates.push_back(p2.handle_left);
+		segment_coordinates.push_back(Coordinate(p1.co.X + (p1.handle_right.X * X_diff), p1.co.Y + (p1.handle_right.Y * Y_diff)));
+		segment_coordinates.push_back(Coordinate(p1.co.X + (p2.handle_left.X * X_diff), p1.co.Y + (p2.handle_left.Y * Y_diff)));
 		segment_coordinates.push_back(p2.co);
 
 		vector<Coordinate> raw_coordinates;

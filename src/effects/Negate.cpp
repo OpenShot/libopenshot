@@ -106,17 +106,14 @@ void Negate::SetJsonValue(Json::Value root) {
 // Get all properties for a specific frame
 string Negate::PropertiesJSON(long int requested_frame) {
 
-	// Requested Point
-	Point requested_point(requested_frame, requested_frame);
-
 	// Generate JSON properties list
 	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", false, 0, 0, 20, CONSTANT, -1, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 30 * 60 * 60 * 48, CONSTANT, -1, true);
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 30 * 60 * 60 * 48, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

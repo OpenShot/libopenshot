@@ -301,23 +301,20 @@ void Blur::SetJsonValue(Json::Value root) {
 // Get all properties for a specific frame
 string Blur::PropertiesJSON(long int requested_frame) {
 
-	// Requested Point
-	Point requested_point(requested_frame, requested_frame);
-
 	// Generate JSON properties list
 	Json::Value root;
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), false, 0, -1, -1, CONSTANT, -1, true);
-	root["position"] = add_property_json("Position", Position(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", false, 0, 0, 20, CONSTANT, -1, false);
-	root["start"] = add_property_json("Start", Start(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["end"] = add_property_json("End", End(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, false);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", false, 0, 0, 1000 * 60 * 30, CONSTANT, -1, true);
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
 
 	// Keyframes
-	root["horizontal_radius"] = add_property_json("Horizontal Radius", horizontal_radius.GetValue(requested_frame), "float", "", horizontal_radius.Contains(requested_point), horizontal_radius.GetCount(), 0, 100, horizontal_radius.GetClosestPoint(requested_point).interpolation, horizontal_radius.GetClosestPoint(requested_point).co.X, false);
-	root["vertical_radius"] = add_property_json("Vertical Radius", vertical_radius.GetValue(requested_frame), "float", "", vertical_radius.Contains(requested_point), vertical_radius.GetCount(), 0, 100, vertical_radius.GetClosestPoint(requested_point).interpolation, vertical_radius.GetClosestPoint(requested_point).co.X, false);
-	root["sigma"] = add_property_json("Sigma", sigma.GetValue(requested_frame), "float", "", sigma.Contains(requested_point), sigma.GetCount(), 0, 100, sigma.GetClosestPoint(requested_point).interpolation, sigma.GetClosestPoint(requested_point).co.X, false);
-	root["iterations"] = add_property_json("Iterations", iterations.GetValue(requested_frame), "float", "", iterations.Contains(requested_point), iterations.GetCount(), 0, 100, iterations.GetClosestPoint(requested_point).interpolation, iterations.GetClosestPoint(requested_point).co.X, false);
+	root["horizontal_radius"] = add_property_json("Horizontal Radius", horizontal_radius.GetValue(requested_frame), "float", "", &horizontal_radius, 0, 100, false, requested_frame);
+	root["vertical_radius"] = add_property_json("Vertical Radius", vertical_radius.GetValue(requested_frame), "float", "", &vertical_radius, 0, 100, false, requested_frame);
+	root["sigma"] = add_property_json("Sigma", sigma.GetValue(requested_frame), "float", "", &sigma, 0, 100, false, requested_frame);
+	root["iterations"] = add_property_json("Iterations", iterations.GetValue(requested_frame), "float", "", &iterations, 0, 100, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
