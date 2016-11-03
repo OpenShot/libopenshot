@@ -113,7 +113,15 @@ void ZmqLogger::Log(string message)
 
 	// Write to log file (if opened, and force it to write to disk in case of a crash)
 	if (log_file.is_open())
-		log_file << message << std::flush;;
+		log_file << message << std::flush;
+}
+
+// Log message to a file (if path set)
+void ZmqLogger::LogToFile(string message)
+{
+	// Write to log file (if opened, and force it to write to disk in case of a crash)
+	if (log_file.is_open())
+		log_file << message << std::flush;
 }
 
 void ZmqLogger::Path(string new_path)

@@ -33,6 +33,9 @@ using namespace openshot;
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
 		is_open(false), auto_map_clips(true)
 {
+	// Create CrashHandler and Attach (incase of errors)
+	CrashHandler::Instance();
+
 	// Init viewport size (curve based, because it can be animated)
 	viewport_scale = Keyframe(100.0);
 	viewport_x = Keyframe(0.0);

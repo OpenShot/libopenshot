@@ -196,6 +196,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Clip.cpp
 		ClipBase.cpp
 		Coordinate.cpp
+		CrashHandler.cpp
 		DummyReader.cpp
 		ReaderBase.cpp
 		RendererBase.cpp
@@ -288,6 +289,11 @@ SET ( REQUIRED_LIBRARIES
 		IF (BLACKMAGIC_FOUND)
 			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )
 		ENDIF (BLACKMAGIC_FOUND)
+
+		IF (WIN32)
+			# Required for exception handling on Windows
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} "imagehlp" )
+		ENDIF(WIN32)
 
 # Link all referenced libraries
 target_link_libraries(openshot ${REQUIRED_LIBRARIES})

@@ -277,7 +277,7 @@ void FFmpegReader::UpdateAudioInfo()
 	info.acodec = aCodecCtx->codec->name;
 	info.channels = aCodecCtx->channels;
 	if (aCodecCtx->channel_layout == 0)
-		aCodecCtx->channel_layout = av_get_default_channel_layout( aCodecCtx->channels );;
+		aCodecCtx->channel_layout = av_get_default_channel_layout( aCodecCtx->channels );
 	info.channel_layout = (ChannelLayout) aCodecCtx->channel_layout;
 	info.sample_rate = aCodecCtx->sample_rate;
 	info.audio_bit_rate = aCodecCtx->bit_rate;

@@ -107,6 +107,9 @@ namespace openshot {
 
 		/// Log message to all subscribers of this logger (if any)
 		void Log(string message);
+
+		/// Log message to a file (if path set)
+		void LogToFile(string message);
 	};
 
 }
