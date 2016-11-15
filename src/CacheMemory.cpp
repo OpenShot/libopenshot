@@ -109,7 +109,7 @@ void CacheMemory::CalculateRanges() {
 		Json::Value range;
 
 		// Add JSON object with start/end attributes
-		// Use strings, since long ints are supported in JSON
+		// Use strings, since long ints are not supported in JSON
 		stringstream start_str;
 		start_str << starting_frame;
 		stringstream end_str;
@@ -333,7 +333,6 @@ Json::Value CacheMemory::JsonValue() {
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
 
-	Json::Value version;
 	stringstream range_version_str;
 	range_version_str << range_version;
 	root["version"] = range_version_str.str();

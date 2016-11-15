@@ -665,15 +665,8 @@ int FFmpegReader::GetNextPacket()
 
 	if (found_packet >= 0)
 	{
-		#pragma omp critical (packet_cache)
-		{
-			// Add packet to packet cache
-			packets[next_packet] = next_packet;
-
-			// Update current packet pointer
-			packet = packets[next_packet];
-		} // end omp critical
-
+		// Update current packet pointer
+		packet = next_packet;
 	}
 	else
 	{
@@ -811,7 +804,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
-	AVPacket *my_packet = packets[packet];
+	AVPacket *my_packet = packet;
 	AVPicture *my_frame = frames[pFrame];
 
 	// Add video frame to list of processing video frames
@@ -923,7 +916,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	}
 
 	// Init some local variables (for OpenMP)
-	AVPacket *my_packet = packets[packet];
+	AVPacket *my_packet = packet;
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
@@ -1930,22 +1923,11 @@ void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
 // Remove AVPacket from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 {
-	#pragma omp critical (packet_cache)
-	{
-		// Remove packet (if any)
-		if (packets.count(remove_packet))
-		{
-			// deallocate memory for packet
-			av_free_packet(remove_packet);
+	// deallocate memory for packet
+	av_free_packet(remove_packet);
 
-			// Remove from cache
-			packets.erase(remove_packet);
-
-			// Delete the object
-			delete remove_packet;
-		}
-
-	} // end omp critical
+	// Delete the object
+	delete remove_packet;
 }
 
 /// Get the smallest video frame that is still being processed

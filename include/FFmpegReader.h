@@ -108,7 +108,6 @@ namespace openshot
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
-		map<AVPacket*, AVPacket*> packets;
 		map<AVPicture*, AVPicture*> frames;
 		map<long int, long int> processing_video_frames;
 		multimap<long int, long int> processing_audio_frames;
