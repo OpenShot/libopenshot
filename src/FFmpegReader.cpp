@@ -1202,7 +1202,11 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		requested_frame = info.video_length;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "", -1);
+
+	// Wait for any processing frames to complete
+	while (processing_video_frames.size() + processing_audio_frames.size() > 0)
+		usleep(2500);
 
 	// Clear working cache (since we are seeking to another location in the file)
 	working_cache.Clear();
