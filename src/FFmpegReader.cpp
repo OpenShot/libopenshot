@@ -252,6 +252,8 @@ void FFmpegReader::Close()
 			processing_audio_frames.clear();
 			missing_audio_frames.clear();
 			missing_video_frames.clear();
+			missing_audio_frames_source.clear();
+			missing_video_frames_source.clear();
 			checked_frames.clear();
 		}
 
@@ -783,7 +785,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		seek_video_frame_found = current_frame;
 
 	// Are we close enough to decode the frame? and is this frame # valid?
-	if ((!has_missing_frames and current_frame < (requested_frame - 20)) or (current_frame == -1))
+	if ((current_frame < (requested_frame - 20)) or (current_frame == -1))
 	{
 		// Remove frame and packet
 		RemoveAVFrame(pFrame);
@@ -903,7 +905,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		seek_audio_frame_found = target_frame;
 
 	// Are we close enough to decode the frame's audio?
-	if (!has_missing_frames and target_frame < (requested_frame - 20))
+	if (target_frame < (requested_frame - 20))
 	{
 		// Remove packet
 		RemoveAVPacket(packet);
@@ -1222,6 +1224,8 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		duplicate_video_frames.clear();
 		missing_audio_frames.clear();
 		missing_video_frames.clear();
+		missing_audio_frames_source.clear();
+		missing_video_frames_source.clear();
 		checked_frames.clear();
 	}
 
@@ -1278,7 +1282,7 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		if (!seek_worked && info.has_audio)
 		{
 			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
-			if (info.has_audio && av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
+			if (av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
 			} else
 			{
@@ -1402,7 +1406,8 @@ long int FFmpegReader::ConvertVideoPTStoFrame(long int pts)
 		while (current_video_frame < frame) {
 			if (!missing_video_frames.count(current_video_frame)) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (tracking missing frame)", "current_video_frame", current_video_frame, "previous_video_frame", previous_video_frame, "", -1, "", -1, "", -1, "", -1);
-				missing_video_frames.insert(pair<long int, long int>(previous_video_frame, current_video_frame));
+				missing_video_frames.insert(pair<long int, long int>(current_video_frame, previous_video_frame));
+				missing_video_frames_source.insert(pair<long int, long int>(previous_video_frame, current_video_frame));
 			}
 
 			// Mark this reader as containing missing frames
@@ -1581,95 +1586,57 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 	map<long int, long int>::iterator itr;
 	bool found_missing_frame = false;
 
-	for (itr = missing_video_frames.begin(); itr != missing_video_frames.end(); ++itr) {
-		// Skip if not requested frame
-		if (requested_frame == itr->second) {
+	// Check if requested frame is a missing frame
+	if (missing_video_frames.count(requested_frame) || missing_audio_frames.count(requested_frame)) {
+		long int missing_source_frame = -1;
+		if (missing_video_frames.count(requested_frame))
+			missing_source_frame = missing_video_frames.find(requested_frame)->second;
+		else if (missing_audio_frames.count(requested_frame))
+			missing_source_frame = missing_audio_frames.find(requested_frame)->second;
 
-			found_missing_frame = true;
+		// Increment missing source frame check count (or init to 1)
+		if (checked_frames.count(missing_source_frame) == 0)
+			checked_frames[missing_source_frame] = 1;
+		else
+			checked_frames[missing_source_frame]++;
 
-			// Get the previous frame of this missing frame (if it's available in missing cache)
-			tr1::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(itr->first);
-
-			// Create blank missing frame
-			tr1::shared_ptr<Frame> missing_frame = CreateFrame(itr->second);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (Is Previous Video Frame Final)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "previous_frame->number", itr->first, "", -1, "", -1, "", -1);
-
-			// If previous frame found, copy image from previous to missing frame (else we'll just wait a bit and try again later)
+		// Get the previous frame of this missing frame (if it's available in missing cache)
+		tr1::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(missing_source_frame);
+		if (parent_frame == NULL) {
+			parent_frame = final_cache.GetFrame(missing_source_frame);
 			if (parent_frame != NULL) {
-				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (AddImage from Previous Video Frame)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "previous_frame->number", parent_frame->number, "", -1, "", -1, "", -1);
-
-				// Add this frame to the processed map (since it's already done)
-				missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*parent_frame->GetImage())));
-
-				processed_video_frames[missing_frame->number] = missing_frame->number;
-				processed_audio_frames[missing_frame->number] = missing_frame->number;
-
-				// Move frame to final cache
-				final_cache.Add(missing_frame);
-
-				// Remove frame from working cache
-				working_cache.Remove(missing_frame->number);
-
-				// Update last_frame processed
-				last_frame = missing_frame->number;
-			}
-
-			break; // exit looping
-		}
-	}
-	if (found_missing_frame) {
-		// Remove missing frame from map
-		missing_video_frames.erase(itr);
-
-	} else {
-		// Look for missing audio frames
-		found_missing_frame = false;
-		for (itr = missing_audio_frames.begin(); itr != missing_audio_frames.end(); ++itr) {
-			// Skip if not requested frame
-			if (requested_frame == itr->second) {
-
-				found_missing_frame = true;
-
-				// Get the previous frame of this missing frame (if it's available in missing cache)
-				tr1::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(itr->first);
-
-				// Create blank missing frame
-				tr1::shared_ptr<Frame> missing_frame = CreateFrame(itr->second);
-
-				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (Is Previous Audio Frame Final)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "previous_frame->number", itr->first, "", -1, "", -1, "", -1);
-
-				// If previous frame found, copy image from previous to missing frame (else we'll just wait a bit and try again later)
-				if (parent_frame != NULL) {
-					// Debug output
-					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (AddImage from Previous Audio Frame)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "previous_frame->number", parent_frame->number, "", -1, "", -1, "", -1);
-
-					// Add this frame to the processed map (since it's already done)
-					missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*parent_frame->GetImage())));
-
-					processed_video_frames[missing_frame->number] = missing_frame->number;
-					processed_audio_frames[missing_frame->number] = missing_frame->number;
-
-					// Move frame to final cache
-					final_cache.Add(missing_frame);
-
-					// Remove frame from working cache
-					working_cache.Remove(missing_frame->number);
-
-					// Update last_frame processed
-					last_frame = missing_frame->number;
-				}
-
-				break; // exit looping
+				// Add missing final frame to missing cache
+				missing_frames.Add(parent_frame);
 			}
 		}
-		if (found_missing_frame) {
-			// Remove missing frame from map
-			missing_audio_frames.erase(itr);
+
+		// Create blank missing frame
+		tr1::shared_ptr<Frame> missing_frame = CreateFrame(requested_frame);
+
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (Is Previous Video Frame Final)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "missing_source_frame", missing_source_frame, "", -1, "", -1, "", -1);
+
+		// If previous frame found, copy image from previous to missing frame (else we'll just wait a bit and try again later)
+		if (parent_frame != NULL) {
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (AddImage from Previous Video Frame)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "missing_source_frame", missing_source_frame, "", -1, "", -1, "", -1);
+
+			// Add this frame to the processed map (since it's already done)
+			missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*parent_frame->GetImage())));
+
+			processed_video_frames[missing_frame->number] = missing_frame->number;
+			processed_audio_frames[missing_frame->number] = missing_frame->number;
+
+			// Move frame to final cache
+			final_cache.Add(missing_frame);
+
+			// Remove frame from working cache
+			working_cache.Remove(missing_frame->number);
+
+			// Update last_frame processed
+			last_frame = missing_frame->number;
 		}
+
 	}
 
 	return found_missing_frame;
@@ -1752,10 +1719,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 				// Add to missing cache (if another frame depends on it)
 				{
 					const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-					if (!missing_video_frames.count(current_video_frame)) {
+					if (missing_video_frames_source.count(f->number)) {
 						// Debug output
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1);
-
 						missing_frames.Add(f);
 					}
 				}

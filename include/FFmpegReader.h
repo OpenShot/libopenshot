@@ -114,7 +114,9 @@ namespace openshot
 		map<long int, long int> processed_video_frames;
 		map<long int, long int> processed_audio_frames;
 		multimap<long int, long int> missing_video_frames;
+		multimap<long int, long int> missing_video_frames_source;
 		multimap<long int, long int> missing_audio_frames;
+		multimap<long int, long int> missing_audio_frames_source;
 		multimap<long int, long int> duplicate_video_frames;
 		map<long int, int> checked_frames;
 		AudioLocation previous_packet_location;
