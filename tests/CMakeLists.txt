@@ -154,11 +154,9 @@ include_directories(${ZMQ_INCLUDE_DIRS})
 # Include jsoncpp headers (needed for JSON parsing)
 include_directories("../thirdparty/jsoncpp/include")
 
-###############  SET TEST SOURCE FILES  #################
-SET ( OPENSHOT_TEST_FILES tests.cpp )
-
 IF (NOT DISABLE_TESTS)
-	SET ( OPENSHOT_TEST_FILES ${OPENSHOT_TEST_FILES} 
+	###############  SET TEST SOURCE FILES  #################
+	SET ( OPENSHOT_TEST_FILES tests.cpp
 		   Cache_Tests.cpp
 		   Clip_Tests.cpp
 		   Color_Tests.cpp
@@ -172,18 +170,18 @@ IF (NOT DISABLE_TESTS)
 		   KeyFrame_Tests.cpp
 		   Point_Tests.cpp
 		   Timeline_Tests.cpp )
+
+	################ TESTER EXECUTABLE #################
+	# Create unit test executable (openshot-test)
+	add_executable(openshot-test
+				   tests.cpp
+				   ${OPENSHOT_TEST_FILES} )
+
+	# Link libraries to the new executable
+	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+
+
+	#################### MAKE TEST ######################
+	# Hook up the 'make test' target to the 'openshot-test' executable
+	ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
 ENDIF (NOT DISABLE_TESTS)
-
-################ TESTER EXECUTABLE #################
-# Create unit test executable (openshot-test)
-add_executable(openshot-test
-			   tests.cpp
-			   ${OPENSHOT_TEST_FILES} )
-
-# Link libraries to the new executable
-target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
-
-
-#################### MAKE TEST ######################
-# Hook up the 'make test' target to the 'openshot-test' executable
-ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
