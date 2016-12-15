@@ -267,7 +267,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
-	if (is_top_clip)
+	if (is_top_clip && source_frame)
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
 	// Declare an image to hold the source frame's image
