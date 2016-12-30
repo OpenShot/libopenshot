@@ -198,6 +198,7 @@ void CrashHandler::printStackTrace(FILE *out, unsigned int max_frames)
 	SymCleanup(process);
 
 #else
+    // Linux and Mac stack unwinding
 	// Storage array for stack trace address data
 	void* addrlist[max_frames+1];
 

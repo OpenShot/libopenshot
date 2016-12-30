@@ -521,7 +521,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 		// Draw 4 sides (centered)
 		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), 0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top center
-		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), source_height - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom center
+		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom center
 		painter.fillRect(0.0, (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // left center
 		painter.fillRect(source_width - (12.0/sx), (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // right center
 
