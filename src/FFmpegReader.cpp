@@ -1495,8 +1495,17 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 		int orig_start = location.sample_start;
 
 		// Update sample start, to prevent gaps in audio
-		location.sample_start = previous_packet_location.sample_start;
-		location.frame = previous_packet_location.frame;
+		if (previous_packet_location.sample_start <= samples_per_frame)
+		{
+			location.sample_start = previous_packet_location.sample_start;
+			location.frame = previous_packet_location.frame;
+		}
+		else
+		{
+			// set to next frame (since we exceeded the # of samples on a frame)
+			location.sample_start = 0;
+			location.frame++;
+		}
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
