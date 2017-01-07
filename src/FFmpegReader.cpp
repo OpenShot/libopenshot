@@ -90,28 +90,12 @@ int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int am
 		// This is too far away to be considered
 		return false;
 
-	int sample_diff = abs(location.sample_start - sample_start);
-	if (location.frame == frame && sample_diff >= 0 && sample_diff <= amount)
+	// Note that samples_per_frame can vary slightly frame to frame when the
+	// audio sampling rate is not an integer multiple of the video fps.
+	int diff = samples_per_frame * (location.frame - frame) + location.sample_start - sample_start;
+	if (abs(diff) <= amount)
 		// close
 		return true;
-
-	// new frame is after
-	if (location.frame > frame)
-	{
-		// remaining samples + new samples
-		sample_diff = (samples_per_frame - sample_start) + location.sample_start;
-		if (sample_diff >= 0 && sample_diff <= amount)
-			return true;
-	}
-
-	// new frame is before
-	if (location.frame < frame)
-	{
-		// remaining new samples + old samples
-		sample_diff = (samples_per_frame - location.sample_start) + sample_start;
-		if (sample_diff >= 0 && sample_diff <= amount)
-			return true;
-	}
 
 	// not close
 	return false;
