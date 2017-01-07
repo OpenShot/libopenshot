@@ -31,7 +31,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL)
+		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), timeline_frame_offset(0)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -231,7 +231,7 @@ void FrameMapper::Init()
 		if (field % 2 == 0 && field > 0)
 		{
 			// New frame number
-			long int frame_number = field / 2;
+			long int frame_number = field / 2 + timeline_frame_offset;
 
 			// Set the bottom frame
 			if (f.isOdd)
@@ -255,7 +255,7 @@ void FrameMapper::Init()
 				if (original_samples >= remaining_samples)
 				{
 					// Take all that we need, and break loop
-					end_samples_position += remaining_samples;
+					end_samples_position += remaining_samples - 1;
 					remaining_samples = 0;
 				} else
 				{
@@ -418,17 +418,23 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 			// Get # of channels in the actual frame
 			int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
+			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number + timeline_frame_offset, target, mapped_frame->SampleRate(), channels_in_frame);
 
 			// Determine if mapped frame is identical to source frame
+			// including audio sample distribution according to mapped.Samples,
+			// and frame_number. In some cases such as end of stream, the reader
+			// will return a frame with a different frame number. In these cases,
+			// we cannot use the frame as is, nor can we modify the frame number,
+			// otherwise the reader's cache object internals become invalid.
 			if (info.sample_rate == mapped_frame->SampleRate() &&
 				info.channels == mapped_frame->GetAudioChannelsCount() &&
 				info.channel_layout == mapped_frame->ChannelsLayout() &&
+				mapped.Samples.total == mapped_frame->GetAudioSamplesCount() &&
+				mapped.Samples.frame_start == mapped.Odd.Frame &&
+				mapped.Samples.sample_start == 0 &&
+				mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
 				info.fps.num == reader->info.fps.num &&
 				info.fps.den == reader->info.fps.den) {
-					// Set frame # on mapped frame
-					mapped_frame->SetFrameNumber(frame_number);
-
 					// Add original frame to cache, and skip the rest (for performance reasons)
 					final_cache.Add(mapped_frame);
 					continue;
@@ -456,13 +462,64 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
                     frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
             }
 
+			// Resample audio on frame (if needed)
+			bool need_resampling = false;
+			if (info.has_audio &&
+				(info.sample_rate != frame->SampleRate() ||
+				 info.channels != frame->GetAudioChannelsCount() ||
+				 info.channel_layout != frame->ChannelsLayout()))
+				// Resample audio and correct # of channels if needed
+				need_resampling = true;
+
+			// create a copy of mapped.Samples that will be used by copy loop
+			SampleRange copy_samples = mapped.Samples;
+
+			if (need_resampling)
+			{
+				// Resampling needed, modify copy of SampleRange object that
+				// includes some additional input samples on first iteration,
+				// and continues the offset to ensure that the sample rate
+				// converter isn't input limited.
+				const int EXTRA_INPUT_SAMPLES = 20;
+
+				// Extend end sample count by an addtional EXTRA_INPUT_SAMPLES samples
+				copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
+				int samples_per_end_frame =
+					Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
+											  reader->info.sample_rate, reader->info.channels);
+				if (copy_samples.sample_end >= samples_per_end_frame)
+				{
+					// check for wrapping
+					copy_samples.frame_end++;
+					copy_samples.sample_end -= samples_per_end_frame;
+				}
+				copy_samples.total += EXTRA_INPUT_SAMPLES;
+
+				if (avr) {
+					// Sample rate conversion has been allocated on this clip, so
+					// this is not the first iteration. Extend start position by
+					// EXTRA_INPUT_SAMPLES to keep step with previous frame
+					copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
+					int samples_per_start_frame =
+					    Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
+					                              reader->info.sample_rate, reader->info.channels);
+					if (copy_samples.sample_start >= samples_per_start_frame)
+					{
+						// check for wrapping
+						copy_samples.frame_start++;
+						copy_samples.sample_start -= samples_per_start_frame;
+					}
+					copy_samples.total -= EXTRA_INPUT_SAMPLES;
+				}
+			}
+
 			// Copy the samples
 			int samples_copied = 0;
-			int starting_frame = mapped.Samples.frame_start;
-			while (info.has_audio && samples_copied < mapped.Samples.total)
+			int starting_frame = copy_samples.frame_start;
+			while (info.has_audio && samples_copied < copy_samples.total)
 			{
 				// Init number of samples to copy this iteration
-				int remaining_samples = mapped.Samples.total - samples_copied;
+				int remaining_samples = copy_samples.total - samples_copied;
 				int number_to_copy = 0;
 
 				// Loop through each channel
@@ -472,17 +529,17 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 					tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
 					int original_samples = original_frame->GetAudioSamplesCount();
 
-					if (starting_frame == mapped.Samples.frame_start)
+					if (starting_frame == copy_samples.frame_start)
 					{
 						// Starting frame (take the ending samples)
-						number_to_copy = original_samples - mapped.Samples.sample_start;
+						number_to_copy = original_samples - copy_samples.sample_start;
 						if (number_to_copy > remaining_samples)
 							number_to_copy = remaining_samples;
 
 						// Add samples to new frame
-						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + mapped.Samples.sample_start, number_to_copy, 1.0);
+						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + copy_samples.sample_start, number_to_copy, 1.0);
 					}
-					else if (starting_frame > mapped.Samples.frame_start && starting_frame < mapped.Samples.frame_end)
+					else if (starting_frame > copy_samples.frame_start && starting_frame < copy_samples.frame_end)
 					{
 						// Middle frame (take all samples)
 						number_to_copy = original_samples;
@@ -495,7 +552,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 					else
 					{
 						// Ending frame (take the beginning samples)
-						number_to_copy = mapped.Samples.sample_end;
+						number_to_copy = copy_samples.sample_end + 1;
 						if (number_to_copy > remaining_samples)
 							number_to_copy = remaining_samples;
 
@@ -510,10 +567,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			}
 
 			// Resample audio on frame (if needed)
-			if (info.has_audio &&
-				(info.sample_rate != frame->SampleRate() ||
-				 info.channels != frame->GetAudioChannelsCount() ||
-				 info.channel_layout != frame->ChannelsLayout()))
+			if (need_resampling)
 				// Resample audio and correct # of channels if needed
 				ResampleMappedAudio(frame, mapped.Odd.Frame);
 
@@ -688,6 +742,18 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	}
 }
 
+// Set offset relative to parent timeline
+void FrameMapper::SetTimelineFrameOffset(long int offset)
+{
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::SetTimelineFrameOffset", "offset", offset, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+	// Mark as dirty
+	is_dirty = true;
+
+	// Used to correctly align audio sample distribution
+	timeline_frame_offset = offset;
+}
+
 // Resample audio and map channels (if needed)
 void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number)
 {
@@ -739,7 +805,7 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	total_frame_samples = Frame::GetSamplesPerFrame(frame->number, target, info.sample_rate, info.channels);
+	total_frame_samples = Frame::GetSamplesPerFrame(frame->number + timeline_frame_offset, target, info.sample_rate, info.channels);
 
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
