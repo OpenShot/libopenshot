@@ -90,28 +90,12 @@ int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int am
 		// This is too far away to be considered
 		return false;
 
-	int sample_diff = abs(location.sample_start - sample_start);
-	if (location.frame == frame && sample_diff >= 0 && sample_diff <= amount)
+	// Note that samples_per_frame can vary slightly frame to frame when the
+	// audio sampling rate is not an integer multiple of the video fps.
+	int diff = samples_per_frame * (location.frame - frame) + location.sample_start - sample_start;
+	if (abs(diff) <= amount)
 		// close
 		return true;
-
-	// new frame is after
-	if (location.frame > frame)
-	{
-		// remaining samples + new samples
-		sample_diff = (samples_per_frame - sample_start) + location.sample_start;
-		if (sample_diff >= 0 && sample_diff <= amount)
-			return true;
-	}
-
-	// new frame is before
-	if (location.frame < frame)
-	{
-		// remaining new samples + old samples
-		sample_diff = (samples_per_frame - location.sample_start) + sample_start;
-		if (sample_diff >= 0 && sample_diff <= amount)
-			return true;
-	}
 
 	// not close
 	return false;
@@ -306,7 +290,7 @@ void FFmpegReader::UpdateAudioInfo()
 		info.fps.num = 24;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
-		info.video_timebase.den = 24;
+		info.video_timebase.den = 90000;
 		info.video_length = info.duration * info.fps.ToDouble();
 		info.width = 720;
 		info.height = 480;
@@ -400,7 +384,8 @@ void FFmpegReader::UpdateVideoInfo()
 		info.fps.num = 24;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
-		info.video_timebase.den = 24;
+		info.video_timebase.den = 90000;
+		info.has_video = false;
 
 		// Calculate number of frames
 		info.video_length = round(info.duration * info.fps.ToDouble());
@@ -518,6 +503,29 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 			// Loop through the stream until the correct frame is found
 			while (true)
 			{
+				// To keep memory and processing to a minimal, no need to go into the packet decode loop
+				// if the desired frame is already available in final_cache...
+				// check for it here first...
+
+				// Check if working frames are 'finished'
+				bool is_cache_found = false;
+				if (!is_seeking) {
+					// Check for any missing frames
+					CheckMissingFrame(requested_frame);
+
+					// Check for final frames
+					CheckWorkingFrames(false, requested_frame);
+				}
+
+				// Check if requested frame is available.
+				// Because there is a minimal_packets decoded per entry, it's possible
+				// the decoded requested_frame is already available in the final_cache.
+				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
+
+				// Break out if frame available already
+				if (is_cache_found && (packets_processed == 0 || packets_processed >= minimum_packets))
+					break;
+
 				// Get the next packet into a local variable called packet
 				packet_error = GetNextPacket();
 
@@ -602,25 +610,8 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
 
-				// Check if working frames are 'finished'
-				bool is_cache_found = false;
-				if (!is_seeking) {
-					// Check for any missing frames
-					CheckMissingFrame(requested_frame);
-
-					// Check for final frames
-					CheckWorkingFrames(false, requested_frame);
-				}
-
-				// Check if requested 'final' frame is available
-				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
-
 				// Increment frames processed
 				packets_processed++;
-
-				// Break once the frame is found
-				if ((is_cache_found && packets_processed >= minimum_packets))
-					break;
 
 			} // end while
 
@@ -1488,17 +1479,8 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 		int orig_start = location.sample_start;
 
 		// Update sample start, to prevent gaps in audio
-		if (previous_packet_location.sample_start <= samples_per_frame)
-		{
-			location.sample_start = previous_packet_location.sample_start;
-			location.frame = previous_packet_location.frame;
-		}
-		else
-		{
-			// set to next frame (since we exceeded the # of samples on a frame)
-			location.sample_start = 0;
-			location.frame++;
-		}
+		location.sample_start = previous_packet_location.sample_start;
+		location.frame = previous_packet_location.frame;
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
@@ -1681,8 +1663,10 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		if (!info.has_video) is_video_ready = true;
 		if (!info.has_audio) is_audio_ready = true;
 
-		// Make final any frames that get stuck (for whatever reason)
-		if (checked_count > 40 && (!is_video_ready || !is_audio_ready)) {
+		// Make final any frames that get stuck (for whatever reason). This is a
+		// stuck condition recovery, so using a large number here is ok. We can't
+		// have this condition trigger prematurely.
+		if (checked_count > 1000 && (!is_video_ready || !is_audio_ready)) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size(), "", -1);
 
@@ -1703,7 +1687,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size(), "", -1);
 
 		// Check if working frame is final
-		if ((!end_of_stream && is_video_ready && is_audio_ready && f->number <= requested_frame) || end_of_stream || is_seek_trash)
+		if ((is_video_ready && is_audio_ready && f->number <= requested_frame) || is_seek_trash)
 		{
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1, "", -1);
