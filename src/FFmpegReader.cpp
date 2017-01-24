@@ -1466,27 +1466,29 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 	AudioLocation location = {whole_frame, sample_start};
 
 	// Compare to previous audio packet (and fix small gaps due to varying PTS timestamps)
-	if (previous_packet_location.frame != -1 && location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
-	{
-		int orig_frame = location.frame;
-		int orig_start = location.sample_start;
+	if (previous_packet_location.frame != -1) {
+		if (location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
+		{
+			int orig_frame = location.frame;
+			int orig_start = location.sample_start;
 
-		// Update sample start, to prevent gaps in audio
-		location.sample_start = previous_packet_location.sample_start;
-		location.frame = previous_packet_location.frame;
+			// Update sample start, to prevent gaps in audio
+			location.sample_start = previous_packet_location.sample_start;
+			location.frame = previous_packet_location.frame;
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Detected)", "Source Frame", orig_frame, "Source Audio Sample", orig_start, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1);
 
-	} else {
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Ignored - too big)", "Previous location frame", previous_packet_location.frame, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1, "", -1);
+		} else {
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Ignored - too big)", "Previous location frame", previous_packet_location.frame, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts, "", -1, "", -1);
 
-		const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-		for (long int audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
-			if (!missing_audio_frames.count(audio_frame)) {
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame, "", -1, "", -1, "", -1);
-				missing_audio_frames.insert(pair<long int, long int>(previous_packet_location.frame - 1, audio_frame));
+			const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+			for (long int audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
+				if (!missing_audio_frames.count(audio_frame)) {
+					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame, "", -1, "", -1, "", -1);
+					missing_audio_frames.insert(pair<long int, long int>(previous_packet_location.frame - 1, audio_frame));
+				}
 			}
 		}
 	}
