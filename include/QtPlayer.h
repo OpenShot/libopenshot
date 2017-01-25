@@ -72,7 +72,7 @@ namespace openshot
 	int Position();
 	
 	/// Seek to a specific frame in the player
-	void Seek(int new_frame);
+	void Seek(long int new_frame);
 
 	/// Set the source URL/path of this player (which will create an internal Reader)
 	void SetSource(const std::string &source);

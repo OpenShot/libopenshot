@@ -81,7 +81,7 @@ namespace openshot
 		virtual int Position() = 0;
 
 		/// Seek to a specific frame in the player
-		virtual void Seek(int new_frame) = 0;
+		virtual void Seek(long int new_frame) = 0;
 
 		/// Get the Playback speed
 		virtual float Speed() = 0;

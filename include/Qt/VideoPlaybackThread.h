@@ -54,7 +54,7 @@ namespace openshot
 	~VideoPlaybackThread();
 
 	/// Get the currently playing frame number (if any)
-	int getCurrentFramePosition();
+	long int getCurrentFramePosition();
 
 	/// Start the thread
 	void run();

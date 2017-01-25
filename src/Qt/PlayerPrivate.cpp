@@ -90,7 +90,7 @@ namespace openshot
 			last_video_position = video_position;
 
 			// How many frames ahead or behind is the video thread?
-			int video_frame_diff = 0;
+			long int video_frame_diff = 0;
 			if (reader->info.has_audio && reader->info.has_video) {
 				if (speed != 1)
 					// Set audio frame again (since we are not in normal speed, and not paused)

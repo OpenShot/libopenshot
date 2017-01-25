@@ -42,7 +42,7 @@ namespace openshot
     }
 
     // Get the currently playing frame number (if any)
-    int VideoCacheThread::getCurrentFramePosition()
+    long int VideoCacheThread::getCurrentFramePosition()
     {
     	if (frame)
     		return frame->number;
@@ -51,13 +51,13 @@ namespace openshot
     }
 
     // Set the currently playing frame number (if any)
-    void VideoCacheThread::setCurrentFramePosition(int current_frame_number)
+    void VideoCacheThread::setCurrentFramePosition(long int current_frame_number)
     {
     	current_display_frame = current_frame_number;
     }
 
 	// Seek the reader to a particular frame number
-	void VideoCacheThread::Seek(int new_position)
+	void VideoCacheThread::Seek(long int new_position)
 	{
 		position = new_position;
 	}

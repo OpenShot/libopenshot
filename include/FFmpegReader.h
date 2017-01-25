@@ -58,9 +58,9 @@ namespace openshot
 	 */
 	struct AudioLocation
 	{
-		int frame;
+		long int frame;
 		int sample_start;
-		int is_near(AudioLocation location, int samples_per_frame, int amount);
+		bool is_near(AudioLocation location, int samples_per_frame, long int amount);
 	};
 
 	/**

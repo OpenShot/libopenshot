@@ -96,16 +96,16 @@ namespace openshot {
 		Keyframe();
 
 		/// Constructor which sets the default point & coordinate at X=0
-		Keyframe(float value);
+		Keyframe(double value);
 
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
 		/// Add a new point on the key-frame, with some defaults set (BEZIER)
-		void AddPoint(float x, float y);
+		void AddPoint(double x, double y);
 
 		/// Add a new point on the key-frame, with a specific interpolation type
-		void AddPoint(float x, float y, InterpolationType interpolate);
+		void AddPoint(double x, double y, InterpolationType interpolate);
 
 		/// Does this keyframe contain a specific point
 		bool Contains(Point p);
@@ -117,7 +117,7 @@ namespace openshot {
 		long int FindIndex(Point p) throw(OutOfBoundsPoint);
 
 		/// Get the value at a specific index
-		float GetValue(long int index);
+		double GetValue(long int index);
 
 		/// Get the rounded INT value at a specific index
 		int GetInt(long int index);
@@ -129,7 +129,7 @@ namespace openshot {
 		Fraction GetRepeatFraction(long int index);
 
 		/// Get the change in Y value (from the previous Y value)
-		float GetDelta(long int index);
+		double GetDelta(long int index);
 
 		/// Get a point at a specific index
 		Point& GetPoint(long int index) throw(OutOfBoundsPoint);
@@ -178,7 +178,7 @@ namespace openshot {
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...
-		void ScalePoints(float scale);
+		void ScalePoints(double scale);
 
 		/// Replace an existing point with a new point
 		void UpdatePoint(long int index, Point p);

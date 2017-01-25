@@ -53,7 +53,7 @@ void Keyframe::ReorderPoints() {
 }
 
 // Constructor which sets the default point & coordinate at X=0
-Keyframe::Keyframe(float value) : needs_update(true) {
+Keyframe::Keyframe(double value) : needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
 
@@ -87,7 +87,7 @@ void Keyframe::AddPoint(Point p) {
 }
 
 // Add a new point on the key-frame, with some defaults set (BEZIER)
-void Keyframe::AddPoint(float x, float y)
+void Keyframe::AddPoint(double x, double y)
 {
 	// Create a point
 	Point new_point(x, y, BEZIER);
@@ -97,7 +97,7 @@ void Keyframe::AddPoint(float x, float y)
 }
 
 // Add a new point on the key-frame, with a specific interpolation type
-void Keyframe::AddPoint(float x, float y, InterpolationType interpolate)
+void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 {
 	// Create a point
 	Point new_point(x, y, interpolate);
@@ -223,7 +223,7 @@ Point Keyframe::GetMaxPoint() {
 }
 
 // Get the value at a specific index
-float Keyframe::GetValue(long int index)
+double Keyframe::GetValue(long int index)
 {
 	// Check if it needs to be processed
 	if (needs_update)
@@ -407,7 +407,7 @@ Fraction Keyframe::GetRepeatFraction(long int index)
 }
 
 // Get the change in Y value (from the previous Y value)
-float Keyframe::GetDelta(long int index)
+double Keyframe::GetDelta(long int index)
 {
 	// Check if it needs to be processed
 	if (needs_update)
@@ -653,13 +653,13 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 	// creating a straight line with coordinates.
 	case LINEAR: {
 		// Get the difference in value
-		float current_value = p1.co.Y;
-		float value_difference = p2.co.Y - p1.co.Y;
-		float value_increment = 0.0f;
+		double current_value = p1.co.Y;
+		double value_difference = p2.co.Y - p1.co.Y;
+		double value_increment = 0.0f;
 
 		// Get the increment value, but take into account the
 		// first segment has 1 extra value
-		value_increment = value_difference / (float) (number_of_values);
+		value_increment = value_difference / (double) (number_of_values);
 
 		if (Segment == 0)
 			// Add an extra value to the first segment
@@ -690,8 +690,8 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 		number_of_values *= 4;	// We need a higher resolution curve (4X)
 
 		// Diff between points
-		float X_diff = p2.co.X - p1.co.X;
-		float Y_diff = p2.co.Y - p1.co.Y;
+		double X_diff = p2.co.X - p1.co.X;
+		double Y_diff = p2.co.Y - p1.co.Y;
 
 		vector<Coordinate> segment_coordinates;
 		segment_coordinates.push_back(p1.co);
@@ -717,8 +717,8 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 
 			jcount = 0;
 
-			float new_x = 0.0f;
-			float new_y = 0.0f;
+			double new_x = 0.0f;
+			double new_y = 0.0f;
 
 			for (long int i = 0; i < npts; i++) {
 				Coordinate co = segment_coordinates[i];
@@ -741,7 +741,7 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 		// Loop through the raw coordinates, and map them correctly to frame numbers.  For example,
 		// we can't have duplicate X values, since X represents our frame  numbers.
 		long int current_frame = p1.co.X;
-		float current_value = p1.co.Y;
+		double current_value = p1.co.Y;
 		for (long int i = 0; i < raw_coordinates.size(); i++)
 		{
 			// Get the raw coordinate
@@ -855,7 +855,7 @@ double Keyframe::Bernstein(long int n, long int i, double t) {
 
 // Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 // 1.0 = same size, 1.05 = 5% increase, etc...
-void Keyframe::ScalePoints(float scale)
+void Keyframe::ScalePoints(double scale)
 {
 	// Loop through each point (skipping the 1st point)
 	for (long int point_index = 0; point_index < Points.size(); point_index++) {

@@ -108,7 +108,7 @@ int QtPlayer::Position()
     return p->video_position;
 }
 
-void QtPlayer::Seek(int new_frame)
+void QtPlayer::Seek(long int new_frame)
 {
 	// Check for seek
 	if (new_frame > 0) {

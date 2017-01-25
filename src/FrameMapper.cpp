@@ -219,7 +219,7 @@ void FrameMapper::Init()
 	Field Even(0, true);	// temp field used to track the EVEN field
 
 	// Variables used to remap audio samples
-	int start_samples_frame = 1;
+	long int start_samples_frame = 1;
 	int start_samples_position = 0;
 
 	for (long int field = 1; field <= fields.size(); field++)
@@ -242,7 +242,7 @@ void FrameMapper::Init()
 			// Determine the range of samples (from the original rate). Resampling happens in real-time when
 			// calling the GetFrame() method. So this method only needs to redistribute the original samples with
 			// the original sample rate.
-			int end_samples_frame = start_samples_frame;
+			long int end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
 			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate, reader->info.channels);
 
@@ -515,7 +515,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 			// Copy the samples
 			int samples_copied = 0;
-			int starting_frame = copy_samples.frame_start;
+			long int starting_frame = copy_samples.frame_start;
 			while (info.has_audio && samples_copied < copy_samples.total)
 			{
 				// Init number of samples to copy this iteration

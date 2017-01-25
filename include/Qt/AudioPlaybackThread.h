@@ -81,13 +81,13 @@ namespace openshot
 	tr1::shared_ptr<Frame> getFrame();
 
 	/// Get the current frame number being played
-	int getCurrentFramePosition();
+	long int getCurrentFramePosition();
 
 	/// Play the audio
 	void Play();
 
 	/// Seek the audio thread
-	void Seek(int new_position);
+	void Seek(long int new_position);
 
 	/// Stop the audio playback
 	void Stop();

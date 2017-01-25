@@ -43,7 +43,7 @@ namespace openshot
     }
 
     // Get the currently playing frame number (if any)
-    int VideoPlaybackThread::getCurrentFramePosition()
+    long int VideoPlaybackThread::getCurrentFramePosition()
     {
     	if (frame)
     		return frame->number;

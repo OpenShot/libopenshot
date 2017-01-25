@@ -83,7 +83,7 @@ FFmpegReader::~FFmpegReader() {
 }
 
 // This struct holds the associated video frame and starting sample # for an audio packet.
-int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int amount)
+bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, long int amount)
 {
 	// Is frame even close to this one?
 	if (abs(location.frame - frame) >= 2)
@@ -92,7 +92,7 @@ int AudioLocation::is_near(AudioLocation location, int samples_per_frame, int am
 
 	// Note that samples_per_frame can vary slightly frame to frame when the
 	// audio sampling rate is not an integer multiple of the video fps.
-	int diff = samples_per_frame * (location.frame - frame) + location.sample_start - sample_start;
+	long int diff = samples_per_frame * (location.frame - frame) + location.sample_start - sample_start;
 	if (abs(diff) <= amount)
 		// close
 		return true;
@@ -937,9 +937,9 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
 
 	// DEBUG (FOR AUDIO ISSUES) - Get the audio packet start time (in seconds)
-	int adjusted_pts = packet->pts + audio_pts_offset;
+	long int adjusted_pts = packet->pts + audio_pts_offset;
 	double audio_seconds = double(adjusted_pts) * info.audio_timebase.ToDouble();
-	double sample_seconds = float(pts_total) / info.sample_rate;
+	double sample_seconds = double(pts_total) / info.sample_rate;
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Decode Info A)", "pts_counter", pts_counter, "PTS", adjusted_pts, "Offset", audio_pts_offset, "PTS Diff", adjusted_pts - prev_pts, "Samples", pts_remaining_samples, "Sample PTS ratio", float(adjusted_pts - prev_pts) / pts_remaining_samples);
@@ -1042,7 +1042,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 		av_free(audio_converted->data[0]);
 		AV_FREE_FRAME(&audio_converted);
 
-		int starting_frame_number = -1;
+		long int starting_frame_number = -1;
 		bool partial_frame = true;
 		for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 		{
@@ -1323,7 +1323,7 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 // Get the PTS for the current video packet
 long int FFmpegReader::GetVideoPTS()
 {
-	int current_pts = 0;
+	long int current_pts = 0;
 	if(packet->dts != AV_NOPTS_VALUE)
 		current_pts = packet->dts;
 
@@ -1445,7 +1445,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 	double frame = (audio_seconds * info.fps.ToDouble()) + 1;
 
 	// Frame # as a whole number (no more decimals)
-	int whole_frame = int(frame);
+	long int whole_frame = long(frame);
 
 	// Remove the whole number, and only get the decimal of the frame
 	double sample_start_percentage = frame - double(whole_frame);
@@ -1469,7 +1469,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 	if (previous_packet_location.frame != -1) {
 		if (location.is_near(previous_packet_location, samples_per_frame, samples_per_frame))
 		{
-			int orig_frame = location.frame;
+			long int orig_frame = location.frame;
 			int orig_start = location.sample_start;
 
 			// Update sample start, to prevent gaps in audio
@@ -1882,7 +1882,7 @@ long int FFmpegReader::GetSmallestVideoFrame()
 {
 	// Loop through frame numbers
 	map<long int, long int>::iterator itr;
-	int smallest_frame = -1;
+	long int smallest_frame = -1;
 	for(itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)
@@ -1898,7 +1898,7 @@ long int FFmpegReader::GetSmallestAudioFrame()
 {
 	// Loop through frame numbers
 	map<long int, long int>::iterator itr;
-	int smallest_frame = -1;
+	long int smallest_frame = -1;
 	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 	for(itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr)
 	{

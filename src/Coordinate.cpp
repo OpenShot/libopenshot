@@ -36,7 +36,7 @@ Coordinate::Coordinate() :
 }
 
 // Constructor which also allows the user to set the X and Y
-Coordinate::Coordinate(float x, float y) :
+Coordinate::Coordinate(double x, double y) :
 	X(x), Y(y), increasing(true), repeated(1,1), delta(0.0)  {
 }
 

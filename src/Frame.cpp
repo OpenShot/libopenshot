@@ -466,7 +466,7 @@ void Frame::SetPixelRatio(int num, int den)
 }
 
 // Set frame number
-void Frame::SetFrameNumber(int new_number)
+void Frame::SetFrameNumber(long int new_number)
 {
 	number = new_number;
 }

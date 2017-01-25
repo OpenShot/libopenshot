@@ -276,7 +276,7 @@ namespace openshot
 		void Save(string path, float scale, string format="PNG", int quality=100);
 
 		/// Set frame number
-		void SetFrameNumber(int number);
+		void SetFrameNumber(long int number);
 
 		/// Set Pixel Aspect Ratio
 		void SetPixelRatio(int num, int den);
