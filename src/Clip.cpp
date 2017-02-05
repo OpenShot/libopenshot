@@ -40,7 +40,6 @@ void Clip::init_settings()
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
-	handles = TRANSFORM_HANDLE_NONE;
 	waveform = false;
 	previous_properties = "";
 
@@ -670,7 +669,6 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", NULL, 0, 8, false, requested_frame);
 	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
 	root["anchor"] = add_property_json("Anchor", anchor, "int", "", NULL, 0, 1, false, requested_frame);
-	root["handles"] = add_property_json("Handles", handles, "int", "", NULL, 0, 1, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 
 	// Add gravity choices (dropdown style)
@@ -693,10 +691,6 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	// Add anchor choices (dropdown style)
 	root["anchor"]["choices"].append(add_property_choice_json("Canvas", ANCHOR_CANVAS, anchor));
 	root["anchor"]["choices"].append(add_property_choice_json("Viewport", ANCHOR_VIEWPORT, anchor));
-
-	// Add transform handles choices (dropdown style)
-	root["handles"]["choices"].append(add_property_choice_json("None", TRANSFORM_HANDLE_NONE, handles));
-	root["handles"]["choices"].append(add_property_choice_json("Selection", TRANSFORM_HANDLE_SELECTION, handles));
 
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
@@ -736,7 +730,6 @@ Json::Value Clip::JsonValue() {
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
-	root["handles"] = handles;
 	root["waveform"] = waveform;
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
@@ -821,8 +814,6 @@ void Clip::SetJsonValue(Json::Value root) {
 		scale = (ScaleType) root["scale"].asInt();
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
-	if (!root["handles"].isNull())
-		handles = (TransformHandleType) root["handles"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
 	if (!root["scale_x"].isNull())

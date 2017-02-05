@@ -467,31 +467,31 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
+    if (!isEqual(x, 0) || !isEqual(y, 0)) {
+        // TRANSLATE/MOVE CLIP
+        transform.translate(x, y);
+        transformed = true;
+    }
+
+    if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
+        // SCALE CLIP
+        transform.scale(sx, sy);
+        transformed = true;
+    }
+
+    if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
+        // SHEAR HEIGHT/WIDTH
+        transform.shear(shear_x, shear_y);
+        transformed = true;
+    }
+
 	if (!isEqual(r, 0)) {
 		// ROTATE CLIP
-		float origin_x = x + (source_width / 2.0);
-		float origin_y = y + (source_height / 2.0);
+		float origin_x = x + ((source_width * sx) / 2.0);
+		float origin_y = y + ((source_height * sy) / 2.0);
 		transform.translate(origin_x, origin_y);
 		transform.rotate(r);
 		transform.translate(-origin_x,-origin_y);
-		transformed = true;
-	}
-
-	if (!isEqual(x, 0) || !isEqual(y, 0)) {
-		// TRANSLATE/MOVE CLIP
-		transform.translate(x, y);
-		transformed = true;
-	}
-
-	if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
-		// TRANSLATE/MOVE CLIP
-		transform.scale(sx, sy);
-		transformed = true;
-	}
-
-	if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
-		// SHEAR HEIGHT/WIDTH
-		transform.shear(shear_x, shear_y);
 		transformed = true;
 	}
 
@@ -512,30 +512,6 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	// Composite a new layer onto the image
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawImage(0, 0, *source_image);
-
-	// Draw transform selection handles (if needed)
-	if (source_clip->handles == TRANSFORM_HANDLE_SELECTION) {
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Add transform selection handles)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
-
-		// Draw 4 corners
-		painter.fillRect(0.0, 0.0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top left
-		painter.fillRect(source_width - (12.0/sx), 0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top right
-		painter.fillRect(0.0, source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom left
-		painter.fillRect(source_width - (12.0/sx), source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom right
-
-		// Draw 4 sides (centered)
-		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), 0, 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // top center
-		painter.fillRect(0.0 + (source_width / 2.0) - (6.0/sx), source_height - (12.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // bottom center
-		painter.fillRect(0.0, (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // left center
-		painter.fillRect(source_width - (12.0/sx), (source_height / 2.0) - (6.0/sy), 12.0/sx, 12.0/sy, QBrush(QColor("#53a0ed"))); // right center
-
-
-		// Draw origin  QPen(const QBrush &brush, qreal width, Qt::PenStyle style = Qt::SolidLine, Qt::PenCapStyle cap = Qt::SquareCap, Qt::PenJoinStyle join = Qt::BevelJoin)
-		painter.setBrush(QColor(83, 160, 237, 122));
-		painter.setPen(Qt::NoPen);
-		painter.drawEllipse((source_width / 2.0) - (25.0/sx), (source_height / 2.0) - (25.0/sy), 50.0/sx, 50.0/sy);
-	}
 
     painter.end();
 
