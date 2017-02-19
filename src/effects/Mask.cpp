@@ -121,8 +121,9 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, long int fra
 	if (!reader)
 		return frame;
 
-	// Get mask image
-	if (!original_mask || !reader->info.has_single_image) {
+	// Get mask image (if missing or different size than frame image)
+	if (!original_mask || !reader->info.has_single_image ||
+            (original_mask && original_mask->size() != frame_image->size())) {
 		#pragma omp critical (open_mask_reader)
 		{
 			// Only get mask if needed
