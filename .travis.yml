@@ -1,0 +1,11 @@
+dist: trusty
+sudo: required
+
+language: cpp
+
+compiler:
+  - gcc
+
+script:
+  - bash .build.sh
+
