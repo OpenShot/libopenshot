@@ -104,6 +104,9 @@ void Timeline::RemoveClip(Clip* clip)
 // Apply a FrameMapper to a clip which matches the settings of this timeline
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
+    // Get lock (prevent getting frames while this happens)
+    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
 	// Determine type of reader
 	ReaderBase* clip_reader = NULL;
 	if (clip->Reader()->Name() == "FrameMapper")
@@ -955,6 +958,9 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
 void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
+
+    // Get lock (prevent getting frames while this happens)
+    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
