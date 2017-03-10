@@ -221,6 +221,9 @@ namespace openshot {
 		/// @brief Automatically map all clips to the timeline's framerate and samplerate
 		void AutoMapClips(bool auto_map) { auto_map_clips = auto_map; };
 
+        /// Clear all cache for this timeline instance, and all clips, mappers, and readers under it
+        void ClearAllCache();
+
 		/// Return a list of clips on the timeline
 		list<Clip*> Clips() { return clips; };
 
@@ -278,7 +281,6 @@ namespace openshot {
 		/// @brief Remove an effect from the timeline
 		/// @param effect Remove an effect from the timeline.
 		void RemoveEffect(EffectBase* effect);
-
 	};
 
 

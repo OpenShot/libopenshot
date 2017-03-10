@@ -214,6 +214,9 @@ namespace openshot
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();
 
+		/// Get the current reader
+		ReaderBase* Reader() throw(ReaderClosed);
+
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number);
 

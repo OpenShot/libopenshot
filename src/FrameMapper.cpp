@@ -66,6 +66,16 @@ FrameMapper::~FrameMapper() {
 		Close();
 }
 
+/// Get the current reader
+ReaderBase* FrameMapper::Reader() throw(ReaderClosed)
+{
+    if (reader)
+        return reader;
+    else
+        // Throw error if reader not initialized
+        throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.", "");
+}
+
 void FrameMapper::AddField(long int frame)
 {
 	// Add a field, and toggle the odd / even field

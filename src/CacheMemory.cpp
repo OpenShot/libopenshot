@@ -283,6 +283,7 @@ void CacheMemory::Clear()
 	frames.clear();
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
+	needs_range_processing = true;
 }
 
 // Count the frames in the queue

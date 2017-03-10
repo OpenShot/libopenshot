@@ -59,6 +59,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.has_video = true;
 	info.video_length = info.fps.ToFloat() * info.duration;
 
+    // Init max image size
+    SetMaxSize(info.width, info.height);
+
 	// Init cache
 	final_cache = new CacheMemory();
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
@@ -164,11 +167,8 @@ float Timeline::calculate_time(long int number, Fraction rate)
 // Apply effects to the source frame (if any)
 tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer)
 {
-	// Calculate time of frame
-	float requested_time = calculate_time(timeline_frame_number, info.fps);
-
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "requested_time", requested_time, "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1, "", -1);
 
 	// Find Effects at this position and layer
 	list<EffectBase*>::iterator effect_itr;
@@ -178,21 +178,22 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 		EffectBase *effect = (*effect_itr);
 
 		// Does clip intersect the current requested time
-		float effect_duration = effect->End() - effect->Start();
-		bool does_effect_intersect = (effect->Position() <= requested_time && effect->Position() + effect_duration >= requested_time && effect->Layer() == layer);
+		long effect_start_position = round(effect->Position() * info.fps.ToDouble()) + 1;
+		long effect_end_position = round((effect->Position() + (effect->End() - effect->Start())) * info.fps.ToDouble()) + 1;
+
+		bool does_effect_intersect = (effect_start_position <= timeline_frame_number && effect_end_position >= timeline_frame_number && effect->Layer() == layer);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "requested_time", requested_time, "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "effect_duration", effect_duration);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Does effect intersect)", "effect->Position()", effect->Position(), "does_effect_intersect", does_effect_intersect, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1);
 
 		// Clip is visible
 		if (does_effect_intersect)
 		{
 			// Determine the frame needed for this clip (based on the position on the timeline)
-			float time_diff = (requested_time - effect->Position()) + effect->Start();
-			int effect_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+			int effect_frame_number = (timeline_frame_number - effect_start_position) + 1;
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Process Effect)", "time_diff", time_diff, "effect_frame_number", effect_frame_number, "effect_duration", effect_duration, "does_effect_intersect", does_effect_intersect, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects (Process Effect)", "effect_frame_number", effect_frame_number, "does_effect_intersect", does_effect_intersect, "", -1, "", -1, "", -1, "", -1);
 
 			// Apply the effect to this frame
 			frame = effect->GetFrame(frame, effect_frame_number);
@@ -656,19 +657,19 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		// Determine all clip frames, and request them in order (to keep resampled audio in sequence)
 		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
-			// Calculate time of timeline frame
-			float requested_time = calculate_time(frame_number, info.fps);
 			// Loop through clips
 			for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
 			{
 				// Get clip object from the iterator
 				Clip *clip = nearby_clips[clip_index];
-				bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
+                long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
+                long clip_end_position = round((clip->Position() + (clip->End() - clip->Start())) * info.fps.ToDouble()) + 1;
+
+				bool does_clip_intersect = (clip_start_position <= frame_number && clip_end_position >= frame_number);
 				if (does_clip_intersect)
 				{
 					// Get clip frame #
-					float time_diff = (requested_time - clip->Position()) + clip->Start();
-					int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+					int clip_frame_number = (frame_number - clip_start_position) + 1;
 					// Cache clip object
 					clip->GetFrame(clip_frame_number);
 				}
@@ -701,23 +702,21 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
 				new_frame->AddColor(info.width, info.height, color.GetColorHex(frame_number));
 
-				// Calculate time of frame
-				float requested_time = calculate_time(frame_number, info.fps);
-
 				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "requested_time", requested_time, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1, "", -1);
 
 				// Find Clips near this time
 				for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
 				{
 					// Get clip object from the iterator
 					Clip *clip = nearby_clips[clip_index];
+                    long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
+                    long clip_end_position = round((clip->Position() + (clip->End() - clip->Start())) * info.fps.ToDouble()) + 1;
 
-					// Does clip intersect the current requested time
-					bool does_clip_intersect = (clip->Position() <= requested_time && clip->Position() + clip->Duration() >= requested_time);
+                    bool does_clip_intersect = (clip_start_position <= frame_number && clip_end_position >= frame_number);
 
 					// Debug output
-					ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1);
+					ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Does clip intersect)", "frame_number", frame_number, "clip->Position()", clip->Position(), "clip->Duration()", clip->Duration(), "does_clip_intersect", does_clip_intersect, "", -1, "", -1);
 
 					// Clip is visible
 					if (does_clip_intersect)
@@ -727,27 +726,29 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 						for (int top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
 						{
 							Clip *nearby_clip = nearby_clips[top_clip_index];
+                            long nearby_clip_start_position = round(nearby_clip->Position() * info.fps.ToDouble()) + 1;
+                            long nearby_clip_end_position = round((nearby_clip->Position() + (nearby_clip->End() - nearby_clip->Start())) * info.fps.ToDouble()) + 1;
+
 							if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
-									nearby_clip->Position() <= requested_time && nearby_clip->Position() + nearby_clip->Duration() >= requested_time &&
-									nearby_clip->Position() > clip->Position()) {
+                                    nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number &&
+                                    nearby_clip_start_position > clip_start_position) {
 								is_top_clip = false;
 								break;
 							}
 						}
 
 						// Determine the frame needed for this clip (based on the position on the timeline)
-						float time_diff = (requested_time - clip->Position()) + clip->Start();
-						int clip_frame_number = round(time_diff * info.fps.ToFloat()) + 1;
+						int clip_frame_number = (frame_number - clip_start_position) + 1;
 
 						// Debug output
-						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "time_diff", time_diff, "requested_time", requested_time, "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
+						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number, "", -1, "", -1);
 
 						// Add clip's frame as layer
 						add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
 
 					} else
 						// Debug output
-						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "requested_time", requested_time, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1);
+						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (clip does not intersect)", "frame_number", frame_number, "does_clip_intersect", does_clip_intersect, "", -1, "", -1, "", -1, "", -1);
 
 				} // end clip loop
 
@@ -779,8 +780,8 @@ vector<Clip*> Timeline::find_intersecting_clips(long int requested_frame, int nu
 	vector<Clip*> matching_clips;
 
 	// Calculate time of frame
-	float min_requested_time = calculate_time(requested_frame, info.fps);
-	float max_requested_time = calculate_time(requested_frame + (number_of_frames - 1), info.fps);
+	float min_requested_frame = requested_frame;
+	float max_requested_frame = requested_frame + (number_of_frames - 1);
 
 	// Re-Sort Clips (since they likely changed)
 	sort_clips();
@@ -793,17 +794,19 @@ vector<Clip*> Timeline::find_intersecting_clips(long int requested_frame, int nu
 		Clip *clip = (*clip_itr);
 
 		// Does clip intersect the current requested time
-		float clip_duration = clip->End() - clip->Start();
-		bool does_clip_intersect = (clip->Position() <= min_requested_time && clip->Position() + clip_duration >= min_requested_time) ||
-								   (clip->Position() > min_requested_time && clip->Position() <= max_requested_time);
+		long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
+		long clip_end_position = round((clip->Position() + (clip->End() - clip->Start())) * info.fps.ToDouble()) + 1;
+
+		bool does_clip_intersect =
+                (clip_start_position <= min_requested_frame || clip_start_position <= max_requested_frame) &&
+                (clip_end_position >= min_requested_frame || clip_end_position >= max_requested_frame);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_time", min_requested_time, "max_requested_time", max_requested_time, "clip->Position()", clip->Position(), "clip_duration", clip_duration, "does_clip_intersect", does_clip_intersect);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::find_intersecting_clips (Is clip near or intersecting)", "requested_frame", requested_frame, "min_requested_frame", min_requested_frame, "max_requested_frame", max_requested_frame, "clip->Position()", clip->Position(), "does_clip_intersect", does_clip_intersect, "", -1);
 
 		// Open (or schedule for closing) this clip, based on if it's intersecting or not
 		#pragma omp critical (reader_lock)
 		update_open_clips(clip, does_clip_intersect);
-
 
 		// Clip is visible
 		if (does_clip_intersect && include)
@@ -1059,6 +1062,12 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 					if (e->Id() == effect_id) {
 						// Apply the change to the effect directly
 						apply_json_to_effects(change, e);
+
+						// Calculate start and end frames that this impacts, and remove those frames from the cache
+                        long int new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+                        long int new_ending_frame = ((existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble()) + 1;
+                        final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
+
 						return; // effect found, don't update clip
 					}
 				}
@@ -1068,8 +1077,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
-		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
-		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
+		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
+		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
 		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
 	}
 
@@ -1087,8 +1096,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 		if (existing_clip) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = existing_clip->Position() * info.fps.ToDouble();
-			long int old_ending_frame = (existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble();
+			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+			long int old_ending_frame = ((existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Update clip properties from JSON
@@ -1101,8 +1110,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 		if (existing_clip) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = existing_clip->Position() * info.fps.ToDouble();
-			long int old_ending_frame = (existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble();
+			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+			long int old_ending_frame = ((existing_clip->Position() + existing_clip->End() - existing_clip->Start()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Remove clip from timeline
@@ -1162,8 +1171,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
-		long int new_starting_frame = change["value"]["position"].asDouble() * info.fps.ToDouble();
-		long int new_ending_frame = (change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble();
+		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
+		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
 		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
 	}
 
@@ -1191,8 +1200,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		if (existing_effect) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = existing_effect->Position() * info.fps.ToDouble();
-			long int old_ending_frame = (existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble();
+			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
+			long int old_ending_frame = ((existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Update effect properties from JSON
@@ -1205,8 +1214,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		if (existing_effect) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = existing_effect->Position() * info.fps.ToDouble();
-			long int old_ending_frame = (existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble();
+			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
+			long int old_ending_frame = ((existing_effect->Position() + existing_effect->End() - existing_effect->Start()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
 
 			// Remove effect from timeline
@@ -1310,6 +1319,27 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 
 }
 
+// Clear all caches
+void Timeline::ClearAllCache() {
+    // Clear primary cache
+    final_cache->Clear();
 
+    // Loop through all clips
+    list<Clip*>::iterator clip_itr;
+    for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+    {
+        // Get clip object from the iterator
+        Clip *clip = (*clip_itr);
 
+        // Clear cache on clip
+        clip->Reader()->GetCache()->Clear();
 
+        // Clear nested Reader (if any)
+        if (clip->Reader()->Name() == "FrameMapper") {
+			FrameMapper* nested_reader = (FrameMapper*) clip->Reader();
+			if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+				nested_reader->Reader()->GetCache()->Clear();
+		}
+
+    }
+}
