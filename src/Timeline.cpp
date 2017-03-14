@@ -140,7 +140,7 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 void Timeline::ApplyMapperToClips()
 {
 	// Clear all cached frames
-	final_cache->Clear();
+	ClearAllCache();
 
 	// Loop through all clips
 	list<Clip*>::iterator clip_itr;
@@ -239,7 +239,7 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, info.channels));
+	new_frame = tr1::shared_ptr<Frame>(new Frame(number, max_width, max_height, "#000000", samples_in_frame, info.channels));
 	new_frame->SampleRate(info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
 	return new_frame;
@@ -271,7 +271,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		tr1::shared_ptr<QImage> source_image = source_frame->GetWaveform(info.width, info.height, red, green, blue, alpha);
+		tr1::shared_ptr<QImage> source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
 		source_frame->AddImage(tr1::shared_ptr<QImage>(source_image));
 	}
 
@@ -375,7 +375,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	{
 	case (SCALE_FIT):
 		// keep aspect ratio
-		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(info.width, info.height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		source_width = source_image->width();
 		source_height = source_image->height();
 
@@ -385,7 +385,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	case (SCALE_STRETCH):
 		// ignore aspect ratio
-		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(info.width, info.height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 		source_width = source_image->width();
 		source_height = source_image->height();
 
@@ -394,11 +394,11 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		break;
 
 	case (SCALE_CROP):
-		QSize width_size(info.width, round(info.width / (float(source_width) / float(source_height))));
-		QSize height_size(round(info.height / (float(source_height) / float(source_width))), info.height);
+		QSize width_size(max_width, round(max_width / (float(source_width) / float(source_height))));
+		QSize height_size(round(max_height / (float(source_height) / float(source_width))), max_height);
 
 		// respect aspect ratio
-		if (width_size.width() >= info.width && width_size.height() >= info.height)
+		if (width_size.width() >= max_width && width_size.height() >= max_height)
 			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		else
 			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(height_size.width(), height_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation))); // height is larger, so resize to it
@@ -423,32 +423,32 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	switch (source_clip->gravity)
 	{
 	case (GRAVITY_TOP):
-		x = (info.width - scaled_source_width) / 2.0; // center
+		x = (max_width - scaled_source_width) / 2.0; // center
 		break;
 	case (GRAVITY_TOP_RIGHT):
-		x = info.width - scaled_source_width; // right
+		x = max_width - scaled_source_width; // right
 		break;
 	case (GRAVITY_LEFT):
-		y = (info.height - scaled_source_height) / 2.0; // center
+		y = (max_height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_CENTER):
-		x = (info.width - scaled_source_width) / 2.0; // center
-		y = (info.height - scaled_source_height) / 2.0; // center
+		x = (max_width - scaled_source_width) / 2.0; // center
+		y = (max_height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_RIGHT):
-		x = info.width - scaled_source_width; // right
-		y = (info.height - scaled_source_height) / 2.0; // center
+		x = max_width - scaled_source_width; // right
+		y = (max_height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_BOTTOM_LEFT):
-		y = (info.height - scaled_source_height); // bottom
+		y = (max_width - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM):
-		x = (info.width - scaled_source_width) / 2.0; // center
-		y = (info.height - scaled_source_height); // bottom
+		x = (max_width - scaled_source_width) / 2.0; // center
+		y = (max_height - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM_RIGHT):
-		x = info.width - scaled_source_width; // right
-		y = (info.height - scaled_source_height); // bottom
+		x = max_width - scaled_source_width; // right
+		y = (max_height - scaled_source_height); // bottom
 		break;
 	}
 
@@ -457,8 +457,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
-	x += (info.width * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
-	y += (info.height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
+	x += (max_width * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
+	y += (max_height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	bool is_x_animated = source_clip->location_x.Points.size() > 1;
 	bool is_y_animated = source_clip->location_y.Points.size() > 1;
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
@@ -691,7 +691,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 				// Create blank frame (which will become the requested frame)
-				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, info.width, info.height, "#000000", samples_in_frame, info.channels)));
+				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, max_width, max_height, "#000000", samples_in_frame, info.channels)));
 				new_frame->AddAudioSilence(samples_in_frame);
 				new_frame->SampleRate(info.sample_rate);
 				new_frame->ChannelsLayout(info.channel_layout);
@@ -702,7 +702,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				// Add Background Color to 1st layer (if animated or not black)
 				if ((color.red.Points.size() > 1 || color.green.Points.size() > 1 || color.blue.Points.size() > 1) ||
 					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
-				new_frame->AddColor(info.width, info.height, color.GetColorHex(frame_number));
+				new_frame->AddColor(max_width, max_height, color.GetColorHex(frame_number));
 
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1, "", -1);
@@ -1069,7 +1069,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 						// Calculate start and end frames that this impacts, and remove those frames from the cache
                         long int new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
                         long int new_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
-                        final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
+                        final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 
 						return; // effect found, don't update clip
 					}
@@ -1082,7 +1082,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
 		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
 		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
-		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
+		final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 	}
 
 	// Determine type of change operation
@@ -1101,7 +1101,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
 			long int old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
-			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
+			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Update clip properties from JSON
 			existing_clip->SetJsonValue(change["value"]);
@@ -1115,7 +1115,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
 			long int old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
-			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
+			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Remove clip from timeline
 			RemoveClip(existing_clip);
@@ -1176,7 +1176,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
 		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
 		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
-		final_cache->Remove(new_starting_frame - 2, new_ending_frame + 2);
+		final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 	}
 
 	// Determine type of change operation
@@ -1205,7 +1205,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			long int old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
-			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
+			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Update effect properties from JSON
 			existing_effect->SetJsonValue(change["value"]);
@@ -1219,7 +1219,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
 			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			long int old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
-			final_cache->Remove(old_starting_frame - 2, old_ending_frame + 2);
+			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Remove effect from timeline
 			RemoveEffect(existing_effect);
