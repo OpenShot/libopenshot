@@ -518,6 +518,29 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.drawImage(0, 0, *source_image);
 
+    // Draw frame #'s on top of image (if needed)
+    if (source_clip->display != FRAME_DISPLAY_NONE) {
+        stringstream frame_number_str;
+        switch (source_clip->display)
+        {
+            case (FRAME_DISPLAY_CLIP):
+                frame_number_str << clip_frame_number;
+                break;
+
+            case (FRAME_DISPLAY_TIMELINE):
+                frame_number_str << timeline_frame_number;
+                break;
+
+            case (FRAME_DISPLAY_BOTH):
+                frame_number_str << timeline_frame_number << " (" << clip_frame_number << ")";
+                break;
+        }
+
+        // Draw frame number on top of image
+        painter.setPen(QColor("#ffffff"));
+        painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
+    }
+
     painter.end();
 
 	// Debug output

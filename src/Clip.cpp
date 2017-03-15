@@ -40,6 +40,7 @@ void Clip::init_settings()
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
+	display = FRAME_DISPLAY_NONE;
 	waveform = false;
 	previous_properties = "";
 
@@ -669,6 +670,7 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", NULL, 0, 8, false, requested_frame);
 	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
 	root["anchor"] = add_property_json("Anchor", anchor, "int", "", NULL, 0, 1, false, requested_frame);
+	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 
 	// Add gravity choices (dropdown style)
@@ -691,6 +693,12 @@ string Clip::PropertiesJSON(long int requested_frame) {
 	// Add anchor choices (dropdown style)
 	root["anchor"]["choices"].append(add_property_choice_json("Canvas", ANCHOR_CANVAS, anchor));
 	root["anchor"]["choices"].append(add_property_choice_json("Viewport", ANCHOR_VIEWPORT, anchor));
+
+	// Add frame number display choices (dropdown style)
+	root["display"]["choices"].append(add_property_choice_json("None", FRAME_DISPLAY_NONE, display));
+	root["display"]["choices"].append(add_property_choice_json("Clip", FRAME_DISPLAY_CLIP, display));
+	root["display"]["choices"].append(add_property_choice_json("Timeline", FRAME_DISPLAY_TIMELINE, display));
+	root["display"]["choices"].append(add_property_choice_json("Both", FRAME_DISPLAY_BOTH, display));
 
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
@@ -730,6 +738,7 @@ Json::Value Clip::JsonValue() {
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
+	root["display"] = display;
 	root["waveform"] = waveform;
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
@@ -814,6 +823,8 @@ void Clip::SetJsonValue(Json::Value root) {
 		scale = (ScaleType) root["scale"].asInt();
 	if (!root["anchor"].isNull())
 		anchor = (AnchorType) root["anchor"].asInt();
+	if (!root["display"].isNull())
+		display = (FrameDisplayType) root["display"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
 	if (!root["scale_x"].isNull())

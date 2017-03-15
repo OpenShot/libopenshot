@@ -151,6 +151,7 @@ namespace openshot {
 		GravityType gravity; ///< The gravity of a clip determines where it snaps to it's parent
 		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
 		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
+        FrameDisplayType display; ///< The format to display the frame number (if any)
 
 		/// Default Constructor
 		Clip();

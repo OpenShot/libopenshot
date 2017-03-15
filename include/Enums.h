@@ -60,5 +60,14 @@ namespace openshot
 		ANCHOR_CANVAS,	///< Anchor the clip to the canvas
 		ANCHOR_VIEWPORT	///< Anchor the clip to the viewport (which can be moved / animated around the canvas)
 	};
+
+	/// This enumeration determines the display format of the clip's frame number (if any). Useful for debugging.
+	enum FrameDisplayType
+	{
+		FRAME_DISPLAY_NONE,     ///< Do not display the frame number
+		FRAME_DISPLAY_CLIP,     ///< Display the clip's internal frame number
+		FRAME_DISPLAY_TIMELINE, ///< Display the timeline's frame number
+		FRAME_DISPLAY_BOTH      ///< Display both the clip's and timeline's frame number
+	};
 }
 #endif

@@ -1659,7 +1659,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		if (!info.has_audio) is_audio_ready = true;
 
 		// Make final any frames that get stuck (for whatever reason)
-		if (checked_count > 40 && (!is_video_ready || !is_audio_ready)) {
+		if (checked_count > 80 && (!is_video_ready || !is_audio_ready)) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size());
 
