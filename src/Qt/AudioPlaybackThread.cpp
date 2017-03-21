@@ -112,6 +112,9 @@ namespace openshot
 
     			// Start new audio device
     			// Init audio device
+				// TODO: We should never create more than a single instance of audioDeviceManager, so this needs to be
+				// refactored in some way, so multiple audio playback threads will always use the same manager. Perhaps
+				// a singleton wrapper around it.
     			audioDeviceManager.initialise (
     			    0, /* number of input channels */
     			    numChannels, /* number of output channels */
