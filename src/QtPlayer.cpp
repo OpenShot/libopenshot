@@ -47,9 +47,12 @@ QtPlayer::QtPlayer(RendererBase *rb) : PlayerBase(), p(new PlayerPrivate(rb)), t
 
 QtPlayer::~QtPlayer()
 {
-    if (mode != PLAYBACK_STOPPED) {
+    if (mode != PLAYBACK_STOPPED)
     	Stop();
-    }
+
+	// Close audio device
+	AudioDeviceManagerSingleton::Instance()->CloseAudioDevice();
+
     delete p;
 }
 

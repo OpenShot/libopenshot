@@ -45,6 +45,15 @@ namespace openshot
 		return m_pInstance;
 	}
 
+    // Close audio device
+    void AudioDeviceManagerSingleton::CloseAudioDevice()
+    {
+        // Close Audio Device
+        audioDeviceManager.closeAudioDevice();
+        audioDeviceManager.removeAllChangeListeners();
+        audioDeviceManager.dispatchPendingMessages();
+    }
+
     // Construtor
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
@@ -168,9 +177,6 @@ namespace openshot
 
 				player.setSource(NULL);
 				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAudioCallback(&player);
-				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.closeAudioDevice();
-				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAllChangeListeners();
-				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.dispatchPendingMessages();
 
 				// Remove source
 				delete source;

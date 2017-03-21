@@ -68,6 +68,9 @@ namespace openshot
 
 		/// Public device manager property
 		AudioDeviceManager audioDeviceManager;
+
+		/// Close audio device
+		void CloseAudioDevice();
 	};
 
     /**
