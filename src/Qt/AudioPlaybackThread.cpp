@@ -30,10 +30,24 @@
 
 namespace openshot
 {
+
+	// Global reference to device manager
+	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::m_pInstance = NULL;
+
+	// Create or Get an instance of the device manager singleton
+	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
+	{
+		if (!m_pInstance) {
+			// Create the actual instance of device manager only once
+			m_pInstance = new AudioDeviceManagerSingleton;
+		}
+
+		return m_pInstance;
+	}
+
     // Construtor
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
-	, audioDeviceManager()
 	, player()
 	, transport()
 	, mixer()
@@ -112,17 +126,14 @@ namespace openshot
 
     			// Start new audio device
     			// Init audio device
-				// TODO: We should never create more than a single instance of audioDeviceManager, so this needs to be
-				// refactored in some way, so multiple audio playback threads will always use the same manager. Perhaps
-				// a singleton wrapper around it.
-    			audioDeviceManager.initialise (
+                AudioDeviceManagerSingleton::Instance()->audioDeviceManager.initialise (
     			    0, /* number of input channels */
     			    numChannels, /* number of output channels */
     			    0, /* no XML settings.. */
     			    true  /* select default device on failure */);
 
     			// Add callback
-    			audioDeviceManager.addAudioCallback(&player);
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.addAudioCallback(&player);
 
     			// Create TimeSliceThread for audio buffering
 				time_thread.startThread();
@@ -156,10 +167,10 @@ namespace openshot
 				transport.setSource(NULL);
 
 				player.setSource(NULL);
-				audioDeviceManager.removeAudioCallback(&player);
-				audioDeviceManager.closeAudioDevice();
-				audioDeviceManager.removeAllChangeListeners();
-				audioDeviceManager.dispatchPendingMessages();
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAudioCallback(&player);
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.closeAudioDevice();
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAllChangeListeners();
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.dispatchPendingMessages();
 
 				// Remove source
 				delete source;

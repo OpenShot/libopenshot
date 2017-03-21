@@ -51,12 +51,30 @@ namespace openshot
 		}
 	};
 
+	/**
+	 *  @brief Singleton wrapper for AudioDeviceManager (to prevent multiple instances).
+	 */
+	class AudioDeviceManagerSingleton {
+	private:
+		/// Default constructor (Don't allow user to create an instance of this singleton)
+		AudioDeviceManagerSingleton(){};
+
+		/// Private variable to keep track of singleton instance
+		static AudioDeviceManagerSingleton * m_pInstance;
+
+	public:
+		/// Create or get an instance of this singleton (invoke the class with this method)
+		static AudioDeviceManagerSingleton * Instance();
+
+		/// Public device manager property
+		AudioDeviceManager audioDeviceManager;
+	};
+
     /**
      *  @brief The audio playback thread
      */
     class AudioPlaybackThread : Thread
     {
-	AudioDeviceManager audioDeviceManager;
 	AudioSourcePlayer player;
 	AudioTransportSource transport;
 	MixerAudioSource mixer;
