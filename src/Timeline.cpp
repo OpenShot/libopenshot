@@ -440,7 +440,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		y = (max_height - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_BOTTOM_LEFT):
-		y = (max_width - scaled_source_height); // bottom
+        y = (max_height - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM):
 		x = (max_width - scaled_source_width) / 2.0; // center
