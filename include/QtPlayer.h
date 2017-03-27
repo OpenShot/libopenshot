@@ -56,6 +56,9 @@ namespace openshot
 	/// Default destructor
 	virtual ~QtPlayer();
 
+	/// Close audio device
+	void CloseAudioDevice();
+
 	/// Play the video
 	void Play();
 	

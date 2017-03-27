@@ -64,7 +64,7 @@ namespace openshot
 
 	public:
 		/// Create or get an instance of this singleton (invoke the class with this method)
-		static AudioDeviceManagerSingleton * Instance();
+		static AudioDeviceManagerSingleton * Instance(int numChannels);
 
 		/// Public device manager property
 		AudioDeviceManager audioDeviceManager;

@@ -50,10 +50,13 @@ QtPlayer::~QtPlayer()
     if (mode != PLAYBACK_STOPPED)
     	Stop();
 
-	// Close audio device
-	AudioDeviceManagerSingleton::Instance()->CloseAudioDevice();
-
     delete p;
+}
+
+void QtPlayer::CloseAudioDevice()
+{
+	// Close audio device (only do this once, when all audio playback is finished)
+	AudioDeviceManagerSingleton::Instance(0)->CloseAudioDevice();
 }
 
 void QtPlayer::SetSource(const std::string &source)
