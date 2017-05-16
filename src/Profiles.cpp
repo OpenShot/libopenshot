@@ -51,24 +51,19 @@ Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
 		info.display_ratio.den = 0;
 		info.interlaced_frame = false;
 
-		// Read the profile file
-		ifstream myfile (path.c_str());
-		if (myfile.is_open())
+		QFile inputFile(path.c_str());
+		if (inputFile.open(QIODevice::ReadOnly))
 		{
-			// Loop through each line
-			while (myfile.good())
+			QTextStream in(&inputFile);
+			while (!in.atEnd())
 			{
-				// read current line of file
-				read_file = true;
-				string line = "";
-				getline (myfile, line);
+				QString line = in.readLine();
 
 				if (line.length() <= 0)
 					continue;
 
 				// Split current line
-				QString qline(line.c_str());
-				QStringList parts = qline.split( "=" );
+				QStringList parts = line.split( "=" );
 				string setting = parts[0].toStdString();
 				string value = parts[1].toStdString();
 				int value_int = 0;
@@ -117,7 +112,8 @@ Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
 					info.pixel_format = value_int;
 				}
 			}
-			myfile.close();
+            read_file = true;
+			inputFile.close();
 		}
 
 	}
