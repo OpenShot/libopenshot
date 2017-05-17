@@ -279,6 +279,16 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 			// Override parent reader
 			reader->info.has_audio = enabled_audio;
 			reader->info.has_video = enabled_video;
+
+			if (reader->Name() == "FrameMapper") {
+				// Override nested reader (if any)
+				FrameMapper* nested_reader = (FrameMapper*) reader;
+				if (nested_reader->Reader()) {
+					nested_reader->Reader()->info.has_audio = enabled_audio;
+					nested_reader->Reader()->info.has_video = enabled_video;
+				}
+			}
+
 		}
 
 		// Is a time map detected
