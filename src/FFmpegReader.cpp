@@ -486,7 +486,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
 	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
-    int max_packets = 1024;
+    int max_packets = 4096;
 
 	// Set the number of threads in OpenMP
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
