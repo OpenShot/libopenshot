@@ -1347,6 +1347,10 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 
 // Clear all caches
 void Timeline::ClearAllCache() {
+
+	// Get lock (prevent getting frames while this happens)
+	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
     // Clear primary cache
     final_cache->Clear();
 
