@@ -1732,6 +1732,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1);
 						missing_frames.Add(f);
 					}
+
+                    // Remove from 'checked' count
+                    checked_frames.erase(f->number);
 				}
 
 				// Remove frame from working cache
@@ -1739,9 +1742,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 
 				// Update last frame processed
 				last_frame = f->number;
-
-				// Remove from 'checked' count
-				checked_frames.erase(f->number);
 
 			} else {
 				// Seek trash, so delete the frame from the working cache, and never add it to the final cache.
