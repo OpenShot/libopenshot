@@ -492,7 +492,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 				// converter isn't input limited.
 				const int EXTRA_INPUT_SAMPLES = 20;
 
-				// Extend end sample count by an addtional EXTRA_INPUT_SAMPLES samples
+				// Extend end sample count by an additional EXTRA_INPUT_SAMPLES samples
 				copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
 				int samples_per_end_frame =
 					Frame::GetSamplesPerFrame(copy_samples.frame_end, original,

@@ -94,7 +94,7 @@ private:
       AllocatedType buffer_[objectPerAllocation];
    };
 
-   // disabled copy constructor and assignement operator.
+   // disabled copy constructor and assignment operator.
    BatchAllocator( const BatchAllocator & );
    void operator =( const BatchAllocator &);
 

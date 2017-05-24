@@ -609,7 +609,7 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 
 		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
 		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without loosing quality.
+		// without losing quality.
 		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = scale_x.GetMaxPoint().co.Y;

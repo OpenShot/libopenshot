@@ -61,7 +61,7 @@ namespace openshot
         audioDeviceManager.dispatchPendingMessages();
     }
 
-    // Construtor
+    // Constructor
     AudioPlaybackThread::AudioPlaybackThread()
 	: Thread("audio-playback")
 	, player()
