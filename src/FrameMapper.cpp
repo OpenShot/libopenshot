@@ -207,7 +207,7 @@ void FrameMapper::Init()
 	} else {
 		// Map the remaining framerates using a simple Keyframe curve
 		// Calculate the difference (to be used as a multiplier)
-		float rate_diff = target.ToFloat() / original.ToFloat();
+		double rate_diff = target.ToDouble() / original.ToDouble();
 		long int new_length = reader->info.video_length * rate_diff;
 
 		// Build curve for framerate mapping
@@ -732,7 +732,12 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	is_dirty = true;
 
 	// Update mapping details
-	target = target_fps;
+	target.num = target_fps.num;
+	target.den = target_fps.den;
+	info.fps.num = target_fps.num;
+	info.fps.den = target_fps.den;
+	info.video_timebase.num = target_fps.den;
+	info.video_timebase.den = target_fps.num;
 	pulldown = target_pulldown;
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;

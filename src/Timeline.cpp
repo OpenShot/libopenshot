@@ -155,13 +155,13 @@ void Timeline::ApplyMapperToClips()
 }
 
 // Calculate time of a frame number, based on a framerate
-float Timeline::calculate_time(long int number, Fraction rate)
+double Timeline::calculate_time(long int number, Fraction rate)
 {
 	// Get float version of fps fraction
-	float raw_fps = rate.ToFloat();
+    double raw_fps = rate.ToFloat();
 
 	// Return the time (in seconds) of this frame
-	return float(number - 1) / raw_fps;
+	return double(number - 1) / raw_fps;
 }
 
 // Apply effects to the source frame (if any)
