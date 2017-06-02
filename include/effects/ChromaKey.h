@@ -70,7 +70,7 @@ namespace openshot
 		/// more colors are matched.
 		///
 		/// @param color The color to match
-		/// @param fuzz The fuzz factor (or threshhold)
+		/// @param fuzz The fuzz factor (or threshold)
 		ChromaKey(Color color, Keyframe fuzz);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a

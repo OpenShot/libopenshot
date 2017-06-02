@@ -77,7 +77,7 @@ namespace openshot {
 		Fraction Repeat() { return repeated; }
 
 		/// @brief Set the increasing flag (used internally on the timeline, to track changes to coordinates)
-		/// @param is_increasing Indicates if this coorindate Y value is increasing (when compared to the previous coordinate)
+		/// @param is_increasing Indicates if this coordinate Y value is increasing (when compared to the previous coordinate)
 		void IsIncreasing(bool is_increasing) { increasing = is_increasing; }
 
 		/// Get the increasing flag (used internally on the timeline, to track changes to coordinates)

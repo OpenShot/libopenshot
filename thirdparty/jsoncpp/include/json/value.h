@@ -47,7 +47,7 @@ namespace Json {
 
    /** @brief Lightweight wrapper to tag static string.
     *
-    * Value constructor and objectValue member assignement takes advantage of the
+    * Value constructor and objectValue member assignment takes advantage of the
     * StaticString and avoid the cost of string duplication when storing the
     * string or the member name.
     *
@@ -479,7 +479,7 @@ namespace Json {
     * - ".name1.name2.name3"
     * - ".[0][1][2].name1[3]"
     * - ".%" => member name is provided as parameter
-    * - ".[%]" => index is provied as parameter
+    * - ".[%]" => index is provided as parameter
     */
    class Path
    {
@@ -616,7 +616,7 @@ namespace Json {
 
 
    /** @brief A linked page based hash-table implementation used internally by Value.
-    * \internal ValueInternalMap is a tradional bucket based hash-table, with a linked
+    * \internal ValueInternalMap is a traditional bucket based hash-table, with a linked
     * list in each bucket to handle collision. There is an addional twist in that
     * each node of the collision linked list is a page containing a fixed amount of
     * value. This provides a better compromise between memory usage and speed.

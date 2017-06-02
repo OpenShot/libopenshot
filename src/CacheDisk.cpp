@@ -471,7 +471,7 @@ string CacheDisk::Json() {
 // Generate Json::JsonValue for this object
 Json::Value CacheDisk::JsonValue() {
 
-	// Proccess range data (if anything has changed)
+	// Process range data (if anything has changed)
 	CalculateRanges();
 
 	// Create root json object
