@@ -154,7 +154,7 @@ tr1::shared_ptr<Frame> TextReader::GetFrame(long int requested_frame) throw(Read
 		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
 		copy_image->modifyImage(); // actually copy the image data to this object
 		//TODO: Reimplement this with QImage
-		//image_frame->AddImage(copy_image);
+		image_frame->AddMagickImage(copy_image);
 
 		// return frame object
 		return image_frame;
