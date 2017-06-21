@@ -486,6 +486,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
 	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
+    int max_packets = 4096;
 
 	// Set the number of threads in OpenMP
 	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
@@ -518,7 +519,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				}
 
 				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "is_seeking", is_seeking);
 
 				// Video packet
 				if (info.has_video && packet->stream_index == videoStream)
@@ -603,7 +604,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				packets_processed++;
 
 				// Break once the frame is found
-				if ((is_cache_found && packets_processed >= minimum_packets))
+				if ((is_cache_found && packets_processed >= minimum_packets) || packets_processed > max_packets)
 					break;
 
 			} // end while
@@ -1220,6 +1221,8 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 	num_checks_since_final = 0;
 	num_packets_since_video_frame = 0;
 	has_missing_frames = false;
+	bool has_audio_override = info.has_audio;
+	bool has_video_override = info.has_video;
 
 	// Increment seek count
 	seek_count++;
@@ -1231,6 +1234,10 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		// Close and re-open file (basically seeking to frame 1)
 		Close();
 		Open();
+
+		// Update overrides (since closing and re-opening might update these)
+		info.has_audio = has_audio_override;
+		info.has_video = has_video_override;
 
 		// Not actually seeking, so clear these flags
 		is_seeking = false;
@@ -1316,6 +1323,10 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 			// Close and re-open file (basically seeking to frame 1)
 			Close();
 			Open();
+
+			// Update overrides (since closing and re-opening might update these)
+			info.has_audio = has_audio_override;
+			info.has_video = has_video_override;
 		}
 	}
 }
@@ -1339,15 +1350,25 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 	{
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
-			// Find the difference between PTS and frame number
-			video_pts_offset = 0 - GetVideoPTS();
+		{
+			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
+			video_pts_offset = 0 - max(GetVideoPTS(), (long) info.video_timebase.ToInt() * 10);
+
+			// debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video, "", -1, "", -1, "", -1, "", -1);
+		}
 	}
 	else
 	{
 		// AUDIO PACKET
 		if (audio_pts_offset == 99999) // Has the offset been set yet?
-			// Find the difference between PTS and frame number
-			audio_pts_offset = 0 - packet->pts;
+		{
+			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
+			audio_pts_offset = 0 - max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
+
+			// debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Audio)", "audio_pts_offset", audio_pts_offset, "is_video", is_video, "", -1, "", -1, "", -1, "", -1);
+		}
 	}
 }
 
@@ -1623,6 +1644,9 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_frame)
 {
 	// Loop through all working queue frames
+    bool checked_count_tripped = false;
+    int max_checked_count = 80;
+
 	while (true)
 	{
 		// Get the front frame of working cache
@@ -1647,7 +1671,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 			is_audio_ready = processed_audio_frames.count(f->number);
 
 			// Get check count for this frame
-			checked_count = checked_frames[f->number];
+            if (!checked_count_tripped || f->number >= requested_frame)
+			    checked_count = checked_frames[f->number];
+            else
+                // Force checked count over the limit
+                checked_count = max_checked_count;
 		}
 
 		if (previous_packet_location.frame == f->number && !end_of_stream)
@@ -1659,9 +1687,12 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		if (!info.has_audio) is_audio_ready = true;
 
 		// Make final any frames that get stuck (for whatever reason)
-		if (checked_count > 80 && (!is_video_ready || !is_audio_ready)) {
+		if (checked_count >= max_checked_count && (!is_video_ready || !is_audio_ready)) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size());
+
+            // Trigger checked count tripped mode (clear out all frames before requested frame)
+            checked_count_tripped = true;
 
 			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
@@ -1701,6 +1732,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1);
 						missing_frames.Add(f);
 					}
+
+                    // Remove from 'checked' count
+                    checked_frames.erase(f->number);
 				}
 
 				// Remove frame from working cache
@@ -1708,9 +1742,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 
 				// Update last frame processed
 				last_frame = f->number;
-
-				// Remove from 'checked' count
-				checked_frames.erase(f->number);
 
 			} else {
 				// Seek trash, so delete the frame from the working cache, and never add it to the final cache.

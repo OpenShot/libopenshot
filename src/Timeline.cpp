@@ -155,13 +155,13 @@ void Timeline::ApplyMapperToClips()
 }
 
 // Calculate time of a frame number, based on a framerate
-float Timeline::calculate_time(long int number, Fraction rate)
+double Timeline::calculate_time(long int number, Fraction rate)
 {
 	// Get float version of fps fraction
-	float raw_fps = rate.ToFloat();
+    double raw_fps = rate.ToFloat();
 
 	// Return the time (in seconds) of this frame
-	return float(number - 1) / raw_fps;
+	return double(number - 1) / raw_fps;
 }
 
 // Apply effects to the source frame (if any)
@@ -631,10 +631,6 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
 {
-	// Check for open reader (or throw exception)
-	if (!is_open)
-		throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");
-
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
@@ -652,6 +648,10 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		// Check for open reader (or throw exception)
+		if (!is_open)
+			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");
 
 		// Check cache again (due to locking)
 		frame = final_cache->GetFrame(requested_frame);
@@ -904,6 +904,9 @@ Json::Value Timeline::JsonValue() {
 // Load JSON string into this object
 void Timeline::SetJson(string value) throw(InvalidJSON) {
 
+	// Get lock (prevent getting frames while this happens)
+	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::Reader reader;
@@ -928,6 +931,7 @@ void Timeline::SetJson(string value) throw(InvalidJSON) {
 void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
+	bool was_open = is_open;
 	Close();
 
 	// Set parent data
@@ -983,6 +987,10 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 		info.duration = root["duration"].asDouble();
 		info.video_length = info.fps.ToFloat() * info.duration;
 	}
+
+	// Re-open if needed
+	if (was_open)
+		Open();
 }
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
@@ -1347,6 +1355,10 @@ void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) 
 
 // Clear all caches
 void Timeline::ClearAllCache() {
+
+	// Get lock (prevent getting frames while this happens)
+	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
     // Clear primary cache
     final_cache->Clear();
 

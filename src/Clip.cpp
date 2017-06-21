@@ -274,18 +274,10 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		else if (enabled_video == -1 && reader && !reader->info.has_audio)
 			enabled_video = 0;
 
-		// Adjust parent reader with same settings (for performance gains)
-		if (reader) {
-			// Override parent reader
-			reader->info.has_audio = enabled_audio;
-			reader->info.has_video = enabled_video;
-		}
-
 		// Is a time map detected
 		long int new_frame_number = requested_frame;
 		if (time.Values.size() > 1)
 			new_frame_number = time.GetLong(requested_frame);
-
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);

@@ -207,7 +207,7 @@ void FrameMapper::Init()
 	} else {
 		// Map the remaining framerates using a simple Keyframe curve
 		// Calculate the difference (to be used as a multiplier)
-		float rate_diff = target.ToFloat() / original.ToFloat();
+		double rate_diff = target.ToDouble() / original.ToDouble();
 		long int new_length = reader->info.video_length * rate_diff;
 
 		// Build curve for framerate mapping
@@ -726,13 +726,18 @@ void FrameMapper::SetJsonValue(Json::Value root) throw(InvalidFile) {
 // Change frame rate or audio mapping details
 void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.num, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.den, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
 
 	// Mark as dirty
 	is_dirty = true;
 
 	// Update mapping details
-	target = target_fps;
+	target.num = target_fps.num;
+	target.den = target_fps.den;
+	info.fps.num = target_fps.num;
+	info.fps.den = target_fps.den;
+	info.video_timebase.num = target_fps.den;
+	info.video_timebase.den = target_fps.num;
 	pulldown = target_pulldown;
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
@@ -750,6 +755,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 		avresample_free(&avr);
 		avr = NULL;
 	}
+
+	// Re-init mapping
+	Init();
 }
 
 // Set offset relative to parent timeline

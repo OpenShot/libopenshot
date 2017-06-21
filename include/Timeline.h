@@ -165,7 +165,7 @@ namespace openshot {
 		void apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to timeline properties
 
 		/// Calculate time of a frame number, based on a framerate
-		float calculate_time(long int number, Fraction rate);
+		double calculate_time(long int number, Fraction rate);
 
 		/// Find intersecting (or non-intersecting) openshot::Clip objects
 		///

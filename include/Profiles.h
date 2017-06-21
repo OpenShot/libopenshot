@@ -34,6 +34,8 @@
 #include <fstream>
 #include <QtCore/qstring.h>
 #include <QtCore/qstringlist.h>
+#include <QtCore/qfile.h>
+#include <QTextStream>
 #include <stdio.h>
 #include <stdlib.h>
 #include "Exceptions.h"
