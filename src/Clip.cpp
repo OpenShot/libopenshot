@@ -356,6 +356,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 	// Check for a valid time map curve
 	if (time.Values.size() > 1)
 	{
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 		tr1::shared_ptr<Frame> new_frame;
 
 		// create buffer and resampler

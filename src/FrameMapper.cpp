@@ -401,191 +401,180 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	// Minimum number of frames to process (for performance reasons)
 	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
-
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
 
-	#pragma omp parallel
+	// Loop through all requested frames
+	for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 	{
-		// Loop through all requested frames, each frame gets it's own thread
-		#pragma omp for ordered firstprivate(requested_frame, minimum_frames)
-		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame, "", -1, "", -1, "", -1);
+
+		// Get the mapped frame
+		MappedFrame mapped = GetMappedFrame(frame_number);
+		tr1::shared_ptr<Frame> mapped_frame;
+
+		// Get the mapped frame (keeping the sample rate and channels the same as the original... for the moment)
+		mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
+
+		// Get # of channels in the actual frame
+		int channels_in_frame = mapped_frame->GetAudioChannelsCount();
+		int samples_in_frame = Frame::GetSamplesPerFrame(frame_number + timeline_frame_offset, target, mapped_frame->SampleRate(), channels_in_frame);
+
+		// Determine if mapped frame is identical to source frame
+		// including audio sample distribution according to mapped.Samples,
+		// and frame_number. In some cases such as end of stream, the reader
+		// will return a frame with a different frame number. In these cases,
+		// we cannot use the frame as is, nor can we modify the frame number,
+		// otherwise the reader's cache object internals become invalid.
+		if (info.sample_rate == mapped_frame->SampleRate() &&
+			info.channels == mapped_frame->GetAudioChannelsCount() &&
+			info.channel_layout == mapped_frame->ChannelsLayout() &&
+			mapped.Samples.total == mapped_frame->GetAudioSamplesCount() &&
+			mapped.Samples.frame_start == mapped.Odd.Frame &&
+			mapped.Samples.sample_start == 0 &&
+			mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
+			info.fps.num == reader->info.fps.num &&
+			info.fps.den == reader->info.fps.den) {
+				// Add original frame to cache, and skip the rest (for performance reasons)
+				final_cache.Add(mapped_frame);
+				continue;
+		}
+
+		// Create a new frame
+		tr1::shared_ptr<Frame> frame = tr1::shared_ptr<Frame>(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
+		frame->SampleRate(mapped_frame->SampleRate());
+		frame->ChannelsLayout(mapped_frame->ChannelsLayout());
+
+
+		// Copy the image from the odd field
+		tr1::shared_ptr<Frame> odd_frame;
+		odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
+
+		if (odd_frame)
+			frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+		if (mapped.Odd.Frame != mapped.Even.Frame) {
+			// Add even lines (if different than the previous image)
+			tr1::shared_ptr<Frame> even_frame;
+			even_frame = GetOrCreateFrame(mapped.Even.Frame);
+			if (even_frame)
+				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+		}
+
+		// Resample audio on frame (if needed)
+		bool need_resampling = false;
+		if (info.has_audio &&
+			(info.sample_rate != frame->SampleRate() ||
+			 info.channels != frame->GetAudioChannelsCount() ||
+			 info.channel_layout != frame->ChannelsLayout()))
+			// Resample audio and correct # of channels if needed
+			need_resampling = true;
+
+		// create a copy of mapped.Samples that will be used by copy loop
+		SampleRange copy_samples = mapped.Samples;
+
+		if (need_resampling)
 		{
+			// Resampling needed, modify copy of SampleRange object that
+			// includes some additional input samples on first iteration,
+			// and continues the offset to ensure that the sample rate
+			// converter isn't input limited.
+			const int EXTRA_INPUT_SAMPLES = 20;
 
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame, "", -1, "", -1, "", -1);
-
-			// Get the mapped frame
-			MappedFrame mapped = GetMappedFrame(frame_number);
-			tr1::shared_ptr<Frame> mapped_frame;
-
-            // Get the mapped frame (keeping the sample rate and channels the same as the original... for the moment)
-			mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
-
-			// Get # of channels in the actual frame
-			int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-			int samples_in_frame = Frame::GetSamplesPerFrame(frame_number + timeline_frame_offset, target, mapped_frame->SampleRate(), channels_in_frame);
-
-			// Determine if mapped frame is identical to source frame
-			// including audio sample distribution according to mapped.Samples,
-			// and frame_number. In some cases such as end of stream, the reader
-			// will return a frame with a different frame number. In these cases,
-			// we cannot use the frame as is, nor can we modify the frame number,
-			// otherwise the reader's cache object internals become invalid.
-			if (info.sample_rate == mapped_frame->SampleRate() &&
-				info.channels == mapped_frame->GetAudioChannelsCount() &&
-				info.channel_layout == mapped_frame->ChannelsLayout() &&
-				mapped.Samples.total == mapped_frame->GetAudioSamplesCount() &&
-				mapped.Samples.frame_start == mapped.Odd.Frame &&
-				mapped.Samples.sample_start == 0 &&
-				mapped_frame->number == frame_number &&// in some conditions (e.g. end of stream)
-				info.fps.num == reader->info.fps.num &&
-				info.fps.den == reader->info.fps.den) {
-					// Add original frame to cache, and skip the rest (for performance reasons)
-					final_cache.Add(mapped_frame);
-					continue;
-			}
-
-			// Create a new frame
-			tr1::shared_ptr<Frame> frame = tr1::shared_ptr<Frame>(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
-			frame->SampleRate(mapped_frame->SampleRate());
-			frame->ChannelsLayout(mapped_frame->ChannelsLayout());
-
-
-			// Copy the image from the odd field
-			tr1::shared_ptr<Frame> odd_frame;
-            #pragma omp ordered
-            odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
-
-            if (odd_frame)
-                frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
-            if (mapped.Odd.Frame != mapped.Even.Frame) {
-                // Add even lines (if different than the previous image)
-                tr1::shared_ptr<Frame> even_frame;
-                #pragma omp ordered
-                even_frame = GetOrCreateFrame(mapped.Even.Frame);
-                if (even_frame)
-                    frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
-            }
-
-			// Resample audio on frame (if needed)
-			bool need_resampling = false;
-			if (info.has_audio &&
-				(info.sample_rate != frame->SampleRate() ||
-				 info.channels != frame->GetAudioChannelsCount() ||
-				 info.channel_layout != frame->ChannelsLayout()))
-				// Resample audio and correct # of channels if needed
-				need_resampling = true;
-
-			// create a copy of mapped.Samples that will be used by copy loop
-			SampleRange copy_samples = mapped.Samples;
-
-			if (need_resampling)
+			// Extend end sample count by an addtional EXTRA_INPUT_SAMPLES samples
+			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
+			int samples_per_end_frame =
+				Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
+										  reader->info.sample_rate, reader->info.channels);
+			if (copy_samples.sample_end >= samples_per_end_frame)
 			{
-				// Resampling needed, modify copy of SampleRange object that
-				// includes some additional input samples on first iteration,
-				// and continues the offset to ensure that the sample rate
-				// converter isn't input limited.
-				const int EXTRA_INPUT_SAMPLES = 20;
+				// check for wrapping
+				copy_samples.frame_end++;
+				copy_samples.sample_end -= samples_per_end_frame;
+			}
+			copy_samples.total += EXTRA_INPUT_SAMPLES;
 
-				// Extend end sample count by an addtional EXTRA_INPUT_SAMPLES samples
-				copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
-				int samples_per_end_frame =
-					Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
+			if (avr) {
+				// Sample rate conversion has been allocated on this clip, so
+				// this is not the first iteration. Extend start position by
+				// EXTRA_INPUT_SAMPLES to keep step with previous frame
+				copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
+				int samples_per_start_frame =
+					Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
 											  reader->info.sample_rate, reader->info.channels);
-				if (copy_samples.sample_end >= samples_per_end_frame)
+				if (copy_samples.sample_start >= samples_per_start_frame)
 				{
 					// check for wrapping
-					copy_samples.frame_end++;
-					copy_samples.sample_end -= samples_per_end_frame;
+					copy_samples.frame_start++;
+					copy_samples.sample_start -= samples_per_start_frame;
 				}
-				copy_samples.total += EXTRA_INPUT_SAMPLES;
-
-				if (avr) {
-					// Sample rate conversion has been allocated on this clip, so
-					// this is not the first iteration. Extend start position by
-					// EXTRA_INPUT_SAMPLES to keep step with previous frame
-					copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
-					int samples_per_start_frame =
-					    Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
-					                              reader->info.sample_rate, reader->info.channels);
-					if (copy_samples.sample_start >= samples_per_start_frame)
-					{
-						// check for wrapping
-						copy_samples.frame_start++;
-						copy_samples.sample_start -= samples_per_start_frame;
-					}
-					copy_samples.total -= EXTRA_INPUT_SAMPLES;
-				}
+				copy_samples.total -= EXTRA_INPUT_SAMPLES;
 			}
+		}
 
-			// Copy the samples
-			int samples_copied = 0;
-			long int starting_frame = copy_samples.frame_start;
-			while (info.has_audio && samples_copied < copy_samples.total)
+		// Copy the samples
+		int samples_copied = 0;
+		long int starting_frame = copy_samples.frame_start;
+		while (info.has_audio && samples_copied < copy_samples.total)
+		{
+			// Init number of samples to copy this iteration
+			int remaining_samples = copy_samples.total - samples_copied;
+			int number_to_copy = 0;
+
+			// Loop through each channel
+			for (int channel = 0; channel < channels_in_frame; channel++)
 			{
-				// Init number of samples to copy this iteration
-				int remaining_samples = copy_samples.total - samples_copied;
-				int number_to_copy = 0;
+				// number of original samples on this frame
+				tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
+				int original_samples = original_frame->GetAudioSamplesCount();
 
-				// Loop through each channel
-				for (int channel = 0; channel < channels_in_frame; channel++)
+				if (starting_frame == copy_samples.frame_start)
 				{
-					// number of original samples on this frame
-					tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
-					int original_samples = original_frame->GetAudioSamplesCount();
+					// Starting frame (take the ending samples)
+					number_to_copy = original_samples - copy_samples.sample_start;
+					if (number_to_copy > remaining_samples)
+						number_to_copy = remaining_samples;
 
-					if (starting_frame == copy_samples.frame_start)
-					{
-						// Starting frame (take the ending samples)
-						number_to_copy = original_samples - copy_samples.sample_start;
-						if (number_to_copy > remaining_samples)
-							number_to_copy = remaining_samples;
-
-						// Add samples to new frame
-						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + copy_samples.sample_start, number_to_copy, 1.0);
-					}
-					else if (starting_frame > copy_samples.frame_start && starting_frame < copy_samples.frame_end)
-					{
-						// Middle frame (take all samples)
-						number_to_copy = original_samples;
-						if (number_to_copy > remaining_samples)
-							number_to_copy = remaining_samples;
-
-						// Add samples to new frame
-						frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
-					}
-					else
-					{
-						// Ending frame (take the beginning samples)
-						number_to_copy = copy_samples.sample_end + 1;
-						if (number_to_copy > remaining_samples)
-							number_to_copy = remaining_samples;
-
-						// Add samples to new frame
-						frame->AddAudio(false, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
-					}
+					// Add samples to new frame
+					frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel) + copy_samples.sample_start, number_to_copy, 1.0);
 				}
+				else if (starting_frame > copy_samples.frame_start && starting_frame < copy_samples.frame_end)
+				{
+					// Middle frame (take all samples)
+					number_to_copy = original_samples;
+					if (number_to_copy > remaining_samples)
+						number_to_copy = remaining_samples;
 
-				// increment frame
-				samples_copied += number_to_copy;
-				starting_frame++;
+					// Add samples to new frame
+					frame->AddAudio(true, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+				}
+				else
+				{
+					// Ending frame (take the beginning samples)
+					number_to_copy = copy_samples.sample_end + 1;
+					if (number_to_copy > remaining_samples)
+						number_to_copy = remaining_samples;
+
+					// Add samples to new frame
+					frame->AddAudio(false, channel, samples_copied, original_frame->GetAudioSamples(channel), number_to_copy, 1.0);
+				}
 			}
 
-			// Resample audio on frame (if needed)
-			if (need_resampling)
-				// Resample audio and correct # of channels if needed
-				ResampleMappedAudio(frame, mapped.Odd.Frame);
+			// increment frame
+			samples_copied += number_to_copy;
+			starting_frame++;
+		}
 
-			// Add frame to final cache
-			final_cache.Add(frame);
+		// Resample audio on frame (if needed)
+		if (need_resampling)
+			// Resample audio and correct # of channels if needed
+			ResampleMappedAudio(frame, mapped.Odd.Frame);
 
-		} // for loop
-	} // omp parallel
+		// Add frame to final cache
+		final_cache.Add(frame);
+
+	} // for loop
 
 	// Return processed openshot::Frame
 	return final_cache.GetFrame(requested_frame);
@@ -836,33 +825,29 @@ void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int ori
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (preparing for resample)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", AV_SAMPLE_FMT_S16, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
 
 	int nb_samples = 0;
-	// Force the audio resampling to happen in order (1st thread to last thread), so the waveform
-	// is smooth and continuous.
-	#pragma omp ordered
-	{
-		// setup resample context
-		if (!avr) {
-			avr = avresample_alloc_context();
-			av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
-			av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
-			av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
-			av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
-			av_opt_set_int(avr,  "in_sample_rate",    sample_rate_in_frame,    0);
-			av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
-			av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
-			av_opt_set_int(avr, "out_channels",       info.channels,    0);
-			avresample_open(avr);
-		}
 
-		// Convert audio samples
-		nb_samples = avresample_convert(avr, 	// audio resample context
-				audio_converted->data, 			// output data pointers
-				audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
-				audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
-				audio_frame->data,				// input data pointers
-				audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
-				audio_frame->nb_samples);		// number of input samples to convert
-	}
+    // setup resample context
+    if (!avr) {
+        avr = avresample_alloc_context();
+        av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
+        av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
+        av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+        av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+        av_opt_set_int(avr,  "in_sample_rate",    sample_rate_in_frame,    0);
+        av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
+        av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
+        av_opt_set_int(avr, "out_channels",       info.channels,    0);
+        avresample_open(avr);
+    }
+
+    // Convert audio samples
+    nb_samples = avresample_convert(avr, 	// audio resample context
+            audio_converted->data, 			// output data pointers
+            audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+            audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
+            audio_frame->data,				// input data pointers
+            audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+            audio_frame->nb_samples);		// number of input samples to convert
 
 	// Create a new array (to hold all resampled S16 audio samples)
 	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels)];

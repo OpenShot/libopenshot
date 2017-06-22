@@ -410,13 +410,19 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-	return audio->getNumChannels();
+	int i;
+	#pragma omp critical
+	i =  audio->getNumChannels();
+	return i;
 }
 
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-	return audio->getNumSamples();
+	int i;
+	#pragma omp critical
+	i = audio->getNumSamples();
+	return i;
 }
 
 juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
