@@ -130,6 +130,11 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	// Update timeline offset
 	float time_diff = 0 - clip->Position() + clip->Start();
 	int clip_offset = -round(time_diff * info.fps.ToFloat());
+
+	if (clip_offset != 0)
+		// Reduce negative offset by 1 (since we want to avoid frame 0)
+		clip_offset += 1;
+
 	clip_mapped_reader->SetTimelineFrameOffset(clip_offset);
 
 	// Update clip reader

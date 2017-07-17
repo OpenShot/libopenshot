@@ -346,7 +346,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 	tr1::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
-	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, reader->info.sample_rate, reader->info.channels);
+	int samples_in_frame = Frame::GetSamplesPerFrame(number + timeline_frame_offset, target, reader->info.sample_rate, reader->info.channels);
 
 	try {
 		// Debug output
