@@ -399,7 +399,8 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	if (final_frame) return final_frame;
 
 	// Minimum number of frames to process (for performance reasons)
-	int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+	// Dialing this down to 1 for now, as it seems to improve performance, and reduce export crashes
+	int minimum_frames = 1;
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
@@ -522,13 +523,13 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			int remaining_samples = copy_samples.total - samples_copied;
 			int number_to_copy = 0;
 
+			// number of original samples on this frame
+			tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
+			int original_samples = original_frame->GetAudioSamplesCount();
+
 			// Loop through each channel
 			for (int channel = 0; channel < channels_in_frame; channel++)
 			{
-				// number of original samples on this frame
-				tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
-				int original_samples = original_frame->GetAudioSamplesCount();
-
 				if (starting_frame == copy_samples.frame_start)
 				{
 					// Starting frame (take the ending samples)

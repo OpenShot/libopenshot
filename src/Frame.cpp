@@ -410,19 +410,21 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-	int i;
-	#pragma omp critical
-	i =  audio->getNumChannels();
-	return i;
+    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+	if (audio)
+		return audio->getNumChannels();
+	else
+		return 0;
 }
 
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-	int i;
-	#pragma omp critical
-	i = audio->getNumSamples();
-	return i;
+    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+	if (audio)
+		return audio->getNumSamples();
+	else
+		return 0;
 }
 
 juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
@@ -779,36 +781,43 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
 {
-	// Resize JUCE audio buffer
+    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+
+    // Resize JUCE audio buffer
 	audio->setSize(channels, length, true, true, false);
 	channel_layout = layout;
 	sample_rate = rate;
 }
 
 // Add audio samples to a specific channel
-void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f)
-{
-	// Extend audio container to hold more (or less) samples and channels.. if needed
-	int new_length = destStartSample + numSamples;
-	int new_channel_length = audio->getNumChannels();
-	if (destChannel >= new_channel_length)
-		new_channel_length = destChannel + 1;
-	if (new_length > audio->getNumSamples() || new_channel_length > audio->getNumChannels())
-		audio->setSize(new_channel_length, new_length, true, true, false);
+void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
+	const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+	#pragma omp critical (adding_audio)
+    {
+		// Extend audio container to hold more (or less) samples and channels.. if needed
+		int new_length = destStartSample + numSamples;
+		int new_channel_length = audio->getNumChannels();
+		if (destChannel >= new_channel_length)
+			new_channel_length = destChannel + 1;
+		if (new_length > audio->getNumSamples() || new_channel_length > audio->getNumChannels())
+			audio->setSize(new_channel_length, new_length, true, true, false);
 
-	// Clear the range of samples first (if needed)
-	if (replaceSamples)
-		audio->clear(destChannel, destStartSample, numSamples);
+		// Clear the range of samples first (if needed)
+		if (replaceSamples)
+			audio->clear(destChannel, destStartSample, numSamples);
 
-	// Add samples to frame's audio buffer
-	audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
-	has_audio_data = true;
+		// Add samples to frame's audio buffer
+		audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
+		has_audio_data = true;
+	}
 }
 
 // Apply gain ramp (i.e. fading volume)
 void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
 {
-	// Apply gain ramp
+    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+
+    // Apply gain ramp
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
 }
 
@@ -962,7 +971,9 @@ void Frame::cleanUpBuffer(void *info)
 // Add audio silence
 void Frame::AddAudioSilence(int numSamples)
 {
-	// Resize audio container
+    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+
+    // Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);
 	audio->clear();
 	has_audio_data = true;

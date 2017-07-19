@@ -57,7 +57,7 @@ void Clip::init_settings()
 	rotation = Keyframe(0.0);
 
 	// Init time & volume
-	time = Keyframe(0.0);
+	time = Keyframe(1.0);
 	volume = Keyframe(1.0);
 
 	// Init audio waveform color
@@ -277,7 +277,7 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 		// Is a time map detected
 		long int new_frame_number = requested_frame;
 		if (time.Values.size() > 1)
-			new_frame_number = time.GetLong(requested_frame);
+            new_frame_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
@@ -365,7 +365,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 			resampler = new AudioResampler();
 
 		// Get new frame number
-		int new_frame_number = round(time.GetValue(frame_number));
+		int new_frame_number = adjust_frame_number_minimum(round(time.GetValue(frame_number)));
 
 		// Create a new frame
 		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate, frame->GetAudioChannelsCount());
