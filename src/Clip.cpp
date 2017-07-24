@@ -276,8 +276,9 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 
 		// Is a time map detected
 		long int new_frame_number = requested_frame;
+		long int time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
 		if (time.Values.size() > 1)
-            new_frame_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
+            new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
