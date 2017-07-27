@@ -593,12 +593,14 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 
 		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
 		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without loosing quality.
+		// without loosing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
+        // method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
+        // the future.
 		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = scale_x.GetMaxPoint().co.Y;
 			float max_scale_y = scale_y.GetMaxPoint().co.Y;
-			reader->SetMaxSize(max_width * max_scale_x, max_height * max_scale_y);
+			reader->SetMaxSize(max(float(max_width), max_width * max_scale_x), max(float(max_height), max_height * max_scale_y));
 
 		} else if (scale == SCALE_CROP) {
 			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
@@ -609,9 +611,9 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 
 			// respect aspect ratio
 			if (width_size.width() >= max_width && width_size.height() >= max_height)
-				reader->SetMaxSize(width_size.width(), width_size.height());
+				reader->SetMaxSize(max(max_width, width_size.width()), max(max_height, width_size.height()));
 			else
-				reader->SetMaxSize(height_size.width(), height_size.height());
+				reader->SetMaxSize(max(max_width, height_size.width()), max(max_height, height_size.height()));
 
 		} else {
 			// No scaling, use original image size (slower)

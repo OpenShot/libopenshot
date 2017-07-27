@@ -1139,8 +1139,23 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 			long int old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
+            // Remove cache on clip's Reader (if found)
+            if (existing_clip->Reader() && existing_clip->Reader()->GetCache())
+                existing_clip->Reader()->GetCache()->Remove(old_starting_frame - 8, old_ending_frame + 8);
+
 			// Update clip properties from JSON
 			existing_clip->SetJsonValue(change["value"]);
+
+            // Clear any cached image sizes (since size might have changed)
+            existing_clip->SetMaxSize(0, 0); // force clearing of cached image size
+            if (existing_clip->Reader()) {
+                existing_clip->Reader()->SetMaxSize(0, 0);
+                if (existing_clip->Reader()->Name() == "FrameMapper") {
+                    FrameMapper *nested_reader = (FrameMapper *) existing_clip->Reader();
+                    if (nested_reader->Reader())
+                        nested_reader->Reader()->SetMaxSize(0, 0);
+                }
+            }
 		}
 
 	} else if (change_type == "delete") {

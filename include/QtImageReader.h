@@ -110,6 +110,9 @@ namespace openshot
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
 
+		/// Set Max Image Size (used for performance optimization)
+		void SetMaxSize(int width, int height);
+
 		/// Open File - which is called by the constructor automatically
 		void Open() throw(InvalidFile);
 	};
