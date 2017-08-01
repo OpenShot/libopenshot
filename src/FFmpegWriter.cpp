@@ -119,7 +119,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	{
 		AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
 		if (new_codec == NULL)
-			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
+			throw InvalidCodec("A valid video codec could not be found for this file.", path);
 		else {
 			// Set video codec
 			info.vcodec = new_codec->name;
@@ -331,6 +331,9 @@ void FFmpegWriter::WriteHeader()
 		if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0)
 			throw InvalidFile("Could not open or write file.", path);
 	}
+
+    // Force the output filename (which doesn't always happen for some reason)
+    snprintf(oc->filename, sizeof(oc->filename), "%s", path.c_str());
 
 	// Write the stream header, if any
 	// TODO: add avoptions / parameters instead of NULL
@@ -1024,6 +1027,10 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	codec = avcodec_find_encoder(video_codec->codec_id);
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
+
+    /* Force max_b_frames to 0 in some cases (i.e. for mjpeg image sequences */
+    if(video_codec->max_b_frames && video_codec->codec_id != CODEC_ID_MPEG4 && video_codec->codec_id != CODEC_ID_MPEG1VIDEO && video_codec->codec_id != CODEC_ID_MPEG2VIDEO)
+        video_codec->max_b_frames = 0;
 
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, NULL) < 0)
