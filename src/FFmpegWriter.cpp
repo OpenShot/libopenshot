@@ -1029,7 +1029,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 		throw InvalidCodec("Could not find codec", path);
 
     /* Force max_b_frames to 0 in some cases (i.e. for mjpeg image sequences */
-    if(video_codec->max_b_frames && video_codec->codec_id != CODEC_ID_MPEG4 && video_codec->codec_id != CODEC_ID_MPEG1VIDEO && video_codec->codec_id != CODEC_ID_MPEG2VIDEO)
+    if(video_codec->max_b_frames && video_codec->codec_id != AV_CODEC_ID_MPEG4 && video_codec->codec_id != AV_CODEC_ID_MPEG1VIDEO && video_codec->codec_id != AV_CODEC_ID_MPEG2VIDEO)
         video_codec->max_b_frames = 0;
 
 	/* open the codec */
