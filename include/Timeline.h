@@ -29,7 +29,7 @@
 #define OPENSHOT_TIMELINE_H
 
 #include <list>
-#include <tr1/memory>
+#include <memory>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include "CacheBase.h"
@@ -133,7 +133,7 @@ namespace openshot {
 	 * t.Open();
 	 *
 	 * // Get frame number 1 from the timeline (This will generate a new frame, made up from the previous clips and settings)
-	 * tr1::shared_ptr<Frame> f = t.GetFrame(1);
+	 * std::shared_ptr<Frame> f = t.GetFrame(1);
 	 *
 	 * // Now that we have an openshot::Frame object, lets have some fun!
 	 * f->Display(); // Display the frame on the screen
@@ -153,7 +153,7 @@ namespace openshot {
 		CacheBase *final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
-		void add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip);
+		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip);
 
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(Clip* clip);
@@ -176,10 +176,10 @@ namespace openshot {
 		vector<Clip*> find_intersecting_clips(long int requested_frame, int number_of_frames, bool include);
 
 		/// Get or generate a blank frame
-		tr1::shared_ptr<Frame> GetOrCreateFrame(Clip* clip, long int number);
+		std::shared_ptr<Frame> GetOrCreateFrame(Clip* clip, long int number);
 
 		/// Apply effects to the source frame (if any)
-		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer);
+		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame, long int timeline_frame_number, int layer);
 
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
@@ -243,7 +243,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)

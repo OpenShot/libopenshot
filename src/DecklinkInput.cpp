@@ -104,9 +104,9 @@ unsigned long DeckLinkInputDelegate::GetCurrentFrameNumber()
 		return 0;
 }
 
-tr1::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(long int requested_frame)
+std::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(long int requested_frame)
 {
-	tr1::shared_ptr<openshot::Frame> f;
+	std::shared_ptr<openshot::Frame> f;
 
 	// Is this frame for the future?
 	while (requested_frame > GetCurrentFrameNumber())
@@ -242,7 +242,7 @@ omp_set_nested(true);
 						m_rgbFrame->GetBytes(&frameBytes);
 
 						// *********** CREATE OPENSHOT FRAME **********
-						tr1::shared_ptr<openshot::Frame> f(new openshot::Frame(copy_frameCount, width, height, "#000000", 2048, 2));
+						std::shared_ptr<openshot::Frame> f(new openshot::Frame(copy_frameCount, width, height, "#000000", 2048, 2));
 
 						// Add Image data to openshot frame
 						// TODO: Fix Decklink support with QImage Upgrade

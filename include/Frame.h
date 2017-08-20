@@ -50,7 +50,7 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QLabel>
-#include <tr1/memory>
+#include <memory>
 #include <unistd.h>
 #include "ZmqLogger.h"
 #ifdef USE_IMAGEMAGICK
@@ -108,17 +108,17 @@ namespace openshot
 	 *       );
 	 *
 	 * // Some methods require a shared pointer to an openshot::Frame object.
-	 * tr1::shared_ptr<Frame> f(new Frame(1, 720, 480, "#000000", 44100, 2));
+	 * std::shared_ptr<Frame> f(new Frame(1, 720, 480, "#000000", 44100, 2));
 	 *
 	 * @endcode
 	 */
 	class Frame
 	{
 	private:
-		tr1::shared_ptr<QImage> image;
-		tr1::shared_ptr<QImage> wave_image;
-		tr1::shared_ptr<juce::AudioSampleBuffer> audio;
-		tr1::shared_ptr<QApplication> previewApp;
+		std::shared_ptr<QImage> image;
+		std::shared_ptr<QImage> wave_image;
+		std::shared_ptr<juce::AudioSampleBuffer> audio;
+		std::shared_ptr<QApplication> previewApp;
 		CriticalSection addingImageSection;
         CriticalSection addingAudioSection;
 		const unsigned char *qbuffer;
@@ -165,14 +165,14 @@ namespace openshot
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
 
 		/// Add (or replace) pixel data to the frame
-		void AddImage(tr1::shared_ptr<QImage> new_image);
+		void AddImage(std::shared_ptr<QImage> new_image);
 
 		/// Add (or replace) pixel data to the frame (for only the odd or even lines)
-		void AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines);
+		void AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines);
 
 #ifdef USE_IMAGEMAGICK
 		/// Add (or replace) pixel data to the frame from an ImageMagick Image
-		void AddMagickImage(tr1::shared_ptr<Magick::Image> new_image);
+		void AddMagickImage(std::shared_ptr<Magick::Image> new_image);
 #endif
 
 		/// Add audio samples to a specific channel
@@ -230,11 +230,11 @@ namespace openshot
 		int64 GetBytes();
 
 		/// Get pointer to Qt QImage image object
-		tr1::shared_ptr<QImage> GetImage();
+		std::shared_ptr<QImage> GetImage();
 
 #ifdef USE_IMAGEMAGICK
 		/// Get pointer to ImageMagick image object
-		tr1::shared_ptr<Magick::Image> GetMagickImage();
+		std::shared_ptr<Magick::Image> GetMagickImage();
 #endif
 
 		/// Set Pixel Aspect Ratio
@@ -256,7 +256,7 @@ namespace openshot
 		static int GetSamplesPerFrame(long int frame_number, Fraction fps, int sample_rate, int channels);
 
 		/// Get an audio waveform image
-		tr1::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);
+		std::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);
 
 		/// Get an audio waveform image pixels
 		const unsigned char* GetWaveformPixels(int width, int height, int Red, int Green, int Blue, int Alpha);

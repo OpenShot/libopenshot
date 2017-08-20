@@ -33,7 +33,7 @@
 	#define __JUCE_UNITTEST_JUCEHEADER__
 #endif
 
-#include <tr1/memory>
+#include <memory>
 #include <sstream>
 #include "Exceptions.h"
 #include "Point.h"

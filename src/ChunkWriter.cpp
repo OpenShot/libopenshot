@@ -74,7 +74,7 @@ string ChunkWriter::get_chunk_path(int chunk_number, string folder, string exten
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
+void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -131,7 +131,7 @@ void ChunkWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 			writer_thumb->WriteFrame(last_frame);
 		} else {
 			// Write the 1st frame (of the 1st chunk)... since no previous chunk is available
-			tr1::shared_ptr<Frame> blank_frame(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+			std::shared_ptr<Frame> blank_frame(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
 			blank_frame->AddColor(info.width, info.height, "#000000");
 			writer_final->WriteFrame(blank_frame);
 			writer_preview->WriteFrame(blank_frame);
@@ -199,7 +199,7 @@ void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(Wr
 	for (int number = start; number <= length; number++)
 	{
 		// Get the frame
-		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
+		std::shared_ptr<Frame> f = reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);
@@ -213,7 +213,7 @@ void ChunkWriter::WriteFrame(int start, int length) throw(WriterClosed)
 	for (int number = start; number <= length; number++)
 	{
 		// Get the frame
-		tr1::shared_ptr<Frame> f = local_reader->GetFrame(number);
+		std::shared_ptr<Frame> f = local_reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);

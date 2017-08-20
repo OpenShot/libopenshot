@@ -187,7 +187,7 @@ string ChunkReader::get_chunk_path(int chunk_number, string folder, string exten
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> ChunkReader::GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound)
+std::shared_ptr<Frame> ChunkReader::GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound)
 {
 	// Determine what chunk contains this frame
 	ChunkLocation location = find_chunk_frame(requested_frame);

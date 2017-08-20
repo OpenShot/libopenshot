@@ -63,7 +63,7 @@ namespace openshot
 		ReaderBase *reader; /// The reader to pull samples from
 		int64 original_frame_number; /// The current frame to read from
 		int64 frame_number; /// The current frame number
-		tr1::shared_ptr<Frame> frame; /// The current frame object that is being read
+		std::shared_ptr<Frame> frame; /// The current frame object that is being read
 		long int frame_position; /// The position of the current frame's buffer
 		double estimated_frame; /// The estimated frame position of the currently playing buffer
 		int estimated_samples_per_frame; /// The estimated samples per frame of video
@@ -118,7 +118,7 @@ namespace openshot
 	    const ReaderInfo & getReaderInfo() const { return reader->info; }
 
 	    /// Return the current frame object
-	    tr1::shared_ptr<Frame> getFrame() const { return frame; }
+	    std::shared_ptr<Frame> getFrame() const { return frame; }
 
 	    /// Get the estimate frame that is playing at this moment
 	    long int getEstimatedFrame() const { return long(estimated_frame); }

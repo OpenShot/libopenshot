@@ -135,7 +135,7 @@ namespace openshot
     }
 
     // Get the next displayed frame (based on speed and direction)
-    tr1::shared_ptr<Frame> PlayerPrivate::getFrame()
+    std::shared_ptr<Frame> PlayerPrivate::getFrame()
     {
 	try {
 		// Get the next frame (based on speed)
@@ -162,7 +162,7 @@ namespace openshot
 	} catch (const OutOfBoundsFrame & e) {
 	    // ...
 	}
-	return tr1::shared_ptr<Frame>();
+	return std::shared_ptr<Frame>();
     }
 
     // Start video/audio playback

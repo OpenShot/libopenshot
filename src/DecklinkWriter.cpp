@@ -139,7 +139,7 @@ void DecklinkWriter::Open() throw(DecklinkError)
 	    //	throw DecklinkError("Failed to enable audio output. Is another application using the card?");
 
 		// Begin video preroll by scheduling a second of frames in hardware
-		//tr1::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
+		//std::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
 		//f->AddColor(displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
 
 		// Preroll 1 second of video
@@ -227,7 +227,7 @@ void DecklinkWriter::Close()
 }
 
 // This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-void DecklinkWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
+void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -243,7 +243,7 @@ void DecklinkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw
 	for (int number = start; number <= length; number++)
 	{
 		// Get the frame
-		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
+		std::shared_ptr<Frame> f = reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);

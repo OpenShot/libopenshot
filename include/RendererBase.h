@@ -30,7 +30,7 @@
 
 #include "../include/Frame.h"
 #include <stdlib.h> // for realloc
-#include <tr1/memory>
+#include <memory>
 
 namespace openshot
 {
@@ -47,7 +47,7 @@ namespace openshot
     public:
 
 	/// Paint(render) a video Frame.
-	void paint(const std::tr1::shared_ptr<Frame> & frame);
+	void paint(const std::shared_ptr<Frame> & frame);
 
 	/// Allow manual override of the QWidget that is used to display
 	virtual void OverrideWidget(long long qwidget_address) = 0;
@@ -56,7 +56,7 @@ namespace openshot
 	RendererBase();
 	virtual ~RendererBase();
 	
-	virtual void render(tr1::shared_ptr<QImage> image) = 0;
+	virtual void render(std::shared_ptr<QImage> image) = 0;
     };
 
 }

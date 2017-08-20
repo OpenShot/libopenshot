@@ -170,7 +170,7 @@ double Timeline::calculate_time(long int number, Fraction rate)
 }
 
 // Apply effects to the source frame (if any)
-tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, long int timeline_frame_number, int layer)
+std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, long int timeline_frame_number, int layer)
 {
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1, "", -1);
@@ -212,9 +212,9 @@ tr1::shared_ptr<Frame> Timeline::apply_effects(tr1::shared_ptr<Frame> frame, lon
 }
 
 // Get or generate a blank frame
-tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
+std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 {
-	tr1::shared_ptr<Frame> new_frame;
+	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame
 	int samples_in_frame = Frame::GetSamplesPerFrame(number, info.fps, info.sample_rate, info.channels);
@@ -227,7 +227,7 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 		clip->SetMaxSize(info.width, info.height);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		new_frame = tr1::shared_ptr<Frame>(clip->GetFrame(number));
+		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number));
 
 		// Return real frame
 		return new_frame;
@@ -244,17 +244,17 @@ tr1::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = tr1::shared_ptr<Frame>(new Frame(number, max_width, max_height, "#000000", samples_in_frame, info.channels));
+	new_frame = std::make_shared<Frame>(number, max_width, max_height, "#000000", samples_in_frame, info.channels);
 	new_frame->SampleRate(info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
 	return new_frame;
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
-	tr1::shared_ptr<Frame> source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
+	std::shared_ptr<Frame> source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
 
 	// No frame found... so bail
 	if (!source_frame)
@@ -276,8 +276,8 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		tr1::shared_ptr<QImage> source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
-		source_frame->AddImage(tr1::shared_ptr<QImage>(source_image));
+		std::shared_ptr<QImage> source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
+		source_frame->AddImage(std::shared_ptr<QImage>(source_image));
 	}
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
@@ -286,7 +286,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 
 	// Declare an image to hold the source frame's image
-	tr1::shared_ptr<QImage> source_image;
+	std::shared_ptr<QImage> source_image;
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
@@ -380,7 +380,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	{
 	case (SCALE_FIT):
 		// keep aspect ratio
-		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+		source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		source_width = source_image->width();
 		source_height = source_image->height();
 
@@ -390,7 +390,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 	case (SCALE_STRETCH):
 		// ignore aspect ratio
-		source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 		source_width = source_image->width();
 		source_height = source_image->height();
 
@@ -404,9 +404,9 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 
 		// respect aspect ratio
 		if (width_size.width() >= max_width && width_size.height() >= max_height)
-			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+			source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		else
-			source_image = tr1::shared_ptr<QImage>(new QImage(source_image->scaled(height_size.width(), height_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation))); // height is larger, so resize to it
+			source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(height_size.width(), height_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation))); // height is larger, so resize to it
 		source_width = source_image->width();
 		source_height = source_image->height();
 
@@ -509,7 +509,7 @@ void Timeline::add_layer(tr1::shared_ptr<Frame> new_frame, Clip* source_clip, lo
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	tr1::shared_ptr<QImage> new_image = new_frame->GetImage();
+	std::shared_ptr<QImage> new_image = new_frame->GetImage();
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
@@ -634,14 +634,14 @@ bool Timeline::isEqual(double a, double b)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
+std::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
 
 	// Check cache
-	tr1::shared_ptr<Frame> frame = final_cache->GetFrame(requested_frame);
+	std::shared_ptr<Frame> frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
@@ -719,7 +719,7 @@ tr1::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 				// Create blank frame (which will become the requested frame)
-				tr1::shared_ptr<Frame> new_frame(tr1::shared_ptr<Frame>(new Frame(frame_number, max_width, max_height, "#000000", samples_in_frame, info.channels)));
+				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, max_width, max_height, "#000000", samples_in_frame, info.channels));
 				new_frame->AddAudioSilence(samples_in_frame);
 				new_frame->SampleRate(info.sample_rate);
 				new_frame->ChannelsLayout(info.channel_layout);

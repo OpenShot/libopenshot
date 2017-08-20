@@ -31,7 +31,7 @@
 #include "../RendererBase.h"
 #include <QtCore/QObject>
 #include <QtGui/QImage>
-#include <tr1/memory>
+#include <memory>
 
 
 class QPainter;
@@ -52,7 +52,7 @@ signals:
 
 protected:
     //void render(openshot::OSPixelFormat format, int width, int height, int bytesPerLine, unsigned char *data);
-    void render(tr1::shared_ptr<QImage> image);
+    void render(std::shared_ptr<QImage> image);
 
 private slots:
 

@@ -112,7 +112,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	t.Open();
 
 	// Get frame
-	tr1::shared_ptr<Frame> f = t.GetFrame(1);
+	std::shared_ptr<Frame> f = t.GetFrame(1);
 
 	// Get the image data
 	int pixel_row = 200;
@@ -435,7 +435,7 @@ TEST(Timeline_Effect_Blur)
 	t.Open();
 
 	// Get frame
-	tr1::shared_ptr<Frame> f = t.GetFrame(1);
+	std::shared_ptr<Frame> f = t.GetFrame(1);
 
 	// Close reader
 	t.Close();

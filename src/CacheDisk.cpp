@@ -163,7 +163,7 @@ CacheDisk::~CacheDisk()
 }
 
 // Add a Frame to the cache
-void CacheDisk::Add(tr1::shared_ptr<Frame> frame)
+void CacheDisk::Add(std::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -222,7 +222,7 @@ void CacheDisk::Add(tr1::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheDisk::GetFrame(long int frame_number)
+std::shared_ptr<Frame> CacheDisk::GetFrame(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -234,14 +234,14 @@ tr1::shared_ptr<Frame> CacheDisk::GetFrame(long int frame_number)
 		if (path.exists(frame_path)) {
 
 			// Load image file
-			tr1::shared_ptr<QImage> image = tr1::shared_ptr<QImage>(new QImage());
+			std::shared_ptr<QImage> image = std::shared_ptr<QImage>(new QImage());
 			bool success = image->load(QString::fromStdString(frame_path.toStdString()));
 
 			// Set pixel formatimage->
-			image = tr1::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
+			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 
 			// Create frame object
-			tr1::shared_ptr<Frame> frame(new Frame());
+			std::shared_ptr<Frame> frame(new Frame());
 			frame->number = frame_number;
 			frame->AddImage(image);
 
@@ -288,15 +288,15 @@ tr1::shared_ptr<Frame> CacheDisk::GetFrame(long int frame_number)
 	}
 
 	// no Frame found
-	return tr1::shared_ptr<Frame>();
+	return std::shared_ptr<Frame>();
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
+std::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-	tr1::shared_ptr<openshot::Frame> f;
+	std::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
 	deque<long int>::iterator itr;

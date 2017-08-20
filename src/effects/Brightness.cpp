@@ -71,10 +71,10 @@ int Brightness::constrain(int color_value)
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Brightness::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Get the frame's image
-	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
+	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get keyframe values for this frame
 	float brightness_value = brightness.GetValue(frame_number);

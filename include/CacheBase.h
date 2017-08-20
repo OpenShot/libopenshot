@@ -28,7 +28,7 @@
 #ifndef OPENSHOT_CACHE_BASE_H
 #define OPENSHOT_CACHE_BASE_H
 
-#include <tr1/memory>
+#include <memory>
 #include "Frame.h"
 #include "Exceptions.h"
 #include "Json.h"
@@ -62,7 +62,7 @@ namespace openshot {
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
-		virtual void Add(tr1::shared_ptr<Frame> frame) = 0;
+		virtual void Add(std::shared_ptr<Frame> frame) = 0;
 
 		/// Clear the cache of all frames
 		virtual void Clear() = 0;
@@ -72,13 +72,13 @@ namespace openshot {
 
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
-		virtual tr1::shared_ptr<Frame> GetFrame(long int frame_number) = 0;
+		virtual std::shared_ptr<Frame> GetFrame(long int frame_number) = 0;
 
 		/// Gets the maximum bytes value
 		virtual long long int GetBytes() = 0;
 
 		/// Get the smallest frame number
-		virtual tr1::shared_ptr<Frame> GetSmallestFrame() = 0;
+		virtual std::shared_ptr<Frame> GetSmallestFrame() = 0;
 
 		/// @brief Remove a specific frame
 		/// @param frame_number The frame number of the cached frame

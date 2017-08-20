@@ -255,7 +255,7 @@ float Clip::End() throw(ReaderClosed)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	if (reader)
 	{
@@ -281,16 +281,16 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
             new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
+		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
-		tr1::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
+		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
 		frame->SampleRate(original_frame->SampleRate());
 		frame->ChannelsLayout(original_frame->ChannelsLayout());
 
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)
@@ -298,7 +298,7 @@ tr1::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
-		tr1::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
+		std::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
 
 		// Apply effects to the frame (if any)
 		apply_effects(new_frame);
@@ -347,7 +347,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed)
 {
 	// Check for valid reader
 	if (!reader)
@@ -358,7 +358,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 	if (time.Values.size() > 1)
 	{
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
-		tr1::shared_ptr<Frame> new_frame;
+		std::shared_ptr<Frame> new_frame;
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -370,7 +370,7 @@ tr1::shared_ptr<Frame> Clip::get_time_mapped_frame(tr1::shared_ptr<Frame> frame,
 
 		// Create a new frame
 		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate, frame->GetAudioChannelsCount());
-		new_frame = tr1::shared_ptr<Frame>(new Frame(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount()));
+		new_frame = std::make_shared<Frame>(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount());
 
 		// Copy the image from the new frame
 		new_frame->AddImage(GetOrCreateFrame(new_frame_number)->GetImage());
@@ -580,9 +580,9 @@ long int Clip::adjust_frame_number_minimum(long int frame_number)
 }
 
 // Get or generate a blank frame
-tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
+std::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 {
-	tr1::shared_ptr<Frame> new_frame;
+	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame
 	int samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
@@ -639,7 +639,7 @@ tr1::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = tr1::shared_ptr<Frame>(new Frame(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels));
+	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
 	return new_frame;
@@ -997,7 +997,7 @@ void Clip::RemoveEffect(EffectBase* effect)
 }
 
 // Apply effects to the source frame (if any)
-tr1::shared_ptr<Frame> Clip::apply_effects(tr1::shared_ptr<Frame> frame)
+std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
 	list<EffectBase*>::iterator effect_itr;

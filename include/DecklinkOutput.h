@@ -97,7 +97,7 @@ protected:
 	// Queue of raw video frames
 	//deque<IDeckLinkMutableVideoFrame*> final_frames;
 	deque<uint8_t * > final_frames;
-	deque<tr1::shared_ptr<openshot::Frame> > raw_video_frames;
+	deque<std::shared_ptr<openshot::Frame> > raw_video_frames;
 
 	// Convert between YUV and RGB
 	IDeckLinkOutput *deckLinkOutput;
@@ -125,7 +125,7 @@ public:
 	void ScheduleNextFrame(bool prerolling);
 
 	/// Custom method to write new frames
-	void WriteFrame(tr1::shared_ptr<openshot::Frame> frame);
+	void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 private:
 	ULONG				m_refCount;

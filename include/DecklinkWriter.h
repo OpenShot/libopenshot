@@ -39,7 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tr1/memory>
+#include <memory>
 #include <unistd.h>
 
 #include "CacheMemory.h"
@@ -96,7 +96,7 @@ namespace openshot
 		void Close();
 
 		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
 		void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed);

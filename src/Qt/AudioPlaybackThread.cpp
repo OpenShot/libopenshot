@@ -103,10 +103,10 @@ namespace openshot
 	}
 
     // Get the current frame object (which is filling the buffer)
-    tr1::shared_ptr<Frame> AudioPlaybackThread::getFrame()
+    std::shared_ptr<Frame> AudioPlaybackThread::getFrame()
     {
 	if (source) return source->getFrame();
-	return tr1::shared_ptr<Frame>();
+	return std::shared_ptr<Frame>();
     }
 
     // Get the currently playing frame number

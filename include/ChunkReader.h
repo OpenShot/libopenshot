@@ -39,7 +39,7 @@
 #include <QtCore/qdir.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <tr1/memory>
+#include <memory>
 #include "Json.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
@@ -110,7 +110,7 @@ namespace openshot
 		FFmpegReader *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
-		tr1::shared_ptr<Frame> last_frame;
+		std::shared_ptr<Frame> last_frame;
 
 		/// Check if folder path existing
 		bool does_folder_exist(string path);
@@ -149,7 +149,7 @@ namespace openshot
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

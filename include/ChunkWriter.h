@@ -90,7 +90,7 @@ namespace openshot
 		FFmpegWriter *writer_thumb;
 		FFmpegWriter *writer_preview;
 		FFmpegWriter *writer_final;
-	    tr1::shared_ptr<Frame> last_frame;
+	    std::shared_ptr<Frame> last_frame;
 	    bool last_frame_needed;
 	    string default_extension;
 	    string default_vcodec;
@@ -133,7 +133,7 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
-		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
 
 		/// @brief Write a block of frames from a reader
 		/// @param start The starting frame number to write (of the reader passed into the constructor)

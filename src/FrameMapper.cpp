@@ -341,9 +341,9 @@ MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfB
 }
 
 // Get or generate a blank frame
-tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
+std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 {
-	tr1::shared_ptr<Frame> new_frame;
+	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
 	int samples_in_frame = Frame::GetSamplesPerFrame(number + timeline_frame_offset, target, reader->info.sample_rate, reader->info.channels);
@@ -373,17 +373,17 @@ tr1::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = tr1::shared_ptr<Frame>(new Frame(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels));
+	new_frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
 	return new_frame;
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	// Check final cache, and just return the frame (if it's available)
-	tr1::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
+	std::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
 	if (final_frame) return final_frame;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
@@ -414,7 +414,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 		// Get the mapped frame
 		MappedFrame mapped = GetMappedFrame(frame_number);
-		tr1::shared_ptr<Frame> mapped_frame;
+		std::shared_ptr<Frame> mapped_frame;
 
 		// Get the mapped frame (keeping the sample rate and channels the same as the original... for the moment)
 		mapped_frame = GetOrCreateFrame(mapped.Odd.Frame);
@@ -444,23 +444,23 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 		}
 
 		// Create a new frame
-		tr1::shared_ptr<Frame> frame = tr1::shared_ptr<Frame>(new Frame(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame));
+		std::shared_ptr<Frame> frame = std::make_shared<Frame>(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame);
 		frame->SampleRate(mapped_frame->SampleRate());
 		frame->ChannelsLayout(mapped_frame->ChannelsLayout());
 
 
 		// Copy the image from the odd field
-		tr1::shared_ptr<Frame> odd_frame;
+		std::shared_ptr<Frame> odd_frame;
 		odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 		if (odd_frame)
-			frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+			frame->AddImage(std::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
 		if (mapped.Odd.Frame != mapped.Even.Frame) {
 			// Add even lines (if different than the previous image)
-			tr1::shared_ptr<Frame> even_frame;
+			std::shared_ptr<Frame> even_frame;
 			even_frame = GetOrCreateFrame(mapped.Even.Frame);
 			if (even_frame)
-				frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+				frame->AddImage(std::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
 		}
 
 		// Resample audio on frame (if needed)
@@ -524,7 +524,7 @@ tr1::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 			int number_to_copy = 0;
 
 			// number of original samples on this frame
-			tr1::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
+			std::shared_ptr<Frame> original_frame = GetOrCreateFrame(starting_frame);
 			int original_samples = original_frame->GetAudioSamplesCount();
 
 			// Loop through each channel
@@ -763,7 +763,7 @@ void FrameMapper::SetTimelineFrameOffset(long int offset)
 }
 
 // Resample audio and map channels (if needed)
-void FrameMapper::ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number)
+void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, long int original_frame_number)
 {
 	// Init audio buffers / variables
 	int total_frame_samples = 0;

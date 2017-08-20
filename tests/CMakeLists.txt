@@ -31,7 +31,7 @@
 IF (WIN32)
 	STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
 	add_definitions( -DIGNORE_JUCE_HYPOT=1 -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath -std=c++0x")
+	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
 ENDIF(WIN32)
 
 ################### UNITTEST++ #####################

@@ -46,7 +46,7 @@ namespace openshot
      */
     class PlayerPrivate : Thread
     {
-    tr1::shared_ptr<Frame> frame; /// The current frame
+    std::shared_ptr<Frame> frame; /// The current frame
 	long int video_position; /// The current frame position.
 	long int audio_position; /// The current frame position.
 	ReaderBase *reader; /// The reader which powers this player
@@ -72,7 +72,7 @@ namespace openshot
 	void stopPlayback(int timeOutMilliseconds = -1);
 
 	/// Get the next frame (based on speed and direction)
-	tr1::shared_ptr<Frame> getFrame();
+	std::shared_ptr<Frame> getFrame();
 
 	/// The parent class of PlayerPrivate
 	friend class QtPlayer;

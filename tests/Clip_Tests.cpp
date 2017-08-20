@@ -214,7 +214,7 @@ TEST(Clip_Effects)
 	c10.AddEffect(&n);
 
 	// Get frame 1
-	tr1::shared_ptr<Frame> f = c10.GetFrame(500);
+	std::shared_ptr<Frame> f = c10.GetFrame(500);
 
 	// Get the image data
 	const unsigned char* pixels = f->GetPixels(10);

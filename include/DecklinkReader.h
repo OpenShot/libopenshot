@@ -39,7 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tr1/memory>
+#include <memory>
 #include <unistd.h>
 
 #include "CacheMemory.h"
@@ -107,7 +107,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 		unsigned long GetCurrentFrameNumber();
 
 		/// Determine if reader is open or closed

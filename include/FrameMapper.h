@@ -32,7 +32,7 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
-#include <tr1/memory>
+#include <memory>
 #include "CacheMemory.h"
 #include "../include/ReaderBase.h"
 #include "../include/Frame.h"
@@ -130,7 +130,7 @@ namespace openshot
 	 * \code
 	 * // Create a frame mapper for a reader, and convert the frame rate (from 24 fps to 29.97 fps)
 	 * FrameMapper mapping(reader, Fraction(30000, 1001), PULLDOWN_CLASSIC, 44100, 2, LAYOUT_STEREO);
-	 * tr1::shared_ptr<Frame> frame2 = mapping.GetFrame(2);
+	 * std::shared_ptr<Frame> frame2 = mapping.GetFrame(2);
 
 	 * // If you need to change the mapping...
 	 * mapping.ChangeMapping(Fraction(24, 1), PULLDOWN_CLASSIC, 48000, 2, LAYOUT_MONO)
@@ -154,7 +154,7 @@ namespace openshot
 		void AddField(Field field);
 
 		// Get Frame or Generate Blank Frame
-		tr1::shared_ptr<Frame> GetOrCreateFrame(long int number);
+		std::shared_ptr<Frame> GetOrCreateFrame(long int number);
 
 		// Use the original and target frame rates and a pull-down technique to create
 		// a mapping between the original fields and frames or a video to a new frame rate.
@@ -194,7 +194,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Determine if reader is open or closed
 		bool IsOpen();
@@ -218,7 +218,7 @@ namespace openshot
 		ReaderBase* Reader() throw(ReaderClosed);
 
 		/// Resample audio and map channels (if needed)
-		void ResampleMappedAudio(tr1::shared_ptr<Frame> frame, long int original_frame_number);
+		void ResampleMappedAudio(std::shared_ptr<Frame> frame, long int original_frame_number);
 
 	};
 }

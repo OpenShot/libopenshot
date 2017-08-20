@@ -35,7 +35,7 @@
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
-#include <tr1/memory>
+#include <memory>
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "Fraction.h"
@@ -53,7 +53,7 @@ namespace openshot
 	class DummyReader : public ReaderBase
 	{
 	private:
-		tr1::shared_ptr<Frame> image_frame;
+		std::shared_ptr<Frame> image_frame;
 		bool is_open;
 
 	public:
@@ -75,7 +75,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

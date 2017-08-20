@@ -66,7 +66,7 @@ TEST(FFmpegWriter_Test_Webm)
 	CHECK_EQUAL(1, r1.info.fps.den);
 
 	// Get a specific frame
-	tr1::shared_ptr<Frame> f = r1.GetFrame(8);
+	std::shared_ptr<Frame> f = r1.GetFrame(8);
 
 	// Get the image data for row 500
 	const unsigned char* pixels = f->GetPixels(500);

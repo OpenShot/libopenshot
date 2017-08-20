@@ -55,7 +55,7 @@ void ImageReader::Open() throw(InvalidFile)
 		try
 		{
 			// load image
-			image = tr1::shared_ptr<Magick::Image>(new Magick::Image(path));
+			image = std::shared_ptr<Magick::Image>(new Magick::Image(path));
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
@@ -113,14 +113,14 @@ void ImageReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> ImageReader::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> ImageReader::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
 	// Create or get frame object
-	tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
 
 	// Add Image data to frame
 	image_frame->AddMagickImage(image);

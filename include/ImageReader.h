@@ -35,7 +35,7 @@
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
-#include <tr1/memory>
+#include <memory>
 #include "Magick++.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
@@ -55,7 +55,7 @@ namespace openshot
 	 * r.Open(); // Open the reader
 	 *
 	 * // Get frame number 1 from the video
-	 * tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	 * std::shared_ptr<Frame> f = r.GetFrame(1);
 	 *
 	 * // Now that we have an openshot::Frame object, lets have some fun!
 	 * f->Display(); // Display the frame on the screen
@@ -68,7 +68,7 @@ namespace openshot
 	{
 	private:
 		string path;
-		tr1::shared_ptr<Magick::Image> image;
+		std::shared_ptr<Magick::Image> image;
 		bool is_open;
 
 	public:
@@ -93,7 +93,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

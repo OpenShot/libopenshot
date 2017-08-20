@@ -99,7 +99,7 @@ namespace openshot
 		virtual bool IsOpen() = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-		virtual void WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed) = 0;
+		virtual void WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed) = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
 		virtual void WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed) = 0;

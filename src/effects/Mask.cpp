@@ -70,7 +70,7 @@ int Mask::constrain(int color_value)
 }
 
 // Get grayscale mask image
-void Mask::set_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
+void Mask::set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
 {
 	// Get pixels for mask image
 	unsigned char *pixels = (unsigned char *) mask_frame_image->bits();
@@ -107,10 +107,10 @@ void Mask::set_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int widt
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Get the mask image (from the mask reader)
-	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
+	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Check if mask reader is open
 	if (reader && !reader->IsOpen())
@@ -127,17 +127,17 @@ tr1::shared_ptr<Frame> Mask::GetFrame(tr1::shared_ptr<Frame> frame, long int fra
 		#pragma omp critical (open_mask_reader)
 		{
 			// Only get mask if needed
-			tr1::shared_ptr<QImage> mask_without_sizing = tr1::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
+			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
 
 			// Resize mask image to match frame size
-			original_mask = tr1::shared_ptr<QImage>(new QImage(
+			original_mask = std::shared_ptr<QImage>(new QImage(
 					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
 										  Qt::SmoothTransformation)));
 		}
 	}
 
 	// Convert mask to grayscale and resize to frame size
-	tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage(*original_mask));
+	std::shared_ptr<QImage> mask = std::shared_ptr<QImage>(new QImage(*original_mask));
 	set_grayscale_mask(mask, frame_image->width(), frame_image->height(), brightness.GetValue(frame_number), contrast.GetValue(frame_number));
 
 	// Get pixels for frame image

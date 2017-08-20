@@ -95,7 +95,7 @@ namespace openshot
 		int number_of_loops;
 		bool combine_frames;
 
-	    tr1::shared_ptr<Frame> last_frame;
+	    std::shared_ptr<Frame> last_frame;
 
 	public:
 
@@ -133,7 +133,7 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written

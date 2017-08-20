@@ -52,7 +52,7 @@ void TextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = tr1::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width,height), Magick::Color(background_color)));
+		image = std::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width,height), Magick::Color(background_color)));
 
 		// Give image a transparent background color
 		image->backgroundColor(Magick::Color("none"));
@@ -143,15 +143,15 @@ void TextReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> TextReader::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> TextReader::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	if (image)
 	{
 		// Create or get frame object
-		tr1::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
 
 		// Add Image data to frame
-		tr1::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+		std::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
 		copy_image->modifyImage(); // actually copy the image data to this object
 		//TODO: Reimplement this with QImage
 		//image_frame->AddImage(copy_image);
@@ -160,7 +160,7 @@ tr1::shared_ptr<Frame> TextReader::GetFrame(long int requested_frame) throw(Read
 		return image_frame;
 	} else {
 		// return empty frame
-		tr1::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
+		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
 
 		// return frame object
 		return image_frame;

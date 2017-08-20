@@ -181,20 +181,20 @@ namespace openshot
 	    int original_sample_rate;
 	    int original_channels;
 
-	    tr1::shared_ptr<Frame> last_frame;
-	    deque<tr1::shared_ptr<Frame> > spooled_audio_frames;
-	    deque<tr1::shared_ptr<Frame> > spooled_video_frames;
+	    std::shared_ptr<Frame> last_frame;
+	    deque<std::shared_ptr<Frame> > spooled_audio_frames;
+	    deque<std::shared_ptr<Frame> > spooled_video_frames;
 
-	    deque<tr1::shared_ptr<Frame> > queued_audio_frames;
-	    deque<tr1::shared_ptr<Frame> > queued_video_frames;
+	    deque<std::shared_ptr<Frame> > queued_audio_frames;
+	    deque<std::shared_ptr<Frame> > queued_video_frames;
 
-	    deque<tr1::shared_ptr<Frame> > processed_frames;
-	    deque<tr1::shared_ptr<Frame> > deallocate_frames;
+	    deque<std::shared_ptr<Frame> > processed_frames;
+	    deque<std::shared_ptr<Frame> > deallocate_frames;
 
-	    map<tr1::shared_ptr<Frame>, AVFrame*> av_frames;
+	    map<std::shared_ptr<Frame>, AVFrame*> av_frames;
 
 	    /// Add an AVFrame to the cache
-	    void add_avframe(tr1::shared_ptr<Frame> frame, AVFrame* av_frame);
+	    void add_avframe(std::shared_ptr<Frame> frame, AVFrame* av_frame);
 
 		/// Add an audio output stream
 		AVStream* add_audio_stream();
@@ -232,13 +232,13 @@ namespace openshot
 		void open_video(AVFormatContext *oc, AVStream *st);
 
 		/// process video frame
-		void process_video_packet(tr1::shared_ptr<Frame> frame);
+		void process_video_packet(std::shared_ptr<Frame> frame);
 
 		/// write all queued frames' audio to the video file
 		void write_audio_packets(bool final);
 
 		/// write video frame
-		bool write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final);
+		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final);
 
 		/// write all queued frames
 		void write_queued_frames() throw (ErrorEncodingVideo);
@@ -316,7 +316,7 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written

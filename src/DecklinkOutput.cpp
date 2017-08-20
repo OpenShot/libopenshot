@@ -195,7 +195,7 @@ void DeckLinkOutputDelegate::ScheduleNextFrame(bool prerolling)
 
 }
 
-void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
+void DeckLinkOutputDelegate::WriteFrame(std::shared_ptr<openshot::Frame> frame)
 {
 
 	#pragma omp critical (blackmagic_output_queue)
@@ -220,7 +220,7 @@ void DeckLinkOutputDelegate::WriteFrame(tr1::shared_ptr<openshot::Frame> frame)
 			while (!raw_video_frames.empty())
 			{
 				// Get front frame (from the queue)
-				tr1::shared_ptr<openshot::Frame> frame = raw_video_frames.front();
+				std::shared_ptr<openshot::Frame> frame = raw_video_frames.front();
 				raw_video_frames.pop_front();
 
 				// copy of frame count

@@ -33,7 +33,7 @@ OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
 # required for libopenshot-audio headers
 IF (WIN32)
 	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath -std=c++0x")
+	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
 ENDIF(WIN32)
 IF (APPLE)
 	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
@@ -43,8 +43,6 @@ IF (APPLE)
     
     SET(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
     SET(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
-
-    SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -std=c++0x")
 ENDIF(APPLE)
 
 ################ IMAGE MAGICK ##################

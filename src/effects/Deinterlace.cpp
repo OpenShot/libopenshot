@@ -59,14 +59,14 @@ void Deinterlace::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Deinterlace::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Get original size of frame's image
 	int original_width = frame->GetImage()->width();
 	int original_height = frame->GetImage()->height();
 
 	// Get the frame's image
-	tr1::shared_ptr<QImage> image = frame->GetImage();
+	std::shared_ptr<QImage> image = frame->GetImage();
 	const unsigned char* pixels = image->bits();
 
 	// Create a smaller, new image
@@ -83,7 +83,7 @@ tr1::shared_ptr<Frame> Deinterlace::GetFrame(tr1::shared_ptr<Frame> frame, long 
 	}
 
 	// Resize deinterlaced image back to original size, and update frame's image
-	image = tr1::shared_ptr<QImage>(new QImage(deinterlaced_image.scaled(original_width, original_height, Qt::IgnoreAspectRatio, Qt::FastTransformation)));
+	image = std::shared_ptr<QImage>(new QImage(deinterlaced_image.scaled(original_width, original_height, Qt::IgnoreAspectRatio, Qt::FastTransformation)));
 
 	// Update image on frame
 	frame->AddImage(image);

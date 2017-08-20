@@ -41,7 +41,7 @@ TEST(ReaderBase_Derived_Class)
 	public:
 		TestReader() { };
 		CacheBase* GetCache() { return NULL; };
-		tr1::shared_ptr<Frame> GetFrame(long int number) { tr1::shared_ptr<Frame> f(new Frame()); return f; }
+		std::shared_ptr<Frame> GetFrame(long int number) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
 		string Json() { };

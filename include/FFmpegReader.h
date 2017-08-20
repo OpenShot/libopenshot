@@ -40,7 +40,7 @@
 #include <ctime>
 #include <iostream>
 #include <stdio.h>
-#include <tr1/memory>
+#include <memory>
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
@@ -78,7 +78,7 @@ namespace openshot
 	 * r.Open(); // Open the reader
 	 *
 	 * // Get frame number 1 from the video
-	 * tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	 * std::shared_ptr<Frame> f = r.GetFrame(1);
 	 *
 	 * // Now that we have an openshot::Frame object, lets have some fun!
 	 * f->Display(); // Display the frame on the screen
@@ -108,7 +108,6 @@ namespace openshot
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
-		map<AVPicture*, AVPicture*> frames;
 		map<long int, long int> processing_video_frames;
 		multimap<long int, long int> processing_audio_frames;
 		map<long int, long int> processed_video_frames;
@@ -117,7 +116,6 @@ namespace openshot
 		multimap<long int, long int> missing_video_frames_source;
 		multimap<long int, long int> missing_audio_frames;
 		multimap<long int, long int> missing_audio_frames_source;
-		multimap<long int, long int> duplicate_video_frames;
 		map<long int, int> checked_frames;
 		AudioLocation previous_packet_location;
 
@@ -128,7 +126,7 @@ namespace openshot
 		long int pts_counter;
 		long int num_packets_since_video_frame;
 		long int num_checks_since_final;
-		tr1::shared_ptr<Frame> last_video_frame;
+		std::shared_ptr<Frame> last_video_frame;
 
 		bool is_seeking;
 		long int seeking_pts;
@@ -169,7 +167,7 @@ namespace openshot
 		long int ConvertVideoPTStoFrame(long int pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		tr1::shared_ptr<Frame> CreateFrame(long int requested_frame);
+		std::shared_ptr<Frame> CreateFrame(long int requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
 		AudioLocation GetAudioPTSLocation(long int pts);
@@ -199,7 +197,7 @@ namespace openshot
 		void ProcessAudioPacket(long int requested_frame, long int target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		tr1::shared_ptr<Frame> ReadStream(long int requested_frame);
+		std::shared_ptr<Frame> ReadStream(long int requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
 		void RemoveAVFrame(AVPicture*);
@@ -249,7 +247,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

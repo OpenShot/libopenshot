@@ -30,7 +30,7 @@
 
 #include <iostream>
 #include <iomanip>
-#include <tr1/memory>
+#include <memory>
 #include <stdlib.h>
 #include <sstream>
 #include "CacheMemory.h"
@@ -125,7 +125,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
-		virtual tr1::shared_ptr<Frame> GetFrame(long int number) = 0;
+		virtual std::shared_ptr<Frame> GetFrame(long int number) = 0;
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;

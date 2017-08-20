@@ -42,7 +42,7 @@ namespace openshot
      */
     class VideoCacheThread : Thread
     {
-	std::tr1::shared_ptr<Frame> frame;
+	std::shared_ptr<Frame> frame;
 	int speed;
 	bool is_playing;
 	long int position;

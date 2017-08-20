@@ -47,7 +47,7 @@
  * r.Open(); // Open the reader
  *
  * // Get frame number 1 from the video
- * tr1::shared_ptr<Frame> f = r.GetFrame(1);
+ * std::shared_ptr<Frame> f = r.GetFrame(1);
  *
  * // Now that we have an openshot::Frame object, lets have some fun!
  * f->Display(); // Display the frame on the screen

@@ -41,7 +41,7 @@ TEST(Cache_Default_Constructor)
 	for (int i = 0; i < 50; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		c.Add(f);
 	}
@@ -59,7 +59,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	for (int i = 30; i > 0; i--)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
+		std::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
 		f->AddColor(320, 240, "#000000");
 		c.Add(f);
 	}
@@ -71,7 +71,7 @@ TEST(Cache_Max_Bytes_Constructor)
 	for (int i = 10; i > 0; i--)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
+		std::shared_ptr<Frame> f(new Frame(i, 320, 240, "#000000"));
 		f->AddColor(320, 240, "#000000");
 		c.Add(f);
 	}
@@ -98,7 +98,7 @@ TEST(Cache_Clear)
 	for (int i = 0; i < 10; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		c.Add(f);
 	}
@@ -122,7 +122,7 @@ TEST(Cache_Add_Duplicate_Frames)
 	for (int i = 0; i < 10; i++)
 	{
 		// Add blank frame to the cache (each frame is #1)
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		c.Add(f);
 	}
 
@@ -139,7 +139,7 @@ TEST(Cache_Check_If_Frame_Exists)
 	for (int i = 1; i < 6; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		c.Add(f);
 	}
@@ -165,9 +165,9 @@ TEST(Cache_GetFrame)
 	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(tr1::shared_ptr<Frame>(red));
-	c.Add(tr1::shared_ptr<Frame>(blue));
-	c.Add(tr1::shared_ptr<Frame>(green));
+	c.Add(std::shared_ptr<Frame>(red));
+	c.Add(std::shared_ptr<Frame>(blue));
+	c.Add(std::shared_ptr<Frame>(green));
 
 	// Get frames
 	CHECK_EQUAL(true, c.GetFrame(0) == NULL);
@@ -190,9 +190,9 @@ TEST(Cache_GetSmallest)
 	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(tr1::shared_ptr<Frame>(red));
-	c.Add(tr1::shared_ptr<Frame>(blue));
-	c.Add(tr1::shared_ptr<Frame>(green));
+	c.Add(std::shared_ptr<Frame>(red));
+	c.Add(std::shared_ptr<Frame>(blue));
+	c.Add(std::shared_ptr<Frame>(green));
 
 	// Check if frame 1 is the front
 	CHECK_EQUAL(1, c.GetSmallestFrame()->number);
@@ -218,9 +218,9 @@ TEST(Cache_Remove)
 	Frame *green = new Frame(3, 500, 500, "green");
 
 	// Add frames to cache
-	c.Add(tr1::shared_ptr<Frame>(red));
-	c.Add(tr1::shared_ptr<Frame>(blue));
-	c.Add(tr1::shared_ptr<Frame>(green));
+	c.Add(std::shared_ptr<Frame>(red));
+	c.Add(std::shared_ptr<Frame>(blue));
+	c.Add(std::shared_ptr<Frame>(green));
 
 	// Check if count is 3
 	CHECK_EQUAL(3, c.Count());
@@ -256,7 +256,7 @@ TEST(Cache_Set_Max_Bytes)
 	for (int i = 0; i < 20; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		c.Add(f);
 	}
@@ -281,7 +281,7 @@ TEST(Cache_Multiple_Remove)
 	for (int i = 1; i <= 20; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		// Add some picture data
 		f->AddColor(1280, 720, "Blue");
@@ -309,7 +309,7 @@ TEST(CacheDisk_Set_Max_Bytes)
 	for (int i = 0; i < 20; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		// Add some picture data
 		f->AddColor(1280, 720, "Blue");
@@ -329,7 +329,7 @@ TEST(CacheDisk_Set_Max_Bytes)
 	CHECK_EQUAL(4 * 1024, c.GetMaxBytes());
 
 	// Read frames from disk cache
-	tr1::shared_ptr<Frame> f = c.GetFrame(5);
+	std::shared_ptr<Frame> f = c.GetFrame(5);
 	CHECK_EQUAL(320, f->GetWidth());
 	CHECK_EQUAL(180, f->GetHeight());
 	CHECK_EQUAL(2, f->GetAudioChannelsCount());
@@ -360,7 +360,7 @@ TEST(CacheDisk_Multiple_Remove)
 	for (int i = 1; i <= 20; i++)
 	{
 		// Add blank frame to the cache
-		tr1::shared_ptr<Frame> f(new Frame());
+		std::shared_ptr<Frame> f(new Frame());
 		f->number = i;
 		// Add some picture data
 		f->AddColor(1280, 720, "Blue");
@@ -389,31 +389,31 @@ TEST(CacheDisk_JSON)
 	CacheDisk c("", "PPM", 1.0, 0.25);
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
 	c.Add(f3);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
 	c.Add(f1);
 	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
 	c.Add(f2);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
 	c.Add(f5);
 	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
 	c.Add(f4);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
@@ -429,31 +429,31 @@ TEST(CacheMemory_JSON)
 	CacheMemory c;
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
 	c.Add(f3);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
 	c.Add(f1);
 	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
 	c.Add(f2);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
 	c.Add(f5);
 	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
-	tr1::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
+	std::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
 	c.Add(f4);
 	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("5", c.JsonValue()["version"].asString());

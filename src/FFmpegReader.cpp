@@ -37,7 +37,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 	  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0) {
+	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
@@ -58,7 +58,7 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader) throw(InvalidFile, 
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0) {
+		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	av_register_all();
@@ -393,7 +393,7 @@ void FFmpegReader::UpdateVideoInfo()
 }
 
 
-tr1::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks)
+std::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -412,7 +412,7 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(Ou
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "requested_frame", requested_frame, "last_frame", last_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Check the cache for this frame
-	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
+	std::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
@@ -475,7 +475,7 @@ tr1::shared_ptr<Frame> FFmpegReader::GetFrame(long int requested_frame) throw(Ou
 }
 
 // Read the stream until we find the requested Frame
-tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
+std::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 {
 	// Allocate video frame
 	bool end_of_stream = false;
@@ -506,9 +506,21 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				// Get the next packet into a local variable called packet
 				packet_error = GetNextPacket();
 
+				int processing_video_frames_size = 0;
+				int processing_audio_frames_size = 0;
+				{
+					const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+					processing_video_frames_size = processing_video_frames.size();
+					processing_audio_frames_size = processing_audio_frames.size();
+				}
+
 				// Wait if too many frames are being processed
-				while (processing_video_frames.size() + processing_audio_frames.size() >= minimum_packets)
+				while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
 					usleep(2500);
+					const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+					processing_video_frames_size = processing_video_frames.size();
+					processing_audio_frames_size = processing_audio_frames.size();
+				}
 
 				// Get the next packet (if any)
 				if (packet_error < 0)
@@ -519,7 +531,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 				}
 
 				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "minimum_packets", minimum_packets, "packets_processed", packets_processed, "is_seeking", is_seeking);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "minimum_packets", minimum_packets, "packets_processed", packets_processed, "is_seeking", is_seeking);
 
 				// Video packet
 				if (info.has_video && packet->stream_index == videoStream)
@@ -535,9 +547,6 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 						check_seek = false;
 
 					if (check_seek) {
-						// Remove packet (since this packet is pointless)
-						RemoveAVPacket(packet);
-
 						// Jump to the next iteration of this loop
 						continue;
 					}
@@ -570,9 +579,6 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 						check_seek = false;
 
 					if (check_seek) {
-						// Remove packet (since this packet is pointless)
-						RemoveAVPacket(packet);
-
 						// Jump to the next iteration of this loop
 						continue;
 					}
@@ -621,7 +627,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 		CheckWorkingFrames(end_of_stream, requested_frame);
 
 	// Return requested frame (if found)
-	tr1::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
+	std::shared_ptr<Frame> frame = final_cache.GetFrame(requested_frame);
 	if (frame)
 		// Return prepared frame
 		return frame;
@@ -635,7 +641,7 @@ tr1::shared_ptr<Frame> FFmpegReader::ReadStream(long int requested_frame)
 		}
 		else {
 			// The largest processed frame is no longer in cache, return a blank frame
-			tr1::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
+			std::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
 			f->AddColor(info.width, info.height, "#000");
 			return f;
 		}
@@ -650,16 +656,16 @@ int FFmpegReader::GetNextPacket()
 	AVPacket *next_packet = new AVPacket();
 	found_packet = av_read_frame(pFormatCtx, next_packet);
 
+    if (packet) {
+        // Remove previous packet before getting next one
+        RemoveAVPacket(packet);
+        packet = NULL;
+    }
+
 	if (found_packet >= 0)
 	{
 		// Update current packet pointer
 		packet = next_packet;
-	}
-	else
-	{
-		// Free packet, since it's unused
-		av_free_packet(next_packet);
-		delete next_packet;
 	}
 
 	// Return if packet was found (or error number)
@@ -681,16 +687,9 @@ bool FFmpegReader::GetAVFrame()
 	{
 		// AVFrames are clobbered on the each call to avcodec_decode_video, so we
 		// must make a copy of the image data before this method is called again.
-		AVPicture *copyFrame = new AVPicture();
-		avpicture_alloc(copyFrame, pCodecCtx->pix_fmt, info.width, info.height);
-		av_picture_copy(copyFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width, info.height);
-
-		#pragma omp critical (packet_cache)
-		{
-			// add to AVFrame cache (if frame finished)
-			frames[copyFrame] = copyFrame;
-			pFrame = frames[copyFrame];
-		}
+		pFrame = new AVPicture();
+		avpicture_alloc(pFrame, pCodecCtx->pix_fmt, info.width, info.height);
+		av_picture_copy(pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width, info.height);
 
 		// Detect interlaced frame (only once)
 		if (!check_interlace)
@@ -699,12 +698,6 @@ bool FFmpegReader::GetAVFrame()
 			info.interlaced_frame = next_frame->interlaced_frame;
 			info.top_field_first = next_frame->top_field_first;
 		}
-
-	}
-	else
-	{
-		// Remove packet (since this packet is pointless)
-		RemoveAVPacket(packet);
 	}
 
 	// deallocate the frame
@@ -774,7 +767,6 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	{
 		// Remove frame and packet
 		RemoveAVFrame(pFrame);
-		RemoveAVPacket(packet);
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Skipped)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
@@ -791,14 +783,13 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 	int height = info.height;
 	int width = info.width;
 	long int video_length = info.video_length;
-	AVPacket *my_packet = packet;
-	AVPicture *my_frame = frames[pFrame];
+    AVPicture *my_frame = pFrame;
 
 	// Add video frame to list of processing video frames
 	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 	processing_video_frames[current_frame] = current_frame;
 
-	#pragma omp task firstprivate(current_frame, my_packet, my_frame, height, width, video_length, pix_fmt)
+	#pragma omp task firstprivate(current_frame, my_frame, height, width, video_length, pix_fmt)
 	{
 		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 		AVFrame *pFrameRGB = NULL;
@@ -833,6 +824,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 
 		// Determine required buffer size and allocate buffer
 		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
+		#pragma omp critical (video_buffer)
 		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
 		// Assign appropriate parts of buffer to image planes in pFrameRGB
@@ -848,7 +840,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 				  original_height, pFrameRGB->data, pFrameRGB->linesize);
 
 		// Create or get the existing frame object
-		tr1::shared_ptr<Frame> f = CreateFrame(current_frame);
+		std::shared_ptr<Frame> f = CreateFrame(current_frame);
 
 		// Add Image data to frame
 		f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
@@ -857,6 +849,7 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 		working_cache.Add(f);
 
 		// Keep track of last last_video_frame
+		#pragma omp critical (video_buffer)
 		last_video_frame = f;
 
 		// Free the RGB image
@@ -865,7 +858,6 @@ void FFmpegReader::ProcessVideoPacket(long int requested_frame)
 
 		// Remove frame and packet
 		RemoveAVFrame(my_frame);
-		RemoveAVPacket(my_packet);
 		sws_freeContext(img_convert_ctx);
 
 		// Remove video frame from list of processing video frames
@@ -892,18 +884,12 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	// Are we close enough to decode the frame's audio?
 	if (target_frame < (requested_frame - 20))
 	{
-		// Remove packet
-		RemoveAVPacket(packet);
-
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Skipped)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
 
 		// Skip to next frame without decoding or caching
 		return;
 	}
-
-	// Init some local variables (for OpenMP)
-	AVPacket *my_packet = packet;
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (Before)", "requested_frame", requested_frame, "target_frame", target_frame, "starting_sample", starting_sample, "", -1, "", -1, "", -1);
@@ -918,7 +904,7 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 
 	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
 	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
-	int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, my_packet);
+	int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, packet);
 
 	if (frame_finished) {
 
@@ -989,192 +975,176 @@ void FFmpegReader::ProcessAudioPacket(long int requested_frame, long int target_
 	}
 
 
+	// Allocate audio buffer
+	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	// Process the audio samples in a separate thread (this includes resampling to 16 bit integer, and storing
-	// in a openshot::Frame object).
-	#pragma omp task firstprivate(requested_frame, target_frame, starting_sample, my_packet, audio_frame)
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
+
+	// Create output frame
+	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
+	AV_RESET_FRAME(audio_converted);
+	audio_converted->nb_samples = audio_frame->nb_samples;
+	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+
+	AVAudioResampleContext *avr = NULL;
+	int nb_samples = 0;
+
+	// setup resample context
+	avr = avresample_alloc_context();
+	av_opt_set_int(avr,  "in_channel_layout", aCodecCtx->channel_layout, 0);
+	av_opt_set_int(avr, "out_channel_layout", aCodecCtx->channel_layout, 0);
+	av_opt_set_int(avr,  "in_sample_fmt",     aCodecCtx->sample_fmt,     0);
+	av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
+	av_opt_set_int(avr,  "in_sample_rate",    info.sample_rate,    0);
+	av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
+	av_opt_set_int(avr,  "in_channels",       info.channels,    0);
+	av_opt_set_int(avr, "out_channels",       info.channels,    0);
+	int r = avresample_open(avr);
+
+	// Convert audio samples
+	nb_samples = avresample_convert(avr, 	// audio resample context
+			audio_converted->data, 			// output data pointers
+			audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
+			audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
+			audio_frame->data,				// input data pointers
+			audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
+			audio_frame->nb_samples);		// number of input samples to convert
+
+	// Copy audio samples over original samples
+	memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
+
+	// Deallocate resample buffer
+	avresample_close(avr);
+	avresample_free(&avr);
+	avr = NULL;
+
+	// Free AVFrames
+	av_free(audio_converted->data[0]);
+	AV_FREE_FRAME(&audio_converted);
+
+	long int starting_frame_number = -1;
+	bool partial_frame = true;
+	for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
 	{
-		// Allocate audio buffer
-		int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+		// Array of floats (to hold samples for each channel)
+		starting_frame_number = target_frame;
+		int channel_buffer_size = packet_samples / info.channels;
+		float *channel_buffer = new float[channel_buffer_size];
 
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
+		// Init buffer array
+		for (int z = 0; z < channel_buffer_size; z++)
+			channel_buffer[z] = 0.0f;
 
-		// Create output frame
-		AVFrame *audio_converted = AV_ALLOCATE_FRAME();
-		AV_RESET_FRAME(audio_converted);
-		audio_converted->nb_samples = audio_frame->nb_samples;
-		av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-
-		AVAudioResampleContext *avr = NULL;
-		int nb_samples = 0;
-		#pragma ordered
+		// Loop through all samples and add them to our Frame based on channel.
+		// Toggle through each channel number, since channel data is stored like (left right left right)
+		int channel = 0;
+		int position = 0;
+		for (int sample = 0; sample < packet_samples; sample++)
 		{
-		// setup resample context
-		avr = avresample_alloc_context();
-		av_opt_set_int(avr,  "in_channel_layout", aCodecCtx->channel_layout, 0);
-		av_opt_set_int(avr, "out_channel_layout", aCodecCtx->channel_layout, 0);
-		av_opt_set_int(avr,  "in_sample_fmt",     aCodecCtx->sample_fmt,     0);
-		av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
-		av_opt_set_int(avr,  "in_sample_rate",    info.sample_rate,    0);
-		av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
-		av_opt_set_int(avr,  "in_channels",       info.channels,    0);
-		av_opt_set_int(avr, "out_channels",       info.channels,    0);
-		int r = avresample_open(avr);
-
-		// Convert audio samples
-		nb_samples = avresample_convert(avr, 	// audio resample context
-				audio_converted->data, 			// output data pointers
-				audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
-				audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
-				audio_frame->data,				// input data pointers
-				audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
-				audio_frame->nb_samples);		// number of input samples to convert
-		}
-
-		// Copy audio samples over original samples
-		memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
-
-		// Deallocate resample buffer
-		avresample_close(avr);
-		avresample_free(&avr);
-		avr = NULL;
-
-		// Free AVFrames
-		av_free(audio_converted->data[0]);
-		AV_FREE_FRAME(&audio_converted);
-
-		long int starting_frame_number = -1;
-		bool partial_frame = true;
-		for (int channel_filter = 0; channel_filter < info.channels; channel_filter++)
-		{
-			// Array of floats (to hold samples for each channel)
-			starting_frame_number = target_frame;
-			int channel_buffer_size = packet_samples / info.channels;
-			float *channel_buffer = new float[channel_buffer_size];
-
-			// Init buffer array
-			for (int z = 0; z < channel_buffer_size; z++)
-				channel_buffer[z] = 0.0f;
-
-			// Loop through all samples and add them to our Frame based on channel.
-			// Toggle through each channel number, since channel data is stored like (left right left right)
-			int channel = 0;
-			int position = 0;
-			for (int sample = 0; sample < packet_samples; sample++)
+			// Only add samples for current channel
+			if (channel_filter == channel)
 			{
-				// Only add samples for current channel
-				if (channel_filter == channel)
-				{
-					// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
-					channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
+				// Add sample (convert from (-32768 to 32768)  to (-1.0 to 1.0))
+				channel_buffer[position] = audio_buf[sample] * (1.0f / (1 << 15));
 
-					// Increment audio position
-					position++;
-				}
-
-				// increment channel (if needed)
-				if ((channel + 1) < info.channels)
-					// move to next channel
-					channel ++;
-				else
-					// reset channel
-					channel = 0;
+				// Increment audio position
+				position++;
 			}
 
-			// Loop through samples, and add them to the correct frames
-			int start = starting_sample;
-			int remaining_samples = channel_buffer_size;
-			float *iterate_channel_buffer = channel_buffer;	// pointer to channel buffer
-			while (remaining_samples > 0)
-			{
-				// Get Samples per frame (for this frame number)
-				int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate, info.channels);
-
-				// Calculate # of samples to add to this frame
-				int samples = samples_per_frame - start;
-				if (samples > remaining_samples)
-					samples = remaining_samples;
-
-				// Create or get the existing frame object
-				tr1::shared_ptr<Frame> f = CreateFrame(starting_frame_number);
-
-				// Determine if this frame was "partially" filled in
-				if (samples_per_frame == start + samples)
-					partial_frame = false;
-				else
-					partial_frame = true;
-
-				// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
-				// some louder samples from maxing out at 1.0 (not sure why this happens)
-				f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
-
-				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
-
-				// Add or update cache
-				working_cache.Add(f);
-
-				// Decrement remaining samples
-				remaining_samples -= samples;
-
-				// Increment buffer (to next set of samples)
-				if (remaining_samples > 0)
-					iterate_channel_buffer += samples;
-
-				// Increment frame number
-				starting_frame_number++;
-
-				// Reset starting sample #
-				start = 0;
-			}
-
-			// clear channel buffer
-			delete[] channel_buffer;
-			channel_buffer = NULL;
-			iterate_channel_buffer = NULL;
+			// increment channel (if needed)
+			if ((channel + 1) < info.channels)
+				// move to next channel
+				channel ++;
+			else
+				// reset channel
+				channel = 0;
 		}
 
-		// Clean up some arrays
-		delete[] audio_buf;
-		audio_buf = NULL;
-
-		// Remove audio frame from list of processing audio frames
+		// Loop through samples, and add them to the correct frames
+		int start = starting_sample;
+		int remaining_samples = channel_buffer_size;
+		float *iterate_channel_buffer = channel_buffer;	// pointer to channel buffer
+		while (remaining_samples > 0)
 		{
-			const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
-			// Update all frames as completed
-			for (long int f = target_frame; f < starting_frame_number; f++) {
-				// Remove the frame # from the processing list. NOTE: If more than one thread is
-				// processing this frame, the frame # will be in this list multiple times. We are only
-				// removing a single instance of it here.
-				processing_audio_frames.erase(processing_audio_frames.find(f));
+			// Get Samples per frame (for this frame number)
+			int samples_per_frame = Frame::GetSamplesPerFrame(starting_frame_number, info.fps, info.sample_rate, info.channels);
 
-				// Check and see if this frame is also being processed by another thread
-				if (processing_audio_frames.count(f) == 0)
-					// No other thread is processing it. Mark the audio as processed (final)
-					processed_audio_frames[f] = f;
-			}
+			// Calculate # of samples to add to this frame
+			int samples = samples_per_frame - start;
+			if (samples > remaining_samples)
+				samples = remaining_samples;
 
-			if (target_frame == starting_frame_number) {
-				// This typically never happens, but just in case, remove the currently processing number
-				processing_audio_frames.erase(processing_audio_frames.find(target_frame));
-			}
+			// Create or get the existing frame object
+			std::shared_ptr<Frame> f = CreateFrame(starting_frame_number);
+
+			// Determine if this frame was "partially" filled in
+			if (samples_per_frame == start + samples)
+				partial_frame = false;
+			else
+				partial_frame = true;
+
+			// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
+			// some louder samples from maxing out at 1.0 (not sure why this happens)
+			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
+
+			// Add or update cache
+			working_cache.Add(f);
+
+			// Decrement remaining samples
+			remaining_samples -= samples;
+
+			// Increment buffer (to next set of samples)
+			if (remaining_samples > 0)
+				iterate_channel_buffer += samples;
+
+			// Increment frame number
+			starting_frame_number++;
+
+			// Reset starting sample #
+			start = 0;
 		}
 
-		// Remove this packet
-		RemoveAVPacket(my_packet);
+		// clear channel buffer
+		delete[] channel_buffer;
+		channel_buffer = NULL;
+		iterate_channel_buffer = NULL;
+	}
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number - 1, "", -1, "", -1, "", -1);
+	// Clean up some arrays
+	delete[] audio_buf;
+	audio_buf = NULL;
 
-	} // end task
+	// Remove audio frame from list of processing audio frames
+	{
+		const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+		// Update all frames as completed
+		for (long int f = target_frame; f < starting_frame_number; f++) {
+			// Remove the frame # from the processing list. NOTE: If more than one thread is
+			// processing this frame, the frame # will be in this list multiple times. We are only
+			// removing a single instance of it here.
+			processing_audio_frames.erase(processing_audio_frames.find(f));
 
+			// Check and see if this frame is also being processed by another thread
+			if (processing_audio_frames.count(f) == 0)
+				// No other thread is processing it. Mark the audio as processed (final)
+				processed_audio_frames[f] = f;
+		}
 
-	// TODO: Fix this bug. Wait on the task to complete. This is not ideal, but solves an issue with the
-	// audio_frame being modified by the next call to this method. I think this is a scope issue with OpenMP.
-	#pragma omp taskwait
+		if (target_frame == starting_frame_number) {
+			// This typically never happens, but just in case, remove the currently processing number
+			processing_audio_frames.erase(processing_audio_frames.find(target_frame));
+		}
+	}
 
 	// Free audio frame
 	AV_FREE_FRAME(&audio_frame);
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (After)", "requested_frame", requested_frame, "starting_frame", target_frame, "end_frame", starting_frame_number - 1, "", -1, "", -1, "", -1);
+
 }
 
 
@@ -1188,12 +1158,24 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 	if (requested_frame > info.video_length)
 		requested_frame = info.video_length;
 
+	int processing_video_frames_size = 0;
+	int processing_audio_frames_size = 0;
+	{
+		const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+		processing_video_frames_size = processing_video_frames.size();
+		processing_audio_frames_size = processing_audio_frames.size();
+	}
+
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "processing_video_frames.size()", processing_video_frames.size(), "processing_audio_frames.size()", processing_audio_frames.size(), "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "", -1);
 
 	// Wait for any processing frames to complete
-	while (processing_video_frames.size() + processing_audio_frames.size() > 0)
+	while (processing_video_frames_size + processing_audio_frames_size > 0) {
 		usleep(2500);
+		const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
+		processing_video_frames_size = processing_video_frames.size();
+		processing_audio_frames_size = processing_audio_frames.size();
+	}
 
 	// Clear working cache (since we are seeking to another location in the file)
 	working_cache.Clear();
@@ -1206,7 +1188,6 @@ void FFmpegReader::Seek(long int requested_frame) throw(TooManySeeks)
 		processing_video_frames.clear();
 		processed_video_frames.clear();
 		processed_audio_frames.clear();
-		duplicate_video_frames.clear();
 		missing_audio_frames.clear();
 		missing_video_frames.clear();
 		missing_audio_frames_source.clear();
@@ -1392,8 +1373,6 @@ long int FFmpegReader::ConvertVideoPTStoFrame(long int pts)
 
 		// Sometimes frames are duplicated due to identical (or similar) timestamps
 		if (frame == previous_video_frame) {
-			duplicate_video_frames.insert(pair<int,int>(frame, frame));
-
 			// return -1 frame number
 			frame = -1;
 		}
@@ -1522,14 +1501,14 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(long int pts)
 }
 
 // Create a new Frame (or return an existing one) and add it to the working queue.
-tr1::shared_ptr<Frame> FFmpegReader::CreateFrame(long int requested_frame)
+std::shared_ptr<Frame> FFmpegReader::CreateFrame(long int requested_frame)
 {
 	// Check working cache
-	tr1::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
+	std::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
 	if (!output)
 	{
 		// Create a new frame on the working cache
-		output = tr1::shared_ptr<Frame>(new Frame(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+		output = std::make_shared<Frame>(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels);
 		output->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
 		output->ChannelsLayout(info.channel_layout); // update audio channel layout from the parent reader
 		output->SampleRate(info.sample_rate); // update the frame's sample rate of the parent reader
@@ -1599,7 +1578,7 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 			checked_frames[missing_source_frame]++;
 
 		// Get the previous frame of this missing frame (if it's available in missing cache)
-		tr1::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(missing_source_frame);
+		std::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(missing_source_frame);
 		if (parent_frame == NULL) {
 			parent_frame = final_cache.GetFrame(missing_source_frame);
 			if (parent_frame != NULL) {
@@ -1609,7 +1588,7 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 		}
 
 		// Create blank missing frame
-		tr1::shared_ptr<Frame> missing_frame = CreateFrame(requested_frame);
+		std::shared_ptr<Frame> missing_frame = CreateFrame(requested_frame);
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (Is Previous Video Frame Final)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "missing_source_frame", missing_source_frame, "", -1, "", -1, "", -1);
@@ -1620,19 +1599,22 @@ bool FFmpegReader::CheckMissingFrame(long int requested_frame)
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (AddImage from Previous Video Frame)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "missing_source_frame", missing_source_frame, "", -1, "", -1, "", -1);
 
 			// Add this frame to the processed map (since it's already done)
-			missing_frame->AddImage(tr1::shared_ptr<QImage>(new QImage(*parent_frame->GetImage())));
+			std::shared_ptr<QImage> parent_image = parent_frame->GetImage();
+			if (parent_image) {
+				missing_frame->AddImage(std::shared_ptr<QImage>(new QImage(*parent_image)));
 
-			processed_video_frames[missing_frame->number] = missing_frame->number;
-			processed_audio_frames[missing_frame->number] = missing_frame->number;
+				processed_video_frames[missing_frame->number] = missing_frame->number;
+				processed_audio_frames[missing_frame->number] = missing_frame->number;
 
-			// Move frame to final cache
-			final_cache.Add(missing_frame);
+				// Move frame to final cache
+				final_cache.Add(missing_frame);
 
-			// Remove frame from working cache
-			working_cache.Remove(missing_frame->number);
+				// Remove frame from working cache
+				working_cache.Remove(missing_frame->number);
 
-			// Update last_frame processed
-			last_frame = missing_frame->number;
+				// Update last_frame processed
+				last_frame = missing_frame->number;
+			}
 		}
 
 	}
@@ -1650,7 +1632,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 	while (true)
 	{
 		// Get the front frame of working cache
-		tr1::shared_ptr<Frame> f(working_cache.GetSmallestFrame());
+		std::shared_ptr<Frame> f(working_cache.GetSmallestFrame());
 
 		// Was a frame found?
 		if (!f)
@@ -1662,6 +1644,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 
 		// Init # of times this frame has been checked so far
 		int checked_count = 0;
+		int checked_frames_size = 0;
 
 		bool is_video_ready = false;
 		bool is_audio_ready = false;
@@ -1671,6 +1654,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 			is_audio_ready = processed_audio_frames.count(f->number);
 
 			// Get check count for this frame
+			checked_frames_size = checked_frames.size();
             if (!checked_count_tripped || f->number >= requested_frame)
 			    checked_count = checked_frames[f->number];
             else
@@ -1689,14 +1673,14 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		// Make final any frames that get stuck (for whatever reason)
 		if (checked_count >= max_checked_count && (!is_video_ready || !is_audio_ready)) {
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size());
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames_size", checked_frames_size);
 
             // Trigger checked count tripped mode (clear out all frames before requested frame)
             checked_count_tripped = true;
 
 			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
-				f->AddImage(tr1::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+				f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
 				is_video_ready = true;
 			}
 
@@ -1708,7 +1692,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, long int requested_fra
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames.size()", checked_frames.size());
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames_size", checked_frames_size);
 
 		// Check if working frame is final
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash)
@@ -1792,9 +1776,6 @@ void FFmpegReader::CheckFPS()
 				// Remove pFrame
 				RemoveAVFrame(pFrame);
 
-				// remove packet
-				RemoveAVPacket(packet);
-
 				// Apply PTS offset
 				pts += video_pts_offset;
 
@@ -1816,13 +1797,7 @@ void FFmpegReader::CheckFPS()
 					// Too far
 					break;
 			}
-			else
-				// remove packet
-				RemoveAVPacket(packet);
 		}
-		else
-			// remove packet
-			RemoveAVPacket(packet);
 
 		// Increment counters
 		iterations++;
@@ -1880,29 +1855,22 @@ void FFmpegReader::CheckFPS()
 // Remove AVFrame from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
 {
-	#pragma omp critical (packet_cache)
-	{
-		// Remove pFrame (if exists)
-		if (frames.count(remove_frame))
-		{
-			// Free memory
-			avpicture_free(frames[remove_frame]);
+    // Remove pFrame (if exists)
+    if (remove_frame)
+    {
+        // Free memory
+        avpicture_free(remove_frame);
 
-			// Remove from cache
-			frames.erase(remove_frame);
-
-			// Delete the object
-			delete remove_frame;
-		}
-
-	} // end omp critical
+        // Delete the object
+        delete remove_frame;
+    }
 }
 
 // Remove AVPacket from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 {
 	// deallocate memory for packet
-	av_free_packet(remove_packet);
+    AV_FREE_PACKET(remove_packet);
 
 	// Delete the object
 	delete remove_packet;
@@ -1914,6 +1882,7 @@ long int FFmpegReader::GetSmallestVideoFrame()
 	// Loop through frame numbers
 	map<long int, long int>::iterator itr;
 	long int smallest_frame = -1;
+	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 	for(itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr)
 	{
 		if (itr->first < smallest_frame || smallest_frame == -1)

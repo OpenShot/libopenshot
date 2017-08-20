@@ -35,7 +35,7 @@
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
-#include <tr1/memory>
+#include <memory>
 #include "../Color.h"
 #include "../Exceptions.h"
 #include "../Json.h"
@@ -64,13 +64,13 @@ namespace openshot
 	{
 	private:
 		ReaderBase *reader;
-		tr1::shared_ptr<QImage> original_mask;
+		std::shared_ptr<QImage> original_mask;
 
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
 
 		/// Get grayscale mask image
-		void set_grayscale_mask(tr1::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
+		void set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
 
 		/// Init effect settings
 		void init_effect_details();
@@ -101,7 +101,7 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		tr1::shared_ptr<Frame> GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number);
+		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, long int frame_number);
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

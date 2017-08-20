@@ -127,7 +127,7 @@ void CacheMemory::CalculateRanges() {
 }
 
 // Add a Frame to the cache
-void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
+void CacheMemory::Add(std::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -152,7 +152,7 @@ void CacheMemory::Add(tr1::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
+std::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -164,15 +164,15 @@ tr1::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
 
 	else
 		// no Frame found
-		return tr1::shared_ptr<Frame>();
+		return std::shared_ptr<Frame>();
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
-tr1::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
+std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-	tr1::shared_ptr<openshot::Frame> f;
+	std::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
 	deque<long int>::iterator itr;
@@ -251,12 +251,12 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 // Move frame to front of queue (so it lasts longer)
 void CacheMemory::MoveToFront(long int frame_number)
 {
+	// Create a scoped lock, to protect the cache from multiple threads
+	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+
 	// Does frame exists in cache?
 	if (frames.count(frame_number))
 	{
-		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-
 		// Loop through frame numbers
 		deque<long int>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)

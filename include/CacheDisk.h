@@ -30,7 +30,7 @@
 
 #include <map>
 #include <deque>
-#include <tr1/memory>
+#include <memory>
 #include "CacheBase.h"
 #include "Frame.h"
 #include "Exceptions.h"
@@ -93,7 +93,7 @@ namespace openshot {
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
-		void Add(tr1::shared_ptr<Frame> frame);
+		void Add(std::shared_ptr<Frame> frame);
 
 		/// Clear the cache of all frames
 		void Clear();
@@ -103,13 +103,13 @@ namespace openshot {
 
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
-		tr1::shared_ptr<Frame> GetFrame(long int frame_number);
+		std::shared_ptr<Frame> GetFrame(long int frame_number);
 
 		/// Gets the maximum bytes value
 		long long int GetBytes();
 
 		/// Get the smallest frame number
-		tr1::shared_ptr<Frame> GetSmallestFrame();
+		std::shared_ptr<Frame> GetSmallestFrame();
 
 		/// @brief Move frame to front of queue (so it lasts longer)
 		/// @param frame_number The frame number of the cached frame

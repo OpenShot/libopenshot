@@ -35,7 +35,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
+	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -47,7 +47,7 @@ Frame::Frame(long int number, int width, int height, string color)
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
+	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -59,7 +59,7 @@ Frame::Frame(long int number, int samples, int channels) :
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
+	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -71,7 +71,7 @@ Frame::Frame(long int number, int width, int height, string color, int samples, 
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
+	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
@@ -89,8 +89,8 @@ Frame::Frame ( const Frame &other )
 void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
-	image = tr1::shared_ptr<QImage>(new QImage(*(other.image)));
-	audio = tr1::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
+	image = std::shared_ptr<QImage>(new QImage(*(other.image)));
+	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	channels = other.channels;
 	channel_layout = other.channel_layout;
@@ -100,7 +100,7 @@ void Frame::DeepCopy(const Frame& other)
 
 
 	if (other.wave_image)
-		wave_image = tr1::shared_ptr<QImage>(new QImage(*(other.wave_image)));
+		wave_image = std::shared_ptr<QImage>(new QImage(*(other.wave_image)));
 }
 
 // Descructor
@@ -117,11 +117,11 @@ void Frame::Display()
 		// Only create the QApplication once
 		static int argc = 1;
 		static char* argv[1] = {NULL};
-		previewApp = tr1::shared_ptr<QApplication>(new QApplication(argc, argv));
+		previewApp = std::shared_ptr<QApplication>(new QApplication(argc, argv));
 	}
 
 	// Get preview image
-	tr1::shared_ptr<QImage> previewImage = GetImage();
+	std::shared_ptr<QImage> previewImage = GetImage();
 
 	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
 	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
@@ -131,7 +131,7 @@ void Frame::Display()
 		int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
 
 		// Resize to fix DAR
-		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 	}
 
 	// Create window
@@ -152,7 +152,7 @@ void Frame::Display()
 }
 
 // Get an audio waveform image
-tr1::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha)
+std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha)
 {
 	// Clear any existing waveform image
 	ClearWaveform();
@@ -207,7 +207,7 @@ tr1::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		}
 
 		// Create blank image
-		wave_image = tr1::shared_ptr<QImage>(new QImage(total_width, total_height, QImage::Format_RGBA8888));
+		wave_image = std::shared_ptr<QImage>(new QImage(total_width, total_height, QImage::Format_RGBA8888));
 		wave_image->fill(QColor(0,0,0,0));
 
 		// Load QPainter with wave_image device
@@ -232,13 +232,13 @@ tr1::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		// Resize Image (if requested)
 		if (width != total_width || height != total_height) {
 			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::FastTransformation);
-			wave_image = tr1::shared_ptr<QImage>(new QImage(scaled_wave_image));
+			wave_image = std::shared_ptr<QImage>(new QImage(scaled_wave_image));
 		}
 	}
 	else
 	{
 		// No audio samples present
-		wave_image = tr1::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+		wave_image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 		wave_image->fill(QColor(QString::fromStdString("#000000")));
 	}
 
@@ -273,7 +273,7 @@ void Frame::DisplayWaveform()
 		// Only create the QApplication once
 		static int argc = 1;
 		static char* argv[1] = {NULL};
-		previewApp = tr1::shared_ptr<QApplication>(new QApplication(argc, argv));
+		previewApp = std::shared_ptr<QApplication>(new QApplication(argc, argv));
 	}
 
 	// Create window
@@ -536,7 +536,7 @@ ChannelLayout Frame::ChannelsLayout()
 void Frame::Save(string path, float scale, string format, int quality)
 {
 	// Get preview image
-	tr1::shared_ptr<QImage> previewImage = GetImage();
+	std::shared_ptr<QImage> previewImage = GetImage();
 
 	// scale image if needed
 	if (abs(scale) > 1.001 || abs(scale) < 0.999)
@@ -552,11 +552,11 @@ void Frame::Save(string path, float scale, string format, int quality)
 			int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
 
 			// Resize to fix DAR
-			previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+			previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 		}
 
 		// Resize image
-		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width * scale, new_height * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+		previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width * scale, new_height * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 	}
 
 	// Save image
@@ -568,7 +568,7 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 		string background_color, bool ignore_aspect, string format, int quality) throw(InvalidFile) {
 
 	// Create blank thumbnail image & fill background color
-	tr1::shared_ptr<QImage> thumbnail = tr1::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
+	std::shared_ptr<QImage> thumbnail = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
 	thumbnail->fill(QColor(QString::fromStdString(background_color)));
 
 	// Create transform and painter
@@ -578,7 +578,7 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 
 
 	// Get preview image
-	tr1::shared_ptr<QImage> previewImage = GetImage();
+	std::shared_ptr<QImage> previewImage = GetImage();
 
 	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
 	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
@@ -588,16 +588,16 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 		int aspect_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
 
 		// Resize to fix DAR
-		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(aspect_width, aspect_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(aspect_width, aspect_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 	}
 
 	// Resize frame image
 	if (ignore_aspect)
 		// Ignore aspect ratio
-		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 	else
 		// Maintain aspect ratio
-		previewImage = tr1::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+		previewImage = std::shared_ptr<QImage>(new QImage(previewImage->scaled(new_width, new_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 
 	// Composite frame image onto background (centered)
 	int x = (new_width - previewImage->size().width()) / 2.0; // center
@@ -609,14 +609,14 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 	// Overlay Image (if any)
 	if (overlay_path != "") {
 		// Open overlay
-		tr1::shared_ptr<QImage> overlay = tr1::shared_ptr<QImage>(new QImage());
+		std::shared_ptr<QImage> overlay = std::shared_ptr<QImage>(new QImage());
 		overlay->load(QString::fromStdString(overlay_path));
 
 		// Set pixel format
-		overlay = tr1::shared_ptr<QImage>(new QImage(overlay->convertToFormat(QImage::Format_RGBA8888)));
+		overlay = std::shared_ptr<QImage>(new QImage(overlay->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Resize to fit
-		overlay = tr1::shared_ptr<QImage>(new QImage(overlay->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		overlay = std::shared_ptr<QImage>(new QImage(overlay->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 
 		// Composite onto thumbnail
 		painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
@@ -627,14 +627,14 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 	// Mask Image (if any)
 	if (mask_path != "") {
 		// Open mask
-		tr1::shared_ptr<QImage> mask = tr1::shared_ptr<QImage>(new QImage());
+		std::shared_ptr<QImage> mask = std::shared_ptr<QImage>(new QImage());
 		mask->load(QString::fromStdString(mask_path));
 
 		// Set pixel format
-		mask = tr1::shared_ptr<QImage>(new QImage(mask->convertToFormat(QImage::Format_RGBA8888)));
+		mask = std::shared_ptr<QImage>(new QImage(mask->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Resize to fit
-		mask = tr1::shared_ptr<QImage>(new QImage(mask->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+		mask = std::shared_ptr<QImage>(new QImage(mask->scaled(new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 
 		// Negate mask
 		mask->invertPixels();
@@ -682,7 +682,7 @@ void Frame::AddColor(int new_width, int new_height, string color)
 {
 	// Create new image object, and fill with pixel data
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
-	image = tr1::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
+	image = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
 
 	// Fill with solid color
 	image->fill(QColor(QString::fromStdString(color)));
@@ -705,7 +705,7 @@ void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage:
 	memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
 
 	// Create new image object, and fill with pixel data
-	image = tr1::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
+	image = std::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
 
 	// Always convert to RGBA8888 (if different)
 	if (image->format() != QImage::Format_RGBA8888)
@@ -718,7 +718,7 @@ void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage:
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(tr1::shared_ptr<QImage> new_image)
+void Frame::AddImage(std::shared_ptr<QImage> new_image)
 {
 	// Ignore blank images
 	if (!new_image)
@@ -739,7 +739,7 @@ void Frame::AddImage(tr1::shared_ptr<QImage> new_image)
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
-void Frame::AddImage(tr1::shared_ptr<QImage> new_image, bool only_odd_lines)
+void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 {
 	// Ignore blank new_image
 	if (!new_image)
@@ -822,7 +822,7 @@ void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, 
 }
 
 // Get pointer to Magick++ image object
-tr1::shared_ptr<QImage> Frame::GetImage()
+std::shared_ptr<QImage> Frame::GetImage()
 {
 	// Check for blank image
 	if (!image)
@@ -834,7 +834,7 @@ tr1::shared_ptr<QImage> Frame::GetImage()
 
 #ifdef USE_IMAGEMAGICK
 // Get pointer to ImageMagick image object
-tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
+std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 {
 	// Check for blank image
 	if (!image)
@@ -845,7 +845,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
 	QRgb const *tmpBits = (const QRgb*)image->bits();
 
 	// Create new image object, and fill with pixel data
-	tr1::shared_ptr<Magick::Image> magick_image = tr1::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));
+	std::shared_ptr<Magick::Image> magick_image = std::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));
 
 	// Give image a transparent background color
 	magick_image->backgroundColor(Magick::Color("none"));
@@ -858,7 +858,7 @@ tr1::shared_ptr<Magick::Image> Frame::GetMagickImage()
 
 #ifdef USE_IMAGEMAGICK
 // Get pointer to QImage of frame
-void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
+void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
 {
 	const int BPP = 4;
 	const std::size_t bufferSize = new_image->columns() * new_image->rows() * BPP;
@@ -882,7 +882,7 @@ void Frame::AddMagickImage(tr1::shared_ptr<Magick::Image> new_image)
     }
 
     // Create QImage of frame data
-    image = tr1::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
+    image = std::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
 
 	// Update height and width
 	width = image->width();

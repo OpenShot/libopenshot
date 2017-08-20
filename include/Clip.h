@@ -33,7 +33,7 @@
 	#define __JUCE_UNITTEST_JUCEHEADER__
 #endif
 
-#include <tr1/memory>
+#include <memory>
 #include <string>
 #include <QtGui/QImage>
 #include "JuceLibraryCode/JuceHeader.h"
@@ -127,16 +127,16 @@ namespace openshot {
 		long int adjust_frame_number_minimum(long int frame_number);
 
 		/// Apply effects to the source frame (if any)
-		tr1::shared_ptr<Frame> apply_effects(tr1::shared_ptr<Frame> frame);
+		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame);
 
 		/// Get file extension
 		string get_file_extension(string path);
 
 		/// Get a frame object or create a blank one
-		tr1::shared_ptr<Frame> GetOrCreateFrame(long int number);
+		std::shared_ptr<Frame> GetOrCreateFrame(long int number);
 
 		/// Adjust the audio and image of a time mapped frame
-		tr1::shared_ptr<Frame> get_time_mapped_frame(tr1::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed);
+		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -181,7 +181,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested
-		tr1::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile, ReaderClosed);

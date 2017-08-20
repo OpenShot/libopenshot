@@ -346,7 +346,7 @@ void FFmpegWriter::WriteHeader()
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed)
+void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -421,7 +421,7 @@ void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 			while (!queued_video_frames.empty())
 			{
 				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = queued_video_frames.front();
+				std::shared_ptr<Frame> frame = queued_video_frames.front();
 
 				// Add to processed queue
 				processed_frames.push_back(frame);
@@ -442,7 +442,7 @@ void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 			while (!processed_frames.empty())
 			{
 				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = processed_frames.front();
+				std::shared_ptr<Frame> frame = processed_frames.front();
 
 				if (info.has_video && video_st)
 				{
@@ -470,7 +470,7 @@ void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 			while (!deallocate_frames.empty())
 			{
 				// Get front frame (from the queue)
-				tr1::shared_ptr<Frame> frame = deallocate_frames.front();
+				std::shared_ptr<Frame> frame = deallocate_frames.front();
 
 				// Does this frame's AVFrame still exist
 				if (av_frames.count(frame))
@@ -508,7 +508,7 @@ void FFmpegWriter::WriteFrame(ReaderBase* reader, long int start, long int lengt
 	for (long int number = start; number <= length; number++)
 	{
 		// Get the frame
-		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
+		std::shared_ptr<Frame> f = reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);
@@ -678,7 +678,7 @@ void FFmpegWriter::flush_encoders()
 			}
 
 			// deallocate memory for packet
-			av_free_packet(&pkt);
+			AV_FREE_PACKET(&pkt);
 		}
 
 
@@ -764,7 +764,7 @@ void FFmpegWriter::Close()
 }
 
 // Add an AVFrame to the cache
-void FFmpegWriter::add_avframe(tr1::shared_ptr<Frame> frame, AVFrame* av_frame)
+void FFmpegWriter::add_avframe(std::shared_ptr<Frame> frame, AVFrame* av_frame)
 {
 	// Add AVFrame to map (if it does not already exist)
 	if (!av_frames.count(frame))
@@ -1063,7 +1063,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 		while (!queued_audio_frames.empty())
 		{
 			// Get front frame (from the queue)
-			tr1::shared_ptr<Frame> frame = queued_audio_frames.front();
+			std::shared_ptr<Frame> frame = queued_audio_frames.front();
 
 			// Get the audio details from this frame
 			sample_rate_in_frame = frame->SampleRate();
@@ -1355,7 +1355,7 @@ void FFmpegWriter::write_audio_packets(bool final)
             AV_FREE_FRAME(&frame_final);
 
 			// deallocate memory for packet
-			av_free_packet(&pkt);
+			AV_FREE_PACKET(&pkt);
 
 			// Reset position
 			audio_input_position = 0;
@@ -1406,7 +1406,7 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 }
 
 // process video frame
-void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
+void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 {
 	// Determine the height & width of the source image
 	int source_image_width = frame->GetWidth();
@@ -1461,7 +1461,7 @@ void FFmpegWriter::process_video_packet(tr1::shared_ptr<Frame> frame)
 }
 
 // write video frame
-bool FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* frame_final)
+bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
 
@@ -1488,7 +1488,7 @@ bool FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 		}
 
 		// Deallocate packet
-		av_free_packet(&pkt);
+		AV_FREE_PACKET(&pkt);
 
 	} else {
 
@@ -1566,7 +1566,7 @@ bool FFmpegWriter::write_video_packet(tr1::shared_ptr<Frame> frame, AVFrame* fra
 			delete[] video_outbuf;
 
 		// Deallocate packet
-		av_free_packet(&pkt);
+		AV_FREE_PACKET(&pkt);
 	}
 
 	// Success

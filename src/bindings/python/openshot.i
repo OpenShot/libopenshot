@@ -40,7 +40,6 @@
 %include <std_except.i>
 
 /* Include shared pointer code */
-#define SWIG_SHARED_PTR_SUBNAMESPACE tr1
 %include <std_shared_ptr.i>
 
 /* Mark these classes as shared_ptr classes */

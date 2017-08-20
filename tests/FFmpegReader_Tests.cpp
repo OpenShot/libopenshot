@@ -58,7 +58,7 @@ TEST(FFmpegReader_Check_Audio_File)
 	r.Open();
 
 	// Get frame 1
-	tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	std::shared_ptr<Frame> f = r.GetFrame(1);
 
 	// Get the number of channels and samples
 	float *samples = f->GetAudioSamples(0);
@@ -88,7 +88,7 @@ TEST(FFmpegReader_Check_Video_File)
 	r.Open();
 
 	// Get frame 1
-	tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	std::shared_ptr<Frame> f = r.GetFrame(1);
 
 	// Get the image data
 	const unsigned char* pixels = f->GetPixels(10);
@@ -126,7 +126,7 @@ TEST(FFmpegReader_Seek)
 	r.Open();
 
 	// Get frame
-	tr1::shared_ptr<Frame> f = r.GetFrame(1);
+	std::shared_ptr<Frame> f = r.GetFrame(1);
 	CHECK_EQUAL(1, f->number);
 
 	// Get frame
@@ -183,7 +183,7 @@ TEST(FFmpegReader_Multiple_Open_and_Close)
 	r.Open();
 
 	// Get frame that requires a seek
-	tr1::shared_ptr<Frame> f = r.GetFrame(1200);
+	std::shared_ptr<Frame> f = r.GetFrame(1200);
 	CHECK_EQUAL(1200, f->number);
 
 	// Close and Re-open the reader

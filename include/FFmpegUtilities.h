@@ -102,11 +102,13 @@
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
     	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 	#else
 		#define AV_ALLOCATE_FRAME() avcodec_alloc_frame()
 		#define AV_RESET_FRAME(av_frame) avcodec_get_frame_defaults(av_frame)
 		#define AV_FREE_FRAME(av_frame) avcodec_free_frame(av_frame)
-    #endif
+		#define AV_FREE_PACKET(av_packet) av_free_packet(av_packet)
+	#endif
 
 
 #endif

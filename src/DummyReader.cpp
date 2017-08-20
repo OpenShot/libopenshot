@@ -78,7 +78,7 @@ void DummyReader::Open() throw(InvalidFile)
 	if (!is_open)
 	{
 		// Create or get frame object
-		image_frame = tr1::shared_ptr<Frame>(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+		image_frame = std::make_shared<Frame>(1, info.width, info.height, "#000000", info.sample_rate, info.channels);
 
 		// Mark as "open"
 		is_open = true;
@@ -97,7 +97,7 @@ void DummyReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-tr1::shared_ptr<Frame> DummyReader::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> DummyReader::GetFrame(long int requested_frame) throw(ReaderClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)

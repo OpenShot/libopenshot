@@ -27,47 +27,43 @@
 
 #include <fstream>
 #include <iostream>
-#include <tr1/memory>
+#include <memory>
 #include "../../include/OpenShot.h"
+#include "../../include/CrashHandler.h"
 
 using namespace openshot;
-using namespace tr1;
 
 
 int main(int argc, char* argv[]) {
-    FFmpegReader rTest("/home/jonathan/Videos/sintel_trailer-720p.mp4");
-    rTest.Open();
 
-    /* WRITER ---------------- */
-    FFmpegWriter w("/home/jonathan/output%05d.jpg");
+    // Create and open reader
+    FFmpegReader r("/home/jonathan/sintel-120fps-crash.mp4");
+    r.Open();
 
-    // Set options
-    w.SetVideoOptions(true, "mjpeg", Fraction(24, 1), 1280, 720, Fraction(1, 1), false, false, 3000000);
+    // Enable debug logging
+    ZmqLogger::Instance()->Enable(false);
+    ZmqLogger::Instance()->Path("/home/jonathan/.openshot_qt/libopenshot2.log");
+    CrashHandler::Instance();
 
-//	w.SetOption(VIDEO_STREAM, "qmin", "2" );
-//	w.SetOption(VIDEO_STREAM, "qmax", "30" );
-//	w.SetOption(VIDEO_STREAM, "crf", "10" );
-//	w.SetOption(VIDEO_STREAM, "rc_min_rate", "2000000" );
-//	w.SetOption(VIDEO_STREAM, "rc_max_rate", "4000000" );
-//    w.SetOption(VIDEO_STREAM, "max_b_frames", "0" );
-//    w.SetOption(VIDEO_STREAM, "b_frames", "0" );
+    // Loop a few times
+    for (int attempt = 1; attempt < 10; attempt++) {
+        cout << "** Attempt " << attempt << " **" << endl;
 
-    // Open writer
-    w.Open();
+        // Read every frame in reader as fast as possible
+        for (int frame_number = 1; frame_number < r.info.video_length; frame_number++) {
+            // Get frame object
+            std::shared_ptr<Frame> f = r.GetFrame(frame_number);
 
-    // Prepare Streams
-    w.PrepareStreams();
+            // Print frame numbers
+            cout << frame_number << " [" << f->number << "], " << flush;
+            if (frame_number % 10 == 0)
+                cout << endl;
+        }
+    }
+    cout << "Completed successfully!" << endl;
 
-
-    // Write header
-    w.WriteHeader();
-
-    // Write some frames
-    w.WriteFrame(&rTest, 500, 505);
-
-    // Close writer & reader
-    w.Close();
-    rTest.Close();
+    // Close reader
+    r.Close();
 
     return 0;
 }

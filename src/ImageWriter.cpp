@@ -86,7 +86,7 @@ void ImageWriter::Open() throw(InvalidFile, InvalidCodec)
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
+void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -94,7 +94,7 @@ void ImageWriter::WriteFrame(tr1::shared_ptr<Frame> frame) throw(WriterClosed)
 
 
 	// Copy and resize image
-	tr1::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
+	std::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
 	frame_image->magick( info.vcodec );
 	frame_image->backgroundColor(Magick::Color("none"));
 	frame_image->matte(true);
@@ -128,7 +128,7 @@ void ImageWriter::WriteFrame(ReaderBase* reader, long int start, long int length
 	for (long int number = start; number <= length; number++)
 	{
 		// Get the frame
-		tr1::shared_ptr<Frame> f = reader->GetFrame(number);
+		std::shared_ptr<Frame> f = reader->GetFrame(number);
 
 		// Encode frame
 		WriteFrame(f);

@@ -67,6 +67,9 @@ PROJECT(openshot)
 MESSAGE("--------------------------------------------------------------")
 MESSAGE("Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
 
+#### Enable C++11 (for std::shared_ptr support)
+set(CMAKE_CXX_FLAGS "-std=c++11")
+
 IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)

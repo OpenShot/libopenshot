@@ -63,7 +63,7 @@ void ChromaKey::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> ChromaKey::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Determine the current HSL (Hue, Saturation, Lightness) for the Chrome
 	int threshold = fuzz.GetInt(frame_number);
@@ -72,7 +72,7 @@ tr1::shared_ptr<Frame> ChromaKey::GetFrame(tr1::shared_ptr<Frame> frame, long in
 	long mask_B = color.blue.GetInt(frame_number);
 
 	// Get source image's pixels
-	tr1::shared_ptr<QImage> image = frame->GetImage();
+	std::shared_ptr<QImage> image = frame->GetImage();
 	unsigned char *pixels = (unsigned char *) image->bits();
 
 	// Loop through pixels

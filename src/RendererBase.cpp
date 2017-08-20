@@ -36,7 +36,7 @@ RendererBase::~RendererBase()
 {
 }
 
-void RendererBase::paint(const std::tr1::shared_ptr<Frame> & frame)
+void RendererBase::paint(const std::shared_ptr<Frame> & frame)
 {
 	if (frame)
 		this->render(frame->GetImage());

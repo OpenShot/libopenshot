@@ -43,7 +43,7 @@ namespace openshot
     class VideoPlaybackThread : Thread
     {
 	RendererBase *renderer;
-	std::tr1::shared_ptr<Frame> frame;
+	std::shared_ptr<Frame> frame;
 	WaitableEvent render;
 	WaitableEvent rendered;
 	bool reset;

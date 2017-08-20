@@ -99,7 +99,7 @@ namespace openshot
 	void Reader(ReaderBase *reader);
 
 	/// Get the current frame object (which is filling the buffer)
-	tr1::shared_ptr<Frame> getFrame();
+	std::shared_ptr<Frame> getFrame();
 
 	/// Get the current frame number being played
 	long int getCurrentFramePosition();

@@ -60,10 +60,10 @@ void Blur::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-tr1::shared_ptr<Frame> Blur::GetFrame(tr1::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
 {
 	// Get the frame's image
-	tr1::shared_ptr<QImage> frame_image = frame->GetImage();
+	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get the current blur radius
 	int horizontal_radius_value = horizontal_radius.GetValue(frame_number);
