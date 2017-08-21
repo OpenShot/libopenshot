@@ -31,6 +31,6 @@
 #include <omp.h>
 
 	// Calculate the # of OpenMP Threads to allow
-	#define OPEN_MP_NUM_PROCESSORS omp_get_max_threads()
+	#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
 
 #endif

@@ -963,8 +963,8 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	AVCodec *codec;
 	audio_codec = st->codec;
 
-	// Set number of threads equal to number of processors + 1
-	audio_codec->thread_count = OPEN_MP_NUM_PROCESSORS;
+	// Set number of threads equal to number of processors (not to exceed 16)
+	audio_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder(audio_codec->codec_id);
@@ -1020,8 +1020,8 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	AVCodec *codec;
 	video_codec = st->codec;
 
-	// Set number of threads equal to number of processors + 1
-	video_codec->thread_count = OPEN_MP_NUM_PROCESSORS;
+	// Set number of threads equal to number of processors (not to exceed 16)
+	video_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder(video_codec->codec_id);
