@@ -81,9 +81,9 @@ namespace openshot
 	{
 	private:
 		string path;
-		int chunk_count;
-		int chunk_size;
-		int frame_count;
+		int64_t chunk_count;
+		int64_t chunk_size;
+		int64_t frame_count;
 		bool is_open;
 		bool is_writing;
 		ReaderBase *local_reader;
@@ -100,7 +100,7 @@ namespace openshot
 		void create_folder(string path);
 
 		/// get a formatted path of a specific chunk
-		string get_chunk_path(int chunk_number, string folder, string extension);
+		string get_chunk_path(int64_t chunk_number, string folder, string extension);
 
 		/// check for valid chunk json
 		bool is_chunk_valid();
@@ -119,7 +119,7 @@ namespace openshot
 		void Close();
 
 		/// Get the chunk size (number of frames to write in each chunk)
-		int GetChunkSize() { return chunk_size; };
+		int64_t GetChunkSize() { return chunk_size; };
 
 		/// Determine if writer is open or closed
 		bool IsOpen() { return is_open; };
@@ -129,7 +129,7 @@ namespace openshot
 
 		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size The number of frames to write in this chunk file
-		void SetChunkSize(int new_size) { chunk_size = new_size; };
+		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
@@ -138,13 +138,13 @@ namespace openshot
 		/// @brief Write a block of frames from a reader
 		/// @param start The starting frame number to write (of the reader passed into the constructor)
 		/// @param length The number of frames to write (of the reader passed into the constructor)
-		void WriteFrame(int start, int length) throw(WriterClosed);
+		void WriteFrame(int64_t start, int64_t length) throw(WriterClosed);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader The reader containing the frames you need
 		/// @param start The starting frame number to write
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed);
 
 	};
 

@@ -227,7 +227,7 @@ void WriterBase::SetJsonValue(Json::Value root) {
 	if (!root["duration"].isNull())
 		info.duration = root["duration"].asDouble();
 	if (!root["file_size"].isNull())
-		info.file_size = (long long) root["file_size"].asUInt();
+		info.file_size = (int64_t) root["file_size"].asUInt();
 	if (!root["height"].isNull())
 		info.height = root["height"].asInt();
 	if (!root["width"].isNull())
@@ -257,7 +257,7 @@ void WriterBase::SetJsonValue(Json::Value root) {
 	if (!root["vcodec"].isNull())
 		info.vcodec = root["vcodec"].asString();
 	if (!root["video_length"].isNull())
-		info.video_length = (long int) root["video_length"].asUInt();
+		info.video_length = (int64_t) root["video_length"].asUInt();
 	if (!root["video_stream_index"].isNull())
 		info.video_stream_index = root["video_stream_index"].asInt();
 	if (!root["video_timebase"].isNull() && root["video_timebase"].isObject()) {

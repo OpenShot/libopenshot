@@ -39,7 +39,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 };
 
 // Constructor that sets the max bytes to cache
-CacheMemory::CacheMemory(long long int max_bytes) : CacheBase(max_bytes) {
+CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 	// Set cache type name
 	cache_type = "CacheMemory";
 	range_version = 0;
@@ -76,19 +76,19 @@ void CacheMemory::CalculateRanges() {
 		// Increment range version
 		range_version++;
 
-		vector<long int>::iterator itr_ordered;
-		long int starting_frame = *ordered_frame_numbers.begin();
-		long int ending_frame = *ordered_frame_numbers.begin();
+		vector<int64_t>::iterator itr_ordered;
+		int64_t starting_frame = *ordered_frame_numbers.begin();
+		int64_t ending_frame = *ordered_frame_numbers.begin();
 
 		// Loop through all known frames (in sequential order)
 		for (itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered) {
-			long int frame_number = *itr_ordered;
+			int64_t frame_number = *itr_ordered;
 			if (frame_number - ending_frame > 1) {
 				// End of range detected
 				Json::Value range;
 
 				// Add JSON object with start/end attributes
-				// Use strings, since long ints are supported in JSON
+				// Use strings, since int64_ts are supported in JSON
 				stringstream start_str;
 				start_str << starting_frame;
 				stringstream end_str;
@@ -109,7 +109,7 @@ void CacheMemory::CalculateRanges() {
 		Json::Value range;
 
 		// Add JSON object with start/end attributes
-		// Use strings, since long ints are not supported in JSON
+		// Use strings, since int64_ts are not supported in JSON
 		stringstream start_str;
 		start_str << starting_frame;
 		stringstream end_str;
@@ -131,7 +131,7 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-	long int frame_number = frame->number;
+	int64_t frame_number = frame->number;
 
 	// Freshen frame if it already exists
 	if (frames.count(frame_number))
@@ -152,7 +152,7 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
-std::shared_ptr<Frame> CacheMemory::GetFrame(long int frame_number)
+std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -175,8 +175,8 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 	std::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
-	deque<long int>::iterator itr;
-	long int smallest_frame = -1;
+	deque<int64_t>::iterator itr;
+	int64_t smallest_frame = -1;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	{
 		if (*itr < smallest_frame || smallest_frame == -1)
@@ -190,15 +190,15 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 }
 
 // Gets the maximum bytes value
-long long int CacheMemory::GetBytes()
+int64_t CacheMemory::GetBytes()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
-	long long int total_bytes = 0;
+	int64_t total_bytes = 0;
 
 	// Loop through frames, and calculate total bytes
-	deque<long int>::reverse_iterator itr;
+	deque<int64_t>::reverse_iterator itr;
 	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
 	{
 		total_bytes += frames[*itr]->GetBytes();
@@ -208,19 +208,19 @@ long long int CacheMemory::GetBytes()
 }
 
 // Remove a specific frame
-void CacheMemory::Remove(long int frame_number)
+void CacheMemory::Remove(int64_t frame_number)
 {
 	Remove(frame_number, frame_number);
 }
 
 // Remove range of frames
-void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
+void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
-	deque<long int>::iterator itr;
+	deque<int64_t>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end();)
 	{
 		if (*itr >= start_frame_number && *itr <= end_frame_number)
@@ -232,7 +232,7 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 	}
 
 	// Loop through ordered frame numbers
-	vector<long int>::iterator itr_ordered;
+	vector<int64_t>::iterator itr_ordered;
 	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end();)
 	{
 		if (*itr_ordered >= start_frame_number && *itr_ordered <= end_frame_number)
@@ -249,7 +249,7 @@ void CacheMemory::Remove(long int start_frame_number, long int end_frame_number)
 }
 
 // Move frame to front of queue (so it lasts longer)
-void CacheMemory::MoveToFront(long int frame_number)
+void CacheMemory::MoveToFront(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -258,7 +258,7 @@ void CacheMemory::MoveToFront(long int frame_number)
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
-		deque<long int>::iterator itr;
+		deque<int64_t>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 		{
 			if (*itr == frame_number)
@@ -287,7 +287,7 @@ void CacheMemory::Clear()
 }
 
 // Count the frames in the queue
-long int CacheMemory::Count()
+int64_t CacheMemory::Count()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
@@ -308,7 +308,7 @@ void CacheMemory::CleanUp()
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{
 			// Get the oldest frame number.
-			long int frame_to_remove = frame_numbers.back();
+			int64_t frame_to_remove = frame_numbers.back();
 
 			// Remove frame_number and frame
 			Remove(frame_to_remove);

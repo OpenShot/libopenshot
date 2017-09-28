@@ -114,7 +114,7 @@ int QtPlayer::Position()
     return p->video_position;
 }
 
-void QtPlayer::Seek(long int new_frame)
+void QtPlayer::Seek(int64_t new_frame)
 {
 	// Check for seek
 	if (new_frame > 0) {
@@ -164,14 +164,14 @@ ReaderBase* QtPlayer::Reader() {
 }
 
 // Set the QWidget pointer to display the video on (as a LONG pointer id)
-void QtPlayer::SetQWidget(long long qwidget_address) {
+void QtPlayer::SetQWidget(int64_t qwidget_address) {
 	// Update override QWidget address on the video renderer
 	p->renderer->OverrideWidget(qwidget_address);
 }
 
 // Get the Renderer pointer address (for Python to cast back into a QObject)
-long long QtPlayer::GetRendererQObject() {
-	return (long long)(VideoRenderer*)p->renderer;
+int64_t QtPlayer::GetRendererQObject() {
+	return (int64_t)(VideoRenderer*)p->renderer;
 }
 
 // Get the Playback speed

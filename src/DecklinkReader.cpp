@@ -231,7 +231,7 @@ unsigned long DecklinkReader::GetCurrentFrameNumber()
 }
 
 // Get an openshot::Frame object for the next available LIVE frame
-std::shared_ptr<Frame> DecklinkReader::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> DecklinkReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
 {
 	// Get a frame from the delegate decklink class (which is collecting them on another thread)
 	std::shared_ptr<Frame> f = delegate->GetFrame(requested_frame);

@@ -95,7 +95,7 @@ void AudioBufferSource::prepareToPlay(int, double) { }
 void AudioBufferSource::releaseResources() { }
 
 // Set the next read position of this source
-void AudioBufferSource::setNextReadPosition (long long newPosition)
+void AudioBufferSource::setNextReadPosition (int64 newPosition)
 {
 	// set position (if the new position is in range)
 	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
@@ -103,14 +103,14 @@ void AudioBufferSource::setNextReadPosition (long long newPosition)
 }
 
 // Get the next read position of this source
-long long AudioBufferSource::getNextReadPosition() const
+int64 AudioBufferSource::getNextReadPosition() const
 {
 	// return the next read position
 	return position;
 }
 
 // Get the total length (in samples) of this audio source
-long long AudioBufferSource::getTotalLength() const
+int64 AudioBufferSource::getTotalLength() const
 {
 	// Get the length
 	return buffer->getNumSamples();

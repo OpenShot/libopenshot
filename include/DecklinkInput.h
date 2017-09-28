@@ -93,7 +93,7 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*, IDeckLinkAudioInputPacket*);
 
 	// Extra methods
-	std::shared_ptr<openshot::Frame> GetFrame(long int requested_frame);
+	std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 	unsigned long GetCurrentFrameNumber();
 
 private:

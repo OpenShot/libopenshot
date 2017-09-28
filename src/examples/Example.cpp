@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
         cout << "** Attempt " << attempt << " **" << endl;
 
         // Read every frame in reader as fast as possible
-        for (int frame_number = 1; frame_number < r.info.video_length; frame_number++) {
+        for (int64_t frame_number = 1; frame_number < r.info.video_length; frame_number++) {
             // Get frame object
             std::shared_ptr<Frame> f = r.GetFrame(frame_number);
 

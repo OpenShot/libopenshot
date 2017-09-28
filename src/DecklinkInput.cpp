@@ -104,7 +104,7 @@ unsigned long DeckLinkInputDelegate::GetCurrentFrameNumber()
 		return 0;
 }
 
-std::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(long int requested_frame)
+std::shared_ptr<openshot::Frame> DeckLinkInputDelegate::GetFrame(int64_t requested_frame)
 {
 	std::shared_ptr<openshot::Frame> f;
 

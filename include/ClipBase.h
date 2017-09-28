@@ -62,7 +62,7 @@ namespace openshot {
 		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
 
 		/// Generate JSON for a property
-		Json::Value add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, long int requested_frame);
+		Json::Value add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame);
 
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(string name, int value, int selected_value);
@@ -104,7 +104,7 @@ namespace openshot {
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		virtual string PropertiesJSON(long int requested_frame) = 0;
+		virtual string PropertiesJSON(int64_t requested_frame) = 0;
 
 	};
 

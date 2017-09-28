@@ -61,10 +61,10 @@ namespace openshot
 		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
-		int64 original_frame_number; /// The current frame to read from
-		int64 frame_number; /// The current frame number
+		int64_t original_frame_number; /// The current frame to read from
+		int64_t frame_number; /// The current frame number
 		std::shared_ptr<Frame> frame; /// The current frame object that is being read
-		long int frame_position; /// The position of the current frame's buffer
+		int64_t frame_position; /// The position of the current frame's buffer
 		double estimated_frame; /// The estimated frame position of the currently playing buffer
 		int estimated_samples_per_frame; /// The estimated samples per frame of video
 
@@ -80,7 +80,7 @@ namespace openshot
 		/// @param audio_reader This reader provides constant samples from a ReaderBase derived class
 		/// @param starting_frame_number This is the frame number to start reading samples from the reader.
 		/// @param buffer_size The max number of samples to keep in the buffer at one time.
-		AudioReaderSource(ReaderBase *audio_reader, int64 starting_frame_number, int buffer_size);
+		AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size);
 
 		/// Destructor
 		~AudioReaderSource();
@@ -97,13 +97,13 @@ namespace openshot
 
 		/// @brief Set the next read position of this source
 		/// @param newPosition The sample # to start reading from
-		void setNextReadPosition (long long newPosition);
+		void setNextReadPosition (int64 newPosition);
 
 		/// Get the next read position of this source
-		long long getNextReadPosition() const;
+		int64 getNextReadPosition() const;
 
 		/// Get the total length (in samples) of this audio source
-		long long getTotalLength() const;
+		int64 getTotalLength() const;
 
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;
@@ -121,7 +121,7 @@ namespace openshot
 	    std::shared_ptr<Frame> getFrame() const { return frame; }
 
 	    /// Get the estimate frame that is playing at this moment
-	    long int getEstimatedFrame() const { return long(estimated_frame); }
+	    int64_t getEstimatedFrame() const { return int64_t(estimated_frame); }
 
 	    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	    void setSpeed(int new_speed) { speed = new_speed; }
@@ -134,7 +134,7 @@ namespace openshot
 	    ReaderBase* Reader() const { return reader; }
 
 	    /// Seek to a specific frame
-	    void Seek(int64 new_position) { frame_number = new_position; estimated_frame = new_position; }
+	    void Seek(int64_t new_position) { frame_number = new_position; estimated_frame = new_position; }
 
 	};
 

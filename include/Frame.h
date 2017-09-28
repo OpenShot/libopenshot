@@ -133,7 +133,7 @@ namespace openshot
 		int constrain(int color_value);
 
 	public:
-		long int number;	 ///< This is the frame number (starting at 1)
+		int64_t number;	 ///< This is the frame number (starting at 1)
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
 
@@ -141,13 +141,13 @@ namespace openshot
 		Frame();
 
 		/// Constructor - image only (48kHz audio silence)
-		Frame(long int number, int width, int height, string color);
+		Frame(int64_t number, int width, int height, string color);
 
 		/// Constructor - audio only (300x200 blank image)
-		Frame(long int number, int samples, int channels);
+		Frame(int64_t number, int samples, int channels);
 
 		/// Constructor - image & audio
-		Frame(long int number, int width, int height, string color, int samples, int channels);
+		Frame(int64_t number, int width, int height, string color, int samples, int channels);
 
 		/// Copy constructor
 		Frame ( const Frame &other );
@@ -227,7 +227,7 @@ namespace openshot
 	    juce::AudioSampleBuffer *GetAudioSampleBuffer();
 
 		/// Get the size in bytes of this frame (rough estimate)
-		int64 GetBytes();
+		int64_t GetBytes();
 
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
@@ -253,7 +253,7 @@ namespace openshot
 		int GetSamplesPerFrame(Fraction fps, int sample_rate, int channels);
 
 		/// Calculate the # of samples per video frame (for a specific frame number and frame rate)
-		static int GetSamplesPerFrame(long int frame_number, Fraction fps, int sample_rate, int channels);
+		static int GetSamplesPerFrame(int64_t frame_number, Fraction fps, int sample_rate, int channels);
 
 		/// Get an audio waveform image
 		std::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);
@@ -277,7 +277,7 @@ namespace openshot
 		void Save(string path, float scale, string format="PNG", int quality=100);
 
 		/// Set frame number
-		void SetFrameNumber(long int number);
+		void SetFrameNumber(int64_t number);
 
 		/// Set Pixel Aspect Ratio
 		void SetPixelRatio(int num, int den);

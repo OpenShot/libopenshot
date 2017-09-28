@@ -89,7 +89,7 @@ namespace openshot
 		int cache_size;
 		bool is_writing;
 		bool is_open;
-		int64 write_video_count;
+		int64_t write_video_count;
 		vector<Magick::Image> frames;
 		int image_quality;
 		int number_of_loops;
@@ -139,7 +139,7 @@ namespace openshot
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed);
 
 	};
 

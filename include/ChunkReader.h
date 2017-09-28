@@ -58,8 +58,8 @@ namespace openshot
 	 */
 	struct ChunkLocation
 	{
-		int number; ///< The chunk number
-		int frame; ///< The frame number
+		int64_t number; ///< The chunk number
+		int64_t frame; ///< The frame number
 	};
 
 	/**
@@ -106,7 +106,7 @@ namespace openshot
 	private:
 		string path;
 		bool is_open;
-		int chunk_size;
+		int64_t chunk_size;
 		FFmpegReader *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
@@ -116,10 +116,10 @@ namespace openshot
 		bool does_folder_exist(string path);
 
 		/// Find the location of a frame in a chunk
-		ChunkLocation find_chunk_frame(long int requested_frame);
+		ChunkLocation find_chunk_frame(int64_t requested_frame);
 
 		/// get a formatted path of a specific chunk
-		string get_chunk_path(int chunk_number, string folder, string extension);
+		string get_chunk_path(int64_t chunk_number, string folder, string extension);
 
 		/// Load JSON meta data about this chunk folder
 		void load_json();
@@ -137,11 +137,11 @@ namespace openshot
 
 		/// @brief Get the chunk size (number of frames to write in each chunk)
 		/// @returns	The number of frames in this chunk
-		int GetChunkSize() { return chunk_size; };
+		int64_t GetChunkSize() { return chunk_size; };
 
 		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size		The number of frames per chunk
-		void SetChunkSize(int new_size) { chunk_size = new_size; };
+		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
 		CacheMemory* GetCache() { return NULL; };
@@ -149,7 +149,7 @@ namespace openshot
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed, ChunkNotFound);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

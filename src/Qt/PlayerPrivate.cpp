@@ -90,7 +90,7 @@ namespace openshot
 			last_video_position = video_position;
 
 			// How many frames ahead or behind is the video thread?
-			long int video_frame_diff = 0;
+			int64_t video_frame_diff = 0;
 			if (reader->info.has_audio && reader->info.has_video) {
 				if (speed != 1)
 					// Set audio frame again (since we are not in normal speed, and not paused)
@@ -105,7 +105,7 @@ namespace openshot
 			const Time t2 = Time::getCurrentTime();
 
 			// Determine how many milliseconds it took to render the frame
-			int64 render_time = t2.toMilliseconds() - t1.toMilliseconds();
+			int64_t render_time = t2.toMilliseconds() - t1.toMilliseconds();
 
 			// Calculate the amount of time to sleep (by subtracting the render time)
 			int sleep_time = int(frame_time - render_time);

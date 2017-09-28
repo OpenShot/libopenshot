@@ -79,13 +79,13 @@ namespace openshot
 
 		/// @brief Set the next read position of this source
 		/// @param newPosition The sample # to start reading from
-		void setNextReadPosition (long long newPosition);
+		void setNextReadPosition (int64 newPosition);
 
 		/// Get the next read position of this source
-		long long getNextReadPosition() const;
+		int64 getNextReadPosition() const;
 
 		/// Get the total length (in samples) of this audio source
-		long long getTotalLength() const;
+		int64 getTotalLength() const;
 
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;

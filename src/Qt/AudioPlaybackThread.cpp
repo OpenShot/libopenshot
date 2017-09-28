@@ -110,13 +110,13 @@ namespace openshot
     }
 
     // Get the currently playing frame number
-    long int AudioPlaybackThread::getCurrentFramePosition()
+    int64_t AudioPlaybackThread::getCurrentFramePosition()
     {
 	return source ? source->getEstimatedFrame() : 0;
     }
 
 	// Seek the audio thread
-	void AudioPlaybackThread::Seek(long int new_position)
+	void AudioPlaybackThread::Seek(int64_t new_position)
 	{
 		source->Seek(new_position);
 	}

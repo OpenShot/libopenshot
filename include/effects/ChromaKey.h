@@ -82,7 +82,7 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, long int frame_number);
+		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number);
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
@@ -91,7 +91,7 @@ namespace openshot
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		// Get all properties for a specific frame
-		string PropertiesJSON(long int requested_frame);
+		string PropertiesJSON(int64_t requested_frame);
 	};
 
 }

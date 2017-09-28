@@ -255,7 +255,7 @@ float Clip::End() throw(ReaderClosed)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame) throw(ReaderClosed)
 {
 	if (reader)
 	{
@@ -275,8 +275,8 @@ std::shared_ptr<Frame> Clip::GetFrame(long int requested_frame) throw(ReaderClos
 			enabled_video = 0;
 
 		// Is a time map detected
-		long int new_frame_number = requested_frame;
-		long int time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
+		int64_t new_frame_number = requested_frame;
+		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
 		if (time.Values.size() > 1)
             new_frame_number = time_mapped_number;
 
@@ -347,7 +347,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number) throw(ReaderClosed)
 {
 	// Check for valid reader
 	if (!reader)
@@ -569,7 +569,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 }
 
 // Adjust frame number minimum value
-long int Clip::adjust_frame_number_minimum(long int frame_number)
+int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 {
 	// Never return a frame number 0 or below
 	if (frame_number < 1)
@@ -580,7 +580,7 @@ long int Clip::adjust_frame_number_minimum(long int frame_number)
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> Clip::GetOrCreateFrame(long int number)
+std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 {
 	std::shared_ptr<Frame> new_frame;
 
@@ -653,7 +653,7 @@ string Clip::Json() {
 }
 
 // Get all properties for a specific frame
-string Clip::PropertiesJSON(long int requested_frame) {
+string Clip::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

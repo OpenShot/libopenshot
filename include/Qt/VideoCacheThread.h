@@ -45,8 +45,8 @@ namespace openshot
 	std::shared_ptr<Frame> frame;
 	int speed;
 	bool is_playing;
-	long int position;
-	long int current_display_frame;
+	int64_t position;
+	int64_t current_display_frame;
 	ReaderBase *reader;
 	int max_frames;
 
@@ -56,7 +56,7 @@ namespace openshot
 	~VideoCacheThread();
 
 	/// Get the currently playing frame number (if any)
-	long int getCurrentFramePosition();
+	int64_t getCurrentFramePosition();
 
     /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     int getSpeed() const { return speed; }
@@ -65,10 +65,10 @@ namespace openshot
 	void Play();
 
 	/// Seek the reader to a particular frame number
-	void Seek(long int new_position);
+	void Seek(int64_t new_position);
 
 	/// Set the currently displaying frame number
-	void setCurrentFramePosition(long int current_frame_number);
+	void setCurrentFramePosition(int64_t current_frame_number);
 
     /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     void setSpeed(int new_speed) { speed = new_speed; }

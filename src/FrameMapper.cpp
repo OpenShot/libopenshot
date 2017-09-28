@@ -76,7 +76,7 @@ ReaderBase* FrameMapper::Reader() throw(ReaderClosed)
         throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.", "");
 }
 
-void FrameMapper::AddField(long int frame)
+void FrameMapper::AddField(int64_t frame)
 {
 	// Add a field, and toggle the odd / even field
 	AddField(Field(frame, field_toggle));
@@ -136,11 +136,11 @@ void FrameMapper::Init()
 
 
 		// Calculate # of fields to map
-		long int frame = 1;
-		long int number_of_fields = reader->info.video_length * 2;
+		int64_t frame = 1;
+		int64_t number_of_fields = reader->info.video_length * 2;
 
 		// Loop through all fields in the original video file
-		for (long int field = 1; field <= number_of_fields; field++)
+		for (int64_t field = 1; field <= number_of_fields; field++)
 		{
 
 			if (difference == 0) // Same frame rate, NO pull-down or special techniques required
@@ -208,7 +208,7 @@ void FrameMapper::Init()
 		// Map the remaining framerates using a simple Keyframe curve
 		// Calculate the difference (to be used as a multiplier)
 		double rate_diff = target.ToDouble() / original.ToDouble();
-		long int new_length = reader->info.video_length * rate_diff;
+		int64_t new_length = reader->info.video_length * rate_diff;
 
 		// Build curve for framerate mapping
 		Keyframe rate_curve;
@@ -216,7 +216,7 @@ void FrameMapper::Init()
 		rate_curve.AddPoint(new_length, reader->info.video_length, LINEAR);
 
 		// Loop through curve, and build list of frames
-		for (long int frame_num = 1; frame_num <= new_length; frame_num++)
+		for (int64_t frame_num = 1; frame_num <= new_length; frame_num++)
 		{
 			// Add 2 fields per frame
 			AddField(rate_curve.GetInt(frame_num));
@@ -229,10 +229,10 @@ void FrameMapper::Init()
 	Field Even(0, true);	// temp field used to track the EVEN field
 
 	// Variables used to remap audio samples
-	long int start_samples_frame = 1;
+	int64_t start_samples_frame = 1;
 	int start_samples_position = 0;
 
-	for (long int field = 1; field <= fields.size(); field++)
+	for (int64_t field = 1; field <= fields.size(); field++)
 	{
 		// Get the current field
 		Field f = fields[field - 1];
@@ -241,7 +241,7 @@ void FrameMapper::Init()
 		if (field % 2 == 0 && field > 0)
 		{
 			// New frame number
-			long int frame_number = field / 2 + timeline_frame_offset;
+			int64_t frame_number = field / 2 + timeline_frame_offset;
 
 			// Set the bottom frame
 			if (f.isOdd)
@@ -252,7 +252,7 @@ void FrameMapper::Init()
 			// Determine the range of samples (from the original rate). Resampling happens in real-time when
 			// calling the GetFrame() method. So this method only needs to redistribute the original samples with
 			// the original sample rate.
-			long int end_samples_frame = start_samples_frame;
+			int64_t end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
 			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate, reader->info.channels);
 
@@ -308,7 +308,7 @@ void FrameMapper::Init()
 	fields.clear();
 }
 
-MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame)
+MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber) throw(OutOfBoundsFrame)
 {
 	// Ignore mapping on single image readers
 	if (info.has_video and !info.has_audio and info.has_single_image) {
@@ -341,7 +341,7 @@ MappedFrame FrameMapper::GetMappedFrame(long int TargetFrameNumber) throw(OutOfB
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
+std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 {
 	std::shared_ptr<Frame> new_frame;
 
@@ -380,7 +380,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(long int number)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame) throw(ReaderClosed)
 {
 	// Check final cache, and just return the frame (if it's available)
 	std::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
@@ -406,7 +406,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through all requested frames
-	for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+	for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 	{
 
 		// Debug output
@@ -516,7 +516,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(long int requested_frame) throw(Rea
 
 		// Copy the samples
 		int samples_copied = 0;
-		long int starting_frame = copy_samples.frame_start;
+		int64_t starting_frame = copy_samples.frame_start;
 		while (info.has_audio && samples_copied < copy_samples.total)
 		{
 			// Init number of samples to copy this iteration
@@ -751,7 +751,7 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 }
 
 // Set offset relative to parent timeline
-void FrameMapper::SetTimelineFrameOffset(long int offset)
+void FrameMapper::SetTimelineFrameOffset(int64_t offset)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::SetTimelineFrameOffset", "offset", offset, "", -1, "", -1, "", -1, "", -1, "", -1);
 
@@ -763,7 +763,7 @@ void FrameMapper::SetTimelineFrameOffset(long int offset)
 }
 
 // Resample audio and map channels (if needed)
-void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, long int original_frame_number)
+void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number)
 {
 	// Init audio buffers / variables
 	int total_frame_samples = 0;

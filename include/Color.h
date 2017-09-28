@@ -60,7 +60,7 @@ namespace openshot {
 		Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha);
 
 		/// Get the HEX value of a color at a specific frame
-		string GetColorHex(long int frame_number);
+		string GetColorHex(int64_t frame_number);
 
 		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
 		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);

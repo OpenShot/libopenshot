@@ -47,15 +47,15 @@ namespace openshot
     class PlayerPrivate : Thread
     {
     std::shared_ptr<Frame> frame; /// The current frame
-	long int video_position; /// The current frame position.
-	long int audio_position; /// The current frame position.
+	int64_t video_position; /// The current frame position.
+	int64_t audio_position; /// The current frame position.
 	ReaderBase *reader; /// The reader which powers this player
 	AudioPlaybackThread *audioPlayback; /// The audio thread
 	VideoPlaybackThread *videoPlayback; /// The video thread
 	VideoCacheThread *videoCache; /// The cache thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	RendererBase *renderer;
-	long int last_video_position; /// The last frame actually displayed
+	int64_t last_video_position; /// The last frame actually displayed
 
 	/// Constructor
 	PlayerPrivate(RendererBase *rb);

@@ -72,12 +72,12 @@ namespace openshot
 	 */
 	struct Field
 	{
-		long int Frame;
+		int64_t Frame;
 		bool isOdd;
 
 		Field() : Frame(0), isOdd(true) { };
 
-		Field(long int frame, bool isodd)
+		Field(int64_t frame, bool isodd)
 		{
 			Frame = frame;
 			isOdd = isodd;
@@ -92,10 +92,10 @@ namespace openshot
 	 */
 	struct SampleRange
 	{
-		int frame_start;
+		int64_t frame_start;
 		int sample_start;
 
-		int frame_end;
+		int64_t frame_end;
 		int sample_end;
 
 		int total;
@@ -147,14 +147,14 @@ namespace openshot
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		AVAudioResampleContext *avr;	// Audio resampling context object
-		long int timeline_frame_offset;	// Timeline frame offset
+		int64_t timeline_frame_offset;	// Timeline frame offset
 
 		// Internal methods used by init
-		void AddField(long int frame);
+		void AddField(int64_t frame);
 		void AddField(Field field);
 
 		// Get Frame or Generate Blank Frame
-		std::shared_ptr<Frame> GetOrCreateFrame(long int number);
+		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		// Use the original and target frame rates and a pull-down technique to create
 		// a mapping between the original fields and frames or a video to a new frame rate.
@@ -177,13 +177,13 @@ namespace openshot
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		// Set offset relative to parent timeline
-		void SetTimelineFrameOffset(long int offset);
+		void SetTimelineFrameOffset(int64_t offset);
 
 		/// Close the openshot::FrameMapper and internal reader
 		void Close();
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
-		MappedFrame GetMappedFrame(long int TargetFrameNumber) throw(OutOfBoundsFrame);
+		MappedFrame GetMappedFrame(int64_t TargetFrameNumber) throw(OutOfBoundsFrame);
 
 		/// Get the cache object used by this reader
 		CacheMemory* GetCache() { return &final_cache; };
@@ -194,7 +194,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
 
 		/// Determine if reader is open or closed
 		bool IsOpen();
@@ -218,7 +218,7 @@ namespace openshot
 		ReaderBase* Reader() throw(ReaderClosed);
 
 		/// Resample audio and map channels (if needed)
-		void ResampleMappedAudio(std::shared_ptr<Frame> frame, long int original_frame_number);
+		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);
 
 	};
 }

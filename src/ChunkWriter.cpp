@@ -51,7 +51,7 @@ ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, In
 }
 
 // get a formatted path of a specific chunk
-string ChunkWriter::get_chunk_path(int chunk_number, string folder, string extension)
+string ChunkWriter::get_chunk_path(int64_t chunk_number, string folder, string extension)
 {
 	// Create path of new chunk video
 	stringstream chunk_count_string;
@@ -193,10 +193,10 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 
 
 // Write a block of frames from a reader
-void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
+void ChunkWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed)
 {
 	// Loop through each frame (and encoded it)
-	for (int number = start; number <= length; number++)
+	for (int64_t number = start; number <= length; number++)
 	{
 		// Get the frame
 		std::shared_ptr<Frame> f = reader->GetFrame(number);
@@ -207,10 +207,10 @@ void ChunkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(Wr
 }
 
 // Write a block of frames from the local cached reader
-void ChunkWriter::WriteFrame(int start, int length) throw(WriterClosed)
+void ChunkWriter::WriteFrame(int64_t start, int64_t length) throw(WriterClosed)
 {
 	// Loop through each frame (and encoded it)
-	for (int number = start; number <= length; number++)
+	for (int64_t number = start; number <= length; number++)
 	{
 		// Get the frame
 		std::shared_ptr<Frame> f = local_reader->GetFrame(number);

@@ -107,7 +107,7 @@ void Mask::set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int widt
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
 	// Get the mask image (from the mask reader)
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
@@ -276,7 +276,7 @@ void Mask::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Mask::PropertiesJSON(long int requested_frame) {
+string Mask::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

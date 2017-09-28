@@ -147,8 +147,8 @@ namespace openshot
 		int cache_size;
 		bool is_writing;
 		bool is_open;
-		int64 write_video_count;
-		int64 write_audio_count;
+		int64_t write_video_count;
+		int64_t write_audio_count;
 
 		bool prepare_streams;
 		bool write_header;
@@ -322,7 +322,7 @@ namespace openshot
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed);
+		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(ErrorEncodingVideo, WriterClosed);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
 		/// by the Close() method if this method has not yet been called.

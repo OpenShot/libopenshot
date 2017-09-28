@@ -37,16 +37,16 @@ CacheBase::CacheBase() : max_bytes(0) {
 };
 
 // Constructor that sets the max frames to cache
-CacheBase::CacheBase(long long int max_bytes) : max_bytes(max_bytes) {
+CacheBase::CacheBase(int64_t max_bytes) : max_bytes(max_bytes) {
 	// Init the critical section
 	cacheCriticalSection = new CriticalSection();
 };
 
 // Set maximum bytes to a different amount based on a ReaderInfo struct
-void CacheBase::SetMaxBytesFromInfo(long int number_of_frames, int width, int height, int sample_rate, int channels)
+void CacheBase::SetMaxBytesFromInfo(int64_t number_of_frames, int width, int height, int sample_rate, int channels)
 {
 	// n frames X height X width X 4 colors of chars X audio channels X 4 byte floats
-	long long int bytes = number_of_frames * (height * width * 4 + (sample_rate * channels * 4));
+	int64_t bytes = number_of_frames * (height * width * 4 + (sample_rate * channels * 4));
 	SetMaxBytes(bytes);
 }
 

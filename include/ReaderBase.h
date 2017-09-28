@@ -62,7 +62,7 @@ namespace openshot
 		bool has_audio;				///< Determines if this file has an audio stream
 		bool has_single_image;		///< Determines if this file only contains a single image
 		float duration;				///< Length of time (in seconds)
-		long long file_size;		///< Size of file (in bytes)
+		int64_t file_size;		///< Size of file (in bytes)
 		int height;					///< The height of the video (in pixels)
 		int width;					///< The width of the video (in pixesl)
 		int pixel_format;			///< The pixel format (i.e. YUV420P, RGB24, etc...)
@@ -71,7 +71,7 @@ namespace openshot
 		Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
 		Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
 		string vcodec;				///< The name of the video codec used to encode / decode the video stream
-		long int video_length;		///< The number of frames in the video stream
+		int64_t video_length;		///< The number of frames in the video stream
 		int video_stream_index;		///< The index of the video stream
 		Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
 		bool interlaced_frame;		// Are the contents of this frame interlaced
@@ -125,7 +125,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
-		virtual std::shared_ptr<Frame> GetFrame(long int number) = 0;
+		virtual std::shared_ptr<Frame> GetFrame(int64_t number) = 0;
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;

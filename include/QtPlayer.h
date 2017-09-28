@@ -75,7 +75,7 @@ namespace openshot
 	int Position();
 	
 	/// Seek to a specific frame in the player
-	void Seek(long int new_frame);
+	void Seek(int64_t new_frame);
 
 	/// Set the source URL/path of this player (which will create an internal Reader)
 	void SetSource(const std::string &source);
@@ -83,10 +83,10 @@ namespace openshot
 	/// Set the QWidget which will be used as the display (note: QLabel works well). This does not take a
 	/// normal pointer, but rather a LONG pointer id (and it re-casts the QWidget pointer inside libopenshot).
 	/// This is required due to SIP and SWIG incompatibility in the Python bindings.
-	void SetQWidget(long long qwidget_address);
+	void SetQWidget(int64_t qwidget_address);
 
 	/// Get the Renderer pointer address (for Python to cast back into a QObject)
-	long long GetRendererQObject();
+	int64_t GetRendererQObject();
 
 	/// Get the Playback speed
 	float Speed();

@@ -124,7 +124,7 @@ namespace openshot {
 		bool manage_reader;
 
 		/// Adjust frame number minimum value
-		long int adjust_frame_number_minimum(long int frame_number);
+		int64_t adjust_frame_number_minimum(int64_t frame_number);
 
 		/// Apply effects to the source frame (if any)
 		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame);
@@ -133,10 +133,10 @@ namespace openshot {
 		string get_file_extension(string path);
 
 		/// Get a frame object or create a blank one
-		std::shared_ptr<Frame> GetOrCreateFrame(long int number);
+		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		/// Adjust the audio and image of a time mapped frame
-		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, long int frame_number) throw(ReaderClosed);
+		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number) throw(ReaderClosed);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -181,7 +181,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested
-		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
 
 		/// Open the internal reader
 		void Open() throw(InvalidFile, ReaderClosed);
@@ -205,7 +205,7 @@ namespace openshot {
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		string PropertiesJSON(long int requested_frame);
+		string PropertiesJSON(int64_t requested_frame);
 
 		/// @brief Remove an effect from the clip
 		/// @param effect Remove an effect from the clip.

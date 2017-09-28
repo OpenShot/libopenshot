@@ -143,7 +143,7 @@ void TextReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> TextReader::GetFrame(long int requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
 {
 	if (image)
 	{

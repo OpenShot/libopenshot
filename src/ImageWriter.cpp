@@ -120,12 +120,12 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 }
 
 // Write a block of frames from a reader
-void ImageWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(WriterClosed)
+void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
-	for (long int number = start; number <= length; number++)
+	for (int64_t number = start; number <= length; number++)
 	{
 		// Get the frame
 		std::shared_ptr<Frame> f = reader->GetFrame(number);

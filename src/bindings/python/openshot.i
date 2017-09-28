@@ -35,6 +35,7 @@
 %include "std_string.i"
 %include "std_list.i"
 %include "std_vector.i"
+%include <stdint.i>
 
 /* Unhandled STL Exception Handling */
 %include <std_except.i>

@@ -160,7 +160,7 @@ void Timeline::ApplyMapperToClips()
 }
 
 // Calculate time of a frame number, based on a framerate
-double Timeline::calculate_time(long int number, Fraction rate)
+double Timeline::calculate_time(int64_t number, Fraction rate)
 {
 	// Get float version of fps fraction
     double raw_fps = rate.ToFloat();
@@ -170,7 +170,7 @@ double Timeline::calculate_time(long int number, Fraction rate)
 }
 
 // Apply effects to the source frame (if any)
-std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, long int timeline_frame_number, int layer)
+std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, int layer)
 {
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer, "", -1, "", -1, "", -1);
@@ -212,7 +212,7 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, lon
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
+std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 {
 	std::shared_ptr<Frame> new_frame;
 
@@ -251,7 +251,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, long int number)
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, long int clip_frame_number, long int timeline_frame_number, bool is_top_clip)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
 	std::shared_ptr<Frame> source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
@@ -634,7 +634,7 @@ bool Timeline::isEqual(double a, double b)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
+std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
@@ -684,7 +684,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 
 		// GENERATE CACHE FOR CLIPS (IN FRAME # SEQUENCE)
 		// Determine all clip frames, and request them in order (to keep resampled audio in sequence)
-		for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+		for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
 			// Loop through clips
 			for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
@@ -710,7 +710,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 		{
 			// Loop through all requested frames
 			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames)
-			for (long int frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
+			for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (processing frame)", "frame_number", frame_number, "omp_get_thread_num()", omp_get_thread_num(), "", -1, "", -1, "", -1, "", -1);
@@ -805,7 +805,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(long int requested_frame) throw(Reader
 
 
 // Find intersecting clips (or non intersecting clips)
-vector<Clip*> Timeline::find_intersecting_clips(long int requested_frame, int number_of_frames, bool include)
+vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include)
 {
 	// Find matching clips
 	vector<Clip*> matching_clips;
@@ -1103,8 +1103,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 						apply_json_to_effects(change, e);
 
 						// Calculate start and end frames that this impacts, and remove those frames from the cache
-                        long int new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
-                        long int new_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
+                        int64_t new_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+                        int64_t new_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
                         final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 
 						return; // effect found, don't update clip
@@ -1116,8 +1116,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
-		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
-		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
+		int64_t new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
+		int64_t new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
 		final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 	}
 
@@ -1135,8 +1135,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 		if (existing_clip) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
-			long int old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
+			int64_t old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+			int64_t old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
             // Remove cache on clip's Reader (if found)
@@ -1164,8 +1164,8 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 		if (existing_clip) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
-			long int old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
+			int64_t old_starting_frame = (existing_clip->Position() * info.fps.ToDouble()) + 1;
+			int64_t old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Remove clip from timeline
@@ -1225,8 +1225,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 	// Calculate start and end frames that this impacts, and remove those frames from the cache
 	if (!change["value"].isArray() && !change["value"]["position"].isNull()) {
-		long int new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
-		long int new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
+		int64_t new_starting_frame = (change["value"]["position"].asDouble() * info.fps.ToDouble()) + 1;
+		int64_t new_ending_frame = ((change["value"]["position"].asDouble() + change["value"]["end"].asDouble() - change["value"]["start"].asDouble()) * info.fps.ToDouble()) + 1;
 		final_cache->Remove(new_starting_frame - 8, new_ending_frame + 8);
 	}
 
@@ -1254,8 +1254,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		if (existing_effect) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
-			long int old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
+			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
+			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Update effect properties from JSON
@@ -1268,8 +1268,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		if (existing_effect) {
 
 			// Calculate start and end frames that this impacts, and remove those frames from the cache
-			long int old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
-			long int old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
+			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
+			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Remove effect from timeline

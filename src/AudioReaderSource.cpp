@@ -31,7 +31,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor that reads samples from a reader
-AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64 starting_frame_number, int buffer_size)
+AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
 	: reader(audio_reader), frame_number(starting_frame_number), original_frame_number(starting_frame_number),
 	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
 
@@ -245,7 +245,7 @@ void AudioReaderSource::prepareToPlay(int, double) { }
 void AudioReaderSource::releaseResources() { }
 
 // Set the next read position of this source
-void AudioReaderSource::setNextReadPosition (long long newPosition)
+void AudioReaderSource::setNextReadPosition (int64 newPosition)
 {
 	// set position (if the new position is in range)
 	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
@@ -253,14 +253,14 @@ void AudioReaderSource::setNextReadPosition (long long newPosition)
 }
 
 // Get the next read position of this source
-long long AudioReaderSource::getNextReadPosition() const
+int64 AudioReaderSource::getNextReadPosition() const
 {
 	// return the next read position
 	return position;
 }
 
 // Get the total length (in samples) of this audio source
-long long AudioReaderSource::getTotalLength() const
+int64 AudioReaderSource::getTotalLength() const
 {
 	// Get the length
 	if (reader)

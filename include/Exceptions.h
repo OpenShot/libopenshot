@@ -57,10 +57,10 @@ namespace openshot {
 	{
 	public:
 		string file_path;
-		int frame_number;
-		int chunk_number;
-		int chunk_frame;
-		ChunkNotFound(string message, int frame_number, int chunk_number, int chunk_frame)
+		int64_t frame_number;
+		int64_t chunk_number;
+		int64_t chunk_frame;
+		ChunkNotFound(string message, int64_t frame_number, int64_t chunk_number, int64_t chunk_frame)
 			: BaseException(message), frame_number(frame_number), chunk_number(chunk_number), chunk_frame(chunk_frame) { }
 		virtual ~ChunkNotFound() throw () {}
 	};
@@ -80,8 +80,8 @@ namespace openshot {
 	{
 	public:
 		string file_path;
-		int frame_number;
-		ErrorDecodingAudio(string message, int frame_number)
+		int64_t frame_number;
+		ErrorDecodingAudio(string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorDecodingAudio() throw () {}
 	};
@@ -91,8 +91,8 @@ namespace openshot {
 	{
 	public:
 		string file_path;
-		int frame_number;
-		ErrorEncodingAudio(string message, int frame_number)
+		int64_t frame_number;
+		ErrorEncodingAudio(string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingAudio() throw () {}
 	};
@@ -102,8 +102,8 @@ namespace openshot {
 	{
 	public:
 		string file_path;
-		int frame_number;
-		ErrorEncodingVideo(string message, int frame_number)
+		int64_t frame_number;
+		ErrorEncodingVideo(string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingVideo() throw () {}
 	};
@@ -202,9 +202,9 @@ namespace openshot {
 	class OutOfBoundsFrame : public BaseException
 	{
 	public:
-		int FrameRequested;
-		int MaxFrames;
-		OutOfBoundsFrame(string message, int frame_requested, int max_frames)
+		int64_t FrameRequested;
+		int64_t MaxFrames;
+		OutOfBoundsFrame(string message, int64_t frame_requested, int64_t max_frames)
 			: BaseException(message), FrameRequested(frame_requested), MaxFrames(max_frames) { }
 		virtual ~OutOfBoundsFrame() throw () {}
 	};

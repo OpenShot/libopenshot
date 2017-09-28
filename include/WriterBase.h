@@ -52,22 +52,22 @@ namespace openshot
 		bool has_audio;				///< Determines if this file has an audio stream
 		bool has_single_image;		///< Determines if this file only contains a single image
 		float duration;				///< Length of time (in seconds)
-		int file_size;				///< Size of file (in bytes)
+		int64_t file_size;				///< Size of file (in bytes)
 		int height;					///< The height of the video (in pixels)
 		int width;					///< The width of the video (in pixels)
 		int pixel_format;			///< The pixel format (i.e. YUV420P, RGB24, etc...)
 		Fraction fps;				///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
-		int video_bit_rate;			///< The bit rate of the video stream (in bytes)
+		int video_bit_rate;		///< The bit rate of the video stream (in bytes)
 		Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
 		Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
 		string vcodec;				///< The name of the video codec used to encode / decode the video stream
-		long int video_length;		///< The number of frames in the video stream
+		int64_t video_length;		///< The number of frames in the video stream
 		int video_stream_index;		///< The index of the video stream
 		Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
 		bool interlaced_frame;		///< Are the contents of this frame interlaced
 		bool top_field_first;		///< Which interlaced field should be displayed first
 		string acodec;				///< The name of the audio codec used to encode / decode the video stream
-		int audio_bit_rate;			///< The bit rate of the audio stream (in bytes)
+		int audio_bit_rate;		///< The bit rate of the audio stream (in bytes)
 		int sample_rate;			///< The number of audio samples per second (44100 is a common sample rate)
 		int channels;				///< The number of audio channels used in the audio stream
 		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
@@ -102,7 +102,7 @@ namespace openshot
 		virtual void WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed) = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-		virtual void WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed) = 0;
+		virtual void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(ErrorEncodingVideo, WriterClosed) = 0;
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object

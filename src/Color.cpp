@@ -61,7 +61,7 @@ Color::Color(string color_hex)
 }
 
 // Get the HEX value of a color at a specific frame
-string Color::GetColorHex(long int frame_number) {
+string Color::GetColorHex(int64_t frame_number) {
 
 	int r = red.GetInt(frame_number);
 	int g = green.GetInt(frame_number);

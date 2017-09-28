@@ -58,9 +58,9 @@ namespace openshot
 	 */
 	struct AudioLocation
 	{
-		long int frame;
+		int64_t frame;
 		int sample_start;
-		bool is_near(AudioLocation location, int samples_per_frame, long int amount);
+		bool is_near(AudioLocation location, int samples_per_frame, int64_t amount);
 	};
 
 	/**
@@ -108,39 +108,39 @@ namespace openshot
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
-		map<long int, long int> processing_video_frames;
-		multimap<long int, long int> processing_audio_frames;
-		map<long int, long int> processed_video_frames;
-		map<long int, long int> processed_audio_frames;
-		multimap<long int, long int> missing_video_frames;
-		multimap<long int, long int> missing_video_frames_source;
-		multimap<long int, long int> missing_audio_frames;
-		multimap<long int, long int> missing_audio_frames_source;
-		map<long int, int> checked_frames;
+		map<int64_t, int64_t> processing_video_frames;
+		multimap<int64_t, int64_t> processing_audio_frames;
+		map<int64_t, int64_t> processed_video_frames;
+		map<int64_t, int64_t> processed_audio_frames;
+		multimap<int64_t, int64_t> missing_video_frames;
+		multimap<int64_t, int64_t> missing_video_frames_source;
+		multimap<int64_t, int64_t> missing_audio_frames;
+		multimap<int64_t, int64_t> missing_audio_frames_source;
+		map<int64_t, int> checked_frames;
 		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
 		int prev_samples;
-		long int prev_pts;
-		long int pts_total;
-		long int pts_counter;
-		long int num_packets_since_video_frame;
-		long int num_checks_since_final;
+		int64_t prev_pts;
+		int64_t pts_total;
+		int64_t pts_counter;
+		int64_t num_packets_since_video_frame;
+		int64_t num_checks_since_final;
 		std::shared_ptr<Frame> last_video_frame;
 
 		bool is_seeking;
-		long int seeking_pts;
-		long int seeking_frame;
+		int64_t seeking_pts;
+		int64_t seeking_frame;
 		bool is_video_seek;
 		int seek_count;
-		long int seek_audio_frame_found;
-		long int seek_video_frame_found;
+		int64_t seek_audio_frame_found;
+		int64_t seek_video_frame_found;
 
-		long int audio_pts_offset;
-		long int video_pts_offset;
-		long int last_frame;
-		long int largest_frame_processed;
-		long int current_video_frame;	// can't reliably use PTS of video to determine this
+		int64_t audio_pts_offset;
+		int64_t video_pts_offset;
+		int64_t last_frame;
+		int64_t largest_frame_processed;
+		int64_t current_video_frame;	// can't reliably use PTS of video to determine this
 
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();
@@ -149,28 +149,28 @@ namespace openshot
 		bool CheckSeek(bool is_video);
 
 		/// Check if a frame is missing and attempt to replace it's frame image (and
-		bool CheckMissingFrame(long int requested_frame);
+		bool CheckMissingFrame(int64_t requested_frame);
 
 		/// Check the working queue, and move finished frames to the finished queue
-		void CheckWorkingFrames(bool end_of_stream, long int requested_frame);
+		void CheckWorkingFrames(bool end_of_stream, int64_t requested_frame);
 
 		/// Convert image to RGB format
-		void convert_image(long int current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
+		void convert_image(int64_t current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
 
 		/// Convert Frame Number into Audio PTS
-		long int ConvertFrameToAudioPTS(long int frame_number);
+		int64_t ConvertFrameToAudioPTS(int64_t frame_number);
 
 		/// Convert Frame Number into Video PTS
-		long int ConvertFrameToVideoPTS(long int frame_number);
+		int64_t ConvertFrameToVideoPTS(int64_t frame_number);
 
 		/// Convert Video PTS into Frame Number
-		long int ConvertVideoPTStoFrame(long int pts);
+		int64_t ConvertVideoPTStoFrame(int64_t pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		std::shared_ptr<Frame> CreateFrame(long int requested_frame);
+		std::shared_ptr<Frame> CreateFrame(int64_t requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
-		AudioLocation GetAudioPTSLocation(long int pts);
+		AudioLocation GetAudioPTSLocation(int64_t pts);
 
 		/// Get an AVFrame (if any)
 		bool GetAVFrame();
@@ -179,25 +179,25 @@ namespace openshot
 		int GetNextPacket();
 
 		/// Get the smallest video frame that is still being processed
-		long int GetSmallestVideoFrame();
+		int64_t GetSmallestVideoFrame();
 
 		/// Get the smallest audio frame that is still being processed
-		long int GetSmallestAudioFrame();
+		int64_t GetSmallestAudioFrame();
 
 		/// Get the PTS for the current video packet
-		long int GetVideoPTS();
+		int64_t GetVideoPTS();
 
 		/// Remove partial frames due to seek
-		bool IsPartialFrame(long int requested_frame);
+		bool IsPartialFrame(int64_t requested_frame);
 
 		/// Process a video packet
-		void ProcessVideoPacket(long int requested_frame);
+		void ProcessVideoPacket(int64_t requested_frame);
 
 		/// Process an audio packet
-		void ProcessAudioPacket(long int requested_frame, long int target_frame, int starting_sample);
+		void ProcessAudioPacket(int64_t requested_frame, int64_t target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		std::shared_ptr<Frame> ReadStream(long int requested_frame);
+		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
 		void RemoveAVFrame(AVPicture*);
@@ -206,7 +206,7 @@ namespace openshot
 		void RemoveAVPacket(AVPacket*);
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-		void Seek(long int requested_frame) throw(TooManySeeks);
+		void Seek(int64_t requested_frame) throw(TooManySeeks);
 
 		/// Update PTS Offset (if any)
 		void UpdatePTSOffset(bool is_video);
@@ -247,7 +247,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

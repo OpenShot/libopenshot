@@ -62,7 +62,7 @@ void ClipBase::SetJsonValue(Json::Value root) {
 }
 
 // Generate JSON for a property
-Json::Value ClipBase::add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, long int requested_frame) {
+Json::Value ClipBase::add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);

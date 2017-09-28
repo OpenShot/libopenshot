@@ -42,7 +42,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 };
 
 // Constructor - image only (48kHz audio silence)
-Frame::Frame(long int number, int width, int height, string color)
+Frame::Frame(int64_t number, int width, int height, string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
@@ -54,7 +54,7 @@ Frame::Frame(long int number, int width, int height, string color)
 };
 
 // Constructor - audio only (300x200 blank image)
-Frame::Frame(long int number, int samples, int channels) :
+Frame::Frame(int64_t number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
@@ -66,7 +66,7 @@ Frame::Frame(long int number, int samples, int channels) :
 };
 
 // Constructor - image & audio
-Frame::Frame(long int number, int width, int height, string color, int samples, int channels)
+Frame::Frame(int64_t number, int width, int height, string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
@@ -433,9 +433,9 @@ juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
 }
 
 // Get the size in bytes of this frame (rough estimate)
-int64 Frame::GetBytes()
+int64_t Frame::GetBytes()
 {
-	int64 total_bytes = 0;
+	int64_t total_bytes = 0;
 	if (image)
 		total_bytes += (width * height * sizeof(char) * 4);
 	if (audio) {
@@ -474,13 +474,13 @@ void Frame::SetPixelRatio(int num, int den)
 }
 
 // Set frame number
-void Frame::SetFrameNumber(long int new_number)
+void Frame::SetFrameNumber(int64_t new_number)
 {
 	number = new_number;
 }
 
 // Calculate the # of samples per video frame (for a specific frame number and frame rate)
-int Frame::GetSamplesPerFrame(long int number, Fraction fps, int sample_rate, int channels)
+int Frame::GetSamplesPerFrame(int64_t number, Fraction fps, int sample_rate, int channels)
 {
 	// Get the total # of samples for the previous frame, and the current frame (rounded)
 	double fps_rate = fps.Reciprocal().ToDouble();

@@ -80,13 +80,13 @@ namespace openshot {
 		void CreateFactorialTable();
 
 		// Get a factorial for a coordinate
-		double Factorial(long int n);
+		double Factorial(int64_t n);
 
 		// Calculate the factorial function for Bernstein basis
-		double Ni(long int n, long int i);
+		double Ni(int64_t n, int64_t i);
 
 		// Calculate Bernstein Basis
-		double Bernstein(long int n, long int i, double t);
+		double Bernstein(int64_t n, int64_t i, double t);
 
 	public:
 		vector<Point> Points;			///< Vector of all Points
@@ -114,25 +114,25 @@ namespace openshot {
 		void FlipPoints();
 
 		/// Get the index of a point by matching a coordinate
-		long int FindIndex(Point p) throw(OutOfBoundsPoint);
+		int64_t FindIndex(Point p) throw(OutOfBoundsPoint);
 
 		/// Get the value at a specific index
-		double GetValue(long int index);
+		double GetValue(int64_t index);
 
 		/// Get the rounded INT value at a specific index
-		int GetInt(long int index);
+		int GetInt(int64_t index);
 
 		/// Get the rounded LONG value at a specific index
-		long int GetLong(long int index);
+		int64_t GetLong(int64_t index);
 
 		/// Get the fraction that represents how many times this value is repeated in the curve
-		Fraction GetRepeatFraction(long int index);
+		Fraction GetRepeatFraction(int64_t index);
 
 		/// Get the change in Y value (from the previous Y value)
-		double GetDelta(long int index);
+		double GetDelta(int64_t index);
 
 		/// Get a point at a specific index
-		Point& GetPoint(long int index) throw(OutOfBoundsPoint);
+		Point& GetPoint(int64_t index) throw(OutOfBoundsPoint);
 
 		/// Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);
@@ -148,10 +148,10 @@ namespace openshot {
 		Point GetMaxPoint();
 
 		// Get the number of values (i.e. coordinates on the X axis)
-		long int GetLength();
+		int64_t GetLength();
 
 		/// Get the number of points (i.e. # of points)
-		long int GetCount();
+		int64_t GetCount();
 
 		/// Get the direction of the curve at a specific index (increasing or decreasing)
 		bool IsIncreasing(int index);
@@ -174,14 +174,14 @@ namespace openshot {
 		void RemovePoint(Point p) throw(OutOfBoundsPoint);
 
 		/// Remove a point by index
-		void RemovePoint(long int index) throw(OutOfBoundsPoint);
+		void RemovePoint(int64_t index) throw(OutOfBoundsPoint);
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...
 		void ScalePoints(double scale);
 
 		/// Replace an existing point with a new point
-		void UpdatePoint(long int index, Point p);
+		void UpdatePoint(int64_t index, Point p);
 
 		/// Print a list of points
 		void PrintPoints();

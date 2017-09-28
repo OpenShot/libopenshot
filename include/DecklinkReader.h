@@ -107,7 +107,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(long int requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
 		unsigned long GetCurrentFrameNumber();
 
 		/// Determine if reader is open or closed

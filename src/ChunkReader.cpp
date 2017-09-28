@@ -123,14 +123,14 @@ void ChunkReader::load_json()
 }
 
 // Find the location of a frame in a chunk
-ChunkLocation ChunkReader::find_chunk_frame(long int requested_frame)
+ChunkLocation ChunkReader::find_chunk_frame(int64_t requested_frame)
 {
 	// Determine which chunk contains this frame.
-	int chunk_number = (requested_frame / chunk_size) + 1;
+	int64_t chunk_number = (requested_frame / chunk_size) + 1;
 
 	// Determine which frame in this chunk
-	int start_frame_of_chunk = (chunk_number - 1) * chunk_size;
-	int chunk_frame_number = (requested_frame - start_frame_of_chunk) + 1; // Add 1 to adjust for the 1st frame of every chunk is just there to "stoke" the audio samples from the previous chunk.
+	int64_t start_frame_of_chunk = (chunk_number - 1) * chunk_size;
+	int64_t chunk_frame_number = (requested_frame - start_frame_of_chunk) + 1; // Add 1 to adjust for the 1st frame of every chunk is just there to "stoke" the audio samples from the previous chunk.
 
 	// Prepare chunk location struct
 	ChunkLocation location = {chunk_number, chunk_frame_number};
@@ -164,7 +164,7 @@ void ChunkReader::Close()
 }
 
 // get a formatted path of a specific chunk
-string ChunkReader::get_chunk_path(int chunk_number, string folder, string extension)
+string ChunkReader::get_chunk_path(int64_t chunk_number, string folder, string extension)
 {
 	// Create path of new chunk video
 	stringstream chunk_count_string;
@@ -187,7 +187,7 @@ string ChunkReader::get_chunk_path(int chunk_number, string folder, string exten
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> ChunkReader::GetFrame(long int requested_frame) throw(ReaderClosed, ChunkNotFound)
+std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame) throw(ReaderClosed, ChunkNotFound)
 {
 	// Determine what chunk contains this frame
 	ChunkLocation location = find_chunk_frame(requested_frame);
@@ -264,7 +264,9 @@ Json::Value ChunkReader::JsonValue() {
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "ChunkReader";
 	root["path"] = path;
-	root["chunk_size"] = chunk_size;
+	stringstream chunk_size_stream;
+	chunk_size_stream << chunk_size;
+	root["chunk_size"] = chunk_size_stream.str();
 	root["chunk_version"] = version;
 
 	// return JsonValue
@@ -304,7 +306,7 @@ void ChunkReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
 	if (!root["path"].isNull())
 		path = root["path"].asString();
 	if (!root["chunk_size"].isNull())
-		chunk_size = root["chunk_size"].asInt();
+		chunk_size = atoll(root["chunk_size"].asString().c_str());
 	if (!root["chunk_version"].isNull())
 		version = (ChunkVersion) root["chunk_version"].asInt();
 

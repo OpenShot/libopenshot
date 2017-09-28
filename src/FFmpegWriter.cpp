@@ -500,12 +500,12 @@ void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(ReaderBase* reader, long int start, long int length) throw(ErrorEncodingVideo, WriterClosed)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(ErrorEncodingVideo, WriterClosed)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
 	// Loop through each frame (and encoded it)
-	for (long int number = start; number <= length; number++)
+	for (int64_t number = start; number <= length; number++)
 	{
 		// Get the frame
 		std::shared_ptr<Frame> f = reader->GetFrame(number);
@@ -896,9 +896,14 @@ AVStream* FFmpegWriter::add_video_stream()
 
 	/* Init video encoder options */
 	c->bit_rate = info.video_bit_rate;
-	c->rc_min_rate = info.video_bit_rate - (info.video_bit_rate / 6);
-	c->rc_max_rate = info.video_bit_rate;
-	c->rc_buffer_size = FFMAX(c->rc_max_rate, 15000000) * 112L / 15000000 * 16384;
+
+	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
+	//invalid bitrate errors and rc buffer underflow errors, etc...
+	//c->rc_min_rate = info.video_bit_rate;
+	//c->rc_max_rate = info.video_bit_rate;
+	//c->rc_buffer_size = FFMAX(c->rc_max_rate, 15000000) * 112L / 15000000 * 16384;
+	//if ( !c->rc_initial_buffer_occupancy )
+	//	c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3/4;
 	c->qmin = 2;
 	c->qmax = 30;
 

@@ -71,7 +71,7 @@ int Brightness::constrain(int color_value)
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, long int frame_number)
+std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
@@ -174,7 +174,7 @@ void Brightness::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Brightness::PropertiesJSON(long int requested_frame) {
+string Brightness::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

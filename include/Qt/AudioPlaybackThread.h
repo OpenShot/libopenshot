@@ -102,13 +102,13 @@ namespace openshot
 	std::shared_ptr<Frame> getFrame();
 
 	/// Get the current frame number being played
-	long int getCurrentFramePosition();
+	int64_t getCurrentFramePosition();
 
 	/// Play the audio
 	void Play();
 
 	/// Seek the audio thread
-	void Seek(long int new_position);
+	void Seek(int64_t new_position);
 
 	/// Stop the audio playback
 	void Stop();
