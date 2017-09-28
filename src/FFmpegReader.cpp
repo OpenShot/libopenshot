@@ -1333,7 +1333,7 @@ void FFmpegReader::UpdatePTSOffset(bool is_video)
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
 			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			video_pts_offset = 0 - max(GetVideoPTS(), (long) info.video_timebase.ToInt() * 10);
+			video_pts_offset = 0 - max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video, "", -1, "", -1, "", -1, "", -1);
