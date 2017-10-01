@@ -144,8 +144,8 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 			pStream = pFormatCtx->streams[videoStream];
 			pCodecCtx = pFormatCtx->streams[videoStream]->codec;
 
-			// Set number of threads equal to number of processors + 1
-			pCodecCtx->thread_count = OPEN_MP_NUM_PROCESSORS;
+			// Set number of threads equal to number of processors (not to exceed 16)
+			pCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 			// Find the decoder for the video stream
 			AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
@@ -170,8 +170,8 @@ void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
 			aStream = pFormatCtx->streams[audioStream];
 			aCodecCtx = pFormatCtx->streams[audioStream]->codec;
 
-			// Set number of threads equal to number of processors + 1
-			aCodecCtx->thread_count = OPEN_MP_NUM_PROCESSORS;
+			// Set number of threads equal to number of processors (not to exceed 16)
+			aCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 			// Find the decoder for the audio stream
 			AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
