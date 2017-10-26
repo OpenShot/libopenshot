@@ -92,7 +92,7 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) throw(InvalidJSON) = 0; ///< Load JSON string into this object
+		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 		Json::Value JsonInfo(); ///< Generate JSON object of meta data / info

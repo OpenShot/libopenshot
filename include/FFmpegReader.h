@@ -206,7 +206,7 @@ namespace openshot
 		void RemoveAVPacket(AVPacket*);
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-		void Seek(int64_t requested_frame) throw(TooManySeeks);
+		void Seek(int64_t requested_frame);
 
 		/// Update PTS Offset (if any)
 		void UpdatePTSOffset(bool is_video);
@@ -227,12 +227,12 @@ namespace openshot
 
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec);
+		FFmpegReader(string path);
 
 		/// Constructor for FFmpegReader.  This only opens the media file to inspect it's properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
-		FFmpegReader(string path, bool inspect_reader) throw(InvalidFile, NoStreamsFound, InvalidCodec);
+		FFmpegReader(string path, bool inspect_reader);
 
 		/// Destructor
 		~FFmpegReader();
@@ -247,7 +247,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
@@ -257,12 +257,12 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Open File - which is called by the constructor automatically
-		void Open() throw(InvalidFile, NoStreamsFound, InvalidCodec);
+		void Open();
 	};
 
 }

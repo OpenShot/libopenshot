@@ -83,7 +83,7 @@ Json::Value EffectBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void EffectBase::SetJson(string value) throw(InvalidJSON) {
+void EffectBase::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

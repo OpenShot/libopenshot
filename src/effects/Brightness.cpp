@@ -138,7 +138,7 @@ Json::Value Brightness::JsonValue() {
 }
 
 // Load JSON string into this object
-void Brightness::SetJson(string value) throw(InvalidJSON) {
+void Brightness::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

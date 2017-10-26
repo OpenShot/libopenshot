@@ -496,7 +496,7 @@ Json::Value CacheDisk::JsonValue() {
 }
 
 // Load JSON string into this object
-void CacheDisk::SetJson(string value) throw(InvalidJSON) {
+void CacheDisk::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -519,7 +519,7 @@ void CacheDisk::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void CacheDisk::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
+void CacheDisk::SetJsonValue(Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();

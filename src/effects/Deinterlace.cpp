@@ -112,7 +112,7 @@ Json::Value Deinterlace::JsonValue() {
 }
 
 // Load JSON string into this object
-void Deinterlace::SetJson(string value) throw(InvalidJSON) {
+void Deinterlace::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

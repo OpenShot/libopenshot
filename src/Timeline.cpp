@@ -68,7 +68,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Add an openshot::Clip to the timeline
-void Timeline::AddClip(Clip* clip) throw(ReaderClosed)
+void Timeline::AddClip(Clip* clip)
 {
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips)
@@ -626,7 +626,7 @@ bool Timeline::isEqual(double a, double b)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame) throw(ReaderClosed, OutOfBoundsFrame)
+std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
@@ -899,7 +899,7 @@ Json::Value Timeline::JsonValue() {
 }
 
 // Load JSON string into this object
-void Timeline::SetJson(string value) throw(InvalidJSON) {
+void Timeline::SetJson(string value) {
 
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
@@ -925,7 +925,7 @@ void Timeline::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
+void Timeline::SetJsonValue(Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	bool was_open = is_open;
@@ -991,7 +991,7 @@ void Timeline::SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed) {
 }
 
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
-void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
+void Timeline::ApplyJsonDiff(string value) {
 
     // Get lock (prevent getting frames while this happens)
     const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
@@ -1035,7 +1035,7 @@ void Timeline::ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey) {
 }
 
 // Apply JSON diff to clips
-void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
+void Timeline::apply_json_to_clips(Json::Value change) {
 
 	// Get key and type of change
 	string change_type = change["type"].asString();
@@ -1169,7 +1169,7 @@ void Timeline::apply_json_to_clips(Json::Value change) throw(InvalidJSONKey) {
 }
 
 // Apply JSON diff to effects
-void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
+void Timeline::apply_json_to_effects(Json::Value change) {
 
 	// Get key and type of change
 	string change_type = change["type"].asString();
@@ -1210,7 +1210,7 @@ void Timeline::apply_json_to_effects(Json::Value change) throw(InvalidJSONKey) {
 }
 
 // Apply JSON diff to effects (if you already know which effect needs to be updated)
-void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_effect) throw(InvalidJSONKey) {
+void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_effect) {
 
 	// Get key and type of change
 	string change_type = change["type"].asString();
@@ -1272,7 +1272,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 }
 
 // Apply JSON diff to timeline properties
-void Timeline::apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey) {
+void Timeline::apply_json_to_timeline(Json::Value change) {
 
 	// Get key and type of change
 	string change_type = change["type"].asString();

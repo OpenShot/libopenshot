@@ -99,15 +99,15 @@ namespace openshot
 		virtual bool IsOpen() = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-		virtual void WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed) = 0;
+		virtual void WriteFrame(std::shared_ptr<Frame> frame) = 0;
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-		virtual void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(ErrorEncodingVideo, WriterClosed) = 0;
+		virtual void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) = 0;
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Display file information in the standard output stream (stdout)

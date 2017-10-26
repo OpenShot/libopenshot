@@ -78,12 +78,12 @@ namespace openshot
 
 		/// Constructor for QtImageReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		QtImageReader(string path) throw(InvalidFile);
+		QtImageReader(string path);
 
 		/// Constructor for QtImageReader.  This only opens the media file to inspect it's properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
-		QtImageReader(string path, bool inspect_reader) throw(InvalidFile);
+		QtImageReader(string path, bool inspect_reader);
 
 		/// Close File
 		void Close();
@@ -96,7 +96,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
@@ -106,15 +106,15 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Set Max Image Size (used for performance optimization)
 		void SetMaxSize(int width, int height);
 
 		/// Open File - which is called by the constructor automatically
-		void Open() throw(InvalidFile);
+		void Open();
 	};
 
 }

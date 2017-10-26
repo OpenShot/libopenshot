@@ -118,7 +118,7 @@ Json::Value ChromaKey::JsonValue() {
 }
 
 // Load JSON string into this object
-void ChromaKey::SetJson(string value) throw(InvalidJSON) {
+void ChromaKey::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

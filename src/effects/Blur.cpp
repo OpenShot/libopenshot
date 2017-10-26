@@ -259,7 +259,7 @@ Json::Value Blur::JsonValue() {
 }
 
 // Load JSON string into this object
-void Blur::SetJson(string value) throw(InvalidJSON) {
+void Blur::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

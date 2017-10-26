@@ -136,7 +136,7 @@ namespace openshot {
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		/// Adjust the audio and image of a time mapped frame
-		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number) throw(ReaderClosed);
+		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -172,7 +172,7 @@ namespace openshot {
 		void AddEffect(EffectBase* effect);
 
 		/// Close the internal reader
-		void Close() throw(ReaderClosed);
+		void Close();
 
 		/// Return the list of effects on the timeline
 		list<EffectBase*> Effects() { return effects; };
@@ -181,25 +181,25 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		/// Open the internal reader
-		void Open() throw(InvalidFile, ReaderClosed);
+		void Open();
 
 		/// @brief Set the current reader
 		/// @param new_reader The reader to be used by this clip
 		void Reader(ReaderBase* new_reader);
 
 		/// Get the current reader
-		ReaderBase* Reader() throw(ReaderClosed);
+		ReaderBase* Reader();
 
 		/// Override End() method
-		float End() throw(ReaderClosed); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
+		float End(); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

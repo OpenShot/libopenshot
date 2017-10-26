@@ -29,7 +29,7 @@
 
 using namespace openshot;
 
-ChunkWriter::ChunkWriter(string path, ReaderBase *reader) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
+ChunkWriter::ChunkWriter(string path, ReaderBase *reader) :
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
 		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false), is_open(false)
 {
@@ -74,7 +74,7 @@ string ChunkWriter::get_chunk_path(int64_t chunk_number, string folder, string e
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
+void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -193,7 +193,7 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 
 
 // Write a block of frames from a reader
-void ChunkWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed)
+void ChunkWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
 	// Loop through each frame (and encoded it)
 	for (int64_t number = start; number <= length; number++)
@@ -207,7 +207,7 @@ void ChunkWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) 
 }
 
 // Write a block of frames from the local cached reader
-void ChunkWriter::WriteFrame(int64_t start, int64_t length) throw(WriterClosed)
+void ChunkWriter::WriteFrame(int64_t start, int64_t length)
 {
 	// Loop through each frame (and encoded it)
 	for (int64_t number = start; number <= length; number++)
@@ -296,7 +296,7 @@ bool ChunkWriter::is_chunk_valid()
 }
 
 // Open the writer
-void ChunkWriter::Open() throw(InvalidFile, InvalidCodec)
+void ChunkWriter::Open()
 {
 	is_open = true;
 }

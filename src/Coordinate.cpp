@@ -66,7 +66,7 @@ Json::Value Coordinate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Coordinate::SetJson(string value) throw(InvalidJSON) {
+void Coordinate::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

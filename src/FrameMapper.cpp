@@ -67,7 +67,7 @@ FrameMapper::~FrameMapper() {
 }
 
 /// Get the current reader
-ReaderBase* FrameMapper::Reader() throw(ReaderClosed)
+ReaderBase* FrameMapper::Reader()
 {
     if (reader)
         return reader;
@@ -308,7 +308,7 @@ void FrameMapper::Init()
 	fields.clear();
 }
 
-MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber) throw(OutOfBoundsFrame)
+MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 {
 	// Ignore mapping on single image readers
 	if (info.has_video and !info.has_audio and info.has_single_image) {
@@ -380,7 +380,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 {
 	// Check final cache, and just return the frame (if it's available)
 	std::shared_ptr<Frame> final_frame = final_cache.GetFrame(requested_frame);
@@ -624,7 +624,7 @@ bool FrameMapper::IsOpen() {
 
 
 // Open the internal reader
-void FrameMapper::Open() throw(InvalidFile)
+void FrameMapper::Open()
 {
 	if (reader)
 	{
@@ -677,7 +677,7 @@ Json::Value FrameMapper::JsonValue() {
 }
 
 // Load JSON string into this object
-void FrameMapper::SetJson(string value) throw(InvalidJSON) {
+void FrameMapper::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -700,7 +700,7 @@ void FrameMapper::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void FrameMapper::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void FrameMapper::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

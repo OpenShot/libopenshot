@@ -93,7 +93,7 @@ namespace openshot
 
 		/// Constructor for DecklinkReader.  This automatically opens the device and loads
 		/// the first second of video, or it throws one of the following exceptions.
-		DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError);
+		DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth);
 		~DecklinkReader(); /// Destructor
 
 		/// Close the device and video stream
@@ -107,7 +107,7 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 		unsigned long GetCurrentFrameNumber();
 
 		/// Determine if reader is open or closed
@@ -118,12 +118,12 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Open device and video stream - which is called by the constructor automatically
-		void Open() throw(DecklinkError);
+		void Open();
 	};
 
 }

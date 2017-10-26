@@ -36,7 +36,7 @@ Mask::Mask() : reader(NULL), replace_image(false) {
 }
 
 // Default constructor
-Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed) :
+Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) :
 		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast), replace_image(false)
 {
 	// Init effect properties
@@ -190,7 +190,7 @@ Json::Value Mask::JsonValue() {
 }
 
 // Load JSON string into this object
-void Mask::SetJson(string value) throw(InvalidJSON) {
+void Mask::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

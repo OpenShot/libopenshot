@@ -108,9 +108,9 @@ namespace openshot {
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 
 }

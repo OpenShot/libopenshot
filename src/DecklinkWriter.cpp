@@ -29,7 +29,7 @@
 
 using namespace openshot;
 
-DecklinkWriter::DecklinkWriter(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError)
+DecklinkWriter::DecklinkWriter(int device, int video_mode, int pixel_format, int channels, int sample_depth)
 	: device(device), is_open(false), g_videoModeIndex(video_mode), g_audioChannels(channels), g_audioSampleDepth(sample_depth)
 {
 	// Init decklink variables
@@ -54,7 +54,7 @@ DecklinkWriter::DecklinkWriter(int device, int video_mode, int pixel_format, int
 }
 
 // Open decklink writer
-void DecklinkWriter::Open() throw(DecklinkError)
+void DecklinkWriter::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -227,7 +227,7 @@ void DecklinkWriter::Close()
 }
 
 // This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
+void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -237,7 +237,7 @@ void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed
 }
 
 // This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-void DecklinkWriter::WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed)
+void DecklinkWriter::WriteFrame(ReaderBase* reader, int start, int length)
 {
 	// Loop through each frame (and encoded it)
 	for (int number = start; number <= length; number++)

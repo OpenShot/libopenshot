@@ -103,7 +103,7 @@ Json::Value Color::JsonValue() {
 }
 
 // Load JSON string into this object
-void Color::SetJson(string value) throw(InvalidJSON) {
+void Color::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

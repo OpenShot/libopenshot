@@ -29,7 +29,7 @@
 
 using namespace openshot;
 
-DecklinkReader::DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError)
+DecklinkReader::DecklinkReader(int device, int video_mode, int pixel_format, int channels, int sample_depth)
 	: device(device), is_open(false), g_videoModeIndex(video_mode), g_audioChannels(channels), g_audioSampleDepth(sample_depth)
 {
 	// Init decklink variables
@@ -166,7 +166,7 @@ DecklinkReader::~DecklinkReader()
 }
 
 // Open image file
-void DecklinkReader::Open() throw(DecklinkError)
+void DecklinkReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -231,7 +231,7 @@ unsigned long DecklinkReader::GetCurrentFrameNumber()
 }
 
 // Get an openshot::Frame object for the next available LIVE frame
-std::shared_ptr<Frame> DecklinkReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> DecklinkReader::GetFrame(int64_t requested_frame)
 {
 	// Get a frame from the delegate decklink class (which is collecting them on another thread)
 	std::shared_ptr<Frame> f = delegate->GetFrame(requested_frame);
@@ -261,7 +261,7 @@ Json::Value DecklinkReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void DecklinkReader::SetJson(string value) throw(InvalidJSON) {
+void DecklinkReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -284,7 +284,7 @@ void DecklinkReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void DecklinkReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void DecklinkReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

@@ -142,7 +142,7 @@ Json::Value Saturation::JsonValue() {
 }
 
 // Load JSON string into this object
-void Saturation::SetJson(string value) throw(InvalidJSON) {
+void Saturation::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

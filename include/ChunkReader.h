@@ -130,7 +130,7 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		/// @param path				The folder path / location of a chunk (chunks are stored as folders)
 		/// @param chunk_version	Choose the video version / quality (THUMBNAIL, PREVIEW, or FINAL)
-		ChunkReader(string path, ChunkVersion chunk_version) throw(InvalidFile, InvalidJSON);
+		ChunkReader(string path, ChunkVersion chunk_version);
 
 		/// Close the reader
 		void Close();
@@ -149,7 +149,7 @@ namespace openshot
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed, ChunkNotFound);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
@@ -159,12 +159,12 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Open the reader. This is required before you can access frames or data from the reader.
-		void Open() throw(InvalidFile);
+		void Open();
 	};
 
 }

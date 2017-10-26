@@ -565,7 +565,7 @@ void Frame::Save(string path, float scale, string format, int quality)
 
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-		string background_color, bool ignore_aspect, string format, int quality) throw(InvalidFile) {
+		string background_color, bool ignore_aspect, string format, int quality) {
 
 	// Create blank thumbnail image & fill background color
 	std::shared_ptr<QImage> thumbnail = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));

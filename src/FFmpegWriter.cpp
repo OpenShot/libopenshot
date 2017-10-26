@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory):
+FFmpegWriter::FFmpegWriter(string path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
@@ -53,7 +53,7 @@ FFmpegWriter::FFmpegWriter(string path) throw (InvalidFile, InvalidFormat, Inval
 }
 
 // Open the writer
-void FFmpegWriter::Open() throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels, InvalidSampleRate)
+void FFmpegWriter::Open()
 {
 	// Open the writer
 	is_open = true;
@@ -112,7 +112,6 @@ void FFmpegWriter::initialize_streams()
 
 // Set video export options
 void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate)
-	throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels)
 {
 	// Set the video options
 	if (codec.length() > 0)
@@ -171,7 +170,6 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 
 // Set audio export options
 void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate)
-	throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory, InvalidChannels)
 {
 	// Set audio options
 	if (codec.length() > 0)
@@ -209,7 +207,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, string codec, int sample_rate
 }
 
 // Set custom options (some codecs accept additional params)
-void FFmpegWriter::SetOption(StreamType stream, string name, string value) throw(NoStreamsFound, InvalidOptions)
+void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 {
 	// Declare codec context
 	AVCodecContext *c = NULL;
@@ -346,7 +344,7 @@ void FFmpegWriter::WriteHeader()
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingVideo, WriterClosed)
+void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -386,7 +384,7 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(ErrorEncodingV
 }
 
 // Write all frames in the queue to the video file.
-void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
+void FFmpegWriter::write_queued_frames()
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_queued_frames", "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "", -1, "", -1, "", -1, "", -1);
 
@@ -500,7 +498,7 @@ void FFmpegWriter::write_queued_frames() throw (ErrorEncodingVideo)
 }
 
 // Write a block of frames from a reader
-void FFmpegWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(ErrorEncodingVideo, WriterClosed)
+void FFmpegWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 

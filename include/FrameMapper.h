@@ -183,7 +183,7 @@ namespace openshot
 		void Close();
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
-		MappedFrame GetMappedFrame(int64_t TargetFrameNumber) throw(OutOfBoundsFrame);
+		MappedFrame GetMappedFrame(int64_t TargetFrameNumber);
 
 		/// Get the cache object used by this reader
 		CacheMemory* GetCache() { return &final_cache; };
@@ -194,7 +194,7 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen();
@@ -204,18 +204,18 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Open the internal reader
-		void Open() throw(InvalidFile);
+		void Open();
 
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();
 
 		/// Get the current reader
-		ReaderBase* Reader() throw(ReaderClosed);
+		ReaderBase* Reader();
 
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);

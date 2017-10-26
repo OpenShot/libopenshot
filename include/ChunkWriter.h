@@ -113,7 +113,7 @@ namespace openshot
 		/// @brief Constructor for ChunkWriter. Throws one of the following exceptions.
 		/// @param path The folder path of the chunk file to be created
 		/// @param reader The initial reader to base this chunk file's meta data on (such as fps, height, width, etc...)
-		ChunkWriter(string path, ReaderBase *reader) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
+		ChunkWriter(string path, ReaderBase *reader);
 
 		/// Close the writer
 		void Close();
@@ -125,7 +125,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Open writer
-		void Open() throw(InvalidFile, InvalidCodec);
+		void Open();
 
 		/// @brief Set the chunk size (number of frames to write in each chunk)
 		/// @param new_size The number of frames to write in this chunk file
@@ -133,18 +133,18 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
-		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param start The starting frame number to write (of the reader passed into the constructor)
 		/// @param length The number of frames to write (of the reader passed into the constructor)
-		void WriteFrame(int64_t start, int64_t length) throw(WriterClosed);
+		void WriteFrame(int64_t start, int64_t length);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader The reader containing the frames you need
 		/// @param start The starting frame number to write
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length);
 
 	};
 

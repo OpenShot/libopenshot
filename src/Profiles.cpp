@@ -32,7 +32,7 @@ using namespace openshot;
 
 // @brief Constructor for Profile.
 // @param path 	The folder path / location of a profile file
-Profile::Profile(string path) throw(InvalidFile, InvalidJSON) {
+Profile::Profile(string path) {
 
 	bool read_file = false;
 
@@ -160,7 +160,7 @@ Json::Value Profile::JsonValue() {
 }
 
 // Load JSON string into this object
-void Profile::SetJson(string value) throw(InvalidJSON) {
+void Profile::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

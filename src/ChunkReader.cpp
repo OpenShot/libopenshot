@@ -29,7 +29,7 @@
 
 using namespace openshot;
 
-ChunkReader::ChunkReader(string path, ChunkVersion chunk_version) throw(InvalidFile, InvalidJSON)
+ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
 		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
 {
 	// Check if folder exists?
@@ -139,7 +139,7 @@ ChunkLocation ChunkReader::find_chunk_frame(int64_t requested_frame)
 }
 
 // Open chunk folder or file
-void ChunkReader::Open() throw(InvalidFile)
+void ChunkReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -187,7 +187,7 @@ string ChunkReader::get_chunk_path(int64_t chunk_number, string folder, string e
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame) throw(ReaderClosed, ChunkNotFound)
+std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 {
 	// Determine what chunk contains this frame
 	ChunkLocation location = find_chunk_frame(requested_frame);
@@ -274,7 +274,7 @@ Json::Value ChunkReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void ChunkReader::SetJson(string value) throw(InvalidJSON) {
+void ChunkReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -297,7 +297,7 @@ void ChunkReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void ChunkReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void ChunkReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

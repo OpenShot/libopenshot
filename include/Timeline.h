@@ -159,10 +159,10 @@ namespace openshot {
 		void apply_mapper_to_clip(Clip* clip);
 
 		/// Apply JSON Diffs to various objects contained in this timeline
-		void apply_json_to_clips(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to clips
-		void apply_json_to_effects(Json::Value change) throw(InvalidJSONKey); ///< Apply JSON diff to effects
-		void apply_json_to_effects(Json::Value change, EffectBase* existing_effect) throw(InvalidJSONKey); ///<Apply JSON diff to a specific effect
-		void apply_json_to_timeline(Json::Value change) throw(InvalidJSONKey); ///<Apply JSON diff to timeline properties
+		void apply_json_to_clips(Json::Value change); ///<Apply JSON diff to clips
+		void apply_json_to_effects(Json::Value change); ///< Apply JSON diff to effects
+		void apply_json_to_effects(Json::Value change, EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
+		void apply_json_to_timeline(Json::Value change); ///<Apply JSON diff to timeline properties
 
 		/// Calculate time of a frame number, based on a framerate
 		double calculate_time(int64_t number, Fraction rate);
@@ -206,7 +206,7 @@ namespace openshot {
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
-		void AddClip(Clip* clip) throw(ReaderClosed);
+		void AddClip(Clip* clip);
 
 		/// @brief Add an effect to the timeline
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
@@ -243,7 +243,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) throw(ReaderClosed, OutOfBoundsFrame);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
@@ -261,15 +261,15 @@ namespace openshot {
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root) throw(InvalidFile, ReaderClosed); ///< Load Json::JsonValue into this object
+		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)
 		/// This is primarily designed to keep the timeline (and its child objects... such as clips and effects) in sync
 		/// with another application... such as OpenShot Video Editor (http://www.openshot.org).
 		/// @param value A JSON string containing a key, value, and type of change.
-		void ApplyJsonDiff(string value) throw(InvalidJSON, InvalidJSONKey);
+		void ApplyJsonDiff(string value);
 
 		/// Open the reader (and start consuming resources)
 		void Open();

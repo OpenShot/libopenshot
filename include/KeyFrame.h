@@ -114,7 +114,7 @@ namespace openshot {
 		void FlipPoints();
 
 		/// Get the index of a point by matching a coordinate
-		int64_t FindIndex(Point p) throw(OutOfBoundsPoint);
+		int64_t FindIndex(Point p);
 
 		/// Get the value at a specific index
 		double GetValue(int64_t index);
@@ -132,7 +132,7 @@ namespace openshot {
 		double GetDelta(int64_t index);
 
 		/// Get a point at a specific index
-		Point& GetPoint(int64_t index) throw(OutOfBoundsPoint);
+		Point& GetPoint(int64_t index);
 
 		/// Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);
@@ -159,7 +159,7 @@ namespace openshot {
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/**
@@ -171,10 +171,10 @@ namespace openshot {
 		void Process();
 
 		/// Remove a point by matching a coordinate
-		void RemovePoint(Point p) throw(OutOfBoundsPoint);
+		void RemovePoint(Point p);
 
 		/// Remove a point by index
-		void RemovePoint(int64_t index) throw(OutOfBoundsPoint);
+		void RemovePoint(int64_t index);
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...

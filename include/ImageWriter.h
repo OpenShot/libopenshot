@@ -101,7 +101,7 @@ namespace openshot
 
 		/// @brief Constructor for ImageWriter. Throws one of the following exceptions.
 		/// @param path The path of the file you want to create
-		ImageWriter(string path) throw(InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory);
+		ImageWriter(string path);
 
 		/// @brief Close the writer and encode/output final image to the disk. This is a requirement of ImageMagick,
 		/// which writes all frames of a multi-frame image at one time.
@@ -114,7 +114,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Open writer
-		void Open() throw(InvalidFile, InvalidCodec);
+		void Open();
 
 		/// @brief Set the cache size (number of frames to queue before writing)
 		/// @param new_size Number of frames to queue before writing
@@ -133,13 +133,13 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length);
 
 	};
 

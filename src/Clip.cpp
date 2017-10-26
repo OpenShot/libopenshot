@@ -192,7 +192,7 @@ void Clip::Reader(ReaderBase* new_reader)
 }
 
 /// Get the current reader
-ReaderBase* Clip::Reader() throw(ReaderClosed)
+ReaderBase* Clip::Reader()
 {
 	if (reader)
 		return reader;
@@ -202,7 +202,7 @@ ReaderBase* Clip::Reader() throw(ReaderClosed)
 }
 
 // Open the internal reader
-void Clip::Open() throw(InvalidFile, ReaderClosed)
+void Clip::Open()
 {
 	if (reader)
 	{
@@ -219,7 +219,7 @@ void Clip::Open() throw(InvalidFile, ReaderClosed)
 }
 
 // Close the internal reader
-void Clip::Close() throw(ReaderClosed)
+void Clip::Close()
 {
 	if (reader) {
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
@@ -233,7 +233,7 @@ void Clip::Close() throw(ReaderClosed)
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
-float Clip::End() throw(ReaderClosed)
+float Clip::End()
 {
 	// if a time curve is present, use it's length
 	if (time.Points.size() > 1)
@@ -255,7 +255,7 @@ float Clip::End() throw(ReaderClosed)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 {
 	if (reader)
 	{
@@ -347,7 +347,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number) throw(ReaderClosed)
+std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
 	// Check for valid reader
 	if (!reader)
@@ -784,7 +784,7 @@ Json::Value Clip::JsonValue() {
 }
 
 // Load JSON string into this object
-void Clip::SetJson(string value) throw(InvalidJSON) {
+void Clip::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

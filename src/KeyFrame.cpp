@@ -107,7 +107,7 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 }
 
 // Get the index of a point by matching a coordinate
-int64_t Keyframe::FindIndex(Point p) throw(OutOfBoundsPoint) {
+int64_t Keyframe::FindIndex(Point p) {
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -336,7 +336,7 @@ Json::Value Keyframe::JsonValue() {
 }
 
 // Load JSON string into this object
-void Keyframe::SetJson(string value) throw(InvalidJSON) {
+void Keyframe::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -429,7 +429,7 @@ double Keyframe::GetDelta(int64_t index)
 }
 
 // Get a point at a specific index
-Point& Keyframe::GetPoint(int64_t index) throw(OutOfBoundsPoint) {
+Point& Keyframe::GetPoint(int64_t index) {
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 		return Points[index];
@@ -456,7 +456,7 @@ int64_t Keyframe::GetCount() {
 }
 
 // Remove a point by matching a coordinate
-void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
+void Keyframe::RemovePoint(Point p) {
 	// mark as dirty
 	needs_update = true;
 
@@ -478,7 +478,7 @@ void Keyframe::RemovePoint(Point p) throw(OutOfBoundsPoint) {
 }
 
 // Remove a point by index
-void Keyframe::RemovePoint(int64_t index) throw(OutOfBoundsPoint) {
+void Keyframe::RemovePoint(int64_t index) {
 	// mark as dirty
 	needs_update = true;
 

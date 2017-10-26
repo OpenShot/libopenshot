@@ -72,7 +72,7 @@ DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, i
 }
 
 // Open image file
-void DummyReader::Open() throw(InvalidFile)
+void DummyReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -97,7 +97,7 @@ void DummyReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -136,7 +136,7 @@ Json::Value DummyReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void DummyReader::SetJson(string value) throw(InvalidJSON) {
+void DummyReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -159,7 +159,7 @@ void DummyReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void DummyReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void DummyReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

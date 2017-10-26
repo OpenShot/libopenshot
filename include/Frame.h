@@ -285,7 +285,7 @@ namespace openshot
 		/// Thumbnail the frame image with tons of options to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG).
 		/// This method allows for masks, overlays, background color, and much more accurate resizing (including padding and centering)
 		void Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-				string background_color, bool ignore_aspect, string format="png", int quality=100) throw(InvalidFile);
+				string background_color, bool ignore_aspect, string format="png", int quality=100);
 
 		/// Play audio samples for this frame
 		void Play();

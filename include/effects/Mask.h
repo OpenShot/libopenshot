@@ -90,7 +90,7 @@ namespace openshot
 		/// @param mask_reader The reader of a grayscale mask image or video, to be used by the wipe transition
 		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask (between 100 and -100)
 		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask (3 is typical, 20 is a lot, 0 is invalid)
-		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) throw(InvalidFile, ReaderClosed);
+		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -105,7 +105,7 @@ namespace openshot
 
 		/// Get and Set JSON methods
 		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value) throw(InvalidJSON); ///< Load JSON string into this object
+		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

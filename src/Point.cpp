@@ -129,7 +129,7 @@ Json::Value Point::JsonValue() {
 }
 
 // Load JSON string into this object
-void Point::SetJson(string value) throw(InvalidJSON) {
+void Point::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

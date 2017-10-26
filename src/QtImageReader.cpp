@@ -29,14 +29,14 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(string path) throw(InvalidFile) : path(path), is_open(false)
+QtImageReader::QtImageReader(string path) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtImageReader::QtImageReader(string path, bool inspect_reader) throw(InvalidFile) : path(path), is_open(false)
+QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -46,7 +46,7 @@ QtImageReader::QtImageReader(string path, bool inspect_reader) throw(InvalidFile
 }
 
 // Open image file
-void QtImageReader::Open() throw(InvalidFile)
+void QtImageReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -127,7 +127,7 @@ void QtImageReader::SetMaxSize(int width, int height)
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -188,7 +188,7 @@ Json::Value QtImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtImageReader::SetJson(string value) throw(InvalidJSON) {
+void QtImageReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -211,7 +211,7 @@ void QtImageReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void QtImageReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void QtImageReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

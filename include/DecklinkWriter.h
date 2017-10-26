@@ -90,19 +90,19 @@ namespace openshot
 
 		/// Constructor for DecklinkWriter.  This automatically opens the device or it
 		/// throws one of the following exceptions.
-		DecklinkWriter(int device, int video_mode, int pixel_format, int channels, int sample_depth) throw(DecklinkError);
+		DecklinkWriter(int device, int video_mode, int pixel_format, int channels, int sample_depth);
 
 		/// Close the device and video stream
 		void Close();
 
 		/// This method is required for all derived classes of WriterBase.  Write a Frame to the video file.
-		void WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed);
+		void WriteFrame(std::shared_ptr<Frame> frame);
 
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
-		void WriteFrame(ReaderBase* reader, int start, int length) throw(WriterClosed);
+		void WriteFrame(ReaderBase* reader, int start, int length);
 
 		/// Open device and video stream - which is called by the constructor automatically
-		void Open() throw(DecklinkError);
+		void Open();
 
 		/// Determine if writer is open or closed
 		bool IsOpen() { return is_open; };

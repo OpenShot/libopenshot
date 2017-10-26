@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, InvalidCodec)
+FFmpegReader::FFmpegReader(string path)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
@@ -53,7 +53,7 @@ FFmpegReader::FFmpegReader(string path) throw(InvalidFile, NoStreamsFound, Inval
 	Close();
 }
 
-FFmpegReader::FFmpegReader(string path, bool inspect_reader) throw(InvalidFile, NoStreamsFound, InvalidCodec)
+FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
@@ -101,7 +101,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 	return false;
 }
 
-void FFmpegReader::Open() throw(InvalidFile, NoStreamsFound, InvalidCodec)
+void FFmpegReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
@@ -393,7 +393,7 @@ void FFmpegReader::UpdateVideoInfo()
 }
 
 
-std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) throw(OutOfBoundsFrame, ReaderClosed, TooManySeeks)
+std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -1150,7 +1150,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 
 // Seek to a specific frame.  This is not always frame accurate, it's more of an estimation on many codecs.
-void FFmpegReader::Seek(int64_t requested_frame) throw(TooManySeeks)
+void FFmpegReader::Seek(int64_t requested_frame)
 {
 	// Adjust for a requested frame that is too small or too large
 	if (requested_frame < 1)
@@ -1930,7 +1930,7 @@ Json::Value FFmpegReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void FFmpegReader::SetJson(string value) throw(InvalidJSON) {
+void FFmpegReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -1953,7 +1953,7 @@ void FFmpegReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void FFmpegReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void FFmpegReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

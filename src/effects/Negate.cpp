@@ -73,7 +73,7 @@ Json::Value Negate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Negate::SetJson(string value) throw(InvalidJSON) {
+void Negate::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

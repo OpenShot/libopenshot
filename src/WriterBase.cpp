@@ -192,7 +192,7 @@ Json::Value WriterBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void WriterBase::SetJson(string value) throw(InvalidJSON) {
+void WriterBase::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;

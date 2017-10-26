@@ -45,7 +45,7 @@ TEST(ReaderBase_Derived_Class)
 		void Close() { };
 		void Open() { };
 		string Json() { };
-		void SetJson(string value) throw(InvalidJSON) { };
+		void SetJson(string value) { };
 		Json::Value JsonValue() { };
 		void SetJsonValue(Json::Value root) { };
 		bool IsOpen() { return true; };

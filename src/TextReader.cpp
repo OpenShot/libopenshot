@@ -143,7 +143,7 @@ void TextReader::Close()
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame) throw(ReaderClosed)
+std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 {
 	if (image)
 	{
@@ -197,7 +197,7 @@ Json::Value TextReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void TextReader::SetJson(string value) throw(InvalidJSON) {
+void TextReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -220,7 +220,7 @@ void TextReader::SetJson(string value) throw(InvalidJSON) {
 }
 
 // Load Json::JsonValue into this object
-void TextReader::SetJsonValue(Json::Value root) throw(InvalidFile) {
+void TextReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-ImageWriter::ImageWriter(string path) throw (InvalidFile, InvalidFormat, InvalidCodec, InvalidOptions, OutOfMemory) :
+ImageWriter::ImageWriter(string path) :
 		path(path), cache_size(8), is_writing(false), write_video_count(0), image_quality(75), number_of_loops(1),
 		combine_frames(true), is_open(false)
 {
@@ -80,13 +80,13 @@ void ImageWriter::SetVideoOptions(string format, Fraction fps, int width, int he
 }
 
 // Open the writer
-void ImageWriter::Open() throw(InvalidFile, InvalidCodec)
+void ImageWriter::Open()
 {
 	is_open = true;
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
+void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -120,7 +120,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame) throw(WriterClosed)
 }
 
 // Write a block of frames from a reader
-void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length) throw(WriterClosed)
+void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
 
