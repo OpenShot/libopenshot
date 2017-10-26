@@ -349,10 +349,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Get actual frame image data
 	source_image = source_frame->GetImage();
 
-	// Get some basic image properties
-	int source_width = source_image->width();
-	int source_height = source_image->height();
-
 	/* ALPHA & OPACITY */
 	if (source_clip->alpha.GetValue(clip_frame_number) != 1.0)
 	{
@@ -376,42 +372,37 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
+	QSize source_size = source_image->size();
 	switch (source_clip->scale)
 	{
 	case (SCALE_FIT):
 		// keep aspect ratio
-		source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-		source_width = source_image->width();
-		source_height = source_image->height();
+		source_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_STRETCH):
 		// ignore aspect ratio
-		source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(max_width, max_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
-		source_width = source_image->width();
-		source_height = source_image->height();
+		source_size.scale(max_width, max_height, Qt::IgnoreAspectRatio);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
 		break;
 
 	case (SCALE_CROP):
-		QSize width_size(max_width, round(max_width / (float(source_width) / float(source_height))));
-		QSize height_size(round(max_height / (float(source_height) / float(source_width))), max_height);
+		QSize width_size(max_width, round(max_width / (float(source_size.width()) / float(source_size.height()))));
+		QSize height_size(round(max_height / (float(source_size.height()) / float(source_size.width()))), max_height);
 
 		// respect aspect ratio
 		if (width_size.width() >= max_width && width_size.height() >= max_height)
-			source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(width_size.width(), width_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+			source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
 		else
-			source_image = std::shared_ptr<QImage>(new QImage(source_image->scaled(height_size.width(), height_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation))); // height is larger, so resize to it
-		source_width = source_image->width();
-		source_height = source_image->height();
+			source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_width, "source_height", source_height, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
 		break;
 	}
 
@@ -422,8 +413,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Adjust size for scale x and scale y
 	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
 	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
-	float scaled_source_width = source_width * sx;
-	float scaled_source_height = source_height * sy;
+	float scaled_source_width = source_size.width() * sx;
+	float scaled_source_height = source_size.height() * sy;
 
 	switch (source_clip->gravity)
 	{
@@ -458,7 +449,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "source_width", source_width, "info.height", info.height, "source_height", source_height);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "scaled_source_width", scaled_source_width, "info.height", info.height, "scaled_source_height", scaled_source_height);
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
@@ -469,8 +460,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
 
-	int offset_x = -1;
-	int offset_y = -1;
 	bool transformed = false;
 	QTransform transform;
 
@@ -483,11 +472,14 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
         transformed = true;
     }
 
-    if (!isEqual(sx, 0) || !isEqual(sy, 0)) {
-        // SCALE CLIP
-        transform.scale(sx, sy);
-        transformed = true;
-    }
+	// SCALE CLIP (if needed)
+	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
+	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
+
+	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
+		transform.scale(source_width_scale, source_height_scale);
+		transformed = true;
+	}
 
     if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
         // SHEAR HEIGHT/WIDTH
@@ -497,8 +489,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	if (!isEqual(r, 0)) {
 		// ROTATE CLIP
-		float origin_x = x + ((source_width * sx) / 2.0);
-		float origin_y = y + ((source_height * sy) / 2.0);
+		float origin_x = x + (scaled_source_width / 2.0);
+		float origin_y = y + (scaled_source_height / 2.0);
 		transform.translate(origin_x, origin_y);
 		transform.rotate(r);
 		transform.translate(-origin_x,-origin_y);
@@ -506,7 +498,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1, "", -1, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	std::shared_ptr<QImage> new_image = new_frame->GetImage();
@@ -549,7 +541,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
     painter.end();
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "offset_x", offset_x, "offset_y", offset_y, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1, "", -1, "", -1);
 }
 
 // Update the list of 'opened' clips
