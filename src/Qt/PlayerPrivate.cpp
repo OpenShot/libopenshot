@@ -84,7 +84,6 @@ namespace openshot
 			// Set the video frame on the video thread and render frame
 			videoPlayback->frame = frame;
 			videoPlayback->render.signal();
-			videoPlayback->rendered.wait();
 
 			// Keep track of the last displayed frame
 			last_video_position = video_position;
@@ -123,9 +122,10 @@ namespace openshot
 				sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
 
 
-			else if (video_frame_diff < -4 && reader->info.has_audio && reader->info.has_video) {
-				// Skip frame(s) to catch up to the audio (if more than 4 frames behind)
-				video_position += abs(video_frame_diff);
+			else if (video_frame_diff < -10 && reader->info.has_audio && reader->info.has_video) {
+				// Skip frame(s) to catch up to the audio (if more than 10 frames behind)
+				video_position += abs(video_frame_diff) / 2; // Seek forward 1/2 the difference
+				sleep_time = 0; // Don't sleep now... immediately go to next position
 			}
 
 			// Sleep (leaving the video frame on the screen for the correct amount of time)
