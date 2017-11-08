@@ -455,8 +455,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
 	x += (max_width * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
 	y += (max_height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
-	bool is_x_animated = source_clip->location_x.Points.size() > 1;
-	bool is_y_animated = source_clip->location_y.Points.size() > 1;
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
 
@@ -465,6 +463,16 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
+	if (!isEqual(r, 0)) {
+		// ROTATE CLIP
+		float origin_x = x + (scaled_source_width / 2.0);
+		float origin_y = y + (scaled_source_height / 2.0);
+		transform.translate(origin_x, origin_y);
+		transform.rotate(r);
+		transform.translate(-origin_x,-origin_y);
+		transformed = true;
+	}
 
     if (!isEqual(x, 0) || !isEqual(y, 0)) {
         // TRANSLATE/MOVE CLIP
@@ -486,16 +494,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
         transform.shear(shear_x, shear_y);
         transformed = true;
     }
-
-	if (!isEqual(r, 0)) {
-		// ROTATE CLIP
-		float origin_x = x + (scaled_source_width / 2.0);
-		float origin_y = y + (scaled_source_height / 2.0);
-		transform.translate(origin_x, origin_y);
-		transform.rotate(r);
-		transform.translate(-origin_x,-origin_y);
-		transformed = true;
-	}
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1, "", -1, "", -1);
