@@ -916,6 +916,9 @@ AVStream* FFmpegWriter::add_video_stream()
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
+	st->time_base.num = info.video_timebase.num;
+	st->time_base.den = info.video_timebase.den;
+
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
 	c->max_b_frames = 10;
 	if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO)
