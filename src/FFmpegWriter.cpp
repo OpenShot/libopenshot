@@ -973,7 +973,9 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 	// Find the audio encoder
-	codec = avcodec_find_encoder(audio_codec->codec_id);
+	codec = avcodec_find_encoder_by_name(info.acodec.c_str());
+	if (!codec)
+		codec = avcodec_find_encoder(audio_codec->codec_id);
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
@@ -1030,7 +1032,9 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	video_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
 	/* find the video encoder */
-	codec = avcodec_find_encoder(video_codec->codec_id);
+	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+	if (!codec)
+		codec = avcodec_find_encoder(video_codec->codec_id);
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
