@@ -682,11 +682,13 @@ void Frame::AddColor(int new_width, int new_height, string color)
 {
 	// Create new image object, and fill with pixel data
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
-	image = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
+	#pragma omp critical (AddImage)
+	{
+		image = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
 
-	// Fill with solid color
-	image->fill(QColor(QString::fromStdString(color)));
-
+		// Fill with solid color
+		image->fill(QColor(QString::fromStdString(color)));
+	}
 	// Update height and width
 	width = image->width();
 	height = image->height();
@@ -705,16 +707,19 @@ void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage:
 	memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
 
 	// Create new image object, and fill with pixel data
-	image = std::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
+	#pragma omp critical (AddImage)
+	{
+		image = std::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
 
-	// Always convert to RGBA8888 (if different)
-	if (image->format() != QImage::Format_RGBA8888)
-		image->convertToFormat(QImage::Format_RGBA8888);
+		// Always convert to RGBA8888 (if different)
+		if (image->format() != QImage::Format_RGBA8888)
+			image->convertToFormat(QImage::Format_RGBA8888);
 
-	// Update height and width
-	width = image->width();
-	height = image->height();
-	has_image_data = true;
+			// Update height and width
+		width = image->width();
+		height = image->height();
+		has_image_data = true;
+	}
 }
 
 // Add (or replace) pixel data to the frame
@@ -726,16 +731,19 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 
 	// assign image data
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
-	image = new_image;
+	#pragma omp critical (AddImage)
+	{
+		image = new_image;
 
-	// Always convert to RGBA8888 (if different)
-	if (image->format() != QImage::Format_RGBA8888)
-		image->convertToFormat(QImage::Format_RGBA8888);
+		// Always convert to RGBA8888 (if different)
+		if (image->format() != QImage::Format_RGBA8888)
+			image->convertToFormat(QImage::Format_RGBA8888);
 
-	// Update height and width
-	width = image->width();
-	height = image->height();
-	has_image_data = true;
+		// Update height and width
+		width = image->width();
+		height = image->height();
+		has_image_data = true;
+	}
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
@@ -753,27 +761,34 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 	} else {
 
 		// Ignore image of different sizes or formats
+		bool ret=false;
+		#pragma omp critical (AddImage)
 		if (image == new_image || image->size() != image->size() || image->format() != image->format())
+			ret=true;
+		if (ret)
 			return;
 
 		// Get the frame's image
 		const GenericScopedLock<CriticalSection> lock(addingImageSection);
-		const unsigned char *pixels = image->bits();
-		const unsigned char *new_pixels = new_image->bits();
+		#pragma omp critical (AddImage)
+		{
+			const unsigned char *pixels = image->bits();
+			const unsigned char *new_pixels = new_image->bits();
 
-		// Loop through the scanlines of the image (even or odd)
-		int start = 0;
-		if (only_odd_lines)
-			start = 1;
-		for (int row = start; row < image->height(); row += 2) {
-			memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
-			new_pixels += image->bytesPerLine();
+			// Loop through the scanlines of the image (even or odd)
+			int start = 0;
+			if (only_odd_lines)
+				start = 1;
+				for (int row = start; row < image->height(); row += 2) {
+					memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+					new_pixels += image->bytesPerLine();
+				}
+
+			// Update height and width
+			width = image->width();
+			height = image->height();
+			has_image_data = true;
 		}
-
-		// Update height and width
-		width = image->width();
-		height = image->height();
-		has_image_data = true;
 	}
 }
 
