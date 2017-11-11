@@ -281,12 +281,17 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
             new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
+		std::shared_ptr<Frame> original_frame;
+		#pragma omp critical (Clip_GetFrame)
+		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
 		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		frame->SampleRate(original_frame->SampleRate());
-		frame->ChannelsLayout(original_frame->ChannelsLayout());
+		#pragma omp critical (Clip_GetFrame)
+		{
+			frame->SampleRate(original_frame->SampleRate());
+			frame->ChannelsLayout(original_frame->ChannelsLayout());
+		}
 
 		// Copy the image from the odd field
 		if (enabled_video)

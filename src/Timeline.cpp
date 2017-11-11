@@ -227,6 +227,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 		clip->SetMaxSize(info.width, info.height);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
+		#pragma omp critical (T_GetOtCreateFrame)
 		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number));
 
 		// Return real frame
@@ -245,8 +246,11 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 
 	// Create blank frame
 	new_frame = std::make_shared<Frame>(number, max_width, max_height, "#000000", samples_in_frame, info.channels);
-	new_frame->SampleRate(info.sample_rate);
-	new_frame->ChannelsLayout(info.channel_layout);
+	#pragma omp critical (T_GetOtCreateFrame)
+	{
+		new_frame->SampleRate(info.sample_rate);
+		new_frame->ChannelsLayout(info.channel_layout);
+	}
 	return new_frame;
 }
 
@@ -254,7 +258,9 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip)
 {
 	// Get the clip's frame & image
-	std::shared_ptr<Frame> source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
+	std::shared_ptr<Frame> source_frame;
+	#pragma omp critical (T_addLayer)
+	source_frame = GetOrCreateFrame(source_clip, clip_frame_number);
 
 	// No frame found... so bail
 	if (!source_frame)
@@ -276,7 +282,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		std::shared_ptr<QImage> source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
+		std::shared_ptr<QImage> source_image;
+		#pragma omp critical (T_addLayer)
+		source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
 		source_frame->AddImage(std::shared_ptr<QImage>(source_image));
 	}
 
@@ -325,10 +333,12 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				// This is a crude solution at best. =)
 				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount())
 					// Force timeline frame to match the source frame
+					#pragma omp critical (T_addLayer)
 					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
 
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
+				#pragma omp critical (T_addLayer)
 				new_frame->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
 
 			}
@@ -499,7 +509,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed, "", -1, "", -1, "", -1);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	std::shared_ptr<QImage> new_image = new_frame->GetImage();
+	std::shared_ptr<QImage> new_image;
+	#pragma omp critical (T_addLayer)
+		new_image = new_frame->GetImage();
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
@@ -631,7 +643,9 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		requested_frame = 1;
 
 	// Check cache
-	std::shared_ptr<Frame> frame = final_cache->GetFrame(requested_frame);
+	std::shared_ptr<Frame> frame;
+	#pragma omp critical (T_GetFrame)
+	frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
@@ -649,6 +663,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");
 
 		// Check cache again (due to locking)
+		#pragma omp critical (T_GetFrame)
 		frame = final_cache->GetFrame(requested_frame);
 		if (frame) {
 			// Debug output
@@ -663,7 +678,9 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
-		vector<Clip*> nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
+		vector<Clip*> nearby_clips;
+		#pragma omp critical (T_GetFrame)
+		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
 
 		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
 		// Allow nested OpenMP sections
@@ -710,9 +727,12 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 				// Create blank frame (which will become the requested frame)
 				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, max_width, max_height, "#000000", samples_in_frame, info.channels));
-				new_frame->AddAudioSilence(samples_in_frame);
-				new_frame->SampleRate(info.sample_rate);
-				new_frame->ChannelsLayout(info.channel_layout);
+				#pragma omp critical (T_GetFrame)
+				{
+					new_frame->AddAudioSilence(samples_in_frame);
+					new_frame->SampleRate(info.sample_rate);
+					new_frame->ChannelsLayout(info.channel_layout);
+				}
 
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
@@ -777,10 +797,13 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Set frame # on mapped frame
-				new_frame->SetFrameNumber(frame_number);
+				#pragma omp critical (T_GetFrame)
+				{
+					new_frame->SetFrameNumber(frame_number);
 
-				// Add final frame to cache
-				final_cache->Add(new_frame);
+					// Add final frame to cache
+					final_cache->Add(new_frame);
+				}
 
 			} // end frame loop
 		} // end parallel
