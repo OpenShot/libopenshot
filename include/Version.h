@@ -36,8 +36,8 @@
 
 #define OPENSHOT_VERSION_MAJOR 0;   /// Major version number is incremented when huge features are added or improved.
 #define OPENSHOT_VERSION_MINOR 1;   /// Minor version is incremented when smaller (but still very important) improvements are added.
-#define OPENSHOT_VERSION_BUILD 8;   /// Build number is incremented when minor bug fixes and less important improvements are added.
-#define OPENSHOT_VERSION_SO 13;     /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
+#define OPENSHOT_VERSION_BUILD 9;   /// Build number is incremented when minor bug fixes and less important improvements are added.
+#define OPENSHOT_VERSION_SO 14;     /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 #define OPENSHOT_VERSION_MAJOR_MINOR STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR); /// A string of the "Major.Minor" version
 #define OPENSHOT_VERSION_ALL STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR) "." STRINGIZE(OPENSHOT_VERSION_BUILD); /// A string of the entire version "Major.Minor.Build"
 
