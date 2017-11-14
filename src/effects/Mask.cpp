@@ -88,7 +88,7 @@ void Mask::set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int widt
 		int gray_value = qGray(R, G, B);
 
 		// Adjust the contrast
-		int factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+		float factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
 		gray_value = constrain((factor * (gray_value - 128)) + 128);
 
 		// Adjust the brightness

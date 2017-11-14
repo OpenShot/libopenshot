@@ -91,7 +91,7 @@ std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, int64_
 		int A = pixels[byte_index + 3];
 
 		// Adjust the contrast
-		int factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
+		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
 		R = constrain((factor * (R - 128)) + 128);
 		G = constrain((factor * (G - 128)) + 128);
 		B = constrain((factor * (B - 128)) + 128);
