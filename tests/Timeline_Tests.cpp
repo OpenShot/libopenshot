@@ -119,7 +119,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK_EQUAL(21, f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(21, (int)f->GetPixels(pixel_row)[pixel_index]);
 	CHECK_EQUAL(191, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
 	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
 	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
