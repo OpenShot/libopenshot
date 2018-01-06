@@ -49,15 +49,15 @@ int main(int argc, char* argv[]) {
     for (int attempt = 1; attempt < 10; attempt++) {
         cout << "** Attempt " << attempt << " **" << endl;
 
-        // Read every frame in reader as fast as possible
-        for (int64_t frame_number = 1; frame_number < r.info.video_length; frame_number++) {
-            // Get frame object
-            std::shared_ptr<Frame> f = r.GetFrame(frame_number);
+    // Read every frame in reader as fast as possible
+    for (int64_t frame_number = 1; frame_number < r.info.video_length; frame_number++) {
+        // Get frame object
+        std::shared_ptr<Frame> f = r.GetFrame(frame_number);
 
-            // Print frame numbers
-            cout << frame_number << " [" << f->number << "], " << flush;
-            if (frame_number % 10 == 0)
-                cout << endl;
+        // Print frame numbers
+        cout << frame_number << " [" << f->number << "], " << flush;
+        if (frame_number % 10 == 0)
+            cout << endl;
         }
     }
     cout << "Completed successfully!" << endl;

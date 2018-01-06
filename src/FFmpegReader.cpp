@@ -1685,7 +1685,6 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			}
 
 			if (info.has_audio && !is_audio_ready) {
-				const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
 				// Mark audio as processed, and indicate the frame has audio data
 				is_audio_ready = true;
 			}
@@ -1698,10 +1697,15 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		if ((!end_of_stream && is_video_ready && is_audio_ready) || end_of_stream || is_seek_trash)
 		{
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "requested_frame", requested_frame, "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "requested_frame", requested_frame, "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "end_of_stream", end_of_stream);
 
 			if (!is_seek_trash)
 			{
+				// Add missing image (if needed - sometimes end_of_stream causes frames with only audio)
+				if (info.has_video && !is_video_ready && last_video_frame)
+					// Copy image from last frame
+					f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+
 				// Reset counter since last 'final' frame
 				num_checks_since_final = 0;
 
