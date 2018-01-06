@@ -128,13 +128,8 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 
 	// Update timeline offset
-	float time_diff = 0 - clip->Position() + clip->Start();
-	int clip_offset = -round(time_diff * info.fps.ToFloat());
-
-	if (clip_offset != 0)
-		// Reduce negative offset by 1 (since we want to avoid frame 0)
-		clip_offset += 1;
-
+	double time_diff = 0 - clip->Position() + clip->Start();
+	int clip_offset = -round(time_diff * info.fps.ToDouble());
 	clip_mapped_reader->SetTimelineFrameOffset(clip_offset);
 
 	// Update clip reader
@@ -302,7 +297,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
-		if (source_frame->GetAudioChannelsCount() == info.channels)
+		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 			{
 				float initial_volume = 1.0f;
@@ -313,6 +308,10 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 				// If channel filter enabled, check for correct channel (and skip non-matching channels)
 				if (channel_filter != -1 && channel_filter != channel)
+					continue; // skip to next channel
+
+				// If no volume on this frame or previous frame, do nothing
+				if (previous_volume == 0.0 && volume == 0.0)
 					continue; // skip to next channel
 
 				// If channel mapping disabled, just use the current channel
@@ -1142,6 +1141,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 		clip->SetJsonValue(change["value"]); // Set properties of new clip from JSON
 		AddClip(clip); // Add clip to timeline
 
+		// Apply framemapper (or update existing framemapper)
+		apply_mapper_to_clip(clip);
+
 	} else if (change_type == "update") {
 
 		// Update existing clip
@@ -1158,6 +1160,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 			// Update clip properties from JSON
 			existing_clip->SetJsonValue(change["value"]);
+
+			// Apply framemapper (or update existing framemapper)
+			apply_mapper_to_clip(existing_clip);
 
             // Clear any cached image sizes (since size might have changed)
             existing_clip->SetMaxSize(0, 0); // force clearing of cached image size
