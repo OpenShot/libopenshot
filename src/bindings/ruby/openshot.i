@@ -40,12 +40,11 @@
 %include <std_except.i>
 
 namespace std {
-{
   template<class T> class shared_ptr {
   public:
     T *operator->();
   };
-}}
+}
 
 /* Mark these classes as shared_ptr classes */
 #ifdef USE_IMAGEMAGICK
