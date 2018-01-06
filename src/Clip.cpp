@@ -598,7 +598,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 
 		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
 		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without loosing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
+		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
         // method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
         // the future.
 		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {

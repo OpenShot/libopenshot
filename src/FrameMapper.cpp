@@ -483,7 +483,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			// converter isn't input limited.
 			const int EXTRA_INPUT_SAMPLES = 20;
 
-			// Extend end sample count by an addtional EXTRA_INPUT_SAMPLES samples
+			// Extend end sample count by an additional EXTRA_INPUT_SAMPLES samples
 			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
 			int samples_per_end_frame =
 				Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
