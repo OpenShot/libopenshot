@@ -290,7 +290,7 @@ SET ( REQUIRED_LIBRARIES
 
 		IF (WIN32)
 			# Required for exception handling on Windows
-			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} "imagehlp" )
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} "imagehlp" "dbghelp" )
 		ENDIF(WIN32)
 
 # Link all referenced libraries
