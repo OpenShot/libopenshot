@@ -146,9 +146,9 @@ TEST(Timeline_Check_Two_Track_Video)
 	f = t.GetFrame(24);
 
 	// Check image properties
-	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(106, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
+	CHECK_EQUAL(176, (int)f->GetPixels(pixel_row)[pixel_index]);
+	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
+	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
 	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
 
 	// Get frame

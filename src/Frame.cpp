@@ -31,7 +31,7 @@ using namespace std;
 using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
-Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
+Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), color("#000000"),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
@@ -43,7 +43,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1),
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int64_t number, int width, int height, string color)
-	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height),
+	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height), color(color),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
@@ -55,7 +55,7 @@ Frame::Frame(int64_t number, int width, int height, string color)
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int64_t number, int samples, int channels) :
-		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1),
+		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1), color("#000000"),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
@@ -67,7 +67,7 @@ Frame::Frame(int64_t number, int samples, int channels) :
 
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, string color, int samples, int channels)
-	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height),
+	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height), color(color),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
 {
 	// Init the image magic and audio buffer
@@ -85,20 +85,33 @@ Frame::Frame ( const Frame &other )
 	DeepCopy(other);
 }
 
+// Assignment operator
+Frame& Frame::operator= (const Frame& other)
+{
+	// copy pointers and data
+	DeepCopy(other);
+
+	return *this;
+}
+
 // Copy data and pointers from another Frame instance
 void Frame::DeepCopy(const Frame& other)
 {
 	number = other.number;
-	image = std::shared_ptr<QImage>(new QImage(*(other.image)));
-	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
-	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	channels = other.channels;
+	width = other.width;
+	height = other.height;
 	channel_layout = other.channel_layout;
 	has_audio_data = other.has_image_data;
 	has_image_data = other.has_image_data;
 	sample_rate = other.sample_rate;
+	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
+	color = other.color;
 
-
+	if (other.image)
+		image = std::shared_ptr<QImage>(new QImage(*(other.image)));
+	if (other.audio)
+		audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(*(other.audio)));
 	if (other.wave_image)
 		wave_image = std::shared_ptr<QImage>(new QImage(*(other.wave_image)));
 }
@@ -453,7 +466,7 @@ const unsigned char* Frame::GetPixels()
 	// Check for blank image
 	if (!image)
 		// Fill with black
-		AddColor(width, height, "#000000");
+		AddColor(width, height, color);
 
 	// Return array of pixel packets
 	return image->bits();
@@ -678,8 +691,11 @@ int Frame::constrain(int color_value)
 }
 
 // Add (or replace) pixel data to the frame (based on a solid color)
-void Frame::AddColor(int new_width, int new_height, string color)
+void Frame::AddColor(int new_width, int new_height, string new_color)
 {
+	// Set color
+	color = new_color;
+
 	// Create new image object, and fill with pixel data
 	const GenericScopedLock<CriticalSection> lock(addingImageSection);
 	#pragma omp critical (AddImage)
@@ -842,7 +858,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 	// Check for blank image
 	if (!image)
 		// Fill with black
-		AddColor(width, height, "#000000");
+		AddColor(width, height, color);
 
 	return image;
 }

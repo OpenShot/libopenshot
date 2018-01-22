@@ -128,6 +128,7 @@ namespace openshot
 		int width;
 		int height;
 		int sample_rate;
+		string color;
 
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
@@ -153,13 +154,13 @@ namespace openshot
 		Frame ( const Frame &other );
 
 		/// Assignment operator
-		//Frame& operator= (const Frame& other);
+		Frame& operator= (const Frame& other);
 
 		/// Destructor
 		~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
-		void AddColor(int new_width, int new_height, string color);
+		void AddColor(int new_width, int new_height, string new_color);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
