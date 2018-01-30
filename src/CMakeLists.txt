@@ -334,8 +334,9 @@ INSTALL(  TARGETS openshot
   LIBRARY DESTINATION ${LIB_INSTALL_DIR}
   COMPONENT library )
 	
-INSTALL(FILES ${headers} 
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/include/libopenshot )
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/include/libopenshot
+	FILES_MATCHING PATTERN "*.h")
 
 
 ############### CPACK PACKAGING ##############
