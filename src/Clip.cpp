@@ -52,9 +52,11 @@ void Clip::init_settings()
 	location_x = Keyframe(0.0);
 	location_y = Keyframe(0.0);
 
-	// Init alpha & rotation
+	// Init alpha
 	alpha = Keyframe(1.0);
-	rotation = Keyframe(0.0);
+
+	// Init rotation
+	init_reader_rotation();
 
 	// Init time & volume
 	time = Keyframe(1.0);
@@ -97,8 +99,32 @@ void Clip::init_settings()
 	manage_reader = false;
 }
 
+// Init reader's rotation (if any)
+void Clip::init_reader_rotation() {
+	// Only init rotation from reader when needed
+	if (rotation.Points.size() > 1)
+		// Do nothing if more than 1 rotation Point
+		return;
+	else if (rotation.Points.size() == 1 && rotation.GetValue(1) != 0.0)
+		// Do nothing if 1 Point, and it's not the default value
+		return;
+
+	// Init rotation
+	if (reader && reader->info.metadata.count("rotate") > 0) {
+		// Use reader metadata rotation (if any)
+		// This is typical with cell phone videos filmed in different orientations
+		try {
+			float rotate_metadata = strtof(reader->info.metadata["rotate"].c_str(), 0);
+			rotation = Keyframe(rotate_metadata);
+		} catch (exception e) {}
+	}
+	else
+		// Default no rotation
+		rotation = Keyframe(0.0);
+}
+
 // Default Constructor for a clip
-Clip::Clip()
+Clip::Clip() : reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -107,11 +133,11 @@ Clip::Clip()
 // Constructor with reader
 Clip::Clip(ReaderBase* new_reader)
 {
-	// Init all default settings
-	init_settings();
-
 	// Set the reader
 	reader = new_reader;
+
+	// Init all default settings
+	init_settings();
 
 	// Open and Close the reader (to set the duration of the clip)
 	Open();
@@ -122,7 +148,7 @@ Clip::Clip(ReaderBase* new_reader)
 }
 
 // Constructor with filepath
-Clip::Clip(string path)
+Clip::Clip(string path) : reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -165,6 +191,7 @@ Clip::Clip(string path)
 	if (reader) {
 		End(reader->info.duration);
 		manage_reader = true;
+		init_reader_rotation();
 	}
 }
 
@@ -189,6 +216,9 @@ void Clip::Reader(ReaderBase* new_reader)
 {
 	// set reader pointer
 	reader = new_reader;
+
+	// Init rotation (if any)
+	init_reader_rotation();
 }
 
 /// Get the current reader

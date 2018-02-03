@@ -186,6 +186,14 @@ void FFmpegReader::Open()
 			UpdateAudioInfo();
 		}
 
+		// Add format metadata (if any)
+		AVDictionaryEntry *tag = NULL;
+		while ((tag = av_dict_get(pFormatCtx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+			QString str_key = tag->key;
+			QString str_value = tag->value;
+			info.metadata[str_key.toStdString()] = str_value.trimmed().toStdString();
+		}
+
 		// Init previous audio location to zero
 		previous_packet_location.frame = -1;
 		previous_packet_location.sample_start = 0;
@@ -294,9 +302,15 @@ void FFmpegReader::UpdateAudioInfo()
 		info.video_length = info.duration * info.fps.ToDouble();
 		info.width = 720;
 		info.height = 480;
-
 	}
 
+	// Add audio metadata (if any found)
+	AVDictionaryEntry *tag = NULL;
+	while ((tag = av_dict_get(aStream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+		QString str_key = tag->key;
+		QString str_value = tag->value;
+		info.metadata[str_key.toStdString()] = str_value.trimmed().toStdString();
+	}
 }
 
 void FFmpegReader::UpdateVideoInfo()
@@ -390,6 +404,13 @@ void FFmpegReader::UpdateVideoInfo()
 		info.video_length = round(info.duration * info.fps.ToDouble());
 	}
 
+	// Add video metadata (if any)
+	AVDictionaryEntry *tag = NULL;
+	while ((tag = av_dict_get(pStream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+		QString str_key = tag->key;
+		QString str_value = tag->value;
+		info.metadata[str_key.toStdString()] = str_value.trimmed().toStdString();
+	}
 }
 
 

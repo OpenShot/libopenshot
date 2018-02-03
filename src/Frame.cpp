@@ -578,17 +578,15 @@ void Frame::Save(string path, float scale, string format, int quality)
 
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
 void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-		string background_color, bool ignore_aspect, string format, int quality) {
+		string background_color, bool ignore_aspect, string format, int quality, float rotate) {
 
 	// Create blank thumbnail image & fill background color
 	std::shared_ptr<QImage> thumbnail = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
 	thumbnail->fill(QColor(QString::fromStdString(background_color)));
 
-	// Create transform and painter
-	QTransform transform;
+	// Create painter
 	QPainter painter(thumbnail.get());
 	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-
 
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
@@ -616,6 +614,18 @@ void Frame::Thumbnail(string path, int new_width, int new_height, string mask_pa
 	int x = (new_width - previewImage->size().width()) / 2.0; // center
 	int y = (new_height - previewImage->size().height()) / 2.0; // center
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+
+	// Create transform and rotate (if needed)
+	QTransform transform;
+	float origin_x = previewImage->width() / 2.0;
+	float origin_y = previewImage->height() / 2.0;
+	transform.translate(origin_x, origin_y);
+	transform.rotate(rotate);
+	transform.translate(-origin_x,-origin_y);
+	painter.setTransform(transform);
+
+	// Draw image onto QImage
 	painter.drawImage(x, y, *previewImage);
 
 

@@ -100,6 +100,13 @@ void ReaderBase::DisplayInfo() {
 	cout << "--> Audio Stream Index: " << info.audio_stream_index << endl;
 	cout << "--> Audio Timebase: " << info.audio_timebase.ToDouble() << " (" << info.audio_timebase.num << "/" << info.audio_timebase.den << ")" << endl;
 	cout << "----------------------------" << endl;
+	cout << "--------- Metadata ---------" << endl;
+	cout << "----------------------------" << endl;
+
+	// Iterate through metadata
+	map<string, string>::iterator it;
+	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
+		cout << "--> " << it->first << ": " << it->second << endl;
 }
 
 // Generate Json::JsonValue for this object
@@ -146,6 +153,12 @@ Json::Value ReaderBase::JsonValue() {
 	root["audio_timebase"] = Json::Value(Json::objectValue);
 	root["audio_timebase"]["num"] = info.audio_timebase.num;
 	root["audio_timebase"]["den"] = info.audio_timebase.den;
+
+	// Append metadata map
+	root["metadata"] = Json::Value(Json::objectValue);
+	map<string, string>::iterator it;
+	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
+		root["metadata"][it->first] = it->second;
 
 	// return JsonValue
 	return root;
@@ -225,5 +238,11 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 			info.audio_timebase.num = root["audio_timebase"]["num"].asInt();
 		if (!root["audio_timebase"]["den"].isNull())
 			info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
+	}
+	if (!root["metadata"].isNull() && root["metadata"].isObject()) {
+		for( Json::Value::iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
+			string key = itr.key().asString();
+			info.metadata[key] = root["metadata"][key].asString();
+		}
 	}
 }

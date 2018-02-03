@@ -141,6 +141,9 @@ namespace openshot {
 		/// Init default settings for a clip
 		void init_settings();
 
+		/// Update default rotation from reader
+		void init_reader_rotation();
+
 		/// Sort effects by order
 		void sort_effects();
 

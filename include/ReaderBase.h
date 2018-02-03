@@ -83,6 +83,7 @@ namespace openshot
 		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
 		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
+		std::map<string, string> metadata;	///< An optional map/dictionary of metadata for this reader
 	};
 
 	/**

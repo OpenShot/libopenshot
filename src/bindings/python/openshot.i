@@ -35,6 +35,7 @@
 %include "std_string.i"
 %include "std_list.i"
 %include "std_vector.i"
+%include "std_map.i"
 %include <stdint.i>
 
 /* Unhandled STL Exception Handling */
@@ -176,4 +177,5 @@ namespace std {
  %template(PointsVector) vector<Point>;
  %template(FieldVector) vector<Field>;
  %template(MappedFrameVector) vector<MappedFrame>;
+ %template(MappedMetadata) map<string, string>;
 }
