@@ -36,7 +36,7 @@ Shift::Shift() : x(0.0), y(0.0) {
 }
 
 // Default constructor
-Shift::Shift(Keyframe x, Keyframe y)
+Shift::Shift(Keyframe x, Keyframe y) : x(x), y(y)
 {
 	// Init effect properties
 	init_effect_details();
@@ -51,7 +51,7 @@ void Shift::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Shift";
 	info.name = "Shift";
-	info.description = "Shift the image up, down, left, and right (with infinite wrapping)";
+	info.description = "Shift the image up, down, left, and right (with infinite wrapping).";
 	info.has_audio = false;
 	info.has_video = true;
 }

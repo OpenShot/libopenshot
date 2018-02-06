@@ -56,18 +56,6 @@ void Saturation::init_effect_details()
 	info.has_video = true;
 }
 
-// Constrain a color value from 0 to 255
-int Saturation::constrain(int color_value)
-{
-	// Constrain new color from 0 to 255
-	if (color_value < 0)
-		color_value = 0;
-	else if (color_value > 255)
-		color_value = 255;
-
-	return color_value;
-}
-
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)

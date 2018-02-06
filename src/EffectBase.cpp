@@ -58,6 +58,18 @@ void EffectBase::DisplayInfo() {
 	cout << "----------------------------" << endl;
 }
 
+// Constrain a color value from 0 to 255
+int EffectBase::constrain(int color_value)
+{
+	// Constrain new color from 0 to 255
+	if (color_value < 0)
+		color_value = 0;
+	else if (color_value > 255)
+		color_value = 255;
+
+	return color_value;
+}
+
 // Generate JSON string of this object
 string EffectBase::Json() {
 

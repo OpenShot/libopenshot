@@ -57,18 +57,6 @@ void Mask::init_effect_details()
 	info.has_video = true;
 }
 
-// Constrain a color value from 0 to 255
-int Mask::constrain(int color_value)
-{
-	// Constrain new color from 0 to 255
-	if (color_value < 0)
-		color_value = 0;
-	else if (color_value > 255)
-		color_value = 255;
-
-	return color_value;
-}
-
 // Get grayscale mask image
 void Mask::set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
 {

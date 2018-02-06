@@ -53,6 +53,9 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 	else if (effect_type == "Deinterlace")
 		return new Deinterlace();
 
+	else if (effect_type == "Hue")
+		return new Hue();
+
 	else if (effect_type == "Mask")
 		return new Mask();
 
@@ -77,6 +80,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Brightness().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
 	root.append(Deinterlace().JsonInfo());
+	root.append(Hue().JsonInfo());
 	root.append(Mask().JsonInfo());
 	root.append(Negate().JsonInfo());
 	root.append(Saturation().JsonInfo());

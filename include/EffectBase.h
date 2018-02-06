@@ -75,6 +75,9 @@ namespace openshot
 		/// Display effect information in the standard output stream (stdout)
 		void DisplayInfo();
 
+		/// Constrain a color value from 0 to 255
+		int constrain(int color_value);
+
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
 		///

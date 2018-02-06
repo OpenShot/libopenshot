@@ -59,9 +59,6 @@ namespace openshot
 	class Saturation : public EffectBase
 	{
 	private:
-		/// Constrain a color value from 0 to 255
-		int constrain(int color_value);
-
 		/// Init effect settings
 		void init_effect_details();
 

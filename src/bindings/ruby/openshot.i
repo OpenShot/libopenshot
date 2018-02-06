@@ -157,6 +157,7 @@ namespace std {
 %include "../../../include/effects/Brightness.h"
 %include "../../../include/effects/ChromaKey.h"
 %include "../../../include/effects/Deinterlace.h"
+%include "../../../include/effects/Hue.h"
 %include "../../../include/effects/Mask.h"
 %include "../../../include/effects/Negate.h"
 %include "../../../include/effects/Saturation.h"
