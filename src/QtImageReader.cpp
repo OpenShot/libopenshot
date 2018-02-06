@@ -55,12 +55,12 @@ void QtImageReader::Open()
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success = image->load(QString::fromStdString(path));
 
-		// Set pixel format
-		image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
-
 		if (!success)
 			// raise exception
 			throw InvalidFile("File could not be opened.", path);
+
+		// Set pixel format
+		image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Update image properties
 		info.has_audio = false;

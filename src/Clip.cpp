@@ -93,9 +93,6 @@ void Clip::init_settings()
 	has_video = Keyframe(-1.0);
 
 	// Default pointers
-	reader = NULL;
-	resampler = NULL;
-	audio_cache = NULL;
 	manage_reader = false;
 }
 
@@ -124,18 +121,15 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : reader(NULL)
+Clip::Clip() : reader(NULL), resampler(NULL), audio_cache(NULL)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader)
+Clip::Clip(ReaderBase* new_reader) : reader(new_reader), resampler(NULL), audio_cache(NULL)
 {
-	// Set the reader
-	reader = new_reader;
-
 	// Init all default settings
 	init_settings();
 
@@ -148,7 +142,7 @@ Clip::Clip(ReaderBase* new_reader)
 }
 
 // Constructor with filepath
-Clip::Clip(string path) : reader(NULL)
+Clip::Clip(string path) : reader(NULL), resampler(NULL), audio_cache(NULL)
 {
 	// Init all default settings
 	init_settings();
