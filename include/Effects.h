@@ -36,6 +36,7 @@
 #include "effects/Mask.h"
 #include "effects/Negate.h"
 #include "effects/Saturation.h"
+#include "effects/Shift.h"
 
 
 #endif

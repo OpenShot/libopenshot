@@ -160,6 +160,7 @@ namespace std {
 %include "../../../include/effects/Mask.h"
 %include "../../../include/effects/Negate.h"
 %include "../../../include/effects/Saturation.h"
+%include "../../../include/effects/Shift.h"
 
 
 /* Wrap std templates (list, vector, etc...) */

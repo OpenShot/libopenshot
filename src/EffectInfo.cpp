@@ -61,6 +61,9 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 
 	else if (effect_type == "Saturation")
 		return new Saturation();
+
+	else if (effect_type == "Shift")
+		return new Shift();
 }
 
 // Generate Json::JsonValue for this object
@@ -77,6 +80,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Mask().JsonInfo());
 	root.append(Negate().JsonInfo());
 	root.append(Saturation().JsonInfo());
+	root.append(Shift().JsonInfo());
 
 	// return JsonValue
 	return root;
