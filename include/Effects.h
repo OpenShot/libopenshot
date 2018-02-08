@@ -38,6 +38,7 @@
 #include "effects/Negate.h"
 #include "effects/Saturation.h"
 #include "effects/Shift.h"
+#include "effects/Wave.h"
 
 
 #endif

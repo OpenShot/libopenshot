@@ -67,6 +67,9 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 
 	else if (effect_type == "Shift")
 		return new Shift();
+
+	else if (effect_type == "Wave")
+		return new Wave();
 }
 
 // Generate Json::JsonValue for this object
@@ -85,6 +88,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Negate().JsonInfo());
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
+	root.append(Wave().JsonInfo());
 
 	// return JsonValue
 	return root;
