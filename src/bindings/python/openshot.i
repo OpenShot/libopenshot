@@ -168,6 +168,7 @@
 %include "../../../include/effects/Hue.h"
 %include "../../../include/effects/Mask.h"
 %include "../../../include/effects/Negate.h"
+%include "../../../include/effects/Pixelate.h"
 %include "../../../include/effects/Saturation.h"
 %include "../../../include/effects/Shift.h"
 %include "../../../include/effects/Wave.h"

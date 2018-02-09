@@ -65,6 +65,9 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 	else if (effect_type == "Negate")
 		return new Negate();
 
+	else if (effect_type == "Pixelate")
+		return new Pixelate();
+
 	else if (effect_type == "Saturation")
 		return new Saturation();
 
@@ -90,6 +93,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Hue().JsonInfo());
 	root.append(Mask().JsonInfo());
 	root.append(Negate().JsonInfo());
+	root.append(Pixelate().JsonInfo());
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
