@@ -160,6 +160,7 @@
 #endif
 
 /* Effects */
+%include "../../../include/effects/Bars.h"
 %include "../../../include/effects/Blur.h"
 %include "../../../include/effects/Brightness.h"
 %include "../../../include/effects/ChromaKey.h"

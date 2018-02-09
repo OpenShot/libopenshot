@@ -41,6 +41,9 @@ string EffectInfo::Json() {
 // Create a new effect instance
 EffectBase* EffectInfo::CreateEffect(string effect_type) {
 	// Init the matching effect object
+	if (effect_type == "Bars")
+		return new Bars();
+
 	if (effect_type == "Blur")
 		return new Blur();
 
@@ -79,6 +82,7 @@ Json::Value EffectInfo::JsonValue() {
 	Json::Value root;
 
 	// Append info JSON from each supported effect
+	root.append(Bars().JsonInfo());
 	root.append(Blur().JsonInfo());
 	root.append(Brightness().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
