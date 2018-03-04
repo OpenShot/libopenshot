@@ -847,8 +847,27 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		if (replaceSamples)
 			audio->clear(destChannel, destStartSample, numSamples);
 
+		// Get max volume of the current audio data
+		float current_max_volume = audio->getMagnitude(destChannel, destStartSample, numSamples);
+
+		// Determine max volume of new audio data (before we add them together)
+		float new_max_volume = 0.0;
+		for (int sample=0; sample<numSamples; sample++) {
+			if (source[sample] > new_max_volume)
+				new_max_volume = source[sample];
+		}
+
+		// Determine volume adjustments (to prevent overflows)
+		float sum_volumes = current_max_volume + new_max_volume;
+		float gainFactor = gainToApplyToSource;
+		if (sum_volumes > 0.0) {
+			// Reduce both sources by this amount (existing samples and new samples)
+			gainFactor = ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;
+			audio->applyGain(gainFactor);
+		}
+
 		// Add samples to frame's audio buffer
-		audio->addFrom(destChannel, destStartSample, source, numSamples, gainToApplyToSource);
+		audio->addFrom(destChannel, destStartSample, source, numSamples, gainFactor);
 		has_audio_data = true;
 	}
 }
