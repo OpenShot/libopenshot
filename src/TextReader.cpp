@@ -154,7 +154,7 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 		std::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
 		copy_image->modifyImage(); // actually copy the image data to this object
 		//TODO: Reimplement this with QImage
-		//image_frame->AddImage(copy_image);
+		image_frame->AddMagickImage(copy_image);
 
 		// return frame object
 		return image_frame;
