@@ -36,34 +36,44 @@ using namespace openshot;
 
 int main(int argc, char* argv[]) {
 
-    // Create and open reader
-    FFmpegReader r("/home/jonathan/sintel-120fps-crash.mp4");
-    r.Open();
+    FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+    r9.Open();
+    r9.DisplayInfo();
 
-    // Enable debug logging
-    ZmqLogger::Instance()->Enable(false);
-    ZmqLogger::Instance()->Path("/home/jonathan/.openshot_qt/libopenshot2.log");
-    CrashHandler::Instance();
+    /* WRITER ---------------- */
+    FFmpegWriter w9("/home/jonathan/metadata.mp4");
 
-    // Loop a few times
-    for (int attempt = 1; attempt < 10; attempt++) {
-        cout << "** Attempt " << attempt << " **" << endl;
+    // Set options
+    w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
+    w9.SetVideoOptions(true, "libx264", r9.info.fps, 1024, 576, Fraction(1,1), false, false, 3000000);
 
-    // Read every frame in reader as fast as possible
-    for (int64_t frame_number = 1; frame_number < r.info.video_length; frame_number++) {
-        // Get frame object
-        std::shared_ptr<Frame> f = r.GetFrame(frame_number);
+    w9.info.metadata["title"] = "testtest";
+	w9.info.metadata["artist"] = "aaa";
+	w9.info.metadata["album"] = "bbb";
+	w9.info.metadata["year"] = "2015";
+	w9.info.metadata["description"] = "ddd";
+	w9.info.metadata["comment"] = "eee";
+	w9.info.metadata["comment"] = "comment";
+    w9.info.metadata["copyright"] = "copyright OpenShot!";
 
-        // Print frame numbers
-        cout << frame_number << " [" << f->number << "], " << flush;
-        if (frame_number % 10 == 0)
-            cout << endl;
-        }
+    // Open writer
+    w9.Open();
+
+    for (long int frame = 1; frame <= 100; frame++)
+    {
+        //int frame_number = (rand() % 750) + 1;
+        int frame_number = frame;
+        std::shared_ptr<Frame> f = r9.GetFrame(frame_number);
+        w9.WriteFrame(f);
     }
-    cout << "Completed successfully!" << endl;
 
-    // Close reader
-    r.Close();
+    // Close writer & reader
+    w9.Close();
+
+    // Close timeline
+    r9.Close();
+
+	cout << "Completed successfully!" << endl;
 
     return 0;
 }

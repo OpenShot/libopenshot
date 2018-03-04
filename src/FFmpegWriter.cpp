@@ -335,6 +335,13 @@ void FFmpegWriter::WriteHeader()
 
 	// Write the stream header, if any
 	// TODO: add avoptions / parameters instead of NULL
+
+	// Add general metadata (if any)
+	for(std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter)
+	{
+		av_dict_set(&oc->metadata, iter->first.c_str(), iter->second.c_str(), 0);
+	}
+
 	avformat_write_header(oc, NULL);
 
 	// Mark as 'written'
@@ -1018,6 +1025,12 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	audio_encoder_buffer_size = AUDIO_PACKET_ENCODING_SIZE;
 	audio_encoder_buffer = new uint8_t[audio_encoder_buffer_size];
 
+	// Add audio metadata (if any)
+	for(std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter)
+	{
+		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
+	}
+
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
 
 }
@@ -1045,6 +1058,12 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
+
+	// Add video metadata (if any)
+	for(std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter)
+	{
+		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
+	}
 
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count, "", -1, "", -1, "", -1, "", -1, "", -1);
 
