@@ -57,42 +57,6 @@ void Mask::init_effect_details()
 	info.has_video = true;
 }
 
-// Get grayscale mask image
-void Mask::set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast)
-{
-	// Get pixels for mask image
-	unsigned char *pixels = (unsigned char *) mask_frame_image->bits();
-
-	// Convert the mask image to grayscale
-	// Loop through pixels
-	for (int pixel = 0, byte_index=0; pixel < mask_frame_image->width() * mask_frame_image->height(); pixel++, byte_index+=4)
-	{
-		// Get the RGB values from the pixel
-		int R = pixels[byte_index];
-		int G = pixels[byte_index + 1];
-		int B = pixels[byte_index + 2];
-
-		// Get the average luminosity
-		int gray_value = qGray(R, G, B);
-
-		// Adjust the contrast
-		float factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-		gray_value = constrain((factor * (gray_value - 128)) + 128);
-
-		// Adjust the brightness
-		gray_value += (255 * brightness);
-
-		// Constrain the value from 0 to 255
-		gray_value = constrain(gray_value);
-
-		// Set all pixels to gray value
-		pixels[byte_index] = gray_value;
-		pixels[byte_index + 1] = gray_value;
-		pixels[byte_index + 2] = gray_value;
-		pixels[byte_index + 3] = 255;
-	}
-}
-
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
@@ -110,43 +74,64 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		return frame;
 
 	// Get mask image (if missing or different size than frame image)
-	if (!original_mask || !reader->info.has_single_image ||
-            (original_mask && original_mask->size() != frame_image->size())) {
+	if (!original_mask || !reader->info.has_single_image || (original_mask && original_mask->size() != frame_image->size())) {
 		#pragma omp critical (open_mask_reader)
 		{
 			// Only get mask if needed
 			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
 
 			// Resize mask image to match frame size
-			original_mask = std::shared_ptr<QImage>(new QImage(
-					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
-										  Qt::SmoothTransformation)));
+			original_mask = std::shared_ptr<QImage>(new QImage(mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 		}
 	}
 
-	// Convert mask to grayscale and resize to frame size
-	std::shared_ptr<QImage> mask = std::shared_ptr<QImage>(new QImage(*original_mask));
-	set_grayscale_mask(mask, frame_image->width(), frame_image->height(), brightness.GetValue(frame_number), contrast.GetValue(frame_number));
-
-	// Get pixels for frame image
+	// Get pixel arrays
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	unsigned char *mask_pixels = (unsigned char *) mask->bits();
+	unsigned char *mask_pixels = (unsigned char *) original_mask->bits();
 
-	// Convert the mask image to grayscale
-	// Loop through pixels
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+	int R = 0;
+	int G = 0;
+	int B = 0;
+	int A = 0;
+	int gray_value = 0;
+	float factor = 0.0;
+	double contrast_value = (contrast.GetValue(frame_number));
+	double brightness_value = (brightness.GetValue(frame_number));
+
+	// Loop through mask pixels, and apply average gray value to frame alpha channel
+	for (int pixel = 0, byte_index=0; pixel < original_mask->width() * original_mask->height(); pixel++, byte_index+=4)
 	{
 		// Get the RGB values from the pixel
-		int Frame_Alpha = pixels[byte_index + 3];
-		int Mask_Value = constrain(Frame_Alpha - (int)mask_pixels[byte_index]); // Red pixel (all colors should have the same value here)
+		R = mask_pixels[byte_index];
+		G = mask_pixels[byte_index + 1];
+		B = mask_pixels[byte_index + 2];
 
-		// Set all pixels to gray value
-		pixels[byte_index + 3] = Mask_Value;
+		// Get the average luminosity
+		gray_value = qGray(R, G, B);
+
+		// Adjust the contrast
+		factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
+		gray_value = constrain((factor * (gray_value - 128)) + 128);
+
+		// Adjust the brightness
+		gray_value += (255 * brightness_value);
+
+		// Constrain the value from 0 to 255
+		gray_value = constrain(gray_value);
+
+		// Set the alpha channel to the gray value
+		if (replace_image) {
+			// Replace frame pixels with gray value
+			pixels[byte_index + 0] = gray_value;
+			pixels[byte_index + 1] = gray_value;
+			pixels[byte_index + 2] = gray_value;
+		} else {
+			// Set alpha channel
+			A = pixels[byte_index + 3];
+			pixels[byte_index + 3] = constrain(A - gray_value);
+		}
+
 	}
-
-	// Replace the frame's image with the current mask (good for debugging)
-	if (replace_image)
-		frame->AddImage(mask); // not typically called when using a mask
 
 	// return the modified frame
 	return frame;

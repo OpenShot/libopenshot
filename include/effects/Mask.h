@@ -66,9 +66,6 @@ namespace openshot
 		ReaderBase *reader;
 		std::shared_ptr<QImage> original_mask;
 
-		/// Get grayscale mask image
-		void set_grayscale_mask(std::shared_ptr<QImage> mask_frame_image, int width, int height, float brightness, float contrast);
-
 		/// Init effect settings
 		void init_effect_details();
 
