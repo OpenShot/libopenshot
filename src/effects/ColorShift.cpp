@@ -30,7 +30,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-ColorShift::ColorShift() : red_x(0.0), red_y(0.0), green_x(0.0), green_y(0.0), blue_x(0.0), blue_y(0.0), alpha_x(0.0), alpha_y(0.0) {
+ColorShift::ColorShift() : red_x(-0.05), red_y(0.0), green_x(0.05), green_y(0.0), blue_x(0.0), blue_y(0.0), alpha_x(0.0), alpha_y(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
