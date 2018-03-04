@@ -33,6 +33,7 @@
 #include "effects/Blur.h"
 #include "effects/Brightness.h"
 #include "effects/ChromaKey.h"
+#include "effects/ColorShift.h"
 #include "effects/Deinterlace.h"
 #include "effects/Hue.h"
 #include "effects/Mask.h"
