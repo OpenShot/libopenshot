@@ -739,7 +739,7 @@ void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage:
 
 		// Always convert to RGBA8888 (if different)
 		if (image->format() != QImage::Format_RGBA8888)
-			image->convertToFormat(QImage::Format_RGBA8888);
+			*image  = image->convertToFormat(QImage::Format_RGBA8888);
 
 			// Update height and width
 		width = image->width();
@@ -763,7 +763,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 
 		// Always convert to RGBA8888 (if different)
 		if (image->format() != QImage::Format_RGBA8888)
-			image->convertToFormat(QImage::Format_RGBA8888);
+			*image = image->convertToFormat(QImage::Format_RGBA8888);
 
 		// Update height and width
 		width = image->width();
