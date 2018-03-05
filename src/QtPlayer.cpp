@@ -117,7 +117,7 @@ int QtPlayer::Position()
 void QtPlayer::Seek(int64_t new_frame)
 {
 	// Check for seek
-	if (new_frame > 0) {
+	if (reader && threads_started && new_frame > 0) {
 		// Notify cache thread that seek has occurred
 		p->videoCache->Seek(new_frame);
 
@@ -138,11 +138,13 @@ void QtPlayer::Stop()
 	mode = PLAYBACK_STOPPED;
 
 	// Notify threads of stopping
-	p->videoCache->Stop();
-	p->audioPlayback->Stop();
+	if (reader && threads_started) {
+		p->videoCache->Stop();
+		p->audioPlayback->Stop();
 
-	// Kill all threads
-	p->stopPlayback();
+		// Kill all threads
+		p->stopPlayback();
+	}
 
 	p->video_position = 0;
 	threads_started = false;
