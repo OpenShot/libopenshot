@@ -165,6 +165,7 @@
 %include "../../../include/effects/Brightness.h"
 %include "../../../include/effects/ChromaKey.h"
 %include "../../../include/effects/ColorShift.h"
+%include "../../../include/effects/Crop.h"
 %include "../../../include/effects/Deinterlace.h"
 %include "../../../include/effects/Hue.h"
 %include "../../../include/effects/Mask.h"
