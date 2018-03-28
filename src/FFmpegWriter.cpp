@@ -76,7 +76,7 @@ void FFmpegWriter::auto_detect_format()
 		throw InvalidFormat("Could not deduce output format from file extension.", path);
 
 	// Allocate the output media context
-	oc = avformat_alloc_context();
+	AV_OUTPUT_CONTEXT(&oc, path.c_str());
 	if (!oc)
 		throw OutOfMemory("Could not allocate memory for AVFormatContext.", path);
 
@@ -211,12 +211,19 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 {
 	// Declare codec context
 	AVCodecContext *c = NULL;
+	AVStream *st = NULL;
 	stringstream convert(value);
 
-	if (info.has_video && stream == VIDEO_STREAM && video_st)
-		c = video_st->codec;
-	else if (info.has_audio && stream == AUDIO_STREAM && audio_st)
-		c = audio_st->codec;
+	if (info.has_video && stream == VIDEO_STREAM && video_st) {
+		st = video_st;
+		// Get codec context
+		c = AV_GET_CODEC_PAR_CONTEXT(st, video_codec);
+	}
+	else if (info.has_audio && stream == AUDIO_STREAM && audio_st) {
+		st = audio_st;
+		// Get codec context
+		c = AV_GET_CODEC_PAR_CONTEXT(st, audio_codec);
+	}
 	else
 		throw NoStreamsFound("The stream was not found. Be sure to call PrepareStreams() first.", path);
 
@@ -226,11 +233,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 	// Was a codec / stream found?
 	if (c)
 		// Find AVOption (if it exists)
-		#if LIBAVFORMAT_VERSION_MAJOR <= 53
-			option = av_find_opt(c->priv_data, name.c_str(), NULL, NULL, NULL);
-		#else
-			option = av_opt_find(c->priv_data, name.c_str(), NULL, 0, 0);
-		#endif
+		option = AV_OPTION_FIND(c->priv_data, name.c_str());
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
@@ -283,11 +286,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 		else
 			// Set AVOption
-			#if LIBAVFORMAT_VERSION_MAJOR <= 53
-				av_set_string3 (c->priv_data, name.c_str(), value.c_str(), 0, NULL);
-			#else
-				av_opt_set (c->priv_data, name.c_str(), value.c_str(), 0);
-			#endif
+			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
 
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::SetOption (" + (string)name + ")", "stream == VIDEO_STREAM", stream == VIDEO_STREAM, "", -1, "", -1, "", -1, "", -1, "", -1);
 
@@ -342,7 +341,9 @@ void FFmpegWriter::WriteHeader()
 		av_dict_set(&oc->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	avformat_write_header(oc, NULL);
+	if (avformat_write_header(oc, NULL) != 0) {
+					throw InvalidFile("Could not write header to file.", path);
+	};
 
 	// Mark as 'written'
 	write_header = true;
@@ -548,10 +549,10 @@ void FFmpegWriter::WriteTrailer()
 // Flush encoders
 void FFmpegWriter::flush_encoders()
 {
-    if (info.has_audio && audio_codec && audio_st->codec->codec_type == AVMEDIA_TYPE_AUDIO && audio_codec->frame_size <= 1)
-        return;
-    if (info.has_video && video_st->codec->codec_type == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && video_codec->codec->id == AV_CODEC_ID_RAWVIDEO)
-        return;
+	if (info.has_audio && audio_codec && AV_GET_CODEC_TYPE(audio_st) == AVMEDIA_TYPE_AUDIO && AV_GET_CODEC_ATTRIBUTES(audio_st, audio_codec)->frame_size <= 1)
+		return;
+	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
+		return;
 
     int error_code = 0;
     int stop_encoding = 1;
@@ -575,29 +576,37 @@ void FFmpegWriter::flush_encoders()
 			int got_packet = 0;
 			int error_code = 0;
 
-			#if LIBAVFORMAT_VERSION_MAJOR >= 54
-				// Newer versions of FFMpeg
-			error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
-
+			#if IS_FFMPEG_3_2
+			#pragma omp critical (write_video_packet)
+			{
+				// Encode video packet (latest version of FFmpeg)
+				error_code = avcodec_send_frame(video_codec, NULL);
+				got_packet = 0;
+			}
 			#else
-				// Older versions of FFmpeg (much sloppier)
 
-				// Encode Picture and Write Frame
-				int video_outbuf_size = 0;
+				#if LIBAVFORMAT_VERSION_MAJOR >= 54
+				// Encode video packet (older than FFmpeg 3.2)
+				error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
 
-				/* encode the image */
-				int out_size = avcodec_encode_video(video_codec, NULL, video_outbuf_size, NULL);
+				#else
+					// Encode video packet (even older version of FFmpeg)
+					int video_outbuf_size = 0;
 
-				/* if zero size, it means the image was buffered */
-				if (out_size > 0) {
-					if(video_codec->coded_frame->key_frame)
-						pkt.flags |= AV_PKT_FLAG_KEY;
-					pkt.data= video_outbuf;
-					pkt.size= out_size;
+					/* encode the image */
+					int out_size = avcodec_encode_video(video_codec, NULL, video_outbuf_size, NULL);
 
-					// got data back (so encode this frame)
-					got_packet = 1;
-				}
+					/* if zero size, it means the image was buffered */
+					if (out_size > 0) {
+						if(video_codec->coded_frame->key_frame)
+							pkt.flags |= AV_PKT_FLAG_KEY;
+						pkt.data= video_outbuf;
+						pkt.size= out_size;
+
+						// got data back (so encode this frame)
+						got_packet = 1;
+					}
+				#endif
 			#endif
 
 			if (error_code < 0) {
@@ -651,7 +660,12 @@ void FFmpegWriter::flush_encoders()
 
 			/* encode the image */
 			int got_packet = 0;
+			#if IS_FFMPEG_3_2
+			avcodec_send_frame(audio_codec, NULL);
+			got_packet = 0;
+			#else
 			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
+			#endif
 			if (error_code < 0) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
 			}
@@ -692,14 +706,14 @@ void FFmpegWriter::flush_encoders()
 // Close the video codec
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
-	avcodec_close(st->codec);
+	AV_FREE_CONTEXT(video_codec);
 	video_codec = NULL;
 }
 
 // Close the audio codec
 void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 {
-	avcodec_close(st->codec);
+	AV_FREE_CONTEXT(audio_codec);
 	audio_codec = NULL;
 
 	// Clear buffers
@@ -743,7 +757,7 @@ void FFmpegWriter::Close()
 
 	// Free the streams
 	for (int i = 0; i < oc->nb_streams; i++) {
-		av_freep(&oc->streams[i]->codec);
+		av_freep(AV_GET_CODEC_ATTRIBUTES(&oc->streams[i], &oc->streams[i]));
 		av_freep(&oc->streams[i]);
 	}
 
@@ -796,14 +810,8 @@ AVStream* FFmpegWriter::add_audio_stream()
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
 	// Create a new audio stream
-	st = avformat_new_stream(oc, codec);
-	if (!st)
-		throw OutOfMemory("Could not allocate memory for the audio stream.", path);
+	AV_FORMAT_NEW_STREAM(oc, audio_codec, codec, st)
 
-	// Set default values
-    avcodec_get_context_defaults3(st->codec, codec);
-
-	c = st->codec;
 	c->codec_id = codec->id;
 #if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -867,6 +875,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
+	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_audio_stream", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->channels", c->channels, "c->sample_fmt", c->sample_fmt, "c->channel_layout", c->channel_layout, "c->sample_rate", c->sample_rate);
 
 	return st;
@@ -878,20 +887,14 @@ AVStream* FFmpegWriter::add_video_stream()
 	AVCodecContext *c;
 	AVStream *st;
 
-	// Find the audio codec
+	// Find the video codec
 	AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
-	// Create a new stream
-	st = avformat_new_stream(oc, codec);
-	if (!st)
-		throw OutOfMemory("Could not allocate memory for the video stream.", path);
+	// Create a new video stream
+	AV_FORMAT_NEW_STREAM(oc, video_codec, codec, st)
 
-	// Set default values
-    avcodec_get_context_defaults3(st->codec, codec);
-
-	c = st->codec;
 	c->codec_id = codec->id;
 #if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -923,6 +926,10 @@ AVStream* FFmpegWriter::add_video_stream()
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
+	#if LIBAVFORMAT_VERSION_MAJOR >= 55
+	c->framerate = av_inv_q(c->time_base);
+	#endif
+	st->avg_frame_rate = av_inv_q(c->time_base);
 	st->time_base.num = info.video_timebase.num;
 	st->time_base.den = info.video_timebase.den;
 
@@ -965,6 +972,7 @@ AVStream* FFmpegWriter::add_video_stream()
         }
     }
 
+	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE, "", -1);
 
 	return st;
@@ -974,7 +982,7 @@ AVStream* FFmpegWriter::add_video_stream()
 void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 {
 	AVCodec *codec;
-	audio_codec = st->codec;
+	AV_GET_CODEC_FROM_STREAM(st, audio_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
 	audio_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
@@ -989,6 +997,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	// Open the codec
 	if (avcodec_open2(audio_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
+	AV_COPY_PARAMS_FROM_CONTEXT(st, audio_codec);
 
 	// Calculate the size of the input frame (i..e how many samples per packet), and the output buffer
 	// TODO: Ugly hack for PCM codecs (will be removed ASAP with new PCM support to compute the input frame size in samples
@@ -996,7 +1005,8 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 		// No frame size found... so calculate
 		audio_input_frame_size = 50000 / info.channels;
 
-		switch (st->codec->codec_id) {
+		int s = AV_FIND_DECODER_CODEC_ID(st);
+		switch (s) {
 		case AV_CODEC_ID_PCM_S16LE:
 		case AV_CODEC_ID_PCM_S16BE:
 		case AV_CODEC_ID_PCM_U16LE:
@@ -1039,7 +1049,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 {
 	AVCodec *codec;
-	video_codec = st->codec;
+	AV_GET_CODEC_FROM_STREAM(st, video_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
 	video_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
@@ -1047,7 +1057,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	/* find the video encoder */
 	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (!codec)
-		codec = avcodec_find_encoder(video_codec->codec_id);
+		codec = avcodec_find_encoder(AV_FIND_DECODER_CODEC_ID(st));
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
@@ -1058,6 +1068,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, NULL) < 0)
 		throw InvalidCodec("Could not open codec", path);
+	AV_COPY_PARAMS_FROM_CONTEXT(st, video_codec);
 
 	// Add video metadata (if any)
 	for(std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter)
@@ -1345,8 +1356,39 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			/* encode the audio samples */
 			int got_packet_ptr = 0;
-			int error_code = avcodec_encode_audio2(audio_codec, &pkt, frame_final, &got_packet_ptr);
 
+			#if IS_FFMPEG_3_2
+			// Encode audio (latest version of FFmpeg)
+			int error_code;
+			int ret = 0;
+			int frame_finished = 0;
+			error_code = ret =  avcodec_send_frame(audio_codec, frame_final);
+			if (ret < 0 && ret !=  AVERROR(EINVAL) && ret != AVERROR_EOF) {
+				avcodec_send_frame(audio_codec, NULL);
+			}
+			else {
+				if (ret >= 0)
+					pkt.size = 0;
+				ret =  avcodec_receive_packet(audio_codec, &pkt);
+				if (ret >= 0)
+					frame_finished = 1;
+				if(ret == AVERROR(EINVAL) || ret == AVERROR_EOF) {
+					avcodec_flush_buffers(audio_codec);
+					ret = 0;
+				}
+				if (ret >= 0) {
+					ret = frame_finished;
+				}
+			}
+			if (!pkt.data && !frame_finished)
+			{
+				ret = -1;
+			}
+			got_packet_ptr = ret;
+			#else
+			// Encode audio (older versions of FFmpeg)
+			int error_code = avcodec_encode_audio2(audio_codec, &pkt, frame_final, &got_packet_ptr);
+			#endif
 			/* if zero size, it means the image was buffered */
 			if (error_code == 0 && got_packet_ptr) {
 
@@ -1416,7 +1458,7 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 		throw OutOfMemory("Could not allocate AVFrame", path);
 
 	// Determine required buffer size and allocate buffer
-	*buffer_size = avpicture_get_size(pix_fmt, width, height);
+	*buffer_size = AV_GET_IMAGE_SIZE(pix_fmt, width, height);
 
 	// Create buffer (if not provided)
 	if (!new_buffer)
@@ -1424,7 +1466,7 @@ AVFrame* FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 		// New Buffer
 		new_buffer = (uint8_t*)av_malloc(*buffer_size * sizeof(uint8_t));
 		// Attach buffer to AVFrame
-		avpicture_fill((AVPicture *)new_av_frame, new_buffer, pix_fmt, width, height);
+		AV_COPY_PICTURE_DATA(new_av_frame, new_buffer, pix_fmt, width, height);
 		new_av_frame->width = width;
 		new_av_frame->height = height;
 		new_av_frame->format = pix_fmt;
@@ -1468,10 +1510,14 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 
 		// Init AVFrame for source image & final (converted image)
 		frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t*) pixels);
+		#if IS_FFMPEG_3_2
+		AVFrame *frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
+		#else
 		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final, NULL);
+		#endif
 
 		// Fill with data
-		avpicture_fill((AVPicture *) frame_source, (uint8_t*)pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
+        AV_COPY_PICTURE_DATA(frame_source, (uint8_t*)pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "", -1, "", -1, "", -1);
 
 		// Resize & convert pixel format
@@ -1539,30 +1585,60 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = 0;
-		#if LIBAVFORMAT_VERSION_MAJOR >= 54
-			// Newer versions of FFMpeg
-			error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
-
-		#else
-			// Older versions of FFmpeg (much sloppier)
-
-			// Encode Picture and Write Frame
-			int video_outbuf_size = 200000;
-			video_outbuf = (uint8_t*) av_malloc(200000);
-
-			/* encode the image */
-			int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
-
-			/* if zero size, it means the image was buffered */
-			if (out_size > 0) {
-				if(video_codec->coded_frame->key_frame)
-					pkt.flags |= AV_PKT_FLAG_KEY;
-				pkt.data= video_outbuf;
-				pkt.size= out_size;
-
-				// got data back (so encode this frame)
-				got_packet_ptr = 1;
+		#if IS_FFMPEG_3_2
+		// Write video packet (latest version of FFmpeg)
+		int frameFinished = 0;
+		int ret = avcodec_send_frame(video_codec, frame_final);
+		error_code = ret;
+		if (ret < 0 ) {
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+			if (ret == AVERROR(EAGAIN) )
+				cerr << "Frame EAGAIN" << "\n";
+			if (ret == AVERROR_EOF )
+				cerr << "Frame AVERROR_EOF" << "\n";
+			avcodec_send_frame(video_codec, NULL);
+		}
+		else {
+			while (ret >= 0) {
+				ret = avcodec_receive_packet(video_codec, &pkt);
+		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+					avcodec_flush_buffers(video_codec);
+					got_packet_ptr = 0;
+		break;
+				}
+				if (ret == 0) {
+					got_packet_ptr = 1;
+					break;
+				}
 			}
+		}
+		#else
+			#if LIBAVFORMAT_VERSION_MAJOR >= 54
+				// Write video packet (older than FFmpeg 3.2)
+				error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
+				if (error_code != 0 )
+					cerr << "Frame AVERROR_EOF" << "\n";
+				if (got_packet_ptr == 0 )
+					cerr << "Frame gotpacket error" << "\n";
+			#else
+				// Write video packet (even older versions of FFmpeg)
+				int video_outbuf_size = 200000;
+				video_outbuf = (uint8_t*) av_malloc(200000);
+
+				/* encode the image */
+				int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
+
+				/* if zero size, it means the image was buffered */
+				if (out_size > 0) {
+					if(video_codec->coded_frame->key_frame)
+						pkt.flags |= AV_PKT_FLAG_KEY;
+					pkt.data= video_outbuf;
+					pkt.size= out_size;
+
+					// got data back (so encode this frame)
+					got_packet_ptr = 1;
+				}
+			#endif
 		#endif
 
 		/* if zero size, it means the image was buffered */
@@ -1612,15 +1688,11 @@ void FFmpegWriter::OutputStreamInfo()
 // Init a collection of software rescalers (thread safe)
 void FFmpegWriter::InitScalers(int source_width, int source_height)
 {
-	// Get the codec
-	AVCodecContext *c;
-	c = video_st->codec;
-
 	// Init software rescalers vector (many of them, one for each thread)
 	for (int x = 0; x < num_of_rescalers; x++)
 	{
 		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, c->pix_fmt, SWS_BILINEAR, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
