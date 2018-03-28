@@ -99,7 +99,7 @@ namespace openshot
 		AVCodecContext *pCodecCtx, *aCodecCtx;
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
-		AVPicture *pFrame;
+		AVFrame *pFrame;
 		bool is_open;
 		bool is_duration_known;
 		bool check_interlace;
@@ -154,9 +154,6 @@ namespace openshot
 		/// Check the working queue, and move finished frames to the finished queue
 		void CheckWorkingFrames(bool end_of_stream, int64_t requested_frame);
 
-		/// Convert image to RGB format
-		void convert_image(int64_t current_frame, AVPicture *copyFrame, int width, int height, PixelFormat pix_fmt);
-
 		/// Convert Frame Number into Audio PTS
 		int64_t ConvertFrameToAudioPTS(int64_t frame_number);
 
@@ -200,7 +197,7 @@ namespace openshot
 		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate it's memory)
-		void RemoveAVFrame(AVPicture*);
+		void RemoveAVFrame(AVFrame*);
 
 		/// Remove AVPacket from cache (and deallocate it's memory)
 		void RemoveAVPacket(AVPacket*);

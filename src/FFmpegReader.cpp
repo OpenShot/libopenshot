@@ -123,11 +123,11 @@ void FFmpegReader::Open()
 		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++)
 		{
 			// Is this a video stream?
-			if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
+			if (AV_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
 				videoStream = i;
 			}
 			// Is this an audio stream?
-			if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
+			if (AV_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
 				audioStream = i;
 			}
 		}
@@ -142,13 +142,17 @@ void FFmpegReader::Open()
 
 			// Set the codec and codec context pointers
 			pStream = pFormatCtx->streams[videoStream];
-			pCodecCtx = pFormatCtx->streams[videoStream]->codec;
+
+			// Find the codec ID from stream
+			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(pStream);
+
+			// Get codec and codec context from stream
+			AVCodec *pCodec = avcodec_find_decoder(codecId);
+			pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
 			pCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
-			// Find the decoder for the video stream
-			AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
 			if (pCodec == NULL) {
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			}
@@ -168,13 +172,17 @@ void FFmpegReader::Open()
 
 			// Get a pointer to the codec context for the audio stream
 			aStream = pFormatCtx->streams[audioStream];
-			aCodecCtx = pFormatCtx->streams[audioStream]->codec;
+
+			// Find the codec ID from stream
+			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(aStream);
+
+			// Get codec and codec context from stream
+			AVCodec *aCodec = avcodec_find_decoder(codecId);
+			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
 			aCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
-			// Find the decoder for the audio stream
-			AVCodec *aCodec = avcodec_find_decoder(aCodecCtx->codec_id);
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 			}
@@ -222,12 +230,12 @@ void FFmpegReader::Close()
 		if (info.has_video)
 		{
 			avcodec_flush_buffers(pCodecCtx);
-			avcodec_close(pCodecCtx);
+			AV_FREE_CONTEXT(pCodecCtx);
 		}
 		if (info.has_audio)
 		{
 			avcodec_flush_buffers(aCodecCtx);
-			avcodec_close(aCodecCtx);
+			AV_FREE_CONTEXT(aCodecCtx);
 		}
 
 		// Clear final cache
@@ -269,12 +277,12 @@ void FFmpegReader::UpdateAudioInfo()
 	info.has_audio = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.acodec = aCodecCtx->codec->name;
-	info.channels = aCodecCtx->channels;
-	if (aCodecCtx->channel_layout == 0)
-		aCodecCtx->channel_layout = av_get_default_channel_layout( aCodecCtx->channels );
-	info.channel_layout = (ChannelLayout) aCodecCtx->channel_layout;
-	info.sample_rate = aCodecCtx->sample_rate;
-	info.audio_bit_rate = aCodecCtx->bit_rate;
+	info.channels = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
+	if (AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout == 0)
+		AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout = av_get_default_channel_layout( AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels );
+	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
+	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
+	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
 
 	// Set audio timebase
 	info.audio_timebase.num = aStream->time_base.num;
@@ -318,8 +326,8 @@ void FFmpegReader::UpdateVideoInfo()
 	// Set values of FileInfo struct
 	info.has_video = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
-	info.height = pCodecCtx->height;
-	info.width = pCodecCtx->width;
+	info.height = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->height;
+	info.width = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->width;
 	info.vcodec = pCodecCtx->codec->name;
 	info.video_bit_rate = pFormatCtx->bit_rate;
 	if (!check_fps)
@@ -334,18 +342,17 @@ void FFmpegReader::UpdateVideoInfo()
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
 		info.pixel_ratio.den = pStream->sample_aspect_ratio.den;
 	}
-	else if (pCodecCtx->sample_aspect_ratio.num != 0)
+	else if (AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->sample_aspect_ratio.num != 0)
 	{
-		info.pixel_ratio.num = pCodecCtx->sample_aspect_ratio.num;
-		info.pixel_ratio.den = pCodecCtx->sample_aspect_ratio.den;
+		info.pixel_ratio.num = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->sample_aspect_ratio.num;
+		info.pixel_ratio.den = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->sample_aspect_ratio.den;
 	}
 	else
 	{
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
 	}
-
-	info.pixel_format = pCodecCtx->pix_fmt;
+	info.pixel_format = AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx);
 
 	// Calculate the DAR (display aspect ratio)
 	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
@@ -697,28 +704,60 @@ int FFmpegReader::GetNextPacket()
 bool FFmpegReader::GetAVFrame()
 {
 	int frameFinished = -1;
+	int ret = 0;
 
 	// Decode video frame
 	AVFrame *next_frame = AV_ALLOCATE_FRAME();
 	#pragma omp critical (packet_cache)
-	avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
-
-	// is frame finished
-	if (frameFinished)
 	{
-		// AVFrames are clobbered on the each call to avcodec_decode_video, so we
-		// must make a copy of the image data before this method is called again.
-		pFrame = new AVPicture();
-		avpicture_alloc(pFrame, pCodecCtx->pix_fmt, info.width, info.height);
-		av_picture_copy(pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width, info.height);
-
-		// Detect interlaced frame (only once)
-		if (!check_interlace)
-		{
-			check_interlace = true;
-			info.interlaced_frame = next_frame->interlaced_frame;
-			info.top_field_first = next_frame->top_field_first;
+	#if IS_FFMPEG_3_2
+		frameFinished = 0;
+		ret = avcodec_send_packet(pCodecCtx, packet);
+		if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		}
+		else {
+			pFrame = new AVFrame();
+			while (ret >= 0) {
+				ret =  avcodec_receive_frame(pCodecCtx, next_frame);
+		  if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+		  break;
+				}
+				// TODO also handle possible further frames
+				// Use only the first frame like avcodec_decode_video2
+				if (frameFinished == 0 ) {
+					frameFinished = 1;
+					av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
+					av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
+												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
+					if (!check_interlace)	{
+						check_interlace = true;
+						info.interlaced_frame = next_frame->interlaced_frame;
+						info.top_field_first = next_frame->top_field_first;
+					}
+				}
+			}
+		}
+	#else
+		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
+
+		// is frame finished
+		if (frameFinished) {
+			// AVFrames are clobbered on the each call to avcodec_decode_video, so we
+			// must make a copy of the image data before this method is called again.
+			pFrame = AV_ALLOCATE_FRAME();
+			avpicture_alloc((AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
+			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
+							info.height);
+
+			// Detect interlaced frame (only once)
+			if (!check_interlace) {
+				check_interlace = true;
+				info.interlaced_frame = next_frame->interlaced_frame;
+				info.top_field_first = next_frame->top_field_first;
+			}
+		}
+	#endif
 	}
 
 	// deallocate the frame
@@ -800,11 +839,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Before)", "requested_frame", requested_frame, "current_frame", current_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Init some things local (for OpenMP)
-	PixelFormat pix_fmt = pCodecCtx->pix_fmt;
+	PixelFormat pix_fmt = AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx);
 	int height = info.height;
 	int width = info.width;
 	int64_t video_length = info.video_length;
-    AVPicture *my_frame = pFrame;
+	AVFrame *my_frame = pFrame;
 
 	// Add video frame to list of processing video frames
 	const GenericScopedLock<CriticalSection> lock(processingCriticalSection);
@@ -844,17 +883,16 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		}
 
 		// Determine required buffer size and allocate buffer
-		numBytes = avpicture_get_size(PIX_FMT_RGBA, width, height);
+		numBytes = AV_GET_IMAGE_SIZE(PIX_FMT_RGBA, width, height);
+
 		#pragma omp critical (video_buffer)
 		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
-		// Assign appropriate parts of buffer to image planes in pFrameRGB
-		// Note that pFrameRGB is an AVFrame, but AVFrame is a superset
-		// of AVPicture
-		avpicture_fill((AVPicture *) pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
+		// Copy picture data from one AVFrame (or AVPicture) to another one.
+		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
-		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, width,
-													  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
+															  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -925,20 +963,52 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
 	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
-	int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, packet);
+	#pragma omp critical (ProcessAudioPacket)
+	{
+	#if IS_FFMPEG_3_2
+		int ret = 0;
+		frame_finished = 1;
+		while((packet->size > 0 || (!packet->data && frame_finished)) && ret >= 0) {
+			frame_finished = 0;
+			ret =  avcodec_send_packet(aCodecCtx, packet);
+			if (ret < 0 && ret !=  AVERROR(EINVAL) && ret != AVERROR_EOF) {
+				avcodec_send_packet(aCodecCtx, NULL);
+				break;
+			}
+			if (ret >= 0)
+				packet->size = 0;
+			ret =  avcodec_receive_frame(aCodecCtx, audio_frame);
+			if (ret >= 0)
+				frame_finished = 1;
+			if(ret == AVERROR(EINVAL) || ret == AVERROR_EOF) {
+				avcodec_flush_buffers(aCodecCtx);
+				ret = 0;
+			}
+			if (ret >= 0) {
+				ret = frame_finished;
+			}
+		}
+		if (!packet->data && !frame_finished)
+		{
+			ret = -1;
+		}
+	#else
+		int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, packet);
+#endif
+	}
 
 	if (frame_finished) {
 
 		// determine how many samples were decoded
-		int planar = av_sample_fmt_is_planar(aCodecCtx->sample_fmt);
+		int planar = av_sample_fmt_is_planar((AVSampleFormat)AV_GET_CODEC_PIXEL_FORMAT(aStream, aCodecCtx));
 		int plane_size = -1;
 		data_size = av_samples_get_buffer_size(&plane_size,
-				aCodecCtx->channels,
+				AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
 				audio_frame->nb_samples,
-				aCodecCtx->sample_fmt, 1);
+				(AVSampleFormat)(AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx)), 1);
 
 		// Calculate total number of samples
-		packet_samples = audio_frame->nb_samples * aCodecCtx->channels;
+		packet_samples = audio_frame->nb_samples * AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels;
 	}
 
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
@@ -999,7 +1069,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	// Allocate audio buffer
 	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", aCodecCtx->sample_fmt, "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
 	// Create output frame
 	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
@@ -1012,9 +1082,9 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// setup resample context
 	avr = avresample_alloc_context();
-	av_opt_set_int(avr,  "in_channel_layout", aCodecCtx->channel_layout, 0);
-	av_opt_set_int(avr, "out_channel_layout", aCodecCtx->channel_layout, 0);
-	av_opt_set_int(avr,  "in_sample_fmt",     aCodecCtx->sample_fmt,     0);
+	av_opt_set_int(avr,  "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
+	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
+	av_opt_set_int(avr,  "in_sample_fmt",     AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
 	av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
 	av_opt_set_int(avr,  "in_sample_rate",    info.sample_rate,    0);
 	av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
@@ -1767,7 +1837,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 void FFmpegReader::CheckFPS()
 {
 	check_fps = true;
-	avpicture_alloc(pFrame, pCodecCtx->pix_fmt, info.width, info.height);
+	AV_ALLOCATE_IMAGE(pFrame, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), info.width, info.height);
 
 	int first_second_counter = 0;
 	int second_second_counter = 0;
@@ -1878,17 +1948,14 @@ void FFmpegReader::CheckFPS()
 }
 
 // Remove AVFrame from cache (and deallocate it's memory)
-void FFmpegReader::RemoveAVFrame(AVPicture* remove_frame)
+void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
 {
     // Remove pFrame (if exists)
     if (remove_frame)
     {
         // Free memory
-        avpicture_free(remove_frame);
-
-        // Delete the object
-        delete remove_frame;
-    }
+		av_freep(&remove_frame->data[0]);
+	}
 }
 
 // Remove AVPacket from cache (and deallocate it's memory)
