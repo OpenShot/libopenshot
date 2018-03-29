@@ -926,7 +926,7 @@ AVStream* FFmpegWriter::add_video_stream()
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
-	#if LIBAVFORMAT_VERSION_MAJOR >= 55
+	#if LIBAVFORMAT_VERSION_MAJOR >= 56
 	c->framerate = av_inv_q(c->time_base);
 	#endif
 	st->avg_frame_rate = av_inv_q(c->time_base);
