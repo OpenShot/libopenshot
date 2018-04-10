@@ -27,6 +27,19 @@
 
 #include "../include/QtImageReader.h"
 
+// RDA...
+//#define USE_RESVG 1		// 0 = use old method as of 2.4.1, 1 = use resvg library to render svg files
+
+#if USE_RESVG == 1
+// Set up resvg
+#define RESVG_QT_BACKEND
+extern "C" {
+#include <resvg/resvg.h>
+}
+#include <QDir>
+#endif
+// ...RDA
+
 using namespace openshot;
 
 QtImageReader::QtImageReader(string path) : path(path), is_open(false)
@@ -51,9 +64,55 @@ void QtImageReader::Open()
 	// Open reader if not already open
 	if (!is_open)
 	{
+
+// RDA...
+#if USE_RESVG == 1
+		image = std::shared_ptr<QImage>(new QImage());
+		bool success;
+
+		// Only use resvg for files ending in '.svg'
+		if (path.find(".svg") != std::string::npos) {
+			// Init resvg structs
+			resvg_render_tree *rtree = NULL;
+			resvg_options opt;
+			// Init resvg options
+			opt.path = path.c_str();
+			opt.dpi = 144;
+			opt.draw_background = 0;
+			opt.fit_to.type = RESVG_FIT_TO_ORIGINAL;
+
+			// Load the svg data from file
+			char *error;
+			rtree = resvg_parse_rtree_from_file(opt.path, &opt, &error);
+			if (!rtree) {
+				printf("resvg_parse_rtree_from_file error: %s\n", error);
+				resvg_error_msg_destroy(error);
+				abort();
+			}
+			// Render and save the svg image to a cache file
+			char resvg_out[1024];
+			QDir cache_dir = QDir::homePath() + QString("/.openshot_qt/cache");
+			if( ! cache_dir.exists() ) {
+				cache_dir.mkpath( "." );
+			}
+			sprintf( resvg_out, "%s/%s.resvg.png", cache_dir.path().toStdString().c_str(), strrchr(opt.path,'/') );
+			printf( "resvg_out = %s\n", resvg_out );
+			resvg_qt_render_to_image(rtree, &opt, resvg_out);
+			resvg_rtree_destroy(rtree);
+			// Attempt to open the rendered file
+			success = image->load(QString::fromStdString(std::string(resvg_out)));
+		} else {
+			// Attempt to open file (old method)
+			success = image->load(QString::fromStdString(path));
+		}
+#else // old method
+// ...RDA
 		// Attempt to open file
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success = image->load(QString::fromStdString(path));
+// RDA...
+#endif
+// ...RDA
 
 		if (!success)
 			// raise exception

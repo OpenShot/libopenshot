@@ -160,6 +160,19 @@ FIND_PACKAGE(ZMQ REQUIRED)
 # Include FFmpeg headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
+################### RESVG #####################
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG)
+
+# Include FFmpeg headers (needed for compile)
+if (RESVG_FOUND)
+   include_directories(${RESVG_INCLUDE_DIRS})
+
+   # define a global var (used in the C++)
+   add_definitions( -DUSE_RESVG=1 )
+   SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+endif(RESVG_FOUND)
+
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
@@ -276,6 +289,10 @@ SET ( REQUIRED_LIBRARIES
 		${ZMQ_LIBRARIES}
 		)
 		
+		IF (RESVG_FOUND)
+			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${RESVG_LIBRARIES} )
+		ENDIF(RESVG_FOUND)
+
 		IF (OPENMP_FOUND)
 			SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )
 		ENDIF (OPENMP_FOUND)
