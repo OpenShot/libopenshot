@@ -157,8 +157,10 @@ include_directories(${ZMQ_INCLUDE_DIRS})
 # Find resvg library (used for rendering svg files)
 FIND_PACKAGE(RESVG)
 
-# Include resvg headers (needed for compile)
-include_directories(${RESVG_INCLUDE_DIRS})
+if (RESVG_FOUND)
+   # Include resvg headers (needed for compile)
+   include_directories(${RESVG_INCLUDE_DIRS})
+endif(RESVG_FOUND)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
