@@ -155,7 +155,7 @@ void ZmqLogger::Close()
 		// // Close an existing bound publisher socket
 		// publisher->close();
 		// publisher = NULL;
-	}
+	//}
 }
 
 // Append debug information

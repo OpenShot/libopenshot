@@ -37,6 +37,9 @@
 #endif // __cplusplus >= 201703L
 	#include <winsock2.h>
 	#include <windows.h>
+	#include <sstream>
+	#include <iostream>
+	#include <iomanip>
 #if __cplusplus >= 201703L
     #undef byte
 #endif // __cplusplus >= 201703L
