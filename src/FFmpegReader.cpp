@@ -1730,6 +1730,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			// No frames found
 			break;
 
+		// Remove frames which are too old
+		if (f && f->number < requested_frame) {
+			working_cache.Remove(f->number);
+		}
+
 		// Check if this frame is 'missing'
 		CheckMissingFrame(f->number);
 
