@@ -176,6 +176,14 @@ void ZmqLogger::AppendDebugMethod(string method_name, string arg1_name, float ar
 
 		stringstream message;
 		message << fixed << setprecision(4);
+
+		// Prepend current time (hires) to message
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		char timebuf[80];
+		strftime(timebuf, sizeof timebuf, "%F %T", localtime(&ts.tv_sec));
+		message << timebuf << "." << std::setiosflags(std::ios::right) << std::setw(9) << std::setfill('0') << ts.tv_nsec << "  ";
+
 		message << method_name << " (";
 
 		// Add attributes to method JSON
