@@ -916,6 +916,10 @@ AVStream* FFmpegWriter::add_video_stream()
 	c->width = info.width;
 	c->height = info.height;
 
+	// Set aspect ratio of stream
+	c->sample_aspect_ratio.num=info.pixel_ratio.num;
+	c->sample_aspect_ratio.den=info.pixel_ratio.den;
+
 	/* time base: this is the fundamental unit of time (in seconds) in terms
 	 of which frame timestamps are represented. for fixed-fps content,
 	 timebase should be 1/framerate and timestamp increments should be
