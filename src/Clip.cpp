@@ -694,7 +694,6 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", NULL, 0, 8, false, requested_frame);
 	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
-	root["anchor"] = add_property_json("Anchor", anchor, "int", "", NULL, 0, 1, false, requested_frame);
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 
@@ -714,10 +713,6 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["scale"]["choices"].append(add_property_choice_json("Best Fit", SCALE_FIT, scale));
 	root["scale"]["choices"].append(add_property_choice_json("Stretch", SCALE_STRETCH, scale));
 	root["scale"]["choices"].append(add_property_choice_json("None", SCALE_NONE, scale));
-
-	// Add anchor choices (dropdown style)
-	root["anchor"]["choices"].append(add_property_choice_json("Canvas", ANCHOR_CANVAS, anchor));
-	root["anchor"]["choices"].append(add_property_choice_json("Viewport", ANCHOR_VIEWPORT, anchor));
 
 	// Add frame number display choices (dropdown style)
 	root["display"]["choices"].append(add_property_choice_json("None", FRAME_DISPLAY_NONE, display));
