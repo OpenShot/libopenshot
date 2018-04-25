@@ -160,13 +160,8 @@ void FFmpegReader::Open()
 			if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
 				throw InvalidCodec("A video codec was found, but could not be opened.", path);
 
-			// mjpeg is Album or Cover Art 90% of the time.
-			if (pCodecCtx->codec->name == "mjpeg") {
-				info.video_stream_index = -1;				
-			} else {
-				// Update the File Info struct with video details (if a video stream is found)
-				UpdateVideoInfo();
-			}
+			// Update the File Info struct with video details (if a video stream is found)
+			UpdateVideoInfo();
 		}
 
 		// Is there an audio stream?
@@ -328,6 +323,10 @@ void FFmpegReader::UpdateAudioInfo()
 
 void FFmpegReader::UpdateVideoInfo()
 {
+	if (std::string(pCodecCtx->codec->name).find("mjpeg") != string::npos) {
+		return;
+	}
+
 	// Set values of FileInfo struct
 	info.has_video = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
