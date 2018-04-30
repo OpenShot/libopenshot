@@ -81,7 +81,7 @@ void QtImageReader::Open()
 			char *error;
 			rtree = resvg_parse_rtree_from_file(qPrintable(image_file.filePath()), &opt, &error);
 			if (!rtree) {
-				//ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_file error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_file error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
 				resvg_error_msg_destroy(error);
 				abort();
 			}
@@ -91,7 +91,7 @@ void QtImageReader::Open()
 				cache_dir.mkpath( "." );
 			}
 			QFileInfo resvg_out(cache_dir, image_file.fileName() + ".resvg.png");
-			//ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_out = ", -1, qPrintable(resvg_out.filePath()), -1, "", -1, "", -1, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_out = ", -1, qPrintable(resvg_out.filePath()), -1, "", -1, "", -1, "", -1, "", -1);
 			resvg_qt_render_to_image(rtree, &opt, qPrintable(resvg_out.filePath()));
 			resvg_rtree_destroy(rtree);
 			// Attempt to open the rendered file
