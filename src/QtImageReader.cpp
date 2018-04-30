@@ -27,9 +27,6 @@
 
 #include "../include/QtImageReader.h"
 
-// RDA...
-//#define USE_RESVG 1		// 0 = use old method as of 2.4.1, 1 = use resvg library to render svg files
-
 #if USE_RESVG == 1
 // Set up resvg
 #define RESVG_QT_BACKEND
@@ -38,7 +35,6 @@ extern "C" {
 }
 #include <QDir>
 #endif
-// ...RDA
 
 using namespace openshot;
 
@@ -65,54 +61,50 @@ void QtImageReader::Open()
 	if (!is_open)
 	{
 
-// RDA...
 #if USE_RESVG == 1
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success;
 
+		QFileInfo image_file(QString::fromStdString(path));
+
 		// Only use resvg for files ending in '.svg'
-		if (path.find(".svg") != std::string::npos) {
+		if (image_file.suffix() == "svg") {
 			// Init resvg structs
 			resvg_render_tree *rtree = NULL;
 			resvg_options opt;
 			// Init resvg options
-			opt.path = path.c_str();
 			opt.dpi = 144;
 			opt.draw_background = 0;
 			opt.fit_to.type = RESVG_FIT_TO_ORIGINAL;
 
 			// Load the svg data from file
 			char *error;
-			rtree = resvg_parse_rtree_from_file(opt.path, &opt, &error);
+			rtree = resvg_parse_rtree_from_file(qPrintable(image_file.filePath()), &opt, &error);
 			if (!rtree) {
-				printf("resvg_parse_rtree_from_file error: %s\n", error);
+				//ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_file error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
 				resvg_error_msg_destroy(error);
 				abort();
 			}
 			// Render and save the svg image to a cache file
-			char resvg_out[1024];
 			QDir cache_dir = QDir::homePath() + QString("/.openshot_qt/cache");
 			if( ! cache_dir.exists() ) {
 				cache_dir.mkpath( "." );
 			}
-			sprintf( resvg_out, "%s/%s.resvg.png", cache_dir.path().toStdString().c_str(), strrchr(opt.path,'/') );
-			printf( "resvg_out = %s\n", resvg_out );
-			resvg_qt_render_to_image(rtree, &opt, resvg_out);
+			QFileInfo resvg_out(cache_dir, image_file.fileName() + ".resvg.png");
+			//ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_out = ", -1, qPrintable(resvg_out.filePath()), -1, "", -1, "", -1, "", -1, "", -1);
+			resvg_qt_render_to_image(rtree, &opt, qPrintable(resvg_out.filePath()));
 			resvg_rtree_destroy(rtree);
 			// Attempt to open the rendered file
-			success = image->load(QString::fromStdString(std::string(resvg_out)));
+			success = image->load(resvg_out.filePath());
 		} else {
 			// Attempt to open file (old method)
 			success = image->load(QString::fromStdString(path));
 		}
-#else // old method
-// ...RDA
+#else // USE_RESVG == 0 old method
 		// Attempt to open file
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success = image->load(QString::fromStdString(path));
-// RDA...
-#endif
-// ...RDA
+#endif // USE_RESVG
 
 		if (!success)
 			// raise exception

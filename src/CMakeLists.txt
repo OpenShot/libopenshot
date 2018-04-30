@@ -157,14 +157,14 @@ endif(OPENMP_FOUND)
 # Find ZeroMQ library (used for socket communication & logging)
 FIND_PACKAGE(ZMQ REQUIRED)
 
-# Include FFmpeg headers (needed for compile)
+# Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
 FIND_PACKAGE(RESVG)
 
-# Include FFmpeg headers (needed for compile)
+# Include resvg headers (needed for compile)
 if (RESVG_FOUND)
    include_directories(${RESVG_INCLUDE_DIRS})
 
