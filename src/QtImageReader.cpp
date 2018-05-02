@@ -65,10 +65,10 @@ void QtImageReader::Open()
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success;
 
-		QFileInfo image_file(QString::fromStdString(path));
+		QFileInfo image_file_info(QString::fromStdString(path));
 
-		// Only use resvg for files ending in '.svg'
-		if (image_file.suffix() == "svg") {
+		// Only use resvg for files with a '.svg' extension
+		if (image_file_info.suffix() == "svg") {
 			// Init resvg structs
 			resvg_render_tree *rtree = NULL;
 			resvg_options opt;
@@ -77,27 +77,46 @@ void QtImageReader::Open()
 			opt.draw_background = 0;
 			opt.fit_to.type = RESVG_FIT_TO_ORIGINAL;
 
-			// Load the svg data from file
-			char *error;
-			rtree = resvg_parse_rtree_from_file(qPrintable(image_file.filePath()), &opt, &error);
+			// Load the svg data from the file into a byte array
+			QFile image_file(QString::fromStdString(path));
+			image_file.open(QFile::ReadOnly);
+			QByteArray ba = image_file.readAll();
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "ba.size()", ba.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
+
+			// use byte array as data source for resvg
+			char *error = nullptr;
+			rtree = resvg_parse_rtree_from_data(ba.constData(), &opt, &error);
 			if (!rtree) {
-				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_file error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_data error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
 				resvg_error_msg_destroy(error);
 				abort();
 			}
-			// Render and save the svg image to a cache file
-			QDir cache_dir = QDir::homePath() + QString("/.openshot_qt/cache");
-			if( ! cache_dir.exists() ) {
-				cache_dir.mkpath( "." );
+
+			// Play a little game with resvg_size and resvg_rect due to disparate types in resvg_get_image_size() and resvg_qt_render_to_canvas()
+			resvg_size resvgSize;
+			resvg_rect resvgRect;
+			resvg_get_image_size(rtree, &resvgRect.width, &resvgRect.height);
+			resvgSize.width = resvgRect.width;
+			resvgSize.height = resvgRect.height;
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvgRect.width", resvgRect.width, "resvgRect.height", resvgRect.height, "resvgSize.width", resvgSize.width, "resvgSize.height", resvgSize.height, "", -1, "", -1);
+
+			// Render and save the svg image to a canvas which has a QImage object as the output
+			QImage img = QImage(resvgSize.width, resvgSize.height, QImage::Format_ARGB32_Premultiplied);
+			img.fill(Qt::transparent);
+			QPainter p;
+			p.begin(&img);
+			p.setRenderHint(QPainter::Antialiasing);
+			resvg_qt_render_to_canvas(rtree, &opt, resvgSize, &p);
+			p.end();
+
+			// Copy the QImage so it is usable below
+			image = std::shared_ptr<QImage>(new QImage(img));
+			if (image->width() && image->height()) {
+				// Assume a success if the image has height and width
+				success = 1;
 			}
-			QFileInfo resvg_out(cache_dir, image_file.fileName() + ".resvg.png");
-			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_out = ", -1, qPrintable(resvg_out.filePath()), -1, "", -1, "", -1, "", -1, "", -1);
-			resvg_qt_render_to_image(rtree, &opt, qPrintable(resvg_out.filePath()));
-			resvg_rtree_destroy(rtree);
-			// Attempt to open the rendered file
-			success = image->load(resvg_out.filePath());
 		} else {
-			// Attempt to open file (old method)
+			// File does not have a '.svg' extenstion - open file (old method)
 			success = image->load(QString::fromStdString(path));
 		}
 #else // USE_RESVG == 0 old method
