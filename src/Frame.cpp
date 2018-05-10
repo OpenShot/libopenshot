@@ -848,6 +848,11 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 			audio->clear(destChannel, destStartSample, numSamples);
 
 		// Get max volume of the current audio data
+		// TODO: This always appears to be 0, which is probably not expected since that means gainFactor is always multiplied by 1.0 below.
+		// "sum_volumes = current_max_volume + new_max_volume" is then alwasy "sum_volumes = 0 + new_max_volume",
+		// which makes "gainFactor *= ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;"
+		// which simplifies to "gainFactor *= new_max_volume / new_max_volume;" aka "gainFactor *= 1.0"
+		// - Rich Alloway
 		float current_max_volume = audio->getMagnitude(destChannel, destStartSample, numSamples);
 
 		// Determine max volume of new audio data (before we add them together)
@@ -862,8 +867,9 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		float gainFactor = gainToApplyToSource;
 		if (sum_volumes > 0.0) {
 			// Reduce both sources by this amount (existing samples and new samples)
-			gainFactor = ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;
+			gainFactor *= ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;
 			audio->applyGain(gainFactor);
+			ZmqLogger::Instance()->AppendDebugMethod("Frame::AddAudio", "gainToApplyToSource", gainToApplyToSource, "gainFactor", gainFactor, "sum_volumes", sum_volumes, "current_max_volume", current_max_volume, "new_max_volume", new_max_volume, "((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes", ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes);
 		}
 
 		// Add samples to frame's audio buffer
