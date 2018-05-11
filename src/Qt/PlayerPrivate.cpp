@@ -129,7 +129,7 @@ namespace openshot
 			}
 
 			// Sleep (leaving the video frame on the screen for the correct amount of time)
-			if (sleep_time > 0) sleep(sleep_time);
+			if (sleep_time > 0) usleep(sleep_time * 1000);
 
 		}
     }

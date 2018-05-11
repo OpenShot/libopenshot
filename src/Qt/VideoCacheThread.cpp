@@ -107,7 +107,7 @@ namespace openshot
 	    }
 
 		// Sleep for 1 frame length
-		sleep(frame_time);
+		usleep(frame_time * 1000);
 	}
 
 	return;

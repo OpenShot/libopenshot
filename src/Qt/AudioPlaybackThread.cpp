@@ -165,8 +165,7 @@ namespace openshot
     			transport.start();
 
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
-					sleep(100);
-
+					usleep(2500);
 
 				// Stop audio and shutdown transport
 				Stop();
