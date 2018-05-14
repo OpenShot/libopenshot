@@ -70,12 +70,12 @@ void QtImageReader::Open()
 		// Only use resvg for files with a '.svg' extension
 		if (image_file_info.suffix() == "svg") {
 			// Init resvg structs
-			resvg_render_tree *rtree = NULL;
+			resvg_render_tree *rtree = nullptr;
 			resvg_options opt;
-			// Init resvg options
+			resvg_init_options(&opt);
+
+			// Set resvg options (ones where the defaults aren't what we want)
 			opt.dpi = 144;
-			opt.draw_background = 0;
-			opt.fit_to.type = RESVG_FIT_TO_ORIGINAL;
 
 			// Load the svg data from the file into a byte array
 			QFile image_file(QString::fromStdString(path));
@@ -84,21 +84,16 @@ void QtImageReader::Open()
 			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "ba.size()", ba.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
 
 			// use byte array as data source for resvg
-			char *error = nullptr;
-			rtree = resvg_parse_rtree_from_data(ba.constData(), &opt, &error);
+			int error = 0;
+			error = resvg_parse_tree_from_data(ba.constData(), ba.size(), &opt, &rtree);
 			if (!rtree) {
-				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_rtree_from_data error", -1, error, -1, "", -1, "", -1, "", -1, "", -1);
-				resvg_error_msg_destroy(error);
+				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_tree_from_data error", error, "", -1, "", -1, "", -1, "", -1, "", -1);
 				abort();
 			}
 
-			// Play a little game with resvg_size and resvg_rect due to disparate types in resvg_get_image_size() and resvg_qt_render_to_canvas()
 			resvg_size resvgSize;
-			resvg_rect resvgRect;
-			resvg_get_image_size(rtree, &resvgRect.width, &resvgRect.height);
-			resvgSize.width = resvgRect.width;
-			resvgSize.height = resvgRect.height;
-			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvgRect.width", resvgRect.width, "resvgRect.height", resvgRect.height, "resvgSize.width", resvgSize.width, "resvgSize.height", resvgSize.height, "", -1, "", -1);
+			resvgSize = resvg_get_image_size(rtree);
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvgSize.width", resvgSize.width, "resvgSize.height", resvgSize.height, "", -1, "", -1, "", -1, "", -1);
 
 			// Render and save the svg image to a canvas which has a QImage object as the output
 			QImage img = QImage(resvgSize.width, resvgSize.height, QImage::Format_ARGB32_Premultiplied);
@@ -110,7 +105,7 @@ void QtImageReader::Open()
 			p.end();
 
 			// Copy the QImage so it is usable below
-			image = std::shared_ptr<QImage>(new QImage(img));
+			image = std::make_shared<QImage>(img);
 			if (image->width() && image->height()) {
 				// Assume a success if the image has height and width
 				success = 1;
