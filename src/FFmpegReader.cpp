@@ -399,7 +399,7 @@ void FFmpegReader::UpdateVideoInfo()
 	}
 
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 120.0f || (info.fps.num == 0 || info.fps.den == 0))
+	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0))
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
 		info.fps.num = 24;
