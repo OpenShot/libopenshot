@@ -44,7 +44,7 @@ FFmpegReader::FFmpegReader(string path)
 	avcodec_register_all();
 
 	// Init cache
-	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 30, info.width, info.height, info.sample_rate, info.channels);
+	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
@@ -65,7 +65,7 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 	avcodec_register_all();
 
 	// Init cache
-	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 30, info.width, info.height, info.sample_rate, info.channels);
+	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
@@ -207,7 +207,7 @@ void FFmpegReader::Open()
 		previous_packet_location.sample_start = 0;
 
 		// Adjust cache size based on size of frame and audio
-		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 30, info.width, info.height, info.sample_rate, info.channels);
+		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
@@ -399,7 +399,7 @@ void FFmpegReader::UpdateVideoInfo()
 	}
 
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 120.0f || (info.fps.num == 0 || info.fps.den == 0))
+	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0))
 	{
 		// Set a few important default video settings (so audio can be divided into frames)
 		info.fps.num = 24;
@@ -568,16 +568,16 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 					num_packets_since_video_frame = 0;
 
 					// Check the status of a seek (if any)
-					if (is_seeking)
+						if (is_seeking)
 						#pragma omp critical (openshot_seek)
-						check_seek = CheckSeek(true);
-					else
-						check_seek = false;
+							check_seek = CheckSeek(true);
+						else
+							check_seek = false;
 
-					if (check_seek) {
-						// Jump to the next iteration of this loop
-						continue;
-					}
+						if (check_seek) {
+							// Jump to the next iteration of this loop
+							continue;
+						}
 
 					// Get the AVFrame from the current packet
 					frame_finished = GetAVFrame();
@@ -600,16 +600,16 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 					num_packets_since_video_frame++;
 
 					// Check the status of a seek (if any)
-					if (is_seeking)
+						if (is_seeking)
 						#pragma omp critical (openshot_seek)
-						check_seek = CheckSeek(false);
-					else
-						check_seek = false;
+							check_seek = CheckSeek(false);
+						else
+							check_seek = false;
 
-					if (check_seek) {
-						// Jump to the next iteration of this loop
-						continue;
-					}
+						if (check_seek) {
+							// Jump to the next iteration of this loop
+							continue;
+						}
 
 					// Update PTS / Frame Offset (if any)
 					UpdatePTSOffset(false);
@@ -794,7 +794,7 @@ bool FFmpegReader::CheckSeek(bool is_video)
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckSeek (Too far, seek again)", "is_video_seek", is_video_seek, "max_seeked_frame", max_seeked_frame, "seeking_frame", seeking_frame, "seeking_pts", seeking_pts, "seek_video_frame_found", seek_video_frame_found, "seek_audio_frame_found", seek_audio_frame_found);
 
 			// Seek again... to the nearest Keyframe
-			Seek(seeking_frame - (20 * seek_count * seek_count));
+			Seek(seeking_frame - (10 * seek_count * seek_count));
 		}
 		else
 		{
@@ -1258,7 +1258,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek", "requested_frame", requested_frame, "seek_count", seek_count, "last_frame", last_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "video_pts_offset", video_pts_offset);
 
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
@@ -1300,7 +1300,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 6;
+	int buffer_amount = 8;
 	if (requested_frame - buffer_amount < 20)
 	{
 		// Close and re-open file (basically seeking to frame 1)
@@ -1729,6 +1729,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		if (!f)
 			// No frames found
 			break;
+
+		// Remove frames which are too old
+		if (f && f->number < requested_frame) {
+			working_cache.Remove(f->number);
+		}
 
 		// Check if this frame is 'missing'
 		CheckMissingFrame(f->number);

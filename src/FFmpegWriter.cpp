@@ -378,10 +378,6 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame)
 
 		else
 		{
-			// YES, WRITING... so wait until it finishes, before writing again
-			while (is_writing)
-				usleep(250000); // sleep for 250 milliseconds
-
 			// Write frames to video file
 			write_queued_frames();
 		}

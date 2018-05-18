@@ -122,6 +122,12 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 
 			// Remove boxes
 			delete[] bxs;
+
+			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
 		}
 
 		// VERTICAL BLUR (if any)
@@ -137,6 +143,12 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 
 			// Remove boxes
 			delete[] bxs;
+
+			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
+			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
 		}
 	}
 
