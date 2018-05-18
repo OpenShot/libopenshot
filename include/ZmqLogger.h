@@ -41,6 +41,12 @@
 #include <zmq.hpp>
 #include <unistd.h>
 
+// OS X does not have clock_gettime, use clock_get_time (https://gist.github.com/jbenet/1087739)
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 
 using namespace std;
 
