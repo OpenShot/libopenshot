@@ -1,0 +1,82 @@
+stages:
+  - build
+
+linux-builder:
+  stage: build
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+    - build/install-x64/*
+  script:
+    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=linux-builder'"
+    - unzip artifacts.zip
+    - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
+    - mkdir -p build; cd build;
+    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+    - make
+    - make install
+  when: always
+  tags:
+    - linux
+
+mac-builder:
+  stage: build
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+    - build/install-x64/*
+  script:
+    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=mac-builder'"
+    - unzip artifacts.zip
+    - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
+    - mkdir -p build; cd build;
+    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/qt5/5.5/clang_64 -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Debug" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
+    - make
+    - make install
+  when: always
+  tags:
+    - mac
+
+windows-builder-x86:
+  stage: build
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+    - build\install-x86\*
+  script:
+    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
+    - $env:UNITTEST_DIR = "C:\msys32\usr"
+    - $env:ZMQDIR = "C:\msys32\usr"
+    - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;" + $env:Path;
+    - New-Item -ItemType Directory -Force -Path build
+    - cd build
+    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+    - mingw32-make
+    - mingw32-make install
+  when: always
+  tags:
+    - windows
+
+windows-builder-x64:
+  stage: build
+  artifacts:
+    expire_in: 4 weeks
+    paths:
+    - build\install-x64\*
+  script:
+    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
+    - $env:UNITTEST_DIR = "C:\msys64\usr"
+    - $env:ZMQDIR = "C:\msys64\usr"
+    - $env:Path = "C:\msys64\mingw64\bin;C:\msys64\mingw64\lib;C:\msys64\usr\lib\cmake\UnitTest++;C:\msys64\home\jonathan\depot_tools;C:\msys64\usr;C:\msys64\usr\lib;" + $env:Path;
+    - New-Item -ItemType Directory -Force -Path build
+    - cd build
+    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+    - mingw32-make
+    - mingw32-make install
+  when: always
+  tags:
+    - windows
