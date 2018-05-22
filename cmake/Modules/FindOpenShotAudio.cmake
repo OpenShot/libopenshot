@@ -9,9 +9,9 @@ message("$ENV{LIBOPENSHOT_AUDIO_DIR}")
 
 # Find the base directory of juce includes
 find_path(LIBOPENSHOT_AUDIO_BASE_DIR JuceHeader.h
-			PATHS /usr/include/libopenshot-audio/
-			/usr/local/include/libopenshot-audio/
-			$ENV{LIBOPENSHOT_AUDIO_DIR}/include/libopenshot-audio/ )
+			PATHS $ENV{LIBOPENSHOT_AUDIO_DIR}/include/libopenshot-audio/
+			/usr/include/libopenshot-audio/
+			/usr/local/include/libopenshot-audio/ )
 
 # Get a list of all header file paths
 FILE(GLOB_RECURSE JUCE_HEADER_FILES
@@ -35,10 +35,10 @@ LIST(REMOVE_DUPLICATES HEADER_DIRECTORIES)
 # Find the libopenshot-audio.so / libopenshot-audio.dll library
 find_library(LIBOPENSHOT_AUDIO_LIBRARY
 			NAMES libopenshot-audio openshot-audio
-			HINTS /usr/lib/
+			HINTS $ENV{LIBOPENSHOT_AUDIO_DIR}/lib/
+			/usr/lib/
 			/usr/lib/libopenshot-audio/
-			/usr/local/lib/
-			$ENV{LIBOPENSHOT_AUDIO_DIR}/lib/ )
+			/usr/local/lib/ )
 
 set(LIBOPENSHOT_AUDIO_LIBRARIES ${LIBOPENSHOT_AUDIO_LIBRARY})
 set(LIBOPENSHOT_AUDIO_LIBRARY ${LIBOPENSHOT_AUDIO_LIBRARIES})
