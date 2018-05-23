@@ -1,10 +1,11 @@
 stages:
-  - build
+  - build-libopenshot
+  - trigger-openshot-qt
 
 linux-builder:
-  stage: build
+  stage: build-libopenshot
   artifacts:
-    expire_in: 4 weeks
+    expire_in: 6 months
     paths:
     - build/install-x64/*
   script:
@@ -15,14 +16,16 @@ linux-builder:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - make
     - make install
+    - cp src/bindings/python/*openshot* install-x64/lib
+    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
   when: always
   tags:
     - linux
 
 mac-builder:
-  stage: build
+  stage: build-libopenshot
   artifacts:
-    expire_in: 4 weeks
+    expire_in: 6 months
     paths:
     - build/install-x64/*
   script:
@@ -33,14 +36,16 @@ mac-builder:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/qt5/5.5/clang_64 -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Debug" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
     - make
     - make install
+    - cp src/bindings/python/*openshot* install-x64/lib
+    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
   when: always
   tags:
     - mac
 
 windows-builder-x86:
-  stage: build
+  stage: build-libopenshot
   artifacts:
-    expire_in: 4 weeks
+    expire_in: 6 months
     paths:
     - build\install-x86\*
   script:
@@ -55,14 +60,17 @@ windows-builder-x86:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make
     - mingw32-make install
+    - cp src\bindings\python\*openshot* install-x86\lib
+    - cp src\libopenshot.dll install-x86\lib
+    - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
   tags:
     - windows
 
 windows-builder-x64:
-  stage: build
+  stage: build-libopenshot
   artifacts:
-    expire_in: 4 weeks
+    expire_in: 6 months
     paths:
     - build\install-x64\*
   script:
@@ -77,6 +85,18 @@ windows-builder-x64:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make
     - mingw32-make install
+    - cp src\bindings\python\*openshot* install-x64\lib
+    - cp src\libopenshot.dll install-x64\lib
+    - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
   tags:
     - windows
+
+trigger-pipeline:
+  stage: trigger-openshot-qt
+  script:
+    - "curl -X POST -F token=$OPENSHOT_QT_PIPELINE_TOKEN -F ref=master http://gitlab.openshot.org/api/v4/projects/3/trigger/pipeline"
+  when: always
+  dependencies: []
+  tags:
+    - linux
