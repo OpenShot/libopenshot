@@ -62,7 +62,6 @@ windows-builder-x86:
     - New-Item -ItemType Directory -Force -Path build
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
-    - mingw32-make
     - mingw32-make install
     - cp src\bindings\python\*openshot* install-x86\lib
     - cp src\libopenshot.dll install-x86\lib
@@ -89,7 +88,6 @@ windows-builder-x64:
     - New-Item -ItemType Directory -Force -Path build
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
-    - mingw32-make
     - mingw32-make install
     - cp src\bindings\python\*openshot* install-x64\lib
     - cp src\libopenshot.dll install-x64\lib
