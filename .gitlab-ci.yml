@@ -11,8 +11,6 @@ builder-template: &builder-template
   script:
     - echo "Template"
   when: always
-  only:
-    - master
 
 linux-builder:
   <<: *builder-template
@@ -28,6 +26,8 @@ linux-builder:
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
   tags:
     - linux
+  only:
+    - master
 
 mac-builder:
   <<: *builder-template
@@ -43,6 +43,8 @@ mac-builder:
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
   tags:
     - mac
+  only:
+    - master
 
 windows-builder-x86:
   <<: *builder-template
@@ -63,6 +65,8 @@ windows-builder-x86:
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   tags:
     - windows
+  only:
+    - master
 
 windows-builder-x64:
   <<: *builder-template
@@ -83,6 +87,8 @@ windows-builder-x64:
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   tags:
     - windows
+  only:
+    - master
 
 trigger-pipeline:
   stage: trigger-openshot-qt
