@@ -51,7 +51,7 @@ windows-builder-x86:
   artifacts:
     expire_in: 6 months
     paths:
-    - build/install-x64/*
+    - build\install-x86\*
   script:
     - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
     - Expand-Archive -Path artifacts.zip -DestinationPath .
@@ -78,7 +78,7 @@ windows-builder-x64:
   artifacts:
     expire_in: 6 months
     paths:
-    - build/install-x64/*
+    - build\install-x64\*
   script:
     - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
     - Expand-Archive -Path artifacts.zip -DestinationPath .
