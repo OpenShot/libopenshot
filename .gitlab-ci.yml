@@ -2,12 +2,20 @@ stages:
   - build-libopenshot
   - trigger-openshot-qt
 
-linux-builder:
+builder-template: &builder-template
   stage: build-libopenshot
   artifacts:
     expire_in: 6 months
     paths:
     - build/install-x64/*
+  script:
+    - echo "Template"
+  when: always
+  only:
+    - master
+
+linux-builder:
+  <<: *builder-template
   script:
     - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=linux-builder'"
     - unzip artifacts.zip
@@ -18,16 +26,11 @@ linux-builder:
     - make install
     - cp src/bindings/python/*openshot* install-x64/lib
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-  when: always
   tags:
     - linux
 
 mac-builder:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build/install-x64/*
+  <<: *builder-template
   script:
     - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=mac-builder'"
     - unzip artifacts.zip
@@ -38,16 +41,11 @@ mac-builder:
     - make install
     - cp src/bindings/python/*openshot* install-x64/lib
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-  when: always
   tags:
     - mac
 
 windows-builder-x86:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build\install-x86\*
+  <<: *builder-template
   script:
     - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
     - Expand-Archive -Path artifacts.zip -DestinationPath .
@@ -63,16 +61,11 @@ windows-builder-x86:
     - cp src\bindings\python\*openshot* install-x86\lib
     - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
-  when: always
   tags:
     - windows
 
 windows-builder-x64:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build\install-x64\*
+  <<: *builder-template
   script:
     - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
     - Expand-Archive -Path artifacts.zip -DestinationPath .
@@ -88,7 +81,6 @@ windows-builder-x64:
     - cp src\bindings\python\*openshot* install-x64\lib
     - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
-  when: always
   tags:
     - windows
 
@@ -100,3 +92,5 @@ trigger-pipeline:
   dependencies: []
   tags:
     - linux
+  only:
+    - master
