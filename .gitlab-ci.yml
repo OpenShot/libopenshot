@@ -21,6 +21,8 @@ linux-builder:
   when: always
   tags:
     - linux
+  only:
+    - master
 
 mac-builder:
   stage: build-libopenshot
@@ -41,6 +43,8 @@ mac-builder:
   when: always
   tags:
     - mac
+  only:
+    - master
 
 windows-builder-x86:
   stage: build-libopenshot
@@ -66,6 +70,8 @@ windows-builder-x86:
   when: always
   tags:
     - windows
+  only:
+    - master
 
 windows-builder-x64:
   stage: build-libopenshot
@@ -91,6 +97,8 @@ windows-builder-x64:
   when: always
   tags:
     - windows
+  only:
+    - master
 
 trigger-pipeline:
   stage: trigger-openshot-qt
@@ -100,3 +108,5 @@ trigger-pipeline:
   dependencies: []
   tags:
     - linux
+  only:
+    - master
