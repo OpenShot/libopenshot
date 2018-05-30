@@ -1300,7 +1300,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = 8;
+	int buffer_amount = OPEN_MP_NUM_PROCESSORS * 2;
 	if (requested_frame - buffer_amount < 20)
 	{
 		// Close and re-open file (basically seeking to frame 1)
@@ -1649,7 +1649,6 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame)
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_count, "", -1, "", -1);
 
-
 	// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
 	map<int64_t, int64_t>::iterator itr;
 	bool found_missing_frame = false;
@@ -1731,7 +1730,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			break;
 
 		// Remove frames which are too old
-		if (f && f->number < requested_frame) {
+		if (f && f->number < (requested_frame - (OPEN_MP_NUM_PROCESSORS * 2))) {
 			working_cache.Remove(f->number);
 		}
 
@@ -1752,7 +1751,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			// Get check count for this frame
 			checked_frames_size = checked_frames.size();
             if (!checked_count_tripped || f->number >= requested_frame)
-			    checked_count = checked_frames[f->number];
+		    checked_count = checked_frames[f->number];
             else
                 // Force checked count over the limit
                 checked_count = max_checked_count;
