@@ -129,6 +129,7 @@ namespace openshot
 		int height;
 		int sample_rate;
 		string color;
+		int64_t max_audio_sample; ///< The max audio sample count added to this frame
 
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
@@ -137,6 +138,7 @@ namespace openshot
 		int64_t number;	 ///< This is the frame number (starting at 1)
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
+
 
 		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 		Frame();
