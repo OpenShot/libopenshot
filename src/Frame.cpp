@@ -32,7 +32,8 @@ using namespace openshot;
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), color("#000000"),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
+		max_audio_sample(0)
 {
 	// Init the image magic and audio buffer
 	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
@@ -44,7 +45,8 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int64_t number, int width, int height, string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height), color(color),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
+	  max_audio_sample(0)
 {
 	// Init the image magic and audio buffer
 	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, 0));
@@ -56,7 +58,8 @@ Frame::Frame(int64_t number, int width, int height, string color)
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int64_t number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1), color("#000000"),
-		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
+		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
+		max_audio_sample(0)
 {
 	// Init the image magic and audio buffer
 	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
@@ -68,7 +71,8 @@ Frame::Frame(int64_t number, int samples, int channels) :
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height), color(color),
-	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false)
+	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
+	  max_audio_sample(0)
 {
 	// Init the image magic and audio buffer
 	audio = std::shared_ptr<juce::AudioSampleBuffer>(new juce::AudioSampleBuffer(channels, samples));
@@ -175,7 +179,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 	QVector<QPointF> labels;
 
 	// Calculate width of an image based on the # of samples
-	int total_samples = audio->getNumSamples();
+	int total_samples = GetAudioSamplesCount();
 	if (total_samples > 0)
 	{
 		// If samples are present...
@@ -193,7 +197,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 			// Get audio for this channel
 			const float *samples = audio->getReadPointer(channel);
 
-			for (int sample = 0; sample < audio->getNumSamples(); sample++, X++)
+			for (int sample = 0; sample < GetAudioSamplesCount(); sample++, X++)
 			{
 				// Sample value (scaled to -100 to 100)
 				float value = samples[sample] * 100;
@@ -335,7 +339,7 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 	float *output = NULL;
 	AudioSampleBuffer *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
-	int num_of_samples = audio->getNumSamples();
+	int num_of_samples = GetAudioSamplesCount();
 
 	// Resample to new sample rate (if needed)
 	if (new_sample_rate != sample_rate)
@@ -381,7 +385,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 	float *output = NULL;
 	AudioSampleBuffer *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
-	int num_of_samples = audio->getNumSamples();
+	int num_of_samples = GetAudioSamplesCount();
 
 	// Resample to new sample rate (if needed)
 	if (new_sample_rate != sample_rate && resampler)
@@ -434,10 +438,7 @@ int Frame::GetAudioChannelsCount()
 int Frame::GetAudioSamplesCount()
 {
     const GenericScopedLock<CriticalSection> lock(addingAudioSection);
-	if (audio)
-		return audio->getNumSamples();
-	else
-		return 0;
+	return max_audio_sample;
 }
 
 juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
@@ -828,6 +829,9 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 	audio->setSize(channels, length, true, true, false);
 	channel_layout = layout;
 	sample_rate = rate;
+
+	// Calculate max audio sample added
+	max_audio_sample = length;
 }
 
 // Add audio samples to a specific channel
@@ -875,6 +879,10 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		// Add samples to frame's audio buffer
 		audio->addFrom(destChannel, destStartSample, source, numSamples, gainFactor);
 		has_audio_data = true;
+
+		// Calculate max audio sample added
+		if (new_length > max_audio_sample)
+			max_audio_sample = new_length;
 	}
 }
 
@@ -961,7 +969,7 @@ void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
 void Frame::Play()
 {
 	// Check if samples are present
-	if (!audio->getNumSamples())
+	if (!GetAudioSamplesCount())
 		return;
 
 	AudioDeviceManager deviceManager;
@@ -1043,4 +1051,8 @@ void Frame::AddAudioSilence(int numSamples)
 	audio->setSize(channels, numSamples, false, true, false);
 	audio->clear();
 	has_audio_data = true;
+
+	// Calculate max audio sample added
+	if (numSamples > max_audio_sample)
+		max_audio_sample = numSamples;
 }
