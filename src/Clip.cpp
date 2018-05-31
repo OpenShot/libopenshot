@@ -402,8 +402,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 		new_frame = std::make_shared<Frame>(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount());
 
 		// Copy the image from the new frame
-		new_frame->AddImage(GetOrCreateFrame(new_frame_number)->GetImage());
-
+		new_frame->AddImage(std::shared_ptr<QImage>(new QImage(*GetOrCreateFrame(new_frame_number)->GetImage())));
 
 		// Get delta (difference in previous Y value)
 		int delta = int(round(time.GetDelta(frame_number)));

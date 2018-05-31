@@ -127,11 +127,6 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
 	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 
-	// Update timeline offset
-	double time_diff = 0 - clip->Position() + clip->Start();
-	int clip_offset = -round(time_diff * info.fps.ToDouble());
-	clip_mapped_reader->SetTimelineFrameOffset(clip_offset);
-
 	// Update clip reader
 	clip->Reader(clip_reader);
 }
