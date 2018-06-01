@@ -22,8 +22,9 @@ linux-builder:
   tags:
     - linux
   only:
-    - master
+    - develop
     - release
+    - tags
 
 mac-builder:
   stage: build-libopenshot
@@ -45,8 +46,9 @@ mac-builder:
   tags:
     - mac
   only:
-    - master
+    - develop
     - release
+    - tags
 
 windows-builder-x86:
   stage: build-libopenshot
@@ -72,8 +74,9 @@ windows-builder-x86:
   tags:
     - windows
   only:
-    - master
+    - develop
     - release
+    - tags
 
 windows-builder-x64:
   stage: build-libopenshot
@@ -99,8 +102,9 @@ windows-builder-x64:
   tags:
     - windows
   only:
-    - master
+    - develop
     - release
+    - tags
 
 trigger-pipeline:
   stage: trigger-openshot-qt
@@ -111,5 +115,6 @@ trigger-pipeline:
   tags:
     - linux
   only:
-    - master
+    - develop
     - release
+    - tags
