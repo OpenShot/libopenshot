@@ -34,11 +34,11 @@
 #include <vector>
 #include <memory>
 #include "CacheMemory.h"
-#include "../include/ReaderBase.h"
-#include "../include/Frame.h"
-#include "../include/Fraction.h"
-#include "../include/Exceptions.h"
-#include "../include/KeyFrame.h"
+#include "ReaderBase.h"
+#include "Frame.h"
+#include "Fraction.h"
+#include "Exceptions.h"
+#include "KeyFrame.h"
 
 
 // Include FFmpeg headers and macros
