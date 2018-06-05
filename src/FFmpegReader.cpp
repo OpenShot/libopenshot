@@ -1300,7 +1300,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = OPEN_MP_NUM_PROCESSORS * 2;
+	int buffer_amount = max(OPEN_MP_NUM_PROCESSORS, 8);
 	if (requested_frame - buffer_amount < 20)
 	{
 		// Close and re-open file (basically seeking to frame 1)
@@ -1751,7 +1751,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			// Get check count for this frame
 			checked_frames_size = checked_frames.size();
             if (!checked_count_tripped || f->number >= requested_frame)
-		    checked_count = checked_frames[f->number];
+			    checked_count = checked_frames[f->number];
             else
                 // Force checked count over the limit
                 checked_count = max_checked_count;

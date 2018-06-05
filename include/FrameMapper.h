@@ -147,7 +147,6 @@ namespace openshot
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		AVAudioResampleContext *avr;	// Audio resampling context object
-		int64_t timeline_frame_offset;	// Timeline frame offset
 
 		// Internal methods used by init
 		void AddField(int64_t frame);
@@ -175,9 +174,6 @@ namespace openshot
 
 		/// Change frame rate or audio mapping details
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
-
-		// Set offset relative to parent timeline
-		void SetTimelineFrameOffset(int64_t offset);
 
 		/// Close the openshot::FrameMapper and internal reader
 		void Close();

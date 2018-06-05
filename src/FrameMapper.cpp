@@ -31,7 +31,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), timeline_frame_offset(0)
+		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -241,7 +241,7 @@ void FrameMapper::Init()
 		if (field % 2 == 0 && field > 0)
 		{
 			// New frame number
-			int64_t frame_number = field / 2 + timeline_frame_offset;
+			int64_t frame_number = field / 2;
 
 			// Set the bottom frame
 			if (f.isOdd)
@@ -346,7 +346,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
-	int samples_in_frame = Frame::GetSamplesPerFrame(number + timeline_frame_offset, target, reader->info.sample_rate, reader->info.channels);
+	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, reader->info.sample_rate, reader->info.channels);
 
 	try {
 		// Debug output
@@ -421,7 +421,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		// Get # of channels in the actual frame
 		int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-		int samples_in_frame = Frame::GetSamplesPerFrame(frame_number + timeline_frame_offset, target, mapped_frame->SampleRate(), channels_in_frame);
+		int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
 
 		// Determine if mapped frame is identical to source frame
 		// including audio sample distribution according to mapped.Samples,
@@ -750,18 +750,6 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	Init();
 }
 
-// Set offset relative to parent timeline
-void FrameMapper::SetTimelineFrameOffset(int64_t offset)
-{
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::SetTimelineFrameOffset", "offset", offset, "", -1, "", -1, "", -1, "", -1, "", -1);
-
-	// Mark as dirty
-	is_dirty = true;
-
-	// Used to correctly align audio sample distribution
-	timeline_frame_offset = offset;
-}
-
 // Resample audio and map channels (if needed)
 void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number)
 {
@@ -813,7 +801,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	total_frame_samples = Frame::GetSamplesPerFrame(frame->number + timeline_frame_offset, target, info.sample_rate, info.channels);
+	total_frame_samples = Frame::GetSamplesPerFrame(frame->number, target, info.sample_rate, info.channels);
 
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
