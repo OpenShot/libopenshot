@@ -839,8 +839,11 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 	const GenericScopedLock<CriticalSection> lock(addingAudioSection);
 	#pragma omp critical (adding_audio)
     {
+		// Clamp starting sample to 0
+		int destStartSampleAdjusted = max(destStartSample, 0);
+
 		// Extend audio container to hold more (or less) samples and channels.. if needed
-		int new_length = destStartSample + numSamples;
+		int new_length = destStartSampleAdjusted + numSamples;
 		int new_channel_length = audio->getNumChannels();
 		if (destChannel >= new_channel_length)
 			new_channel_length = destChannel + 1;
@@ -849,7 +852,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 
 		// Clear the range of samples first (if needed)
 		if (replaceSamples)
-			audio->clear(destChannel, destStartSample, numSamples);
+			audio->clear(destChannel, destStartSampleAdjusted, numSamples);
 
 		// Get max volume of the current audio data
 		// TODO: This always appears to be 0, which is probably not expected since that means gainFactor is always multiplied by 1.0 below.
@@ -857,7 +860,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		// which makes "gainFactor *= ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;"
 		// which simplifies to "gainFactor *= new_max_volume / new_max_volume;" aka "gainFactor *= 1.0"
 		// - Rich Alloway
-		float current_max_volume = audio->getMagnitude(destChannel, destStartSample, numSamples);
+		float current_max_volume = audio->getMagnitude(destChannel, destStartSampleAdjusted, numSamples);
 
 		// Determine max volume of new audio data (before we add them together)
 		float new_max_volume = 0.0;
@@ -877,7 +880,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		}
 
 		// Add samples to frame's audio buffer
-		audio->addFrom(destChannel, destStartSample, source, numSamples, gainFactor);
+		audio->addFrom(destChannel, destStartSampleAdjusted, source, numSamples, gainFactor);
 		has_audio_data = true;
 
 		// Calculate max audio sample added
