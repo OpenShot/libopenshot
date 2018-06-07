@@ -9,7 +9,10 @@ linux-builder:
     paths:
     - build/install-x64/*
   script:
-    - "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=linux-builder || curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
+    - "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=linux-builder"
+    - if [ ! -f artifacts.zip ]; then
+    -    "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
+    - fi
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
@@ -31,7 +34,10 @@ mac-builder:
     paths:
     - build/install-x64/*
   script:
-    - "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=mac-builder || curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
+    - "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=mac-builder"
+    - if [ ! -f artifacts.zip ]; then
+    -    "curl -f -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
+    - fi
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
@@ -53,7 +59,8 @@ windows-builder-x86:
     paths:
     - build\install-x86\*
   script:
-    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
+    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
     - $env:UNITTEST_DIR = "C:\msys32\usr"
@@ -79,7 +86,8 @@ windows-builder-x64:
     paths:
     - build\install-x64\*
   script:
-    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
+    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
     - $env:UNITTEST_DIR = "C:\msys64\usr"
