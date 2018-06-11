@@ -105,4 +105,4 @@ trigger-pipeline:
   when: always
   dependencies: []
   tags:
-    - linux
+    - gitlab
