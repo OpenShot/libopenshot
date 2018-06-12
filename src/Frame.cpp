@@ -854,33 +854,8 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 		if (replaceSamples)
 			audio->clear(destChannel, destStartSampleAdjusted, numSamples);
 
-		// Get max volume of the current audio data
-		// TODO: This always appears to be 0, which is probably not expected since that means gainFactor is always multiplied by 1.0 below.
-		// "sum_volumes = current_max_volume + new_max_volume" is then alwasy "sum_volumes = 0 + new_max_volume",
-		// which makes "gainFactor *= ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;"
-		// which simplifies to "gainFactor *= new_max_volume / new_max_volume;" aka "gainFactor *= 1.0"
-		// - Rich Alloway
-		float current_max_volume = audio->getMagnitude(destChannel, destStartSampleAdjusted, numSamples);
-
-		// Determine max volume of new audio data (before we add them together)
-		float new_max_volume = 0.0;
-		for (int sample=0; sample<numSamples; sample++) {
-			if (source[sample] > new_max_volume)
-				new_max_volume = source[sample];
-		}
-
-		// Determine volume adjustments (to prevent overflows)
-		float sum_volumes = current_max_volume + new_max_volume;
-		float gainFactor = gainToApplyToSource;
-		if (sum_volumes > 0.0) {
-			// Reduce both sources by this amount (existing samples and new samples)
-			gainFactor *= ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes;
-			audio->applyGain(gainFactor);
-			ZmqLogger::Instance()->AppendDebugMethod("Frame::AddAudio", "gainToApplyToSource", gainToApplyToSource, "gainFactor", gainFactor, "sum_volumes", sum_volumes, "current_max_volume", current_max_volume, "new_max_volume", new_max_volume, "((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes", ((current_max_volume + new_max_volume) - (current_max_volume * new_max_volume)) / sum_volumes);
-		}
-
 		// Add samples to frame's audio buffer
-		audio->addFrom(destChannel, destStartSampleAdjusted, source, numSamples, gainFactor);
+		audio->addFrom(destChannel, destStartSampleAdjusted, source, numSamples, gainToApplyToSource);
 		has_audio_data = true;
 
 		// Calculate max audio sample added
