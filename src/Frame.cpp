@@ -976,7 +976,7 @@ void Frame::Play()
 			(double) sample_rate,
 			audio->getNumChannels()); // sample rate of source
 	transport1.setPosition (0);
-	transport1.setGain(1.0);
+	transport1.setGain(1.0
 
 
 	// Create MIXER
