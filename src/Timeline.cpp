@@ -288,18 +288,14 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
-		// Protect max_volume (if negative or zero, default max_volume to 1.0, which will not adjust volume)
-		if (max_volume <= 0.0)
-			max_volume = 1.0;
-
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 			{
-				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1) / max_volume; // previous frame's percentage of volume (0 to 1)
-				float volume = source_clip->volume.GetValue(clip_frame_number) / max_volume; // percentage of volume (0 to 1)
+				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1) / max(max_volume, 1.0); // previous frame's percentage of volume (0 to 1)
+				float volume = source_clip->volume.GetValue(clip_frame_number) / max(max_volume, 1.0); // percentage of volume (0 to 1)
 				int channel_filter = source_clip->channel_filter.GetInt(clip_frame_number); // optional channel to filter (if not -1)
 				int channel_mapping = source_clip->channel_mapping.GetInt(clip_frame_number); // optional channel to map this channel to (if not -1)
 
