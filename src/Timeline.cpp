@@ -294,8 +294,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 			{
-				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1) / max(max_volume, 1.0); // previous frame's percentage of volume (0 to 1)
-				float volume = source_clip->volume.GetValue(clip_frame_number) / max(max_volume, 1.0); // percentage of volume (0 to 1)
+				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1) / fmaxf(max_volume, 1.0); // previous frame's percentage of volume (0 to 1)
+				float volume = source_clip->volume.GetValue(clip_frame_number) / fmaxf(max_volume, 1.0); // percentage of volume (0 to 1)
 				int channel_filter = source_clip->channel_filter.GetInt(clip_frame_number); // optional channel to filter (if not -1)
 				int channel_mapping = source_clip->channel_mapping.GetInt(clip_frame_number); // optional channel to map this channel to (if not -1)
 
