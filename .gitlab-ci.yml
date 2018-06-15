@@ -9,7 +9,10 @@ linux-builder:
     paths:
     - build/install-x64/*
   script:
-    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=linux-builder'"
+    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=linux-builder"
+    - if [ ! -f artifacts.zip ]; then
+    -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
+    - fi
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
@@ -18,11 +21,9 @@ linux-builder:
     - make install
     - cp src/bindings/python/*openshot* install-x64/lib
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-  when: always
+  when: manual
   tags:
     - linux
-  only:
-    - master
 
 mac-builder:
   stage: build-libopenshot
@@ -31,7 +32,10 @@ mac-builder:
     paths:
     - build/install-x64/*
   script:
-    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN 'http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=mac-builder'"
+    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=mac-builder"
+    - if [ ! -f artifacts.zip ]; then
+    -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
+    - fi
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
@@ -43,8 +47,6 @@ mac-builder:
   when: always
   tags:
     - mac
-  only:
-    - master
 
 windows-builder-x86:
   stage: build-libopenshot
@@ -53,7 +55,8 @@ windows-builder-x86:
     paths:
     - build\install-x86\*
   script:
-    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
     - $env:UNITTEST_DIR = "C:\msys32\usr"
@@ -69,8 +72,6 @@ windows-builder-x86:
   when: always
   tags:
     - windows
-  only:
-    - master
 
 windows-builder-x64:
   stage: build-libopenshot
@@ -79,7 +80,8 @@ windows-builder-x64:
     paths:
     - build\install-x64\*
   script:
-    - Invoke-WebRequest -Uri "http://gitlab.openshot.org/jonathan/libopenshot-audio/-/jobs/artifacts/master/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip"
+    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
     - $env:UNITTEST_DIR = "C:\msys64\usr"
@@ -95,16 +97,12 @@ windows-builder-x64:
   when: always
   tags:
     - windows
-  only:
-    - master
 
 trigger-pipeline:
   stage: trigger-openshot-qt
   script:
-    - "curl -X POST -F token=$OPENSHOT_QT_PIPELINE_TOKEN -F ref=master http://gitlab.openshot.org/api/v4/projects/3/trigger/pipeline"
+    - "curl -X POST -F token=$OPENSHOT_QT_PIPELINE_TOKEN -F ref=$CI_COMMIT_REF_NAME http://gitlab.openshot.org/api/v4/projects/3/trigger/pipeline"
   when: always
   dependencies: []
   tags:
-    - linux
-  only:
-    - master
+    - gitlab
