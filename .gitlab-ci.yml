@@ -65,11 +65,11 @@ windows-builder-x86:
     - $env:ZMQDIR = "C:\msys32\usr"
     - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
-    - New-Item -ItemType Directory -Force -Path build\install-x86\python
+    - New-Item -ItemType Directory -Force -Path install-x86\python
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x86\python\"
+    - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\install-x86\python\"
     - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
@@ -91,11 +91,11 @@ windows-builder-x64:
     - $env:ZMQDIR = "C:\msys64\usr"
     - $env:Path = "C:\msys64\mingw64\bin;C:\msys64\mingw64\lib;C:\msys64\usr\lib\cmake\UnitTest++;C:\msys64\home\jonathan\depot_tools;C:\msys64\usr;C:\msys64\usr\lib;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
-    - New-Item -ItemType Directory -Force -Path build\install-x64\python
+    - New-Item -ItemType Directory -Force -Path install-x64\python
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x64\python\"
+    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\install-x64\python\"
     - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
