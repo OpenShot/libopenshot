@@ -72,7 +72,7 @@ windows-builder-x86:
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x86\python"
+    - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x86\python\"
     - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
@@ -99,7 +99,7 @@ windows-builder-x64:
     - cd build
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x64\python"
+    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "$CI_PROJECT_DIR\build\install-x64\python\"
     - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
   when: always
