@@ -22,7 +22,7 @@ linux-builder:
     - make install
     - cp src/bindings/python/*openshot* install-x64/lib
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-  when: manual
+  when: always
   tags:
     - linux
 
