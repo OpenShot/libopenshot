@@ -153,7 +153,7 @@ namespace openshot {
 		CacheBase *final_cache; ///<Final cache of timeline frames
 
 		/// Process a new layer of video or audio
-		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip);
+		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
 
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(Clip* clip);
