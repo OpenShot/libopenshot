@@ -24,7 +24,7 @@ FOREACH(HEADER_PATH ${JUCE_HEADER_FILES})
 	get_filename_component(HEADER_DIRECTORY ${HEADER_PATH}
 		PATH
 	)
-	
+
 	# Append each directory into the HEADER_DIRECTORIES list
 	LIST(APPEND HEADER_DIRECTORIES ${HEADER_DIRECTORY})
 ENDFOREACH(HEADER_PATH)
@@ -32,7 +32,12 @@ ENDFOREACH(HEADER_PATH)
 # Remove duplicates from the header directories list
 LIST(REMOVE_DUPLICATES HEADER_DIRECTORIES)
 
-# Find the libopenshot-audio.so / libopenshot-audio.dll library
+# Find the libopenshot-audio.so (check env var first)
+find_library(LIBOPENSHOT_AUDIO_LIBRARY
+		NAMES libopenshot-audio openshot-audio
+		PATHS $ENV{LIBOPENSHOT_AUDIO_DIR}/lib/ NO_DEFAULT_PATH)
+
+# Find the libopenshot-audio.so / libopenshot-audio.dll library (fallback)
 find_library(LIBOPENSHOT_AUDIO_LIBRARY
 			NAMES libopenshot-audio openshot-audio
 			HINTS $ENV{LIBOPENSHOT_AUDIO_DIR}/lib/
