@@ -59,29 +59,35 @@ void Mask::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
-{
+std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
 	// Get the mask image (from the mask reader)
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Check if mask reader is open
-	if (reader && !reader->IsOpen())
-		#pragma omp critical (open_mask_reader)
-		reader->Open();
+	#pragma omp critical (open_mask_reader)
+	{
+		if (reader && !reader->IsOpen())
+			reader->Open();
+	}
 
 	// No reader (bail on applying the mask)
 	if (!reader)
 		return frame;
 
 	// Get mask image (if missing or different size than frame image)
-	if (!original_mask || !reader->info.has_single_image || (original_mask && original_mask->size() != frame_image->size())) {
-		#pragma omp critical (open_mask_reader)
-		{
+	#pragma omp critical (open_mask_reader)
+	{
+		if (!original_mask || !reader->info.has_single_image ||
+			(original_mask && original_mask->size() != frame_image->size())) {
+
 			// Only get mask if needed
-			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(new QImage(*reader->GetFrame(frame_number)->GetImage()));
+			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(
+					new QImage(*reader->GetFrame(frame_number)->GetImage()));
 
 			// Resize mask image to match frame size
-			original_mask = std::shared_ptr<QImage>(new QImage(mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+			original_mask = std::shared_ptr<QImage>(new QImage(
+					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
+												Qt::SmoothTransformation)));
 		}
 	}
 

@@ -450,55 +450,55 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
-		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    #pragma omp critical (ReadStream)
+	  {
+			// Check the cache a 2nd time (due to a potential previous lock)
+			if (has_missing_frames)
+			    CheckMissingFrame(requested_frame);
+			frame = final_cache.GetFrame(requested_frame);
+			if (frame) {
+				// Debug output
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
-		// Check the cache a 2nd time (due to a potential previous lock)
-		if (has_missing_frames)
-		    CheckMissingFrame(requested_frame);
-		frame = final_cache.GetFrame(requested_frame);
-		if (frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
-
-			// Return the cached frame
-			return frame;
-		}
-
-		// Frame is not in cache
-		// Reset seek count
-		seek_count = 0;
-
-		// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
-		if (last_frame == 0 && requested_frame != 1)
-			// Get first frame
-			ReadStream(1);
-
-		// Are we within X frames of the requested frame?
-		int64_t diff = requested_frame - last_frame;
-		if (diff >= 1 && diff <= 20)
-		{
-			// Continue walking the stream
-			return ReadStream(requested_frame);
-		}
-		else
-		{
-			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-			if (enable_seek)
-				// Only seek if enabled
-				Seek(requested_frame);
-
-			else if (!enable_seek && diff < 0)
-			{
-				// Start over, since we can't seek, and the requested frame is smaller than our position
-				Close();
-				Open();
+				// Return the cached frame
 			}
+			else {
+				// Frame is not in cache
+				// Reset seek count
+				seek_count = 0;
 
-			// Then continue walking the stream
-			return ReadStream(requested_frame);
-		}
+				// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
+				if (last_frame == 0 && requested_frame != 1)
+					// Get first frame
+					ReadStream(1);
 
+				// Are we within X frames of the requested frame?
+				int64_t diff = requested_frame - last_frame;
+				if (diff >= 1 && diff <= 20)
+				{
+					// Continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+				else
+				{
+					// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
+					if (enable_seek)
+						// Only seek if enabled
+						Seek(requested_frame);
+
+					else if (!enable_seek && diff < 0)
+					{
+						// Start over, since we can't seek, and the requested frame is smaller than our position
+						Close();
+						Open();
+					}
+
+					// Then continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+			}
+	  } //omp critical
+    return frame;
 	}
 }
 
@@ -962,7 +962,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int data_size = 0;
 
 	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + AV_INPUT_BUFFER_PADDING_SIZE;
 	#pragma omp critical (ProcessAudioPacket)
 	{
 	#if IS_FFMPEG_3_2
@@ -1067,7 +1067,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 
 	// Allocate audio buffer
-	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
 
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
