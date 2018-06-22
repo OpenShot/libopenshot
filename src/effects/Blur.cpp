@@ -302,11 +302,11 @@ void Blur::SetJsonValue(Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["horizontal_radius"].isNull())
 		horizontal_radius.SetJsonValue(root["horizontal_radius"]);
-	else if (!root["vertical_radius"].isNull())
+	if (!root["vertical_radius"].isNull())
 		vertical_radius.SetJsonValue(root["vertical_radius"]);
-	else if (!root["sigma"].isNull())
+	if (!root["sigma"].isNull())
 		sigma.SetJsonValue(root["sigma"]);
-	else if (!root["iterations"].isNull())
+	if (!root["iterations"].isNull())
 		iterations.SetJsonValue(root["iterations"]);
 }
 
