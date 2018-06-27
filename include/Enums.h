@@ -69,5 +69,13 @@ namespace openshot
 		FRAME_DISPLAY_TIMELINE, ///< Display the timeline's frame number
 		FRAME_DISPLAY_BOTH      ///< Display both the clip's and timeline's frame number
 	};
+
+	/// This enumeration determines the strategy when mixing audio with other clips.
+	enum VolumeMixType
+	{
+		VOLUME_MIX_NONE,   	///< Do not apply any volume mixing adjustments. Just add the samples together.
+		VOLUME_MIX_AVERAGE,	///< Evenly divide the overlapping clips volume keyframes, so that the sum does not exceed 100%
+		VOLUME_MIX_REDUCE 	///< Reduce volume by about %25, and then mix (louder, but could cause pops if the sum exceeds 100%)
+	};
 }
 #endif
