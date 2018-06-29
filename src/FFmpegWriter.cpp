@@ -298,6 +298,9 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 /// Determine if codec name is valid
 bool FFmpegWriter::IsValidCodec(string codec_name) {
+	// Initialize FFMpeg, and register all formats and codecs
+	av_register_all();
+
 	// Find the codec (if any)
 	if (avcodec_find_encoder_by_name(codec_name.c_str()) == NULL)
 		return false;
@@ -999,10 +1002,17 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
+	// Init options
+	AVDictionary *opts = NULL;
+	av_dict_set(&opts, "strict", "experimental", 0);
+
 	// Open the codec
-	if (avcodec_open2(audio_codec, codec, NULL) < 0)
+	if (avcodec_open2(audio_codec, codec, &opts) < 0)
 		throw InvalidCodec("Could not open codec", path);
 	AV_COPY_PARAMS_FROM_CONTEXT(st, audio_codec);
+
+	// Free options
+	av_dict_free(&opts);
 
 	// Calculate the size of the input frame (i..e how many samples per packet), and the output buffer
 	// TODO: Ugly hack for PCM codecs (will be removed ASAP with new PCM support to compute the input frame size in samples
@@ -1070,10 +1080,17 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
     if(video_codec->max_b_frames && video_codec->codec_id != AV_CODEC_ID_MPEG4 && video_codec->codec_id != AV_CODEC_ID_MPEG1VIDEO && video_codec->codec_id != AV_CODEC_ID_MPEG2VIDEO)
         video_codec->max_b_frames = 0;
 
+	// Init options
+	AVDictionary *opts = NULL;
+	av_dict_set(&opts, "strict", "experimental", 0);
+
 	/* open the codec */
-	if (avcodec_open2(video_codec, codec, NULL) < 0)
+	if (avcodec_open2(video_codec, codec, &opts) < 0)
 		throw InvalidCodec("Could not open codec", path);
 	AV_COPY_PARAMS_FROM_CONTEXT(st, video_codec);
+
+	// Free options
+	av_dict_free(&opts);
 
 	// Add video metadata (if any)
 	for(std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter)
