@@ -298,6 +298,9 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 /// Determine if codec name is valid
 bool FFmpegWriter::IsValidCodec(string codec_name) {
+	// Initialize FFMpeg, and register all formats and codecs
+	av_register_all();
+
 	// Find the codec (if any)
 	if (avcodec_find_encoder_by_name(codec_name.c_str()) == NULL)
 		return false;
