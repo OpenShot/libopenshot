@@ -156,9 +156,17 @@ void FFmpegReader::Open()
 			if (pCodec == NULL) {
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open video codec
-			if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 				throw InvalidCodec("A video codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with video details (if a video stream is found)
 			UpdateVideoInfo();
@@ -186,9 +194,17 @@ void FFmpegReader::Open()
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open audio codec
-			if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
+			if (avcodec_open2(aCodecCtx, aCodec, &opts) < 0)
 				throw InvalidCodec("An audio codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with audio details (if an audio stream is found)
 			UpdateAudioInfo();
