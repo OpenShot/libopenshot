@@ -808,7 +808,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Add frame to cache)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height, "", -1, "", -1, "", -1);
 
 				// Set frame # on mapped frame
-				#pragma omp critical (T_GetFrame)
+				#pragma omp ordered
 				{
 					new_frame->SetFrameNumber(frame_number);
 
