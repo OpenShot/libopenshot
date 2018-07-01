@@ -91,7 +91,7 @@ namespace openshot
 		string text_color;
 		string background_color;
 		std::shared_ptr<Magick::Image> image;
-		list<Magick::Drawable> lines;
+		vector<Magick::Drawable> lines;
 		bool is_open;
 		GravityType gravity;
 

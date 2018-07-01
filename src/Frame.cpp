@@ -29,6 +29,9 @@
 
 using namespace std;
 using namespace openshot;
+#ifdef USE_IMAGEMAGICK
+using namespace Magick;
+#endif
 
 // Constructor - blank frame (300x200 blank image, 48kHz audio silence)
 Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), color("#000000"),
@@ -902,7 +905,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 	// Give image a transparent background color
 	magick_image->backgroundColor(Magick::Color("none"));
 	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	magick_image->matte(true);
+	magick_image->alpha(true);
 
 	return magick_image;
 }
@@ -924,13 +927,14 @@ void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
     // Iterate through the pixel packets, and load our own buffer
 	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
 	int numcopied = 0;
-    Magick::PixelPacket *pixels = new_image->getPixels(0,0, new_image->columns(), new_image->rows());
+    const Quantum *pixels = new_image->getConstPixels(0,0, new_image->columns(), new_image->rows());
     for (int n = 0, i = 0; n < new_image->columns() * new_image->rows(); n += 1, i += 4) {
-    	buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
-    	buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
-    	buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
-    	buffer[i+3] = 255 - MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].opacity);
-    	numcopied+=4;
+		buffer[i+0] = MagickCore::ScaleQuantumToChar(MagickCore::GetPixelRed(new_image->image(), pixels));
+		buffer[i+1] = MagickCore::ScaleQuantumToChar(MagickCore::GetPixelGreen(new_image->image(), pixels));
+		buffer[i+2] = MagickCore::ScaleQuantumToChar(MagickCore::GetPixelBlue(new_image->image(), pixels));
+		buffer[i+3] = MagickCore::ScaleQuantumToChar(MagickCore::GetPixelAlpha(new_image->image(), pixels));
+		numcopied+=4;
+		pixels += MagickCore::GetPixelChannels(new_image->image());
     }
 
     // Create QImage of frame data

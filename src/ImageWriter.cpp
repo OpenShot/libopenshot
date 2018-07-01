@@ -97,7 +97,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	std::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
 	frame_image->magick( info.vcodec );
 	frame_image->backgroundColor(Magick::Color("none"));
-	frame_image->matte(true);
+	frame_image->alpha(true);
 	frame_image->quality(image_quality);
 	frame_image->animationDelay(info.video_timebase.ToFloat() * 100);
 	frame_image->animationIterations(number_of_loops);
