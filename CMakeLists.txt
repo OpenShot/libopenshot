@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.2.0)
 
 MESSAGE("--------------------------------------------------------------")
 MESSAGE("Welcome to the OpenShot Build System! CMake will now check for all required build")
@@ -53,7 +53,9 @@ STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MAJOR[ ]+([0-9]+);(.*)" "\\1" 
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" MINOR_VERSION "${LINE_MINOR}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
-set(PROJECT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}")
+
+################### SETUP PROJECT ###################
+PROJECT(libopenshot VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
 
 MESSAGE("--> MAJOR Version: ${MAJOR_VERSION}")
 MESSAGE("--> MINOR Version: ${MINOR_VERSION}")
@@ -61,9 +63,6 @@ MESSAGE("--> BUILD Version: ${BUILD_VERSION}")
 MESSAGE("--> SO/API/ABI Version: ${SO_VERSION}")
 MESSAGE("--> VERSION: ${PROJECT_VERSION}")
 MESSAGE("")
-
-################### SETUP PROJECT ###################
-PROJECT(openshot)
 MESSAGE("--------------------------------------------------------------")
 MESSAGE("Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
 
