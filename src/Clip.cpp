@@ -41,6 +41,7 @@ void Clip::init_settings()
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
 	display = FRAME_DISPLAY_NONE;
+	mixing = VOLUME_MIX_NONE;
 	waveform = false;
 	previous_properties = "";
 
@@ -694,6 +695,7 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["gravity"] = add_property_json("Gravity", gravity, "int", "", NULL, 0, 8, false, requested_frame);
 	root["scale"] = add_property_json("Scale", scale, "int", "", NULL, 0, 3, false, requested_frame);
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
+	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 
 	// Add gravity choices (dropdown style)
@@ -718,6 +720,11 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["display"]["choices"].append(add_property_choice_json("Clip", FRAME_DISPLAY_CLIP, display));
 	root["display"]["choices"].append(add_property_choice_json("Timeline", FRAME_DISPLAY_TIMELINE, display));
 	root["display"]["choices"].append(add_property_choice_json("Both", FRAME_DISPLAY_BOTH, display));
+
+	// Add volume mixing choices (dropdown style)
+	root["mixing"]["choices"].append(add_property_choice_json("None", VOLUME_MIX_NONE, mixing));
+	root["mixing"]["choices"].append(add_property_choice_json("Average", VOLUME_MIX_AVERAGE, mixing));
+	root["mixing"]["choices"].append(add_property_choice_json("Reduce", VOLUME_MIX_REDUCE, mixing));
 
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
@@ -758,6 +765,7 @@ Json::Value Clip::JsonValue() {
 	root["scale"] = scale;
 	root["anchor"] = anchor;
 	root["display"] = display;
+	root["mixing"] = mixing;
 	root["waveform"] = waveform;
 	root["scale_x"] = scale_x.JsonValue();
 	root["scale_y"] = scale_y.JsonValue();
@@ -844,6 +852,8 @@ void Clip::SetJsonValue(Json::Value root) {
 		anchor = (AnchorType) root["anchor"].asInt();
 	if (!root["display"].isNull())
 		display = (FrameDisplayType) root["display"].asInt();
+	if (!root["mixing"].isNull())
+		mixing = (VolumeMixType) root["mixing"].asInt();
 	if (!root["waveform"].isNull())
 		waveform = root["waveform"].asBool();
 	if (!root["scale_x"].isNull())
