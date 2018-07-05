@@ -46,7 +46,7 @@ IF (RUBY_FOUND)
 	swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
 	
 	### Set name of target (with no prefix, since Ruby does not like that)
-	#SET_TARGET_PROPERTIES(rbopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
+	SET_TARGET_PROPERTIES(rbopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
 
 	### Link the new Ruby wrapper library with libopenshot
 	SWIG_LINK_LIBRARIES(rbopenshot ${RUBY_LIBRARY} openshot)

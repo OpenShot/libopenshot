@@ -38,15 +38,16 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 	
 	### Enable C++ support in SWIG
-	SET_SOURCE_FILES_PROPERTIES(openshot.i PROPERTIES CPLUSPLUS ON)
+	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 	SET(CMAKE_SWIG_FLAGS "")
 	
 	### Add the SWIG interface file (which defines all the SWIG methods)
 	swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
 
-	### Set output name of target
-	#set_target_properties(_pyopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
+	### Set output name of target (...this seems super dumb)
+	set_target_properties(${SWIG_MODULE_pyopenshot_REAL_NAME} PROPERTIES
+						  PREFIX "_" OUTPUT_NAME "openshot")
 
 	### Link the new python wrapper library with libopenshot
 	swig_link_libraries(pyopenshot ${PYTHON_LIBRARIES} openshot)
