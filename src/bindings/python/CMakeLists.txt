@@ -50,7 +50,7 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 						  PREFIX "_" OUTPUT_NAME "openshot")
 
 	### Link the new python wrapper library with libopenshot
-	swig_link_libraries(pyopenshot ${PYTHON_LIBRARIES} openshot)
+	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME} ${PYTHON_LIBRARIES} openshot)
 
 	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
 	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c 

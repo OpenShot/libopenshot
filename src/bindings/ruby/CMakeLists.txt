@@ -46,10 +46,11 @@ IF (RUBY_FOUND)
 	swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
 	
 	### Set name of target (with no prefix, since Ruby does not like that)
-	SET_TARGET_PROPERTIES(rbopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
+	SET_TARGET_PROPERTIES(${SWIG_MODULE_rbopenshot_REAL_NAME}
+	                       PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
 
 	### Link the new Ruby wrapper library with libopenshot
-	SWIG_LINK_LIBRARIES(rbopenshot ${RUBY_LIBRARY} openshot)
+	target_link_libraries(${SWIG_MODULE_rbopenshot_REAL_NAME} ${RUBY_LIBRARY} openshot)
 	
 	### FIND THE RUBY INTERPRETER (AND THE LOAD_PATH FOLDER)
 	EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir']" OUTPUT_VARIABLE RUBY_VENDOR_ARCH_DIR)
