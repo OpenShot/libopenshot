@@ -31,35 +31,39 @@ INCLUDE(${SWIG_USE_FILE})
 
 FIND_PACKAGE(PythonLibs 3)
 FIND_PACKAGE(PythonInterp 3)
-IF (PYTHONLIBS_FOUND)
-	IF (PYTHONINTERP_FOUND)
+if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
-		### Include Python header files
-		INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-		INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-		
-		### Enable C++ support in SWIG
-		SET_SOURCE_FILES_PROPERTIES(openshot.i PROPERTIES CPLUSPLUS ON)
-		SET(CMAKE_SWIG_FLAGS "")
-		
-		### Add the SWIG interface file (which defines all the SWIG methods)
-		SWIG_ADD_MODULE(openshot python openshot.i)
+	### Include Python header files
+	INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
+	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+	
+	### Enable C++ support in SWIG
+	SET_SOURCE_FILES_PROPERTIES(openshot.i PROPERTIES CPLUSPLUS ON)
+	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
+	SET(CMAKE_SWIG_FLAGS "")
+	
+	### Add the SWIG interface file (which defines all the SWIG methods)
+	swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
 
-		### Link the new python wrapper library with libopenshot
-		SWIG_LINK_LIBRARIES(openshot ${PYTHON_LIBRARIES} openshot)
+	### Set output name of target
+	#set_target_properties(_pyopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
 
-		### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-		EXECUTE_PROCESS ( COMMAND ${PYTHON_EXECUTABLE} -c "import site; print(site.getsitepackages()[0])"
-		                     OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-		                     OUTPUT_STRIP_TRAILING_WHITESPACE )
-		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-		SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH})
+	### Link the new python wrapper library with libopenshot
+	swig_link_libraries(pyopenshot ${PYTHON_LIBRARIES} openshot)
 
-		############### INSTALL HEADERS & LIBRARY ################
-		### Install Python bindings
-		INSTALL(TARGETS _openshot DESTINATION ${PYTHON_MODULE_PATH} )
-		INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION ${PYTHON_MODULE_PATH} )
+	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
+	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c 
+		"from distutils.sysconfig import get_python_lib; print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-	ENDIF(PYTHONINTERP_FOUND)
-ENDIF (PYTHONLIBS_FOUND)
+	GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+	FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+	SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH})
+
+	############### INSTALL HEADERS & LIBRARY ################
+	### Install Python bindings
+	INSTALL(TARGETS ${SWIG_MODULE_pyopenshot_REAL_NAME} LIBRARY DESTINATION ${PYTHON_MODULE_PATH} )
+	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py DESTINATION ${PYTHON_MODULE_PATH} )
+
+endif ()
