@@ -26,21 +26,24 @@
 
 cmake_minimum_required(VERSION 3.2.0)
 
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Welcome to the OpenShot Build System! CMake will now check for all required build")
-MESSAGE("dependencies and notify you of any missing files or other issues. If you have any")
-MESSAGE("questions or issues, please visit <http://www.openshot.org/>.")
+message("-----------------------------------------------------------------
+          Welcome to the OpenShot Build System!
+
+CMake will now check libopenshot's build dependencies and inform
+you of any missing files or other issues.
+
+For more information, please visit <http://www.openshot.org/>.
+-----------------------------------------------------------------")
 
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ GET VERSION INFORMATION FROM VERSION.H ##################
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Determining Version Number (from Version.h file)")
+MESSAGE(STATUS "Determining Version Number (from Version.h file)")
 
 #### Get the lines related to libopenshot version from the Version.h header
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h OPENSHOT_VERSION_LINES
-  REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
+     REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
   
 #### Set each line into it's own variable
 list (GET OPENSHOT_VERSION_LINES 0 LINE_MAJOR)
@@ -54,17 +57,18 @@ STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" 
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
 
+MESSAGE(STATUS "MAJOR Version: ${MAJOR_VERSION}")
+MESSAGE(STATUS "MINOR Version: ${MINOR_VERSION}")
+MESSAGE(STATUS "BUILD Version: ${BUILD_VERSION}")
+MESSAGE(STATUS "SO/API/ABI Version: ${SO_VERSION}")
+
 ################### SETUP PROJECT ###################
 PROJECT(libopenshot VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
 
-MESSAGE("--> MAJOR Version: ${MAJOR_VERSION}")
-MESSAGE("--> MINOR Version: ${MINOR_VERSION}")
-MESSAGE("--> BUILD Version: ${BUILD_VERSION}")
-MESSAGE("--> SO/API/ABI Version: ${SO_VERSION}")
-MESSAGE("--> VERSION: ${PROJECT_VERSION}")
-MESSAGE("")
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
+MESSAGE("Generating build files for OpenShot
+
+  Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
+  SO/API/ABI Version: ${SO_VERSION}")
 
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_FLAGS "-std=c++11")
