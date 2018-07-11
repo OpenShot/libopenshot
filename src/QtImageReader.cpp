@@ -27,6 +27,15 @@
 
 #include "../include/QtImageReader.h"
 
+#if USE_RESVG == 1
+// Set up resvg
+#define RESVG_QT_BACKEND
+extern "C" {
+#include <resvg/resvg.h>
+}
+#include <QDir>
+#endif
+
 using namespace openshot;
 
 QtImageReader::QtImageReader(string path) : path(path), is_open(false)
@@ -51,9 +60,65 @@ void QtImageReader::Open()
 	// Open reader if not already open
 	if (!is_open)
 	{
+
+#if USE_RESVG == 1
+		image = std::shared_ptr<QImage>(new QImage());
+		bool success;
+
+		QFileInfo image_file_info(QString::fromStdString(path));
+
+		// Only use resvg for files with a '.svg' extension
+		if (image_file_info.suffix() == "svg") {
+			// Init resvg structs
+			resvg_render_tree *rtree = nullptr;
+			resvg_options opt;
+			resvg_init_options(&opt);
+
+			// Set resvg options (ones where the defaults aren't what we want)
+			opt.dpi = 144;
+
+			// Load the svg data from the file into a byte array
+			QFile image_file(QString::fromStdString(path));
+			image_file.open(QFile::ReadOnly);
+			QByteArray ba = image_file.readAll();
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "ba.size()", ba.size(), "", -1, "", -1, "", -1, "", -1, "", -1);
+
+			// use byte array as data source for resvg
+			int error = 0;
+			error = resvg_parse_tree_from_data(ba.constData(), ba.size(), &opt, &rtree);
+			if (!rtree) {
+				ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvg_parse_tree_from_data error", error, "", -1, "", -1, "", -1, "", -1, "", -1);
+				abort();
+			}
+
+			resvg_size resvgSize;
+			resvgSize = resvg_get_image_size(rtree);
+			ZmqLogger::Instance()->AppendDebugMethod("QtImageReader::Open", "resvgSize.width", resvgSize.width, "resvgSize.height", resvgSize.height, "", -1, "", -1, "", -1, "", -1);
+
+			// Render and save the svg image to a canvas which has a QImage object as the output
+			QImage img = QImage(resvgSize.width, resvgSize.height, QImage::Format_ARGB32_Premultiplied);
+			img.fill(Qt::transparent);
+			QPainter p;
+			p.begin(&img);
+			p.setRenderHint(QPainter::Antialiasing);
+			resvg_qt_render_to_canvas(rtree, &opt, resvgSize, &p);
+			p.end();
+
+			// Copy the QImage so it is usable below
+			image = std::make_shared<QImage>(img);
+			if (image->width() && image->height()) {
+				// Assume a success if the image has height and width
+				success = 1;
+			}
+		} else {
+			// File does not have a '.svg' extenstion - open file (old method)
+			success = image->load(QString::fromStdString(path));
+		}
+#else // USE_RESVG == 0 old method
 		// Attempt to open file
 		image = std::shared_ptr<QImage>(new QImage());
 		bool success = image->load(QString::fromStdString(path));
+#endif // USE_RESVG
 
 		if (!success)
 			// raise exception
