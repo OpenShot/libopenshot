@@ -156,9 +156,17 @@ void FFmpegReader::Open()
 			if (pCodec == NULL) {
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open video codec
-			if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 				throw InvalidCodec("A video codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with video details (if a video stream is found)
 			UpdateVideoInfo();
@@ -186,9 +194,17 @@ void FFmpegReader::Open()
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open audio codec
-			if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
+			if (avcodec_open2(aCodecCtx, aCodec, &opts) < 0)
 				throw InvalidCodec("An audio codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with audio details (if an audio stream is found)
 			UpdateAudioInfo();
@@ -450,55 +466,55 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
-		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    #pragma omp critical (ReadStream)
+	  {
+			// Check the cache a 2nd time (due to a potential previous lock)
+			if (has_missing_frames)
+			    CheckMissingFrame(requested_frame);
+			frame = final_cache.GetFrame(requested_frame);
+			if (frame) {
+				// Debug output
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
-		// Check the cache a 2nd time (due to a potential previous lock)
-		if (has_missing_frames)
-		    CheckMissingFrame(requested_frame);
-		frame = final_cache.GetFrame(requested_frame);
-		if (frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
-
-			// Return the cached frame
-			return frame;
-		}
-
-		// Frame is not in cache
-		// Reset seek count
-		seek_count = 0;
-
-		// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
-		if (last_frame == 0 && requested_frame != 1)
-			// Get first frame
-			ReadStream(1);
-
-		// Are we within X frames of the requested frame?
-		int64_t diff = requested_frame - last_frame;
-		if (diff >= 1 && diff <= 20)
-		{
-			// Continue walking the stream
-			return ReadStream(requested_frame);
-		}
-		else
-		{
-			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-			if (enable_seek)
-				// Only seek if enabled
-				Seek(requested_frame);
-
-			else if (!enable_seek && diff < 0)
-			{
-				// Start over, since we can't seek, and the requested frame is smaller than our position
-				Close();
-				Open();
+				// Return the cached frame
 			}
+			else {
+				// Frame is not in cache
+				// Reset seek count
+				seek_count = 0;
 
-			// Then continue walking the stream
-			return ReadStream(requested_frame);
-		}
+				// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
+				if (last_frame == 0 && requested_frame != 1)
+					// Get first frame
+					ReadStream(1);
 
+				// Are we within X frames of the requested frame?
+				int64_t diff = requested_frame - last_frame;
+				if (diff >= 1 && diff <= 20)
+				{
+					// Continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+				else
+				{
+					// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
+					if (enable_seek)
+						// Only seek if enabled
+						Seek(requested_frame);
+
+					else if (!enable_seek && diff < 0)
+					{
+						// Start over, since we can't seek, and the requested frame is smaller than our position
+						Close();
+						Open();
+					}
+
+					// Then continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+			}
+	  } //omp critical
+    return frame;
 	}
 }
 
