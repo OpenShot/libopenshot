@@ -590,6 +590,23 @@ void FFmpegWriter::flush_encoders()
 				// Encode video packet (latest version of FFmpeg)
 				error_code = avcodec_send_frame(video_codec, NULL);
 				got_packet = 0;
+				while (error_code >= 0) {
+					error_code = avcodec_receive_packet(video_codec, &pkt);
+					if (error_code == AVERROR(EAGAIN)|| error_code == AVERROR_EOF) {
+						got_packet = 0;
+						// Write packet
+						avcodec_flush_buffers(video_codec);
+						break;
+					}
+					if (pkt.pts != AV_NOPTS_VALUE)
+						pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
+					if (pkt.dts != AV_NOPTS_VALUE)
+						pkt.dts = av_rescale_q(pkt.dts, video_codec->time_base, video_st->time_base);
+					if (pkt.duration > 0)
+						pkt.duration = av_rescale_q(pkt.duration, video_codec->time_base, video_st->time_base);
+					pkt.stream_index = video_st->index;
+					error_code = av_interleaved_write_frame(oc, &pkt);
+				}
 			}
 			#else
 
