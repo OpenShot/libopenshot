@@ -258,6 +258,9 @@ namespace openshot
 		/// Determine if writer is open or closed
 		bool IsOpen() { return is_open; };
 
+		/// Determine if codec name is valid
+		static bool IsValidCodec(string codec_name);
+
 		/// Open writer
 		void Open();
 

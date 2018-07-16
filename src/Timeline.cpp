@@ -294,10 +294,23 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 			{
-				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1) / fmaxf(max_volume, 1.0); // previous frame's percentage of volume (0 to 1)
-				float volume = source_clip->volume.GetValue(clip_frame_number) / fmaxf(max_volume, 1.0); // percentage of volume (0 to 1)
+				// Get volume from previous frame and this frame
+				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1);
+				float volume = source_clip->volume.GetValue(clip_frame_number);
 				int channel_filter = source_clip->channel_filter.GetInt(clip_frame_number); // optional channel to filter (if not -1)
 				int channel_mapping = source_clip->channel_mapping.GetInt(clip_frame_number); // optional channel to map this channel to (if not -1)
+
+				// Apply volume mixing strategy
+				if (source_clip->mixing == VOLUME_MIX_AVERAGE && max_volume > 1.0) {
+					// Don't allow this clip to exceed 100% (divide volume equally between all overlapping clips with volume
+					previous_volume = previous_volume / max_volume;
+					volume = volume / max_volume;
+				}
+				else if (source_clip->mixing == VOLUME_MIX_REDUCE && max_volume > 1.0) {
+					// Reduce clip volume by a bit, hoping it will prevent exceeding 100% (but it is very possible it will)
+					previous_volume = previous_volume * 0.77;
+					volume = volume * 0.77;
+				}
 
 				// If channel filter enabled, check for correct channel (and skip non-matching channels)
 				if (channel_filter != -1 && channel_filter != channel)
@@ -760,14 +773,18 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 							long nearby_clip_start_frame = (nearby_clip->Start() * info.fps.ToDouble()) + 1;
 							long nearby_clip_frame_number = frame_number - nearby_clip_start_position + nearby_clip_start_frame;
 
+							// Determine if top clip
 							if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
                                     nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number &&
                                     nearby_clip_start_position > clip_start_position && is_top_clip == true) {
 								is_top_clip = false;
 							}
 
-							if (nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number) {
-								max_volume += nearby_clip->volume.GetValue(nearby_clip_frame_number);
+							// Determine max volume of overlapping clips
+							if (nearby_clip->Reader() && nearby_clip->Reader()->info.has_audio &&
+									nearby_clip->has_audio.GetInt(nearby_clip_frame_number) != 0 &&
+									nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number) {
+									max_volume += nearby_clip->volume.GetValue(nearby_clip_frame_number);
 							}
 						}
 

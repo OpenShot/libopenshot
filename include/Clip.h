@@ -155,6 +155,7 @@ namespace openshot {
 		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
 		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
         FrameDisplayType display; ///< The format to display the frame number (if any)
+		VolumeMixType mixing; ///< What strategy should be followed when mixing audio with other clips
 
 		/// Default Constructor
 		Clip();
