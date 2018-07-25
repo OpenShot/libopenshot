@@ -245,7 +245,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume)
 {
 	// Get the clip's frame & image
 	std::shared_ptr<Frame> source_frame;
@@ -288,18 +288,29 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
-
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number, "", -1);
 
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
 			{
-				float initial_volume = 1.0f;
-				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1); // previous frame's percentage of volume (0 to 1)
-				float volume = source_clip->volume.GetValue(clip_frame_number); // percentage of volume (0 to 1)
+				// Get volume from previous frame and this frame
+				float previous_volume = source_clip->volume.GetValue(clip_frame_number - 1);
+				float volume = source_clip->volume.GetValue(clip_frame_number);
 				int channel_filter = source_clip->channel_filter.GetInt(clip_frame_number); // optional channel to filter (if not -1)
 				int channel_mapping = source_clip->channel_mapping.GetInt(clip_frame_number); // optional channel to map this channel to (if not -1)
+
+				// Apply volume mixing strategy
+				if (source_clip->mixing == VOLUME_MIX_AVERAGE && max_volume > 1.0) {
+					// Don't allow this clip to exceed 100% (divide volume equally between all overlapping clips with volume
+					previous_volume = previous_volume / max_volume;
+					volume = volume / max_volume;
+				}
+				else if (source_clip->mixing == VOLUME_MIX_REDUCE && max_volume > 1.0) {
+					// Reduce clip volume by a bit, hoping it will prevent exceeding 100% (but it is very possible it will)
+					previous_volume = previous_volume * 0.77;
+					volume = volume * 0.77;
+				}
 
 				// If channel filter enabled, check for correct channel (and skip non-matching channels)
 				if (channel_filter != -1 && channel_filter != channel)
@@ -313,12 +324,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				if (channel_mapping == -1)
 					channel_mapping = channel;
 
-				// If no ramp needed, set initial volume = clip's volume
-				if (isEqual(previous_volume, volume))
-					initial_volume = volume;
-
 				// Apply ramp to source frame (if needed)
-				if (!isEqual(previous_volume, volume))
+				if (!isEqual(previous_volume, 1.0) || !isEqual(volume, 1.0))
 					source_frame->ApplyGainRamp(channel_mapping, 0, source_frame->GetAudioSamplesCount(), previous_volume, volume);
 
 				// TODO: Improve FrameMapper (or Timeline) to always get the correct number of samples per frame.
@@ -333,7 +340,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
 				#pragma omp critical (T_addLayer)
-				new_frame->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), initial_volume);
+				new_frame->AddAudio(false, channel_mapping, 0, source_frame->GetAudioSamples(channel), source_frame->GetAudioSamplesCount(), 1.0);
 
 			}
 		else
@@ -757,17 +764,27 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 					{
 						// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
 						bool is_top_clip = true;
+						float max_volume = 0.0;
 						for (int top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
 						{
 							Clip *nearby_clip = nearby_clips[top_clip_index];
                             long nearby_clip_start_position = round(nearby_clip->Position() * info.fps.ToDouble()) + 1;
                             long nearby_clip_end_position = round((nearby_clip->Position() + nearby_clip->Duration()) * info.fps.ToDouble()) + 1;
+							long nearby_clip_start_frame = (nearby_clip->Start() * info.fps.ToDouble()) + 1;
+							long nearby_clip_frame_number = frame_number - nearby_clip_start_position + nearby_clip_start_frame;
 
+							// Determine if top clip
 							if (clip->Id() != nearby_clip->Id() && clip->Layer() == nearby_clip->Layer() &&
                                     nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number &&
-                                    nearby_clip_start_position > clip_start_position) {
+                                    nearby_clip_start_position > clip_start_position && is_top_clip == true) {
 								is_top_clip = false;
-								break;
+							}
+
+							// Determine max volume of overlapping clips
+							if (nearby_clip->Reader() && nearby_clip->Reader()->info.has_audio &&
+									nearby_clip->has_audio.GetInt(nearby_clip_frame_number) != 0 &&
+									nearby_clip_start_position <= frame_number && nearby_clip_end_position >= frame_number) {
+									max_volume += nearby_clip->volume.GetValue(nearby_clip_frame_number);
 							}
 						}
 
@@ -779,7 +796,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 						ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number, "", -1, "", -1);
 
 						// Add clip's frame as layer
-						add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip);
+						add_layer(new_frame, clip, clip_frame_number, frame_number, is_top_clip, max_volume);
 
 					} else
 						// Debug output
