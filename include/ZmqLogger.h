@@ -73,10 +73,10 @@ namespace openshot {
 		ZmqLogger(){}; 						 // Don't allow user to create an instance of this singleton
 
 		/// Default copy method
-		ZmqLogger(ZmqLogger const&){};             // Don't allow the user to copy this instance
+		ZmqLogger(ZmqLogger const&) = delete;             // Don't allow the user to copy this instance
 
 		/// Default assignment operator
-		ZmqLogger & operator=(ZmqLogger const&){};  // Don't allow the user to assign this instance
+		ZmqLogger & operator=(ZmqLogger const&) = delete;  // Don't allow the user to assign this instance
 
 		/// Private variable to keep track of singleton instance
 		static ZmqLogger * m_pInstance;
