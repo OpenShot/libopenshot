@@ -159,12 +159,13 @@ void ZmqLogger::Close()
 }
 
 // Append debug information
-void ZmqLogger::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
-								   string arg2_name, float arg2_value,
-								   string arg3_name, float arg3_value,
-								   string arg4_name, float arg4_value,
-								   string arg5_name, float arg5_value,
-								   string arg6_name, float arg6_value)
+void ZmqLogger::AppendDebugMethod(string method_name,
+								  string arg1_name="", float arg1_value=-1,
+								  string arg2_name="", float arg2_value=-1,
+								  string arg3_name="", float arg3_value=-1,
+								  string arg4_name="", float arg4_value=-1,
+								  string arg5_name="", float arg5_value=-1,
+								  string arg6_name="", float arg6_value=-1)
 {
 	if (!enabled)
 		// Don't do anything
