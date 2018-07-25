@@ -56,10 +56,10 @@ namespace openshot {
 		CrashHandler(){}; 						 // Don't allow user to create an instance of this singleton
 
 		/// Default copy method
-		CrashHandler(CrashHandler const&){};             // Don't allow the user to copy this instance
+		CrashHandler(CrashHandler const&) = delete;             // Don't allow the user to copy this instance
 
 		/// Default assignment operator
-		CrashHandler & operator=(CrashHandler const&){};  // Don't allow the user to assign this instance
+		CrashHandler & operator=(CrashHandler const&) = delete;  // Don't allow the user to assign this instance
 
 		/// Private variable to keep track of singleton instance
 		static CrashHandler *m_pInstance;
