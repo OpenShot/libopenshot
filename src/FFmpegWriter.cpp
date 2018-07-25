@@ -559,7 +559,7 @@ void FFmpegWriter::flush_encoders()
 {
 	if (info.has_audio && audio_codec && AV_GET_CODEC_TYPE(audio_st) == AVMEDIA_TYPE_AUDIO && AV_GET_CODEC_ATTRIBUTES(audio_st, audio_codec)->frame_size <= 1)
 		return;
-	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
+	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_NOFILE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
 
     int error_code = 0;
@@ -881,7 +881,7 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
-		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_audio_stream", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->channels", c->channels, "c->sample_fmt", c->sample_fmt, "c->channel_layout", c->channel_layout, "c->sample_rate", c->sample_rate);
@@ -953,7 +953,7 @@ AVStream* FFmpegWriter::add_video_stream()
 		c->mb_decision = 2;
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
-		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 	// Find all supported pixel formats for this codec
     const PixelFormat* supported_pixel_formats = codec->pix_fmts;
@@ -973,7 +973,7 @@ AVStream* FFmpegWriter::add_video_stream()
         if (strcmp(fmt->name, "gif") != 0)
 			// If not GIF format, skip the encoding process
 			// Set raw picture flag (so we don't encode this video)
-			oc->oformat->flags |= AVFMT_RAWPICTURE;
+			oc->oformat->flags |= AVFMT_NOFILE;
         } else {
         	// Set the default codec
         	c->pix_fmt = PIX_FMT_YUV420P;
@@ -981,7 +981,7 @@ AVStream* FFmpegWriter::add_video_stream()
     }
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_NOFILE", AVFMT_NOFILE, "", -1);
 
 	return st;
 }
@@ -1056,7 +1056,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + AV_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
 
 }
 
@@ -1560,9 +1560,9 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 // write video frame
 bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_NOFILE", oc->oformat->flags & AVFMT_NOFILE, "", -1, "", -1, "", -1, "", -1);
 
-	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+	if (oc->oformat->flags & AVFMT_NOFILE) {
 		// Raw video case.
 		AVPacket pkt;
 		av_init_packet(&pkt);
