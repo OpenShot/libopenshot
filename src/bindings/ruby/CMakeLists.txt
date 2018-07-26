@@ -37,17 +37,20 @@ IF (RUBY_FOUND)
 	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 	
 	### Enable C++ in SWIG
-	SET_SOURCE_FILES_PROPERTIES(openshot.i PROPERTIES CPLUSPLUS ON)
+	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
+	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
+
 	SET(CMAKE_SWIG_FLAGS "")
 
 	### Add the SWIG interface file (which defines all the SWIG methods)
-	SWIG_ADD_MODULE(rbopenshot ruby openshot.i)
+	swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
 	
 	### Set name of target (with no prefix, since Ruby does not like that)
-	SET_TARGET_PROPERTIES(rbopenshot PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
+	SET_TARGET_PROPERTIES(${SWIG_MODULE_rbopenshot_REAL_NAME}
+	                       PROPERTIES PREFIX "" OUTPUT_NAME "openshot")
 
 	### Link the new Ruby wrapper library with libopenshot
-	SWIG_LINK_LIBRARIES(rbopenshot ${RUBY_LIBRARY} openshot)
+	target_link_libraries(${SWIG_MODULE_rbopenshot_REAL_NAME} ${RUBY_LIBRARY} openshot)
 	
 	### FIND THE RUBY INTERPRETER (AND THE LOAD_PATH FOLDER)
 	EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE} -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir']" OUTPUT_VARIABLE RUBY_VENDOR_ARCH_DIR)
@@ -58,6 +61,6 @@ IF (RUBY_FOUND)
 
 	############### INSTALL HEADERS & LIBRARY ################
 	# Install Ruby bindings
-	INSTALL(TARGETS rbopenshot LIBRARY DESTINATION ${RUBY_VENDOR_ARCH_DIR})
+	install(TARGETS ${SWIG_MODULE_rbopenshot_REAL_NAME} LIBRARY DESTINATION ${RUBY_VENDOR_ARCH_DIR} )
 	
 ENDIF (RUBY_FOUND)
