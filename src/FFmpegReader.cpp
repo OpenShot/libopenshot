@@ -421,18 +421,6 @@ void FFmpegReader::UpdateVideoInfo()
 		// Calculate FPS, duration, video bit rate, and video length manually
 		// by scanning through all the video stream packets
 		CheckFPS();
-
-		// If still an invalid FPS detected, just default to 24 FPS
-		// Set a few important default video settings (so audio can be divided into frames)
-		if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0)) {
-			info.fps.num = 24;
-			info.fps.den = 1;
-			info.video_timebase.num = 1;
-			info.video_timebase.den = 24;
-
-			// Calculate number of frames
-			info.video_length = round(info.duration * info.fps.ToDouble());
-		}
 	}
 
 	// Add video metadata (if any)
@@ -1934,6 +1922,18 @@ void FFmpegReader::CheckFPS()
 
 		// Update video bit rate
 		info.video_bit_rate = info.file_size / info.duration;
+	} else {
+
+		// Too short to determine framerate, just default FPS
+		// Set a few important default video settings (so audio can be divided into frames)
+		info.fps.num = 30;
+		info.fps.den = 1;
+		info.video_timebase.num = info.fps.den;
+		info.video_timebase.den = info.fps.num;
+
+		// Calculate number of frames
+		info.video_length = frames_detected;
+		info.duration = frames_detected / info.video_timebase.ToFloat();
 	}
 }
 
