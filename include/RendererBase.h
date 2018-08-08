@@ -28,7 +28,7 @@
 #ifndef OPENSHOT_RENDERER_BASE_H
 #define OPENSHOT_RENDERER_BASE_H
 
-#include "../include/Frame.h"
+#include "Frame.h"
 #include <stdlib.h> // for realloc
 #include <memory>
 

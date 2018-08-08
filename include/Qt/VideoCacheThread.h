@@ -28,9 +28,9 @@
 #ifndef OPENSHOT_VIDEO_CACHE_THREAD_H
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
-#include "../../include/OpenMPUtilities.h"
-#include "../../include/ReaderBase.h"
-#include "../../include/RendererBase.h"
+#include "../OpenMPUtilities.h"
+#include "../ReaderBase.h"
+#include "../RendererBase.h"
 
 namespace openshot
 {
