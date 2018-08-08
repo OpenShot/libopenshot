@@ -156,9 +156,17 @@ void FFmpegReader::Open()
 			if (pCodec == NULL) {
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open video codec
-			if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 				throw InvalidCodec("A video codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with video details (if a video stream is found)
 			UpdateVideoInfo();
@@ -186,9 +194,17 @@ void FFmpegReader::Open()
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 			}
+
+			// Init options
+			AVDictionary *opts = NULL;
+			av_dict_set(&opts, "strict", "experimental", 0);
+
 			// Open audio codec
-			if (avcodec_open2(aCodecCtx, aCodec, NULL) < 0)
+			if (avcodec_open2(aCodecCtx, aCodec, &opts) < 0)
 				throw InvalidCodec("An audio codec was found, but could not be opened.", path);
+
+			// Free options
+			av_dict_free(&opts);
 
 			// Update the File Info struct with audio details (if an audio stream is found)
 			UpdateAudioInfo();
@@ -323,19 +339,21 @@ void FFmpegReader::UpdateAudioInfo()
 
 void FFmpegReader::UpdateVideoInfo()
 {
+	if (check_fps)
+		// Already initialized all the video metadata, no reason to do it again
+		return;
+
 	// Set values of FileInfo struct
 	info.has_video = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.height = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->height;
 	info.width = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->width;
 	info.vcodec = pCodecCtx->codec->name;
-	info.video_bit_rate = pFormatCtx->bit_rate;
-	if (!check_fps)
-	{
-		// set frames per second (fps)
-		info.fps.num = pStream->avg_frame_rate.num;
-		info.fps.den = pStream->avg_frame_rate.den;
-	}
+	info.video_bit_rate = (pFormatCtx->bit_rate / 8);
+
+	// set frames per second (fps)
+	info.fps.num = pStream->avg_frame_rate.num;
+	info.fps.den = pStream->avg_frame_rate.den;
 
 	if (pStream->sample_aspect_ratio.num != 0)
 	{
@@ -399,16 +417,10 @@ void FFmpegReader::UpdateVideoInfo()
 	}
 
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0))
-	{
-		// Set a few important default video settings (so audio can be divided into frames)
-		info.fps.num = 24;
-		info.fps.den = 1;
-		info.video_timebase.num = 1;
-		info.video_timebase.den = 24;
-
-		// Calculate number of frames
-		info.video_length = round(info.duration * info.fps.ToDouble());
+	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0)) {
+		// Calculate FPS, duration, video bit rate, and video length manually
+		// by scanning through all the video stream packets
+		CheckFPS();
 	}
 
 	// Add video metadata (if any)
@@ -1841,16 +1853,12 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 void FFmpegReader::CheckFPS()
 {
 	check_fps = true;
-	AV_ALLOCATE_IMAGE(pFrame, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), info.width, info.height);
-
 	int first_second_counter = 0;
 	int second_second_counter = 0;
 	int third_second_counter = 0;
 	int forth_second_counter = 0;
 	int fifth_second_counter = 0;
-
-	int iterations = 0;
-	int threshold = 500;
+	int frames_detected = 0;
 
 	// Loop through the stream
 	while (true)
@@ -1892,63 +1900,41 @@ void FFmpegReader::CheckFPS()
 					forth_second_counter++;
 				else if (video_seconds > 4.0 && video_seconds <= 5.0)
 					fifth_second_counter++;
-				else
-					// Too far
-					break;
+
+				// Increment counters
+				frames_detected++;
 			}
 		}
-
-		// Increment counters
-		iterations++;
-
-		// Give up (if threshold exceeded)
-		if (iterations > threshold)
-			break;
 	}
 
 	// Double check that all counters have greater than zero (or give up)
-	if (second_second_counter == 0 || third_second_counter == 0 || forth_second_counter == 0 || fifth_second_counter == 0)
-	{
-		// Seek to frame 1
-		Seek(1);
+	if (second_second_counter != 0 && third_second_counter != 0 && forth_second_counter != 0 && fifth_second_counter != 0) {
+		// Calculate average FPS
+		int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
+		int avg_fps = round(sum_fps / 4.0f);
 
-		// exit with no changes to FPS (not enough data to calculate)
-		return;
+		// Update FPS
+		info.fps = Fraction(avg_fps, 1);
+
+		// Update Duration and Length
+		info.video_length = frames_detected;
+		info.duration = frames_detected / round(sum_fps / 4.0f);
+
+		// Update video bit rate
+		info.video_bit_rate = info.file_size / info.duration;
+	} else {
+
+		// Too short to determine framerate, just default FPS
+		// Set a few important default video settings (so audio can be divided into frames)
+		info.fps.num = 30;
+		info.fps.den = 1;
+		info.video_timebase.num = info.fps.den;
+		info.video_timebase.den = info.fps.num;
+
+		// Calculate number of frames
+		info.video_length = frames_detected;
+		info.duration = frames_detected / info.video_timebase.ToFloat();
 	}
-
-	int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
-	int avg_fps = round(sum_fps / 4.0f);
-
-	// Sometimes the FPS is incorrectly detected by FFmpeg.  If the 1st and 2nd seconds counters
-	// agree with each other, we are going to adjust the FPS of this reader instance.  Otherwise, print
-	// a warning message.
-
-	// Get diff from actual frame rate
-	double fps = info.fps.ToDouble();
-	double diff = fps - double(avg_fps);
-
-	// Is difference bigger than 1 frame?
-	if (diff <= -1 || diff >= 1)
-	{
-		// Compare to half the frame rate (the most common type of issue)
-		double half_fps = Fraction(info.fps.num / 2, info.fps.den).ToDouble();
-		diff = half_fps - double(avg_fps);
-
-		// Is difference bigger than 1 frame?
-		if (diff <= -1 || diff >= 1)
-		{
-			// Update FPS for this reader instance
-			info.fps = Fraction(avg_fps, 1);
-		}
-		else
-		{
-			// Update FPS for this reader instance (to 1/2 the original framerate)
-			info.fps = Fraction(info.fps.num / 2, info.fps.den);
-		}
-	}
-
-	// Seek to frame 1
-	Seek(1);
 }
 
 // Remove AVFrame from cache (and deallocate it's memory)
