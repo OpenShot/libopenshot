@@ -650,8 +650,8 @@ void FrameMapper::Close()
 
 		// Deallocate resample buffer
 		if (avr) {
-			avresample_close(avr);
-			avresample_free(&avr);
+			SWR_CLOSE(avr);
+			SWR_FREE(&avr);
 			avr = NULL;
 		}
 	}
@@ -741,8 +741,8 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 
 	// Deallocate resample buffer
 	if (avr) {
-		avresample_close(avr);
-		avresample_free(&avr);
+		SWR_CLOSE(avr);
+		SWR_FREE(&avr);
 		avr = NULL;
 	}
 
@@ -817,7 +817,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
     // setup resample context
     if (!avr) {
-        avr = avresample_alloc_context();
+        avr = SWR_ALLOC();
         av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
         av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
         av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
@@ -826,11 +826,11 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
         av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
         av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
         av_opt_set_int(avr, "out_channels",       info.channels,    0);
-        avresample_open(avr);
+        SWR_INIT(avr);
     }
 
     // Convert audio samples
-    nb_samples = avresample_convert(avr, 	// audio resample context
+    nb_samples = SWR_CONVERT(avr, 	// audio resample context
             audio_converted->data, 			// output data pointers
             audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
             audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold

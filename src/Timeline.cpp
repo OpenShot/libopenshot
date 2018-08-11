@@ -1000,13 +1000,14 @@ void Timeline::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
+				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
 
-				// Load Json into Effect
-				e->SetJsonValue(existing_effect);
+					// Load Json into Effect
+					e->SetJsonValue(existing_effect);
 
-				// Add Effect to Timeline
-				AddEffect(e);
+					// Add Effect to Timeline
+					AddEffect(e);
+				}
 			}
 		}
 	}
@@ -1270,13 +1271,14 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		EffectBase *e = NULL;
 
 		// Init the matching effect object
-		e = EffectInfo().CreateEffect(effect_type);
+		if (e = EffectInfo().CreateEffect(effect_type)) {
 
-		// Load Json into Effect
-		e->SetJsonValue(change["value"]);
+			// Load Json into Effect
+			e->SetJsonValue(change["value"]);
 
-		// Add Effect to Timeline
-		AddEffect(e);
+			// Add Effect to Timeline
+			AddEffect(e);
+		}
 
 	} else if (change_type == "update") {
 

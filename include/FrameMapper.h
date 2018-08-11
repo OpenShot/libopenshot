@@ -146,7 +146,7 @@ namespace openshot
 		ReaderBase *reader;		// The source video reader
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
-		AVAudioResampleContext *avr;	// Audio resampling context object
+		SWRCONTEXT *avr;	// Audio resampling context object
 
 		// Internal methods used by init
 		void AddField(int64_t frame);

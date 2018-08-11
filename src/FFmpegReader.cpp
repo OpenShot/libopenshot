@@ -40,8 +40,8 @@ FFmpegReader::FFmpegReader(string path)
 	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
-	avcodec_register_all();
+	AV_REGISTER_ALL
+	AVCODEC_REGISTER_ALL
 
 	// Init cache
 	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
@@ -61,8 +61,8 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
-	avcodec_register_all();
+	AV_REGISTER_ALL
+	AVCODEC_REGISTER_ALL
 
 	// Init cache
 	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
@@ -974,7 +974,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int data_size = 0;
 
 	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE;
 	#pragma omp critical (ProcessAudioPacket)
 	{
 	#if IS_FFMPEG_3_2
@@ -1079,7 +1079,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 
 	// Allocate audio buffer
-	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE];
 
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
@@ -1089,11 +1089,11 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	audio_converted->nb_samples = audio_frame->nb_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
-	AVAudioResampleContext *avr = NULL;
+	SWRCONTEXT *avr = NULL;
 	int nb_samples = 0;
 
 	// setup resample context
-	avr = avresample_alloc_context();
+	avr = SWR_ALLOC();
 	av_opt_set_int(avr,  "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr,  "in_sample_fmt",     AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
@@ -1102,10 +1102,10 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
 	av_opt_set_int(avr,  "in_channels",       info.channels,    0);
 	av_opt_set_int(avr, "out_channels",       info.channels,    0);
-	int r = avresample_open(avr);
+	int r = SWR_INIT(avr);
 
 	// Convert audio samples
-	nb_samples = avresample_convert(avr, 	// audio resample context
+	nb_samples = SWR_CONVERT(avr, 	// audio resample context
 			audio_converted->data, 			// output data pointers
 			audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 			audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
@@ -1117,8 +1117,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
 
 	// Deallocate resample buffer
-	avresample_close(avr);
-	avresample_free(&avr);
+	SWR_CLOSE(avr);
+	SWR_FREE(&avr);
 	avr = NULL;
 
 	// Free AVFrames
@@ -1344,7 +1344,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 		{
 			seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
+				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->AV_FILENAME);
 			} else
 			{
 				// VIDEO SEEK
@@ -1358,7 +1358,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 		{
 			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
+				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->AV_FILENAME);
 			} else
 			{
 				// AUDIO SEEK
@@ -1853,6 +1853,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 void FFmpegReader::CheckFPS()
 {
 	check_fps = true;
+	AV_ALLOCATE_IMAGE(pFrame, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), info.width, info.height);
+
 	int first_second_counter = 0;
 	int second_second_counter = 0;
 	int third_second_counter = 0;
