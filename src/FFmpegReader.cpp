@@ -37,7 +37,8 @@ FFmpegReader::FFmpegReader(string path)
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 	  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
+	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
+	  packet(NULL), use_omp_threads(true) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -58,7 +59,8 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
+		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
+		  packet(NULL), use_omp_threads(true) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -226,6 +228,9 @@ void FFmpegReader::Open()
 		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+
+		// Initialize OMP threading support
+		use_omp_threads = openshot::IsOMPEnabled();
 
 		// Mark as "open"
 		is_open = true;
@@ -633,8 +638,13 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
 				}
 
+				if (!use_omp_threads) {
+					// Wait on each OMP task to complete before moving on to the next one. This slows
+					// down processing considerably, but might be more stable on some systems.
+					#pragma omp taskwait
+				}
+
 				// Check if working frames are 'finished'
-				bool is_cache_found = false;
 				if (!is_seeking) {
 					// Check for any missing frames
 					CheckMissingFrame(requested_frame);
@@ -644,7 +654,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 				}
 
 				// Check if requested 'final' frame is available
-				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
+				bool is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
 
 				// Increment frames processed
 				packets_processed++;
