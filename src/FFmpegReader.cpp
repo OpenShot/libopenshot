@@ -607,6 +607,12 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 
 						// Process Video Packet
 						ProcessVideoPacket(requested_frame);
+
+						if (!use_omp_threads) {
+							// Wait on each OMP task to complete before moving on to the next one. This slows
+							// down processing considerably, but might be more stable on some systems.
+							#pragma omp taskwait
+						}
 					}
 
 				}
@@ -636,12 +642,6 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 
 					// Process Audio Packet
 					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
-				}
-
-				if (!use_omp_threads) {
-					// Wait on each OMP task to complete before moving on to the next one. This slows
-					// down processing considerably, but might be more stable on some systems.
-					#pragma omp taskwait
 				}
 
 				// Check if working frames are 'finished'
