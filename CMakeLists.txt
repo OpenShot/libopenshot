@@ -33,6 +33,7 @@ MESSAGE("questions or issues, please visit <http://www.openshot.org/>.")
 
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+include(GNUInstallDirs)
 
 ################ GET VERSION INFORMATION FROM VERSION.H ##################
 MESSAGE("--------------------------------------------------------------")
@@ -87,4 +88,4 @@ add_subdirectory(tests)
 include(cmake/Modules/UseDoxygen.cmake)
 
 file(GLOB_RECURSE doc_files ${CMAKE_CURRENT_BINARY_DIR}/doc/html/*.*)
-INSTALL(FILES ${doc_files} DESTINATION share/doc/libopenshot)
+INSTALL(FILES ${doc_files} DESTINATION ${CMAKE_INSTALL_DOCDIR}/libopenshot)
