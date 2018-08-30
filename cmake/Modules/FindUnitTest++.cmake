@@ -1,49 +1,39 @@
 # Locate UNITTEST
 # This module defines
 # UNITTEST++_LIBRARY
-# UNITTEST++_FOUND, if false, do not try to link to gdal 
+# UNITTEST++_FOUND, if false, do not try to link to gdal
 # UNITTEST++_INCLUDE_DIR, where to find the headers
 
 FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
-    ${UNITTEST_DIR}/include/unittest++
-    $ENV{UNITTEST_DIR}/include/unittest++
-	$ENV{UNITTEST_DIR}/src
-    $ENV{UNITTEST_DIR}
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local/include
-    /usr/include
-    /usr/include/unittest++
-    /usr/include/UnitTest++ # Fedora
-    /usr/include/unittest-cpp # openSUSE
-    /usr/local/include/UnitTest++/ # Arch
-    /sw/include # Fink
-    /opt/local/include # DarwinPorts
-    /opt/local/include/UnitTest++
-    /opt/csw/include # Blastwave
-    /opt/include
-    [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]/include
-    /usr/freeware/include
+    HINTS
+        ENV UNITTEST_DIR
+    PATHS
+        [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]
+        ~/Library/Frameworks
+        /Library/Frameworks
+        $ENV{UNITTEST_DIR}/src
+    PATH_SUFFIXES
+        include/unittest++
+        include/UnitTest++
+        include/unittest-cpp
+        include
+        unittest++
+        UnitTest++
+        unittest-cpp
 )
 
-FIND_LIBRARY(UNITTEST++_LIBRARY 
+FIND_LIBRARY(UNITTEST++_LIBRARY
     NAMES unittest++ UnitTest++
+    HINTS
+        ENV UNITTEST_DIR
     PATHS
-    ${UNITTEST_DIR}/lib
-    $ENV{UNITTEST_DIR}/lib
-	$ENV{UNITTEST_DIR}/build
-    $ENV{UNITTEST_DIR}
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local/lib
-    /usr/lib
-    /usr/lib64/ # Fedora
-    /sw/lib
-    /opt/local/lib
-    /opt/csw/lib
-    /opt/lib
-    [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]/lib
-    /usr/freeware/lib64
+        [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]
+        $ENV{UNITTEST_DIR}/build
+        ~/Library/Frameworks
+        /Library/Frameworks
+    PATH_SUFFIXES
+        lib
+        lib64
 )
 
 SET(UNITTEST++_FOUND "NO")
