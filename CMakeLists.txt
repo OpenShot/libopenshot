@@ -87,5 +87,4 @@ add_subdirectory(tests)
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
 
-file(GLOB_RECURSE doc_files ${CMAKE_CURRENT_BINARY_DIR}/doc/html/*.*)
-INSTALL(FILES ${doc_files} DESTINATION ${CMAKE_INSTALL_DOCDIR}/libopenshot)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/libopenshot OPTIONAL)
