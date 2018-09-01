@@ -97,6 +97,9 @@ namespace openshot
 		AVFormatContext *pFormatCtx;
 		int i, videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
+		#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+		AVBufferRef *hw_device_ctx = NULL; //PM
+		#endif
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
 		AVFrame *pFrame;

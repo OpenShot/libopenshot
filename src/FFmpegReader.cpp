@@ -32,6 +32,9 @@
 
 using namespace openshot;
 
+int hw_de_on = 1;					// Is set in UI
+int hw_de_supported = 0;	// Is set by FFmpegReader
+
 FFmpegReader::FFmpegReader(string path)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
@@ -103,6 +106,45 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 	return false;
 }
 
+#if IS_FFMPEG_3_2
+#if defined(__linux__)
+#pragma message "You are compiling with experimental hardware decode"
+
+static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			if (*p == AV_PIX_FMT_VAAPI)
+            return *p;
+    }
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using VA-API.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		hw_de_supported = 0;
+    return AV_PIX_FMT_NONE;
+}
+
+int is_hardware_decode_supported(int codecid)
+{
+	int ret;
+	switch (codecid) {
+		case AV_CODEC_ID_H264:
+		case AV_CODEC_ID_MPEG2VIDEO:
+		case AV_CODEC_ID_VC1:
+		case AV_CODEC_ID_WMV1:
+		case AV_CODEC_ID_WMV2:
+		case AV_CODEC_ID_WMV3:
+		ret = 1;
+		break;
+	default :
+		ret = 0;
+		break;
+	}
+	return ret;
+}
+
+#endif
+#endif
+
 void FFmpegReader::Open()
 {
 	// Open reader if not already open
@@ -110,6 +152,14 @@ void FFmpegReader::Open()
 	{
 		// Initialize format context
 		pFormatCtx = NULL;
+
+    char * val = getenv( "OS2_DECODE_HW" );
+		if (val == NULL) {
+			hw_de_on = 0;
+		}
+		else{
+			hw_de_on = (val[0] == '1')? 1 : 0;
+		}
 
 		// Open video file
 		if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
@@ -151,7 +201,11 @@ void FFmpegReader::Open()
 			// Get codec and codec context from stream
 			AVCodec *pCodec = avcodec_find_decoder(codecId);
 			pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
-
+			#if IS_FFMPEG_3_2
+				#if defined(__linux__)
+					hw_de_supported = is_hardware_decode_supported(pCodecCtx->codec_id);
+				#endif
+			#endif
 			// Set number of threads equal to number of processors (not to exceed 16)
 			pCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
 
@@ -163,6 +217,23 @@ void FFmpegReader::Open()
 			AVDictionary *opts = NULL;
 			av_dict_set(&opts, "strict", "experimental", 0);
 
+			#if IS_FFMPEG_3_2
+				#if defined(__linux__)
+				if (hw_de_on & hw_de_supported) {
+					// Open Hardware Acceleration
+					hw_device_ctx = NULL;
+					pCodecCtx->get_format = get_vaapi_format;
+					if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI, NULL, NULL, 0) >= 0) {
+						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+							throw InvalidCodec("Hardware device reference create failed.", path);
+						}
+					}
+					else {
+						throw InvalidCodec("Hardware device create failed.", path);
+					}
+				}
+				#endif
+			#endif
 			// Open video codec
 			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 				throw InvalidCodec("A video codec was found, but could not be opened.", path);
@@ -252,6 +323,16 @@ void FFmpegReader::Close()
 		{
 			avcodec_flush_buffers(pCodecCtx);
 			AV_FREE_CONTEXT(pCodecCtx);
+			#if IS_FFMPEG_3_2
+				#if defined(__linux__)
+				if (hw_de_on) {
+					if (hw_device_ctx) {
+						av_buffer_unref(&hw_device_ctx);
+						hw_device_ctx = NULL;
+					}
+				}
+				#endif
+			#endif
 		}
 		if (info.has_audio)
 		{
@@ -703,8 +784,12 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 int FFmpegReader::GetNextPacket()
 {
 	int found_packet = 0;
-	AVPacket *next_packet = new AVPacket();
+	AVPacket *next_packet;
+	#pragma omp critical(getnextpacket)
+	{
+	next_packet = new AVPacket();
 	found_packet = av_read_frame(pFormatCtx, next_packet);
+
 
     if (packet) {
         // Remove previous packet before getting next one
@@ -717,7 +802,7 @@ int FFmpegReader::GetNextPacket()
 		// Update current packet pointer
 		packet = next_packet;
 	}
-
+}
 	// Return if packet was found (or error number)
 	return found_packet;
 }
@@ -734,17 +819,51 @@ bool FFmpegReader::GetAVFrame()
 	{
 	#if IS_FFMPEG_3_2
 		frameFinished = 0;
+
 		ret = avcodec_send_packet(pCodecCtx, packet);
+
 		if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		}
 		else {
+				AVFrame *next_frame2;
+				#if defined(__linux__)
+				if (hw_de_on && hw_de_supported) {
+					next_frame2 = AV_ALLOCATE_FRAME();
+				}
+				else
+				#endif
+				{
+					next_frame2 = next_frame;
+				}
 			pFrame = new AVFrame();
 			while (ret >= 0) {
-				ret =  avcodec_receive_frame(pCodecCtx, next_frame);
+					ret =  avcodec_receive_frame(pCodecCtx, next_frame2);
 		  if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 		  break;
 				}
+					if (ret != 0) {
+						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (invalid return frame received)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+					}
+					#if defined(__linux__)
+					if (hw_de_on && hw_de_supported) {
+						int err;
+		        if (next_frame2->format == AV_PIX_FMT_VAAPI) {
+							next_frame->format = AV_PIX_FMT_YUV420P;
+							if ((err = av_hwframe_transfer_data(next_frame,next_frame2,0)) < 0) {
+								ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+							}
+							if ((err = av_frame_copy_props(next_frame,next_frame2)) < 0) {
+								ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to copy props to output frame)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+							}
+						}
+					}
+					else
+					#endif
+					{	// No hardware acceleration used -> no copy from GPU memory needed
+						next_frame = next_frame2;
+					}
+					//}
 				// TODO also handle possible further frames
 				// Use only the first frame like avcodec_decode_video2
 				if (frameFinished == 0 ) {
@@ -759,6 +878,11 @@ bool FFmpegReader::GetAVFrame()
 					}
 				}
 			}
+				#if defined(__linux__)
+				if (hw_de_on && hw_de_supported) {
+					AV_FREE_FRAME(&next_frame2);
+				}
+				#endif
 		}
 	#else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
