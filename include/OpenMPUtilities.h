@@ -33,7 +33,8 @@
 #include <string.h>
 
 // Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+#define OPEN_MP_NUM_PROCESSORS ((getenv( "LIMIT_OMP_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_OMP_THREADS" ))) )))
+#define FF_NUM_PROCESSORS ((getenv( "LIMIT_FF_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_FF_THREADS" ))) )))
 
 using namespace std;
 

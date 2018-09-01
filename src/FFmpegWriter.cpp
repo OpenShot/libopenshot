@@ -1099,7 +1099,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
-	audio_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
+	audio_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder_by_name(info.acodec.c_str());
@@ -1173,7 +1173,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	AV_GET_CODEC_FROM_STREAM(st, video_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
-	video_codec->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
+	video_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
 
   #if IS_FFMPEG_3_2
   #if defined(__linux__)
