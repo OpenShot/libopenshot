@@ -221,9 +221,15 @@ void FFmpegReader::Open()
 				#if defined(__linux__)
 				if (hw_de_on & hw_de_supported) {
 					// Open Hardware Acceleration
+					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
+			    char *dev_hw = getenv( "HW_DE_DEVICE_SET" );
+			    // Check if it is there and writable
+			    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
+			      dev_hw = NULL;  // use default
+			    }
 					hw_device_ctx = NULL;
 					pCodecCtx->get_format = get_vaapi_format;
-					if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI, NULL, NULL, 0) >= 0) {
+					if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI, dev_hw, NULL, 0) >= 0) {
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
 							throw InvalidCodec("Hardware device reference create failed.", path);
 						}

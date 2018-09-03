@@ -1178,8 +1178,8 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
   #if IS_FFMPEG_3_2
   #if defined(__linux__)
   if (hw_en_on && hw_en_supported) {
-    // Use the hw device given in the environment variable HW_DEVICE_SET or the default if not set
-    char *dev_hw = getenv( "HW_DEVICE_SET" );
+    // Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
+    char *dev_hw = getenv( "HW_EN_DEVICE_SET" );
     // Check if it is there and writable
     if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
       dev_hw = NULL;  // use default
