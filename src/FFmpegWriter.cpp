@@ -49,7 +49,13 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
         return -1;
     }
     frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
+    #if defined(__linux__)
     frames_ctx->format    = AV_PIX_FMT_VAAPI;
+    #elif defined(_WIN32)
+    frames_ctx->format    = AV_PIX_FMT_DXVA2_VLD;
+    #elif defined(__APPLE__)
+    frames_ctx->format    = AV_PIX_FMT_QSV;
+    #endif
     frames_ctx->sw_format = AV_PIX_FMT_NV12;
     frames_ctx->width     = width;
     frames_ctx->height    = height;
@@ -70,9 +76,9 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 #endif
 
 #if IS_FFMPEG_3_2
-#if defined(__linux__)
+//#if defined(__linux__)
 #pragma message "You are compiling with experimental hardware encode"
-#endif
+//#endif
 #endif
 
 FFmpegWriter::FFmpegWriter(string path) :
@@ -164,6 +170,28 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 		#if IS_FFMPEG_3_2
 		#if defined(__linux__)
 		if ( (strcmp(codec.c_str(),"h264_vaapi") == 0)) {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 1;
+      hw_en_supported = 1;
+		}
+		else {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 0;
+      hw_en_supported = 0;
+		}
+		#elif defined(_WIN32)
+		if ( (strcmp(codec.c_str(),"h264_dxva2") == 0)) {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 1;
+      hw_en_supported = 1;
+		}
+		else {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 0;
+      hw_en_supported = 0;
+		}
+    #elif defined(__APPLE__)
+		if ( (strcmp(codec.c_str(),"h264_qsv") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
       hw_en_supported = 1;
@@ -799,14 +827,14 @@ void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 	AV_FREE_CONTEXT(video_codec);
 	video_codec = NULL;
   #if IS_FFMPEG_3_2
-  #if defined(__linux__)
+//  #if defined(__linux__)
   if (hw_en_on && hw_en_supported) {
     if (hw_device_ctx) {
         av_buffer_unref(&hw_device_ctx);
         hw_device_ctx = NULL;
       }
   }
-  #endif
+//  #endif
   #endif
 }
 
@@ -1176,8 +1204,8 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	video_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
 
   #if IS_FFMPEG_3_2
-  #if defined(__linux__)
   if (hw_en_on && hw_en_supported) {
+    #if defined(__linux__)
     // Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
     char *dev_hw = getenv( "HW_EN_DEVICE_SET" );
     // Check if it is there and writable
@@ -1189,8 +1217,20 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
         cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
         throw InvalidCodec("Could not create hwdevice", path);
   	}
+    #elif defined(_WIN32)
+    if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_DXVA2,
+        NULL, NULL, 0) < 0) {
+        cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
+        throw InvalidCodec("Could not create hwdevice", path);
+  	}
+    #elif defined(__APPLE__)
+    if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_QSV,
+        NULL, NULL, 0) < 0) {
+        cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
+        throw InvalidCodec("Could not create hwdevice", path);
+  	}
+    #endif
   }
-  #endif
   #endif
 	/* find the video encoder */
 	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
@@ -1208,10 +1248,15 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	av_dict_set(&opts, "strict", "experimental", 0);
 
   #if IS_FFMPEG_3_2
-  #if defined(__linux__)
   if (hw_en_on && hw_en_supported) {
     video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
+    #if defined(__linux__)
     video_codec->pix_fmt   = AV_PIX_FMT_VAAPI;
+    #elif defined(_WIN32)
+    video_codec->pix_fmt   = AV_PIX_FMT_DXVA2_VLD
+    #elif defined(__APPLE__)
+    video_codec->pix_fmt   = AV_PIX_FMT_QSV
+    #endif
     video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
     av_opt_set(video_codec->priv_data,"preset","slow",0);
     av_opt_set(video_codec->priv_data,"tune","zerolatency",0);
@@ -1222,7 +1267,6 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
         fprintf(stderr, "Failed to set hwframe context.\n");
     }
   }
-  #endif
   #endif
 
 	/* open the codec */
@@ -1675,11 +1719,11 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 		frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t*) pixels);
 		#if IS_FFMPEG_3_2
     AVFrame *frame_final;
-    #if defined(__linux__)
+//    #if defined(__linux__)
     if (hw_en_on && hw_en_supported) {
       frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
     } else
-    #endif
+//    #endif
     {
       frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
     }
@@ -1758,7 +1802,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
     #if IS_FFMPEG_3_2
-    #if defined(__linux__)
+//    #if defined(__linux__)
     if (hw_en_on && hw_en_supported) {
         if (!(hw_frame = av_frame_alloc())) {
           fprintf(stderr, "Error code: av_hwframe_alloc\n");
@@ -1775,7 +1819,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
         }
         av_frame_copy_props(hw_frame, frame_final);
     }
-    #endif
+//    #endif
     #endif
 		/* encode the image */
 		int got_packet_ptr = 0;
@@ -1784,13 +1828,13 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Write video packet (latest version of FFmpeg)
 		int frameFinished = 0;
     int ret;
-    #if defined(__linux__)
+//    #if defined(__linux__)
     #if IS_FFMPEG_3_2
     if (hw_en_on && hw_en_supported) {
       ret = avcodec_send_frame(video_codec, hw_frame); //hw_frame!!!
     } else
     #endif
-    #endif
+//    #endif
     ret = avcodec_send_frame(video_codec, frame_final);
 		error_code = ret;
 		if (ret < 0 ) {
@@ -1877,14 +1921,14 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
     #if IS_FFMPEG_3_2
-    #if defined(__linux__)
+//    #if defined(__linux__)
         if (hw_en_on && hw_en_supported) {
           if (hw_frame) {
             av_frame_free(&hw_frame);
             hw_frame = NULL;
           }
         }
-    #endif
+//    #endif
     #endif
 	}
 
@@ -1907,11 +1951,11 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 	{
 		// Init the software scaler from FFMpeg
     #if IS_FFMPEG_3_2
-    #if defined(__linux__)
+//    #if defined(__linux__)
     if (hw_en_on && hw_en_supported) {
       img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL, NULL, NULL);
     } else
-    #endif
+//    #endif
     #endif
     {
 		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
