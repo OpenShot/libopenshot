@@ -717,7 +717,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		#pragma omp parallel
 		{
 			// Loop through all requested frames
-			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames)
+			// The scheduler has to be static!
+			#pragma omp for ordered schedule(static,1) firstprivate(nearby_clips, requested_frame, minimum_frames)
 			for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
