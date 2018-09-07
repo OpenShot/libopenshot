@@ -666,6 +666,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 			} // end while
 
 		} // end omp single
+
 	} // end omp parallel
 
 	// Debug output
@@ -914,7 +915,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+															  height, PIX_FMT_RGBA, SWS_LANCZOS, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,

@@ -1752,7 +1752,7 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 	for (int x = 0; x < num_of_rescalers; x++)
 	{
 		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_LANCZOS, NULL, NULL, NULL);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);

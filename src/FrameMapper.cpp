@@ -376,6 +376,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	new_frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
+	new_frame->AddAudioSilence(samples_in_frame);
 	return new_frame;
 }
 
