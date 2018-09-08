@@ -80,6 +80,10 @@ ENDIF (ImageMagick_FOUND)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
 # Include FFmpeg headers (needed for compile)
+message('AVCODEC_FOUND: ${AVCODEC_FOUND}')
+message('AVCODEC_INCLUDE_DIRS: ${AVCODEC_INCLUDE_DIRS}')
+message('AVCODEC_LIBRARIES: ${AVCODEC_LIBRARIES}')
+
 IF (AVCODEC_FOUND)
 	include_directories(${AVCODEC_INCLUDE_DIRS})
 ENDIF (AVCODEC_FOUND)
