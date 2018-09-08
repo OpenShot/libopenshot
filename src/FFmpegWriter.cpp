@@ -47,23 +47,17 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
     int err = 0;
 
     if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
-        fprintf(stderr, "Failed to create VAAPI frame context.\n");
+        fprintf(stderr, "Failed to create HW frame context.\n");
         return -1;
     }
     frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-    #if defined(__linux__)
     frames_ctx->format    = hw_en_av_pix_fmt;
-    #elif defined(_WIN32)
-    frames_ctx->format    = AV_PIX_FMT_DXVA2_VLD;
-    #elif defined(__APPLE__)
-    frames_ctx->format    = AV_PIX_FMT_QSV;
-    #endif
     frames_ctx->sw_format = AV_PIX_FMT_NV12;
     frames_ctx->width     = width;
     frames_ctx->height    = height;
     frames_ctx->initial_pool_size = 20;
     if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
-        fprintf(stderr, "Failed to initialize VAAPI frame context."
+        fprintf(stderr, "Failed to initialize HW frame context."
                 "Error code: %s\n",av_err2str(err));
         av_buffer_unref(&hw_frames_ref);
         return err;
@@ -178,16 +172,27 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
       hw_en_av_pix_fmt = AV_PIX_FMT_VAAPI;
       hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 		}
-		else {
-			new_codec = avcodec_find_encoder_by_name(codec.c_str());
-			hw_en_on = 0;
-      hw_en_supported = 0;
-		}
+    else {
+      if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
+  			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+  			hw_en_on = 1;
+        hw_en_supported = 1;
+        hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
+        hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+  		  }
+  		else {
+  			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+  			hw_en_on = 0;
+        hw_en_supported = 0;
+  		}
+    }
 		#elif defined(_WIN32)
 		if ( (strcmp(codec.c_str(),"h264_dxva2") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
       hw_en_supported = 1;
+      hw_en_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
+      hw_en_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
 		}
 		else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -199,6 +204,8 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
       hw_en_supported = 1;
+      hw_en_av_pix_fmt = AV_PIX_FMT_QSV;
+      hw_en_av_device_type = AV_HWDEVICE_TYPE_QSV;
 		}
 		else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -1216,24 +1223,14 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
     if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
       dev_hw = NULL;  // use default
     }
+    #else
+      dev_hw = NULL;  // use default
+    #endif
   	if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
         dev_hw, NULL, 0) < 0) {
         cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
         throw InvalidCodec("Could not create hwdevice", path);
   	}
-    #elif defined(_WIN32)
-    if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_DXVA2,
-        NULL, NULL, 0) < 0) {
-        cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
-        throw InvalidCodec("Could not create hwdevice", path);
-  	}
-    #elif defined(__APPLE__)
-    if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_QSV,
-        NULL, NULL, 0) < 0) {
-        cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
-        throw InvalidCodec("Could not create hwdevice", path);
-  	}
-    #endif
   }
   #endif
 	/* find the video encoder */
@@ -1254,13 +1251,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
   #if IS_FFMPEG_3_2
   if (hw_en_on && hw_en_supported) {
     video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
-    #if defined(__linux__)
     video_codec->pix_fmt   = hw_en_av_pix_fmt;
-    #elif defined(_WIN32)
-    video_codec->pix_fmt   = AV_PIX_FMT_DXVA2_VLD
-    #elif defined(__APPLE__)
-    video_codec->pix_fmt   = AV_PIX_FMT_QSV
-    #endif
     video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
     av_opt_set(video_codec->priv_data,"preset","slow",0);
     av_opt_set(video_codec->priv_data,"tune","zerolatency",0);
