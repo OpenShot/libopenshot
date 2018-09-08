@@ -75,7 +75,8 @@ macro(find_component _component _pkgconfig _library _header)
 			${PC_LIB${_component}_INCLUDE_DIRS}
 			$ENV{FFMPEGDIR}/include/
 			$ENV{FFMPEGDIR}/include/ffmpeg/
-			/opt/ffmpeg/include/
+			/opt/
+			/opt/include/
 			PATH_SUFFIXES
 			ffmpeg
 			)
