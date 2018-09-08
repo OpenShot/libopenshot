@@ -6,8 +6,7 @@ before_install:
   - #sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
   - sudo apt-get update -q
   - #sudo apt-get install gcc-4.8 ffmpeg libopenshot-audio-dev libopenshot-dev -y
-  - sudo apt-get install gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
-  - apt-get install mlocate -y
+  - sudo apt-get install mlocate gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
   - sudo apt autoremove -y
   - locate libavformat
 
