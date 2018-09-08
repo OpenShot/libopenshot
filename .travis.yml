@@ -14,7 +14,6 @@ before_install:
   - locate libavformat
   - locate openshot
   - locate ffmpeg
-  - ffmpeg
 
 script:
   - mkdir -p build; cd build;
