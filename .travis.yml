@@ -8,6 +8,7 @@ before_install:
   - #sudo apt-get install gcc-4.8 ffmpeg libopenshot-audio-dev libopenshot-dev -y
   - sudo apt-get install gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
   - sudo apt autoremove -y
+  - locate libavformat
 
 script:
   - mkdir -p build; cd build;
