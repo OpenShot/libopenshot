@@ -9,7 +9,10 @@ before_install:
   - sudo apt-get install gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
   - sudo apt autoremove -y
   - sudo updatedb
+  - pwd
   - locate libavformat
+  - locate openshot
+  - locate ffmpeg
 
 script:
   - mkdir -p build; cd build;
