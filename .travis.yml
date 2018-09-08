@@ -7,6 +7,7 @@ before_install:
   - sudo apt-get update -q
   - #sudo apt-get install gcc-4.8 ffmpeg libopenshot-audio-dev libopenshot-dev -y
   - sudo apt-get install gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
+  - apt-get install mlocate -y
   - sudo apt autoremove -y
   - locate libavformat
 
