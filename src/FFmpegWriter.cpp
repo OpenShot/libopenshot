@@ -35,6 +35,8 @@ using namespace openshot;
 #if IS_FFMPEG_3_2
 int hw_en_on = 1;					// Is set in UI
 int hw_en_supported = 0;	// Is set by FFmpegWriter
+AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
+AVHWDeviceType hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 static AVBufferRef *hw_device_ctx = NULL;
 AVFrame *hw_frame = NULL;
 
@@ -50,7 +52,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
     }
     frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
     #if defined(__linux__)
-    frames_ctx->format    = AV_PIX_FMT_VAAPI;
+    frames_ctx->format    = hw_en_av_pix_fmt;
     #elif defined(_WIN32)
     frames_ctx->format    = AV_PIX_FMT_DXVA2_VLD;
     #elif defined(__APPLE__)
@@ -173,6 +175,8 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
       hw_en_supported = 1;
+      hw_en_av_pix_fmt = AV_PIX_FMT_VAAPI;
+      hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 		}
 		else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -1212,7 +1216,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
     if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
       dev_hw = NULL;  // use default
     }
-  	if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI,
+  	if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
         dev_hw, NULL, 0) < 0) {
         cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
         throw InvalidCodec("Could not create hwdevice", path);
@@ -1251,7 +1255,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
   if (hw_en_on && hw_en_supported) {
     video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
     #if defined(__linux__)
-    video_codec->pix_fmt   = AV_PIX_FMT_VAAPI;
+    video_codec->pix_fmt   = hw_en_av_pix_fmt;
     #elif defined(_WIN32)
     video_codec->pix_fmt   = AV_PIX_FMT_DXVA2_VLD
     #elif defined(__APPLE__)
