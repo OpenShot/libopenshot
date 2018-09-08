@@ -77,7 +77,7 @@ macro(find_component _component _pkgconfig _library _header)
 			ffmpeg
 			$ENV{FFMPEGDIR}/include/
 			$ENV{FFMPEGDIR}/include/ffmpeg/
-			/opt/ffmpeg/
+			/opt/ffmpeg/include/
 			)
 
 	find_library(${_component}_LIBRARIES NAMES ${_library}
@@ -87,7 +87,8 @@ macro(find_component _component _pkgconfig _library _header)
 			$ENV{FFMPEGDIR}/lib/
 			$ENV{FFMPEGDIR}/lib/ffmpeg/
 			$ENV{FFMPEGDIR}/bin/
-			/opt/ffmpeg/
+			/opt/ffmpeg/lib/
+			/opt/ffmpeg/bin/
 			)
 
 	set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")
