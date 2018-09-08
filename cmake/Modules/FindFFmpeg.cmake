@@ -71,12 +71,12 @@ macro(find_component _component _pkgconfig _library _header)
 
 	find_path(${_component}_INCLUDE_DIRS ${_header}
 			HINTS
+			/opt/
+			/opt/include/
 			${PC_LIB${_component}_INCLUDEDIR}
 			${PC_LIB${_component}_INCLUDE_DIRS}
 			$ENV{FFMPEGDIR}/include/
 			$ENV{FFMPEGDIR}/include/ffmpeg/
-			/opt/
-			/opt/include/
 			PATH_SUFFIXES
 			ffmpeg
 			)
