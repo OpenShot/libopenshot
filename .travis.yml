@@ -4,7 +4,7 @@ dist: trusty
 before_install:
   - sudo add-apt-repository ppa:openshot.developers/libopenshot-daily -y
   - sudo apt-get update -q
-  - sudo apt-get install gcc-4.8 libopenshot-dev -y
+  - sudo apt-get install gcc-4.8 libopenshot-audio-dev libopenshot-dev -y
 
 script:
   - mkdir -p build; cd build;
