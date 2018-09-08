@@ -1,0 +1,27 @@
+language: cpp
+dist: trusty
+
+before_install:
+  - sudo add-apt-repository ppa:openshot.developers/libopenshot-daily -y
+  - sudo apt-get update -q
+  - sudo apt-get install gcc-4.8 libopenshot-dev -y
+
+script:
+  - mkdir -p build; cd build;
+  - cmake -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+  - make
+  - make install
+
+notifications:
+  email: true
+  webhooks:
+    urls:
+      secure: h2oTAbAZF6+c6iv/kHoDGtl1mzQDF2vQSKWnO1pwfEz+L80lX9u3+JB+jsbYUcZ9smBRnRRghqxpLBmyzH3QZCrBdxKnTWfGc7I7lkTCFQZ5O3pPmIusO6W5zX+YUc+NHPPZXouHuHFmEeEB9vJnt/YB/fyGAGOIq+qXV4s+R9M=
+    on_success: always
+    on_failure: always
+    on_start: always
+
+env:
+  global:
+  - TRAVIS_LIBOPENSHOT=TEST
+  - LANG="en_US.UTF-8"
