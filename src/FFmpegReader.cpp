@@ -145,11 +145,11 @@ static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelF
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
         return *p;
 			}
-			if (*p == AV_PIX_FMT_D3D11) {
+/*			if (*p == AV_PIX_FMT_D3D11) {
 				hw_de_av_pix_fmt = AV_PIX_FMT_D3D11;
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
         return *p;
-			}
+			}*/
     }
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using DXVA2.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		hw_de_supported = 0;
