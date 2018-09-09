@@ -32,9 +32,9 @@
 
 using namespace openshot;
 
-#if IS_FFMPEG_3_2
 int hw_de_on = 1;					// Is set in UI
 int hw_de_supported = 0;	// Is set by FFmpegReader
+#if IS_FFMPEG_3_2
 AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 #endif
@@ -147,11 +147,11 @@ static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelF
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
         return *p;
 			}
-/*			if (*p == AV_PIX_FMT_D3D11) {
+			if (*p == AV_PIX_FMT_D3D11) {
 				hw_de_av_pix_fmt = AV_PIX_FMT_D3D11;
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
         return *p;
-			}*/
+			}
     }
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using DXVA2.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		hw_de_supported = 0;
@@ -291,7 +291,9 @@ void FFmpegReader::Open()
 			AVCodec *pCodec = avcodec_find_decoder(codecId);
 			pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
 			#if IS_FFMPEG_3_2
-			hw_de_supported = is_hardware_decode_supported(pCodecCtx->codec_id);
+			if (hw_de_on) {
+				hw_de_supported = is_hardware_decode_supported(pCodecCtx->codec_id);
+			}
 			#endif
 			// Set number of threads equal to number of processors (not to exceed 16)
 			pCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
@@ -309,13 +311,11 @@ void FFmpegReader::Open()
 				// Open Hardware Acceleration
 				// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
 		    char *dev_hw = NULL;
-				#if defined(__linux__)
 				dev_hw = getenv( "HW_DE_DEVICE_SET" );
 		    // Check if it is there and writable
 		    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
 		      dev_hw = NULL;  // use default
 		    }
-				#endif
 				hw_device_ctx = NULL;
 				#if defined(__linux__)
 				pCodecCtx->get_format = get_vaapi_format;
