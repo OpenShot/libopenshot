@@ -32,10 +32,12 @@
 
 using namespace openshot;
 
+#if IS_FFMPEG_3_2
 int hw_de_on = 1;					// Is set in UI
 int hw_de_supported = 0;	// Is set by FFmpegReader
 AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+#endif
 
 FFmpegReader::FFmpegReader(string path)
 	: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
