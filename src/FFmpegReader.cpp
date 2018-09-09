@@ -113,12 +113,12 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 #if IS_FFMPEG_3_2
 #pragma message "You are compiling with experimental hardware decode"
 
-#if defined(__linux__)
-static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
 
     for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			//Linux formats
 			if (*p == AV_PIX_FMT_VAAPI) {
 				hw_de_av_pix_fmt = AV_PIX_FMT_VAAPI;
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
@@ -129,19 +129,7 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPix
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
         return *p;
 			}
-    }
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using VA-API.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		hw_de_supported = 0;
-    return AV_PIX_FMT_NONE;
-}
-#endif
-
-#if defined(_WIN32)
-static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-    const enum AVPixelFormat *p;
-
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			// Windows formats
 			if (*p == AV_PIX_FMT_DXVA2_VLD) {
 				hw_de_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
@@ -152,68 +140,19 @@ static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelF
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
         return *p;
 			}
-    }
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using DXVA2.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		hw_de_supported = 0;
-		hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
-    return AV_PIX_FMT_NONE;
-}
-#endif
-
-#if defined(__APPLE__)
-static int get_qsv_format(AVCodecContext *avctx, const enum AVPixelFormat *pix_fmts)
-{
-  /*  while (*pix_fmts != AV_PIX_FMT_NONE) {
-        if (*pix_fmts == AV_PIX_FMT_QSV) {
-            DecodeContext *decode = avctx->opaque;
-            AVHWFramesContext  *frames_ctx;
-            AVQSVFramesContext *frames_hwctx;
-            int ret;
-
-            // create a pool of surfaces to be used by the decoder
-            avctx->hw_frames_ctx = av_hwframe_ctx_alloc(decode->hw_device_ref);
-            if (!avctx->hw_frames_ctx)
-                return AV_PIX_FMT_NONE;
-            frames_ctx   = (AVHWFramesContext*)avctx->hw_frames_ctx->data;
-            frames_hwctx = frames_ctx->hwctx;
-
-            frames_ctx->format            = AV_PIX_FMT_QSV;
-            frames_ctx->sw_format         = avctx->sw_pix_fmt;
-            frames_ctx->width             = FFALIGN(avctx->coded_width,  32);
-            frames_ctx->height            = FFALIGN(avctx->coded_height, 32);
-            frames_ctx->initial_pool_size = 32;
-
-            frames_hwctx->frame_type = MFX_MEMTYPE_VIDEO_MEMORY_DECODER_TARGET;
-
-            ret = av_hwframe_ctx_init(avctx->hw_frames_ctx);
-            if (ret < 0)
-                return AV_PIX_FMT_NONE;
-
-            return AV_PIX_FMT_QSV;
-        }
-
-        pix_fmts++;
-    }
-
-    fprintf(stderr, "The QSV pixel format not offered in get_format()\n");
-		*/
-    const enum AVPixelFormat *p;
-
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			//Mac format
 			if (*p == AV_PIX_FMT_QSV) {
 				hw_de_av_pix_fmt = AV_PIX_FMT_QSV;
 				hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
         return *p;
 			}
     }
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using QSV.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		hw_de_supported = 0;
-		hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
     return AV_PIX_FMT_NONE;
 }
-#endif
 
-int is_hardware_decode_supported(int codecid)
+int FFmpegReader::is_hardware_decode_supported(int codecid)
 {
 	int ret;
 	switch (codecid) {
@@ -317,15 +256,7 @@ void FFmpegReader::Open()
 		      dev_hw = NULL;  // use default
 		    }
 				hw_device_ctx = NULL;
-				#if defined(__linux__)
-				pCodecCtx->get_format = get_vaapi_format;
-				#endif
-				#if defined(_WIN32)
-				pCodecCtx->get_format = get_dx_format;
-				#endif
-				#if defined(__APPLE__)
-				pCodecCtx->get_format = get_qsv_format;
-				#endif
+				pCodecCtx->get_format = get_hw_dec_format;
 				if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, dev_hw, NULL, 0) >= 0) {
 					if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
 						throw InvalidCodec("Hardware device reference create failed.", path);

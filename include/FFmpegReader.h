@@ -146,6 +146,11 @@ namespace openshot
 		int64_t largest_frame_processed;
 		int64_t current_video_frame;	// can't reliably use PTS of video to determine this
 
+		//int hw_de_supported = 0;	// Is set by FFmpegReader
+		//AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
+
+		int is_hardware_decode_supported(int codecid);
+
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();
 
