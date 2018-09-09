@@ -300,23 +300,23 @@ void FFmpegReader::Open()
 			if (hw_de_on && hw_de_supported) {
 				// Open Hardware Acceleration
 				// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
-		    char *dev_hw = getenv( "HW_DE_DEVICE_SET" );
+		    char *dev_hw = NULL;
+				#if defined(__linux__)
+				dev_hw = getenv( "HW_DE_DEVICE_SET" );
 		    // Check if it is there and writable
 		    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
 		      dev_hw = NULL;  // use default
 		    }
+				#endif
 				hw_device_ctx = NULL;
 				#if defined(__linux__)
 				pCodecCtx->get_format = get_vaapi_format;
-				//if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI, dev_hw, NULL, 0) >= 0) {
 				#endif
 				#if defined(_WIN32)
 				pCodecCtx->get_format = get_dx_format;
-				//if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_DXVA2, dev_hw, NULL, 0) >= 0) {
 				#endif
 				#if defined(__APPLE__)
 				pCodecCtx->get_format = get_qsv_format;
-				//if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_QSV, dev_hw, NULL, 0) >= 0) {
 				#endif
 				if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, dev_hw, NULL, 0) >= 0) {
 					if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
