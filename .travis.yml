@@ -1,5 +1,9 @@
-language: cpp
 dist: trusty
+
+matrix:
+ include:
+
+language: cpp
 
 name: "Build (FFmpeg 3)"
 before_install:
