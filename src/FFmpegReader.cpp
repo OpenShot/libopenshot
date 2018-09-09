@@ -118,37 +118,35 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
     const enum AVPixelFormat *p;
 
     for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			//Linux formats
-			if (*p == AV_PIX_FMT_VAAPI) {
-				hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
-				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
-        return *p;
-			}
-			if (*p == AV_PIX_FMT_CUDA) {
-				hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
-				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
-        return *p;
-			}
-			// Windows formats
-			if (*p == AV_PIX_FMT_DXVA2_VLD) {
-				hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
-				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
-        return *p;
-			}
-			if (*p == AV_PIX_FMT_D3D11) {
-				hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
-				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
-        return *p;
-			}
-			//Mac format
-			if (*p == AV_PIX_FMT_QSV) {
-				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
-				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
-        return *p;
+			switch (*p) {
+				case AV_PIX_FMT_VAAPI:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
+        	return *p;
+					break;
+				case AV_PIX_FMT_CUDA:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
+        	return *p;
+					break;
+				case AV_PIX_FMT_DXVA2_VLD:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
+        	return *p;
+					break;
+				case AV_PIX_FMT_D3D11:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
+        	return *p;
+					break;
+				case AV_PIX_FMT_QSV:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
+        	return *p;
+					break;
 			}
     }
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		//hw_de_supported = 0;
     return AV_PIX_FMT_NONE;
 }
 
@@ -266,6 +264,12 @@ void FFmpegReader::Open()
 					throw InvalidCodec("Hardware device create failed.", path);
 				}
 			}
+/*		// Check to see if the hardware supports that file (size!)
+			AVHWFramesConstraints *constraints = NULL;
+			constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx->device_ref,hwconfig);
+			if (constraints)
+				av_hwframe_constraints_free(&constraints);
+*/
 			#endif
 			// Open video codec
 			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
