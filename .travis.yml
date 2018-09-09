@@ -12,9 +12,10 @@ before_install:
 
 script:
   - mkdir -p build; cd build;
-  - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
+  - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" -D"CMAKE_INSTALL_PREFIX:PATH=install-x64" ../
   - make VERBOSE=1
   - make install
+  - make test
 
 notifications:
   email: true
