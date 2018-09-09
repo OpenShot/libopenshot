@@ -111,6 +111,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 #if IS_FFMPEG_3_2
 #pragma message "You are compiling with experimental hardware decode"
 
+#if defined(__linux__)
 static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
@@ -131,7 +132,9 @@ static enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPix
 		hw_de_supported = 0;
     return AV_PIX_FMT_NONE;
 }
+#endif
 
+#if defined(_WIN32)
 static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
@@ -153,7 +156,9 @@ static enum AVPixelFormat get_dx_format(AVCodecContext *ctx, const enum AVPixelF
 		hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
     return AV_PIX_FMT_NONE;
 }
+#endif
 
+#if defined(__APPLE__)
 static int get_qsv_format(AVCodecContext *avctx, const enum AVPixelFormat *pix_fmts)
 {
   /*  while (*pix_fmts != AV_PIX_FMT_NONE) {
@@ -204,6 +209,7 @@ static int get_qsv_format(AVCodecContext *avctx, const enum AVPixelFormat *pix_f
 		hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
     return AV_PIX_FMT_NONE;
 }
+#endif
 
 int is_hardware_decode_supported(int codecid)
 {
