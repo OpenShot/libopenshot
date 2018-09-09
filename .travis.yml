@@ -1,9 +1,5 @@
-stages:
-  - build
-
 jobs:
   include:
-    - stage: build
     - name: "Build (FFmpeg 3)"
     - language: cpp
     - dist: trusty
