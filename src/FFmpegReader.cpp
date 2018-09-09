@@ -33,10 +33,10 @@
 using namespace openshot;
 
 int hw_de_on = 1;					// Is set in UI
-int hw_de_supported = 0;	// Is set by FFmpegReader
+//int hw_de_supported = 0;	// Is set by FFmpegReader
 #if IS_FFMPEG_3_2
-AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
-AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
+AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
 #endif
 
 FFmpegReader::FFmpegReader(string path)
@@ -120,35 +120,35 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
     for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			//Linux formats
 			if (*p == AV_PIX_FMT_VAAPI) {
-				hw_de_av_pix_fmt = AV_PIX_FMT_VAAPI;
-				hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
         return *p;
 			}
 			if (*p == AV_PIX_FMT_CUDA) {
-				hw_de_av_pix_fmt = AV_PIX_FMT_CUDA;
-				hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
         return *p;
 			}
 			// Windows formats
 			if (*p == AV_PIX_FMT_DXVA2_VLD) {
-				hw_de_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
-				hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
         return *p;
 			}
 			if (*p == AV_PIX_FMT_D3D11) {
-				hw_de_av_pix_fmt = AV_PIX_FMT_D3D11;
-				hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
         return *p;
 			}
 			//Mac format
 			if (*p == AV_PIX_FMT_QSV) {
-				hw_de_av_pix_fmt = AV_PIX_FMT_QSV;
-				hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
         return *p;
 			}
     }
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		hw_de_supported = 0;
+		//hw_de_supported = 0;
     return AV_PIX_FMT_NONE;
 }
 
@@ -852,6 +852,10 @@ bool FFmpegReader::GetAVFrame()
 		frameFinished = 0;
 
 		ret = avcodec_send_packet(pCodecCtx, packet);
+
+		// Get the format from the variables set in get_hw_dec_format
+		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
+		hw_de_av_device_type = hw_de_av_device_type_global;
 
 		if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
