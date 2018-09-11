@@ -32,8 +32,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+// Calculate the # of OpenMP and FFmpeg Threads to allow. We are limiting both
+// of these based on our own performance tests (more is not always better).
+#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), 6))
+#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), 12))
 
 using namespace std;
 
