@@ -576,8 +576,13 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		// Add clip to 'opened' list, because it's missing
 		open_clips[clip] = clip;
 
-		// Open the clip
-		clip->Open();
+		try {
+			// Open the clip
+			clip->Open();
+
+		} catch (const InvalidFile & e) {
+			// ...
+		}
 	}
 
 	// Debug output
@@ -717,7 +722,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		#pragma omp parallel
 		{
 			// Loop through all requested frames
-			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames)
+			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames) schedule(static,1)
 			for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
@@ -1000,13 +1005,14 @@ void Timeline::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
+				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
 
-				// Load Json into Effect
-				e->SetJsonValue(existing_effect);
+					// Load Json into Effect
+					e->SetJsonValue(existing_effect);
 
-				// Add Effect to Timeline
-				AddEffect(e);
+					// Add Effect to Timeline
+					AddEffect(e);
+				}
 			}
 		}
 	}
@@ -1270,13 +1276,14 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		EffectBase *e = NULL;
 
 		// Init the matching effect object
-		e = EffectInfo().CreateEffect(effect_type);
+		if (e = EffectInfo().CreateEffect(effect_type)) {
 
-		// Load Json into Effect
-		e->SetJsonValue(change["value"]);
+			// Load Json into Effect
+			e->SetJsonValue(change["value"]);
 
-		// Add Effect to Timeline
-		AddEffect(e);
+			// Add Effect to Timeline
+			AddEffect(e);
+		}
 
 	} else if (change_type == "update") {
 

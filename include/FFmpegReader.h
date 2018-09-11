@@ -105,6 +105,7 @@ namespace openshot
 		bool check_interlace;
 		bool check_fps;
 		bool has_missing_frames;
+		bool use_omp_threads;
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;

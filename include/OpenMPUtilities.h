@@ -29,8 +29,26 @@
 #define OPENSHOT_OPENMP_UTILITIES_H
 
 #include <omp.h>
+#include <stdlib.h>
+#include <string.h>
 
-	// Calculate the # of OpenMP Threads to allow
-	#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+// Calculate the # of OpenMP Threads to allow
+#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+
+using namespace std;
+
+namespace openshot {
+
+	// Check if OS2_OMP_THREADS environment variable is present, and return
+	// if multiple threads should be used with OMP
+	static bool IsOMPEnabled() {
+		char* OS2_OMP_THREADS = getenv("OS2_OMP_THREADS");
+		if (OS2_OMP_THREADS != NULL && strcmp(OS2_OMP_THREADS, "0") == 0)
+			return false;
+		else
+			return true;
+	}
+
+}
 
 #endif

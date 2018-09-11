@@ -82,6 +82,7 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 
 	else if (effect_type == "Wave")
 		return new Wave();
+	return NULL;
 }
 
 // Generate Json::JsonValue for this object

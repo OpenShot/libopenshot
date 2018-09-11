@@ -46,7 +46,7 @@ FFmpegWriter::FFmpegWriter(string path) :
 	info.has_video = false;
 
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
+	AV_REGISTER_ALL
 
 	// auto detect format
 	auto_detect_format();
@@ -299,7 +299,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 /// Determine if codec name is valid
 bool FFmpegWriter::IsValidCodec(string codec_name) {
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
+	AV_REGISTER_ALL
 
 	// Find the codec (if any)
 	if (avcodec_find_encoder_by_name(codec_name.c_str()) == NULL)
@@ -342,7 +342,7 @@ void FFmpegWriter::WriteHeader()
 	}
 
     // Force the output filename (which doesn't always happen for some reason)
-    snprintf(oc->filename, sizeof(oc->filename), "%s", path.c_str());
+		snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", path.c_str());
 
 	// Write the stream header, if any
 	// TODO: add avoptions / parameters instead of NULL
@@ -559,8 +559,10 @@ void FFmpegWriter::flush_encoders()
 {
 	if (info.has_audio && audio_codec && AV_GET_CODEC_TYPE(audio_st) == AVMEDIA_TYPE_AUDIO && AV_GET_CODEC_ATTRIBUTES(audio_st, audio_codec)->frame_size <= 1)
 		return;
+#if (LIBAVFORMAT_VERSION_MAJOR < 58)
 	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
+#endif
 
     int error_code = 0;
     int stop_encoding = 1;
@@ -751,14 +753,14 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 
 	// Deallocate resample buffer
 	if (avr) {
-		avresample_close(avr);
-		avresample_free(&avr);
+		SWR_CLOSE(avr);
+		SWR_FREE(&avr);
 		avr = NULL;
 	}
 
 	if (avr_planar) {
-		avresample_close(avr_planar);
-		avresample_free(&avr_planar);
+		SWR_CLOSE(avr_planar);
+		SWR_FREE(&avr_planar);
 		avr_planar = NULL;
 	}
 }
@@ -898,7 +900,11 @@ AVStream* FFmpegWriter::add_audio_stream()
 
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
+#if (LIBAVCODEC_VERSION_MAJOR >= 57)
+		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+#else
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+#endif
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_audio_stream", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->channels", c->channels, "c->sample_fmt", c->sample_fmt, "c->channel_layout", c->channel_layout, "c->sample_rate", c->sample_rate);
@@ -970,7 +976,11 @@ AVStream* FFmpegWriter::add_video_stream()
 		c->mb_decision = 2;
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
+#if (LIBAVCODEC_VERSION_MAJOR >= 57)
+		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+#else
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+#endif
 
 	// Find all supported pixel formats for this codec
     const PixelFormat* supported_pixel_formats = codec->pix_fmts;
@@ -987,10 +997,12 @@ AVStream* FFmpegWriter::add_video_stream()
             // Raw video should use RGB24
         	c->pix_fmt = PIX_FMT_RGB24;
 
+#if (LIBAVFORMAT_VERSION_MAJOR < 58)
         if (strcmp(fmt->name, "gif") != 0)
 			// If not GIF format, skip the encoding process
 			// Set raw picture flag (so we don't encode this video)
 			oc->oformat->flags |= AVFMT_RAWPICTURE;
+#endif
         } else {
         	// Set the default codec
         	c->pix_fmt = PIX_FMT_YUV420P;
@@ -998,7 +1010,11 @@ AVStream* FFmpegWriter::add_video_stream()
     }
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
+#if (LIBAVFORMAT_VERSION_MAJOR < 58)
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE, "", -1);
+#else
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (string)fmt->name + " : " + (string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "", -1, "", -1);
+#endif
 
 	return st;
 }
@@ -1073,7 +1089,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_audio", "audio_codec->thread_count", audio_codec->thread_count, "audio_input_frame_size", audio_input_frame_size, "buffer_size", AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE, "", -1, "", -1, "", -1);
 
 }
 
@@ -1239,7 +1255,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// setup resample context
 			if (!avr) {
-				avr = avresample_alloc_context();
+				avr = SWR_ALLOC();
 				av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
 				av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
 				av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
@@ -1248,12 +1264,12 @@ void FFmpegWriter::write_audio_packets(bool final)
 				av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
 				av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
 				av_opt_set_int(avr, "out_channels",       info.channels,    0);
-				avresample_open(avr);
+				SWR_INIT(avr);
 			}
 			int nb_samples = 0;
 
 			// Convert audio samples
-			nb_samples = avresample_convert(avr, 	// audio resample context
+			nb_samples = SWR_CONVERT(avr, 	// audio resample context
 					audio_converted->data, 			// output data pointers
 					audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 					audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
@@ -1314,7 +1330,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 				// setup resample context
 				if (!avr_planar) {
-					avr_planar = avresample_alloc_context();
+					avr_planar = SWR_ALLOC();
 					av_opt_set_int(avr_planar,  "in_channel_layout", info.channel_layout, 0);
 					av_opt_set_int(avr_planar, "out_channel_layout", info.channel_layout, 0);
 					av_opt_set_int(avr_planar,  "in_sample_fmt",     output_sample_fmt,     0);
@@ -1323,7 +1339,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 					av_opt_set_int(avr_planar, "out_sample_rate",    info.sample_rate,    0);
 					av_opt_set_int(avr_planar,  "in_channels",       info.channels,    0);
 					av_opt_set_int(avr_planar, "out_channels",       info.channels,    0);
-					avresample_open(avr_planar);
+					SWR_INIT(avr_planar);
 				}
 
 				// Create input frame (and allocate arrays)
@@ -1346,7 +1362,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 				av_samples_alloc(frame_final->data, frame_final->linesize, info.channels, frame_final->nb_samples, audio_codec->sample_fmt, 0);
 
 				// Convert audio samples
-				int nb_samples = avresample_convert(avr_planar, 	// audio resample context
+				int nb_samples = SWR_CONVERT(avr_planar, 	// audio resample context
 						frame_final->data, 			// output data pointers
 						frame_final->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 						frame_final->nb_samples,	// maximum number of samples that the output buffer can hold
@@ -1577,6 +1593,9 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 // write video frame
 bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final)
 {
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags", oc->oformat->flags, "", -1, "", -1, "", -1, "", -1);
+#else
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE, "", -1, "", -1, "", -1, "", -1);
 
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
@@ -1604,7 +1623,9 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
 
-	} else {
+	} else
+#endif
+        {
 
 		AVPacket pkt;
 		av_init_packet(&pkt);
@@ -1731,7 +1752,7 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 	for (int x = 0; x < num_of_rescalers; x++)
 	{
 		// Init the software scaler from FFMpeg
-		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_LANCZOS, NULL, NULL, NULL);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
