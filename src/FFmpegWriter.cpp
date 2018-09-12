@@ -71,12 +71,6 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 }
 #endif
 
-#if IS_FFMPEG_3_2
-//#if defined(__linux__)
-#pragma message "You are compiling with experimental hardware encode"
-//#endif
-#endif
-
 FFmpegWriter::FFmpegWriter(string path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),

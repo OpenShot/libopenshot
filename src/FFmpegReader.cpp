@@ -29,6 +29,7 @@
  */
 
 #include "../include/FFmpegReader.h"
+#include "libavutil/hwcontext_vaapi.h"
 
 using namespace openshot;
 
@@ -111,7 +112,6 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 }
 
 #if IS_FFMPEG_3_2
-#pragma message "You are compiling with experimental hardware decode"
 
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
@@ -226,55 +226,96 @@ void FFmpegReader::Open()
 
 			// Get codec and codec context from stream
 			AVCodec *pCodec = avcodec_find_decoder(codecId);
-			pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
-			#if IS_FFMPEG_3_2
-			if (hw_de_on) {
-				hw_de_supported = is_hardware_decode_supported(pCodecCtx->codec_id);
-			}
-			#endif
-			// Set number of threads equal to number of processors (not to exceed 16)
-			pCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
-
-			if (pCodec == NULL) {
-				throw InvalidCodec("A valid video codec could not be found for this file.", path);
-			}
-
-			// Init options
 			AVDictionary *opts = NULL;
-			av_dict_set(&opts, "strict", "experimental", 0);
+			int retry_decode_open = 2;
+			// If hw accel is selected but hardware connot handle repeat with software decoding
+			do {
+				pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
+				#if IS_FFMPEG_3_2
+				if (hw_de_on && (retry_decode_open==2)) {
+					// Up to here no decision is made if hardware or software decode
+					hw_de_supported = is_hardware_decode_supported(pCodecCtx->codec_id);
+				}
+				#endif
+				retry_decode_open = 0;
+				// Set number of threads equal to number of processors (not to exceed 16)
+				pCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
 
-			#if IS_FFMPEG_3_2
-			if (hw_de_on && hw_de_supported) {
-				// Open Hardware Acceleration
-				// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
-		    char *dev_hw = NULL;
-				dev_hw = getenv( "HW_DE_DEVICE_SET" );
-		    // Check if it is there and writable
-		    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
-		      dev_hw = NULL;  // use default
-		    }
-				hw_device_ctx = NULL;
-				pCodecCtx->get_format = get_hw_dec_format;
-				if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, dev_hw, NULL, 0) >= 0) {
-					if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-						throw InvalidCodec("Hardware device reference create failed.", path);
+				if (pCodec == NULL) {
+					throw InvalidCodec("A valid video codec could not be found for this file.", path);
+				}
+
+				// Init options
+				av_dict_set(&opts, "strict", "experimental", 0);
+				#if IS_FFMPEG_3_2
+				if (hw_de_on && hw_de_supported) {
+					// Open Hardware Acceleration
+					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
+			    char *dev_hw = NULL;
+					dev_hw = getenv( "HW_DE_DEVICE_SET" );
+			    // Check if it is there and writable
+			    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
+			      dev_hw = NULL;  // use default
+			    }
+					hw_device_ctx = NULL;
+					// Here the first hardware initialisations are made
+					pCodecCtx->get_format = get_hw_dec_format;
+					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, dev_hw, NULL, 0) >= 0) {
+						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+							throw InvalidCodec("Hardware device reference create failed.", path);
+						}
+					}
+					else {
+						throw InvalidCodec("Hardware device create failed.", path);
 					}
 				}
-				else {
-					throw InvalidCodec("Hardware device create failed.", path);
-				}
-			}
-/*		// Check to see if the hardware supports that file (size!)
-			AVHWFramesConstraints *constraints = NULL;
-			constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx->device_ref,hwconfig);
-			if (constraints)
-				av_hwframe_constraints_free(&constraints);
-*/
-			#endif
-			// Open video codec
-			if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
-				throw InvalidCodec("A video codec was found, but could not be opened.", path);
+				#endif
+				// Open video codec
+				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
+					throw InvalidCodec("A video codec was found, but could not be opened.", path);
 
+				#if IS_FFMPEG_3_2
+				if (hw_de_on && hw_de_supported) {
+					AVHWFramesConstraints *constraints = NULL;
+					// NOT WORKING needs hwconfig config_id !!!!!!!!!!!!!!!!!!!!!!!!!!!
+							//AVVAAPIHWConfig *hwconfig = NULL;
+					//		void *hwconfig = NULL;
+					//		hwconfig = av_hwdevice_hwconfig_alloc(hw_device_ctx);
+							//hwconfig->config_id = ((VAAPIDecodeContext *)pCodecCtx->priv_data)->va_config;
+					//		constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,(void*)hwconfig);
+					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,NULL);  // No usable information!
+					if (constraints) {
+//						constraints->max_height = 1100;   // Just for testing
+//						constraints->max_width = 1950;		// Just for testing
+						if (pCodecCtx->coded_width < constraints->min_width  	||
+								pCodecCtx->coded_height < constraints->min_height ||
+								pCodecCtx->coded_width > constraints->max_width  	||
+								pCodecCtx->coded_height > constraints->max_height) {
+							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+							hw_de_supported = 0;
+							retry_decode_open = 1;
+							AV_FREE_CONTEXT(pCodecCtx);
+							if (hw_device_ctx) {
+								av_buffer_unref(&hw_device_ctx);
+								hw_device_ctx = NULL;
+							}
+						}
+						else {
+							// All is just peachy
+							cerr << "MinWidth : " << constraints->min_width << "MinHeight : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
+							cerr << "Frame width :" << pCodecCtx->coded_width << "Frame height :" << pCodecCtx->coded_height << "\n";
+							retry_decode_open = 0;
+						}
+						av_hwframe_constraints_free(&constraints);
+					}
+					else {
+						cerr << "Constraints could not be found\n";
+					}
+				} // if hw_de_on && hw_de_supported
+				#else
+				retry_decode_open = 0;
+				#endif
+			} while (retry_decode_open); // retry_decode_open
 			// Free options
 			av_dict_free(&opts);
 
