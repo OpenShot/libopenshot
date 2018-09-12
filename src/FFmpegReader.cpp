@@ -29,7 +29,7 @@
  */
 
 #include "../include/FFmpegReader.h"
-#include "libavutil/hwcontext_vaapi.h"
+//#include "libavutil/hwcontext_vaapi.h"
 
 using namespace openshot;
 
