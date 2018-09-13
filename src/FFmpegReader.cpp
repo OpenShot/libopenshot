@@ -29,7 +29,36 @@
  */
 
 #include "../include/FFmpegReader.h"
-//#include "libavutil/hwcontext_vaapi.h"
+#include "libavutil/hwcontext_vaapi.h"
+
+
+#define MAX_SUPPORTED_WIDTH 1950
+#define MAX_SUPPORTED_HEIGHT 1100
+
+typedef struct VAAPIDecodeContext {
+     VAProfile             va_profile;
+     VAEntrypoint          va_entrypoint;
+     VAConfigID            va_config;
+     VAContextID           va_context;
+
+ #if FF_API_STRUCT_VAAPI_CONTEXT
+// FF_DISABLE_DEPRECATION_WARNINGS
+     int                   have_old_context;
+     struct vaapi_context *old_context;
+     AVBufferRef          *device_ref;
+// FF_ENABLE_DEPRECATION_WARNINGS
+ #endif
+
+     AVHWDeviceContext    *device;
+     AVVAAPIDeviceContext *hwctx;
+
+     AVHWFramesContext    *frames;
+     AVVAAPIFramesContext *hwfc;
+
+     enum AVPixelFormat    surface_format;
+     int                   surface_count;
+ } VAAPIDecodeContext;
+
 
 using namespace openshot;
 
@@ -277,16 +306,12 @@ void FFmpegReader::Open()
 				#if IS_FFMPEG_3_2
 				if (hw_de_on && hw_de_supported) {
 					AVHWFramesConstraints *constraints = NULL;
-					// NOT WORKING needs hwconfig config_id !!!!!!!!!!!!!!!!!!!!!!!!!!!
-							//AVVAAPIHWConfig *hwconfig = NULL;
-					//		void *hwconfig = NULL;
-					//		hwconfig = av_hwdevice_hwconfig_alloc(hw_device_ctx);
-							//hwconfig->config_id = ((VAAPIDecodeContext *)pCodecCtx->priv_data)->va_config;
-					//		constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,(void*)hwconfig);
-					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,NULL);  // No usable information!
+					void *hwconfig = NULL;
+					hwconfig = av_hwdevice_hwconfig_alloc(hw_device_ctx);
+	// NOT WORKING needs va_config !
+					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
+					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
 					if (constraints) {
-//						constraints->max_height = 1100;   // Just for testing
-//						constraints->max_width = 1950;		// Just for testing
 						if (pCodecCtx->coded_width < constraints->min_width  	||
 								pCodecCtx->coded_height < constraints->min_height ||
 								pCodecCtx->coded_width > constraints->max_width  	||
@@ -302,14 +327,34 @@ void FFmpegReader::Open()
 						}
 						else {
 							// All is just peachy
-							cerr << "MinWidth : " << constraints->min_width << "MinHeight : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
-							cerr << "Frame width :" << pCodecCtx->coded_width << "Frame height :" << pCodecCtx->coded_height << "\n";
+							cerr << "Min width   : " << constraints->min_width << " MinHeight    : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
+							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							retry_decode_open = 0;
 						}
 						av_hwframe_constraints_free(&constraints);
+						if (hwconfig) {
+							av_freep(&hwconfig);
+						}
 					}
 					else {
-						cerr << "Constraints could not be found\n";
+						cerr << "Constraints could not be found using default 1k limit\n";
+						if (pCodecCtx->coded_width < 0  	||
+								pCodecCtx->coded_height < 0 	||
+								pCodecCtx->coded_width > MAX_SUPPORTED_WIDTH ||
+								pCodecCtx->coded_height > MAX_SUPPORTED_HEIGHT) {
+							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+							hw_de_supported = 0;
+							retry_decode_open = 1;
+							AV_FREE_CONTEXT(pCodecCtx);
+							if (hw_device_ctx) {
+								av_buffer_unref(&hw_device_ctx);
+								hw_device_ctx = NULL;
+							}
+						}
+						else {
+							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+							retry_decode_open = 0;
+						}
 					}
 				} // if hw_de_on && hw_de_supported
 				#else
