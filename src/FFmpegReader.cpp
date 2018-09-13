@@ -337,11 +337,15 @@ void FFmpegReader::Open()
 						}
 					}
 					else {
-						cerr << "Constraints could not be found using default 1k limit\n";
+						int max_h, max_w;
+						max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
+						max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
+						cerr << "Constraints could not be found using default limit\n";
+						cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
 						if (pCodecCtx->coded_width < 0  	||
 								pCodecCtx->coded_height < 0 	||
-								pCodecCtx->coded_width > MAX_SUPPORTED_WIDTH ||
-								pCodecCtx->coded_height > MAX_SUPPORTED_HEIGHT) {
+								pCodecCtx->coded_width > max_w ||
+								pCodecCtx->coded_height > max_h ) {
 							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
 							hw_de_supported = 0;
 							retry_decode_open = 1;
