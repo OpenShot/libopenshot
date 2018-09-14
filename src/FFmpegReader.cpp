@@ -29,6 +29,8 @@
  */
 
 #include "../include/FFmpegReader.h"
+
+#if IS_FFMPEG_3_2
 #include "libavutil/hwcontext_vaapi.h"
 
 
@@ -58,6 +60,7 @@ typedef struct VAAPIDecodeContext {
      enum AVPixelFormat    surface_format;
      int                   surface_count;
  } VAAPIDecodeContext;
+#endif
 
 
 using namespace openshot;
