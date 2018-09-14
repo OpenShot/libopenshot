@@ -31,12 +31,12 @@
 #include "../include/FFmpegReader.h"
 
 #if IS_FFMPEG_3_2
-#include "libavutil/hwcontext_vaapi.h"
+//#include "libavutil/hwcontext_vaapi.h"
 
 
 #define MAX_SUPPORTED_WIDTH 1950
 #define MAX_SUPPORTED_HEIGHT 1100
-
+/*
 typedef struct VAAPIDecodeContext {
      VAProfile             va_profile;
      VAEntrypoint          va_entrypoint;
@@ -60,6 +60,7 @@ typedef struct VAAPIDecodeContext {
      enum AVPixelFormat    surface_format;
      int                   surface_count;
  } VAAPIDecodeContext;
+ */
 #endif
 
 
@@ -312,7 +313,7 @@ void FFmpegReader::Open()
 					void *hwconfig = NULL;
 					hwconfig = av_hwdevice_hwconfig_alloc(hw_device_ctx);
 	// NOT WORKING needs va_config !
-					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
+	//				((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
 					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
 					if (constraints) {
 						if (pCodecCtx->coded_width < constraints->min_width  	||
