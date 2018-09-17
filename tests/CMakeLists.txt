@@ -180,12 +180,18 @@ endif(OPENMP_FOUND)
 # Find ZeroMQ library (used for socket communication & logging)
 FIND_PACKAGE(ZMQ REQUIRED)
 
-# Include FFmpeg headers (needed for compile)
+# Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
-include_directories("../thirdparty/jsoncpp/include")
+if (USE_SYSTEM_JSONCPP)
+	find_package(JsonCpp REQUIRED)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
+else()
+	message("Using embedded JsonCpp")
+	include_directories("../thirdparty/jsoncpp/include")
+endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
 	###############  SET TEST SOURCE FILES  #################
