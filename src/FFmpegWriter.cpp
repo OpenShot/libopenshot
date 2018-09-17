@@ -241,7 +241,9 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 		info.pixel_ratio.num = pixel_ratio.num;
 		info.pixel_ratio.den = pixel_ratio.den;
 	}
-	if (bit_rate >= 1000)
+	if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
+		info.video_bit_rate = bit_rate;
+	if ((bit_rate > 0) && (bit_rate <=63))	// bit_rate is the crf value
 		info.video_bit_rate = bit_rate;
 
 	info.interlaced_frame = interlaced;
@@ -1040,7 +1042,30 @@ AVStream* FFmpegWriter::add_video_stream()
 #endif
 
 	/* Init video encoder options */
-	c->bit_rate = info.video_bit_rate;
+	if (info.video_bit_rate > 1000) {
+		c->bit_rate = info.video_bit_rate;
+	}
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+	else {
+		switch (c->codec_id) {
+			case AV_CODEC_ID_VP8 :
+				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+				break;
+			case AV_CODEC_ID_VP9 :
+				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+				if (info.video_bit_rate == 0) {
+		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
+				 }
+				 break;
+			case AV_CODEC_ID_H264 :
+				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+				break;
+			case AV_CODEC_ID_H265 :
+				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+				break;
+		}
+	}
+#endif
 
 	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
