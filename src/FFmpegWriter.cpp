@@ -33,6 +33,12 @@
 using namespace openshot;
 
 #if IS_FFMPEG_3_2
+#pragma message "You are compiling with experimental hardware encode"
+#else
+#pragma message "You are compiling only with software encode"
+#endif
+
+#if IS_FFMPEG_3_2
 int hw_en_on = 1;					// Is set in UI
 int hw_en_supported = 0;	// Is set by FFmpegWriter
 AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
