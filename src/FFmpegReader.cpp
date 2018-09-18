@@ -292,6 +292,7 @@ void FFmpegReader::Open()
 			    // Check if it is there and writable
 			    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
 			      dev_hw = NULL;  // use default
+            cerr << "\n\n\nDecode Device not present using default\n\n\n";            
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
