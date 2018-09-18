@@ -292,7 +292,7 @@ void FFmpegReader::Open()
 			    // Check if it is there and writable
 			    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
 			      dev_hw = NULL;  // use default
-            cerr << "\n\n\nDecode Device not present using default\n\n\n";            
+            cerr << "\n\n\nDecode Device not present using default\n\n\n";
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
@@ -337,6 +337,7 @@ void FFmpegReader::Open()
 						}
 						else {
 							// All is just peachy
+              cerr << "\nDecode hardware acceleration is used\n";
 							cerr << "Min width   : " << constraints->min_width << " MinHeight    : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
 							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							retry_decode_open = 0;
@@ -351,12 +352,13 @@ void FFmpegReader::Open()
 						max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
 						max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
 						cerr << "Constraints could not be found using default limit\n";
-						cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
 						if (pCodecCtx->coded_width < 0  	||
 								pCodecCtx->coded_height < 0 	||
 								pCodecCtx->coded_width > max_w ||
 								pCodecCtx->coded_height > max_h ) {
 							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+              cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
+							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							hw_de_supported = 0;
 							retry_decode_open = 1;
 							AV_FREE_CONTEXT(pCodecCtx);
@@ -366,11 +368,16 @@ void FFmpegReader::Open()
 							}
 						}
 						else {
+              cerr << "\nDecode hardware acceleration is used\n";
+              cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
 							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							retry_decode_open = 0;
 						}
 					}
 				} // if hw_de_on && hw_de_supported
+        else {
+          cerr << "\nDecode in software is used\n";
+        }
 				#else
 				retry_decode_open = 0;
 				#endif
