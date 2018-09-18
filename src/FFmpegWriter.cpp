@@ -1254,7 +1254,8 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
     #endif
   	if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
         dev_hw, NULL, 0) < 0) {
-        cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video : Codec name: ", info.vcodec.c_str(), -1, " ERROR creating\n", -1, "", -1, "", -1, "", -1, "", -1);
+        //cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
         throw InvalidCodec("Could not create hwdevice", path);
   	}
   }
@@ -1860,10 +1861,12 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		error_code = ret;
 		if (ret < 0 ) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-			if (ret == AVERROR(EAGAIN) )
+			if (ret == AVERROR(EAGAIN) ) {
 				cerr << "Frame EAGAIN" << "\n";
-			if (ret == AVERROR_EOF )
+      }
+			if (ret == AVERROR_EOF ) {
 				cerr << "Frame AVERROR_EOF" << "\n";
+      }
 			avcodec_send_frame(video_codec, NULL);
 		}
 		else {
@@ -1884,10 +1887,12 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 			#if LIBAVFORMAT_VERSION_MAJOR >= 54
 				// Write video packet (older than FFmpeg 3.2)
 				error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
-				if (error_code != 0 )
+				if (error_code != 0 ) {
 					cerr << "Frame AVERROR_EOF" << "\n";
-				if (got_packet_ptr == 0 )
+        }
+				if (got_packet_ptr == 0 ) {
 					cerr << "Frame gotpacket error" << "\n";
+        }
 			#else
 				// Write video packet (even older versions of FFmpeg)
 				int video_outbuf_size = 200000;

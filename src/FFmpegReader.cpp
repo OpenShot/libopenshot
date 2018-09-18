@@ -334,7 +334,7 @@ void FFmpegReader::Open()
 								pCodecCtx->coded_width > constraints->max_width  	||
 								pCodecCtx->coded_height > constraints->max_height) {
               ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+							//cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
 							hw_de_supported = 0;
 							retry_decode_open = 1;
 							AV_FREE_CONTEXT(pCodecCtx);
@@ -345,10 +345,10 @@ void FFmpegReader::Open()
 						}
 						else {
 							// All is just peachy
-              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-              cerr << "\nDecode hardware acceleration is used\n";
-							cerr << "Min width   : " << constraints->min_width << " MinHeight    : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
-							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Min width :", constraints->min_width, "Min Height :", constraints->min_height, "MaxWidth :", constraints->max_width, "MaxHeight :", constraints->max_height, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height);
+              //cerr << "\nDecode hardware acceleration is used\n";
+							//cerr << "Min width   : " << constraints->min_width << " MinHeight    : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
+							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							retry_decode_open = 0;
 						}
 						av_hwframe_constraints_free(&constraints);
@@ -360,15 +360,16 @@ void FFmpegReader::Open()
 						int max_h, max_w;
 						max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
 						max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
-						cerr << "Constraints could not be found using default limit\n";
+            ZmqLogger::Instance()->AppendDebugMethod("Constraints could not be found using default limit\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+						//cerr << "Constraints could not be found using default limit\n";
 						if (pCodecCtx->coded_width < 0  	||
 								pCodecCtx->coded_height < 0 	||
 								pCodecCtx->coded_width > max_w ||
 								pCodecCtx->coded_height > max_h ) {
-              ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-							cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
-              cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
-							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+              ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
+							//cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+              //cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
+							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							hw_de_supported = 0;
 							retry_decode_open = 1;
 							AV_FREE_CONTEXT(pCodecCtx);
@@ -378,17 +379,17 @@ void FFmpegReader::Open()
 							}
 						}
 						else {
-              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-              cerr << "\nDecode hardware acceleration is used\n";
-              cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
-							cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
+              //cerr << "\nDecode hardware acceleration is used\n";
+              //cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
+							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
 							retry_decode_open = 0;
 						}
 					}
 				} // if hw_de_on && hw_de_supported
         else {
           ZmqLogger::Instance()->AppendDebugMethod("\nDecode in software is used\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-          cerr << "\nDecode in software is used\n";
+          //cerr << "\nDecode in software is used\n";
         }
 				#else
 				retry_decode_open = 0;
