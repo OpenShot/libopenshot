@@ -33,6 +33,12 @@
 #define PRAYFORAWONDER 0
 
 #if IS_FFMPEG_3_2
+#pragma message "You are compiling with experimental hardware decode"
+#else
+#pragma message "You are compiling only with software decode" 
+#endif
+
+#if IS_FFMPEG_3_2
 #define MAX_SUPPORTED_WIDTH 1950
 #define MAX_SUPPORTED_HEIGHT 1100
 
