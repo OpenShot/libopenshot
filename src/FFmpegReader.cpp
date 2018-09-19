@@ -37,11 +37,12 @@ FFmpegReader::FFmpegReader(string path)
 	  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 	  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
+	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
+	  packet(NULL), use_omp_threads(true) {
 
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
-	avcodec_register_all();
+	AV_REGISTER_ALL
+	AVCODEC_REGISTER_ALL
 
 	// Init cache
 	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
@@ -58,11 +59,12 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0), packet(NULL) {
+		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
+		  packet(NULL), use_omp_threads(true) {
 
 	// Initialize FFMpeg, and register all formats and codecs
-	av_register_all();
-	avcodec_register_all();
+	AV_REGISTER_ALL
+	AVCODEC_REGISTER_ALL
 
 	// Init cache
 	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
@@ -151,7 +153,7 @@ void FFmpegReader::Open()
 			pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
-			pCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
+			pCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
 
 			if (pCodec == NULL) {
 				throw InvalidCodec("A valid video codec could not be found for this file.", path);
@@ -189,7 +191,7 @@ void FFmpegReader::Open()
 			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
-			aCodecCtx->thread_count = min(OPEN_MP_NUM_PROCESSORS, 16);
+			aCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
 
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
@@ -226,6 +228,9 @@ void FFmpegReader::Open()
 		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+
+		// Initialize OMP threading support
+		use_omp_threads = openshot::IsOMPEnabled();
 
 		// Mark as "open"
 		is_open = true;
@@ -328,6 +333,11 @@ void FFmpegReader::UpdateAudioInfo()
 		info.height = 480;
 	}
 
+	// Fix invalid video lengths for certain types of files (MP3 for example)
+	if (info.has_video && ((info.duration * info.fps.ToDouble()) - info.video_length > 60)) {
+		info.video_length = info.duration * info.fps.ToDouble();
+	}
+
 	// Add audio metadata (if any found)
 	AVDictionaryEntry *tag = NULL;
 	while ((tag = av_dict_get(aStream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
@@ -339,19 +349,21 @@ void FFmpegReader::UpdateAudioInfo()
 
 void FFmpegReader::UpdateVideoInfo()
 {
+	if (check_fps)
+		// Already initialized all the video metadata, no reason to do it again
+		return;
+
 	// Set values of FileInfo struct
 	info.has_video = true;
 	info.file_size = pFormatCtx->pb ? avio_size(pFormatCtx->pb) : -1;
 	info.height = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->height;
 	info.width = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->width;
 	info.vcodec = pCodecCtx->codec->name;
-	info.video_bit_rate = pFormatCtx->bit_rate;
-	if (!check_fps)
-	{
-		// set frames per second (fps)
-		info.fps.num = pStream->avg_frame_rate.num;
-		info.fps.den = pStream->avg_frame_rate.den;
-	}
+	info.video_bit_rate = (pFormatCtx->bit_rate / 8);
+
+	// set frames per second (fps)
+	info.fps.num = pStream->avg_frame_rate.num;
+	info.fps.den = pStream->avg_frame_rate.den;
 
 	if (pStream->sample_aspect_ratio.num != 0)
 	{
@@ -415,16 +427,10 @@ void FFmpegReader::UpdateVideoInfo()
 	}
 
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0))
-	{
-		// Set a few important default video settings (so audio can be divided into frames)
-		info.fps.num = 24;
-		info.fps.den = 1;
-		info.video_timebase.num = 1;
-		info.video_timebase.den = 24;
-
-		// Calculate number of frames
-		info.video_length = round(info.duration * info.fps.ToDouble());
+	if (info.fps.ToFloat() > 240.0f || (info.fps.num <= 0 || info.fps.den <= 0) || info.video_length <= 0) {
+		// Calculate FPS, duration, video bit rate, and video length manually
+		// by scanning through all the video stream packets
+		CheckFPS();
 	}
 
 	// Add video metadata (if any)
@@ -466,55 +472,55 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
-		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    #pragma omp critical (ReadStream)
+	  {
+			// Check the cache a 2nd time (due to a potential previous lock)
+			if (has_missing_frames)
+			    CheckMissingFrame(requested_frame);
+			frame = final_cache.GetFrame(requested_frame);
+			if (frame) {
+				// Debug output
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
 
-		// Check the cache a 2nd time (due to a potential previous lock)
-		if (has_missing_frames)
-		    CheckMissingFrame(requested_frame);
-		frame = final_cache.GetFrame(requested_frame);
-		if (frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
-
-			// Return the cached frame
-			return frame;
-		}
-
-		// Frame is not in cache
-		// Reset seek count
-		seek_count = 0;
-
-		// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
-		if (last_frame == 0 && requested_frame != 1)
-			// Get first frame
-			ReadStream(1);
-
-		// Are we within X frames of the requested frame?
-		int64_t diff = requested_frame - last_frame;
-		if (diff >= 1 && diff <= 20)
-		{
-			// Continue walking the stream
-			return ReadStream(requested_frame);
-		}
-		else
-		{
-			// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-			if (enable_seek)
-				// Only seek if enabled
-				Seek(requested_frame);
-
-			else if (!enable_seek && diff < 0)
-			{
-				// Start over, since we can't seek, and the requested frame is smaller than our position
-				Close();
-				Open();
+				// Return the cached frame
 			}
+			else {
+				// Frame is not in cache
+				// Reset seek count
+				seek_count = 0;
 
-			// Then continue walking the stream
-			return ReadStream(requested_frame);
-		}
+				// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
+				if (last_frame == 0 && requested_frame != 1)
+					// Get first frame
+					ReadStream(1);
 
+				// Are we within X frames of the requested frame?
+				int64_t diff = requested_frame - last_frame;
+				if (diff >= 1 && diff <= 20)
+				{
+					// Continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+				else
+				{
+					// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
+					if (enable_seek)
+						// Only seek if enabled
+						Seek(requested_frame);
+
+					else if (!enable_seek && diff < 0)
+					{
+						// Start over, since we can't seek, and the requested frame is smaller than our position
+						Close();
+						Open();
+					}
+
+					// Then continue walking the stream
+					frame = ReadStream(requested_frame);
+				}
+			}
+	  } //omp critical
+    return frame;
 	}
 }
 
@@ -606,6 +612,12 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 
 						// Process Video Packet
 						ProcessVideoPacket(requested_frame);
+
+						if (!use_omp_threads) {
+							// Wait on each OMP task to complete before moving on to the next one. This slows
+							// down processing considerably, but might be more stable on some systems.
+							#pragma omp taskwait
+						}
 					}
 
 				}
@@ -638,7 +650,6 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 				}
 
 				// Check if working frames are 'finished'
-				bool is_cache_found = false;
 				if (!is_seeking) {
 					// Check for any missing frames
 					CheckMissingFrame(requested_frame);
@@ -648,7 +659,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 				}
 
 				// Check if requested 'final' frame is available
-				is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
+				bool is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
 
 				// Increment frames processed
 				packets_processed++;
@@ -660,6 +671,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 			} // end while
 
 		} // end omp single
+
 	} // end omp parallel
 
 	// Debug output
@@ -908,7 +920,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+															  height, PIX_FMT_RGBA, SWS_LANCZOS, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -978,7 +990,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int data_size = 0;
 
 	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE;
 	#pragma omp critical (ProcessAudioPacket)
 	{
 	#if IS_FFMPEG_3_2
@@ -1083,7 +1095,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 
 	// Allocate audio buffer
-	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
+	int16_t *audio_buf = new int16_t[AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE];
 
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (ReSample)", "packet_samples", packet_samples, "info.channels", info.channels, "info.sample_rate", info.sample_rate, "aCodecCtx->sample_fmt", AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), "AV_SAMPLE_FMT_S16", AV_SAMPLE_FMT_S16, "", -1);
 
@@ -1093,11 +1105,11 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	audio_converted->nb_samples = audio_frame->nb_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
-	AVAudioResampleContext *avr = NULL;
+	SWRCONTEXT *avr = NULL;
 	int nb_samples = 0;
 
 	// setup resample context
-	avr = avresample_alloc_context();
+	avr = SWR_ALLOC();
 	av_opt_set_int(avr,  "in_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr, "out_channel_layout", AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout, 0);
 	av_opt_set_int(avr,  "in_sample_fmt",     AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx), 0);
@@ -1106,10 +1118,10 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
 	av_opt_set_int(avr,  "in_channels",       info.channels,    0);
 	av_opt_set_int(avr, "out_channels",       info.channels,    0);
-	int r = avresample_open(avr);
+	int r = SWR_INIT(avr);
 
 	// Convert audio samples
-	nb_samples = avresample_convert(avr, 	// audio resample context
+	nb_samples = SWR_CONVERT(avr, 	// audio resample context
 			audio_converted->data, 			// output data pointers
 			audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
 			audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
@@ -1121,8 +1133,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
 
 	// Deallocate resample buffer
-	avresample_close(avr);
-	avresample_free(&avr);
+	SWR_CLOSE(avr);
+	SWR_FREE(&avr);
 	avr = NULL;
 
 	// Free AVFrames
@@ -1348,7 +1360,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 		{
 			seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->filename);
+				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->AV_FILENAME);
 			} else
 			{
 				// VIDEO SEEK
@@ -1362,7 +1374,7 @@ void FFmpegReader::Seek(int64_t requested_frame)
 		{
 			seek_target = ConvertFrameToAudioPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.audio_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
-				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->filename);
+				fprintf(stderr, "%s: error while seeking audio stream\n", pFormatCtx->AV_FILENAME);
 			} else
 			{
 				// AUDIO SEEK
@@ -1857,16 +1869,14 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 void FFmpegReader::CheckFPS()
 {
 	check_fps = true;
-	AV_ALLOCATE_IMAGE(pFrame, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), info.width, info.height);
 
 	int first_second_counter = 0;
 	int second_second_counter = 0;
 	int third_second_counter = 0;
 	int forth_second_counter = 0;
 	int fifth_second_counter = 0;
-
-	int iterations = 0;
-	int threshold = 500;
+	int frames_detected = 0;
+	int64_t pts = 0;
 
 	// Loop through the stream
 	while (true)
@@ -1886,7 +1896,7 @@ void FFmpegReader::CheckFPS()
 				UpdatePTSOffset(true);
 
 				// Get PTS of this packet
-				int64_t pts = GetVideoPTS();
+				pts = GetVideoPTS();
 
 				// Remove pFrame
 				RemoveAVFrame(pFrame);
@@ -1908,63 +1918,51 @@ void FFmpegReader::CheckFPS()
 					forth_second_counter++;
 				else if (video_seconds > 4.0 && video_seconds <= 5.0)
 					fifth_second_counter++;
-				else
-					// Too far
-					break;
+
+				// Increment counters
+				frames_detected++;
 			}
 		}
-
-		// Increment counters
-		iterations++;
-
-		// Give up (if threshold exceeded)
-		if (iterations > threshold)
-			break;
 	}
 
 	// Double check that all counters have greater than zero (or give up)
-	if (second_second_counter == 0 || third_second_counter == 0 || forth_second_counter == 0 || fifth_second_counter == 0)
-	{
-		// Seek to frame 1
-		Seek(1);
+	if (second_second_counter != 0 && third_second_counter != 0 && forth_second_counter != 0 && fifth_second_counter != 0) {
+		// Calculate average FPS (average of first few seconds)
+		int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
+		int avg_fps = round(sum_fps / 4.0f);
 
-		// exit with no changes to FPS (not enough data to calculate)
-		return;
+		// Update FPS
+		info.fps = Fraction(avg_fps, 1);
+
+		// Update Duration and Length
+		info.video_length = frames_detected;
+		info.duration = frames_detected / (sum_fps / 4.0f);
+
+		// Update video bit rate
+		info.video_bit_rate = info.file_size / info.duration;
+	} else if (second_second_counter != 0 && third_second_counter != 0) {
+		// Calculate average FPS (only on second 2)
+		int sum_fps = second_second_counter;
+
+		// Update FPS
+		info.fps = Fraction(sum_fps, 1);
+
+		// Update Duration and Length
+		info.video_length = frames_detected;
+		info.duration = frames_detected / float(sum_fps);
+
+		// Update video bit rate
+		info.video_bit_rate = info.file_size / info.duration;
+	} else {
+		// Too short to determine framerate, just default FPS
+		// Set a few important default video settings (so audio can be divided into frames)
+		info.fps.num = 30;
+		info.fps.den = 1;
+
+		// Calculate number of frames
+		info.video_length = frames_detected;
+		info.duration = frames_detected / info.fps.ToFloat();
 	}
-
-	int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
-	int avg_fps = round(sum_fps / 4.0f);
-
-	// Sometimes the FPS is incorrectly detected by FFmpeg.  If the 1st and 2nd seconds counters
-	// agree with each other, we are going to adjust the FPS of this reader instance.  Otherwise, print
-	// a warning message.
-
-	// Get diff from actual frame rate
-	double fps = info.fps.ToDouble();
-	double diff = fps - double(avg_fps);
-
-	// Is difference bigger than 1 frame?
-	if (diff <= -1 || diff >= 1)
-	{
-		// Compare to half the frame rate (the most common type of issue)
-		double half_fps = Fraction(info.fps.num / 2, info.fps.den).ToDouble();
-		diff = half_fps - double(avg_fps);
-
-		// Is difference bigger than 1 frame?
-		if (diff <= -1 || diff >= 1)
-		{
-			// Update FPS for this reader instance
-			info.fps = Fraction(avg_fps, 1);
-		}
-		else
-		{
-			// Update FPS for this reader instance (to 1/2 the original framerate)
-			info.fps = Fraction(info.fps.num / 2, info.fps.den);
-		}
-	}
-
-	// Seek to frame 1
-	Seek(1);
 }
 
 // Remove AVFrame from cache (and deallocate it's memory)

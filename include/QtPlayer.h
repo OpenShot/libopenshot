@@ -31,9 +31,9 @@
 
 #include <iostream>
 #include <vector>
-#include "../include/PlayerBase.h"
-#include "../include/Qt/PlayerPrivate.h"
-#include "../include/RendererBase.h"
+#include "PlayerBase.h"
+#include "Qt/PlayerPrivate.h"
+#include "RendererBase.h"
 
 using namespace std;
 

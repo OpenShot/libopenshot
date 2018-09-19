@@ -30,14 +30,14 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Mask::Mask() : reader(NULL), replace_image(false) {
+Mask::Mask() : reader(NULL), replace_image(false), needs_refresh(true) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
 Mask::Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast) :
-		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast), replace_image(false)
+		reader(mask_reader), brightness(mask_brightness), contrast(mask_contrast), replace_image(false), needs_refresh(true)
 {
 	// Init effect properties
 	init_effect_details();
@@ -77,7 +77,7 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	// Get mask image (if missing or different size than frame image)
 	#pragma omp critical (open_mask_reader)
 	{
-		if (!original_mask || !reader->info.has_single_image ||
+		if (!original_mask || !reader->info.has_single_image || needs_refresh ||
 			(original_mask && original_mask->size() != frame_image->size())) {
 
 			// Only get mask if needed
@@ -90,6 +90,9 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 												Qt::SmoothTransformation)));
 		}
 	}
+
+	// Refresh no longer needed
+	needs_refresh = false;
 
 	// Get pixel arrays
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
@@ -206,47 +209,51 @@ void Mask::SetJsonValue(Json::Value root) {
 		contrast.SetJsonValue(root["contrast"]);
 	if (!root["reader"].isNull()) // does Json contain a reader?
 	{
-
-		if (!root["reader"]["type"].isNull()) // does the reader Json contain a 'type'?
+		#pragma omp critical (open_mask_reader)
 		{
-			// Close previous reader (if any)
-			if (reader)
+			// This reader has changed, so refresh cached assets
+			needs_refresh = true;
+
+			if (!root["reader"]["type"].isNull()) // does the reader Json contain a 'type'?
 			{
-				// Close and delete existing reader (if any)
-				reader->Close();
-				delete reader;
-				reader = NULL;
-			}
+				// Close previous reader (if any)
+				if (reader) {
+					// Close and delete existing reader (if any)
+					reader->Close();
+					delete reader;
+					reader = NULL;
+				}
 
-			// Create new reader (and load properties)
-			string type = root["reader"]["type"].asString();
+				// Create new reader (and load properties)
+				string type = root["reader"]["type"].asString();
 
-			if (type == "FFmpegReader") {
+				if (type == "FFmpegReader") {
 
-				// Create new reader
-				reader = new FFmpegReader(root["reader"]["path"].asString());
-				reader->SetJsonValue(root["reader"]);
+					// Create new reader
+					reader = new FFmpegReader(root["reader"]["path"].asString());
+					reader->SetJsonValue(root["reader"]);
 
-#ifdef USE_IMAGEMAGICK
-			} else if (type == "ImageReader") {
+	#ifdef USE_IMAGEMAGICK
+					} else if (type == "ImageReader") {
 
-				// Create new reader
-				reader = new ImageReader(root["reader"]["path"].asString());
-				reader->SetJsonValue(root["reader"]);
-#endif
+						// Create new reader
+						reader = new ImageReader(root["reader"]["path"].asString());
+						reader->SetJsonValue(root["reader"]);
+	#endif
 
-			} else if (type == "QtImageReader") {
+				} else if (type == "QtImageReader") {
 
-				// Create new reader
-				reader = new QtImageReader(root["reader"]["path"].asString());
-				reader->SetJsonValue(root["reader"]);
+					// Create new reader
+					reader = new QtImageReader(root["reader"]["path"].asString());
+					reader->SetJsonValue(root["reader"]);
 
-			} else if (type == "ChunkReader") {
+				} else if (type == "ChunkReader") {
 
-				// Create new reader
-				reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
-				reader->SetJsonValue(root["reader"]);
+					// Create new reader
+					reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
+					reader->SetJsonValue(root["reader"]);
 
+				}
 			}
 
 		}
@@ -274,6 +281,11 @@ string Mask::PropertiesJSON(int64_t requested_frame) {
 	// Keyframes
 	root["brightness"] = add_property_json("Brightness", brightness.GetValue(requested_frame), "float", "", &brightness, -1.0, 1.0, false, requested_frame);
 	root["contrast"] = add_property_json("Contrast", contrast.GetValue(requested_frame), "float", "", &contrast, 0, 20, false, requested_frame);
+
+	if (reader)
+		root["reader"] = add_property_json("Source", 0.0, "reader", reader->Json(), NULL, 0, 1, false, requested_frame);
+	else
+		root["reader"] = add_property_json("Source", 0.0, "reader", "{}", NULL, 0, 1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

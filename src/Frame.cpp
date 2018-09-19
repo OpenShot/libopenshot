@@ -512,6 +512,8 @@ int Frame::GetSamplesPerFrame(int64_t number, Fraction fps, int sample_rate, int
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
 	int samples_per_frame = round(total_samples - previous_samples);
+	if (samples_per_frame < 0)
+		samples_per_frame = 0;
 	return samples_per_frame;
 }
 
