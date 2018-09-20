@@ -62,7 +62,7 @@
 #include "AudioResampler.h"
 #include "Fraction.h"
 
-
+#pragma SWIG nowarn=362
 using namespace std;
 
 namespace openshot
