@@ -63,8 +63,8 @@
 
 #include "DeckLinkAPI.h"
 #include "CacheMemory.h"
-#include "../include/Frame.h"
-#include "../include/OpenMPUtilities.h"
+#include "Frame.h"
+#include "OpenMPUtilities.h"
 
 enum OutputSignal {
 	kOutputSignalPip		= 0,

@@ -29,8 +29,8 @@
 #ifndef OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 #define OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 
-#include "../../include/ReaderBase.h"
-#include "../../include/RendererBase.h"
+#include "../ReaderBase.h"
+#include "../RendererBase.h"
 
 namespace openshot
 {

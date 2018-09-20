@@ -43,7 +43,15 @@
 		#include <libavcodec/avcodec.h>
 		#include <libavformat/avformat.h>
 		#include <libswscale/swscale.h>
+		// Change this to the first version swrescale works
+	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+			#define USE_SW
+	#endif
+	#ifdef USE_SW
+		#include <libswresample/swresample.h>
+	#else
 		#include <libavresample/avresample.h>
+	#endif
 		#include <libavutil/mathematics.h>
 		#include <libavutil/pixfmt.h>
 		#include <libavutil/pixdesc.h>
@@ -106,7 +114,65 @@
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
 	#endif
 
-	#if IS_FFMPEG_3_2
+	#ifdef USE_SW
+		#define SWR_CONVERT(ctx, out, linesize, out_count, in, linesize2, in_count) \
+			swr_convert(ctx, out, out_count, (const uint8_t **)in, in_count)
+		#define SWR_ALLOC() swr_alloc()
+		#define SWR_CLOSE(ctx) {}
+		#define SWR_FREE(ctx) swr_free(ctx)
+		#define SWR_INIT(ctx)  swr_init(ctx)
+		#define SWRCONTEXT SwrContext
+	#else
+		#define SWR_CONVERT(ctx, out, linesize, out_count, in, linesize2, in_count) \
+			avresample_convert(ctx, out, linesize, out_count, (uint8_t **)in, linesize2, in_count)
+		#define SWR_ALLOC() avresample_alloc_context()
+		#define SWR_CLOSE(ctx) avresample_close(ctx)
+		#define SWR_FREE(ctx) avresample_free(ctx)
+		#define SWR_INIT(ctx)  avresample_open(ctx)
+		#define SWRCONTEXT AVAudioResampleContext
+	#endif
+
+
+	#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+		#define AV_REGISTER_ALL
+		#define AVCODEC_REGISTER_ALL
+		#define AV_FILENAME url
+		#define MY_INPUT_BUFFER_PADDING_SIZE AV_INPUT_BUFFER_PADDING_SIZE
+		#define AV_ALLOCATE_FRAME() av_frame_alloc()
+		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
+		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
+    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
+		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
+		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
+		#define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codecpar->codec_id
+		auto AV_GET_CODEC_CONTEXT = [](AVStream* av_stream, AVCodec* av_codec) { \
+			AVCodecContext *context = avcodec_alloc_context3(av_codec); \
+			avcodec_parameters_to_context(context, av_stream->codecpar); \
+			return context; \
+		};
+		#define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_codec;
+		#define AV_GET_CODEC_FROM_STREAM(av_stream,codec_in)
+		#define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_stream->codecpar
+		#define AV_GET_CODEC_PIXEL_FORMAT(av_stream, av_context) (AVPixelFormat) av_stream->codecpar->format
+		#define AV_GET_SAMPLE_FORMAT(av_stream, av_context) av_stream->codecpar->format
+		#define AV_GET_IMAGE_SIZE(pix_fmt, width, height) av_image_get_buffer_size(pix_fmt, width, height, 1)
+		#define AV_COPY_PICTURE_DATA(av_frame, buffer, pix_fmt, width, height) av_image_fill_arrays(av_frame->data, av_frame->linesize, buffer, pix_fmt, width, height, 1)
+		#define AV_OUTPUT_CONTEXT(output_context, path) avformat_alloc_output_context2( output_context, NULL, NULL, path)
+		#define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
+		#define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) 	av_opt_set(priv_data, name, value, 0); avcodec_parameters_from_context(av_stream->codecpar, avcodec);
+		#define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) 	av_st = avformat_new_stream(oc, NULL);\
+			if (!av_st) \
+				throw OutOfMemory("Could not allocate memory for the video stream.", path); \
+			c = avcodec_alloc_context3(av_codec); \
+			st_codec = c; \
+			av_st->codecpar->codec_id = av_codec->id;
+		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) avcodec_parameters_from_context(av_stream->codecpar, av_codec);
+	#elif IS_FFMPEG_3_2
+		#define AV_REGISTER_ALL av_register_all();
+		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
+		#define AV_FILENAME filename
+		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
@@ -138,6 +204,10 @@
 			av_st->codecpar->codec_id = av_codec->id;
 		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) avcodec_parameters_from_context(av_stream->codecpar, av_codec);
 	#elif LIBAVFORMAT_VERSION_MAJOR >= 55
+		#define AV_REGISTER_ALL av_register_all();
+		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
+		#define AV_FILENAME filename
+		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) avpicture_alloc((AVPicture *) av_frame, pix_fmt, width, height)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
@@ -164,6 +234,10 @@
 			c = av_st->codec;
 		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 	#else
+		#define AV_REGISTER_ALL av_register_all();
+		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
+		#define AV_FILENAME filename
+		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() avcodec_alloc_frame()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) avpicture_alloc((AVPicture *) av_frame, pix_fmt, width, height)
 		#define AV_RESET_FRAME(av_frame) avcodec_get_frame_defaults(av_frame)

@@ -1,0 +1,49 @@
+dist: trusty
+
+matrix:
+  include:
+    - language: cpp
+      name: "FFmpeg 2"
+      before_script:
+      - sudo add-apt-repository ppa:openshot.developers/libopenshot-daily -y
+      - sudo add-apt-repository ppa:beineri/opt-qt58-trusty -y
+      - sudo apt-get update -qq
+      - sudo apt-get install gcc-4.8 cmake libavcodec-dev libavformat-dev libswscale-dev libavresample-dev libavutil-dev libopenshot-audio-dev libopenshot-dev libfdk-aac-dev libfdk-aac-dev libjsoncpp-dev libmagick++-dev libopenshot-audio-dev libunittest++-dev libzmq3-dev pkg-config python3-dev qtbase5-dev qtmultimedia5-dev swig -y
+      - sudo apt autoremove -y
+      script:
+      - mkdir -p build; cd build;
+      - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
+      - make VERBOSE=1
+      - make test
+
+    - language: cpp
+      name: "FFmpeg 3"
+      before_script:
+      - sudo add-apt-repository ppa:openshot.developers/libopenshot-daily -y
+      - sudo add-apt-repository ppa:beineri/opt-qt58-trusty -y
+      - sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
+      - sudo apt-get update -qq
+      - sudo apt-get install gcc-4.8 cmake libavcodec-dev libavformat-dev libswscale-dev libavresample-dev libavutil-dev libopenshot-audio-dev libopenshot-dev libfdk-aac-dev libfdk-aac-dev libjsoncpp-dev libmagick++-dev libopenshot-audio-dev libunittest++-dev libzmq3-dev pkg-config python3-dev qtbase5-dev qtmultimedia5-dev swig -y
+      - sudo apt autoremove -y
+      script:
+      - mkdir -p build; cd build;
+      - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
+      - make VERBOSE=1
+      - make test
+
+    - language: cpp
+      name: "FFmpeg 4"
+      before_script:
+      - sudo add-apt-repository ppa:openshot.developers/libopenshot-daily -y
+      - sudo add-apt-repository ppa:beineri/opt-qt58-trusty -y
+      - sudo add-apt-repository ppa:jonathonf/ffmpeg -y
+      - sudo add-apt-repository ppa:jonathonf/ffmpeg-4 -y
+      - sudo add-apt-repository ppa:jonathonf/backports -y
+      - sudo apt-get update -qq
+      - sudo apt-get install gcc-4.8 cmake libavcodec58 libavformat58 libavcodec-dev libavformat-dev libswscale-dev libavresample-dev libavutil-dev libopenshot-audio-dev libopenshot-dev libfdk-aac-dev libfdk-aac-dev libjsoncpp-dev libmagick++-dev libopenshot-audio-dev libunittest++-dev libzmq3-dev pkg-config python3-dev qtbase5-dev qtmultimedia5-dev swig -y
+      - sudo apt autoremove -y
+      script:
+      - mkdir -p build; cd build;
+      - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
+      - make VERBOSE=1
+      - make test

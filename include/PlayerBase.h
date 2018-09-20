@@ -29,7 +29,7 @@
 #define OPENSHOT_PLAYER_BASE_H
 
 #include <iostream>
-#include "../include/ReaderBase.h"
+#include "ReaderBase.h"
 
 using namespace std;
 

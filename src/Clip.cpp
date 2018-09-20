@@ -671,6 +671,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
+	new_frame->AddAudioSilence(samples_in_frame);
 	return new_frame;
 }
 
@@ -925,13 +926,14 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
+				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
 
-				// Load Json into Effect
-				e->SetJsonValue(existing_effect);
+					// Load Json into Effect
+					e->SetJsonValue(existing_effect);
 
-				// Add Effect to Timeline
-				AddEffect(e);
+					// Add Effect to Timeline
+					AddEffect(e);
+				}
 			}
 		}
 	}

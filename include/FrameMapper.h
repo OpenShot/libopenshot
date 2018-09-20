@@ -34,11 +34,11 @@
 #include <vector>
 #include <memory>
 #include "CacheMemory.h"
-#include "../include/ReaderBase.h"
-#include "../include/Frame.h"
-#include "../include/Fraction.h"
-#include "../include/Exceptions.h"
-#include "../include/KeyFrame.h"
+#include "ReaderBase.h"
+#include "Frame.h"
+#include "Fraction.h"
+#include "Exceptions.h"
+#include "KeyFrame.h"
 
 
 // Include FFmpeg headers and macros
@@ -146,7 +146,7 @@ namespace openshot
 		ReaderBase *reader;		// The source video reader
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
-		AVAudioResampleContext *avr;	// Audio resampling context object
+		SWRCONTEXT *avr;	// Audio resampling context object
 
 		// Internal methods used by init
 		void AddField(int64_t frame);

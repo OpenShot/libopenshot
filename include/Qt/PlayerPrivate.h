@@ -29,12 +29,12 @@
 #ifndef OPENSHOT_PLAYER_PRIVATE_H
 #define OPENSHOT_PLAYER_PRIVATE_H
 
-#include "../../include/ReaderBase.h"
-#include "../../include/RendererBase.h"
-#include "../../include/AudioReaderSource.h"
-#include "../../include/Qt/AudioPlaybackThread.h"
-#include "../../include/Qt/VideoPlaybackThread.h"
-#include "../../include/Qt/VideoCacheThread.h"
+#include "../ReaderBase.h"
+#include "../RendererBase.h"
+#include "../AudioReaderSource.h"
+#include "../Qt/AudioPlaybackThread.h"
+#include "../Qt/VideoPlaybackThread.h"
+#include "../Qt/VideoCacheThread.h"
 
 namespace openshot
 {
