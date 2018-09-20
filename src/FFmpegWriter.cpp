@@ -1242,18 +1242,42 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
   #if IS_FFMPEG_3_2
   if (hw_en_on && hw_en_supported) {
     char *dev_hw = NULL;
-    #if defined(__linux__)
+    char adapter[256];
+    char *adapter_ptr = NULL;
+    int adapter_num;
 		// Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
 		dev_hw = getenv( "HW_EN_DEVICE_SET" );
-		// Check if it is there and writable
-		if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
-		  dev_hw = NULL;  // use default
-		}
-    #else
-      dev_hw = NULL;  // use default
-    #endif
+    if( dev_hw != NULL) {
+      adapter_num = atoi(dev_hw);
+      if (adapter_num < 3 && adapter_num >=0) {
+  #if defined(__linux__)
+        snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+        // Maybe 127 is better because the first card would be 1?!
+        adapter_ptr = adapter;
+  #elif defined(_WIN32)
+        adapter_ptr = NULL;
+  #elif defined(__APPLE__)
+        adapter_ptr = NULL;
+  #endif
+      }
+      else {
+        adapter_ptr = NULL; // Just to be sure
+      }
+    }
+// Check if it is there and writable
+  #if defined(__linux__)
+    if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
+  #elif defined(_WIN32)
+    if( adapter_ptr != NULL ) {
+  #elif defined(__APPLE__)
+    if( adapter_ptr != NULL ) {
+  #endif
+	      adapter_ptr = NULL;  // use default
+        //cerr << "\n\n\nEncode Device not present using default\n\n\n";
+        ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	    }
   	if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
-        dev_hw, NULL, 0) < 0) {
+        adapter_ptr, NULL, 0) < 0) {
         ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video : Codec name: ", info.vcodec.c_str(), -1, " ERROR creating\n", -1, "", -1, "", -1, "", -1, "", -1);
         //cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
         throw InvalidCodec("Could not create hwdevice", path);

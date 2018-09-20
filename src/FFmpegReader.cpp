@@ -303,6 +303,7 @@ void FFmpegReader::Open()
             if (adapter_num < 3 && adapter_num >=0) {
       #if defined(__linux__)
               snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+              // Maybe 127 is better because the first card would be 1?!
               adapter_ptr = adapter;
       #elif defined(_WIN32)
               adapter_ptr = NULL;
