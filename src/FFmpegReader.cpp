@@ -294,17 +294,42 @@ void FFmpegReader::Open()
 					// Open Hardware Acceleration
 					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
 			    char *dev_hw = NULL;
+          char adapter[256];
+          char *adapter_ptr = NULL;
+          int adapter_num;
 					dev_hw = getenv( "HW_DE_DEVICE_SET" );
+          if( dev_hw != NULL) {
+            adapter_num = atoi(dev_hw);
+            if (adapter_num < 3 && adapter_num >=0) {
+      #if defined(__linux__)
+              snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+              adapter_ptr = adapter;
+      #elif defined(_WIN32)
+              adapter_ptr = NULL;
+      #elif defined(__APPLE__)
+              adapter_ptr = NULL;
+      #endif
+            }
+            else {
+              adapter_ptr = NULL; // Just to be sure
+            }
+          }
 			    // Check if it is there and writable
-			    if( dev_hw != NULL && access( dev_hw, W_OK ) == -1 ) {
-			      dev_hw = NULL;  // use default
+      #if defined(__linux__)
+			    if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
+      #elif defined(_WIN32)
+          if( adapter_ptr != NULL ) {
+      #elif defined(__APPLE__)
+          if( adapter_ptr != NULL ) {
+      #endif
+			      adapter_ptr = NULL;  // use default
             //cerr << "\n\n\nDecode Device not present using default\n\n\n";
-            ZmqLogger::Instance()->AppendDebugMethod("\n\n\nDecode Device not present using default\n\n\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+            ZmqLogger::Instance()->AppendDebugMethod("Decode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
 					pCodecCtx->get_format = get_hw_dec_format;
-					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, dev_hw, NULL, 0) >= 0) {
+					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
 							throw InvalidCodec("Hardware device reference create failed.", path);
 						}
