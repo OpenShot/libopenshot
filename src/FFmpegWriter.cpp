@@ -1053,23 +1053,48 @@ AVStream* FFmpegWriter::add_video_stream()
 	}
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 	else {
-		switch (c->codec_id) {
-			case AV_CODEC_ID_VP8 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
-				break;
-			case AV_CODEC_ID_VP9 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
-				if (info.video_bit_rate == 0) {
-		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
-				 }
-				 break;
-			case AV_CODEC_ID_H264 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
-				break;
-			case AV_CODEC_ID_H265 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
-				break;
-		}
+    if (hw_en_on) {
+      double mbs = 15000000.0;
+      if (info.video_bit_rate > 0) {
+        if (info.video_bit_rate > 42) {
+          mbs = 380.0;
+        }
+        else {
+          mbs *= pow(0.912,info.video_bit_rate);
+        }
+      }
+      c->bit_rate = (int)(mbs);
+    }
+    else {
+  		switch (c->codec_id) {
+  			case AV_CODEC_ID_VP8 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+  				break;
+  			case AV_CODEC_ID_VP9 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+  				if (info.video_bit_rate == 0) {
+  		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
+  				 }
+  				 break;
+  			case AV_CODEC_ID_H264 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+  				break;
+  			case AV_CODEC_ID_H265 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+  				break;
+        default:
+          double mbs = 15000000.0;
+          if (info.video_bit_rate > 0) {
+            if (info.video_bit_rate > 42) {
+              mbs = 380.0;
+            }
+            else {
+              mbs *= pow(0.912,info.video_bit_rate);
+            }
+          }
+          c->bit_rate = (int)(mbs);
+  		}
+    }
 	}
 #endif
 
