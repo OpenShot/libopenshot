@@ -595,6 +595,11 @@ void FFmpegReader::UpdateAudioInfo()
 		info.height = 480;
 	}
 
+	// Fix invalid video lengths for certain types of files (MP3 for example)
+	if (info.has_video && ((info.duration * info.fps.ToDouble()) - info.video_length > 60)) {
+		info.video_length = info.duration * info.fps.ToDouble();
+	}
+
 	// Add audio metadata (if any found)
 	AVDictionaryEntry *tag = NULL;
 	while ((tag = av_dict_get(aStream->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
@@ -684,7 +689,7 @@ void FFmpegReader::UpdateVideoInfo()
 	}
 
 	// Override an invalid framerate
-	if (info.fps.ToFloat() > 240.0f || (info.fps.num == 0 || info.fps.den == 0)) {
+	if (info.fps.ToFloat() > 240.0f || (info.fps.num <= 0 || info.fps.den <= 0) || info.video_length <= 0) {
 		// Calculate FPS, duration, video bit rate, and video length manually
 		// by scanning through all the video stream packets
 		CheckFPS();
@@ -928,6 +933,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 			} // end while
 
 		} // end omp single
+
 	} // end omp parallel
 
 	// Debug output
@@ -1216,7 +1222,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+															  height, PIX_FMT_RGBA, SWS_LANCZOS, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -2173,6 +2179,7 @@ void FFmpegReader::CheckFPS()
 	int forth_second_counter = 0;
 	int fifth_second_counter = 0;
 	int frames_detected = 0;
+	int64_t pts = 0;
 
 	// Loop through the stream
 	while (true)
@@ -2192,7 +2199,7 @@ void FFmpegReader::CheckFPS()
 				UpdatePTSOffset(true);
 
 				// Get PTS of this packet
-				int64_t pts = GetVideoPTS();
+				pts = GetVideoPTS();
 
 				// Remove pFrame
 				RemoveAVFrame(pFrame);
@@ -2223,7 +2230,7 @@ void FFmpegReader::CheckFPS()
 
 	// Double check that all counters have greater than zero (or give up)
 	if (second_second_counter != 0 && third_second_counter != 0 && forth_second_counter != 0 && fifth_second_counter != 0) {
-		// Calculate average FPS
+		// Calculate average FPS (average of first few seconds)
 		int sum_fps = second_second_counter + third_second_counter + forth_second_counter + fifth_second_counter;
 		int avg_fps = round(sum_fps / 4.0f);
 
@@ -2232,22 +2239,32 @@ void FFmpegReader::CheckFPS()
 
 		// Update Duration and Length
 		info.video_length = frames_detected;
-		info.duration = frames_detected / round(sum_fps / 4.0f);
+		info.duration = frames_detected / (sum_fps / 4.0f);
+
+		// Update video bit rate
+		info.video_bit_rate = info.file_size / info.duration;
+	} else if (second_second_counter != 0 && third_second_counter != 0) {
+		// Calculate average FPS (only on second 2)
+		int sum_fps = second_second_counter;
+
+		// Update FPS
+		info.fps = Fraction(sum_fps, 1);
+
+		// Update Duration and Length
+		info.video_length = frames_detected;
+		info.duration = frames_detected / float(sum_fps);
 
 		// Update video bit rate
 		info.video_bit_rate = info.file_size / info.duration;
 	} else {
-
 		// Too short to determine framerate, just default FPS
 		// Set a few important default video settings (so audio can be divided into frames)
 		info.fps.num = 30;
 		info.fps.den = 1;
-		info.video_timebase.num = info.fps.den;
-		info.video_timebase.den = info.fps.num;
 
 		// Calculate number of frames
 		info.video_length = frames_detected;
-		info.duration = frames_detected / info.video_timebase.ToFloat();
+		info.duration = frames_detected / info.fps.ToFloat();
 	}
 }
 

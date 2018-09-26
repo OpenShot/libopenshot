@@ -578,8 +578,13 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		// Add clip to 'opened' list, because it's missing
 		open_clips[clip] = clip;
 
-		// Open the clip
-		clip->Open();
+		try {
+			// Open the clip
+			clip->Open();
+
+		} catch (const InvalidFile & e) {
+			// ...
+		}
 	}
 
 	// Debug output
@@ -719,8 +724,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		#pragma omp parallel
 		{
 			// Loop through all requested frames
-			// The scheduler has to be static!
-			#pragma omp for ordered schedule(static,1) firstprivate(nearby_clips, requested_frame, minimum_frames)
+			#pragma omp for ordered firstprivate(nearby_clips, requested_frame, minimum_frames) schedule(static,1)
 			for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 			{
 				// Debug output
