@@ -1067,6 +1067,12 @@ AVStream* FFmpegWriter::add_video_stream()
     }
     else {
   		switch (c->codec_id) {
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+  			case AV_CODEC_ID_AV1 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+                c->bit_rate = 0;
+  				break;
+#endif
   			case AV_CODEC_ID_VP8 :
   				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
   				break;
