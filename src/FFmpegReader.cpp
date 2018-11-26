@@ -155,7 +155,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 
 #if IS_FFMPEG_3_2
 
-static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+static enum AVPixelFormat get_hw_dec_format_va(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
 
@@ -166,21 +166,69 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
         	return *p;
 					break;
+        }
+      }
+  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+      return AV_PIX_FMT_NONE;
+  }
+
+static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			switch (*p) {
 				case AV_PIX_FMT_CUDA:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
         	return *p;
 					break;
+        }
+      }
+  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+      return AV_PIX_FMT_NONE;
+  }
+
+static enum AVPixelFormat get_hw_dec_format_dx(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			switch (*p) {
 				case AV_PIX_FMT_DXVA2_VLD:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
         	return *p;
 					break;
+        }
+      }
+  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+      return AV_PIX_FMT_NONE;
+  }
+
+static enum AVPixelFormat get_hw_dec_format_d3(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			switch (*p) {
 				case AV_PIX_FMT_D3D11:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
         	return *p;
 					break;
+        }
+      }
+  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+      return AV_PIX_FMT_NONE;
+  }
+
+static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+    const enum AVPixelFormat *p;
+
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			switch (*p) {
 				case AV_PIX_FMT_QSV:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
@@ -334,16 +382,54 @@ void FFmpegReader::Open()
 					// Here the first hardware initialisations are made
           // TODO: check for each format in an extra call
           // Now only vaapi the first in the list is found
+      #if defined(__linux__)
           hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-					pCodecCtx->get_format = get_hw_dec_format;
+					pCodecCtx->get_format = get_hw_dec_format_va;
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-							throw InvalidCodec("Hardware device reference create failed.", path);
+							throw InvalidCodec("Hardware device reference create failed vaapi.", path);
 						}
 					}
 					else {
-						throw InvalidCodec("Hardware device create failed.", path);
+            hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+  					pCodecCtx->get_format = get_hw_dec_format_cu;
+            hw_device_ctx = NULL;
+  					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+  						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+  							throw InvalidCodec("Hardware device reference create failed cuda.", path);
+  						}
+  					}
+  					else {
+						    throw InvalidCodec("Hardware device create failed.", path);
+
+            }
 					}
+      #endif
+      #if defined(_WIN32)
+          hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+          pCodecCtx->get_format = get_hw_dec_format_dx;
+          if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+            if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+              throw InvalidCodec("Hardware device reference create failed vaapi.", path);
+            }
+          }
+          else {
+            throw InvalidCodec("Hardware device create failed.", path);
+          }
+      #endif
+      #if defined(__APPLE__)
+          hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+          pCodecCtx->get_format = get_hw_dec_format_qs;
+          if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+            if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+              throw InvalidCodec("Hardware device reference create failed vaapi.", path);
+            }
+          }
+          else {
+            throw InvalidCodec("Hardware device create failed.", path);
+          }
+      #endif
+
 				}
 				#endif
 				// Open video codec
