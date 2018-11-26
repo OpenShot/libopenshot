@@ -300,21 +300,24 @@ void FFmpegReader::Open()
 					dev_hw = getenv( "HW_DE_DEVICE_SET" );
           if( dev_hw != NULL) {
             adapter_num = atoi(dev_hw);
-            if (adapter_num < 3 && adapter_num >=0) {
-      #if defined(__linux__)
-              snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-              // Maybe 127 is better because the first card would be 1?!
-              adapter_ptr = adapter;
-      #elif defined(_WIN32)
-              adapter_ptr = NULL;
-      #elif defined(__APPLE__)
-              adapter_ptr = NULL;
-      #endif
-            }
-            else {
-              adapter_ptr = NULL; // Just to be sure
-            }
+          } else {
+            adapter_num = 0;
           }
+          if (adapter_num < 3 && adapter_num >=0) {
+      #if defined(__linux__)
+            snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+            // Maybe 127 is better because the first card would be 1?!
+            adapter_ptr = adapter;
+      #elif defined(_WIN32)
+            adapter_ptr = NULL;
+      #elif defined(__APPLE__)
+            adapter_ptr = NULL;
+      #endif
+          }
+          else {
+            adapter_ptr = NULL; // Just to be sure
+          }
+          //}
 			    // Check if it is there and writable
       #if defined(__linux__)
 			    if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
@@ -329,6 +332,8 @@ void FFmpegReader::Open()
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
+          // TODO: check for each format in an extra call
+          // Now only vaapi the first in the list is found
 					pCodecCtx->get_format = get_hw_dec_format;
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
