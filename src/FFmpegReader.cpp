@@ -79,7 +79,7 @@ int hw_de_on = 1;					// Is set in UI
 //int hw_de_supported = 0;	// Is set by FFmpegReader
 #if IS_FFMPEG_3_2
 AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
-AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
+AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
 
 FFmpegReader::FFmpegReader(string path)
@@ -334,6 +334,7 @@ void FFmpegReader::Open()
 					// Here the first hardware initialisations are made
           // TODO: check for each format in an extra call
           // Now only vaapi the first in the list is found
+          hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 					pCodecCtx->get_format = get_hw_dec_format;
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {

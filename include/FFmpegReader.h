@@ -149,7 +149,7 @@ namespace openshot
 		int hw_de_supported = 0;	// Is set by FFmpegReader
 		#if IS_FFMPEG_3_2
 		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
-		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
 		#endif
 
 		int is_hardware_decode_supported(int codecid);
