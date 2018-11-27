@@ -155,6 +155,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 
 #if IS_FFMPEG_3_2
 
+#if defined(__linux__)
 static enum AVPixelFormat get_hw_dec_format_va(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
@@ -188,7 +189,9 @@ static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum A
   		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
       return AV_PIX_FMT_NONE;
   }
+#endif
 
+#if defined(_WIN32)
 static enum AVPixelFormat get_hw_dec_format_dx(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
@@ -222,7 +225,9 @@ static enum AVPixelFormat get_hw_dec_format_d3(AVCodecContext *ctx, const enum A
   		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
       return AV_PIX_FMT_NONE;
   }
+#endif
 
+#if defined(__APPLE__)
 static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
     const enum AVPixelFormat *p;
@@ -239,6 +244,7 @@ static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum A
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
     return AV_PIX_FMT_NONE;
 }
+#endif
 
 int FFmpegReader::is_hardware_decode_supported(int codecid)
 {
@@ -345,7 +351,7 @@ void FFmpegReader::Open()
           char adapter[256];
           char *adapter_ptr = NULL;
           int adapter_num;
-					dev_hw = getenv( "HW_DE_DEVICE_SET" );
+					dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
           if( dev_hw != NULL) {
             adapter_num = atoi(dev_hw);
           } else {
@@ -354,7 +360,6 @@ void FFmpegReader::Open()
           if (adapter_num < 3 && adapter_num >=0) {
       #if defined(__linux__)
             snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-            // Maybe 127 is better because the first card would be 1?!
             adapter_ptr = adapter;
       #elif defined(_WIN32)
             adapter_ptr = NULL;
@@ -380,8 +385,6 @@ void FFmpegReader::Open()
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
-          // TODO: check for each format in an extra call
-          // Now only vaapi the first in the list is found
       #if defined(__linux__)
           hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 					pCodecCtx->get_format = get_hw_dec_format_va;
@@ -401,7 +404,6 @@ void FFmpegReader::Open()
   					}
   					else {
 						    throw InvalidCodec("Hardware device create failed.", path);
-
             }
 					}
       #endif
@@ -410,19 +412,29 @@ void FFmpegReader::Open()
           pCodecCtx->get_format = get_hw_dec_format_dx;
           if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
             if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-              throw InvalidCodec("Hardware device reference create failed vaapi.", path);
+              throw InvalidCodec("Hardware device reference create failed dxva2.", path);
             }
           }
           else {
-            throw InvalidCodec("Hardware device create failed.", path);
-          }
+            hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11;
+  					pCodecCtx->get_format = get_hw_dec_format_cu;
+            hw_device_ctx = NULL;
+  					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+  						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
+  							throw InvalidCodec("Hardware device reference create failed d3d11.", path);
+  						}
+  					}
+  					else {
+						    throw InvalidCodec("Hardware device create failed.", path);
+            }
+					}
       #endif
       #if defined(__APPLE__)
           hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
           pCodecCtx->get_format = get_hw_dec_format_qs;
           if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
             if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-              throw InvalidCodec("Hardware device reference create failed vaapi.", path);
+              throw InvalidCodec("Hardware device reference create failed qsv.", path);
             }
           }
           else {
