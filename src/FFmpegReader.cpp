@@ -275,13 +275,29 @@ void FFmpegReader::Open()
 		// Initialize format context
 		pFormatCtx = NULL;
 
-    char * val = getenv( "OS2_DECODE_HW" );
+    // Old version turn hardware decode on
+    /*char * val = getenv( "OS2_DECODE_HW" );
 		if (val == NULL) {
 			hw_de_on = 0;
 		}
 		else{
 			hw_de_on = (val[0] == '1')? 1 : 0;
-		}
+		}*/
+
+    // New version turn hardware decode on
+    {
+      char *decoder_hw = NULL;
+      decoder_hw = getenv( "HW_DECODER" );
+      if(decoder_hw != NULL) {
+        if( strncmp(decoder_hw,"NONE",4) == 0) {
+          hw_de_on = 0;
+        } else {
+          hw_de_on = 1;
+        }
+      } else {
+        hw_de_on = 0;
+      }
+    }
 
 		// Open video file
 		if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
@@ -348,6 +364,7 @@ void FFmpegReader::Open()
 					// Open Hardware Acceleration
 					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
 			    char *dev_hw = NULL;
+          char *decoder_hw = NULL;
           char adapter[256];
           char *adapter_ptr = NULL;
           int adapter_num;
@@ -361,6 +378,38 @@ void FFmpegReader::Open()
       #if defined(__linux__)
             snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
             adapter_ptr = adapter;
+            decoder_hw = getenv( "HW_DECODER" );
+            if(decoder_hw != NULL) {
+                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+                  pCodecCtx->get_format = get_hw_dec_format_va;
+                }
+                if (strncmp(decoder_hw,"HW_DE_VAAPI",11) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+                  pCodecCtx->get_format = get_hw_dec_format_va;
+                }
+                if (strncmp(decoder_hw,"HW_DE_NVDEC",11) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+                  pCodecCtx->get_format = get_hw_dec_format_cu;
+                }
+            } else {
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+                pCodecCtx->get_format = get_hw_dec_format_va;
+            }
+
+            /* This is a hack:
+               my first card is AMD, my second card is nVidia
+               */
+            switch (adapter_num) {
+              case 1:
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+                pCodecCtx->get_format = get_hw_dec_format_cu;
+                break;
+              default:
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+                pCodecCtx->get_format = get_hw_dec_format_va;
+                break;
+            }
       #elif defined(_WIN32)
             adapter_ptr = NULL;
       #elif defined(__APPLE__)
@@ -386,25 +435,16 @@ void FFmpegReader::Open()
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
       #if defined(__linux__)
-          hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-					pCodecCtx->get_format = get_hw_dec_format_va;
+          //hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+					//pCodecCtx->get_format = get_hw_dec_format_cu;
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
+            cerr << "\n\n**** HW device create OK ******** \n\n";
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-							throw InvalidCodec("Hardware device reference create failed vaapi.", path);
+							throw InvalidCodec("Hardware device reference create failed cuda.", path);
 						}
 					}
 					else {
-            hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-  					pCodecCtx->get_format = get_hw_dec_format_cu;
-            hw_device_ctx = NULL;
-  					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
-  						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-  							throw InvalidCodec("Hardware device reference create failed cuda.", path);
-  						}
-  					}
-  					else {
-						    throw InvalidCodec("Hardware device create failed.", path);
-            }
+						  throw InvalidCodec("Hardware device create failed.", path);
 					}
       #endif
       #if defined(_WIN32)
