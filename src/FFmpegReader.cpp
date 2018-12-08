@@ -400,7 +400,7 @@ void FFmpegReader::Open()
             /* This is a hack:
                my first card is AMD, my second card is nVidia
                */
-            switch (adapter_num) {
+/*            switch (adapter_num) {
               case 1:
                 hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
                 pCodecCtx->get_format = get_hw_dec_format_cu;
@@ -409,7 +409,7 @@ void FFmpegReader::Open()
                 hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
                 pCodecCtx->get_format = get_hw_dec_format_va;
                 break;
-            }
+            }*/
       #elif defined(_WIN32)
             adapter_ptr = NULL;
       #elif defined(__APPLE__)
@@ -440,7 +440,7 @@ void FFmpegReader::Open()
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
             cerr << "\n\n**** HW device create OK ******** \n\n";
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-							throw InvalidCodec("Hardware device reference create failed cuda.", path);
+							throw InvalidCodec("Hardware device reference create failed.", path);
 						}
 					}
 					else {
