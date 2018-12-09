@@ -397,23 +397,42 @@ void FFmpegReader::Open()
                 pCodecCtx->get_format = get_hw_dec_format_va;
             }
 
-            /* This is a hack:
-               my first card is AMD, my second card is nVidia
-               */
-/*            switch (adapter_num) {
-              case 1:
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-                pCodecCtx->get_format = get_hw_dec_format_cu;
-                break;
-              default:
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-                pCodecCtx->get_format = get_hw_dec_format_va;
-                break;
-            }*/
       #elif defined(_WIN32)
             adapter_ptr = NULL;
+            decoder_hw = getenv( "HW_DECODER" );
+            if(decoder_hw != NULL) {
+                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                  pCodecCtx->get_format = get_hw_dec_format_dx;
+                }
+                if (strncmp(decoder_hw,"HW_DE_WINDOWS_DXVA2",19) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                  pCodecCtx->get_format = get_hw_dec_format_dx;
+                }
+                if (strncmp(decoder_hw,"HW_DE_WINDOWS_D3D11",19) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11;
+                  pCodecCtx->get_format = get_hw_dec_format_d3;
+                }
+            } else {
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                pCodecCtx->get_format = get_hw_dec_format_dx;
+            }
       #elif defined(__APPLE__)
             adapter_ptr = NULL;
+            decoder_hw = getenv( "HW_DECODER" );
+            if(decoder_hw != NULL) {
+                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+                  pCodecCtx->get_format = get_hw_dec_format_qs;
+                }
+                if (strncmp(decoder_hw,"HW_DE_MACOS",11) == 0) { //Will never happen
+                  hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
+                  pCodecCtx->get_format = get_hw_dec_format_qs;
+                }
+            } else {
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+                pCodecCtx->get_format = get_hw_dec_format_qs;
+            }
       #endif
           }
           else {
@@ -429,14 +448,10 @@ void FFmpegReader::Open()
           if( adapter_ptr != NULL ) {
       #endif
 			      adapter_ptr = NULL;  // use default
-            //cerr << "\n\n\nDecode Device not present using default\n\n\n";
             ZmqLogger::Instance()->AppendDebugMethod("Decode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 			    }
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
-      #if defined(__linux__)
-          //hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-					//pCodecCtx->get_format = get_hw_dec_format_cu;
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
             cerr << "\n\n**** HW device create OK ******** \n\n";
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
@@ -446,41 +461,6 @@ void FFmpegReader::Open()
 					else {
 						  throw InvalidCodec("Hardware device create failed.", path);
 					}
-      #endif
-      #if defined(_WIN32)
-          hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
-          pCodecCtx->get_format = get_hw_dec_format_dx;
-          if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
-            if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-              throw InvalidCodec("Hardware device reference create failed dxva2.", path);
-            }
-          }
-          else {
-            hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11;
-  					pCodecCtx->get_format = get_hw_dec_format_cu;
-            hw_device_ctx = NULL;
-  					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
-  						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-  							throw InvalidCodec("Hardware device reference create failed d3d11.", path);
-  						}
-  					}
-  					else {
-						    throw InvalidCodec("Hardware device create failed.", path);
-            }
-					}
-      #endif
-      #if defined(__APPLE__)
-          hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-          pCodecCtx->get_format = get_hw_dec_format_qs;
-          if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
-            if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
-              throw InvalidCodec("Hardware device reference create failed qsv.", path);
-            }
-          }
-          else {
-            throw InvalidCodec("Hardware device create failed.", path);
-          }
-      #endif
 
 				}
 				#endif
