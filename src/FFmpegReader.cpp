@@ -402,19 +402,19 @@ void FFmpegReader::Open()
             decoder_hw = getenv( "HW_DECODER" );
             if(decoder_hw != NULL) {
                 if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
                 }
                 if (strncmp(decoder_hw,"HW_DE_WINDOWS_DXVA2",19) == 0) { //Will never happen
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
                 }
                 if (strncmp(decoder_hw,"HW_DE_WINDOWS_D3D11",19) == 0) { //Will never happen
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11;
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
                   pCodecCtx->get_format = get_hw_dec_format_d3;
                 }
             } else {
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2_VLD;
+                hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                 pCodecCtx->get_format = get_hw_dec_format_dx;
             }
       #elif defined(__APPLE__)
@@ -457,6 +457,14 @@ void FFmpegReader::Open()
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
 							throw InvalidCodec("Hardware device reference create failed.", path);
 						}
+            /*
+            ret = av_hwframe_ctx_init(pCodecCtx->hw_device_ctx);
+            ret = av_hwframe_ctx_init(ist->hw_frames_ctx);
+            if (ret < 0) {
+              av_log(avctx, AV_LOG_ERROR, "Error initializing a CUDA frame pool\n");
+              return ret;
+            }
+            */
 					}
 					else {
 						  throw InvalidCodec("Hardware device create failed.", path);
