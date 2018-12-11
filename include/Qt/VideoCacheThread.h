@@ -49,7 +49,8 @@ namespace openshot
 	int64_t current_display_frame;
 	ReaderBase *reader;
 	int max_frames;
-
+	ThreadPool pool {6};
+	
 	/// Constructor
 	VideoCacheThread();
 	/// Destructor

@@ -29,6 +29,45 @@
 
 namespace openshot
 {
+	class DemoThreadPoolJob  : public ThreadPoolJob
+	{
+		public:
+			DemoThreadPoolJob()
+				: ThreadPoolJob ("Demo Threadpool Job")
+			{}
+
+			ReaderBase *reader;
+			int64_t frame_number;
+
+			JobStatus runJob() override
+			{
+				try
+				{
+					if (reader) {
+						// Force the frame to be generated
+						reader->GetFrame(frame_number);
+					}
+
+				}
+				catch (const OutOfBoundsFrame & e)
+				{
+					// Ignore out of bounds frame exceptions
+				}
+
+				return jobHasFinished;
+			}
+
+			void removedFromQueue()
+			{
+				// This is called to tell us that our job has been removed from the pool.
+				// In this case there's no need to do anything here.
+			}
+
+		private:
+			JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoThreadPoolJob)
+	};
+
+
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false), position(1)
@@ -77,39 +116,37 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-	while (!threadShouldExit() && is_playing) {
+		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+		// Allow nested OpenMP sections
+		omp_set_nested(true);
+		while (!threadShouldExit() && is_playing) {
 
-		// Calculate sleep time for frame rate
-		double frame_time = (1000.0 / reader->info.fps.ToDouble());
+			if (current_display_frame > position) {
+				position = current_display_frame;
+			}
+			
+			int64_t frame_difference = position - current_display_frame;
 
-	    // Cache frames before the other threads need them
-	    // Cache frames up to the max frames
-	    while (speed == 1 && (position - current_display_frame) < max_frames)
-	    {
-	    	// Only cache up till the max_frames amount... then sleep
-			try
+			// Cache frames before the other threads need them
+			// Cache frames up to the max frames
+			if (speed == 1 && frame_difference < 19)
 			{
-				if (reader) {
-					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame), "", -1, "", -1);
-
-					// Force the frame to be generated
-					reader->GetFrame(position);
+				for (int i = 1; i <= (19 - frame_difference); i++) {
+					auto* newJob = new DemoThreadPoolJob();
+					newJob->reader = reader;
+					newJob->frame_number = position + i;
+					pool.addJob(newJob, true);
 				}
-
+				// Increment frame number
+				position += (19 - frame_difference);
+				continue;
 			}
-			catch (const OutOfBoundsFrame & e)
-			{
-				// Ignore out of bounds frame exceptions
-			}
-
-	    	// Increment frame number
-	    	position++;
-	    }
-
-		// Sleep for 1 frame length
-		usleep(frame_time * 1000);
-	}
-
-	return;
+			// Calculate sleep time for frame rate
+			double frame_time = (1000.0 / reader->info.fps.ToDouble());
+			
+			// Sleep for 1 frame length
+			usleep(10 * 1000);}
+		}
+		return;
     }
 }

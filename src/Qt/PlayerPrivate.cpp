@@ -184,6 +184,4 @@ namespace openshot
     	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
 
     }
-
-
 }

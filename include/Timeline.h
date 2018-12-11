@@ -282,8 +282,6 @@ namespace openshot {
 		/// @param effect Remove an effect from the timeline.
 		void RemoveEffect(EffectBase* effect);
 	};
-
-
 }
 
 #endif
