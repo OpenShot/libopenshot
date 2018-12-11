@@ -29,9 +29,48 @@
 
 namespace openshot
 {
+	class VideoCacheThreadPoolJob  : public ThreadPoolJob
+	{
+		public:
+			VideoCacheThreadPoolJob()
+				: ThreadPoolJob ("VideoCache Threadpool Job")
+			{}
+
+			ReaderBase *reader;
+			int64_t frame_number;
+
+			JobStatus runJob() override
+			{
+				try
+				{
+					if (reader) {
+						// Force the frame to be generated
+						reader->GetFrame(frame_number);
+					}
+
+				}
+				catch (const OutOfBoundsFrame & e)
+				{
+					// Ignore out of bounds frame exceptions
+				}
+
+				return jobHasFinished;
+			}
+
+			void removedFromQueue()
+			{
+				// This is called to tell us that our job has been removed from the pool.
+				// In this case there's no need to do anything here.
+			}
+
+		private:
+			JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VideoCacheThreadPoolJob)
+	};
+
+
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
-	: Thread("video-cache"), speed(1), is_playing(false), position(1)
+	: Thread("VideoCacheThread"), speed(1), is_playing(false), position(1)
 	, reader(NULL), max_frames(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
     {
     }
@@ -54,12 +93,23 @@ namespace openshot
     void VideoCacheThread::setCurrentFramePosition(int64_t current_frame_number)
     {
     	current_display_frame = current_frame_number;
+		if (current_display_frame > position) {
+			resetPosition();
+		}
     }
+
+	// Reset the position to the current_display_frame
+	void VideoCacheThread::resetPosition()
+	{
+		#pragma omp critical(ResetPosition)
+		position = current_display_frame;
+	}
 
 	// Seek the reader to a particular frame number
 	void VideoCacheThread::Seek(int64_t new_position)
 	{
 		position = new_position;
+		current_display_frame = new_position;
 	}
 
 	// Play the video
@@ -77,45 +127,24 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-	while (!threadShouldExit() && is_playing) {
-
-		// Calculate sleep time for frame rate
-		double frame_time = (1000.0 / reader->info.fps.ToDouble());
-
-	    // Cache frames before the other threads need them
-	    // Cache frames up to the max frames
-	    while (speed == 1 && (position - current_display_frame) < max_frames)
-	    {
-	    	// Only cache up till the max_frames amount... then sleep
-			try
+		while (!threadShouldExit() && is_playing) {
+			// Cache frames before the other threads need them
+			// Cache frames up to the max frames
+			while ((position - current_display_frame) < max_frames)
 			{
-				if (reader) {
-					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame), "", -1, "", -1);
-
-					// Force the frame to be generated
-					reader->GetFrame(position);
-				}
-
+				VideoCacheThreadPoolJob* cachingJob = new VideoCacheThreadPoolJob();
+				cachingJob->reader = reader;
+				cachingJob->frame_number = position;
+				pool.addJob(cachingJob, true);
+		
+				// Increment frame number
+				position++;
 			}
-			catch (const OutOfBoundsFrame & e)
-			{
-				// Ignore out of bounds frame exceptions
-			}
-
-			// Is cache position behind current display frame?
-			if (position < current_display_frame) {
-				// Jump ahead
-				position = current_display_frame;
-			}
-
-	    	// Increment frame number
-	    	position++;
-	    }
-
-		// Sleep for 1 frame length
-		usleep(frame_time * 1000);
-	}
-
-	return;
+			
+			// Sleep for 10 msecs
+			usleep(10 * 1000);
+		}
+		
+		return;
     }
 }

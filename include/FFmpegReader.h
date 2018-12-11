@@ -241,6 +241,9 @@ namespace openshot
 		/// Get the cache object used by this reader
 		CacheMemory* GetCache() { return &final_cache; };
 
+		/// Get the thread used to buffer the CacheBase (always return NULL for this reader)
+		Thread* GetCacheThread() { return NULL; };
+
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video

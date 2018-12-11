@@ -27,6 +27,7 @@
  */
 
 #include "../../include/Qt/PlayerPrivate.h"
+#include "../../include/Timeline.h"
 
 namespace openshot
 {
@@ -55,6 +56,9 @@ namespace openshot
 		if (!reader)
 			return;
 
+		Timeline *timelineReader = dynamic_cast<Timeline*>(reader);
+		videoCache = timelineReader->GetCacheThread();
+		
 		// Start the threads
 		if (reader->info.has_audio)
 			audioPlayback->startThread(8);
@@ -184,6 +188,4 @@ namespace openshot
     	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
 
     }
-
-
 }

@@ -49,6 +49,8 @@
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 
+#include "Qt/VideoCacheThread.h"
+
 using namespace std;
 using namespace openshot;
 
@@ -151,6 +153,7 @@ namespace openshot {
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		list<EffectBase*> effects; ///<List of clips on this timeline
 		CacheBase *final_cache; ///<Final cache of timeline frames
+		VideoCacheThread *cache_thread; ///<Thread used to generate final cache of timeline frames
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
@@ -236,6 +239,9 @@ namespace openshot {
 		/// Get the cache object used by this reader
 		CacheBase* GetCache() { return final_cache; };
 
+		/// Get the thread used to buffer the CacheBase
+		VideoCacheThread* GetCacheThread() { return cache_thread; };
+
 		/// Get the cache object used by this reader
 		void SetCache(CacheBase* new_cache);
 
@@ -282,8 +288,6 @@ namespace openshot {
 		/// @param effect Remove an effect from the timeline.
 		void RemoveEffect(EffectBase* effect);
 	};
-
-
 }
 
 #endif
