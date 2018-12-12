@@ -145,8 +145,9 @@ namespace openshot
 			double frame_time = (1000.0 / reader->info.fps.ToDouble());
 			
 			// Sleep for 1 frame length
-			usleep(10 * 1000);}
+			usleep(10 * 1000);
 		}
+		
 		return;
     }
 }
