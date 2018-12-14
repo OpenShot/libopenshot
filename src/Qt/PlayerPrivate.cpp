@@ -149,7 +149,7 @@ namespace openshot
 		else
 		{
 			// Update cache on which frame was retrieved
-			videoCache->current_display_frame = video_position;
+			videoCache->setCurrentFramePosition(video_position);
 
 			// return frame from reader
 			return reader->GetFrame(video_position);
