@@ -31,7 +31,8 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true)
+		is_open(false), auto_map_clips(true),
+		cache_thread(new VideoCacheThread())
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -65,6 +66,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init cache
 	final_cache = new CacheMemory();
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+
+	// Init cache thread
+	cache_thread->Reader(this);
 }
 
 // Add an openshot::Clip to the timeline
@@ -626,7 +630,7 @@ void Timeline::Close()
 
 	// Mark timeline as closed
 	is_open = false;
-
+	
 	// Clear cache
 	final_cache->Clear();
 }
@@ -659,6 +663,9 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	{
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+
+		//#pragma omp critical
+		//std::cout << "\tTimeline::GetFrame(" << requested_frame << ") found frame in cache" << endl;
 
 		// Return cached frame
 		return frame;
@@ -766,8 +773,11 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 		// Add final frame to cache
 		#pragma omp critical(T_AddFrame)
-		final_cache->Add(new_frame);
-
+		{
+			final_cache->Add(new_frame);
+			//std::cout << "\tTimeline::GetFrame(" << requested_frame << ") added frame to cache | ";
+			//std::cout << "Timeline::GetFrame()::final_cache.count() " << final_cache->Count() << endl;
+		}
 		// Return frame (or blank frame)
 		return new_frame;
 	}
@@ -1353,6 +1363,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 // Clear all caches
 void Timeline::ClearAllCache() {
 
+	//std::cout << "--------Timeline::ClearAllCache()---------" << endl;
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
@@ -1377,4 +1388,8 @@ void Timeline::ClearAllCache() {
 		}
 
     }
+
+	// Reset cache_thread position
+	cache_thread->resetPosition();
+
 }

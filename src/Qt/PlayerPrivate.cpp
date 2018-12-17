@@ -27,6 +27,7 @@
  */
 
 #include "../../include/Qt/PlayerPrivate.h"
+#include "../../include/Timeline.h"
 
 namespace openshot
 {
@@ -55,6 +56,12 @@ namespace openshot
 		if (!reader)
 			return;
 
+		std::cout << "HER1" << endl;
+		Timeline *timelineReader = dynamic_cast<Timeline*>(reader);
+		videoCache = timelineReader->GetCacheThread();
+		//videoCache = dynamic_cast<VideoCacheThread*>(reader->GetCacheThread());
+		std::cout << "HER2" << endl;
+		//reader->info.has_audio = false;
 		// Start the threads
 		if (reader->info.has_audio)
 			audioPlayback->startThread(8);
@@ -124,6 +131,7 @@ namespace openshot
 
 			else if (video_frame_diff < -10 && reader->info.has_audio && reader->info.has_video) {
 				// Skip frame(s) to catch up to the audio (if more than 10 frames behind)
+				std::cout << "IN here" << endl;
 				video_position += abs(video_frame_diff) / 2; // Seek forward 1/2 the difference
 				sleep_time = 0; // Don't sleep now... immediately go to next position
 			}
@@ -149,8 +157,10 @@ namespace openshot
 		else
 		{
 			// Update cache on which frame was retrieved
-			videoCache->current_display_frame = video_position;
+			//videoCache->current_display_frame = video_position;
+			videoCache->setCurrentFramePosition(video_position);
 
+			//std::cout << "PlayerPrivate::reader->GetFrame(" << video_position << ")" << endl;
 			// return frame from reader
 			return reader->GetFrame(video_position);
 		}

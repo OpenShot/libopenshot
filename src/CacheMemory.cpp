@@ -284,6 +284,7 @@ void CacheMemory::Clear()
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
 	needs_range_processing = true;
+	//std::cout << "CLEARING" << endl;
 }
 
 // Count the frames in the queue

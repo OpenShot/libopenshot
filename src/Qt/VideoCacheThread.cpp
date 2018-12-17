@@ -44,6 +44,8 @@ namespace openshot
 				try
 				{
 					if (reader) {
+						//#pragma omp critical
+						//std::cout << "DemoThreadPoolJob::runJob()::reader->GetFrame(" << frame_number << ")" << endl;
 						// Force the frame to be generated
 						reader->GetFrame(frame_number);
 					}
@@ -93,7 +95,17 @@ namespace openshot
     void VideoCacheThread::setCurrentFramePosition(int64_t current_frame_number)
     {
     	current_display_frame = current_frame_number;
+		if (current_display_frame > position) {
+			resetPosition();
+		}
     }
+
+	// Reset the position to the current_display_frame
+	void VideoCacheThread::resetPosition()
+	{
+		#pragma omp critical(ResetPosition)
+		position = current_display_frame;
+	}
 
 	// Seek the reader to a particular frame number
 	void VideoCacheThread::Seek(int64_t new_position)
@@ -121,24 +133,34 @@ namespace openshot
 		omp_set_nested(true);
 		while (!threadShouldExit() && is_playing) {
 
-			if (current_display_frame > position) {
-				position = current_display_frame;
-			}
-			
 			int64_t frame_difference = position - current_display_frame;
 
+			// Check to see if final_cache got cleared
+			//  this can happen on a clip update. If so we need to 
+			//  restart caching with clip updates. 
+			/*
+			if (frame_difference > reader->GetCache()->Count()) {
+				std::cout << "\tposition: " << position << "\tcurrent_display_frame" << current_display_frame << endl;
+				position = current_display_frame;
+				std::cout << "**VideoCacheThread::run() Resetting cache | frame_difference: " << frame_difference << " | final_cache->Count(): " << reader->GetCache()->Count() << endl;
+				double frame_times = (1000.0 / reader->info.fps.ToDouble());
+			
+				// Sleep for 1 frame length
+				usleep(frame_times * 1000);
+			}
+			*/
 			// Cache frames before the other threads need them
 			// Cache frames up to the max frames
-			if (speed == 1 && frame_difference < 19)
+			if (speed == 1 && frame_difference < 16)
 			{
-				for (int i = 1; i <= (19 - frame_difference); i++) {
+				for (int i = 1; i <= (16 - frame_difference); i++) {
 					auto* newJob = new DemoThreadPoolJob();
 					newJob->reader = reader;
 					newJob->frame_number = position + i;
 					pool.addJob(newJob, true);
 				}
 				// Increment frame number
-				position += (19 - frame_difference);
+				position += (16 - frame_difference);
 				continue;
 			}
 			// Calculate sleep time for frame rate

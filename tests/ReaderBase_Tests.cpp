@@ -41,6 +41,7 @@ TEST(ReaderBase_Derived_Class)
 	public:
 		TestReader() { };
 		CacheBase* GetCache() { return NULL; };
+		Thread* GetCacheThread() { return NULL; };
 		std::shared_ptr<Frame> GetFrame(int64_t number) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
