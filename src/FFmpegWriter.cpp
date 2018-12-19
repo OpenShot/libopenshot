@@ -1053,6 +1053,7 @@ AVStream* FFmpegWriter::add_video_stream()
 	}
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 	else {
+#if IS_FFMPEG_3_2
     if (hw_en_on) {
       double mbs = 15000000.0;
       if (info.video_bit_rate > 0) {
@@ -1065,7 +1066,9 @@ AVStream* FFmpegWriter::add_video_stream()
       }
       c->bit_rate = (int)(mbs);
     }
-    else {
+    else
+#endif
+    {
   		switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
   			case AV_CODEC_ID_AV1 :

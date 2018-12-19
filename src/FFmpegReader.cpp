@@ -458,6 +458,24 @@ void FFmpegReader::Open()
 							throw InvalidCodec("Hardware device reference create failed.", path);
 						}
             /*
+            av_buffer_unref(&ist->hw_frames_ctx);
+            ist->hw_frames_ctx = av_hwframe_ctx_alloc(hw_device_ctx);
+            if (!ist->hw_frames_ctx) {
+                av_log(avctx, AV_LOG_ERROR, "Error creating a CUDA frames context\n");
+                return AVERROR(ENOMEM);
+            }
+
+            frames_ctx = (AVHWFramesContext*)ist->hw_frames_ctx->data;
+
+            frames_ctx->format = AV_PIX_FMT_CUDA;
+            frames_ctx->sw_format = avctx->sw_pix_fmt;
+            frames_ctx->width = avctx->width;
+            frames_ctx->height = avctx->height;
+
+            av_log(avctx, AV_LOG_DEBUG, "Initializing CUDA frames context: sw_format = %s, width = %d, height = %d\n",
+                    av_get_pix_fmt_name(frames_ctx->sw_format), frames_ctx->width, frames_ctx->height);
+
+
             ret = av_hwframe_ctx_init(pCodecCtx->hw_device_ctx);
             ret = av_hwframe_ctx_init(ist->hw_frames_ctx);
             if (ret < 0) {
