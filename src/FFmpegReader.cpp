@@ -2426,6 +2426,7 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
     {
         // Free memory
 		av_freep(&remove_frame->data[0]);
+    AV_FREE_FRAME(&remove_frame);
 	}
 }
 
