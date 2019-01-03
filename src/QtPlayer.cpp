@@ -156,7 +156,9 @@ void QtPlayer::Reader(ReaderBase *new_reader)
 	// Set new reader. Note: Be sure to close and dispose of the old reader after calling this
 	reader = new_reader;
 	p->reader = new_reader;
-	p->videoCache->Reader(new_reader);
+
+	Timeline *timelineReader = dynamic_cast<Timeline*>(new_reader);
+	p->videoCache = timelineReader->GetCacheThread();
 	p->audioPlayback->Reader(new_reader);
 }
 

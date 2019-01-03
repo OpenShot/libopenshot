@@ -99,12 +99,14 @@ void Timeline::AddEffect(EffectBase* effect)
 // Remove an effect from the timeline
 void Timeline::RemoveEffect(EffectBase* effect)
 {
+	const ScopedWriteLock myScopedLock (getFrameReadWriteLock);
 	effects.remove(effect);
 }
 
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {
+	const ScopedWriteLock myScopedLock (getFrameReadWriteLock);
 	clips.remove(clip);
 }
 
@@ -667,6 +669,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
+		const ScopedReadLock myScopedLock (getFrameReadWriteLock);
 		// Check for open reader (or throw exception)
 		if (!is_open)
 			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");

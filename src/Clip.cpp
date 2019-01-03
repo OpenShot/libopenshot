@@ -282,6 +282,7 @@ float Clip::End()
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 {
+	const ScopedReadLock myScopedLock (getFrameReadWriteLock);
 	if (reader)
 	{
 		// Adjust out of bounds frame number
@@ -611,6 +612,7 @@ int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 // Get or generate a blank frame
 std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 {
+	const ScopedReadLock myScopedLock (getFrameReadWriteLock);
 	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame
@@ -1028,6 +1030,7 @@ void Clip::AddEffect(EffectBase* effect)
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
+	const ScopedWriteLock myScopedLock (getFrameReadWriteLock);
 	effects.remove(effect);
 }
 

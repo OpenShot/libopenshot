@@ -55,9 +55,6 @@ namespace openshot
 		// bail if no reader set
 		if (!reader)
 			return;
-
-		Timeline *timelineReader = dynamic_cast<Timeline*>(reader);
-		videoCache = timelineReader->GetCacheThread();
 		
 		// Start the threads
 		if (reader->info.has_audio)

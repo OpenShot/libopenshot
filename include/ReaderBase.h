@@ -102,6 +102,8 @@ namespace openshot
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
 
+		ReadWriteLock getFrameReadWriteLock;
+
 		int max_width; ///< The maximum image width needed by this clip (used for optimizations)
 		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
 
