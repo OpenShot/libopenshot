@@ -349,6 +349,10 @@ void FFmpegReader::UpdateAudioInfo()
 
 void FFmpegReader::UpdateVideoInfo()
 {
+	if (std::string(pCodecCtx->codec->name).find("mjpeg") != string::npos) {
+		return;
+	}
+
 	if (check_fps)
 		// Already initialized all the video metadata, no reason to do it again
 		return;
