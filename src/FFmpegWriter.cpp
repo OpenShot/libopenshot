@@ -1383,7 +1383,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			} else {
 				// Create a new array
-				final_samples = new int16_t[audio_input_position * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))];
+				final_samples = (int16_t*)av_malloc(sizeof(int16_t) * audio_input_position * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 
 				// Copy audio into buffer for frame
 				memcpy(final_samples, samples, audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt));
