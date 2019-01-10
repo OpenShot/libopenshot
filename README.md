@@ -6,7 +6,7 @@ to the world. For more information visit [http://www.openshot.org/](http://www.o
 
 ### License
 
-Copyright (c) 2008-2018 OpenShot Studios, LLC
+Copyright (c) 2008-2019 OpenShot Studios, LLC
 [http://www.openshotstudios.com/](http://www.openshotstudios.com/).
 
 OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -55,6 +55,6 @@ Please see AUTHORS file for a full list of authors.
 [www.openshot.org](http://www.openshot.org) | [www.openshotstudios.com](http://www.openshotstudios.com)
 
 ---
-Copyright (c) 2008-2018 OpenShot Studios, LLC
+Copyright (c) 2008-2019 OpenShot Studios, LLC
 
 [www.openshotstudios.com](http://www.openshotstudios.com).
