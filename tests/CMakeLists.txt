@@ -204,6 +204,7 @@ IF (NOT DISABLE_TESTS)
 		   FrameMapper_Tests.cpp
 		   KeyFrame_Tests.cpp
 		   Point_Tests.cpp
+		   Settings_Tests.cpp
 		   Timeline_Tests.cpp )
 
 	################ TESTER EXECUTABLE #################

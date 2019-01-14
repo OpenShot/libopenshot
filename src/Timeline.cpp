@@ -387,35 +387,48 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	QSize source_size = source_image->size();
 	switch (source_clip->scale)
 	{
-	case (SCALE_FIT):
-		// keep aspect ratio
-		source_size.scale(max_width, max_height, Qt::KeepAspectRatio);
+		case (SCALE_FIT): {
+			// keep aspect ratio
+			source_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_STRETCH): {
+			// ignore aspect ratio
+			source_size.scale(max_width, max_height, Qt::IgnoreAspectRatio);
 
-	case (SCALE_STRETCH):
-		// ignore aspect ratio
-		source_size.scale(max_width, max_height, Qt::IgnoreAspectRatio);
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_CROP): {
+			QSize width_size(max_width, round(max_width / (float(source_size.width()) / float(source_size.height()))));
+			QSize height_size(round(max_height / (float(source_size.height()) / float(source_size.width()))), max_height);
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// respect aspect ratio
+			if (width_size.width() >= max_width && width_size.height() >= max_height)
+				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
+			else
+				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
 
-	case (SCALE_CROP):
-		QSize width_size(max_width, round(max_width / (float(source_size.width()) / float(source_size.height()))));
-		QSize height_size(round(max_height / (float(source_size.height()) / float(source_size.width()))), max_height);
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_NONE): {
+			// Calculate ratio of source size to project size
+			// Even with no scaling, previews need to be adjusted correctly
+			// (otherwise NONE scaling draws the frame image outside of the preview)
+			float source_width_ratio = source_size.width() / float(info.width);
+			float source_height_ratio = source_size.height() / float(info.height);
+			source_size.scale(max_width * source_width_ratio, max_height * source_height_ratio, Qt::KeepAspectRatio);
 
-		// respect aspect ratio
-		if (width_size.width() >= max_width && width_size.height() >= max_height)
-			source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
-		else
-			source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
-
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_NONE)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
