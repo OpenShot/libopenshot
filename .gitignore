@@ -4,3 +4,6 @@ build/*
 .pydevproject
 .settings
 .idea/*
+.project
+.cproject
+/.metadata/
