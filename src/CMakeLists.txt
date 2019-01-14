@@ -244,6 +244,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Profiles.cpp
 		QtImageReader.cpp
 		QtPlayer.cpp
+		Settings.cpp
 		Timeline.cpp
 
 		# Qt Video Player
