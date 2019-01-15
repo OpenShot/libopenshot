@@ -27,6 +27,7 @@
  */
 
 #include "../../include/Qt/PlayerPrivate.h"
+#include "../../include/Timeline.h"
 
 namespace openshot
 {
@@ -54,7 +55,7 @@ namespace openshot
 		// bail if no reader set
 		if (!reader)
 			return;
-
+		
 		// Start the threads
 		if (reader->info.has_audio)
 			audioPlayback->startThread(8);
@@ -149,7 +150,7 @@ namespace openshot
 		else
 		{
 			// Update cache on which frame was retrieved
-			videoCache->current_display_frame = video_position;
+			videoCache->setCurrentFramePosition(video_position);
 
 			// return frame from reader
 			return reader->GetFrame(video_position);
@@ -184,6 +185,4 @@ namespace openshot
     	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
 
     }
-
-
 }

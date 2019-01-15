@@ -146,6 +146,9 @@ namespace openshot
 		/// Get the cache object used by this reader (always return NULL for this reader)
 		CacheMemory* GetCache() { return NULL; };
 
+		/// Get the thread used to buffer the CacheBase (always return NULL for this reader)
+		Thread* GetCacheThread() { return NULL; };
+
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve

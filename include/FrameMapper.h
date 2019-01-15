@@ -184,6 +184,9 @@ namespace openshot
 		/// Get the cache object used by this reader
 		CacheMemory* GetCache() { return &final_cache; };
 
+		/// Get the thread used to buffer the CacheBase (always return NULL for this reader)
+		Thread* GetCacheThread() { return NULL; };
+
 		/// @brief This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
 		/// frame of video.

@@ -49,6 +49,8 @@ using namespace std;
 
 namespace openshot
 {
+	using juce::Thread;
+
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
@@ -100,6 +102,8 @@ namespace openshot
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
 
+		ReadWriteLock getFrameReadWriteLock;
+
 		int max_width; ///< The maximum image width needed by this clip (used for optimizations)
 		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
 
@@ -119,6 +123,9 @@ namespace openshot
 
 		/// Get the cache object used by this reader (note: not all readers use cache)
 		virtual CacheBase* GetCache() = 0;
+
+		/// Get the thread used to buffer the CacheBase (note: not all readers implement caching)
+		virtual Thread* GetCacheThread() = 0; 
 
 		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that

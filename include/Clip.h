@@ -111,6 +111,9 @@ namespace openshot {
 		/// Section lock for multiple threads
 	    CriticalSection getFrameCriticalSection;
 
+		/// Section lock for multiple thread that allows multiple readers
+		ReadWriteLock getFrameReadWriteLock;
+
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		list<EffectBase*> effects; ///<List of clips on this timeline

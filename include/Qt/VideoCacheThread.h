@@ -49,7 +49,8 @@ namespace openshot
 	int64_t current_display_frame;
 	ReaderBase *reader;
 	int max_frames;
-
+	ThreadPool pool;
+	
 	/// Constructor
 	VideoCacheThread();
 	/// Destructor
@@ -70,6 +71,9 @@ namespace openshot
 	/// Set the currently displaying frame number
 	void setCurrentFramePosition(int64_t current_frame_number);
 
+	/// Reset the position to the current_display_frame
+	void resetPosition();
+
     /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     void setSpeed(int new_speed) { speed = new_speed; }
 
@@ -85,6 +89,7 @@ namespace openshot
 	/// Parent class of VideoCacheThread
 	friend class PlayerPrivate;
 	friend class QtPlayer;
+	friend class Timeline;
     };
 
 }

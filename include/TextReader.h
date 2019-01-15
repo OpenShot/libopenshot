@@ -45,6 +45,7 @@ using namespace std;
 
 namespace openshot
 {
+	using juce::Thread;
 
 	/**
 	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
@@ -118,6 +119,9 @@ namespace openshot
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
 		CacheMemory* GetCache() { return NULL; };
+
+		/// Get the thread used to buffer the CacheBase (always return NULL for this reader)
+		Thread* GetCacheThread() { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
