@@ -886,9 +886,49 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		if (pFrameRGB == NULL)
 			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
-		// Determine if video needs to be scaled down (for performance reasons)
-		// Timelines pass their size to the clips, which pass their size to the readers (as max size)
-		// If a clip is being scaled larger, it will set max_width and max_height = 0 (which means don't down scale)
+		// Determine the max size of this source image (based on the timeline's size, the scaling mode,
+		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
+		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
+		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
+		// the future.
+		int max_width = Settings::Instance()->MAX_WIDTH;
+		int max_height = Settings::Instance()->MAX_HEIGHT;
+
+		Clip* parent = (Clip*) GetClip();
+		if (parent) {
+			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
+				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
+				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+				max_width = max(float(max_width), max_width * max_scale_x);
+				max_height = max(float(max_height), max_height * max_scale_y);
+
+			} else if (parent->scale == SCALE_CROP) {
+				// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
+				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+				QSize width_size(max_width * max_scale_x,
+								 round(max_width / (float(info.width) / float(info.height))));
+				QSize height_size(round(max_height / (float(info.height) / float(info.width))),
+								  max_height * max_scale_y);
+				// respect aspect ratio
+				if (width_size.width() >= max_width && width_size.height() >= max_height) {
+					max_width = max(max_width, width_size.width());
+					max_height = max(max_height, width_size.height());
+				}
+				else {
+					max_width = max(max_width, height_size.width());
+					max_height = max(max_height, height_size.height());
+				}
+
+			} else {
+				// No scaling, use original image size (slower)
+				max_width = info.width;
+				max_height = info.height;
+			}
+		}
+
+		// Determine if image needs to be scaled (for performance reasons)
 		int original_height = height;
 		if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
 			// Override width and height (but maintain aspect ratio)
@@ -1973,8 +2013,11 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
     if (remove_frame)
     {
         // Free memory
-		av_freep(&remove_frame->data[0]);
-		AV_FREE_FRAME(&remove_frame);
+		#pragma omp critical (packet_cache)
+		{
+			av_freep(&remove_frame->data[0]);
+			AV_FREE_FRAME(&remove_frame);
+		}
 	}
 }
 

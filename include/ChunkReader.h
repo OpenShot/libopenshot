@@ -29,8 +29,6 @@
 #define OPENSHOT_CHUNK_READER_H
 
 #include "ReaderBase.h"
-#include "FFmpegReader.h"
-
 #include <cmath>
 #include <ctime>
 #include <iostream>
@@ -107,7 +105,7 @@ namespace openshot
 		string path;
 		bool is_open;
 		int64_t chunk_size;
-		FFmpegReader *local_reader;
+		ReaderBase *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
 		std::shared_ptr<Frame> last_frame;
