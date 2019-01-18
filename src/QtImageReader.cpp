@@ -69,8 +69,9 @@ void QtImageReader::Open()
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
-		// Only use resvg for files ending in '.svg'
-		if (path.find(".svg") != std::string::npos) {
+		// Only use resvg for files ending in '.svg' or '.svgz'
+		if (path.find(".svg") != std::string::npos ||
+				path.find(".svgz") != std::string::npos) {
 
 			ResvgRenderer renderer(QString::fromStdString(path));
 			if (!renderer.isValid()) {
@@ -209,8 +210,9 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
-		// Only use resvg for files ending in '.svg'
-		if (path.find(".svg") != std::string::npos) {
+		// Only use resvg for files ending in '.svg' or '.svgz'
+		if (path.find(".svg") != std::string::npos ||
+			path.find(".svgz") != std::string::npos) {
 			ResvgRenderer renderer(QString::fromStdString(path));
 			if (renderer.isValid()) {
 
