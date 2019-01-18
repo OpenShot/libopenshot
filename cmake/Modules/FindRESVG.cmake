@@ -5,12 +5,14 @@
 # RESVG_LIBRARIES - The libraries needed to use RESVG
 # RESVG_DEFINITIONS - Compiler switches required for using RESVG
 find_path ( RESVG_INCLUDE_DIR ResvgQt.h
-            PATHS /usr/include/
+            PATHS ${RESVGDIR}/include/resvg/
+                  $ENV{RESVGDIR}/include/resvg/
+                  $ENV{RESVGDIR}/include/
+                  /usr/include/
                   /usr/include/resvg/
                   /usr/local/include/
                   /usr/local/include/resvg/
-                  $ENV{RESVGDIR}/include/
-                  $ENV{RESVGDIR}/include/resvg/ )
+                   )
 
 find_library ( RESVG_LIBRARY NAMES resvg
                PATHS /usr/lib/
