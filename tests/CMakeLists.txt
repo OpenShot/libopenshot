@@ -179,13 +179,21 @@ FIND_PACKAGE(ZMQ REQUIRED)
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
+################### RESVG #####################
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG REQUIRED)
+
+# Include resvg headers (optional SVG library)
+if (RESVG_FOUND)
+	include_directories(${RESVG_INCLUDE_DIRS})
+endif(RESVG_FOUND)
+
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
 else()
-	message("Using embedded JsonCpp")
 	include_directories("../thirdparty/jsoncpp/include")
 endif(USE_SYSTEM_JSONCPP)
 

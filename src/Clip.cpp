@@ -26,6 +26,15 @@
  */
 
 #include "../include/Clip.h"
+#include "../include/FFmpegReader.h"
+#include "../include/FrameMapper.h"
+#ifdef USE_IMAGEMAGICK
+	#include "../include/ImageReader.h"
+	#include "../include/TextReader.h"
+#endif
+#include "../include/QtImageReader.h"
+#include "../include/ChunkReader.h"
+#include "../include/DummyReader.h"
 
 using namespace openshot;
 
@@ -211,6 +220,9 @@ void Clip::Reader(ReaderBase* new_reader)
 {
 	// set reader pointer
 	reader = new_reader;
+
+	// set parent
+	reader->SetClip(this);
 
 	// Init rotation (if any)
 	init_reader_rotation();
@@ -620,35 +632,6 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
-		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
-        // method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
-        // the future.
-		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {
-			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
-			float max_scale_x = scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = scale_y.GetMaxPoint().co.Y;
-			reader->SetMaxSize(max(float(max_width), max_width * max_scale_x), max(float(max_height), max_height * max_scale_y));
-
-		} else if (scale == SCALE_CROP) {
-			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
-			float max_scale_x = scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = scale_y.GetMaxPoint().co.Y;
-			QSize width_size(max_width * max_scale_x, round(max_width / (float(reader->info.width) / float(reader->info.height))));
-			QSize height_size(round(max_height / (float(reader->info.height) / float(reader->info.width))), max_height * max_scale_y);
-
-			// respect aspect ratio
-			if (width_size.width() >= max_width && width_size.height() >= max_height)
-				reader->SetMaxSize(max(max_width, width_size.width()), max(max_height, width_size.height()));
-			else
-				reader->SetMaxSize(max(max_width, height_size.width()), max(max_height, height_size.height()));
-
-		} else {
-			// No scaling, use original image size (slower)
-			reader->SetMaxSize(0, 0);
-		}
-
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -996,9 +979,11 @@ void Clip::SetJsonValue(Json::Value root) {
 				reader->SetJsonValue(root["reader"]);
 			}
 
-			// mark as managed reader
-			if (reader)
+			// mark as managed reader and set parent
+			if (reader) {
+				reader->SetClip(this);
 				manage_reader = true;
+			}
 
 			// Re-Open reader (if needed)
 			if (already_open)

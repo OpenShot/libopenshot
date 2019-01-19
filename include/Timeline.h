@@ -48,6 +48,7 @@
 #include "KeyFrame.h"
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
+#include "Settings.h"
 
 using namespace std;
 using namespace openshot;
@@ -264,6 +265,10 @@ namespace openshot {
 		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+
+		/// Set Max Image Size (used for performance optimization). Convenience function for setting
+		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+		void SetMaxSize(int width, int height);
 
 		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)
 		/// This is primarily designed to keep the timeline (and its child objects... such as clips and effects) in sync

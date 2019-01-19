@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
+#include "Clip.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
 #include "Settings.h"
