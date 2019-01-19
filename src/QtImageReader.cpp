@@ -36,7 +36,7 @@
 #if USE_RESVG == 1
 	// If defined and found in CMake, utilize the libresvg for parsing
 	// SVG files and rasterizing them to QImages.
-	#include "resvg/ResvgQt.h"
+	#include "ResvgQt.h"
 #endif
 
 using namespace openshot;
