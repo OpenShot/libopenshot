@@ -2016,7 +2016,9 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
 		#pragma omp critical (packet_cache)
 		{
 			av_freep(&remove_frame->data[0]);
+#ifndef WIN32
 			AV_FREE_FRAME(&remove_frame);
+#endif
 		}
 	}
 }
