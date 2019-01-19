@@ -134,5 +134,6 @@
 #include "Profiles.h"
 #include "QtImageReader.h"
 #include "Timeline.h"
+#include "Settings.h"
 
 #endif

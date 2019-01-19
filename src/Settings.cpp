@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for OpenMPUtilities (set some common macros)
+ * @brief Source file for global Settings class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,17 +25,26 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_OPENMP_UTILITIES_H
-#define OPENSHOT_OPENMP_UTILITIES_H
+#include "../include/Settings.h"
 
-#include <omp.h>
-#include <stdlib.h>
-#include <string.h>
-
-// Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS ((getenv( "LIMIT_OMP_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_OMP_THREADS" ))) )))
-#define FF_NUM_PROCESSORS ((getenv( "LIMIT_FF_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_FF_THREADS" ))) )))
+using namespace std;
+using namespace openshot;
 
 
+// Global reference to logger
+Settings *Settings::m_pInstance = NULL;
 
-#endif
+// Create or Get an instance of the logger singleton
+Settings *Settings::Instance()
+{
+	if (!m_pInstance) {
+		// Create the actual instance of logger only once
+		m_pInstance = new Settings;
+		m_pInstance->HARDWARE_DECODE = false;
+		m_pInstance->HARDWARE_ENCODE = false;
+		m_pInstance->HIGH_QUALITY_SCALING = false;
+		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
+	}
+
+	return m_pInstance;
+}

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for OpenMPUtilities (set some common macros)
+ * @brief Unit tests for openshot::Color
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,17 +25,39 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_OPENMP_UTILITIES_H
-#define OPENSHOT_OPENMP_UTILITIES_H
+#include "UnitTest++.h"
+#include "../include/OpenShot.h"
 
-#include <omp.h>
-#include <stdlib.h>
-#include <string.h>
+using namespace std;
+using namespace openshot;
 
-// Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS ((getenv( "LIMIT_OMP_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_OMP_THREADS" ))) )))
-#define FF_NUM_PROCESSORS ((getenv( "LIMIT_FF_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_FF_THREADS" ))) )))
+TEST(Settings_Default_Constructor)
+{
+	// Create an empty color
+	Settings *s = Settings::Instance();
 
+	CHECK_EQUAL(false, s->HARDWARE_DECODE);
+	CHECK_EQUAL(false, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(false, s->HIGH_QUALITY_SCALING);
+	CHECK_EQUAL(false, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
+}
 
+TEST(Settings_Change_Settings)
+{
+	// Create an empty color
+	Settings *s = Settings::Instance();
+	s->HARDWARE_DECODE = true;
+	s->HARDWARE_ENCODE = true;
+	s->HIGH_QUALITY_SCALING = true;
+	s->WAIT_FOR_VIDEO_PROCESSING_TASK = true;
 
-#endif
+	CHECK_EQUAL(true, s->HARDWARE_DECODE);
+	CHECK_EQUAL(true, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(true, s->HIGH_QUALITY_SCALING);
+	CHECK_EQUAL(true, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
+
+	CHECK_EQUAL(true, s->HARDWARE_DECODE);
+	CHECK_EQUAL(true, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(true, Settings::Instance()->HIGH_QUALITY_SCALING);
+	CHECK_EQUAL(true, Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK);
+}
