@@ -27,6 +27,9 @@ SET( RESVG_FOUND FALSE )
 IF ( RESVG_INCLUDE_DIR AND RESVG_LIBRARY )
     SET ( RESVG_FOUND TRUE )
 
+    MESSAGE('-- RESVG_INCLUDE_DIRS: ${RESVG_INCLUDE_DIRS}')
+    MESSAGE('-- RESVG_LIBRARIES: ${RESVG_LIBRARIES}')
+
     include ( FindPackageHandleStandardArgs )
     # handle the QUIETLY and REQUIRED arguments and set RESVG_FOUND to TRUE
     # if all listed variables are TRUE
