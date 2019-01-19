@@ -28,19 +28,14 @@
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include "ReaderBase.h"
-
 #include <cmath>
 #include <ctime>
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include <QtCore/QString>
-#include <QtGui/QImage>
-#include <QtGui/QPainter>
-#include "CacheMemory.h"
 #include "Exceptions.h"
+#include "ReaderBase.h"
 
 using namespace std;
 
@@ -109,9 +104,6 @@ namespace openshot
 		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
-
-		/// Set Max Image Size (used for performance optimization)
-		void SetMaxSize(int width, int height);
 
 		/// Open File - which is called by the constructor automatically
 		void Open();
