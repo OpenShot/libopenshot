@@ -239,7 +239,8 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
-			       name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate"  || name == "rc_max_rate"))
+			       name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate"  || name == "rc_max_rate" ||
+					 	 name == "crf"))
 	{
 		// Check for specific named options
 		if (name == "g")
