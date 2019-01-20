@@ -948,7 +948,7 @@ AVStream* FFmpegWriter::add_video_stream()
 			case AV_CODEC_ID_VP9 :
 				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
 				if (info.video_bit_rate == 0) {
-		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
+		            av_opt_set_int(c->priv_data, "lossless", 1, 0);
 				 }
 				 break;
 #ifdef AV_CODEC_ID_AV1
