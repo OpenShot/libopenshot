@@ -287,11 +287,37 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// Buffer size
 			convert >> c->rc_buffer_size;
 
-		else if (name == "crf")
-			// Buffer size
-			//IMPORTANT!!!!!!!
-			// Here checks have to be done that are now disabled in SetVideoOptions
-			av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+		else if (name == "crf") {
+			// encode quality
+			// This might be better in an extra methods
+			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+					switch (c->codec_id) {
+						case AV_CODEC_ID_VP8 :
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							break;
+						case AV_CODEC_ID_VP9 :
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							if (stoi(value) == 0) {
+								av_opt_set_int(c->priv_data, "lossless", 1, 0);
+							 }
+							 break;
+						case AV_CODEC_ID_H264 :
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
+							break;
+						case AV_CODEC_ID_H265 :
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
+							if (stoi(value) == 0) {
+								av_opt_set_int(c->priv_data, "lossless", 1, 0);
+							 }
+							break;
+			#ifdef AV_CODEC_ID_AV1
+						case AV_CODEC_ID_AV1 :
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							break;
+			#endif
+					}
+			#endif
+		}
 
 		else
 			// Set AVOption
@@ -946,32 +972,6 @@ AVStream* FFmpegWriter::add_video_stream()
 	if (info.video_bit_rate > 1000) {
 		c->bit_rate = info.video_bit_rate;
 	}
-#if 0 // LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-	else {
-		switch (c->codec_id) {
-			case AV_CODEC_ID_VP8 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
-				break;
-			case AV_CODEC_ID_VP9 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
-				if (info.video_bit_rate == 0) {
-					av_opt_set_int(c->priv_data, "lossless", 1, 0);
-				 }
-				 break;
-#ifdef AV_CODEC_ID_AV1
-			case AV_CODEC_ID_AV1 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
-				break;
-#endif
-			case AV_CODEC_ID_H264 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
-				break;
-			case AV_CODEC_ID_H265 :
-				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
-				break;
-		}
-	}
-#endif
 
 	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
