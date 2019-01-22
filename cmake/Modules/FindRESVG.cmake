@@ -22,14 +22,8 @@ find_library ( RESVG_LIBRARY NAMES resvg
 set ( RESVG_LIBRARIES ${RESVG_LIBRARY} )
 set ( RESVG_INCLUDE_DIRS ${RESVG_INCLUDE_DIR} )
 
-SET( RESVG_FOUND FALSE )
-
-IF ( RESVG_INCLUDE_DIR AND RESVG_LIBRARY )
-    SET ( RESVG_FOUND TRUE )
-
-    include ( FindPackageHandleStandardArgs )
-    # handle the QUIETLY and REQUIRED arguments and set RESVG_FOUND to TRUE
-    # if all listed variables are TRUE
-    find_package_handle_standard_args ( RESVG DEFAULT_MSG RESVG_LIBRARY RESVG_INCLUDE_DIR )
-ENDIF ( RESVG_INCLUDE_DIR AND RESVG_LIBRARY )
-
+include ( FindPackageHandleStandardArgs )
+# handle the QUIETLY and REQUIRED arguments and set RESVG_FOUND to TRUE
+# if all listed variables are TRUE
+find_package_handle_standard_args ( RESVG "Could NOT find RESVG, using Qt SVG parsing instead" RESVG_LIBRARY RESVG_INCLUDE_DIR )
+mark_as_advanced( RESVG_LIBRARY RESVG_INCLUDE_DIR )
