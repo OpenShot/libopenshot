@@ -3,7 +3,6 @@
 # RESVG_FOUND - System has RESVG
 # RESVG_INCLUDE_DIRS - The RESVG include directories
 # RESVG_LIBRARIES - The libraries needed to use RESVG
-# RESVG_DEFINITIONS - Compiler switches required for using RESVG
 find_path ( RESVG_INCLUDE_DIR ResvgQt.h
             PATHS ${RESVGDIR}/include/resvg
                   $ENV{RESVGDIR}/include/resvg
