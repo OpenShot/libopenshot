@@ -16,6 +16,7 @@ find_path ( RESVG_INCLUDE_DIR ResvgQt.h
 find_library ( RESVG_LIBRARY NAMES resvg
                PATHS /usr/lib
                     /usr/local/lib
+                    $ENV{RESVGDIR}
                     $ENV{RESVGDIR}/lib )
 
 set ( RESVG_LIBRARIES ${RESVG_LIBRARY} )
