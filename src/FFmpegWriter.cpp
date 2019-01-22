@@ -287,6 +287,12 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// Buffer size
 			convert >> c->rc_buffer_size;
 
+		else if (name == "crf")
+			// Buffer size
+			//IMPORTANT!!!!!!!
+			// Here checks have to be done that are now disabled in SetVideoOptions
+			av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+
 		else
 			// Set AVOption
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
@@ -940,7 +946,7 @@ AVStream* FFmpegWriter::add_video_stream()
 	if (info.video_bit_rate > 1000) {
 		c->bit_rate = info.video_bit_rate;
 	}
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+#if 0 // LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 	else {
 		switch (c->codec_id) {
 			case AV_CODEC_ID_VP8 :
