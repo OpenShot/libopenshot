@@ -288,8 +288,9 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			convert >> c->rc_buffer_size;
 
 		else if (name == "crf") {
-			// encode quality
-			// This might be better in an extra methods
+			// encode quality and special settings like lossless
+			// This might be better in an extra methods as more options
+			// and way to set quality are possible
 			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 					switch (c->codec_id) {
 						case AV_CODEC_ID_VP8 :
