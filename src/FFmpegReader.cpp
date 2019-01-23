@@ -892,7 +892,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
 		// the future.
 		int max_width = Settings::Instance()->MAX_WIDTH;
+		if (max_width <= 0)
+			max_width = info.width;
 		int max_height = Settings::Instance()->MAX_HEIGHT;
+		if (max_height <= 0)
+			max_height = info.height;
 
 		Clip* parent = (Clip*) GetClip();
 		if (parent) {
