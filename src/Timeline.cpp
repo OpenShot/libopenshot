@@ -669,6 +669,41 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
+		bool isFrameProcessing = false;
+		#pragma omp critical(T_IsFrameProcessing) 
+		{
+			// Check to see if frame is currently being processed
+			processingFramesReadWriteLock.enterRead();
+			std::set<int64_t>::iterator frame_search = processing_frames.find(requested_frame);
+			isFrameProcessing = frame_search != processing_frames.end();
+			processingFramesReadWriteLock.exitRead();
+
+			if (!isFrameProcessing) {
+				// this frame is not being processed 
+				const ScopedWriteLock myScopedLock (processingFramesReadWriteLock);
+				processing_frames.insert(requested_frame);
+			}
+		}
+		while (isFrameProcessing) {
+			// Sleep for 50 ms
+			usleep(50 *1000);
+			const ScopedReadLock myScopedLock (processingFramesReadWriteLock);
+			std::set<int64_t>::iterator frame_search = processing_frames.find(requested_frame);
+			isFrameProcessing = frame_search != processing_frames.end();
+		}
+
+		// Check the cache again in case the frame was being processing
+		#pragma omp critical(T_GetFrame)
+		frame = final_cache->GetFrame(requested_frame);
+		if (frame)
+		{
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found)", "requested_frame", requested_frame, "", -1, "", -1, "", -1, "", -1, "", -1);
+			
+			// Return cached frame
+			return frame;
+		}
+
 		const ScopedReadLock myScopedLock (getFrameReadWriteLock);
 		// Check for open reader (or throw exception)
 		if (!is_open)
@@ -772,6 +807,17 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		// Add final frame to cache
 		#pragma omp critical(T_AddFrame)
 		final_cache->Add(new_frame);
+		
+		// Remove frame from the processing_frames set
+		processingFramesReadWriteLock.enterWrite();
+		for(std::set<int64_t>::iterator it = processing_frames.begin(); it != processing_frames.end(); ) {
+			if(*it == requested_frame) {
+				it = processing_frames.erase(it);
+			}
+			else
+				++it;
+		}
+		processingFramesReadWriteLock.exitWrite();
 		
 		// Return frame (or blank frame)
 		return new_frame;
