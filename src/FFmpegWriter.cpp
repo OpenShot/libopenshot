@@ -148,8 +148,6 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	}
 	if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
-	if ((bit_rate > 0) && (bit_rate <=63))	// bit_rate is the crf value
-		info.video_bit_rate = bit_rate;
 
 	info.interlaced_frame = interlaced;
 	info.top_field_first = top_field_first;
