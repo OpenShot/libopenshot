@@ -194,8 +194,6 @@ if (RESVG_FOUND)
    # define a global var (used in the C++)
    add_definitions( -DUSE_RESVG=1 )
    SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
-else(RESVG_FOUND)
-	message("-- Could NOT find libresvg (using Qt SVG parsing instead)")
 endif(RESVG_FOUND)
 
 ################### JSONCPP #####################

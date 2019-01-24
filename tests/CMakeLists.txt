@@ -181,7 +181,7 @@ include_directories(${ZMQ_INCLUDE_DIRS})
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
-FIND_PACKAGE(RESVG REQUIRED)
+FIND_PACKAGE(RESVG)
 
 # Include resvg headers (optional SVG library)
 if (RESVG_FOUND)
