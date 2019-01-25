@@ -43,6 +43,8 @@ Settings *Settings::Instance()
 		m_pInstance->HARDWARE_DECODE = false;
 		m_pInstance->HARDWARE_ENCODE = false;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
+		m_pInstance->MAX_WIDTH = 0;
+		m_pInstance->MAX_HEIGHT = 0;
 		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
 	}
 
