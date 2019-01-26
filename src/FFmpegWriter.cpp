@@ -148,6 +148,8 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	}
 	if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
+	else
+		info.video_bit_rate = 0;
 
 	info.interlaced_frame = interlaced;
 	info.top_field_first = top_field_first;
@@ -968,8 +970,11 @@ AVStream* FFmpegWriter::add_video_stream()
 #endif
 
 	/* Init video encoder options */
-	if (info.video_bit_rate > 1000) {
+	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
+	}
+	else {
+		c->bit_rate = 0;
 	}
 
 	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
