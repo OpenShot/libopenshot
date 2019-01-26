@@ -284,6 +284,8 @@ void FFmpegReader::Open()
 			hw_de_on = (val[0] == '1')? 1 : 0;
 		}*/
 
+    //hw_de_on = Settings::Instance()->HARDWARE_DECODE;
+
     // New version turn hardware decode on
     {
       char *decoder_hw = NULL;
@@ -368,7 +370,7 @@ void FFmpegReader::Open()
           char adapter[256];
           char *adapter_ptr = NULL;
           int adapter_num;
-					dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
+          dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
           if( dev_hw != NULL) {
             adapter_num = atoi(dev_hw);
           } else {
