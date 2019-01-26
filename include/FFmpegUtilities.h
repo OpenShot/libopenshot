@@ -114,6 +114,13 @@
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
 	#endif
 
+	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
+	// definition in ruby/config.h, so we move it to FF_RSHIFT
+	#ifdef RSHIFT
+		#define FF_RSHIFT(a, b) RSHIFT(a, b)
+		#undef RSHIFT
+	#endif
+
 	#ifdef USE_SW
 		#define SWR_CONVERT(ctx, out, linesize, out_count, in, linesize2, in_count) \
 			swr_convert(ctx, out, out_count, (const uint8_t **)in, in_count)
