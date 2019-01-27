@@ -1123,6 +1123,11 @@ AVStream* FFmpegWriter::add_video_stream()
 #endif
   			case AV_CODEC_ID_VP8 :
   				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+          c->bit_rate = 10000000;
+          if (info.video_bit_rate == 0) {
+            av_opt_set(c->priv_data, "preset", "veryslow", 0);
+            c->bit_rate = 30000000;
+  				 }
   				break;
   			case AV_CODEC_ID_VP9 :
   				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
@@ -1137,6 +1142,10 @@ AVStream* FFmpegWriter::add_video_stream()
   				break;
   			case AV_CODEC_ID_H265 :
   				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+          if (info.video_bit_rate == 0) {
+            av_opt_set(c->priv_data, "preset", "veryslow", 0);
+  		      av_opt_set_int(c->priv_data, "lossless", 1, 0);
+  				 }
   				break;
         default:
           double mbs = 15000000.0;
