@@ -249,8 +249,10 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	}
   if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
-  else
-  	info.video_bit_rate = 0;
+    if ((bit_rate >= 0) && 	(bit_rate < 64)	)	// bit_rate is the bitrate in b/s
+  		info.video_bit_rate = bit_rate;
+  //else
+  //	info.video_bit_rate = 0;
 
 	info.interlaced_frame = interlaced;
 	info.top_field_first = top_field_first;
@@ -392,29 +394,35 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
+      int tempi = stoi(value);
 			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 					switch (c->codec_id) {
 						case AV_CODEC_ID_VP8 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							av_opt_set_int(c->priv_data, "crf", min(tempi,63), 0);
 							break;
 						case AV_CODEC_ID_VP9 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
-							if (stoi(value) == 0) {
+							av_opt_set_int(c->priv_data, "crf", min(tempi,63), 0);
+							if (tempi == 0) {
 								av_opt_set_int(c->priv_data, "lossless", 1, 0);
+                av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							 }
 							 break;
 						case AV_CODEC_ID_H264 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
+							av_opt_set_int(c->priv_data, "crf", min(tempi,51), 0);
+              if (tempi == 0) {
+                av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							 }
 							break;
 						case AV_CODEC_ID_H265 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
-							if (stoi(value) == 0) {
+							av_opt_set_int(c->priv_data, "crf", min(tempi,51), 0);
+							if (tempi == 0) {
 								av_opt_set_int(c->priv_data, "lossless", 1, 0);
+                av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							 }
 							break;
 			#ifdef AV_CODEC_ID_AV1
 						case AV_CODEC_ID_AV1 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							av_opt_set_int(c->priv_data, "crf", min(tempi,63), 0);
 							break;
 			#endif
 					}
@@ -1082,13 +1090,70 @@ AVStream* FFmpegWriter::add_video_stream()
 #endif
 
 	/* Init video encoder options */
-	if (info.video_bit_rate > 1000) {
+	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
 	}
-  else {
-		c->bit_rate = 0;
+//  else {
+//		c->bit_rate = 0;
+//	}
+  #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+	else {
+#if IS_FFMPEG_3_2
+    if (hw_en_on) {
+      double mbs = 15000000.0;
+      if (info.video_bit_rate > 0) {
+        if (info.video_bit_rate > 42) {
+          mbs = 380.0;
+        }
+        else {
+          mbs *= pow(0.912,info.video_bit_rate);
+        }
+      }
+      c->bit_rate = (int)(mbs);
+    }
+    else
+#endif
+    {
+  		switch (c->codec_id) {
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+  			case AV_CODEC_ID_AV1 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+          c->bit_rate = 0;
+  				break;
+#endif
+  			case AV_CODEC_ID_VP8 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+  				break;
+  			case AV_CODEC_ID_VP9 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
+          c->bit_rate = 0;
+  				if (info.video_bit_rate == 0) {
+  		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
+  				 }
+  				 break;
+  			case AV_CODEC_ID_H264 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+  				break;
+  			case AV_CODEC_ID_H265 :
+  				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,51), 0);
+  				break;
+        default:
+          double mbs = 15000000.0;
+          if (info.video_bit_rate > 0) {
+            if (info.video_bit_rate > 42) {
+              mbs = 380.0;
+            }
+            else {
+              mbs *= pow(0.912,info.video_bit_rate);
+            }
+          }
+          c->bit_rate = (int)(mbs);
+  		}
+    }
 	}
-	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
+#endif
+
+//TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
 	//c->rc_min_rate = info.video_bit_rate;
 	//c->rc_max_rate = info.video_bit_rate;

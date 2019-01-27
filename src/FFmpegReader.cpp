@@ -291,7 +291,7 @@ void FFmpegReader::Open()
       char *decoder_hw = NULL;
       decoder_hw = getenv( "HW_DECODER" );
       if(decoder_hw != NULL) {
-        if( strncmp(decoder_hw,"NONE",4) == 0) {
+        if( strncmp(decoder_hw,"0",4) == 0) {
           hw_de_on = 0;
         } else {
           hw_de_on = 1;
@@ -382,15 +382,15 @@ void FFmpegReader::Open()
             adapter_ptr = adapter;
             decoder_hw = getenv( "HW_DECODER" );
             if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
                   pCodecCtx->get_format = get_hw_dec_format_va;
                 }
-                if (strncmp(decoder_hw,"HW_DE_VAAPI",11) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"1",11) == 0) {
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
                   pCodecCtx->get_format = get_hw_dec_format_va;
                 }
-                if (strncmp(decoder_hw,"HW_DE_NVDEC",11) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"2",11) == 0) {
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
                   pCodecCtx->get_format = get_hw_dec_format_cu;
                 }
@@ -403,15 +403,15 @@ void FFmpegReader::Open()
             adapter_ptr = NULL;
             decoder_hw = getenv( "HW_DECODER" );
             if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
                 }
-                if (strncmp(decoder_hw,"HW_DE_WINDOWS_DXVA2",19) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"3",19) == 0) {
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
                 }
-                if (strncmp(decoder_hw,"HW_DE_WINDOWS_D3D11",19) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"4",19) == 0) {
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
                   pCodecCtx->get_format = get_hw_dec_format_d3;
                 }
@@ -423,11 +423,11 @@ void FFmpegReader::Open()
             adapter_ptr = NULL;
             decoder_hw = getenv( "HW_DECODER" );
             if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"NONE",4) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
                   pCodecCtx->get_format = get_hw_dec_format_qs;
                 }
-                if (strncmp(decoder_hw,"HW_DE_MACOS",11) == 0) { //Will never happen
+                if (strncmp(decoder_hw,"5",11) == 0) {
                   hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
                   pCodecCtx->get_format = get_hw_dec_format_qs;
                 }
