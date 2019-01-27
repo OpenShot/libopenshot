@@ -390,7 +390,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// Buffer size
 			convert >> c->rc_buffer_size;
 
-		else if (name == "crf") {
+/*		else if (name == "crf") {
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
@@ -428,7 +428,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 					}
 			#endif
 		}
-
+*/
 		else
 			// Set AVOption
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
@@ -1128,7 +1128,8 @@ AVStream* FFmpegWriter::add_video_stream()
   				av_opt_set_int(c->priv_data, "crf", min(info.video_bit_rate,63), 0);
           c->bit_rate = 0;
   				if (info.video_bit_rate == 0) {
-  		       av_opt_set_int(c->priv_data, "lossless", 1, 0);
+            av_opt_set(c->priv_data, "preset", "veryslow", 0);
+  		      av_opt_set_int(c->priv_data, "lossless", 1, 0);
   				 }
   				 break;
   			case AV_CODEC_ID_H264 :
