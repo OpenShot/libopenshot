@@ -55,16 +55,24 @@ FFmpegWriter::FFmpegWriter(string path) :
 // Open the writer
 void FFmpegWriter::Open()
 {
-	// Open the writer
-	is_open = true;
+	if (!is_open) {
+		// Open the writer
+		is_open = true;
 
-	// Prepare streams (if needed)
-	if (!prepare_streams)
-		PrepareStreams();
+		// Prepare streams (if needed)
+		if (!prepare_streams)
+			PrepareStreams();
 
-	// Write header (if needed)
-	if (!write_header)
-		WriteHeader();
+		// Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
+		if (info.has_video && video_st)
+			open_video(oc, video_st);
+		if (info.has_audio && audio_st)
+			open_audio(oc, audio_st);
+
+		// Write header (if needed)
+		if (!write_header)
+			WriteHeader();
+	}
 }
 
 // auto detect format (from path)
@@ -148,8 +156,8 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 	}
 	if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
-	else
-		info.video_bit_rate = 0;
+	if ((bit_rate >= 0) && 	(bit_rate < 64)	)	// bit_rate is the bitrate in crf
+		info.video_bit_rate = bit_rate;
 
 	info.interlaced_frame = interlaced;
 	info.top_field_first = top_field_first;
@@ -293,29 +301,50 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// and way to set quality are possible
 			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 					switch (c->codec_id) {
-						case AV_CODEC_ID_VP8 :
+						#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+						case AV_CODEC_ID_AV1 :
+							c->bit_rate = 0;
 							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
 							break;
+						#endif
+						case AV_CODEC_ID_VP8 :
+							c->bit_rate = 10000000;
+							av_opt_set_int(c->priv_data, "crf", max(min(stoi(value),63),4), 0); // 4-63
+							break;
 						case AV_CODEC_ID_VP9 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+							c->bit_rate = 0;		// Must be zero!
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0); // 0-63
 							if (stoi(value) == 0) {
+								av_opt_set(c->priv_data, "preset", "veryslow", 0);
 								av_opt_set_int(c->priv_data, "lossless", 1, 0);
 							 }
 							 break;
 						case AV_CODEC_ID_H264 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0); // 0-51
+							if (stoi(value) == 0) {
+								av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						 	}
 							break;
 						case AV_CODEC_ID_H265 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0);
+							av_opt_set_int(c->priv_data, "crf", min(stoi(value),51), 0); // 0-51
 							if (stoi(value) == 0) {
+								av_opt_set(c->priv_data, "preset", "veryslow", 0);
 								av_opt_set_int(c->priv_data, "lossless", 1, 0);
-							 }
+						 	}
 							break;
-			#ifdef AV_CODEC_ID_AV1
-						case AV_CODEC_ID_AV1 :
-							av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
-							break;
-			#endif
+						default:
+							// If this codec doesn't support crf calculate a bitrate
+							// TODO: find better formula
+							double mbs = 15000000.0;
+							if (info.video_bit_rate > 0) {
+								if (info.video_bit_rate > 42) {
+									mbs = 380.0;
+								}
+								else {
+									mbs *= pow(0.912,info.video_bit_rate);
+								}
+							}
+							c->bit_rate = (int)(mbs);
 					}
 			#endif
 		}
@@ -354,12 +383,6 @@ void FFmpegWriter::PrepareStreams()
 
 	// Initialize the streams (i.e. add the streams)
 	initialize_streams();
-
-	// Now that all the parameters are set, we can open the audio and video codecs and allocate the necessary encode buffers
-	if (info.has_video && video_st)
-		open_video(oc, video_st);
-	if (info.has_audio && audio_st)
-		open_audio(oc, audio_st);
 
 	// Mark as 'prepared'
 	prepare_streams = true;
@@ -972,9 +995,6 @@ AVStream* FFmpegWriter::add_video_stream()
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
-	}
-	else {
-		c->bit_rate = 0;
 	}
 
 	//TODO: Implement variable bitrate feature (which actually works). This implementation throws
