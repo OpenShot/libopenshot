@@ -48,32 +48,32 @@ AVFrame *hw_frame = NULL;
 
 static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int64_t width, int64_t height)
 {
-    AVBufferRef *hw_frames_ref;
-    AVHWFramesContext *frames_ctx = NULL;
-    int err = 0;
+	AVBufferRef *hw_frames_ref;
+	AVHWFramesContext *frames_ctx = NULL;
+	int err = 0;
 
-    if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
-        fprintf(stderr, "Failed to create HW frame context.\n");
-        return -1;
-    }
-    frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-    frames_ctx->format    = hw_en_av_pix_fmt;
-    frames_ctx->sw_format = AV_PIX_FMT_NV12;
-    frames_ctx->width     = width;
-    frames_ctx->height    = height;
-    frames_ctx->initial_pool_size = 20;
-    if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
-        fprintf(stderr, "Failed to initialize HW frame context."
-                "Error code: %s\n",av_err2str(err));
-        av_buffer_unref(&hw_frames_ref);
-        return err;
-    }
-    ctx->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
-    if (!ctx->hw_frames_ctx)
-        err = AVERROR(ENOMEM);
+	if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
+		fprintf(stderr, "Failed to create HW frame context.\n");
+		return -1;
+	}
+	frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
+	frames_ctx->format    = hw_en_av_pix_fmt;
+	frames_ctx->sw_format = AV_PIX_FMT_NV12;
+	frames_ctx->width     = width;
+	frames_ctx->height    = height;
+	frames_ctx->initial_pool_size = 20;
+	if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
+		fprintf(stderr, "Failed to initialize HW frame context."
+			"Error code: %s\n",av_err2str(err));
+		av_buffer_unref(&hw_frames_ref);
+		return err;
+	}
+	ctx->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
+	if (!ctx->hw_frames_ctx)
+		err = AVERROR(ENOMEM);
 
-    av_buffer_unref(&hw_frames_ref);
-    return err;
+	av_buffer_unref(&hw_frames_ref);
+	return err;
 }
 #endif
 
@@ -176,49 +176,49 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 		if ( (strcmp(codec.c_str(),"h264_vaapi") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
-      hw_en_supported = 1;
-      hw_en_av_pix_fmt = AV_PIX_FMT_VAAPI;
-      hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+			hw_en_supported = 1;
+			hw_en_av_pix_fmt = AV_PIX_FMT_VAAPI;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 		}
-    else {
-      if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
-  			new_codec = avcodec_find_encoder_by_name(codec.c_str());
-  			hw_en_on = 1;
-        hw_en_supported = 1;
-        hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
-        hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-  		  }
-  		else {
-  			new_codec = avcodec_find_encoder_by_name(codec.c_str());
-  			hw_en_on = 0;
-        hw_en_supported = 0;
-  		}
-    }
+		else {
+			if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
+				new_codec = avcodec_find_encoder_by_name(codec.c_str());
+				hw_en_on = 1;
+				hw_en_supported = 1;
+				hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
+				hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+			}
+			else {
+				new_codec = avcodec_find_encoder_by_name(codec.c_str());
+				hw_en_on = 0;
+				hw_en_supported = 0;
+			}
+		}
 		#elif defined(_WIN32)
 		if ( (strcmp(codec.c_str(),"h264_dxva2") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
-      hw_en_supported = 1;
-      hw_en_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
-      hw_en_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+			hw_en_supported = 1;
+			hw_en_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
 		}
 		else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 0;
-      hw_en_supported = 0;
+			hw_en_supported = 0;
 		}
-    #elif defined(__APPLE__)
+		#elif defined(__APPLE__)
 		if ( (strcmp(codec.c_str(),"h264_qsv") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
-      hw_en_supported = 1;
-      hw_en_av_pix_fmt = AV_PIX_FMT_QSV;
-      hw_en_av_device_type = AV_HWDEVICE_TYPE_QSV;
+			hw_en_supported = 1;
+			hw_en_av_pix_fmt = AV_PIX_FMT_QSV;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_QSV;
 		}
 		else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 0;
-      hw_en_supported = 0;
+			hw_en_supported = 0;
 		}
 		#else  // is FFmpeg 3 but not linux
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -255,7 +255,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 		info.pixel_ratio.num = pixel_ratio.num;
 		info.pixel_ratio.den = pixel_ratio.den;
 	}
-  if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
+	if (bit_rate >= 1000)			// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
 	if ((bit_rate >= 0) && 	(bit_rate < 64)	)	// bit_rate is the bitrate in crf
 		info.video_bit_rate = bit_rate;
@@ -348,8 +348,8 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
-			       name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate"  || name == "rc_max_rate" ||
-					 	 name == "crf"))
+						name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate"  || name == "rc_max_rate" ||
+						name == "crf"))
 	{
 		// Check for specific named options
 		if (name == "g")
@@ -396,28 +396,26 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// Buffer size
 			convert >> c->rc_buffer_size;
 
-    else if (name == "crf") {
+		else if (name == "crf") {
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-      #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-        #if IS_FFMPEG_3_2
-        if (hw_en_on) {
-          double mbs = 15000000.0;
-          if (info.video_bit_rate > 0) {
-            if (info.video_bit_rate > 42) {
-              mbs = 380000.0;
-            }
-            else {
-              mbs *= pow(0.912,info.video_bit_rate);
-            }
-          }
-          c->bit_rate = (int)(mbs);
-        } else
-        #endif
-//      #endif
-//			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-        {
+			#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+				#if IS_FFMPEG_3_2
+				if (hw_en_on) {
+					double mbs = 15000000.0;
+					if (info.video_bit_rate > 0) {
+						if (info.video_bit_rate > 42) {
+							mbs = 380000.0;
+						}
+						else {
+							mbs *= pow(0.912,info.video_bit_rate);
+						}
+					}
+					c->bit_rate = (int)(mbs);
+				} else
+				#endif
+				{
 					switch (c->codec_id) {
 						#if (LIBAVCODEC_VERSION_MAJOR >= 58)
 						case AV_CODEC_ID_AV1 :
@@ -519,7 +517,7 @@ void FFmpegWriter::WriteHeader()
 			throw InvalidFile("Could not open or write file.", path);
 	}
 
-    // Force the output filename (which doesn't always happen for some reason)
+		// Force the output filename (which doesn't always happen for some reason)
 		snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", path.c_str());
 
 	// Write the stream header, if any
@@ -743,11 +741,11 @@ void FFmpegWriter::flush_encoders()
 		return;
 #endif
 
-    int error_code = 0;
-    int stop_encoding = 1;
+		int error_code = 0;
+		int stop_encoding = 1;
 
-    // FLUSH VIDEO ENCODER
-    if (info.has_video)
+		// FLUSH VIDEO ENCODER
+		if (info.has_video)
 		for (;;) {
 
 			// Increment PTS (in frames and scaled to the codec's timebase)
@@ -846,8 +844,8 @@ void FFmpegWriter::flush_encoders()
 				av_freep(&video_outbuf);
 		}
 
-    // FLUSH AUDIO ENCODER
-    if (info.has_audio)
+		// FLUSH AUDIO ENCODER
+		if (info.has_audio)
 		for (;;) {
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
@@ -914,16 +912,16 @@ void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
 	AV_FREE_CONTEXT(video_codec);
 	video_codec = NULL;
-  #if IS_FFMPEG_3_2
+	#if IS_FFMPEG_3_2
 //  #if defined(__linux__)
-  if (hw_en_on && hw_en_supported) {
-    if (hw_device_ctx) {
-        av_buffer_unref(&hw_device_ctx);
-        hw_device_ctx = NULL;
-      }
-  }
+	if (hw_en_on && hw_en_supported) {
+		if (hw_device_ctx) {
+			av_buffer_unref(&hw_device_ctx);
+			hw_device_ctx = NULL;
+		}
+	}
 //  #endif
-  #endif
+	#endif
 }
 
 // Close the audio codec
@@ -1042,15 +1040,15 @@ AVStream* FFmpegWriter::add_audio_stream()
 	// Set valid sample rate (or throw error)
 	if (codec->supported_samplerates) {
 		int i;
-	    for (i = 0; codec->supported_samplerates[i] != 0; i++)
-	        if (info.sample_rate == codec->supported_samplerates[i])
-	        {
-	        	// Set the valid sample rate
-	        	c->sample_rate = info.sample_rate;
-	            break;
-	        }
-	    if (codec->supported_samplerates[i] == 0)
-	    	throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
+		for (i = 0; codec->supported_samplerates[i] != 0; i++)
+			if (info.sample_rate == codec->supported_samplerates[i])
+			{
+				// Set the valid sample rate
+				c->sample_rate = info.sample_rate;
+				break;
+			}
+			if (codec->supported_samplerates[i] == 0)
+				throw InvalidSampleRate("An invalid sample rate was detected for this codec.", path);
 	} else
 		// Set sample rate
 		c->sample_rate = info.sample_rate;
@@ -1174,31 +1172,31 @@ AVStream* FFmpegWriter::add_video_stream()
 #endif
 
 	// Find all supported pixel formats for this codec
-    const PixelFormat* supported_pixel_formats = codec->pix_fmts;
-    while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
-        // Assign the 1st valid pixel format (if one is missing)
-        if (c->pix_fmt == PIX_FMT_NONE)
-        	c->pix_fmt = *supported_pixel_formats;
-        ++supported_pixel_formats;
-    }
+	const PixelFormat* supported_pixel_formats = codec->pix_fmts;
+	while (supported_pixel_formats != NULL && *supported_pixel_formats != PIX_FMT_NONE) {
+		// Assign the 1st valid pixel format (if one is missing)
+		if (c->pix_fmt == PIX_FMT_NONE)
+			c->pix_fmt = *supported_pixel_formats;
+		++supported_pixel_formats;
+	}
 
-    // Codec doesn't have any pix formats?
-    if (c->pix_fmt == PIX_FMT_NONE) {
-        if(fmt->video_codec == AV_CODEC_ID_RAWVIDEO) {
-            // Raw video should use RGB24
-        	c->pix_fmt = PIX_FMT_RGB24;
+	// Codec doesn't have any pix formats?
+	if (c->pix_fmt == PIX_FMT_NONE) {
+		if(fmt->video_codec == AV_CODEC_ID_RAWVIDEO) {
+			// Raw video should use RGB24
+			c->pix_fmt = PIX_FMT_RGB24;
 
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
-        if (strcmp(fmt->name, "gif") != 0)
-			// If not GIF format, skip the encoding process
-			// Set raw picture flag (so we don't encode this video)
-			oc->oformat->flags |= AVFMT_RAWPICTURE;
+			if (strcmp(fmt->name, "gif") != 0)
+				// If not GIF format, skip the encoding process
+				// Set raw picture flag (so we don't encode this video)
+				oc->oformat->flags |= AVFMT_RAWPICTURE;
 #endif
-        } else {
-        	// Set the default codec
-        	c->pix_fmt = PIX_FMT_YUV420P;
-        }
-    }
+		} else {
+			// Set the default codec
+			c->pix_fmt = PIX_FMT_YUV420P;
+		}
+	}
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
@@ -1293,51 +1291,50 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	// Set number of threads equal to number of processors (not to exceed 16)
 	video_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
 
-  #if IS_FFMPEG_3_2
-  if (hw_en_on && hw_en_supported) {
-    char *dev_hw = NULL;
-    char adapter[256];
-    char *adapter_ptr = NULL;
-    int adapter_num;
+	#if IS_FFMPEG_3_2
+	if (hw_en_on && hw_en_supported) {
+		char *dev_hw = NULL;
+		char adapter[256];
+		char *adapter_ptr = NULL;
+		int adapter_num;
 		// Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
 		dev_hw = getenv( "HW_EN_DEVICE_SET" );
-    if( dev_hw != NULL) {
-      adapter_num = atoi(dev_hw);
-      if (adapter_num < 3 && adapter_num >=0) {
-  #if defined(__linux__)
-        snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-        // Maybe 127 is better because the first card would be 1?!
-        adapter_ptr = adapter;
-  #elif defined(_WIN32)
-        adapter_ptr = NULL;
-  #elif defined(__APPLE__)
-        adapter_ptr = NULL;
-  #endif
-      }
-      else {
-        adapter_ptr = NULL; // Just to be sure
-      }
-    }
+		if( dev_hw != NULL) {
+			adapter_num = atoi(dev_hw);
+			if (adapter_num < 3 && adapter_num >=0) {
+	#if defined(__linux__)
+				snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+				// Maybe 127 is better because the first card would be 1?!
+				adapter_ptr = adapter;
+	#elif defined(_WIN32)
+				adapter_ptr = NULL;
+	#elif defined(__APPLE__)
+				adapter_ptr = NULL;
+	#endif
+			}
+			else {
+				adapter_ptr = NULL; // Just to be sure
+			}
+		}
 // Check if it is there and writable
-  #if defined(__linux__)
-    if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
-  #elif defined(_WIN32)
-    if( adapter_ptr != NULL ) {
-  #elif defined(__APPLE__)
-    if( adapter_ptr != NULL ) {
-  #endif
-	      adapter_ptr = NULL;  // use default
-        //cerr << "\n\n\nEncode Device not present using default\n\n\n";
-        ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-	    }
-  	if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
-        adapter_ptr, NULL, 0) < 0) {
-        ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video : Codec name: ", info.vcodec.c_str(), -1, " ERROR creating\n", -1, "", -1, "", -1, "", -1, "", -1);
-        //cerr << "FFmpegWriter::open_video : Codec name: " << info.vcodec.c_str() << " ERROR creating\n";
-        throw InvalidCodec("Could not create hwdevice", path);
-  	}
-  }
-  #endif
+	#if defined(__linux__)
+		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
+	#elif defined(_WIN32)
+		if( adapter_ptr != NULL ) {
+	#elif defined(__APPLE__)
+		if( adapter_ptr != NULL ) {
+	#endif
+				adapter_ptr = NULL;  // use default
+				//cerr << "\n\n\nEncode Device not present using default\n\n\n";
+				ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+			}
+		if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
+			adapter_ptr, NULL, 0) < 0) {
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video : Codec name: ", info.vcodec.c_str(), -1, " ERROR creating\n", -1, "", -1, "", -1, "", -1, "", -1);
+				throw InvalidCodec("Could not create hwdevice", path);
+		}
+	}
+	#endif
 	/* find the video encoder */
 	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (!codec)
@@ -1345,29 +1342,29 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	if (!codec)
 		throw InvalidCodec("Could not find codec", path);
 
-    /* Force max_b_frames to 0 in some cases (i.e. for mjpeg image sequences */
-    if(video_codec->max_b_frames && video_codec->codec_id != AV_CODEC_ID_MPEG4 && video_codec->codec_id != AV_CODEC_ID_MPEG1VIDEO && video_codec->codec_id != AV_CODEC_ID_MPEG2VIDEO)
-        video_codec->max_b_frames = 0;
+		/* Force max_b_frames to 0 in some cases (i.e. for mjpeg image sequences */
+		if(video_codec->max_b_frames && video_codec->codec_id != AV_CODEC_ID_MPEG4 && video_codec->codec_id != AV_CODEC_ID_MPEG1VIDEO && video_codec->codec_id != AV_CODEC_ID_MPEG2VIDEO)
+				video_codec->max_b_frames = 0;
 
 	// Init options
 	AVDictionary *opts = NULL;
 	av_dict_set(&opts, "strict", "experimental", 0);
 
-  #if IS_FFMPEG_3_2
-  if (hw_en_on && hw_en_supported) {
-    video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
-    video_codec->pix_fmt   = hw_en_av_pix_fmt;
-    video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
-    av_opt_set(video_codec->priv_data,"preset","slow",0);
-    av_opt_set(video_codec->priv_data,"tune","zerolatency",0);
-    av_opt_set(video_codec->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
-    // set hw_frames_ctx for encoder's AVCodecContext
-    int err;
-    if ((err = set_hwframe_ctx(video_codec, hw_device_ctx, info.width, info.height)) < 0) {
-        fprintf(stderr, "Failed to set hwframe context.\n");
-    }
-  }
-  #endif
+	#if IS_FFMPEG_3_2
+	if (hw_en_on && hw_en_supported) {
+		video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
+		video_codec->pix_fmt   = hw_en_av_pix_fmt;
+		video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
+		av_opt_set(video_codec->priv_data,"preset","slow",0);
+		av_opt_set(video_codec->priv_data,"tune","zerolatency",0);
+		av_opt_set(video_codec->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+		// set hw_frames_ctx for encoder's AVCodecContext
+		int err;
+		if ((err = set_hwframe_ctx(video_codec, hw_device_ctx, info.width, info.height)) < 0) {
+				fprintf(stderr, "Failed to set hwframe context.\n");
+		}
+	}
+	#endif
 
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, &opts) < 0)
@@ -1627,9 +1624,9 @@ void FFmpegWriter::write_audio_packets(bool final)
 					memcpy(samples, frame_final->data[0], nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
 
 				// deallocate AVFrame
- 				av_freep(&(audio_frame->data[0]));
- 				AV_FREE_FRAME(&audio_frame);
- 				all_queued_samples = NULL; // this array cleared with above call
+				av_freep(&(audio_frame->data[0]));
+				AV_FREE_FRAME(&audio_frame);
+				all_queued_samples = NULL; // this array cleared with above call
 
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 2nd resampling for Planar formats)", "nb_samples", nb_samples, "", -1, "", -1, "", -1, "", -1, "", -1);
 
@@ -1730,7 +1727,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// deallocate AVFrame
 			av_freep(&(frame_final->data[0]));
-            AV_FREE_FRAME(&frame_final);
+						AV_FREE_FRAME(&frame_final);
 
 			// deallocate memory for packet
 			AV_FREE_PACKET(&pkt);
@@ -1820,19 +1817,19 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 		#if IS_FFMPEG_3_2
     AVFrame *frame_final;
 //    #if defined(__linux__)
-    if (hw_en_on && hw_en_supported) {
-      frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
-    } else
+		if (hw_en_on && hw_en_supported) {
+			frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
+		} else
 //    #endif
-    {
-      frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
-    }
+		{
+			frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
+		}
 		#else
 		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final, NULL);
 		#endif
 
 		// Fill with data
-        AV_COPY_PICTURE_DATA(frame_source, (uint8_t*)pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
+		AV_COPY_PICTURE_DATA(frame_source, (uint8_t*)pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::process_video_packet", "frame->number", frame->number, "bytes_source", bytes_source, "bytes_final", bytes_final, "", -1, "", -1, "", -1);
 
 		// Resize & convert pixel format
@@ -1901,50 +1898,50 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
-    #if IS_FFMPEG_3_2
+		#if IS_FFMPEG_3_2
 //    #if defined(__linux__)
-    if (hw_en_on && hw_en_supported) {
-        if (!(hw_frame = av_frame_alloc())) {
-          fprintf(stderr, "Error code: av_hwframe_alloc\n");
-        }
-        if (av_hwframe_get_buffer(video_codec->hw_frames_ctx, hw_frame, 0) < 0) {
-            fprintf(stderr, "Error code: av_hwframe_get_buffer\n");
-        }
-        if (!hw_frame->hw_frames_ctx) {
-          fprintf(stderr, "Error hw_frames_ctx.\n");
-        }
-        hw_frame->format = AV_PIX_FMT_NV12;
-        if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
-            fprintf(stderr, "Error while transferring frame data to surface.\n");
-        }
-        av_frame_copy_props(hw_frame, frame_final);
-    }
+		if (hw_en_on && hw_en_supported) {
+			if (!(hw_frame = av_frame_alloc())) {
+				fprintf(stderr, "Error code: av_hwframe_alloc\n");
+			}
+			if (av_hwframe_get_buffer(video_codec->hw_frames_ctx, hw_frame, 0) < 0) {
+				fprintf(stderr, "Error code: av_hwframe_get_buffer\n");
+			}
+			if (!hw_frame->hw_frames_ctx) {
+				fprintf(stderr, "Error hw_frames_ctx.\n");
+			}
+			hw_frame->format = AV_PIX_FMT_NV12;
+			if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
+				fprintf(stderr, "Error while transferring frame data to surface.\n");
+			}
+			av_frame_copy_props(hw_frame, frame_final);
+		}
 //    #endif
-    #endif
+		#endif
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = 0;
 		#if IS_FFMPEG_3_2
 		// Write video packet (latest version of FFmpeg)
 		int frameFinished = 0;
-    int ret;
+		int ret;
 //    #if defined(__linux__)
-    #if IS_FFMPEG_3_2
-    if (hw_en_on && hw_en_supported) {
-      ret = avcodec_send_frame(video_codec, hw_frame); //hw_frame!!!
-    } else
-    #endif
+		#if IS_FFMPEG_3_2
+		if (hw_en_on && hw_en_supported) {
+			ret = avcodec_send_frame(video_codec, hw_frame); //hw_frame!!!
+		} else
+		#endif
 //    #endif
-    ret = avcodec_send_frame(video_codec, frame_final);
+		ret = avcodec_send_frame(video_codec, frame_final);
 		error_code = ret;
 		if (ret < 0 ) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 			if (ret == AVERROR(EAGAIN) ) {
 				cerr << "Frame EAGAIN" << "\n";
-      }
+			}
 			if (ret == AVERROR_EOF ) {
 				cerr << "Frame AVERROR_EOF" << "\n";
-      }
+			}
 			avcodec_send_frame(video_codec, NULL);
 		}
 		else {
@@ -1967,10 +1964,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 				error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 				if (error_code != 0 ) {
 					cerr << "Frame AVERROR_EOF" << "\n";
-        }
+				}
 				if (got_packet_ptr == 0 ) {
 					cerr << "Frame gotpacket error" << "\n";
-        }
+				}
 			#else
 				// Write video packet (even older versions of FFmpeg)
 				int video_outbuf_size = 200000;
@@ -2026,14 +2023,14 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		AV_FREE_PACKET(&pkt);
     #if IS_FFMPEG_3_2
 //    #if defined(__linux__)
-        if (hw_en_on && hw_en_supported) {
-          if (hw_frame) {
-            av_frame_free(&hw_frame);
-            hw_frame = NULL;
-          }
-        }
+		if (hw_en_on && hw_en_supported) {
+			if (hw_frame) {
+				av_frame_free(&hw_frame);
+				hw_frame = NULL;
+			}
+		}
 //    #endif
-    #endif
+		#endif
 	}
 
 	// Success
@@ -2061,14 +2058,14 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 		// Init the software scaler from FFMpeg
     #if IS_FFMPEG_3_2
 //    #if defined(__linux__)
-    if (hw_en_on && hw_en_supported) {
-      img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL, NULL, NULL);
-    } else
+		if (hw_en_on && hw_en_supported) {
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL, NULL, NULL);
+		} else
 //    #endif
-    #endif
-    {
-		img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
-    }
+		#endif
+		{
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);
+		}
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
