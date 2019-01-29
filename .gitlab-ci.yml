@@ -22,6 +22,7 @@ linux-builder:
     - make install
     - mv /usr/local/lib/python3.4/dist-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
@@ -48,6 +49,7 @@ mac-builder:
     - make install
     - mv /Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
@@ -77,6 +79,8 @@ windows-builder-x86:
     - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "install-x86\python\"
     - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
+    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
@@ -105,6 +109,8 @@ windows-builder-x64:
     - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "install-x64\python\"
     - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
+    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
