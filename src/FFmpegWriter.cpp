@@ -400,7 +400,24 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+      #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+        #if IS_FFMPEG_3_2
+        if (hw_en_on) {
+          double mbs = 15000000.0;
+          if (info.video_bit_rate > 0) {
+            if (info.video_bit_rate > 42) {
+              mbs = 380000.0;
+            }
+            else {
+              mbs *= pow(0.912,info.video_bit_rate);
+            }
+          }
+          c->bit_rate = (int)(mbs);
+        } else
+        #endif
+//      #endif
+//			#if  LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+        {
 					switch (c->codec_id) {
 						#if (LIBAVCODEC_VERSION_MAJOR >= 58)
 						case AV_CODEC_ID_AV1 :
@@ -447,6 +464,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 							}
 							c->bit_rate = (int)(mbs);
 					}
+        }
 			#endif
 		}
 
@@ -1108,24 +1126,6 @@ AVStream* FFmpegWriter::add_video_stream()
 	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
 	}
-  #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-	else {
-    #if IS_FFMPEG_3_2
-    if (hw_en_on) {
-      double mbs = 15000000.0;
-      if (info.video_bit_rate > 0) {
-        if (info.video_bit_rate > 42) {
-          mbs = 380000.0;
-        }
-        else {
-          mbs *= pow(0.912,info.video_bit_rate);
-        }
-      }
-      c->bit_rate = (int)(mbs);
-    }
-    #endif
-	}
-  #endif
 
 //TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
