@@ -79,6 +79,9 @@ namespace openshot {
 		/// Use video card for faster video decoding (if supported)
 		bool HARDWARE_DECODE = false;
 
+		/// Use video codec for faster video decoding (if supported)
+		int HARDWARE_DECODER = 0;
+
 		/// Use video card for faster video encoding (if supported)
 		bool HARDWARE_ENCODE = false;
 
@@ -93,6 +96,24 @@ namespace openshot {
 
 		/// Wait for OpenMP task to finish before continuing (used to limit threads on slower systems)
 		bool WAIT_FOR_VIDEO_PROCESSING_TASK = false;
+
+		/// Number of threads of OpenMP
+		int OMP_THREADS = 6;//OPEN_MP_NUM_PROCESSORS
+
+		/// Number of threads that ffmpeg uses
+		int FF_THREADS = 8;//FF_NUM_PROCESSORS
+
+		/// Maximum rows that hardware decode can handle
+		int DE_LIMIT_HEIGHT_MAX = 1100;
+
+		/// Maximum columns that hardware decode can handle
+		int DE_LIMIT_WIDTH_MAX = 1950;
+
+		/// Which GPU to use to decode (0 is the first)
+		int HW_DE_DEVICE_SET = 0;
+
+		/// Which GPU to use to encode (0 is the first)
+		int HW_EN_DEVICE_SET = 0;
 
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static Settings * Instance();

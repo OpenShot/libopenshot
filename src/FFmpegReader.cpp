@@ -287,7 +287,7 @@ void FFmpegReader::Open()
     //hw_de_on = Settings::Instance()->HARDWARE_DECODE;
 
     // New version turn hardware decode on
-    {
+  /*  {
       char *decoder_hw = NULL;
       decoder_hw = getenv( "HW_DECODER" );
       if(decoder_hw != NULL) {
@@ -299,7 +299,11 @@ void FFmpegReader::Open()
       } else {
         hw_de_on = 0;
       }
-    }
+    }*/
+		// Newest versions
+		{
+			hw_de_on = (Settings::Instance()->HARDWARE_DECODER == 0  ? 0 : 1);
+		}
 
 		// Open video file
 		if (avformat_open_input(&pFormatCtx, path.c_str(), NULL, NULL) != 0)
@@ -366,7 +370,8 @@ void FFmpegReader::Open()
 					// Open Hardware Acceleration
 					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
 			    char *dev_hw = NULL;
-          char *decoder_hw = NULL;
+          //char *decoder_hw = NULL;
+					int i_decoder_hw = 0;
           char adapter[256];
           char *adapter_ptr = NULL;
           int adapter_num;
@@ -380,60 +385,62 @@ void FFmpegReader::Open()
       #if defined(__linux__)
             snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
             adapter_ptr = adapter;
-            decoder_hw = getenv( "HW_DECODER" );
-            if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
+						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+								case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
                   pCodecCtx->get_format = get_hw_dec_format_va;
-                }
-                if (strncmp(decoder_hw,"1",11) == 0) {
+									break;
+								case 1:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
                   pCodecCtx->get_format = get_hw_dec_format_va;
-                }
-                if (strncmp(decoder_hw,"2",11) == 0) {
+									break;
+								case 2:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
                   pCodecCtx->get_format = get_hw_dec_format_cu;
-                }
-            } else {
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-                pCodecCtx->get_format = get_hw_dec_format_va;
-            }
+									break;
+								default:
+                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+                  pCodecCtx->get_format = get_hw_dec_format_va;
+									break;
+							}
 
       #elif defined(_WIN32)
             adapter_ptr = NULL;
-            decoder_hw = getenv( "HW_DECODER" );
-            if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
+						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+							case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
-                }
-                if (strncmp(decoder_hw,"3",19) == 0) {
+									break;
+							case 3:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                   pCodecCtx->get_format = get_hw_dec_format_dx;
-                }
-                if (strncmp(decoder_hw,"4",19) == 0) {
+									break;
+							case 4:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
                   pCodecCtx->get_format = get_hw_dec_format_d3;
-                }
-            } else {
+							default:
                 hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
                 pCodecCtx->get_format = get_hw_dec_format_dx;
+								break;
             }
       #elif defined(__APPLE__)
             adapter_ptr = NULL;
-            decoder_hw = getenv( "HW_DECODER" );
-            if(decoder_hw != NULL) {
-                if (strncmp(decoder_hw,"0",4) == 0) { //Will never happen
+						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+							case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
                   pCodecCtx->get_format = get_hw_dec_format_qs;
-                }
-                if (strncmp(decoder_hw,"5",11) == 0) {
+									break;
+							case 5:
                   hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
                   pCodecCtx->get_format = get_hw_dec_format_qs;
-                }
-            } else {
+									break;
+							default:
                 hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
                 pCodecCtx->get_format = get_hw_dec_format_qs;
+								break;
             }
       #endif
           }
@@ -536,8 +543,10 @@ void FFmpegReader::Open()
 					}
 					else {
 						int max_h, max_w;
-						max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
-						max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
+						//max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
+						max_h = Settings::Instance()->DE_LIMIT_HEIGHT_MAX;
+						//max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
+						max_w = Settings::Instance()->DE_LIMIT_WIDTH_MAX;
             ZmqLogger::Instance()->AppendDebugMethod("Constraints could not be found using default limit\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 						//cerr << "Constraints could not be found using default limit\n";
 						if (pCodecCtx->coded_width < 0  	||
