@@ -35,6 +35,7 @@
 #include <sstream>
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"
+#include "ClipBase.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
@@ -101,11 +102,9 @@ namespace openshot
 		/// Section lock for multiple threads
 	    CriticalSection getFrameCriticalSection;
 	    CriticalSection processingCriticalSection;
-
 		ReadWriteLock getFrameReadWriteLock;
 
-		int max_width; ///< The maximum image width needed by this clip (used for optimizations)
-		int max_height; ///< The maximium image height needed by this clip (used for optimizations)
+		ClipBase* parent;
 
 	public:
 
@@ -114,6 +113,12 @@ namespace openshot
 
 		/// Information about the current media file
 		ReaderInfo info;
+
+		/// Parent clip object of this reader (which can be unparented and NULL)
+		ClipBase* GetClip();
+
+		/// Set parent clip object of this reader
+		void SetClip(ClipBase* clip);
 
 		/// Close the reader (and any resources it was consuming)
 		virtual void Close() = 0;
@@ -146,9 +151,6 @@ namespace openshot
 		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
-
-		/// Set Max Image Size (used for performance optimization)
-		void SetMaxSize(int width, int height) { max_width = width; max_height = height; };
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

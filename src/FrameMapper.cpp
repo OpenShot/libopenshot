@@ -352,9 +352,6 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Set max image size (used for performance optimization)
-		reader->SetMaxSize(max_width, max_height);
-
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 

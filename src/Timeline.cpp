@@ -61,7 +61,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.video_length = info.fps.ToFloat() * info.duration;
 
     // Init max image size
-    SetMaxSize(info.width, info.height);
+	SetMaxSize(info.width, info.height);
 
 	// Init cache
 	final_cache = new CacheMemory();
@@ -219,9 +219,6 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Set max image size (used for performance optimization)
-		clip->SetMaxSize(info.width, info.height);
-
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number));
 
@@ -240,7 +237,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
 	// Create blank frame
-	new_frame = std::make_shared<Frame>(number, max_width, max_height, "#000000", samples_in_frame, info.channels);
+	new_frame = std::make_shared<Frame>(number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels);
 	#pragma omp critical (T_GetOtCreateFrame)
 	{
 		new_frame->SampleRate(info.sample_rate);
@@ -279,7 +276,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Generate Waveform Dynamically (the size of the timeline)
 		std::shared_ptr<QImage> source_image;
 		#pragma omp critical (T_addLayer)
-		source_image = source_frame->GetWaveform(max_width, max_height, red, green, blue, alpha);
+		source_image = source_frame->GetWaveform(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, red, green, blue, alpha);
 		source_frame->AddImage(std::shared_ptr<QImage>(source_image));
 	}
 
@@ -392,35 +389,48 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	QSize source_size = source_image->size();
 	switch (source_clip->scale)
 	{
-	case (SCALE_FIT):
-		// keep aspect ratio
-		source_size.scale(max_width, max_height, Qt::KeepAspectRatio);
+		case (SCALE_FIT): {
+			// keep aspect ratio
+			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::KeepAspectRatio);
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_STRETCH): {
+			// ignore aspect ratio
+			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::IgnoreAspectRatio);
 
-	case (SCALE_STRETCH):
-		// ignore aspect ratio
-		source_size.scale(max_width, max_height, Qt::IgnoreAspectRatio);
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_CROP): {
+			QSize width_size(Settings::Instance()->MAX_WIDTH, round(Settings::Instance()->MAX_WIDTH / (float(source_size.width()) / float(source_size.height()))));
+			QSize height_size(round(Settings::Instance()->MAX_HEIGHT / (float(source_size.height()) / float(source_size.width()))), Settings::Instance()->MAX_HEIGHT);
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// respect aspect ratio
+			if (width_size.width() >= Settings::Instance()->MAX_WIDTH && width_size.height() >= Settings::Instance()->MAX_HEIGHT)
+				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
+			else
+				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
 
-	case (SCALE_CROP):
-		QSize width_size(max_width, round(max_width / (float(source_size.width()) / float(source_size.height()))));
-		QSize height_size(round(max_height / (float(source_size.height()) / float(source_size.width()))), max_height);
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
+		case (SCALE_NONE): {
+			// Calculate ratio of source size to project size
+			// Even with no scaling, previews need to be adjusted correctly
+			// (otherwise NONE scaling draws the frame image outside of the preview)
+			float source_width_ratio = source_size.width() / float(info.width);
+			float source_height_ratio = source_size.height() / float(info.height);
+			source_size.scale(Settings::Instance()->MAX_WIDTH * source_width_ratio, Settings::Instance()->MAX_HEIGHT * source_height_ratio, Qt::KeepAspectRatio);
 
-		// respect aspect ratio
-		if (width_size.width() >= max_width && width_size.height() >= max_height)
-			source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
-		else
-			source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
-
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
-		break;
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_NONE)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height(), "", -1, "", -1, "", -1);
+			break;
+		}
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
@@ -436,32 +446,32 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	switch (source_clip->gravity)
 	{
 	case (GRAVITY_TOP):
-		x = (max_width - scaled_source_width) / 2.0; // center
+		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
 		break;
 	case (GRAVITY_TOP_RIGHT):
-		x = max_width - scaled_source_width; // right
+		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
 		break;
 	case (GRAVITY_LEFT):
-		y = (max_height - scaled_source_height) / 2.0; // center
+		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_CENTER):
-		x = (max_width - scaled_source_width) / 2.0; // center
-		y = (max_height - scaled_source_height) / 2.0; // center
+		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_RIGHT):
-		x = max_width - scaled_source_width; // right
-		y = (max_height - scaled_source_height) / 2.0; // center
+		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
 		break;
 	case (GRAVITY_BOTTOM_LEFT):
-        y = (max_height - scaled_source_height); // bottom
+        y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM):
-		x = (max_width - scaled_source_width) / 2.0; // center
-		y = (max_height - scaled_source_height); // bottom
+		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
 		break;
 	case (GRAVITY_BOTTOM_RIGHT):
-		x = max_width - scaled_source_width; // right
-		y = (max_height - scaled_source_height); // bottom
+		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
 		break;
 	}
 
@@ -470,8 +480,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
-	x += (max_width * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
-	y += (max_height * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
+	x += (Settings::Instance()->MAX_WIDTH * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
+	y += (Settings::Instance()->MAX_HEIGHT * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
 
@@ -630,7 +640,7 @@ void Timeline::Close()
 
 	// Mark timeline as closed
 	is_open = false;
-	
+	std::cout << "Timeline::Close()" << endl;
 	// Clear cache
 	final_cache->Clear();
 }
@@ -720,7 +730,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);
 
 		// Create blank frame (which will become the requested frame)
-		std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(requested_frame, max_width, max_height, "#000000", samples_in_frame, info.channels));
+		std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(requested_frame, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels));
 		#pragma omp critical(T_GetFrame)
 		{
 			new_frame->AddAudioSilence(samples_in_frame);
@@ -734,10 +744,11 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		// Add Background Color to 1st layer (if animated or not black)
 		if ((color.red.Points.size() > 1 || color.green.Points.size() > 1 || color.blue.Points.size() > 1) ||
 			(color.red.GetValue(requested_frame) != 0.0 || color.green.GetValue(requested_frame) != 0.0 || color.blue.GetValue(requested_frame) != 0.0))
-			new_frame->AddColor(max_width, max_height, color.GetColorHex(requested_frame));
+			new_frame->AddColor(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, color.GetColorHex(requested_frame));
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", requested_frame, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size(), "", -1, "", -1, "", -1);
+
 
 		// Find Clips near this time
 		for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
@@ -1172,17 +1183,6 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 			// Apply framemapper (or update existing framemapper)
 			apply_mapper_to_clip(existing_clip);
-
-            // Clear any cached image sizes (since size might have changed)
-            existing_clip->SetMaxSize(0, 0); // force clearing of cached image size
-            if (existing_clip->Reader()) {
-                existing_clip->Reader()->SetMaxSize(0, 0);
-                if (existing_clip->Reader()->Name() == "FrameMapper") {
-                    FrameMapper *nested_reader = (FrameMapper *) existing_clip->Reader();
-                    if (nested_reader->Reader())
-                        nested_reader->Reader()->SetMaxSize(0, 0);
-                }
-            }
 		}
 
 	} else if (change_type == "delete") {
@@ -1432,4 +1432,12 @@ void Timeline::ClearAllCache() {
 	// Reset cache_thread position
 	cache_thread->resetPosition();
 
+}
+
+// Set Max Image Size (used for performance optimization). Convenience function for setting
+// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+void Timeline::SetMaxSize(int width, int height) {
+	// Init max image size
+	Settings::Instance()->MAX_WIDTH = width;
+	Settings::Instance()->MAX_HEIGHT = height;
 }
