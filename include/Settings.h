@@ -30,6 +30,20 @@
 
 
 #include "JuceLibraryCode/JuceHeader.h"
+
+#ifdef __MINGW32__
+#if __cplusplus >= 201703L
+    #define byte BYTE
+#endif // __cplusplus >= 201703L
+	#include <winsock2.h>
+	#include <windows.h>
+#if __cplusplus >= 201703L
+    #undef byte
+#endif // __cplusplus >= 201703L
+	#include <DbgHelp.h>
+#else
+	#include <execinfo.h>
+#endif
 #include <iostream>
 #include <iomanip>
 #include <fstream>
