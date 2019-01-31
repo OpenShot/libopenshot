@@ -44,18 +44,9 @@
 #include "EffectBase.h"
 #include "Effects.h"
 #include "EffectInfo.h"
-#include "FFmpegReader.h"
 #include "Fraction.h"
-#include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
-#include "QtImageReader.h"
-#include "ChunkReader.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
-#include "DummyReader.h"
 
 using namespace std;
 using namespace openshot;

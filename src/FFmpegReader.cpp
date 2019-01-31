@@ -38,7 +38,7 @@ FFmpegReader::FFmpegReader(string path)
 	  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 	  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
 	  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
-	  packet(NULL), use_omp_threads(true) {
+	  packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -60,7 +60,7 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
-		  packet(NULL), use_omp_threads(true) {
+		  packet(NULL) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -228,9 +228,6 @@ void FFmpegReader::Open()
 		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
 		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-
-		// Initialize OMP threading support
-		use_omp_threads = openshot::IsOMPEnabled();
 
 		// Mark as "open"
 		is_open = true;
@@ -617,7 +614,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 						// Process Video Packet
 						ProcessVideoPacket(requested_frame);
 
-						if (!use_omp_threads) {
+						if (openshot::Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK) {
 							// Wait on each OMP task to complete before moving on to the next one. This slows
 							// down processing considerably, but might be more stable on some systems.
 							#pragma omp taskwait
@@ -632,16 +629,16 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 					num_packets_since_video_frame++;
 
 					// Check the status of a seek (if any)
-						if (is_seeking)
-						#pragma omp critical (openshot_seek)
-							check_seek = CheckSeek(false);
-						else
-							check_seek = false;
+					if (is_seeking)
+					#pragma omp critical (openshot_seek)
+						check_seek = CheckSeek(false);
+					else
+						check_seek = false;
 
-						if (check_seek) {
-							// Jump to the next iteration of this loop
-							continue;
-						}
+					if (check_seek) {
+						// Jump to the next iteration of this loop
+						continue;
+					}
 
 					// Update PTS / Frame Offset (if any)
 					UpdatePTSOffset(false);
@@ -893,9 +890,53 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		if (pFrameRGB == NULL)
 			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
-		// Determine if video needs to be scaled down (for performance reasons)
-		// Timelines pass their size to the clips, which pass their size to the readers (as max size)
-		// If a clip is being scaled larger, it will set max_width and max_height = 0 (which means don't down scale)
+		// Determine the max size of this source image (based on the timeline's size, the scaling mode,
+		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
+		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
+		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
+		// the future.
+		int max_width = Settings::Instance()->MAX_WIDTH;
+		if (max_width <= 0)
+			max_width = info.width;
+		int max_height = Settings::Instance()->MAX_HEIGHT;
+		if (max_height <= 0)
+			max_height = info.height;
+
+		Clip* parent = (Clip*) GetClip();
+		if (parent) {
+			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
+				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
+				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+				max_width = max(float(max_width), max_width * max_scale_x);
+				max_height = max(float(max_height), max_height * max_scale_y);
+
+			} else if (parent->scale == SCALE_CROP) {
+				// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
+				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+				QSize width_size(max_width * max_scale_x,
+								 round(max_width / (float(info.width) / float(info.height))));
+				QSize height_size(round(max_height / (float(info.height) / float(info.width))),
+								  max_height * max_scale_y);
+				// respect aspect ratio
+				if (width_size.width() >= max_width && width_size.height() >= max_height) {
+					max_width = max(max_width, width_size.width());
+					max_height = max(max_height, width_size.height());
+				}
+				else {
+					max_width = max(max_width, height_size.width());
+					max_height = max(max_height, height_size.height());
+				}
+
+			} else {
+				// No scaling, use original image size (slower)
+				max_width = info.width;
+				max_height = info.height;
+			}
+		}
+
+		// Determine if image needs to be scaled (for performance reasons)
 		int original_height = height;
 		if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
 			// Override width and height (but maintain aspect ratio)
@@ -923,8 +964,12 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		// Copy picture data from one AVFrame (or AVPicture) to another one.
 		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
+		int scale_mode = SWS_FAST_BILINEAR;
+		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
+			scale_mode = SWS_LANCZOS;
+		}
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, SWS_LANCZOS, NULL, NULL, NULL);
+															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -1976,7 +2021,13 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
     if (remove_frame)
     {
         // Free memory
-		av_freep(&remove_frame->data[0]);
+		#pragma omp critical (packet_cache)
+		{
+			av_freep(&remove_frame->data[0]);
+#ifndef WIN32
+			AV_FREE_FRAME(&remove_frame);
+#endif
+		}
 	}
 }
 

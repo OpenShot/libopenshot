@@ -47,11 +47,10 @@ using namespace std;
 namespace openshot {
 
 	/**
-	 * @brief This abstract class is the base class, used by all readers in libopenshot.
+	 * @brief This class is used for logging and sending those logs over a ZemoMQ socket to a listener
 	 *
-	 * Readers are types of classes that read video, audio, and image files, and
-	 * return openshot::Frame objects. The only requirements for a 'reader', are to
-	 * derive from this base class, implement the GetFrame method, and call the InitFileInfo() method.
+	 * OpenShot desktop editor listens to this port, to receive libopenshot debug output. It both logs to
+	 * a file and sends the stdout over a socket.
 	 */
 	class ZmqLogger {
 	private:

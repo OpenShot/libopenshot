@@ -79,7 +79,33 @@ ENDIF (ImageMagick_FOUND)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
 # Include FFmpeg headers (needed for compile)
-include_directories(${FFMPEG_INCLUDE_DIR})
+IF (AVCODEC_FOUND)
+	include_directories(${AVCODEC_INCLUDE_DIRS})
+ENDIF (AVCODEC_FOUND)
+IF (AVDEVICE_FOUND)
+	include_directories(${AVDEVICE_INCLUDE_DIRS})
+ENDIF (AVDEVICE_FOUND)
+IF (AVFORMAT_FOUND)
+	include_directories(${AVFORMAT_INCLUDE_DIRS})
+ENDIF (AVFORMAT_FOUND)
+IF (AVFILTER_FOUND)
+	include_directories(${AVFILTER_INCLUDE_DIRS})
+ENDIF (AVFILTER_FOUND)
+IF (AVUTIL_FOUND)
+	include_directories(${AVUTIL_INCLUDE_DIRS})
+ENDIF (AVUTIL_FOUND)
+IF (POSTPROC_FOUND)
+	include_directories(${POSTPROC_INCLUDE_DIRS})
+ENDIF (POSTPROC_FOUND)
+IF (SWSCALE_FOUND)
+	include_directories(${SWSCALE_INCLUDE_DIRS})
+ENDIF (SWSCALE_FOUND)
+IF (SWRESAMPLE_FOUND)
+	include_directories(${SWRESAMPLE_INCLUDE_DIRS})
+ENDIF (SWRESAMPLE_FOUND)
+IF (AVRESAMPLE_FOUND)
+	include_directories(${AVRESAMPLE_INCLUDE_DIRS})
+ENDIF (AVRESAMPLE_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -150,12 +176,26 @@ endif(OPENMP_FOUND)
 # Find ZeroMQ library (used for socket communication & logging)
 FIND_PACKAGE(ZMQ REQUIRED)
 
-# Include FFmpeg headers (needed for compile)
+# Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+
+################### RESVG #####################
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG)
+
+# Include resvg headers (optional SVG library)
+if (RESVG_FOUND)
+	include_directories(${RESVG_INCLUDE_DIRS})
+endif(RESVG_FOUND)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
-include_directories("../thirdparty/jsoncpp/include")
+if (USE_SYSTEM_JSONCPP)
+	find_package(JsonCpp REQUIRED)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
+else()
+	include_directories("../thirdparty/jsoncpp/include")
+endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
 	###############  SET TEST SOURCE FILES  #################
@@ -172,6 +212,7 @@ IF (NOT DISABLE_TESTS)
 		   FrameMapper_Tests.cpp
 		   KeyFrame_Tests.cpp
 		   Point_Tests.cpp
+		   Settings_Tests.cpp
 		   Timeline_Tests.cpp )
 
 	################ TESTER EXECUTABLE #################
