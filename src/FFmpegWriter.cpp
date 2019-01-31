@@ -462,7 +462,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value)
 							}
 							c->bit_rate = (int)(mbs);
 					}
-        }
+				}
 			#endif
 		}
 
@@ -1298,9 +1298,6 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 		char *adapter_ptr = NULL;
 		int adapter_num;
 		// Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
-		//dev_hw = getenv( "HW_EN_DEVICE_SET" );
-		//if( dev_hw != NULL) {
-		//	adapter_num = atoi(dev_hw);
 		adapter_num = openshot::Settings::Instance()->HW_EN_DEVICE_SET;
 		fprintf(stderr, "\n\nEncodiing Device Nr: %d\n", adapter_num);
 		if (adapter_num < 3 && adapter_num >=0) {
@@ -1317,7 +1314,6 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 			else {
 				adapter_ptr = NULL; // Just to be sure
 			}
-//		}
 // Check if it is there and writable
 	#if defined(__linux__)
 		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
@@ -1539,9 +1535,9 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// Remove converted audio
 			av_freep(&(audio_frame->data[0]));
-            AV_FREE_FRAME(&audio_frame);
+			AV_FREE_FRAME(&audio_frame);
 			av_freep(&audio_converted->data[0]);
-            AV_FREE_FRAME(&audio_converted);
+			AV_FREE_FRAME(&audio_converted);
 			all_queued_samples = NULL; // this array cleared with above call
 
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets (Successfully completed 1st resampling)", "nb_samples", nb_samples, "remaining_frame_samples", remaining_frame_samples, "", -1, "", -1, "", -1, "", -1);
@@ -1732,7 +1728,7 @@ void FFmpegWriter::write_audio_packets(bool final)
 
 			// deallocate AVFrame
 			av_freep(&(frame_final->data[0]));
-						AV_FREE_FRAME(&frame_final);
+			AV_FREE_FRAME(&frame_final);
 
 			// deallocate memory for packet
 			AV_FREE_PACKET(&pkt);
@@ -1821,11 +1817,9 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame)
 		frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t*) pixels);
 		#if IS_FFMPEG_3_2
     AVFrame *frame_final;
-//    #if defined(__linux__)
 		if (hw_en_on && hw_en_supported) {
 			frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
 		} else
-//    #endif
 		{
 			frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
 		}
@@ -1887,7 +1881,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 
 	} else
 #endif
-        {
+	{
 
 		AVPacket pkt;
 		av_init_packet(&pkt);
@@ -1904,7 +1898,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
 		#if IS_FFMPEG_3_2
-//    #if defined(__linux__)
 		if (hw_en_on && hw_en_supported) {
 			if (!(hw_frame = av_frame_alloc())) {
 				fprintf(stderr, "Error code: av_hwframe_alloc\n");
@@ -1921,7 +1914,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 			}
 			av_frame_copy_props(hw_frame, frame_final);
 		}
-//    #endif
 		#endif
 		/* encode the image */
 		int got_packet_ptr = 0;
@@ -1930,13 +1922,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 		// Write video packet (latest version of FFmpeg)
 		int frameFinished = 0;
 		int ret;
-//    #if defined(__linux__)
 		#if IS_FFMPEG_3_2
 		if (hw_en_on && hw_en_supported) {
 			ret = avcodec_send_frame(video_codec, hw_frame); //hw_frame!!!
 		} else
 		#endif
-//    #endif
 		ret = avcodec_send_frame(video_codec, frame_final);
 		error_code = ret;
 		if (ret < 0 ) {
@@ -2002,7 +1992,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 			//pkt.pts = pkt.dts = write_video_count;
 
 			// set the timestamp
-//        av_packet_rescale_ts(&pkt, video_st->time_base,video_codec->time_base);
 			if (pkt.pts != AV_NOPTS_VALUE)
 				pkt.pts = av_rescale_q(pkt.pts, video_codec->time_base, video_st->time_base);
 			if (pkt.dts != AV_NOPTS_VALUE)
@@ -2026,15 +2015,13 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame* fra
 
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
-    #if IS_FFMPEG_3_2
-//    #if defined(__linux__)
+		#if IS_FFMPEG_3_2
 		if (hw_en_on && hw_en_supported) {
 			if (hw_frame) {
 				av_frame_free(&hw_frame);
 				hw_frame = NULL;
 			}
 		}
-//    #endif
 		#endif
 	}
 
@@ -2062,11 +2049,9 @@ void FFmpegWriter::InitScalers(int source_width, int source_height)
 	{
 		// Init the software scaler from FFMpeg
     #if IS_FFMPEG_3_2
-//    #if defined(__linux__)
 		if (hw_en_on && hw_en_supported) {
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL, NULL, NULL);
 		} else
-//    #endif
 		#endif
 		{
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR, NULL, NULL, NULL);

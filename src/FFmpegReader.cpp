@@ -76,7 +76,6 @@ typedef struct VAAPIDecodeContext {
 using namespace openshot;
 
 int hw_de_on = 1;					// Is set in UI
-//int hw_de_supported = 0;	// Is set by FFmpegReader
 #if IS_FFMPEG_3_2
 AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
 AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
@@ -158,91 +157,91 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 #if defined(__linux__)
 static enum AVPixelFormat get_hw_dec_format_va(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
-    const enum AVPixelFormat *p;
+		const enum AVPixelFormat *p;
 
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
 				case AV_PIX_FMT_VAAPI:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
-        	return *p;
+					return *p;
 					break;
-        }
-      }
-  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-      return AV_PIX_FMT_NONE;
-  }
+			}
+		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		return AV_PIX_FMT_NONE;
+}
 
 static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
-    const enum AVPixelFormat *p;
+		const enum AVPixelFormat *p;
 
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
 				case AV_PIX_FMT_CUDA:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
-        	return *p;
+					return *p;
 					break;
-        }
-      }
-  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-      return AV_PIX_FMT_NONE;
-  }
+			}
+		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		return AV_PIX_FMT_NONE;
+}
 #endif
 
 #if defined(_WIN32)
 static enum AVPixelFormat get_hw_dec_format_dx(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
-    const enum AVPixelFormat *p;
+		const enum AVPixelFormat *p;
 
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
 				case AV_PIX_FMT_DXVA2_VLD:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
-        	return *p;
+					return *p;
 					break;
-        }
-      }
-  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-      return AV_PIX_FMT_NONE;
-  }
+			}
+		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		return AV_PIX_FMT_NONE;
+}
 
 static enum AVPixelFormat get_hw_dec_format_d3(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
-    const enum AVPixelFormat *p;
+		const enum AVPixelFormat *p;
 
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
 				case AV_PIX_FMT_D3D11:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
-        	return *p;
+					return *p;
 					break;
-        }
-      }
-  		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-      return AV_PIX_FMT_NONE;
-  }
+			}
+		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		return AV_PIX_FMT_NONE;
+}
 #endif
 
 #if defined(__APPLE__)
 static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
-    const enum AVPixelFormat *p;
+		const enum AVPixelFormat *p;
 
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
 				case AV_PIX_FMT_QSV:
 					hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
 					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
-        	return *p;
+					return *p;
 					break;
 			}
-    }
+		}
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-    return AV_PIX_FMT_NONE;
+		return AV_PIX_FMT_NONE;
 }
 #endif
 
@@ -274,33 +273,6 @@ void FFmpegReader::Open()
 	{
 		// Initialize format context
 		pFormatCtx = NULL;
-
-    // Old version turn hardware decode on
-    /*char * val = getenv( "OS2_DECODE_HW" );
-		if (val == NULL) {
-			hw_de_on = 0;
-		}
-		else{
-			hw_de_on = (val[0] == '1')? 1 : 0;
-		}*/
-
-    //hw_de_on = openshot::Settings::Instance()->HARDWARE_DECODE;
-
-    // New version turn hardware decode on
-  /*  {
-      char *decoder_hw = NULL;
-      decoder_hw = getenv( "HW_DECODER" );
-      if(decoder_hw != NULL) {
-        if( strncmp(decoder_hw,"0",4) == 0) {
-          hw_de_on = 0;
-        } else {
-          hw_de_on = 1;
-        }
-      } else {
-        hw_de_on = 0;
-      }
-    }*/
-		// Newest versions
 		{
 			hw_de_on = (openshot::Settings::Instance()->HARDWARE_DECODER == 0  ? 0 : 1);
 		}
@@ -368,106 +340,96 @@ void FFmpegReader::Open()
 				#if IS_FFMPEG_3_2
 				if (hw_de_on && hw_de_supported) {
 					// Open Hardware Acceleration
-					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
-			    //char *dev_hw = NULL;
-          //char *decoder_hw = NULL;
 					int i_decoder_hw = 0;
-          char adapter[256];
-          char *adapter_ptr = NULL;
-          int adapter_num;
-/*          dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
-          if( dev_hw != NULL) {
-            adapter_num = atoi(dev_hw);
-          } else {
-            adapter_num = 0;
-          }*/
+					char adapter[256];
+					char *adapter_ptr = NULL;
+					int adapter_num;
 					adapter_num = openshot::Settings::Instance()->HW_DE_DEVICE_SET;
 					fprintf(stderr, "\n\nDecodiing Device Nr: %d\n", adapter_num);
-          if (adapter_num < 3 && adapter_num >=0) {
-      #if defined(__linux__)
-            snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-            adapter_ptr = adapter;
+					if (adapter_num < 3 && adapter_num >=0) {
+			#if defined(__linux__)
+						snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+						adapter_ptr = adapter;
 						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 								case 0:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-                  pCodecCtx->get_format = get_hw_dec_format_va;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+									pCodecCtx->get_format = get_hw_dec_format_va;
 									break;
 								case 1:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-                  pCodecCtx->get_format = get_hw_dec_format_va;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+									pCodecCtx->get_format = get_hw_dec_format_va;
 									break;
 								case 2:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-                  pCodecCtx->get_format = get_hw_dec_format_cu;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+									pCodecCtx->get_format = get_hw_dec_format_cu;
 									break;
 								default:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-                  pCodecCtx->get_format = get_hw_dec_format_va;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+									pCodecCtx->get_format = get_hw_dec_format_va;
 									break;
 							}
 
-      #elif defined(_WIN32)
-            adapter_ptr = NULL;
+			#elif defined(_WIN32)
+						adapter_ptr = NULL;
 						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 							case 0:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-                  pCodecCtx->get_format = get_hw_dec_format_dx;
-									break;
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+								pCodecCtx->get_format = get_hw_dec_format_dx;
+								break;
 							case 3:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-                  pCodecCtx->get_format = get_hw_dec_format_dx;
-									break;
-							case 4:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
-                  pCodecCtx->get_format = get_hw_dec_format_d3;
-							default:
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-                pCodecCtx->get_format = get_hw_dec_format_dx;
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+								pCodecCtx->get_format = get_hw_dec_format_dx;
 								break;
-            }
-      #elif defined(__APPLE__)
-            adapter_ptr = NULL;
+							case 4:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
+								pCodecCtx->get_format = get_hw_dec_format_d3;
+								break;
+							default:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+								pCodecCtx->get_format = get_hw_dec_format_dx;
+								break;
+						}
+			#elif defined(__APPLE__)
+						adapter_ptr = NULL;
 						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 							case 0:
-                  hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-                  pCodecCtx->get_format = get_hw_dec_format_qs;
-									break;
-							case 5:
-                  hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
-                  pCodecCtx->get_format = get_hw_dec_format_qs;
-									break;
-							default:
-                hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-                pCodecCtx->get_format = get_hw_dec_format_qs;
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+								pCodecCtx->get_format = get_hw_dec_format_qs;
 								break;
-            }
-      #endif
-          }
-          else {
-            adapter_ptr = NULL; // Just to be sure
-          }
-          //}
-			    // Check if it is there and writable
-      #if defined(__linux__)
-			    if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
-      #elif defined(_WIN32)
-          if( adapter_ptr != NULL ) {
-      #elif defined(__APPLE__)
-          if( adapter_ptr != NULL ) {
-      #endif
+							case 5:
+								hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
+								pCodecCtx->get_format = get_hw_dec_format_qs;
+								break;
+							default:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+								pCodecCtx->get_format = get_hw_dec_format_qs;
+								break;
+						}
+			#endif
+					}
+					else {
+						adapter_ptr = NULL; // Just to be sure
+					}
+					// Check if it is there and writable
+			#if defined(__linux__)
+					if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
+			#elif defined(_WIN32)
+					if( adapter_ptr != NULL ) {
+			#elif defined(__APPLE__)
+					if( adapter_ptr != NULL ) {
+			#endif
 						ZmqLogger::Instance()->AppendDebugMethod("Decode Device present using device", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 					}
 					else {
-			      adapter_ptr = NULL;  // use default
-            ZmqLogger::Instance()->AppendDebugMethod("Decode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-			    }
+						adapter_ptr = NULL;  // use default
+						ZmqLogger::Instance()->AppendDebugMethod("Decode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+					}
 					hw_device_ctx = NULL;
 					// Here the first hardware initialisations are made
 					if (av_hwdevice_ctx_create(&hw_device_ctx, hw_de_av_device_type, adapter_ptr, NULL, 0) >= 0) {
-            cerr << "\n\n**** HW device create OK ******** \n\n";
 						if (!(pCodecCtx->hw_device_ctx = av_buffer_ref(hw_device_ctx))) {
 							throw InvalidCodec("Hardware device reference create failed.", path);
 						}
@@ -523,8 +485,7 @@ void FFmpegReader::Open()
 								pCodecCtx->coded_height < constraints->min_height ||
 								pCodecCtx->coded_width > constraints->max_width  	||
 								pCodecCtx->coded_height > constraints->max_height) {
-              ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-							//cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
+							ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 							hw_de_supported = 0;
 							retry_decode_open = 1;
 							AV_FREE_CONTEXT(pCodecCtx);
@@ -535,10 +496,7 @@ void FFmpegReader::Open()
 						}
 						else {
 							// All is just peachy
-              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Min width :", constraints->min_width, "Min Height :", constraints->min_height, "MaxWidth :", constraints->max_width, "MaxHeight :", constraints->max_height, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height);
-              //cerr << "\nDecode hardware acceleration is used\n";
-							//cerr << "Min width   : " << constraints->min_width << " MinHeight    : " << constraints->min_height << "MaxWidth : " << constraints->max_width << "MaxHeight : " << constraints->max_height << "\n";
-							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+							ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Min width :", constraints->min_width, "Min Height :", constraints->min_height, "MaxWidth :", constraints->max_width, "MaxHeight :", constraints->max_height, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height);
 							retry_decode_open = 0;
 						}
 						av_hwframe_constraints_free(&constraints);
@@ -552,16 +510,13 @@ void FFmpegReader::Open()
 						max_h = openshot::Settings::Instance()->DE_LIMIT_HEIGHT_MAX;
 						//max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
 						max_w = openshot::Settings::Instance()->DE_LIMIT_WIDTH_MAX;
-            ZmqLogger::Instance()->AppendDebugMethod("Constraints could not be found using default limit\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+						ZmqLogger::Instance()->AppendDebugMethod("Constraints could not be found using default limit\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 						//cerr << "Constraints could not be found using default limit\n";
 						if (pCodecCtx->coded_width < 0  	||
 								pCodecCtx->coded_height < 0 	||
 								pCodecCtx->coded_width > max_w ||
 								pCodecCtx->coded_height > max_h ) {
-              ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
-							//cerr << "DIMENSIONS ARE TOO LARGE for hardware acceleration\n";
-              //cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
-							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+							ZmqLogger::Instance()->AppendDebugMethod("DIMENSIONS ARE TOO LARGE for hardware acceleration\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
 							hw_de_supported = 0;
 							retry_decode_open = 1;
 							AV_FREE_CONTEXT(pCodecCtx);
@@ -571,18 +526,14 @@ void FFmpegReader::Open()
 							}
 						}
 						else {
-              ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
-              //cerr << "\nDecode hardware acceleration is used\n";
-              //cerr << "  Max Width : " << max_w << " Height : " << max_h << "\n";
-							//cerr << "Frame width : " << pCodecCtx->coded_width << " Frame height : " << pCodecCtx->coded_height << "\n";
+							ZmqLogger::Instance()->AppendDebugMethod("\nDecode hardware acceleration is used\n", "Max Width :", max_w, "Max Height :", max_h, "Frame width :", pCodecCtx->coded_width, "Frame height :", pCodecCtx->coded_height, "", -1, "", -1);
 							retry_decode_open = 0;
 						}
 					}
 				} // if hw_de_on && hw_de_supported
-        else {
-          ZmqLogger::Instance()->AppendDebugMethod("\nDecode in software is used\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-          //cerr << "\nDecode in software is used\n";
-        }
+				else {
+					ZmqLogger::Instance()->AppendDebugMethod("\nDecode in software is used\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+				}
 				#else
 				retry_decode_open = 0;
 				#endif
@@ -897,8 +848,8 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
-    #pragma omp critical (ReadStream)
-	  {
+		#pragma omp critical (ReadStream)
+		{
 			// Check the cache a 2nd time (due to a potential previous lock)
 			if (has_missing_frames)
 			    CheckMissingFrame(requested_frame);
@@ -944,8 +895,8 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
 					frame = ReadStream(requested_frame);
 				}
 			}
-	  } //omp critical
-    return frame;
+		} //omp critical
+		return frame;
 	}
 }
 
@@ -1141,11 +1092,11 @@ int FFmpegReader::GetNextPacket()
 	found_packet = av_read_frame(pFormatCtx, next_packet);
 
 
-    if (packet) {
-        // Remove previous packet before getting next one
-        RemoveAVPacket(packet);
-        packet = NULL;
-    }
+	if (packet) {
+		// Remove previous packet before getting next one
+		RemoveAVPacket(packet);
+		packet = NULL;
+	}
 
 	if (found_packet >= 0)
 	{
@@ -1191,15 +1142,15 @@ bool FFmpegReader::GetAVFrame()
 			pFrame = new AVFrame();
 			while (ret >= 0) {
 					ret =  avcodec_receive_frame(pCodecCtx, next_frame2);
-		  		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-		  			break;
+					if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+						break;
 					}
 					if (ret != 0) {
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (invalid return frame received)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 					}
 					if (hw_de_on && hw_de_supported) {
 						int err;
-		        if (next_frame2->format == hw_de_av_pix_fmt) {
+						if (next_frame2->format == hw_de_av_pix_fmt) {
 							next_frame->format = AV_PIX_FMT_YUV420P;
 							if ((err = av_hwframe_transfer_data(next_frame,next_frame2,0)) < 0) {
 								ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
@@ -1437,7 +1388,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
-				  original_height, pFrameRGB->data, pFrameRGB->linesize);
+					original_height, pFrameRGB->data, pFrameRGB->linesize);
 
 		// Create or get the existing frame object
 		std::shared_ptr<Frame> f = CreateFrame(current_frame);
@@ -2257,8 +2208,8 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame)
 void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_frame)
 {
 	// Loop through all working queue frames
-    bool checked_count_tripped = false;
-    int max_checked_count = 80;
+	bool checked_count_tripped = false;
+	int max_checked_count = 80;
 
 	while (true)
 	{
@@ -2291,11 +2242,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 
 			// Get check count for this frame
 			checked_frames_size = checked_frames.size();
-            if (!checked_count_tripped || f->number >= requested_frame)
-			    checked_count = checked_frames[f->number];
-            else
-                // Force checked count over the limit
-                checked_count = max_checked_count;
+			if (!checked_count_tripped || f->number >= requested_frame)
+				checked_count = checked_frames[f->number];
+			else
+				// Force checked count over the limit
+				checked_count = max_checked_count;
 		}
 
 		if (previous_packet_location.frame == f->number && !end_of_stream)
@@ -2311,8 +2262,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (exceeded checked_count)", "requested_frame", requested_frame, "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "checked_count", checked_count, "checked_frames_size", checked_frames_size);
 
-            // Trigger checked count tripped mode (clear out all frames before requested frame)
-            checked_count_tripped = true;
+			// Trigger checked count tripped mode (clear out all frames before requested frame)
+			checked_count_tripped = true;
 
 			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
@@ -2357,8 +2308,8 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 						missing_frames.Add(f);
 					}
 
-                    // Remove from 'checked' count
-                    checked_frames.erase(f->number);
+					// Remove from 'checked' count
+					checked_frames.erase(f->number);
 				}
 
 				// Remove frame from working cache
@@ -2482,10 +2433,10 @@ void FFmpegReader::CheckFPS()
 // Remove AVFrame from cache (and deallocate it's memory)
 void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
 {
-    // Remove pFrame (if exists)
-    if (remove_frame)
-    {
-        // Free memory
+	// Remove pFrame (if exists)
+	if (remove_frame)
+	{
+		// Free memory
 		#pragma omp critical (packet_cache)
 		{
 			av_freep(&remove_frame->data[0]);
@@ -2500,7 +2451,7 @@ void FFmpegReader::RemoveAVFrame(AVFrame* remove_frame)
 void FFmpegReader::RemoveAVPacket(AVPacket* remove_packet)
 {
 	// deallocate memory for packet
-    AV_FREE_PACKET(remove_packet);
+	AV_FREE_PACKET(remove_packet);
 
 	// Delete the object
 	delete remove_packet;

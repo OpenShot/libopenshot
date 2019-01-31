@@ -98,10 +98,10 @@ namespace openshot {
 		bool WAIT_FOR_VIDEO_PROCESSING_TASK = false;
 
 		/// Number of threads of OpenMP
-		int OMP_THREADS = 12;//OPEN_MP_NUM_PROCESSORS
+		int OMP_THREADS = 12;
 
 		/// Number of threads that ffmpeg uses
-		int FF_THREADS = 8;//FF_NUM_PROCESSORS
+		int FF_THREADS = 8;
 
 		/// Maximum rows that hardware decode can handle
 		int DE_LIMIT_HEIGHT_MAX = 1100;

@@ -47,8 +47,8 @@ Settings *Settings::Instance()
 		m_pInstance->MAX_WIDTH = 0;
 		m_pInstance->MAX_HEIGHT = 0;
 		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
-		m_pInstance->OMP_THREADS = 12;//OPEN_MP_NUM_PROCESSORS
-		m_pInstance->FF_THREADS = 8;//FF_NUM_PROCESSORS
+		m_pInstance->OMP_THREADS = 12;
+		m_pInstance->FF_THREADS = 8;
 		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
 		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
 		m_pInstance->HW_DE_DEVICE_SET = 0;
