@@ -1293,15 +1293,17 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 
 	#if IS_FFMPEG_3_2
 	if (hw_en_on && hw_en_supported) {
-		char *dev_hw = NULL;
+		//char *dev_hw = NULL;
 		char adapter[256];
 		char *adapter_ptr = NULL;
 		int adapter_num;
 		// Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
-		dev_hw = getenv( "HW_EN_DEVICE_SET" );
-		if( dev_hw != NULL) {
-			adapter_num = atoi(dev_hw);
-			if (adapter_num < 3 && adapter_num >=0) {
+		//dev_hw = getenv( "HW_EN_DEVICE_SET" );
+		//if( dev_hw != NULL) {
+		//	adapter_num = atoi(dev_hw);
+		adapter_num = openshot::Settings::Instance()->HW_EN_DEVICE_SET;
+		fprintf(stderr, "\n\nEncodiing Device Nr: %d\n", adapter_num);
+		if (adapter_num < 3 && adapter_num >=0) {
 	#if defined(__linux__)
 				snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
 				// Maybe 127 is better because the first card would be 1?!
@@ -1315,7 +1317,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 			else {
 				adapter_ptr = NULL; // Just to be sure
 			}
-		}
+//		}
 // Check if it is there and writable
 	#if defined(__linux__)
 		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
@@ -1324,6 +1326,9 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 	#elif defined(__APPLE__)
 		if( adapter_ptr != NULL ) {
 	#endif
+				ZmqLogger::Instance()->AppendDebugMethod("Encode Device present using device", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		}
+		else {
 				adapter_ptr = NULL;  // use default
 				//cerr << "\n\n\nEncode Device not present using default\n\n\n";
 				ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);

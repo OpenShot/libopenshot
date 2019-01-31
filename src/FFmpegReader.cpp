@@ -284,7 +284,7 @@ void FFmpegReader::Open()
 			hw_de_on = (val[0] == '1')? 1 : 0;
 		}*/
 
-    //hw_de_on = Settings::Instance()->HARDWARE_DECODE;
+    //hw_de_on = openshot::Settings::Instance()->HARDWARE_DECODE;
 
     // New version turn hardware decode on
   /*  {
@@ -302,7 +302,7 @@ void FFmpegReader::Open()
     }*/
 		// Newest versions
 		{
-			hw_de_on = (Settings::Instance()->HARDWARE_DECODER == 0  ? 0 : 1);
+			hw_de_on = (openshot::Settings::Instance()->HARDWARE_DECODER == 0  ? 0 : 1);
 		}
 
 		// Open video file
@@ -369,23 +369,25 @@ void FFmpegReader::Open()
 				if (hw_de_on && hw_de_supported) {
 					// Open Hardware Acceleration
 					// Use the hw device given in the environment variable HW_DE_DEVICE_SET or the default if not set
-			    char *dev_hw = NULL;
+			    //char *dev_hw = NULL;
           //char *decoder_hw = NULL;
 					int i_decoder_hw = 0;
           char adapter[256];
           char *adapter_ptr = NULL;
           int adapter_num;
-          dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
+/*          dev_hw = getenv( "HW_DE_DEVICE_SET" ); // The first card is 0
           if( dev_hw != NULL) {
             adapter_num = atoi(dev_hw);
           } else {
             adapter_num = 0;
-          }
+          }*/
+					adapter_num = openshot::Settings::Instance()->HW_DE_DEVICE_SET;
+					fprintf(stderr, "\n\nDecodiing Device Nr: %d\n", adapter_num);
           if (adapter_num < 3 && adapter_num >=0) {
       #if defined(__linux__)
             snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
             adapter_ptr = adapter;
-						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 								case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
@@ -407,7 +409,7 @@ void FFmpegReader::Open()
 
       #elif defined(_WIN32)
             adapter_ptr = NULL;
-						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 							case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
@@ -427,7 +429,7 @@ void FFmpegReader::Open()
             }
       #elif defined(__APPLE__)
             adapter_ptr = NULL;
-						i_decoder_hw = Settings::Instance()->HARDWARE_DECODER;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 						switch (i_decoder_hw) {
 							case 0:
                   hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
@@ -456,6 +458,9 @@ void FFmpegReader::Open()
       #elif defined(__APPLE__)
           if( adapter_ptr != NULL ) {
       #endif
+						ZmqLogger::Instance()->AppendDebugMethod("Decode Device present using device", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+					}
+					else {
 			      adapter_ptr = NULL;  // use default
             ZmqLogger::Instance()->AppendDebugMethod("Decode Device not present using default", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 			    }
@@ -544,9 +549,9 @@ void FFmpegReader::Open()
 					else {
 						int max_h, max_w;
 						//max_h = ((getenv( "LIMIT_HEIGHT_MAX" )==NULL) ? MAX_SUPPORTED_HEIGHT : atoi(getenv( "LIMIT_HEIGHT_MAX" )));
-						max_h = Settings::Instance()->DE_LIMIT_HEIGHT_MAX;
+						max_h = openshot::Settings::Instance()->DE_LIMIT_HEIGHT_MAX;
 						//max_w = ((getenv( "LIMIT_WIDTH_MAX" )==NULL) ? MAX_SUPPORTED_WIDTH : atoi(getenv( "LIMIT_WIDTH_MAX" )));
-						max_w = Settings::Instance()->DE_LIMIT_WIDTH_MAX;
+						max_w = openshot::Settings::Instance()->DE_LIMIT_WIDTH_MAX;
             ZmqLogger::Instance()->AppendDebugMethod("Constraints could not be found using default limit\n", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 						//cerr << "Constraints could not be found using default limit\n";
 						if (pCodecCtx->coded_width < 0  	||
@@ -1354,10 +1359,10 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame)
 		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
 		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
 		// the future.
-		int max_width = Settings::Instance()->MAX_WIDTH;
+		int max_width = openshot::Settings::Instance()->MAX_WIDTH;
 		if (max_width <= 0)
 			max_width = info.width;
-		int max_height = Settings::Instance()->MAX_HEIGHT;
+		int max_height = openshot::Settings::Instance()->MAX_HEIGHT;
 		if (max_height <= 0)
 			max_height = info.height;
 

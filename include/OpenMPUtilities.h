@@ -32,9 +32,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../include/Settings.h"
+
+using namespace std;
+using namespace openshot;
+
 // Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS ((getenv( "LIMIT_OMP_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_OMP_THREADS" ))) )))
-#define FF_NUM_PROCESSORS ((getenv( "LIMIT_FF_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_FF_THREADS" ))) )))
+//#define OPEN_MP_NUM_PROCESSORS ((getenv( "LIMIT_OMP_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_OMP_THREADS" ))) )))
+//#define FF_NUM_PROCESSORS ((getenv( "LIMIT_FF_THREADS" )==NULL) ? omp_get_num_procs() : (min(omp_get_num_procs(), max(2, atoi(getenv( "LIMIT_FF_THREADS" ))) )))
+#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->OMP_THREADS) ))
+#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->FF_THREADS) ))
 
 
 
