@@ -1316,7 +1316,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
 			}
 // Check if it is there and writable
 	#if defined(__linux__)
-		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == -1 ) {
+		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == 0 ) {
 	#elif defined(_WIN32)
 		if( adapter_ptr != NULL ) {
 	#elif defined(__APPLE__)
