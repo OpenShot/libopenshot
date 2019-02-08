@@ -6,20 +6,20 @@ world.
 
 [![Build Status](https://img.shields.io/travis/OpenShot/libopenshot/develop.svg?label=libopenshot)](https://travis-ci.org/OpenShot/libopenshot) [![Build Status](https://img.shields.io/travis/OpenShot/libopenshot-audio/develop.svg?label=libopenshot-audio)](https://travis-ci.org/OpenShot/libopenshot-audio)
 
+### Install
+
+We have detailed instructions for building libopenshot and libopenshot-audio for each OS:
+
+   * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
+   * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
+   * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
+
 ## Developers
 
 Are you interested in becoming more involved in the development of 
 OpenShot? Build exciting new features, fix bugs, make friends, and become a hero! 
 Please read the [step-by-step](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer) 
 instructions for getting source code, configuring dependencies, and building OpenShot.
-
-### Install
-
-We also have detailed instructions for building libopenshot and libopenshot-audio for each OS:
-
-   * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
-   * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
-   * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
 
 ### Documentation
 
