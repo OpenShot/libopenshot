@@ -8,7 +8,7 @@ world.
 
 ### Install
 
-We have detailed instructions for building libopenshot and libopenshot-audio for each OS:
+Detailed instructions for building libopenshot and libopenshot-audio for each OS:
 
    * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
    * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
