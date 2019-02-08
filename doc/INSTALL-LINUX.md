@@ -1,14 +1,26 @@
 ## Getting Started
 
-The best way to get started with libopenshot, is to learn about our build system, obtain all the source code, install a development IDE and tools, and better understand our dependencies. So, please read through the following sections, and follow the instructions. And keep in mind, that your computer is likely different than the one used when writing these instructions. Your file paths and versions of applications might be slightly different, so keep an eye out for subtle file path differences in the commands you type.
+The best way to get started with libopenshot, is to learn about our build system, obtain all the source code, 
+install a development IDE and tools, and better understand our dependencies. So, please read through the 
+following sections, and follow the instructions. And keep in mind, that your computer is likely different 
+than the one used when writing these instructions. Your file paths and versions of applications might be 
+slightly different, so keep an eye out for subtle file path differences in the commands you type.
 
 ## Build Tools
 
-CMake is the backbone of our build system.  It is a cross-platform build system, which checks for dependencies, locates header files and libraries, generates makefiles, and supports the cross-platform compiling of libopenshot and libopenshot-audio.  CMake uses an out-of-source build concept, where all temporary build files, such as makefiles, object files, and even the final binaries, are created outside of the source code folder, inside a /build/ sub-folder.  This prevents the build process from cluttering up the source code.  These instructions have only been tested with the GNU compiler (including MSYS2/MinGW for Windows).
+CMake is the backbone of our build system.  It is a cross-platform build system, which checks for 
+dependencies, locates header files and libraries, generates makefiles, and supports the cross-platform 
+compiling of libopenshot and libopenshot-audio.  CMake uses an out-of-source build concept, where 
+all temporary build files, such as makefiles, object files, and even the final binaries, are created 
+outside of the source code folder, inside a /build/ sub-folder.  This prevents the build process 
+from cluttering up the source code.  These instructions have only been tested with the GNU compiler 
+(including MSYS2/MinGW for Windows).
 
 ## Dependencies
 
-The following libraries are required to build libopenshot.  Instructions on how to install these dependencies vary for each operating system.  Libraries and Executables have been labeled in the list below to help distinguish between them.
+The following libraries are required to build libopenshot.  Instructions on how to install these 
+dependencies vary for each operating system.  Libraries and Executables have been labeled in the 
+list below to help distinguish between them.
 
 * ### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
   * http://www.ffmpeg.org/ `(Library)`
@@ -56,7 +68,10 @@ The following libraries are required to build libopenshot.  Instructions on how 
 
 
 ## CMake Flags (Optional)
-There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled. Some of these flags might be required when compiling on certain OSes, just depending on how your build environment is setup. To add a build flag, follow this general syntax:  $ cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ../
+There are many different build flags that can be passed to cmake to adjust how libopenshot is 
+compiled. Some of these flags might be required when compiling on certain OSes, just depending 
+on how your build environment is setup. To add a build flag, follow this general syntax: 
+`cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ../`
 
 * MAGICKCORE_HDRI_ENABLE (default 0)
 * MAGICKCORE_QUANTUM_DEPTH (default 0)
@@ -71,7 +86,9 @@ There are many different build flags that can be passed to cmake to adjust how l
 
 ## Obtaining Source Code
 
-The first step in installing libopenshot is to obtain the most recent source code. The source code is available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command to obtain the latest libopenshot source code.
+The first step in installing libopenshot is to obtain the most recent source code. The source code is 
+available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command 
+to obtain the latest libopenshot source code.
 
 ```
 git clone https://github.com/OpenShot/libopenshot.git
@@ -105,7 +122,9 @@ The source code is divided up into the following folders.
 
 ## Install Dependencies
 
-In order to actually compile libopenshot, we need to install some dependencies on your system. The easiest way to accomplish this is with our Daily PPA. A PPA is an unofficial Ubuntu repository, which has our software packages available to download and install.
+In order to actually compile libopenshot, we need to install some dependencies on your system. The easiest 
+way to accomplish this is with our Daily PPA. A PPA is an unofficial Ubuntu repository, which has our 
+software packages available to download and install.
 
 ```
    sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
@@ -139,7 +158,8 @@ In order to actually compile libopenshot, we need to install some dependencies o
 ```
 
 ## Linux Build Instructions (libopenshot-audio)
-To compile libopenshot-audio, we need to go through a few additional steps to manually build and install it. Launch a terminal and enter:
+To compile libopenshot-audio, we need to go through a few additional steps to manually build and 
+install it. Launch a terminal and enter:
 
 ```
 cd [libopenshot-audio repo folder]
@@ -162,7 +182,10 @@ cmake ../
 make
 ```
 
-If you are missing any dependencies for libopenshot, you might receive error messages at this point.  Just install the missing packages (usually with a -dev suffix), and run the above commands again.  Repeat until no error messages are displayed, and the build process completes. Also, if you manually install Qt 5, you might need to specify the location for cmake:
+If you are missing any dependencies for libopenshot, you might receive error messages at this point. 
+Just install the missing packages (usually with a -dev suffix), and run the above commands again. 
+Repeat until no error messages are displayed, and the build process completes. Also, if you manually
+install Qt 5, you might need to specify the location for cmake:
 
 ```
 cmake -DCMAKE_PREFIX_PATH=/qt5_path/qt5/5.2.0/ ../
@@ -180,17 +203,23 @@ To auto-generate documentation for libopenshot, launch a terminal, and enter:
 make doc
 ```
 
-This will use doxygen to generate a folder of HTML files, with all classes and methods documented. The folder is located at **build/doc/html/**. Once libopenshot has been successfully built, we need to install it (i.e. copy it to the correct folder, so other libraries can find it).
+This will use doxygen to generate a folder of HTML files, with all classes and methods documented. The 
+folder is located at **build/doc/html/**. Once libopenshot has been successfully built, we need to 
+install it (i.e. copy it to the correct folder, so other libraries can find it).
 
 ```
 make install
 ```
 
-This will copy the binary files to /usr/local/lib/, and the header files to /usr/local/include/openshot/...  This is where other projects will look for the libopenshot files when building. Python 3 bindings are also installed at this point. let's verify the python bindings work:
+This will copy the binary files to /usr/local/lib/, and the header files to /usr/local/include/openshot/... 
+This is where other projects will look for the libopenshot files when building. Python 3 bindings are 
+also installed at this point. let's verify the python bindings work:
 
 ```
 python3
 >>> import openshot
 ```
 
-If no errors are displayed, you have successfully compiled and installed libopenshot on your system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! Welcome to the OpenShot developer community! We look forward to meeting you!
+If no errors are displayed, you have successfully compiled and installed libopenshot on your system. 
+Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! 
+Welcome to the OpenShot developer community! We look forward to meeting you!
