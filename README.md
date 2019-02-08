@@ -15,11 +15,11 @@ instructions for getting source code, configuring dependencies, and building Ope
 
 ### Install
 
-Please see **/doc/InstallationGuide.pdf** for a very detailed  
-Linux, Mac, and Windows compiling instruction guide. An online version
-is also available: 
+We have detailed instructions for building/compiling libopenshot for each OS:
 
-https://docs.google.com/document/d/1V6nq-IuS9zxqO1-OSt8iTS_cw_HMCpsUNofHLYtUNjM/pub.
+   * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
+   * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
+   * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
 
 ### Documentation
 
