@@ -8,7 +8,8 @@ world.
 
 ### Install
 
-Detailed instructions for building libopenshot and libopenshot-audio for each OS:
+Detailed instructions for building libopenshot and libopenshot-audio for each OS. These instructions
+are also available in the /docs/ source folder.
 
    * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
    * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
@@ -34,10 +35,6 @@ instructions for getting source code, configuring dependencies, and building Ope
 You can report a new libopenshot issue directly on GitHub:
 
 https://github.com/OpenShot/libopenshot/issues
-
-### Authors
-
-Please see AUTHORS file for a full list of authors.
 
 ## Websites
 
