@@ -4,7 +4,7 @@ world.
 
 ## Build Status
 
-[![Build Status](https://travis-ci.org/OpenShot/libopenshot.svg?branch=develop)](https://travis-ci.org/OpenShot/libopenshot) `libopenshot`  [![Build Status](https://travis-ci.org/OpenShot/libopenshot-audio.svg?branch=develop)](https://travis-ci.org/OpenShot/libopenshot-audio) `libopenshot-audio`
+libopenshot: [![Build Status](https://travis-ci.org/OpenShot/libopenshot.svg?branch=develop)](https://travis-ci.org/OpenShot/libopenshot) | libopenshot-audio: [![Build Status](https://travis-ci.org/OpenShot/libopenshot-audio.svg?branch=develop)](https://travis-ci.org/OpenShot/libopenshot-audio)
 
 ## Developers
 
