@@ -14,13 +14,6 @@ Detailed instructions for building libopenshot and libopenshot-audio for each OS
    * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
    * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
 
-## Developers
-
-Are you interested in becoming more involved in the development of 
-OpenShot? Build exciting new features, fix bugs, make friends, and become a hero! 
-Please read the [step-by-step](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer) 
-instructions for getting source code, configuring dependencies, and building OpenShot.
-
 ### Documentation
 
 Beautiful HTML documentation can be generated using Doxygen.
@@ -28,6 +21,13 @@ Beautiful HTML documentation can be generated using Doxygen.
 make doc
 ```
 (Also available online: http://openshot.org/files/libopenshot/)
+
+## Developers
+
+Are you interested in becoming more involved in the development of 
+OpenShot? Build exciting new features, fix bugs, make friends, and become a hero! 
+Please read the [step-by-step](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer) 
+instructions for getting source code, configuring dependencies, and building OpenShot.
 
 ## Report a bug
 
