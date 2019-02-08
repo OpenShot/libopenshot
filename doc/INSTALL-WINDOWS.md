@@ -1,14 +1,28 @@
 ## Getting Started
 
-The best way to get started with libopenshot, is to learn about our build system, obtain all the source code, install a development IDE and tools, and better understand our dependencies. So, please read through the following sections, and follow the instructions. And keep in mind, that your computer is likely different than the one used when writing these instructions. Your file paths and versions of applications might be slightly different, so keep an eye out for subtle file path differences in the commands you type.
+The best way to get started with libopenshot, is to learn about our build system, obtain all the 
+source code, install a development IDE and tools, and better understand our dependencies. So, 
+please read through the following sections, and follow the instructions. And keep in mind, 
+that your computer is likely different than the one used when writing these instructions. 
+Your file paths and versions of applications might be slightly different, so keep an eye out 
+for subtle file path differences in the commands you type.
 
 ## Build Tools
 
-CMake is the backbone of our build system.  It is a cross-platform build system, which checks for dependencies, locates header files and libraries, generates makefiles, and supports the cross-platform compiling of libopenshot and libopenshot-audio.  CMake uses an out-of-source build concept, where all temporary build files, such as makefiles, object files, and even the final binaries, are created outside of the source code folder, inside a /build/ sub-folder.  This prevents the build process from cluttering up the source code.  These instructions have only been tested with the GNU compiler (including MSYS2/MinGW for Windows).
+CMake is the backbone of our build system.  It is a cross-platform build system, which 
+checks for dependencies, locates header files and libraries, generates makefiles, and 
+supports the cross-platform compiling of libopenshot and libopenshot-audio.  CMake uses 
+an out-of-source build concept, where all temporary build files, such as makefiles, 
+object files, and even the final binaries, are created outside of the source code 
+folder, inside a /build/ sub-folder.  This prevents the build process from cluttering 
+up the source code.  These instructions have only been tested with the GNU compiler 
+(including MSYS2/MinGW for Windows).
 
 ## Dependencies
 
-The following libraries are required to build libopenshot.  Instructions on how to install these dependencies vary for each operating system.  Libraries and Executables have been labeled in the list below to help distinguish between them.
+The following libraries are required to build libopenshot.  Instructions on how to 
+install these dependencies vary for each operating system.  Libraries and Executables 
+have been labeled in the list below to help distinguish between them.
 
 * ### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
   * http://www.ffmpeg.org/ `(Library)`
@@ -55,7 +69,10 @@ The following libraries are required to build libopenshot.  Instructions on how 
   * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
 
 ## CMake Flags (Optional)
-There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled. Some of these flags might be required when compiling on certain OSes, just depending on how your build environment is setup. To add a build flag, follow this general syntax:  $ cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ../
+There are many different build flags that can be passed to cmake to adjust how libopenshot 
+is compiled. Some of these flags might be required when compiling on certain OSes, just 
+depending on how your build environment is setup. To add a build flag, follow this general 
+syntax: `cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ../`
 
 * MAGICKCORE_HDRI_ENABLE (default 0)
 * MAGICKCORE_QUANTUM_DEPTH (default 0)
@@ -70,9 +87,14 @@ There are many different build flags that can be passed to cmake to adjust how l
 
 ## Environment Variables
 
-Many environment variables will need to be set during this Windows installation guide. The command line will need to be closed and re-launched after any changes to your environment variables. Also, dependency libraries will not be found during linking or execution without being found in the PATH environment variable. So, if you get errors related to missing commands or libraries, double check the PATH variable.
+Many environment variables will need to be set during this Windows installation guide. 
+The command line will need to be closed and re-launched after any changes to your environment 
+variables. Also, dependency libraries will not be found during linking or execution without 
+being found in the PATH environment variable. So, if you get errors related to missing 
+commands or libraries, double check the PATH variable.
 
-The following environment variables need to be added to your “System Variables”.  Be sure to check each folder path for accuracy, as your paths will likely be different than this list.
+The following environment variables need to be added to your “System Variables”.  Be sure to 
+check each folder path for accuracy, as your paths will likely be different than this list.
 
 ### Example Variables
 
@@ -95,7 +117,9 @@ The following environment variables need to be added to your “System Variables
 
 ## Obtaining Source Code
 
-The first step in installing libopenshot is to obtain the most recent source code. The source code is available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command to obtain the latest libopenshot source code.
+The first step in installing libopenshot is to obtain the most recent source code. The source code 
+is available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command to 
+obtain the latest libopenshot source code.
 
 ```
 git clone https://github.com/OpenShot/libopenshot.git
@@ -107,13 +131,16 @@ git clone https://github.com/OpenShot/libopenshot-audio.git
 The source code is divided up into the following folders.
 
 * ### build/
-   * This folder needs to be manually created, and is used by cmake to store the temporary build files, such as makefiles, as well as the final binaries (library and test executables).
+   * This folder needs to be manually created, and is used by cmake to store the temporary 
+   build files, such as makefiles, as well as the final binaries (library and test executables).
 
 * ### cmake/
-   * This folder contains custom modules not included by default in cmake, used to find dependency libraries and headers and determine if these libraries are installed.
+   * This folder contains custom modules not included by default in cmake, used to find 
+   dependency libraries and headers and determine if these libraries are installed.
 
 * ### doc/
-   * This folder contains documentation and related files, such as logos and images required by the doxygen auto-generated documentation.
+   * This folder contains documentation and related files, such as logos and images 
+   required by the doxygen auto-generated documentation.
 
 * ### include/
    * This folder contains all headers (*.h) used by libopenshot.
@@ -122,10 +149,12 @@ The source code is divided up into the following folders.
    * This folder contains all source code (*.cpp) used by libopenshot.
 
 * ### tests/
-   * This folder contains all unit test code.  Each class has it’s own test file (*.cpp), and uses UnitTest++ macros to keep the test code simple and manageable.
+   * This folder contains all unit test code.  Each class has it’s own test file (*.cpp), and 
+   uses UnitTest++ macros to keep the test code simple and manageable.
 
 * ### thirdparty/
-   * This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
+   * This folder contains code not written by the OpenShot team. For example, jsoncpp, an 
+   open-source JSON parser.
 
 ## Install MSYS2 Dependencies
 
@@ -258,9 +287,12 @@ cmake -G "MinGW Makefiles" -DPYTHON_INCLUDE_DIR="C:/Python34/include/" -DPYTHON_
 mingw32-make
 ```
 
-If you are missing any dependencies for libopenshot, you will receive error messages at this point.  Just install the missing dependencies, and run the above commands again.  Repeat until no error messages are displayed and the build process completes.
+If you are missing any dependencies for libopenshot, you will receive error messages at this point. 
+Just install the missing dependencies, and run the above commands again. Repeat until no error 
+messages are displayed and the build process completes.
 
-Also, if you are having trouble building, please see the CMake Flags section above, as it might provide a solution for finding a missing folder path, missing Python 3 library, etc...
+Also, if you are having trouble building, please see the CMake Flags section above, as 
+it might provide a solution for finding a missing folder path, missing Python 3 library, etc...
 
 To run all unit tests (and verify everything is working correctly), launch a terminal, and enter:
 
@@ -274,17 +306,24 @@ To auto-generate the documentation for libopenshot, launch a terminal, and enter
 mingw32-make doc
 ```
 
-This will use doxygen to generate a folder of HTML files, with all classes and methods documented. The folder is located at build/doc/html/. Once libopenshot has been successfully built, we need to install it (i.e. copy it to the correct folder, so other libraries can find it).
+This will use doxygen to generate a folder of HTML files, with all classes and methods 
+documented. The folder is located at build/doc/html/. Once libopenshot has been successfully 
+built, we need to install it (i.e. copy it to the correct folder, so other libraries can find it).
 
 ```
 mingw32-make install
 ```
 
-This should copy the binary files to C:\Program Files\openshot\lib\, and the header files to C:\Program Files\openshot\include\...  This is where other projects will look for the libopenshot files when building.. Python 3 bindings are also installed at this point. let's verify the python bindings work:
+This should copy the binary files to C:\Program Files\openshot\lib\, and the header 
+files to C:\Program Files\openshot\include\...  This is where other projects will 
+look for the libopenshot files when building.. Python 3 bindings are also installed 
+at this point. let's verify the python bindings work:
 
 ```
 python3
 >>> import openshot
 ```
 
-If no errors are displayed, you have successfully compiled and installed libopenshot on your system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! Welcome to the OpenShot developer community! We look forward to meeting you!
+If no errors are displayed, you have successfully compiled and installed libopenshot on 
+your system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! 
+Welcome to the OpenShot developer community! We look forward to meeting you!
