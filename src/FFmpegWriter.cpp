@@ -203,9 +203,18 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 			hw_en_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
 		}
 		else {
-			new_codec = avcodec_find_encoder_by_name(codec.c_str());
-			hw_en_on = 0;
-			hw_en_supported = 0;
+			if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
+				new_codec = avcodec_find_encoder_by_name(codec.c_str());
+				hw_en_on = 1;
+				hw_en_supported = 1;
+				hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
+				hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+			}
+			else {
+				new_codec = avcodec_find_encoder_by_name(codec.c_str());
+				hw_en_on = 0;
+				hw_en_supported = 0;
+			}
 		}
 		#elif defined(__APPLE__)
 		if ( (strcmp(codec.c_str(),"h264_qsv") == 0)) {
