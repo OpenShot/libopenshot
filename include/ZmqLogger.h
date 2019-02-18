@@ -29,17 +29,17 @@
 #define OPENSHOT_LOGGER_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <stdlib.h>
+// #include "JuceLibraryCode/JuceHeader.h"
+// #include <iostream>
+// #include <iomanip>
+// #include <fstream>
+// #include <stdlib.h>
 #include <string>
-#include <sstream>
-#include <stdio.h>
-#include <time.h>
-#include <zmq.hpp>
-#include <unistd.h>
+// #include <sstream>
+// #include <stdio.h>
+// #include <time.h>
+// #include <zmq.hpp>
+// #include <unistd.h>
 
 
 using namespace std;
@@ -54,19 +54,19 @@ namespace openshot {
 	 */
 	class ZmqLogger {
 	private:
-		CriticalSection loggerCriticalSection;
+		//CriticalSection loggerCriticalSection;
 		string connection;
 
 		// Logfile related vars
 		string file_path;
-		ofstream log_file;
+		//ofstream log_file;
 		bool enabled;
 
 		/// ZMQ Context
-		zmq::context_t *context;
+		//zmq::context_t *context;
 
 		/// ZMQ Socket
-		zmq::socket_t *publisher;
+		//zmq::socket_t *publisher;
 
 		/// Default constructor
 		ZmqLogger(){}; 						 // Don't allow user to create an instance of this singleton

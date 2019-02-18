@@ -32,12 +32,21 @@
 #include <stdio.h>
 #include <signal.h>
 #ifdef __MINGW32__
+#if __cplusplus >= 201703L
+    #define byte BYTE
+#endif // __cplusplus >= 201703L
 	#include <winsock2.h>
 	#include <windows.h>
+#if __cplusplus >= 201703L
+    #undef byte
+#endif // __cplusplus >= 201703L
 	#include <DbgHelp.h>
 #else
 	#include <execinfo.h>
 #endif
+#include <sstream>
+#include <iostream>
+#include <iomanip>
 #include <errno.h>
 #include <cxxabi.h>
 #include "ZmqLogger.h"
