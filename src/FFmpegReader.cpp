@@ -472,8 +472,6 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame)
     #pragma omp critical (ReadStream)
 	  {
 			// Check the cache a 2nd time (due to a potential previous lock)
-			if (has_missing_frames)
-			    CheckMissingFrame(requested_frame);
 			frame = final_cache.GetFrame(requested_frame);
 			if (frame) {
 				// Debug output
@@ -648,9 +646,6 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame)
 
 				// Check if working frames are 'finished'
 				if (!is_seeking) {
-					// Check for any missing frames
-					CheckMissingFrame(requested_frame);
-
 					// Check for final frames
 					CheckWorkingFrames(false, requested_frame);
 				}
@@ -1726,6 +1721,22 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame)
 	map<int64_t, int64_t>::iterator itr;
 	bool found_missing_frame = false;
 
+	// Special MP3 Handling (ignore more than 1 video frame)
+	if (info.has_audio and info.has_video) {
+		AVCodecID aCodecId = AV_FIND_DECODER_CODEC_ID(aStream);
+		AVCodecID vCodecId = AV_FIND_DECODER_CODEC_ID(pStream);
+		// If MP3 with single video frame, handle this special case by copying the previously
+		// decoded image to the new frame. Otherwise, it will spend a huge amount of
+		// CPU time looking for missing images for all the audio-only frames.
+		if (checked_count > 8 && !missing_video_frames.count(requested_frame) &&
+			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
+			last_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
+				missing_video_frames.insert(pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
+				missing_video_frames_source.insert(pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
+				missing_frames.Add(last_video_frame);
+		}
+	}
+
 	// Check if requested frame is a missing frame
 	if (missing_video_frames.count(requested_frame) || missing_audio_frames.count(requested_frame)) {
 		int64_t missing_source_frame = -1;
@@ -1808,7 +1819,11 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		}
 
 		// Check if this frame is 'missing'
-		CheckMissingFrame(f->number);
+		bool foundFrame = CheckMissingFrame(f->number);
+		if (foundFrame) {
+			// If we already found the missing frame, no need to continue checking
+			break;
+		}
 
 		// Init # of times this frame has been checked so far
 		int checked_count = 0;
