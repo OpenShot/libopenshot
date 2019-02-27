@@ -1646,7 +1646,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts)
 			for (int64_t audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
 				if (!missing_audio_frames.count(audio_frame)) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame, "", -1, "", -1, "", -1);
-					missing_audio_frames.insert(pair<int64_t, int64_t>(previous_packet_location.frame - 1, audio_frame));
+					missing_audio_frames.insert(pair<int64_t, int64_t>(audio_frame, previous_packet_location.frame - 1));
 				}
 			}
 		}
@@ -1737,13 +1737,9 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame)
 		}
 	}
 
-	// Check if requested frame is a missing frame
-	if (missing_video_frames.count(requested_frame) || missing_audio_frames.count(requested_frame)) {
-		int64_t missing_source_frame = -1;
-		if (missing_video_frames.count(requested_frame))
-			missing_source_frame = missing_video_frames.find(requested_frame)->second;
-		else if (missing_audio_frames.count(requested_frame))
-			missing_source_frame = missing_audio_frames.find(requested_frame)->second;
+	// Check if requested video frame is a missing
+	if (missing_video_frames.count(requested_frame)) {
+		int64_t missing_source_frame = missing_video_frames.find(requested_frame)->second;
 
 		// Increment missing source frame check count (or init to 1)
 		if (checked_frames.count(missing_source_frame) == 0)
@@ -1776,21 +1772,26 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame)
 			std::shared_ptr<QImage> parent_image = parent_frame->GetImage();
 			if (parent_image) {
 				missing_frame->AddImage(std::shared_ptr<QImage>(new QImage(*parent_image)));
-
 				processed_video_frames[missing_frame->number] = missing_frame->number;
-				processed_audio_frames[missing_frame->number] = missing_frame->number;
-
-				// Move frame to final cache
-				final_cache.Add(missing_frame);
-
-				// Remove frame from working cache
-				working_cache.Remove(missing_frame->number);
-
-				// Update last_frame processed
-				last_frame = missing_frame->number;
 			}
 		}
+	}
 
+	// Check if requested audio frame is a missing
+	if (missing_audio_frames.count(requested_frame)) {
+
+		// Create blank missing frame
+		std::shared_ptr<Frame> missing_frame = CreateFrame(requested_frame);
+
+		// Get Samples per frame (for this frame number)
+		int samples_per_frame = Frame::GetSamplesPerFrame(missing_frame->number, info.fps, info.sample_rate, info.channels);
+
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame (Add Silence for Missing Audio Frame)", "requested_frame", requested_frame, "missing_frame->number", missing_frame->number, "samples_per_frame", samples_per_frame, "", -1, "", -1, "", -1);
+
+		// Add this frame to the processed map (since it's already done)
+		missing_frame->AddAudioSilence(samples_per_frame);
+		processed_audio_frames[missing_frame->number] = missing_frame->number;
 	}
 
 	return found_missing_frame;
@@ -1802,6 +1803,9 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 	// Loop through all working queue frames
     bool checked_count_tripped = false;
     int max_checked_count = 80;
+
+	// Check if requested frame is 'missing'
+	CheckMissingFrame(requested_frame);
 
 	while (true)
 	{
@@ -1819,11 +1823,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		}
 
 		// Check if this frame is 'missing'
-		bool foundFrame = CheckMissingFrame(f->number);
-		if (foundFrame) {
-			// If we already found the missing frame, no need to continue checking
-			break;
-		}
+		CheckMissingFrame(f->number);
 
 		// Init # of times this frame has been checked so far
 		int checked_count = 0;
