@@ -193,28 +193,26 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 
 	// Spot check values from the curve
 	CHECK_EQUAL(kf.GetInt(1), 500);
-	CHECK_EQUAL(kf.IsIncreasing(1), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).num, 1);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 12);
-	CHECK_EQUAL(kf.GetDelta(1), 500);
+	CHECK_EQUAL(kf.IsIncreasing(1), true);
+	CHECK_CLOSE(kf.GetDelta(1), 500, 0.01);
 
 	CHECK_EQUAL(kf.GetInt(24), 498);
 	CHECK_EQUAL(kf.IsIncreasing(24), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 3);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 6);
-	CHECK_EQUAL(kf.GetDelta(24), 0);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 1);
+	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 1);
+	CHECK_CLOSE(kf.GetDelta(24), -0.1717, 0.01);
 
-	CHECK_EQUAL(kf.GetLong(390), 100);
-	CHECK_EQUAL(kf.IsIncreasing(390), true);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 3);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 15);
-	CHECK_EQUAL(kf.GetDelta(390), 0);
+	CHECK_EQUAL(kf.GetLong(400), 100);
+	CHECK_EQUAL(kf.IsIncreasing(400), false);
+	CHECK_EQUAL(kf.GetRepeatFraction(400).num, 1);
+	CHECK_EQUAL(kf.GetRepeatFraction(400).den, 1);
+	CHECK_CLOSE(kf.GetDelta(400), -0.0019, 0.01);
 
-	CHECK_EQUAL(kf.GetLong(391), 100);
-	CHECK_EQUAL(kf.IsIncreasing(391), true);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 4);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 15);
-	CHECK_EQUAL(kf.GetDelta(388), -1);
+	CHECK_EQUAL(kf.GetLong(401), 100);
+	CHECK_EQUAL(kf.IsIncreasing(401), true);
+	CHECK_EQUAL(kf.GetRepeatFraction(401).num, 1);
+	CHECK_EQUAL(kf.GetRepeatFraction(401).den, 1);
+	CHECK_CLOSE(kf.GetDelta(401), 0.1174, 0.01);
 }
 
 
@@ -377,4 +375,20 @@ TEST(Keyframe_Remove_Duplicate_Point)
 	// Spot check values from the curve
 	CHECK_EQUAL(kf.GetLength(), 1);
 	CHECK_CLOSE(kf.GetPoint(0).co.Y, 2.0, 0.01);
+}
+
+TEST(Keyframe_Large_Number_Values)
+{
+	// Large value
+	int64_t large_value = 30 * 60 * 90;
+
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 1.0);
+	kf.AddPoint(large_value, 100.0); // 90 minutes long
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetLength(), large_value + 1);
+	CHECK_CLOSE(kf.GetPoint(0).co.Y, 1.0, 0.01);
+	CHECK_CLOSE(kf.GetPoint(1).co.Y, 100.0, 0.01);
 }

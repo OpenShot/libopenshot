@@ -296,18 +296,13 @@ bool Keyframe::IsIncreasing(int index)
 		Process();
 
 	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return long(round(Values[index].IsIncreasing()));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return long(round(Values[0].IsIncreasing()));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return long(round(Values[Values.size() - 1].IsIncreasing()));
-	else
-		// return the default direction of most curves (i.e. increasing is true)
+	if (GetDelta(index) > 0.0) {
+		// Increasing
 		return true;
+	} else {
+		// Decreasing
+		return false;
+	}
 }
 
 // Generate JSON string of this object
@@ -385,25 +380,15 @@ void Keyframe::SetJsonValue(Json::Value root) {
 }
 
 // Get the fraction that represents how many times this value is repeated in the curve
+// This is depreciated and will be removed soon.
 Fraction Keyframe::GetRepeatFraction(int64_t index)
 {
 	// Check if it needs to be processed
 	if (needs_update)
 		Process();
 
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return Values[index].Repeat();
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return Values[0].Repeat();
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return Values[Values.size() - 1].Repeat();
-	else
-		// return a blank coordinate (0,0)
-		return Fraction(1,1);
+	// return a blank coordinate (0,0)
+	return Fraction(1,1);
 }
 
 // Get the change in Y value (from the previous Y value)
@@ -414,17 +399,17 @@ double Keyframe::GetDelta(int64_t index)
 		Process();
 
 	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return Values[index].Delta();
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return Values[0].Delta();
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return Values[Values.size() - 1].Delta();
+	if (index <= 1 && Values.size() >= 1)
+		// Return first value as delta (special rule for first value)
+		return Values[index].Y;
+	else if (index > 1 && index < Values.size())
+		// Return delta between previous and current coordinate
+		return Values[index].Y - Values[index - 1].Y;
+	else if (index >= Values.size() && Values.size() > 1)
+		// Return delta of last two coordinates
+		return Values[Values.size() - 1].Y - Values[Values.size() - 2].Y;
 	else
-		// return a blank coordinate (0,0)
+		// return default delta
 		return 0.0;
 }
 
@@ -529,7 +514,7 @@ void Keyframe::PrintValues() {
 
 	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
-		cout << long(round(c.X)) << "\t" << c.Y << "\t" << c.IsIncreasing() << "\t" << c.Repeat().num << "\t" << c.Repeat().den << "\t" << c.Delta() << endl;
+		cout << long(round(c.X)) << "\t" << c.Y << "\t" << IsIncreasing(c.X) << "\t" << GetRepeatFraction(c.X).num << "\t" << GetRepeatFraction(c.X).den << "\t" << GetDelta(c.X) << endl;
 	}
 }
 
@@ -566,69 +551,6 @@ void Keyframe::Process() {
 
 				// process segment p1,p2
 				ProcessSegment(x, p1, p2);
-			}
-
-			// Loop through each Value, and set the direction of the coordinate.  This is used
-			// when time mapping, to determine what direction the audio waveforms play.
-			bool increasing = true;
-			int repeat_count = 1;
-			int64_t last_value = 0;
-			for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
-				int current_value = long(round((*it).Y));
-				int64_t next_value = long(round((*it).Y));
-				int64_t prev_value = long(round((*it).Y));
-				if (it + 1 != Values.end())
-					next_value = long(round((*(it + 1)).Y));
-				if (it - 1 >= Values.begin())
-					prev_value = long(round((*(it - 1)).Y));
-
-				// Loop forward and look for the next unique value (to determine direction)
-				for (vector<Coordinate>::iterator direction_it = it + 1; direction_it != Values.end(); direction_it++) {
-					int64_t next = long(round((*direction_it).Y));
-
-					// Detect direction
-					if (current_value < next)
-					{
-						increasing = true;
-						break;
-					}
-					else if (current_value > next)
-					{
-						increasing = false;
-						break;
-					}
-				}
-
-				// Set direction
-				(*it).IsIncreasing(increasing);
-
-				// Detect repeated Y value
-				if (current_value == last_value)
-					// repeated, so increment count
-					repeat_count++;
-				else
-					// reset repeat counter
-					repeat_count = 1;
-
-				// Detect how many 'more' times it's repeated
-				int additional_repeats = 0;
-				for (vector<Coordinate>::iterator repeat_it = it + 1; repeat_it != Values.end(); repeat_it++) {
-					int64_t next = long(round((*repeat_it).Y));
-					if (next == current_value)
-						// repeated, so increment count
-						additional_repeats++;
-					else
-						break; // stop looping
-				}
-
-				// Set repeat fraction
-				(*it).Repeat(Fraction(repeat_count, repeat_count + additional_repeats));
-
-				// Set delta (i.e. different from previous unique Y value)
-				(*it).Delta(current_value - last_value);
-
-				// track the last value
-				last_value = current_value;
 			}
 		}
 

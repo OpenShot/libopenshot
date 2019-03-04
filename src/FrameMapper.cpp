@@ -54,9 +54,6 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 	// Adjust cache size based on size of frame and audio
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-
-	// init mapping between original and target frames
-	Init();
 }
 
 // Destructor
@@ -205,22 +202,23 @@ void FrameMapper::Init()
 		}
 
 	} else {
-		// Map the remaining framerates using a simple Keyframe curve
-		// Calculate the difference (to be used as a multiplier)
+		// Map the remaining framerates using a linear algorithm
 		double rate_diff = target.ToDouble() / original.ToDouble();
 		int64_t new_length = reader->info.video_length * rate_diff;
 
-		// Build curve for framerate mapping
-		Keyframe rate_curve;
-		rate_curve.AddPoint(1, 1, LINEAR);
-		rate_curve.AddPoint(new_length, reader->info.video_length, LINEAR);
+		// Calculate the value difference
+		double value_increment = reader->info.video_length / (double) (new_length);
 
 		// Loop through curve, and build list of frames
+		double original_frame_num = 1.0f;
 		for (int64_t frame_num = 1; frame_num <= new_length; frame_num++)
 		{
 			// Add 2 fields per frame
-			AddField(rate_curve.GetInt(frame_num));
-			AddField(rate_curve.GetInt(frame_num));
+			AddField(round(original_frame_num));
+			AddField(round(original_frame_num));
+
+			// Increment original frame number
+			original_frame_num += value_increment;
 		}
 	}
 
@@ -310,6 +308,11 @@ void FrameMapper::Init()
 
 MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Ignore mapping on single image readers
 	if (info.has_video and !info.has_audio and info.has_single_image) {
 		// Return the same number
@@ -743,14 +746,16 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 		SWR_FREE(&avr);
 		avr = NULL;
 	}
-
-	// Re-init mapping
-	Init();
 }
 
 // Resample audio and map channels (if needed)
 void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number)
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Init audio buffers / variables
 	int total_frame_samples = 0;
 	int channels_in_frame = frame->GetAudioChannelsCount();
