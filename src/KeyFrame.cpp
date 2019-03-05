@@ -296,13 +296,49 @@ bool Keyframe::IsIncreasing(int index)
 		Process();
 
 	// Is index a valid point?
-	if (GetDelta(index) > 0.0) {
-		// Increasing
-		return true;
-	} else {
-		// Decreasing
-		return false;
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		if (current_value < next_value) {
+			// Increasing
+			return true;
+		}
+		else if (current_value >= next_value) {
+			// Decreasing
+			return false;
+		}
 	}
+	else
+		// return default true (since most curves increase)
+		return true;
 }
 
 // Generate JSON string of this object
@@ -387,8 +423,44 @@ Fraction Keyframe::GetRepeatFraction(int64_t index)
 	if (needs_update)
 		Process();
 
-	// return a blank coordinate (0,0)
-	return Fraction(1,1);
+	// Is index a valid point?
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		int64_t total_repeats = previous_repeats + next_repeats;
+		return Fraction(previous_repeats, total_repeats);
+	}
+	else
+		// return a blank coordinate
+		return Fraction(1,1);
 }
 
 // Get the change in Y value (from the previous Y value)
@@ -399,17 +471,48 @@ double Keyframe::GetDelta(int64_t index)
 		Process();
 
 	// Is index a valid point?
-	if (index <= 1 && Values.size() >= 1)
-		// Return first value as delta (special rule for first value)
-		return Values[index].Y;
-	else if (index > 1 && index < Values.size())
-		// Return delta between previous and current coordinate
-		return Values[index].Y - Values[index - 1].Y;
-	else if (index >= Values.size() && Values.size() > 1)
-		// Return delta of last two coordinates
-		return Values[Values.size() - 1].Y - Values[Values.size() - 2].Y;
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Check for matching previous value (special case for 1st element)
+		if (current_value == previous_value)
+			previous_value = 0;
+
+		if (previous_repeats == 1)
+			return current_value - previous_value;
+		else
+			return 0.0;
+	}
 	else
-		// return default delta
+		// return a blank coordinate
 		return 0.0;
 }
 
