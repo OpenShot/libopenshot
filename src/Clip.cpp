@@ -340,13 +340,13 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
-		std::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
+		get_time_mapped_frame(frame, requested_frame);
 
 		// Apply effects to the frame (if any)
-		apply_effects(new_frame);
+		apply_effects(frame);
 
 		// Return processed 'frame'
-		return new_frame;
+		return frame;
 	}
 	else
 		// Throw error if reader not initialized
@@ -389,7 +389,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
+void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
 	// Check for valid reader
 	if (!reader)
@@ -400,7 +400,6 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 	if (time.Values.size() > 1)
 	{
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
-		std::shared_ptr<Frame> new_frame;
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -408,14 +407,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 			resampler = new AudioResampler();
 
 		// Get new frame number
-		int new_frame_number = adjust_frame_number_minimum(round(time.GetValue(frame_number)));
-
-		// Create a new frame
-		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate, frame->GetAudioChannelsCount());
-		new_frame = std::make_shared<Frame>(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount());
-
-		// Copy the image from the new frame
-		new_frame->AddImage(std::shared_ptr<QImage>(new QImage(*GetOrCreateFrame(new_frame_number)->GetImage())));
+		int new_frame_number = frame->number;
 
 		// Get delta (difference in previous Y value)
 		int delta = int(round(time.GetDelta(frame_number)));
@@ -463,7 +455,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 					start -= 1;
 				for (int channel = 0; channel < channels; channel++)
 					// Add new (slower) samples, to the frame object
-					new_frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
+					frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
 										number_of_samples, 1.0f);
 
 				// Clean up
@@ -571,7 +563,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
 					// Add new (slower) samples, to the frame object
-					new_frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
+					frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
 
 				// Clean up
 				buffer = NULL;
@@ -592,7 +584,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 
 				// Add reversed samples to the frame object
 				for (int channel = 0; channel < channels; channel++)
-					new_frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
+					frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
 
 
 			}
@@ -600,13 +592,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 			delete samples;
 			samples = NULL;
 		}
-
-		// Return new time mapped frame
-		return new_frame;
-
-	} else
-		// Use original frame
-		return frame;
+	}
 }
 
 // Adjust frame number minimum value

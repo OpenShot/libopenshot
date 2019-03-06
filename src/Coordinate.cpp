@@ -32,12 +32,12 @@ using namespace openshot;
 
 // Default constructor for a coordinate, which defaults the X and Y to zero (0,0)
 Coordinate::Coordinate() :
-	X(0), Y(0), increasing(true), repeated(1,1), delta(0.0) {
+	X(0), Y(0) {
 }
 
 // Constructor which also allows the user to set the X and Y
 Coordinate::Coordinate(double x, double y) :
-	X(x), Y(y), increasing(true), repeated(1,1), delta(0.0)  {
+	X(x), Y(y) {
 }
 
 
@@ -96,15 +96,4 @@ void Coordinate::SetJsonValue(Json::Value root) {
 		X = root["X"].asDouble();
 	if (!root["Y"].isNull())
 		Y = root["Y"].asDouble();
-	if (!root["increasing"].isNull())
-		increasing = root["increasing"].asBool();
-	if (!root["repeated"].isNull() && root["repeated"].isObject())
-	{
-		if (!root["repeated"]["num"].isNull())
-			repeated.num = root["repeated"]["num"].asInt();
-		if (!root["repeated"]["den"].isNull())
-			repeated.den = root["repeated"]["den"].asInt();
-	}
-	if (!root["delta"].isNull())
-		delta = root["delta"].asDouble();
 }
