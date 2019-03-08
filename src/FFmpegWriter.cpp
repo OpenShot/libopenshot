@@ -1132,8 +1132,14 @@ AVStream* FFmpegWriter::add_video_stream()
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
-		c->qmin = 2;
-		c->qmax = 30;
+		if (info.video_bit_rate >= 1500000) {
+			c->qmin = 2;
+			c->qmax = 30;
+		}
+		else {
+			c->qmin = 0;
+			c->qmax = 63;
+		}
 	}
 	else {
 		c->qmin = 0;
