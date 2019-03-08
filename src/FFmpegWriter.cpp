@@ -1132,6 +1132,12 @@ AVStream* FFmpegWriter::add_video_stream()
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000) {
 		c->bit_rate = info.video_bit_rate;
+		c->qmin = 2;
+		c->qmax = 30;
+	}
+	else {
+		c->qmin = 0;
+		c->qmax = 63;
 	}
 
 //TODO: Implement variable bitrate feature (which actually works). This implementation throws
@@ -1141,8 +1147,8 @@ AVStream* FFmpegWriter::add_video_stream()
 	//c->rc_buffer_size = FFMAX(c->rc_max_rate, 15000000) * 112L / 15000000 * 16384;
 	//if ( !c->rc_initial_buffer_occupancy )
 	//	c->rc_initial_buffer_occupancy = c->rc_buffer_size * 3/4;
-	c->qmin = 2;
-	c->qmax = 30;
+//	c->qmin = 2;
+//	c->qmax = 30;
 
 	/* resolution must be a multiple of two */
 	// TODO: require /2 height and width
