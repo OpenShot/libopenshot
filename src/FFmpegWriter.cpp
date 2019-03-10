@@ -1140,8 +1140,14 @@ AVStream* FFmpegWriter::add_video_stream()
 		// Defaults are used because mpeg2 otherwise had problems
 	}
 	else {
-		c->qmin = 0;
-		c->qmax = 63;
+		if (info.video_bit_rate < 40) {
+			c->qmin = 0;
+			c->qmax = 63;
+		}
+		else {
+			c->qmin = info.video_bit_rate - 5;
+			c->qmax = 63;
+		}
 	}
 
 //TODO: Implement variable bitrate feature (which actually works). This implementation throws
