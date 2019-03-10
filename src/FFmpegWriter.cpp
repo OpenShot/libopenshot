@@ -1140,13 +1140,28 @@ AVStream* FFmpegWriter::add_video_stream()
 		// Defaults are used because mpeg2 otherwise had problems
 	}
 	else {
-		if (info.video_bit_rate < 40) {
-			c->qmin = 0;
-			c->qmax = 63;
-		}
-		else {
-			c->qmin = info.video_bit_rate - 5;
-			c->qmax = 63;
+		// Check if codec supports crf
+		switch (c->codec_id) {
+			#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+			case AV_CODEC_ID_AV1 :
+			#endif
+			case AV_CODEC_ID_VP8 :
+			case AV_CODEC_ID_VP9 :
+			case AV_CODEC_ID_H264 :
+			case AV_CODEC_ID_H265 :
+				if (info.video_bit_rate < 40) {
+					c->qmin = 0;
+					c->qmax = 63;
+				}
+				else {
+					c->qmin = info.video_bit_rate - 5;
+					c->qmax = 63;
+				}
+				break;
+			default:
+				// Here should be the setting for codecs that don't support crf
+				// For now defaults are used
+				break;
 		}
 	}
 
