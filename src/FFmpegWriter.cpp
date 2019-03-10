@@ -1142,13 +1142,15 @@ AVStream* FFmpegWriter::add_video_stream()
 	else {
 		// Check if codec supports crf
 		switch (c->codec_id) {
+			#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 			#if (LIBAVCODEC_VERSION_MAJOR >= 58)
 			case AV_CODEC_ID_AV1 :
 			#endif
-			case AV_CODEC_ID_VP8 :
 			case AV_CODEC_ID_VP9 :
-			case AV_CODEC_ID_H264 :
 			case AV_CODEC_ID_H265 :
+			#endif
+			case AV_CODEC_ID_VP8 :
+			case AV_CODEC_ID_H264 :
 				if (info.video_bit_rate < 40) {
 					c->qmin = 0;
 					c->qmax = 63;
