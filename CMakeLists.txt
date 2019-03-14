@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2014 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -41,8 +41,8 @@ MESSAGE("Determining Version Number (from Version.h file)")
 #### Get the lines related to libopenshot version from the Version.h header
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h OPENSHOT_VERSION_LINES
   REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
-  
-#### Set each line into it's own variable
+
+#### Set each line into its own variable
 list (GET OPENSHOT_VERSION_LINES 0 LINE_MAJOR)
 list (GET OPENSHOT_VERSION_LINES 1 LINE_MINOR)
 list (GET OPENSHOT_VERSION_LINES 2 LINE_BUILD)

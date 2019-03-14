@@ -197,7 +197,7 @@ namespace openshot
 		/// Clean up buffer after QImage is deleted
 		static void cleanUpBuffer(void *info);
 
-		/// Clear the waveform image (and deallocate it's memory)
+		/// Clear the waveform image (and deallocate its memory)
 		void ClearWaveform();
 
 		/// Copy data and pointers from another Frame instance

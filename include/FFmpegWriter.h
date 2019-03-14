@@ -83,7 +83,7 @@ namespace openshot
 	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
 	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
 	 *
 	 * // Open the writer
@@ -110,7 +110,7 @@ namespace openshot
 	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
 	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
 	 *
 	 * // Prepare Streams (Optional method that must be called before any SetOption calls)
