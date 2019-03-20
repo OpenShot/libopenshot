@@ -22,7 +22,10 @@ linux-builder:
     - make install
     - mv /usr/local/lib/python3.4/dist-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
+  except:
+  - tags
   tags:
     - linux
 
@@ -46,7 +49,10 @@ mac-builder:
     - make install
     - mv /Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
+  except:
+  - tags
   tags:
     - mac
 
@@ -62,6 +68,7 @@ windows-builder-x86:
     - Expand-Archive -Path artifacts.zip -DestinationPath .
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
     - $env:UNITTEST_DIR = "C:\msys32\usr"
+    - $env:RESVGDIR = "C:\msys32\usr\local"
     - $env:ZMQDIR = "C:\msys32\usr"
     - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
@@ -72,7 +79,11 @@ windows-builder-x86:
     - Move-Item -Force -path "C:\msys32\mingw32\lib\python3.6\site-packages\*openshot*" -destination "install-x86\python\"
     - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
+    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
   when: always
+  except:
+  - tags
   tags:
     - windows
 
@@ -98,7 +109,11 @@ windows-builder-x64:
     - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "install-x64\python\"
     - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
+    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
+  except:
+  - tags
   tags:
     - windows
 
@@ -108,5 +123,7 @@ trigger-pipeline:
     - "curl -X POST -F token=$OPENSHOT_QT_PIPELINE_TOKEN -F ref=$CI_COMMIT_REF_NAME http://gitlab.openshot.org/api/v4/projects/3/trigger/pipeline"
   when: always
   dependencies: []
+  except:
+  - tags
   tags:
     - gitlab

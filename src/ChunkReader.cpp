@@ -26,6 +26,7 @@
  */
 
 #include "../include/ChunkReader.h"
+#include "../include/FFmpegReader.h"
 
 using namespace openshot;
 
@@ -227,7 +228,6 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 			cout << "Load READER: " << chunk_video_path << endl;
 			// Load new FFmpegReader
 			local_reader = new FFmpegReader(chunk_video_path);
-			local_reader->enable_seek = false; // disable seeking
 			local_reader->Open(); // open reader
 
 		} catch (InvalidFile)

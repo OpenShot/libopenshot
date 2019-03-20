@@ -88,6 +88,7 @@ namespace std {
 #include "../../../include/QtPlayer.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
+#include "../../../include/Settings.h"
 #include "../../../include/Timeline.h"
 #include "../../../include/ZmqLogger.h"
 
@@ -143,6 +144,7 @@ namespace std {
 %include "../../../include/QtPlayer.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
+%include "../../../include/Settings.h"
 %include "../../../include/Timeline.h"
 %include "../../../include/ZmqLogger.h"
 

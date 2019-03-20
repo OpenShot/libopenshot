@@ -102,6 +102,12 @@ namespace openshot
 				// Ignore out of bounds frame exceptions
 			}
 
+			// Is cache position behind current display frame?
+			if (position < current_display_frame) {
+				// Jump ahead
+				position = current_display_frame;
+			}
+
 	    	// Increment frame number
 	    	position++;
 	    }

@@ -44,18 +44,9 @@
 #include "EffectBase.h"
 #include "Effects.h"
 #include "EffectInfo.h"
-#include "FFmpegReader.h"
 #include "Fraction.h"
-#include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
-#include "QtImageReader.h"
-#include "ChunkReader.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
-#include "DummyReader.h"
 
 using namespace std;
 using namespace openshot;
@@ -136,7 +127,7 @@ namespace openshot {
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		/// Adjust the audio and image of a time mapped frame
-		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number);
+		void get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number);
 
 		/// Init default settings for a clip
 		void init_settings();

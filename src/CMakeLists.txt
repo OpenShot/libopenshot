@@ -79,11 +79,6 @@ ENDIF (ImageMagick_FOUND)
 # Find FFmpeg libraries (used for video encoding / decoding)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
-# Include FFmpeg headers (needed for compile)
-message('AVCODEC_FOUND: ${AVCODEC_FOUND}')
-message('AVCODEC_INCLUDE_DIRS: ${AVCODEC_INCLUDE_DIRS}')
-message('AVCODEC_LIBRARIES: ${AVCODEC_LIBRARIES}')
-
 IF (AVCODEC_FOUND)
 	include_directories(${AVCODEC_INCLUDE_DIRS})
 ENDIF (AVCODEC_FOUND)
@@ -115,8 +110,6 @@ ENDIF (AVRESAMPLE_FOUND)
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 FIND_PACKAGE(OpenShotAudio REQUIRED)
-
-message('LIBOPENSHOT_AUDIO_INCLUDE_DIRS: ${LIBOPENSHOT_AUDIO_INCLUDE_DIRS}')
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
@@ -190,13 +183,26 @@ FIND_PACKAGE(ZMQ REQUIRED)
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
 
+################### RESVG #####################
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG)
+
+# Include resvg headers (optional SVG library)
+if (RESVG_FOUND)
+   include_directories(${RESVG_INCLUDE_DIRS})
+
+   # define a global var (used in the C++)
+   add_definitions( -DUSE_RESVG=1 )
+   SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+endif(RESVG_FOUND)
+
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
 else()
-	message("Using embedded JsonCpp")
+	message("-- Could NOT find JsonCpp library (Using embedded JsonCpp instead)")
 	include_directories("../thirdparty/jsoncpp/include")
 endif(USE_SYSTEM_JSONCPP)
 
@@ -244,6 +250,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Profiles.cpp
 		QtImageReader.cpp
 		QtPlayer.cpp
+		Settings.cpp
 		Timeline.cpp
 
 		# Qt Video Player
@@ -332,6 +339,10 @@ ENDIF (SWRESAMPLE_FOUND)
 IF (AVRESAMPLE_FOUND)
 	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVRESAMPLE_LIBRARIES} )
 ENDIF (AVRESAMPLE_FOUND)
+
+IF (RESVG_FOUND)
+	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${RESVG_LIBRARIES} )
+ENDIF(RESVG_FOUND)
 
 IF (OPENMP_FOUND)
 	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )

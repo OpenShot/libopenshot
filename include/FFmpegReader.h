@@ -42,8 +42,10 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
+#include "Clip.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
+#include "Settings.h"
 
 
 using namespace std;
@@ -105,7 +107,6 @@ namespace openshot
 		bool check_interlace;
 		bool check_fps;
 		bool has_missing_frames;
-		bool use_omp_threads;
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
