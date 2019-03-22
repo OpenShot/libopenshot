@@ -1442,7 +1442,7 @@ void Timeline::ClearAllCache() {
 // Set Max Image Size (used for performance optimization). Convenience function for setting
 // Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
 void Timeline::SetMaxSize(int width, int height) {
-	// Init max image size
-	Settings::Instance()->MAX_WIDTH = width;
-	Settings::Instance()->MAX_HEIGHT = height;
+	// Init max image size (choose the smallest one)
+	Settings::Instance()->MAX_WIDTH = min(width, info.width);
+	Settings::Instance()->MAX_HEIGHT = min(height, info.height);
 }

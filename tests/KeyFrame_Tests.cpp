@@ -378,3 +378,19 @@ TEST(Keyframe_Remove_Duplicate_Point)
 	CHECK_EQUAL(kf.GetLength(), 1);
 	CHECK_CLOSE(kf.GetPoint(0).co.Y, 2.0, 0.01);
 }
+
+TEST(Keyframe_Large_Number_Values)
+{
+	// Large value
+	int64_t large_value = 30 * 60 * 90;
+
+	// Create a keyframe curve with 2 points
+	Keyframe kf;
+	kf.AddPoint(1, 1.0);
+	kf.AddPoint(large_value, 100.0); // 90 minutes long
+
+	// Spot check values from the curve
+	CHECK_EQUAL(kf.GetLength(), large_value + 1);
+	CHECK_CLOSE(kf.GetPoint(0).co.Y, 1.0, 0.01);
+	CHECK_CLOSE(kf.GetPoint(1).co.Y, 100.0, 0.01);
+}
