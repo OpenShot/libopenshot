@@ -38,7 +38,7 @@
 	#define _NDEBUG
 #endif
 
-#include "JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 #include "AudioBufferSource.h"
 #include "Exceptions.h"
 

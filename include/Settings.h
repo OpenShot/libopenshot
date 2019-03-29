@@ -29,7 +29,7 @@
 #define OPENSHOT_SETTINGS_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>

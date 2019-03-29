@@ -36,7 +36,7 @@
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
-#include "JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"

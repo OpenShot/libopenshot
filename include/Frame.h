@@ -56,7 +56,7 @@
 #ifdef USE_IMAGEMAGICK
 	#include "Magick++.h"
 #endif
-#include "JuceLibraryCode/JuceHeader.h"
+#include "JuceHeader.h"
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
