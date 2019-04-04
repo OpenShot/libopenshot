@@ -42,11 +42,18 @@ namespace openshot
 			m_pInstance = new AudioDeviceManagerSingleton;
 
 			// Initialize audio device only 1 time
-            m_pInstance->audioDeviceManager.initialise (
+			String error = m_pInstance->audioDeviceManager.initialise (
 					0, /* number of input channels */
                     numChannels, /* number of output channels */
 					0, /* no XML settings.. */
 					true  /* select default device on failure */);
+
+			// Persist any errors detected
+			if (error.isNotEmpty()) {
+				m_pInstance->initialise_error = error.toStdString();
+			} else {
+				m_pInstance->initialise_error = "";
+			}
 		}
 
 		return m_pInstance;
