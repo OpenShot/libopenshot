@@ -512,6 +512,8 @@ int Frame::GetSamplesPerFrame(int64_t number, Fraction fps, int sample_rate, int
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
 	int samples_per_frame = round(total_samples - previous_samples);
+	if (samples_per_frame < 0)
+		samples_per_frame = 0;
 	return samples_per_frame;
 }
 
@@ -951,11 +953,15 @@ void Frame::Play()
 		return;
 
 	AudioDeviceManager deviceManager;
-	deviceManager.initialise (0, /* number of input channels */
+	String error = deviceManager.initialise (0, /* number of input channels */
 	        2, /* number of output channels */
 	        0, /* no XML settings.. */
 	        true  /* select default device on failure */);
-	//deviceManager.playTestSound();
+
+	// Output error (if any)
+	if (error.isNotEmpty()) {
+		cout << "Error on initialise(): " << error.toStdString() << endl;
+	}
 
 	AudioSourcePlayer audioSourcePlayer;
 	deviceManager.addAudioCallback (&audioSourcePlayer);

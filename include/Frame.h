@@ -56,13 +56,13 @@
 #ifdef USE_IMAGEMAGICK
 	#include "Magick++.h"
 #endif
-#include "JuceLibraryCode/JuceHeader.h"
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
+#include "JuceHeader.h"
 
-
+#pragma SWIG nowarn=362
 using namespace std;
 
 namespace openshot

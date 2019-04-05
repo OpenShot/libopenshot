@@ -31,9 +31,9 @@
 
 #include <iostream>
 #include <vector>
-#include "../include/PlayerBase.h"
-#include "../include/Qt/PlayerPrivate.h"
-#include "../include/RendererBase.h"
+#include "PlayerBase.h"
+#include "Qt/PlayerPrivate.h"
+#include "RendererBase.h"
 
 using namespace std;
 
@@ -58,6 +58,9 @@ namespace openshot
 
 	/// Close audio device
 	void CloseAudioDevice();
+
+	/// Get Error (if any)
+	string GetError();
 
 	/// Play the video
 	void Play();

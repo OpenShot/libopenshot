@@ -51,6 +51,7 @@
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
 #include "ZmqLogger.h"
+#include "Settings.h"
 
 
 using namespace std;
@@ -174,8 +175,8 @@ namespace openshot
 	    int initial_audio_input_frame_size;
 	    int audio_input_position;
 	    int audio_encoder_buffer_size;
-	    AVAudioResampleContext *avr;
-	    AVAudioResampleContext *avr_planar;
+	    SWRCONTEXT *avr;
+	    SWRCONTEXT *avr_planar;
 
 	    /* Resample options */
 	    int original_sample_rate;

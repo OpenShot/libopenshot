@@ -54,9 +54,6 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 	// Adjust cache size based on size of frame and audio
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-
-	// init mapping between original and target frames
-	Init();
 }
 
 // Destructor
@@ -205,22 +202,23 @@ void FrameMapper::Init()
 		}
 
 	} else {
-		// Map the remaining framerates using a simple Keyframe curve
-		// Calculate the difference (to be used as a multiplier)
+		// Map the remaining framerates using a linear algorithm
 		double rate_diff = target.ToDouble() / original.ToDouble();
 		int64_t new_length = reader->info.video_length * rate_diff;
 
-		// Build curve for framerate mapping
-		Keyframe rate_curve;
-		rate_curve.AddPoint(1, 1, LINEAR);
-		rate_curve.AddPoint(new_length, reader->info.video_length, LINEAR);
+		// Calculate the value difference
+		double value_increment = (reader->info.video_length + 1) / (double) (new_length);
 
 		// Loop through curve, and build list of frames
+		double original_frame_num = 1.0f;
 		for (int64_t frame_num = 1; frame_num <= new_length; frame_num++)
 		{
 			// Add 2 fields per frame
-			AddField(rate_curve.GetInt(frame_num));
-			AddField(rate_curve.GetInt(frame_num));
+			AddField(round(original_frame_num));
+			AddField(round(original_frame_num));
+
+			// Increment original frame number
+			original_frame_num += value_increment;
 		}
 	}
 
@@ -310,6 +308,11 @@ void FrameMapper::Init()
 
 MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Ignore mapping on single image readers
 	if (info.has_video and !info.has_audio and info.has_single_image) {
 		// Return the same number
@@ -352,9 +355,6 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Set max image size (used for performance optimization)
-		reader->SetMaxSize(max_width, max_height);
-
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -376,6 +376,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	new_frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(info.channel_layout);
+	new_frame->AddAudioSilence(samples_in_frame);
 	return new_frame;
 }
 
@@ -650,8 +651,8 @@ void FrameMapper::Close()
 
 		// Deallocate resample buffer
 		if (avr) {
-			avresample_close(avr);
-			avresample_free(&avr);
+			SWR_CLOSE(avr);
+			SWR_FREE(&avr);
 			avr = NULL;
 		}
 	}
@@ -741,18 +742,20 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 
 	// Deallocate resample buffer
 	if (avr) {
-		avresample_close(avr);
-		avresample_free(&avr);
+		SWR_CLOSE(avr);
+		SWR_FREE(&avr);
 		avr = NULL;
 	}
-
-	// Re-init mapping
-	Init();
 }
 
 // Resample audio and map channels (if needed)
 void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number)
 {
+	// Check if mappings are dirty (and need to be recalculated)
+	if (is_dirty)
+		// Recalculate mappings
+		Init();
+
 	// Init audio buffers / variables
 	int total_frame_samples = 0;
 	int channels_in_frame = frame->GetAudioChannelsCount();
@@ -817,7 +820,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
     // setup resample context
     if (!avr) {
-        avr = avresample_alloc_context();
+        avr = SWR_ALLOC();
         av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
         av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
         av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
@@ -826,11 +829,11 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
         av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
         av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
         av_opt_set_int(avr, "out_channels",       info.channels,    0);
-        avresample_open(avr);
+        SWR_INIT(avr);
     }
 
     // Convert audio samples
-    nb_samples = avresample_convert(avr, 	// audio resample context
+    nb_samples = SWR_CONVERT(avr, 	// audio resample context
             audio_converted->data, 			// output data pointers
             audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
             audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold

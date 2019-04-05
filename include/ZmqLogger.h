@@ -29,7 +29,6 @@
 #define OPENSHOT_LOGGER_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -40,6 +39,7 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
+#include "JuceHeader.h"
 
 
 using namespace std;
@@ -47,11 +47,10 @@ using namespace std;
 namespace openshot {
 
 	/**
-	 * @brief This abstract class is the base class, used by all readers in libopenshot.
+	 * @brief This class is used for logging and sending those logs over a ZemoMQ socket to a listener
 	 *
-	 * Readers are types of classes that read video, audio, and image files, and
-	 * return openshot::Frame objects. The only requirements for a 'reader', are to
-	 * derive from this base class, implement the GetFrame method, and call the InitFileInfo() method.
+	 * OpenShot desktop editor listens to this port, to receive libopenshot debug output. It both logs to
+	 * a file and sends the stdout over a socket.
 	 */
 	class ZmqLogger {
 	private:
@@ -72,11 +71,19 @@ namespace openshot {
 		/// Default constructor
 		ZmqLogger(){}; 						 // Don't allow user to create an instance of this singleton
 
+#if __GNUC__ >=7
 		/// Default copy method
-		ZmqLogger(ZmqLogger const&){};             // Don't allow the user to copy this instance
+		ZmqLogger(ZmqLogger const&) = delete; // Don't allow the user to assign this instance
 
 		/// Default assignment operator
-		ZmqLogger & operator=(ZmqLogger const&){};  // Don't allow the user to assign this instance
+		ZmqLogger & operator=(ZmqLogger const&) = delete;  // Don't allow the user to assign this instance
+#else
+		/// Default copy method
+		ZmqLogger(ZmqLogger const&) {}; // Don't allow the user to assign this instance
+
+		/// Default assignment operator
+		ZmqLogger & operator=(ZmqLogger const&);  // Don't allow the user to assign this instance
+#endif
 
 		/// Private variable to keep track of singleton instance
 		static ZmqLogger * m_pInstance;

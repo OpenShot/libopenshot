@@ -32,8 +32,8 @@
 #include <iomanip>
 #include <memory>
 #include "ClipBase.h"
-#include "Frame.h"
 #include "Json.h"
+#include "Frame.h"
 
 using namespace std;
 

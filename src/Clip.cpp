@@ -26,6 +26,15 @@
  */
 
 #include "../include/Clip.h"
+#include "../include/FFmpegReader.h"
+#include "../include/FrameMapper.h"
+#ifdef USE_IMAGEMAGICK
+	#include "../include/ImageReader.h"
+	#include "../include/TextReader.h"
+#endif
+#include "../include/QtImageReader.h"
+#include "../include/ChunkReader.h"
+#include "../include/DummyReader.h"
 
 using namespace openshot;
 
@@ -212,6 +221,9 @@ void Clip::Reader(ReaderBase* new_reader)
 	// set reader pointer
 	reader = new_reader;
 
+	// set parent
+	reader->SetClip(this);
+
 	// Init rotation (if any)
 	init_reader_rotation();
 }
@@ -328,13 +340,13 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
-		std::shared_ptr<Frame> new_frame = get_time_mapped_frame(frame, requested_frame);
+		get_time_mapped_frame(frame, requested_frame);
 
 		// Apply effects to the frame (if any)
-		apply_effects(new_frame);
+		apply_effects(frame);
 
 		// Return processed 'frame'
-		return new_frame;
+		return frame;
 	}
 	else
 		// Throw error if reader not initialized
@@ -377,7 +389,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 }
 
 // Adjust the audio and image of a time mapped frame
-std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
+void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
 	// Check for valid reader
 	if (!reader)
@@ -388,7 +400,6 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 	if (time.Values.size() > 1)
 	{
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
-		std::shared_ptr<Frame> new_frame;
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -396,14 +407,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 			resampler = new AudioResampler();
 
 		// Get new frame number
-		int new_frame_number = adjust_frame_number_minimum(round(time.GetValue(frame_number)));
-
-		// Create a new frame
-		int samples_in_frame = Frame::GetSamplesPerFrame(new_frame_number, reader->info.fps, reader->info.sample_rate, frame->GetAudioChannelsCount());
-		new_frame = std::make_shared<Frame>(new_frame_number, 1, 1, "#000000", samples_in_frame, frame->GetAudioChannelsCount());
-
-		// Copy the image from the new frame
-		new_frame->AddImage(std::shared_ptr<QImage>(new QImage(*GetOrCreateFrame(new_frame_number)->GetImage())));
+		int new_frame_number = frame->number;
 
 		// Get delta (difference in previous Y value)
 		int delta = int(round(time.GetDelta(frame_number)));
@@ -451,7 +455,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 					start -= 1;
 				for (int channel = 0; channel < channels; channel++)
 					// Add new (slower) samples, to the frame object
-					new_frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
+					frame->AddAudio(true, channel, 0, resampled_buffer->getReadPointer(channel, start),
 										number_of_samples, 1.0f);
 
 				// Clean up
@@ -559,7 +563,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
 					// Add new (slower) samples, to the frame object
-					new_frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
+					frame->AddAudio(true, channel, 0, buffer->getReadPointer(channel), number_of_samples, 1.0f);
 
 				// Clean up
 				buffer = NULL;
@@ -580,7 +584,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 
 				// Add reversed samples to the frame object
 				for (int channel = 0; channel < channels; channel++)
-					new_frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
+					frame->AddAudio(true, channel, 0, samples->getReadPointer(channel), number_of_samples, 1.0f);
 
 
 			}
@@ -588,13 +592,7 @@ std::shared_ptr<Frame> Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame,
 			delete samples;
 			samples = NULL;
 		}
-
-		// Return new time mapped frame
-		return new_frame;
-
-	} else
-		// Use original frame
-		return frame;
+	}
 }
 
 // Adjust frame number minimum value
@@ -620,35 +618,6 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
 
-		// Determine the max size of this clips source image (based on the timeline's size, the scaling mode,
-		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
-        // method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
-        // the future.
-		if (scale == SCALE_FIT || scale == SCALE_STRETCH) {
-			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
-			float max_scale_x = scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = scale_y.GetMaxPoint().co.Y;
-			reader->SetMaxSize(max(float(max_width), max_width * max_scale_x), max(float(max_height), max_height * max_scale_y));
-
-		} else if (scale == SCALE_CROP) {
-			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
-			float max_scale_x = scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = scale_y.GetMaxPoint().co.Y;
-			QSize width_size(max_width * max_scale_x, round(max_width / (float(reader->info.width) / float(reader->info.height))));
-			QSize height_size(round(max_height / (float(reader->info.height) / float(reader->info.width))), max_height * max_scale_y);
-
-			// respect aspect ratio
-			if (width_size.width() >= max_width && width_size.height() >= max_height)
-				reader->SetMaxSize(max(max_width, width_size.width()), max(max_height, width_size.height()));
-			else
-				reader->SetMaxSize(max(max_width, height_size.width()), max(max_height, height_size.height()));
-
-		} else {
-			// No scaling, use original image size (slower)
-			reader->SetMaxSize(0, 0);
-		}
-
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
 
@@ -671,6 +640,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
+	new_frame->AddAudioSilence(samples_in_frame);
 	return new_frame;
 }
 
@@ -925,13 +895,14 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				e = EffectInfo().CreateEffect(existing_effect["type"].asString());
+				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
 
-				// Load Json into Effect
-				e->SetJsonValue(existing_effect);
+					// Load Json into Effect
+					e->SetJsonValue(existing_effect);
 
-				// Add Effect to Timeline
-				AddEffect(e);
+					// Add Effect to Timeline
+					AddEffect(e);
+				}
 			}
 		}
 	}
@@ -994,9 +965,11 @@ void Clip::SetJsonValue(Json::Value root) {
 				reader->SetJsonValue(root["reader"]);
 			}
 
-			// mark as managed reader
-			if (reader)
+			// mark as managed reader and set parent
+			if (reader) {
+				reader->SetClip(this);
 				manage_reader = true;
+			}
 
 			// Re-Open reader (if needed)
 			if (already_open)

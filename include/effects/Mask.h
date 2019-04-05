@@ -65,6 +65,7 @@ namespace openshot
 	private:
 		ReaderBase *reader;
 		std::shared_ptr<QImage> original_mask;
+		bool needs_refresh;
 
 		/// Init effect settings
 		void init_effect_details();
