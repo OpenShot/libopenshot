@@ -66,7 +66,7 @@ message(STATUS "SO/API/ABI Version: ${SO_VERSION}")
 message(STATUS "Determining Version Number - done")
 
 ################### SETUP PROJECT ###################
-PROJECT(libopenshot LANGUAGES CXX
+PROJECT(libopenshot LANGUAGES C CXX
         VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
 
 message("
