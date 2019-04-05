@@ -1,4 +1,5 @@
 dist: xenial
+sudo: required
 
 matrix:
   include:
