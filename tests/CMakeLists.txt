@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-SET(TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
