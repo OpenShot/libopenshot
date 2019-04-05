@@ -56,6 +56,36 @@ mac-builder:
   tags:
     - mac
 
+windows-builder-x64:
+  stage: build-libopenshot
+  artifacts:
+    expire_in: 6 months
+    paths:
+    - build\install-x64\*
+  script:
+    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
+    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
+    - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
+    - $env:UNITTEST_DIR = "C:\msys64\usr"
+    - $env:ZMQDIR = "C:\msys64\usr"
+    - $env:Path = "C:\msys64\mingw64\bin;C:\msys64\mingw64\lib;C:\msys64\usr\lib\cmake\UnitTest++;C:\msys64\home\jonathan\depot_tools;C:\msys64\usr;C:\msys64\usr\lib;" + $env:Path;
+    - New-Item -ItemType Directory -Force -Path build
+    - New-Item -ItemType Directory -Force -Path build\install-x64\python
+    - cd build
+    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+    - mingw32-make install
+    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "install-x64\python\"
+    - cp src\libopenshot.dll install-x64\lib
+    - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
+    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
+  when: always
+  except:
+  - tags
+  tags:
+    - windows
+
 windows-builder-x86:
   stage: build-libopenshot
   artifacts:
@@ -81,36 +111,6 @@ windows-builder-x86:
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
     - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
-  when: always
-  except:
-  - tags
-  tags:
-    - windows
-
-windows-builder-x64:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build\install-x64\*
-  script:
-    - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
-    - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
-    - Expand-Archive -Path artifacts.zip -DestinationPath .
-    - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
-    - $env:UNITTEST_DIR = "C:\msys64\usr"
-    - $env:ZMQDIR = "C:\msys64\usr"
-    - $env:Path = "C:\msys64\mingw64\bin;C:\msys64\mingw64\lib;C:\msys64\usr\lib\cmake\UnitTest++;C:\msys64\home\jonathan\depot_tools;C:\msys64\usr;C:\msys64\usr\lib;" + $env:Path;
-    - New-Item -ItemType Directory -Force -Path build
-    - New-Item -ItemType Directory -Force -Path build\install-x64\python
-    - cd build
-    - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
-    - mingw32-make install
-    - Move-Item -Force -path "C:\msys64\mingw64\lib\python3.6\site-packages\*openshot*" -destination "install-x64\python\"
-    - cp src\libopenshot.dll install-x64\lib
-    - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
-    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
-    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
