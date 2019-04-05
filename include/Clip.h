@@ -36,7 +36,6 @@
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
-#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
@@ -47,6 +46,7 @@
 #include "Fraction.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
+#include "JuceHeader.h"
 
 using namespace std;
 using namespace openshot;

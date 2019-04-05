@@ -37,8 +37,8 @@
 #endif
 
 #include <iomanip>
-#include "JuceLibraryCode/JuceHeader.h"
 #include "ReaderBase.h"
+#include "JuceHeader.h"
 
 using namespace std;
 
