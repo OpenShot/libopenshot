@@ -4,7 +4,7 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
 # OpenShot Library (libopenshot), an open-source project dedicated to
 # delivering high quality video editing and animation solutions to the
@@ -59,13 +59,17 @@ STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" 
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
 
+message(STATUS "MAJOR Version: ${MAJOR_VERSION}")
+message(STATUS "MINOR Version: ${MINOR_VERSION}")
+message(STATUS "BUILD Version: ${BUILD_VERSION}")
+message(STATUS "SO/API/ABI Version: ${SO_VERSION}")
 message(STATUS "Determining Version Number - done")
 
 ################### SETUP PROJECT ###################
 PROJECT(libopenshot LANGUAGES CXX
         VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
 
-message("\
+message("
 Generating build files for OpenShot
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
   SO/API/ABI Version: ${SO_VERSION}
