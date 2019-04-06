@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-SET(TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -224,8 +224,7 @@ IF (NOT DISABLE_TESTS)
 	# Link libraries to the new executable
 	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
 
-
 	#################### MAKE TEST ######################
-	# Hook up the 'make test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
+	# Hook up the 'make os_test' target to the 'openshot-test' executable
+	ADD_CUSTOM_TARGET(os_test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
 ENDIF (NOT DISABLE_TESTS)
