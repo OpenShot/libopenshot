@@ -227,4 +227,5 @@ IF (NOT DISABLE_TESTS)
 	#################### MAKE TEST ######################
 	# Hook up the 'make os_test' target to the 'openshot-test' executable
 	ADD_CUSTOM_TARGET(os_test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
+	add_dependencies(os_test openshot-test)
 ENDIF (NOT DISABLE_TESTS)
