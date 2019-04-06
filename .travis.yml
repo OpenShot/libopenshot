@@ -15,7 +15,7 @@ matrix:
       - mkdir -p build; cd build;
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
-      - make test
+      - make os_test
 
     - language: cpp
       name: "FFmpeg 3"
@@ -30,7 +30,7 @@ matrix:
       - mkdir -p build; cd build;
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
-      - make test
+      - make os_test
 
     - language: cpp
       name: "FFmpeg 4"
@@ -47,4 +47,4 @@ matrix:
       - mkdir -p build; cd build;
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
-      - make test
+      - make os_test

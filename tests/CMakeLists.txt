@@ -231,8 +231,8 @@ IF (NOT DISABLE_TESTS)
 	endif()
 
 	#################### MAKE TEST ######################
-	# Hook up the 'make test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
+	# Hook up the 'make os_test' target to the 'openshot-test' executable
+	ADD_CUSTOM_TARGET(os_test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
 
 	# Remove cmake policy
 	cmake_policy(POP)
