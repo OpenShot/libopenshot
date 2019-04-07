@@ -59,6 +59,9 @@ namespace openshot
 	/// Close audio device
 	void CloseAudioDevice();
 
+	/// Get Error (if any)
+	string GetError();
+
 	/// Play the video
 	void Play();
 	

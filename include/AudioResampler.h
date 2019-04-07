@@ -38,9 +38,9 @@
 	#define _NDEBUG
 #endif
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"
 #include "Exceptions.h"
+#include "JuceHeader.h"
 
 namespace openshot {
 

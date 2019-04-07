@@ -29,7 +29,6 @@
 #define OPENSHOT_SETTINGS_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -40,6 +39,7 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
+#include "JuceHeader.h"
 
 
 using namespace std;
