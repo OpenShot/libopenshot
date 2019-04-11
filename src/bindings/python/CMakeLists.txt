@@ -67,8 +67,8 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
 	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
 	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
-from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+import site; from distutils.sysconfig import get_python_lib; \
+print( get_python_lib( plat_specific=True, standard_lib=True, prefix='${CMAKE_INSTALL_PREFIX}' ) + '/' +  site.getsitepackages()[0].split('/')[-1] )"
 	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
 	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
 
