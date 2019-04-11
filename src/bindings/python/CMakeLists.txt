@@ -66,18 +66,13 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	                      ${PYTHON_LIBRARIES} openshot)
 
 	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-	if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-		# If not prefix found, detect python site package folder
-		EXECUTE_PROCESS ( COMMAND ${PYTHON_EXECUTABLE} -c "import site; print(site.getsitepackages()[0])"
-				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-				OUTPUT_STRIP_TRAILING_WHITESPACE )
-	else()
- 	    execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
- from distutils.sysconfig import get_python_lib; \
- print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
- 	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
- 	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
-	endif()
+	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+import site; from distutils.sysconfig import get_python_lib; \
+print( get_python_lib( plat_specific=True, standard_lib=True, prefix='${CMAKE_INSTALL_PREFIX}' ) \
+ + '/' +  get_python_lib( plat_specific=False, standard_lib=False, prefix='${CMAKE_INSTALL_PREFIX}' ).split('/')[-1] \
+ + '/' )"
+	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
 
 	GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
 	                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
