@@ -248,9 +248,9 @@ static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum A
 
 		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 			switch (*p) {
-				case AV_PIX_FMT_QSV:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
+				case AV_PIX_FMT_VIDEOTOOLBOX:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
 					return *p;
 					break;
 			}
@@ -413,15 +413,15 @@ void FFmpegReader::Open() {
 							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 							switch (i_decoder_hw) {
 								case 0:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
 									pCodecCtx->get_format = get_hw_dec_format_qs;
 									break;
 								case 5:
-									hw_de_av_device_type =  AV_HWDEVICE_TYPE_QSV;
+									hw_de_av_device_type =  AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
 									pCodecCtx->get_format = get_hw_dec_format_qs;
 									break;
 								default:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
 									pCodecCtx->get_format = get_hw_dec_format_qs;
 									break;
 							}
