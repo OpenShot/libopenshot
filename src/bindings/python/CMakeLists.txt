@@ -66,17 +66,36 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	                      ${PYTHON_LIBRARIES} openshot)
 
 	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+	if (UNIX AND NOT APPLE)
+		### Special-case for Debian's crazy, by checking to see if pybuild
+		### is available. We don't use it, except as a canary in a coal mine
+		find_program(PYBUILD_EXECUTABLE pybuild
+		             DOC "Path to Debian's pybuild utility")
+		if (PYBUILD_EXECUTABLE)
+			# We're on a Debian derivative, fall back to old path detection
+			set(py_detection "import site; print(site.getsitepackages()[0])")
+		else()
+			# Use distutils to detect install path
+			set (py_detection "\
 from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
-	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
+print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )")
+		endif()
+	endif()
 
-	GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-	                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-	FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-	     ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-	SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH})
+	if (NOT PYTHON_MODULE_PATH)
+		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "${py_detection}"
+		                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+		                  OUTPUT_STRIP_TRAILING_WHITESPACE )
+
+		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+		                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+		     ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+		SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH}
+		    CACHE PATH "Install path for Python modules (relative to prefix)")
+	endif()
+
+	message(STATUS "Will install Python module to: ${PYTHON_MODULE_PATH}")
 
 	############### INSTALL HEADERS & LIBRARY ################
 	### Install Python bindings
