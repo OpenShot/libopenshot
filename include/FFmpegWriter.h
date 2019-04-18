@@ -233,7 +233,7 @@ namespace openshot {
 		void process_video_packet(std::shared_ptr<Frame> frame);
 
 		/// write all queued frames' audio to the video file
-		void write_audio_packets(bool final);
+		void write_audio_packets(bool is_final);
 
 		/// write video frame
 		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final);

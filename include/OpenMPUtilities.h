@@ -42,5 +42,4 @@ using namespace openshot;
 #define FF_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->FF_THREADS) ))
 
 
-
 #endif
