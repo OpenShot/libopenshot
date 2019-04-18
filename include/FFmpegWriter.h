@@ -56,14 +56,12 @@
 
 using namespace std;
 
-namespace openshot
-{
+namespace openshot {
 
 	/// This enumeration designates the type of stream when encoding (video or audio)
-	enum StreamType
-	{
-		VIDEO_STREAM,	///< A video stream (used to determine which type of stream)
-		AUDIO_STREAM	///< An audio stream (used to determine which type of stream)
+	enum StreamType {
+		VIDEO_STREAM,    ///< A video stream (used to determine which type of stream)
+		AUDIO_STREAM     ///< An audio stream (used to determine which type of stream)
 	};
 
 	/**
@@ -141,8 +139,7 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class FFmpegWriter : public WriterBase
-	{
+	class FFmpegWriter : public WriterBase {
 	private:
 		string path;
 		int cache_size;
@@ -155,56 +152,56 @@ namespace openshot
 		bool write_header;
 		bool write_trailer;
 
-	    AVOutputFormat *fmt;
-	    AVFormatContext *oc;
-	    AVStream *audio_st, *video_st;
-	    AVCodecContext *video_codec;
-	    AVCodecContext *audio_codec;
-	    SwsContext *img_convert_ctx;
-	    double audio_pts, video_pts;
-	    int16_t *samples;
-	    uint8_t *audio_outbuf;
-	    uint8_t *audio_encoder_buffer;
+		AVOutputFormat *fmt;
+		AVFormatContext *oc;
+		AVStream *audio_st, *video_st;
+		AVCodecContext *video_codec;
+		AVCodecContext *audio_codec;
+		SwsContext *img_convert_ctx;
+		double audio_pts, video_pts;
+		int16_t *samples;
+		uint8_t *audio_outbuf;
+		uint8_t *audio_encoder_buffer;
 
-	    int num_of_rescalers;
+		int num_of_rescalers;
 		int rescaler_position;
-		vector<SwsContext*> image_rescalers;
+		vector<SwsContext *> image_rescalers;
 
-	    int audio_outbuf_size;
-	    int audio_input_frame_size;
-	    int initial_audio_input_frame_size;
-	    int audio_input_position;
-	    int audio_encoder_buffer_size;
-	    SWRCONTEXT *avr;
-	    SWRCONTEXT *avr_planar;
+		int audio_outbuf_size;
+		int audio_input_frame_size;
+		int initial_audio_input_frame_size;
+		int audio_input_position;
+		int audio_encoder_buffer_size;
+		SWRCONTEXT *avr;
+		SWRCONTEXT *avr_planar;
 
-	    /* Resample options */
-	    int original_sample_rate;
-	    int original_channels;
+		/* Resample options */
+		int original_sample_rate;
+		int original_channels;
 
-	    std::shared_ptr<Frame> last_frame;
-	    deque<std::shared_ptr<Frame> > spooled_audio_frames;
-	    deque<std::shared_ptr<Frame> > spooled_video_frames;
+		std::shared_ptr<Frame> last_frame;
+		deque<std::shared_ptr<Frame> > spooled_audio_frames;
+		deque<std::shared_ptr<Frame> > spooled_video_frames;
 
-	    deque<std::shared_ptr<Frame> > queued_audio_frames;
-	    deque<std::shared_ptr<Frame> > queued_video_frames;
+		deque<std::shared_ptr<Frame> > queued_audio_frames;
+		deque<std::shared_ptr<Frame> > queued_video_frames;
 
-	    deque<std::shared_ptr<Frame> > processed_frames;
-	    deque<std::shared_ptr<Frame> > deallocate_frames;
+		deque<std::shared_ptr<Frame> > processed_frames;
+		deque<std::shared_ptr<Frame> > deallocate_frames;
 
-	    map<std::shared_ptr<Frame>, AVFrame*> av_frames;
+		map<std::shared_ptr<Frame>, AVFrame *> av_frames;
 
-	    /// Add an AVFrame to the cache
-	    void add_avframe(std::shared_ptr<Frame> frame, AVFrame* av_frame);
+		/// Add an AVFrame to the cache
+		void add_avframe(std::shared_ptr<Frame> frame, AVFrame *av_frame);
 
 		/// Add an audio output stream
-		AVStream* add_audio_stream();
+		AVStream *add_audio_stream();
 
 		/// Add a video output stream
-		AVStream* add_video_stream();
+		AVStream *add_video_stream();
 
 		/// Allocate an AVFrame object
-		AVFrame* allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);
+		AVFrame *allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);
 
 		/// Auto detect format (from path)
 		void auto_detect_format();
@@ -239,7 +236,7 @@ namespace openshot
 		void write_audio_packets(bool final);
 
 		/// write video frame
-		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final);
+		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final);
 
 		/// write all queued frames
 		void write_queued_frames();
@@ -303,7 +300,7 @@ namespace openshot
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
@@ -324,7 +321,7 @@ namespace openshot
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length);
+		void WriteFrame(ReaderBase *reader, int64_t start, int64_t length);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
 		/// by the Close() method if this method has not yet been called.
