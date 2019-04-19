@@ -86,10 +86,6 @@ hardware acceleration support on Ubuntu Linux!
 **Needed:** a way to get the options and limits of the GPU, like
 supported codecs and the supported dimensions (width and height).
 
-**Would be nice:** a way in python to only have some source for the desired
-plattform. Example: VAAPI is not supported in Windows or Mac and should not
-be displayed as an option for encoder libraries.
-
 **Further improvement:** Right now the frame can be decoded on the GPU but the
 frame is then copied to CPU memory. Before encoding the frame the frame is then
 copied to GPU memory for encoding. That is necessary because the modifications
