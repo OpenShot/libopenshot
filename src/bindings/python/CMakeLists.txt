@@ -30,10 +30,10 @@ FIND_PACKAGE(SWIG 2.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
-if (CMAKE_VERSION VERSION_GREATER 3.13)
+if (POLICY CMP0078)
 	cmake_policy(SET CMP0078 OLD)
 endif()
-if (CMAKE_VERSION VERSION_GREATER 3.14)
+if (POLICY CMP0086)
 	cmake_policy(SET CMP0086 OLD)
 endif()
 
@@ -65,20 +65,29 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME}
 	                      ${PYTHON_LIBRARIES} openshot)
 
-	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-	execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
-import site; from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, standard_lib=True, prefix='${CMAKE_INSTALL_PREFIX}' ) \
- + '/' +  get_python_lib( plat_specific=False, standard_lib=False, prefix='${CMAKE_INSTALL_PREFIX}' ).split('/')[-1] \
- + '/' )"
-	                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-	                  OUTPUT_STRIP_TRAILING_WHITESPACE )
+    ### Check if the following Debian-friendly python module path exists
+	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages")
+	if (NOT EXISTS ${PYTHON_MODULE_PATH})
 
-	GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-	                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-	FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-	     ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-	SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH})
+		### Check if another Debian-friendly python module path exists
+		SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
+		if (NOT EXISTS ${PYTHON_MODULE_PATH})
+
+			### Calculate the python module path (using distutils)
+			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+from distutils.sysconfig import get_python_lib; \
+print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+				OUTPUT_STRIP_TRAILING_WHITESPACE )
+
+			GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+					"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+			FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+					${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+			SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
+		endif()
+	endif()
+	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
 
 	############### INSTALL HEADERS & LIBRARY ################
 	### Install Python bindings
