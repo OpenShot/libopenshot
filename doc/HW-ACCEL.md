@@ -8,8 +8,8 @@ Observations for developers wanting to make hardware acceleration work.
 
 * HW accel is supported from ffmpeg version 3.2 (3.3 for nVidia drivers)
 * HW accel was removed for nVidia drivers in Ubuntu for ffmpeg 4+
-* I could not manage to build a version of ffmpeg 4.1 with the nVidia SDK 
-that worked with nVidia cards. There might be a problem in ffmpeg 4+ 
+* I could not manage to build a version of ffmpeg 4.1 with the nVidia SDK
+that worked with nVidia cards. There might be a problem in ffmpeg 4+
 that prohibits this.
 
 **Notice:** The ffmpeg versions of Ubuntu and PPAs for Ubuntu show the
@@ -55,7 +55,7 @@ int HW_EN_DEVICE_SET = 0;
 
 The correct version of libva is needed (libva in Ubuntu 16.04 or libva2
 in Ubuntu 18.04) for the AppImage to work with hardware acceleration.
-An AppImage that works on both systems (supporting libva and libva2), 
+An AppImage that works on both systems (supporting libva and libva2),
 might be possible when no libva is included in the AppImage.
 
 * vaapi is working for intel and AMD
@@ -64,14 +64,14 @@ might be possible when no libva is included in the AppImage.
 
 ## AMD Graphics Cards (RadeonOpenCompute/ROCm)
 
-Decoding and encoding on the (AMD) GPU can be done on systems where ROCm
-is installed and run. Possible future use for GPU acceleration of effects (contributions
-welcome).
+Decoding and encoding on the (AMD) GPU is possible with the default drivers.
+On systems where ROCm is installed and run a future use for GPU acceleration
+of effects could be implemented (contributions welcome).
 
 ## Multiple Graphics Cards
 
 If the computer has multiple graphics cards installed, you can choose which
-should be used by libopenshot. Also, you can optionally use one card for 
+should be used by libopenshot. Also, you can optionally use one card for
 decoding and the other for encoding (if both cards support acceleration).
 
 ## Help Us Improve Hardware Support
@@ -82,3 +82,17 @@ this document if you find an error or discover some new information.
 
 **Desperately Needed:** a way to compile ffmpeg 4.0 and up with working nVidia
 hardware acceleration support on Ubuntu Linux!
+
+**Needed:** a way to get the options and limits of the GPU, like
+supported codecs and the supported dimensions (width and height).
+
+**Would be nice:** a way in python to only have some source for the desired
+plattform. Example: VAAPI is not supported in Windows or Mac and should not
+be displayed as an option for encoder libraries.
+
+**Further improvement:** Right now the frame can be decoded on the GPU but the
+frame is then copied to CPU memory. Before encoding the frame the frame is then
+copied to GPU memory for encoding. That is necessary because the modifications
+are done by the CPU. Using the GPU for that too will make it possible to do
+away with these two copies. A possible solution would be to use Vulkan compute
+which would be available on Linux and Windows natively and on MacOS via MoltenVK.
