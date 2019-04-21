@@ -77,13 +77,17 @@ namespace openshot {
 
 	public:
 		/// Use video card for faster video decoding (if supported)
+		// REMOVE_HW_OLD
+		// Removing this breaks decode completely
+		// Find bug in libopenshot
 		bool HARDWARE_DECODE = false;
 
 		/// Use video codec for faster video decoding (if supported)
 		int HARDWARE_DECODER = 0;
 
 		/// Use video card for faster video encoding (if supported)
-		bool HARDWARE_ENCODE = false;
+		// REMOVE_HW_OLD
+		//bool HARDWARE_ENCODE = false;
 
 		/// Scale mode used in FFmpeg decoding and encoding (used as an optimization for faster previews)
 		bool HIGH_QUALITY_SCALING = false;
