@@ -40,11 +40,7 @@ Settings *Settings::Instance()
 	if (!m_pInstance) {
 		// Create the actual instance of logger only once
 		m_pInstance = new Settings;
-		// REMOVE_HW_OLD
-		//m_pInstance->HARDWARE_DECODE = false;
 		m_pInstance->HARDWARE_DECODER = 0;
-		// REMOVE_HW_OLD
-		//m_pInstance->HARDWARE_ENCODE = false;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
 		m_pInstance->MAX_WIDTH = 0;
 		m_pInstance->MAX_HEIGHT = 0;

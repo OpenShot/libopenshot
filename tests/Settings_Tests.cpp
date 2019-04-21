@@ -37,8 +37,6 @@ TEST(Settings_Default_Constructor)
 	Settings *s = Settings::Instance();
 
 	CHECK_EQUAL(0, s->HARDWARE_DECODER);
-	// REMOVE_HW_OLD
-	//CHECK_EQUAL(false, s->HARDWARE_ENCODE);
 	CHECK_EQUAL(false, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(false, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }
@@ -48,20 +46,14 @@ TEST(Settings_Change_Settings)
 	// Create an empty color
 	Settings *s = Settings::Instance();
 	s->HARDWARE_DECODER = 1;
-	// REMOVE_HW_OLD
-	//s->HARDWARE_ENCODE = true;
 	s->HIGH_QUALITY_SCALING = true;
 	s->WAIT_FOR_VIDEO_PROCESSING_TASK = true;
 
 	CHECK_EQUAL(1, s->HARDWARE_DECODER);
-	// REMOVE_HW_OLD
-	//CHECK_EQUAL(true, s->HARDWARE_ENCODE);
 	CHECK_EQUAL(true, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 
 	CHECK_EQUAL(1, s->HARDWARE_DECODER);
-	// REMOVE_HW_OLD
-	//CHECK_EQUAL(true, s->HARDWARE_ENCODE);
 	CHECK_EQUAL(true, Settings::Instance()->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }

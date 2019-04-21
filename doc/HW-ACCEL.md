@@ -74,20 +74,19 @@ This information might be wrong, and we would love to continue improving
 our support for hardware acceleration in OpenShot. Please help us update
 this document if you find an error or discover some new information.
 
-**Desperately Needed:** a way to compile ffmpeg 4.0 and up with working nVidia
+**Desperately Needed:** A way to compile ffmpeg 4.0 and up with working nVidia
 hardware acceleration support on Ubuntu Linux!
 
-**BUG:** hardware supported decoding still has a bug. The speed gains with
+**BUG:** Hardware supported decoding still has a bug. The speed gains with
 decoding are by far not as great as with encoding. In case hardware accelerated
-decoding does not work disable it.
-Hardware acceleration might also break because of graphics drivers that have
-bugs.
+decoding does not work disable it. Hardware acceleration might also break 
+because of graphics drivers that have bugs.
 
-**Needed:** a way to get the options and limits of the GPU, like
+**Needed:** A way to get the options and limits of the GPU, like
 supported codecs and the supported dimensions (width and height).
 
 **Further improvement:** Right now the frame can be decoded on the GPU but the
-frame is then copied to CPU memory. Before encoding the frame the frame is then
+frame is then copied to CPU memory. Before encoding the frame is then
 copied to GPU memory for encoding. That is necessary because the modifications
 are done by the CPU. Using the GPU for that too will make it possible to do
 away with these two copies. A possible solution would be to use Vulkan compute
