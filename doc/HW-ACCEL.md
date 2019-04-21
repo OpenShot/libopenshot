@@ -23,9 +23,6 @@ The following settings are use by libopenshot to enable, disable, and control
 the various hardware acceleration features.
 
 ```
-/// DEPRECATED Use video card for faster video decoding (if supported)
-bool HARDWARE_DECODE = false;
-
 /// Use video codec for faster video decoding (if supported)
 int HARDWARE_DECODER = 0;
 
@@ -80,10 +77,11 @@ this document if you find an error or discover some new information.
 **Desperately Needed:** a way to compile ffmpeg 4.0 and up with working nVidia
 hardware acceleration support on Ubuntu Linux!
 
-**BUG:** the use of HARDWARE_DECODE is somehow still needed, otherwise hardware
-supported decoding breaks. TODO remove the hidden dependency on this variable.
-The variable HARDWARE_DECODER should and does select if and which hardware
-decoder is used but somehow HARDWARE_DECODE has to be there too.
+**BUG:** hardware supported decoding still has a bug. The speed gains with
+decoding are by far not as great as with encoding. In case hardware accelerated
+decoding does not work disable it.
+Hardware acceleration might also break because of graphics drivers that have
+bugs.
 
 **Needed:** a way to get the options and limits of the GPU, like
 supported codecs and the supported dimensions (width and height).

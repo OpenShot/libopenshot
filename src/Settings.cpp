@@ -41,9 +41,7 @@ Settings *Settings::Instance()
 		// Create the actual instance of logger only once
 		m_pInstance = new Settings;
 		// REMOVE_HW_OLD
-		// Removing this breaks decode completely
-		// Find bug in libopenshot
-		m_pInstance->HARDWARE_DECODE = false;
+		//m_pInstance->HARDWARE_DECODE = false;
 		m_pInstance->HARDWARE_DECODER = 0;
 		// REMOVE_HW_OLD
 		//m_pInstance->HARDWARE_ENCODE = false;

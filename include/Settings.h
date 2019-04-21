@@ -78,9 +78,7 @@ namespace openshot {
 	public:
 		/// Use video card for faster video decoding (if supported)
 		// REMOVE_HW_OLD
-		// Removing this breaks decode completely
-		// Find bug in libopenshot
-		bool HARDWARE_DECODE = false;
+		//bool HARDWARE_DECODE = false;
 
 		/// Use video codec for faster video decoding (if supported)
 		int HARDWARE_DECODER = 0;
