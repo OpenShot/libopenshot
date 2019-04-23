@@ -109,6 +109,9 @@ namespace openshot {
 		/// Which GPU to use to encode (0 is the first)
 		int HW_EN_DEVICE_SET = 0;
 
+		/// The audio device name to use during playback
+		string PLAYBACK_AUDIO_DEVICE_NAME = "";
+
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static Settings * Instance();
 	};

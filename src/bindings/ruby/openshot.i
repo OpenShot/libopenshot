@@ -91,6 +91,7 @@ namespace std {
 #include "../../../include/Settings.h"
 #include "../../../include/Timeline.h"
 #include "../../../include/ZmqLogger.h"
+#include "../../../include/AudioDeviceInfo.h"
 
 %}
 
@@ -147,6 +148,7 @@ namespace std {
 %include "../../../include/Settings.h"
 %include "../../../include/Timeline.h"
 %include "../../../include/ZmqLogger.h"
+%include "../../../include/AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "../../../include/ImageReader.h"
@@ -181,4 +183,5 @@ namespace std {
  %template(FieldVector) vector<Field>;
  %template(MappedFrameVector) vector<MappedFrame>;
  %template(MappedMetadata) map<string, string>;
+ %template(AudioDeviceInfoVector) vector<AudioDeviceInfo>;
 }

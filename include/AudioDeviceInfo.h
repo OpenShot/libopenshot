@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for global Settings class
+ * @brief Header file for Audio Device Info struct
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,34 +25,19 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Settings.h"
-
-using namespace std;
-using namespace openshot;
+#ifndef OPENSHOT_AUDIODEVICEINFO_H
+#define OPENSHOT_AUDIODEVICEINFO_H
 
 
-// Global reference to logger
-Settings *Settings::m_pInstance = NULL;
-
-// Create or Get an instance of the logger singleton
-Settings *Settings::Instance()
+/**
+ * @brief This struct hold information about Audio Devices
+ *
+ * The type and name of the audio device.
+ */
+struct AudioDeviceInfo
 {
-	if (!m_pInstance) {
-		// Create the actual instance of logger only once
-		m_pInstance = new Settings;
-		m_pInstance->HARDWARE_DECODER = 0;
-		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->MAX_WIDTH = 0;
-		m_pInstance->MAX_HEIGHT = 0;
-		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
-		m_pInstance->OMP_THREADS = 12;
-		m_pInstance->FF_THREADS = 8;
-		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
-		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
-		m_pInstance->HW_DE_DEVICE_SET = 0;
-		m_pInstance->HW_EN_DEVICE_SET = 0;
-		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
-	}
+	string name;
+	string type;
+};
 
-	return m_pInstance;
-}
+#endif
