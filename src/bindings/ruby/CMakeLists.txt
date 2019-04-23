@@ -30,10 +30,10 @@ FIND_PACKAGE(SWIG 2.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
-if (CMAKE_VERSION VERSION_GREATER 3.13)
+if (POLICY CMP0078)
 	cmake_policy(SET CMP0078 OLD)
 endif()
-if (CMAKE_VERSION VERSION_GREATER 3.14)
+if (POLICY CMP0086)
 	cmake_policy(SET CMP0086 OLD)
 endif()
 
