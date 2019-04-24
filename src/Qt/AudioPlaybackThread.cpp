@@ -41,13 +41,16 @@ namespace openshot
 			// Create the actual instance of device manager only once
 			m_pInstance = new AudioDeviceManagerSingleton;
 
+			// Get preferred audio device name (if any)
+			string preferred_audio_device = Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME;
+
 			// Initialize audio device only 1 time
 			String error = m_pInstance->audioDeviceManager.initialise (
 					0, /* number of input channels */
 					2, /* number of output channels */
 					0, /* no XML settings.. */
 					true,  /* select default device on failure */
-					Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME /* preferredDefaultDeviceName */);
+					preferred_audio_device /* preferredDefaultDeviceName */);
 
 			// Persist any errors detected
 			if (error.isNotEmpty()) {
