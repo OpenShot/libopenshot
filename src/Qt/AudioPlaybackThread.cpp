@@ -42,10 +42,10 @@ namespace openshot
 			m_pInstance = new AudioDeviceManagerSingleton;
 
 			// Get preferred audio device name (if any)
-			string preferred_audio_device = Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME;
+			juce::String preferred_audio_device = juce::String(Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME.c_str());
 
 			// Initialize audio device only 1 time
-			String error = m_pInstance->audioDeviceManager.initialise (
+			juce::String error = m_pInstance->audioDeviceManager.initialise (
 					0, /* number of input channels */
 					2, /* number of output channels */
 					0, /* no XML settings.. */
@@ -67,7 +67,7 @@ namespace openshot
 
 				for (int j = 0; j < deviceNames.size (); ++j )
 				{
-					const String deviceName = deviceNames[j];
+					juce::String deviceName = deviceNames[j];
 					AudioDeviceInfo deviceInfo = {deviceName.toStdString(), t->getTypeName().toStdString()};
 					m_pInstance->audio_device_names.push_back(deviceInfo);
 				}
