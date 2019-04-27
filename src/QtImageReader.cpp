@@ -209,7 +209,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (cached_image && cached_image->width() != max_width || cached_image->height() != max_height)) {
+	if (!cached_image || (cached_image->width() != max_width || cached_image->height() != max_height)) {
 
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
