@@ -74,8 +74,13 @@ This information might be wrong, and we would love to continue improving
 our support for hardware acceleration in OpenShot. Please help us update
 this document if you find an error or discover some new information.
 
-**Desperately Needed:** A way to compile ffmpeg 4.0 and up with working nVidia
-hardware acceleration support on Ubuntu Linux!
+**Desperately Needed:** The manual at:
+https://www.tal.org/tutorials/ffmpeg_nvidia_encode
+works pretty well. I could compile and install a version of ffmpeg 4.1.3
+on Mint 19.1 that supports the GPU on nVidia cards. A version of openshot
+with hardware support using these libraries could use the nVidia GPU.
+(A way to compile ffmpeg 4.0 and up with working nVidia
+hardware acceleration support on Ubuntu Linux!)
 
 **BUG:** Hardware supported decoding still has a bug. The speed gains with
 decoding are by far not as great as with encoding. In case hardware accelerated
