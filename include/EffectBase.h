@@ -105,6 +105,7 @@ namespace openshot
 
 		/// Set the order that this effect should be executed.
 		void Order(int new_order) { order = new_order; }
+		virtual ~EffectBase() = default;
 	};
 
 }
