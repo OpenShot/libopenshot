@@ -96,3 +96,9 @@ copied to GPU memory for encoding. That is necessary because the modifications
 are done by the CPU. Using the GPU for that too will make it possible to do
 away with these two copies. A possible solution would be to use Vulkan compute
 which would be available on Linux and Windows natively and on MacOS via MoltenVK.
+
+## Credit
+
+A big thanks to Peter M (https://github.com/eisneinechse) for all his work
+on integrating hardware accelleration into libopenshot! The community thanks
+you for this major contribution!

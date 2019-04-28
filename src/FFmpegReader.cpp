@@ -186,6 +186,23 @@ static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum A
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_cu (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		return AV_PIX_FMT_NONE;
 }
+
+static enum AVPixelFormat get_hw_dec_format_vd(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+		const enum AVPixelFormat *p;
+
+		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+			switch (*p) {
+				case AV_PIX_FMT_VDPAU:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_VDPAU;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VDPAU;
+					return *p;
+					break;
+			}
+		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_vd (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		return AV_PIX_FMT_NONE;
+}
 #endif
 
 #if defined(_WIN32)
@@ -376,6 +393,10 @@ void FFmpegReader::Open() {
 									case 2:
 										hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
 										pCodecCtx->get_format = get_hw_dec_format_cu;
+										break;
+									case 6:
+										hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
+										pCodecCtx->get_format = get_hw_dec_format_vd;
 										break;
 									default:
 										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
