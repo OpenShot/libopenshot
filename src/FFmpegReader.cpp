@@ -259,7 +259,7 @@ static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum A
 #endif
 
 #if defined(__APPLE__)
-static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+static enum AVPixelFormat get_hw_dec_format_vt(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
 		const enum AVPixelFormat *p;
 
@@ -272,10 +272,27 @@ static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum A
 					break;
 			}
 		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_qs (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_vt (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 		return AV_PIX_FMT_NONE;
 }
 #endif
+
+static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+{
+	const enum AVPixelFormat *p;
+
+	for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+		switch (*p) {
+			case AV_PIX_FMT_QSV:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
+				return *p;
+				break;
+		}
+	}
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_qs (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	return AV_PIX_FMT_NONE;
+}
 
 int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 {
@@ -382,10 +399,6 @@ void FFmpegReader::Open() {
 							adapter_ptr = adapter;
 							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 							switch (i_decoder_hw) {
-									case 0:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-										pCodecCtx->get_format = get_hw_dec_format_va;
-										break;
 									case 1:
 										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 										pCodecCtx->get_format = get_hw_dec_format_va;
@@ -398,6 +411,10 @@ void FFmpegReader::Open() {
 										hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
 										pCodecCtx->get_format = get_hw_dec_format_vd;
 										break;
+									case 7:
+										hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+										pCodecCtx->get_format = get_hw_dec_format_qs;
+										break;
 									default:
 										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 										pCodecCtx->get_format = get_hw_dec_format_va;
@@ -408,10 +425,6 @@ void FFmpegReader::Open() {
 							adapter_ptr = NULL;
 							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 							switch (i_decoder_hw) {
-								case 0:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-									pCodecCtx->get_format = get_hw_dec_format_dx;
-									break;
 								case 2:
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
 									pCodecCtx->get_format = get_hw_dec_format_cu;
@@ -424,6 +437,10 @@ void FFmpegReader::Open() {
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
 									pCodecCtx->get_format = get_hw_dec_format_d3;
 									break;
+								case 7:
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+									pCodecCtx->get_format = get_hw_dec_format_qs;
+									break;
 								default:
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
 									pCodecCtx->get_format = get_hw_dec_format_dx;
@@ -433,17 +450,17 @@ void FFmpegReader::Open() {
 							adapter_ptr = NULL;
 							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
 							switch (i_decoder_hw) {
-								case 0:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-									pCodecCtx->get_format = get_hw_dec_format_qs;
-									break;
 								case 5:
 									hw_de_av_device_type =  AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+									pCodecCtx->get_format = get_hw_dec_format_vt;
+									break;
+								case 7:
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
 									pCodecCtx->get_format = get_hw_dec_format_qs;
 									break;
 								default:
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-									pCodecCtx->get_format = get_hw_dec_format_qs;
+									pCodecCtx->get_format = get_hw_dec_format_vt;
 									break;
 							}
 #endif
