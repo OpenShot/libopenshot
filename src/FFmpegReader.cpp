@@ -76,7 +76,7 @@ using namespace openshot;
 
 int hw_de_on = 0;
 #if IS_FFMPEG_3_2
-AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
+	AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
 

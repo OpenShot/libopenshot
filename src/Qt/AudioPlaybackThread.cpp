@@ -45,7 +45,7 @@ namespace openshot
 			juce::String preferred_audio_device = juce::String(Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME.c_str());
 
 			// Initialize audio device only 1 time
-			juce::String error = m_pInstance->audioDeviceManager.initialise (
+			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
 					0, /* number of input channels */
 					2, /* number of output channels */
 					0, /* no XML settings.. */
@@ -53,8 +53,8 @@ namespace openshot
 					preferred_audio_device /* preferredDefaultDeviceName */);
 
 			// Persist any errors detected
-			if (error.isNotEmpty()) {
-				m_pInstance->initialise_error = error.toStdString();
+			if (audio_error.isNotEmpty()) {
+				m_pInstance->initialise_error = audio_error.toRawUTF8();
 			} else {
 				m_pInstance->initialise_error = "";
 			}
@@ -68,7 +68,8 @@ namespace openshot
 				for (int j = 0; j < deviceNames.size (); ++j )
 				{
 					juce::String deviceName = deviceNames[j];
-					AudioDeviceInfo deviceInfo = {deviceName.toStdString(), t->getTypeName().toStdString()};
+					juce::String typeName = t->getTypeName();
+					AudioDeviceInfo deviceInfo = {deviceName.toRawUTF8(), typeName.toRawUTF8()};
 					m_pInstance->audio_device_names.push_back(deviceInfo);
 				}
 			}
