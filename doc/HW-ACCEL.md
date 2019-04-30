@@ -1,8 +1,8 @@
 ## Hardware Acceleration
 
-OpenShot now has experimental support for hardware acceleration, which uses 1 (or more) 
+OpenShot now has experimental support for hardware acceleration, which uses 1 (or more)
 graphics cards to offload some of the work for both decoding and encoding. This is
-very new and experimental (as of May 2019), but we look forward to "accelerating" 
+very new and experimental (as of May 2019), but we look forward to "accelerating"
 our support for this in the future!
 
 The following table summarizes our current level of support:
@@ -10,8 +10,8 @@ The following table summarizes our current level of support:
 |                    | Linux Decode | Linux Encode | Mac Decode | Mac Encode | Windows Decode       | Windows Encode | Notes          |
 |--------------------|--------------|--------------|------------|------------|----------------------|----------------|----------------|
 | VA-API             |   Verified   |   Verified   |      -     |      -     |           -          |        -       | Linux Only     |
-| VDPAU              |   Verified   |   Verified   |      -     |      -     |           -          |        -       | Linux Only     |
-| CUDA (NVDEC/NVENC) |   Verified   |   Verified   |      -     |      -     |           -          |    Verified    | Cross Platform |
+| VDPAU              |  Verified(+) |   N/A(++)    |      -     |      -     |           -          |        -       | Linux Only     |
+| CUDA (NVDEC/NVENC) |  Fails(+++)  |   Verified   |      -     |      -     |           -          |    Verified    | Cross Platform |
 | VideoToolBox       |       -      |       -      |  Verified  |   Crashes  |           -          |        -       | Mac Only       |
 | DXVA2              |       -      |       -      |      -     |      -     | Fails (green frames) |    Verified    | Windows Only   |
 | D3D11VA            |       -      |       -      |      -     |      -     | Fails (green frames) |        -       | Windows Only   |
@@ -21,9 +21,9 @@ The following table summarizes our current level of support:
 
 * HW accel is supported from FFmpeg version 3.2 (3.3 for nVidia drivers)
 * HW accel was removed for nVidia drivers in Ubuntu for FFmpeg 4+
-* We could not manage to build a version of FFmpeg 4.1 with the nVidia SDK
-that worked with nVidia cards. There might be a problem in FFmpeg 4+
-that prohibits this.
+* (+) VDPAU for some reason needs a card number one higher than it really is
+* (++) VDPAU is a decoder only.
+* (+++) Green frames
 
 **Notice:** The FFmpeg versions of Ubuntu and PPAs for Ubuntu show the
 same behaviour. FFmpeg 3 has working nVidia hardware acceleration while
@@ -106,23 +106,23 @@ on Mint 19.1 that supports the GPU on nVidia cards. A version of openshot
 with hardware support using these libraries could use the nVidia GPU.
 
 **BUG:** Hardware supported decoding still has some bugs (as you can see from
-the chart above). Also, the speed gains with decoding are not as great 
+the chart above). Also, the speed gains with decoding are not as great
 as with encoding. Currently, if hardware decoding fails, there is no
 fallback (you either get green frames or an "invalid file" error in OpenShot).
 This needs to be improved to successfully fall-back to software decoding.
 
-**Needed:** 
-  * A way to get options and limits of the GPU, such as 
+**Needed:**
+  * A way to get options and limits of the GPU, such as
  supported dimensions (width and height).
-  *  A way to list the actual Graphic Cards available to FFmpeg (for the 
-  user to choose which card for decoding and encoding, as opposed 
+  *  A way to list the actual Graphic Cards available to FFmpeg (for the
+  user to choose which card for decoding and encoding, as opposed
   to "Graphics Card X")
 
 **Further improvement:** Right now the frame can be decoded on the GPU, but the
-frame is then copied to CPU memory for modifications. It is then copied back to 
+frame is then copied to CPU memory for modifications. It is then copied back to
 GPU memory for encoding. Using the GPU for both decoding and modifications
-will make it possible to do away with these two copies. A possible solution would 
-be to use Vulkan compute which would be available on Linux and Windows natively 
+will make it possible to do away with these two copies. A possible solution would
+be to use Vulkan compute which would be available on Linux and Windows natively
 and on MacOS via MoltenVK.
 
 ## Credit
