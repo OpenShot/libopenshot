@@ -1,20 +1,33 @@
 ## Hardware Acceleration
 
-Observations for developers wanting to make hardware acceleration work.
+OpenShot now has experimental support for hardware acceleration, which uses 1 (or more) 
+graphics cards to offload some of the work for both decoding and encoding. This is
+very new and experimental (as of May 2019), but we look forward to "accelerating" 
+our support for this in the future!
 
-*All observations are for Linux (but contributions welcome).*
+The following table summarizes our current level of support:
+
+|                    | Linux Decode | Linux Encode | Mac Decode | Mac Encode | Windows Decode       | Windows Encode | Notes          |
+|--------------------|--------------|--------------|------------|------------|----------------------|----------------|----------------|
+| VA-API             |   Verified   |   Verified   |      -     |      -     |           -          |        -       | Linux Only     |
+| VDPAU              |   Verified   |   Verified   |      -     |      -     |           -          |        -       | Linux Only     |
+| CUDA (NVDEC/NVENC) |   Verified   |   Verified   |      -     |      -     |           -          |    Verified    | Cross Platform |
+| VideoToolBox       |       -      |       -      |  Verified  |   Crashes  |           -          |        -       | Mac Only       |
+| DXVA2              |       -      |       -      |      -     |      -     | Fails (green frames) |    Verified    | Windows Only   |
+| D3D11VA            |       -      |       -      |      -     |      -     | Fails (green frames) |        -       | Windows Only   |
+| QSV                |     Fails    |     Fails    |    Fails   |    Fails   |         Fails        |      Fails     | Cross Platform |
 
 ## Supported FFmpeg Versions
 
-* HW accel is supported from ffmpeg version 3.2 (3.3 for nVidia drivers)
-* HW accel was removed for nVidia drivers in Ubuntu for ffmpeg 4+
-* I could not manage to build a version of ffmpeg 4.1 with the nVidia SDK
-that worked with nVidia cards. There might be a problem in ffmpeg 4+
+* HW accel is supported from FFmpeg version 3.2 (3.3 for nVidia drivers)
+* HW accel was removed for nVidia drivers in Ubuntu for FFmpeg 4+
+* We could not manage to build a version of FFmpeg 4.1 with the nVidia SDK
+that worked with nVidia cards. There might be a problem in FFmpeg 4+
 that prohibits this.
 
-**Notice:** The ffmpeg versions of Ubuntu and PPAs for Ubuntu show the
-same behaviour. ffmpeg 3 has working nVidia hardware acceleration while
-ffmpeg 4+ has no support for nVidia hardware acceleration
+**Notice:** The FFmpeg versions of Ubuntu and PPAs for Ubuntu show the
+same behaviour. FFmpeg 3 has working nVidia hardware acceleration while
+FFmpeg 4+ has no support for nVidia hardware acceleration
 included.
 
 ## OpenShot Settings
@@ -26,10 +39,19 @@ the various hardware acceleration features.
 /// Use video codec for faster video decoding (if supported)
 int HARDWARE_DECODER = 0;
 
+/* 0 - No acceleration
+   1 - Linux VA-API
+   2 - nVidia NVDEC
+   3 - Windows D3D9
+   4 - Windows D3D11
+   5 - MacOS / VideoToolBox
+   6 - Linux VDPAU
+   7 - Intel QSV */
+
 /// Number of threads of OpenMP
 int OMP_THREADS = 12;
 
-/// Number of threads that ffmpeg uses
+/// Number of threads that FFmpeg uses
 int FF_THREADS = 8;
 
 /// Maximum rows that hardware decode can handle
@@ -38,10 +60,10 @@ int DE_LIMIT_HEIGHT_MAX = 1100;
 /// Maximum columns that hardware decode can handle
 int DE_LIMIT_WIDTH_MAX = 1950;
 
-/// Which GPU to use to decode (0 is the first)
+/// Which GPU to use to decode (0 is the first, LINUX ONLY)
 int HW_DE_DEVICE_SET = 0;
 
-/// Which GPU to use to encode (0 is the first)
+/// Which GPU to use to encode (0 is the first, LINUX ONLY)
 int HW_EN_DEVICE_SET = 0;
 ```
 
@@ -67,38 +89,44 @@ of effects could be implemented (contributions welcome).
 If the computer has multiple graphics cards installed, you can choose which
 should be used by libopenshot. Also, you can optionally use one card for
 decoding and the other for encoding (if both cards support acceleration).
+This is currently only supported on Linux, due to the device name FFmpeg
+expects (i.e. **/dev/dri/render128**). Contributions welcome if anyone can
+determine what string format to pass for Windows and Mac.
 
 ## Help Us Improve Hardware Support
 
 This information might be wrong, and we would love to continue improving
 our support for hardware acceleration in OpenShot. Please help us update
-this document if you find an error or discover some new information.
+this document if you find an error or discover new and/or useful information.
 
-**Desperately Needed:** The manual at:
+**FFmpeg 4 + nVidia** The manual at:
 https://www.tal.org/tutorials/ffmpeg_nvidia_encode
-works pretty well. I could compile and install a version of ffmpeg 4.1.3
+works pretty well. We could compile and install a version of FFmpeg 4.1.3
 on Mint 19.1 that supports the GPU on nVidia cards. A version of openshot
 with hardware support using these libraries could use the nVidia GPU.
-(A way to compile ffmpeg 4.0 and up with working nVidia
-hardware acceleration support on Ubuntu Linux!)
 
-**BUG:** Hardware supported decoding still has a bug. The speed gains with
-decoding are by far not as great as with encoding. In case hardware accelerated
-decoding does not work disable it. Hardware acceleration might also break 
-because of graphics drivers that have bugs.
+**BUG:** Hardware supported decoding still has some bugs (as you can see from
+the chart above). Also, the speed gains with decoding are not as great 
+as with encoding. Currently, if hardware decoding fails, there is no
+fallback (you either get green frames or an "invalid file" error in OpenShot).
+This needs to be improved to successfully fall-back to software decoding.
 
-**Needed:** A way to get the options and limits of the GPU, like
-supported codecs and the supported dimensions (width and height).
+**Needed:** 
+  * A way to get options and limits of the GPU, such as 
+ supported dimensions (width and height).
+  *  A way to list the actual Graphic Cards available to FFmpeg (for the 
+  user to choose which card for decoding and encoding, as opposed 
+  to "Graphics Card X")
 
-**Further improvement:** Right now the frame can be decoded on the GPU but the
-frame is then copied to CPU memory. Before encoding the frame is then
-copied to GPU memory for encoding. That is necessary because the modifications
-are done by the CPU. Using the GPU for that too will make it possible to do
-away with these two copies. A possible solution would be to use Vulkan compute
-which would be available on Linux and Windows natively and on MacOS via MoltenVK.
+**Further improvement:** Right now the frame can be decoded on the GPU, but the
+frame is then copied to CPU memory for modifications. It is then copied back to 
+GPU memory for encoding. Using the GPU for both decoding and modifications
+will make it possible to do away with these two copies. A possible solution would 
+be to use Vulkan compute which would be available on Linux and Windows natively 
+and on MacOS via MoltenVK.
 
 ## Credit
 
 A big thanks to Peter M (https://github.com/eisneinechse) for all his work
-on integrating hardware accelleration into libopenshot! The community thanks
+on integrating hardware acceleration into libopenshot! The community thanks
 you for this major contribution!

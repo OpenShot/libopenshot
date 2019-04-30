@@ -76,7 +76,18 @@ namespace openshot {
 		static Settings * m_pInstance;
 
 	public:
-		/// Use video codec for faster video decoding (if supported)
+		/**
+		 * @brief Use video codec for faster video decoding (if supported)
+		 *
+		 * 0 - No acceleration,
+		 * 1 - Linux VA-API,
+		 * 2 - nVidia NVDEC,
+		 * 3 - Windows D3D9,
+		 * 4 - Windows D3D11,
+		 * 5 - MacOS / VideoToolBox,
+		 * 6 - Linux VDPAU,
+		 * 7 - Intel QSV
+		 */
 		int HARDWARE_DECODER = 0;
 
 		/// Scale mode used in FFmpeg decoding and encoding (used as an optimization for faster previews)
