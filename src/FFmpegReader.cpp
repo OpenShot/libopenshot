@@ -152,137 +152,53 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 
 #if IS_FFMPEG_3_2
 
-#if defined(__linux__)
-static enum AVPixelFormat get_hw_dec_format_va(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_VAAPI:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_va (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-
-static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_CUDA:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_cu (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-
-static enum AVPixelFormat get_hw_dec_format_vd(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_VDPAU:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VDPAU;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VDPAU;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_vd (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-#endif
-
-#if defined(_WIN32)
-static enum AVPixelFormat get_hw_dec_format_dx(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_DXVA2_VLD:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_dx (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-
-static enum AVPixelFormat get_hw_dec_format_d3(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_D3D11:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_d3 (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-
-static enum AVPixelFormat get_hw_dec_format_cu(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_CUDA:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_cu (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-#endif
-
-#if defined(__APPLE__)
-static enum AVPixelFormat get_hw_dec_format_vt(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
-{
-		const enum AVPixelFormat *p;
-
-		for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-			switch (*p) {
-				case AV_PIX_FMT_VIDEOTOOLBOX:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-					return *p;
-					break;
-			}
-		}
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_vt (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
-		return AV_PIX_FMT_NONE;
-}
-#endif
-
-static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
+// Get hardware pix format
+static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
 	const enum AVPixelFormat *p;
 
 	for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
 		switch (*p) {
+#if defined(__linux__)
+			// Linux pix formats
+			case AV_PIX_FMT_VAAPI:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_VAAPI;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VAAPI;
+				return *p;
+				break;
+			case AV_PIX_FMT_VDPAU:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_VDPAU;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VDPAU;
+				return *p;
+				break;
+#endif
+#if defined(_WIN32)
+			// Windows pix formats
+			case AV_PIX_FMT_DXVA2_VLD:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_DXVA2_VLD;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_DXVA2;
+				return *p;
+				break;
+			case AV_PIX_FMT_D3D11:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_D3D11;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_D3D11VA;
+				return *p;
+				break;
+#endif
+#if defined(__APPLE__)
+			// Apple pix formats
+			case AV_PIX_FMT_VIDEOTOOLBOX:
+					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
+					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+					return *p;
+					break;
+#endif
+				// Cross-platform pix formats
+			case AV_PIX_FMT_CUDA:
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_CUDA;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_CUDA;
+				return *p;
+				break;
 			case AV_PIX_FMT_QSV:
 				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
 				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
@@ -290,7 +206,7 @@ static enum AVPixelFormat get_hw_dec_format_qs(AVCodecContext *ctx, const enum A
 				break;
 		}
 	}
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format_qs (Unable to decode this file using hardware decode.)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::get_hw_dec_format (Unable to decode this file using hardware decode)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 	return AV_PIX_FMT_NONE;
 }
 
@@ -304,15 +220,14 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 		case AV_CODEC_ID_WMV1:
 		case AV_CODEC_ID_WMV2:
 		case AV_CODEC_ID_WMV3:
-		ret = 1;
-		break;
-	default :
-		ret = 0;
-		break;
+			ret = 1;
+			break;
+		default :
+			ret = 0;
+			break;
 	}
 	return ret;
 }
-
 #endif
 
 void FFmpegReader::Open() {
@@ -393,76 +308,66 @@ void FFmpegReader::Open() {
 					adapter_num = openshot::Settings::Instance()->HW_DE_DEVICE_SET;
 					fprintf(stderr, "\n\nDecodiing Device Nr: %d\n", adapter_num);
 
+					// Set hardware pix format (callback)
+					pCodecCtx->get_format = get_hw_dec_format;
+
 					if (adapter_num < 3 && adapter_num >=0) {
 #if defined(__linux__)
-							snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
-							adapter_ptr = adapter;
-							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-							switch (i_decoder_hw) {
-									case 1:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-										pCodecCtx->get_format = get_hw_dec_format_va;
-										break;
-									case 2:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-										pCodecCtx->get_format = get_hw_dec_format_cu;
-										break;
-									case 6:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
-										pCodecCtx->get_format = get_hw_dec_format_vd;
-										break;
-									case 7:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-										pCodecCtx->get_format = get_hw_dec_format_qs;
-										break;
-									default:
-										hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-										pCodecCtx->get_format = get_hw_dec_format_va;
-										break;
-								}
-
-#elif defined(_WIN32)
-							adapter_ptr = NULL;
-							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-							switch (i_decoder_hw) {
+						snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
+						adapter_ptr = adapter;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+								case 1:
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
+									break;
 								case 2:
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-									pCodecCtx->get_format = get_hw_dec_format_cu;
 									break;
-								case 3:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-									pCodecCtx->get_format = get_hw_dec_format_dx;
-									break;
-								case 4:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
-									pCodecCtx->get_format = get_hw_dec_format_d3;
+								case 6:
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VDPAU;
 									break;
 								case 7:
 									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-									pCodecCtx->get_format = get_hw_dec_format_qs;
 									break;
 								default:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-									pCodecCtx->get_format = get_hw_dec_format_dx;
+									hw_de_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
 									break;
 							}
+
+#elif defined(_WIN32)
+						adapter_ptr = NULL;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+							case 2:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+								break;
+							case 3:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+								break;
+							case 4:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_D3D11VA;
+								break;
+							case 7:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+								break;
+							default:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
+								break;
+						}
 #elif defined(__APPLE__)
-							adapter_ptr = NULL;
-							i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
-							switch (i_decoder_hw) {
-								case 5:
-									hw_de_av_device_type =  AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-									pCodecCtx->get_format = get_hw_dec_format_vt;
-									break;
-								case 7:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
-									pCodecCtx->get_format = get_hw_dec_format_qs;
-									break;
-								default:
-									hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-									pCodecCtx->get_format = get_hw_dec_format_vt;
-									break;
-							}
+						adapter_ptr = NULL;
+						i_decoder_hw = openshot::Settings::Instance()->HARDWARE_DECODER;
+						switch (i_decoder_hw) {
+							case 5:
+								hw_de_av_device_type =  AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+								break;
+							case 7:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_QSV;
+								break;
+							default:
+								hw_de_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+								break;
+						}
 #endif
 
 					} else {
