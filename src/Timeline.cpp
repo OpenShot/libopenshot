@@ -1371,6 +1371,33 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		else if (root_key == "fps" && sub_key == "den")
 			// Set fps.den
 			info.fps.den = change["value"].asInt();
+		else if (root_key == "display_ratio" && sub_key == "" && change["value"].isObject()) {
+			// Set display_ratio fraction
+			if (!change["value"]["num"].isNull())
+				info.display_ratio.num = change["value"]["num"].asInt();
+			if (!change["value"]["den"].isNull())
+				info.display_ratio.den = change["value"]["den"].asInt();
+		}
+		else if (root_key == "display_ratio" && sub_key == "num")
+			// Set display_ratio.num
+			info.display_ratio.num = change["value"].asInt();
+		else if (root_key == "display_ratio" && sub_key == "den")
+			// Set display_ratio.den
+			info.display_ratio.den = change["value"].asInt();
+		else if (root_key == "pixel_ratio" && sub_key == "" && change["value"].isObject()) {
+			// Set pixel_ratio fraction
+			if (!change["value"]["num"].isNull())
+				info.pixel_ratio.num = change["value"]["num"].asInt();
+			if (!change["value"]["den"].isNull())
+				info.pixel_ratio.den = change["value"]["den"].asInt();
+		}
+		else if (root_key == "pixel_ratio" && sub_key == "num")
+			// Set pixel_ratio.num
+			info.pixel_ratio.num = change["value"].asInt();
+		else if (root_key == "pixel_ratio" && sub_key == "den")
+			// Set pixel_ratio.den
+			info.pixel_ratio.den = change["value"].asInt();
+
 		else if (root_key == "sample_rate")
 			// Set sample rate
 			info.sample_rate = change["value"].asInt();
@@ -1380,9 +1407,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		else if (root_key == "channel_layout")
 			// Set channel layout
 			info.channel_layout = (ChannelLayout) change["value"].asInt();
-
 		else
-
 			// Error parsing JSON (or missing keys)
 			throw InvalidJSONKey("JSON change key is invalid", change.toStyledString());
 
@@ -1443,7 +1468,14 @@ void Timeline::ClearAllCache() {
 // Set Max Image Size (used for performance optimization). Convenience function for setting
 // Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
 void Timeline::SetMaxSize(int width, int height) {
-	// Init max image size (choose the smallest one)
-	Settings::Instance()->MAX_WIDTH = min(width, info.width);
-	Settings::Instance()->MAX_HEIGHT = min(height, info.height);
+	// Maintain aspect ratio regardless of what size is passed in
+	QSize display_ratio_size = QSize(info.display_ratio.num * info.pixel_ratio.ToFloat(), info.display_ratio.den * info.pixel_ratio.ToFloat());
+	QSize proposed_size = QSize(min(width, info.width), min(height, info.height));
+
+	// Scale QSize up to proposed size
+	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);
+
+	// Set max size
+	Settings::Instance()->MAX_WIDTH = display_ratio_size.width();
+	Settings::Instance()->MAX_HEIGHT = display_ratio_size.height();
 }
