@@ -20,7 +20,7 @@ The following table summarizes our current level of support:
 * *(+) VDPAU for some reason needs a card number one higher than it really is*
 * *(++) VDPAU is a decoder only.*
 * *(+++) Green frames (pixel data not correctly tranferred back to system memory)*
-* *(++++) Crashes and burns
+* *(++++) Crashes and burns*
 
 ## Supported FFmpeg Versions
 
