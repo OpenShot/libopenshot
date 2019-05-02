@@ -35,24 +35,43 @@ namespace openshot
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::m_pInstance = NULL;
 
 	// Create or Get an instance of the device manager singleton
-	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance(int numChannels)
+	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
 	{
 		if (!m_pInstance) {
 			// Create the actual instance of device manager only once
 			m_pInstance = new AudioDeviceManagerSingleton;
 
+			// Get preferred audio device name (if any)
+			juce::String preferred_audio_device = juce::String(Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME.c_str());
+
 			// Initialize audio device only 1 time
-			String error = m_pInstance->audioDeviceManager.initialise (
+			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
 					0, /* number of input channels */
-                    numChannels, /* number of output channels */
+					2, /* number of output channels */
 					0, /* no XML settings.. */
-					true  /* select default device on failure */);
+					true,  /* select default device on failure */
+					preferred_audio_device /* preferredDefaultDeviceName */);
 
 			// Persist any errors detected
-			if (error.isNotEmpty()) {
-				m_pInstance->initialise_error = error.toStdString();
+			if (audio_error.isNotEmpty()) {
+				m_pInstance->initialise_error = audio_error.toRawUTF8();
 			} else {
 				m_pInstance->initialise_error = "";
+			}
+
+			// Get all audio device names
+			for (int i = 0; i < m_pInstance->audioDeviceManager.getAvailableDeviceTypes().size(); ++i)
+			{
+				const AudioIODeviceType* t = m_pInstance->audioDeviceManager.getAvailableDeviceTypes()[i];
+				const StringArray deviceNames = t->getDeviceNames ();
+
+				for (int j = 0; j < deviceNames.size (); ++j )
+				{
+					juce::String deviceName = deviceNames[j];
+					juce::String typeName = t->getTypeName();
+					AudioDeviceInfo deviceInfo = {deviceName.toRawUTF8(), typeName.toRawUTF8()};
+					m_pInstance->audio_device_names.push_back(deviceInfo);
+				}
 			}
 		}
 
@@ -149,7 +168,7 @@ namespace openshot
 
     			// Start new audio device (or get existing one)
     			// Add callback
-				AudioDeviceManagerSingleton::Instance(numChannels)->audioDeviceManager.addAudioCallback(&player);
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.addAudioCallback(&player);
 
     			// Create TimeSliceThread for audio buffering
 				time_thread.startThread();
@@ -182,7 +201,7 @@ namespace openshot
 				transport.setSource(NULL);
 
 				player.setSource(NULL);
-				AudioDeviceManagerSingleton::Instance(0)->audioDeviceManager.removeAudioCallback(&player);
+				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAudioCallback(&player);
 
 				// Remove source
 				delete source;

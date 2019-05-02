@@ -42,6 +42,9 @@
 	extern "C" {
 		#include <libavcodec/avcodec.h>
 		#include <libavformat/avformat.h>
+	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+		#include <libavutil/hwcontext.h> //PM
+	#endif
 		#include <libswscale/swscale.h>
 		// Change this to the first version swrescale works
 	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)

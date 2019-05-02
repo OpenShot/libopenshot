@@ -199,10 +199,12 @@ endif(RESVG_FOUND)
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
+	message(STATUS "Discovering system JsonCPP (USE_SYSTEM_JSONCPP enabled)")
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
+	message(STATUS "Discovering system JsonCPP - done")
 else()
-	message("-- Could NOT find JsonCpp library (Using embedded JsonCpp instead)")
+	message(STATUS "Using embedded JsonCpp (USE_SYSTEM_JSONCPP not enabled)")
 	include_directories("../thirdparty/jsoncpp/include")
 endif(USE_SYSTEM_JSONCPP)
 

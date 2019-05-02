@@ -32,11 +32,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Calculate the # of OpenMP and FFmpeg Threads to allow. We are limiting both
-// of these based on our own performance tests (more is not always better).
-#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), 6))
-#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), 12))
+#include "../include/Settings.h"
 
+using namespace std;
+using namespace openshot;
+
+// Calculate the # of OpenMP Threads to allow
+#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->OMP_THREADS) ))
+#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->FF_THREADS) ))
 
 
 #endif
