@@ -82,7 +82,9 @@ list(APPEND OPENSHOT_INCLUDE_DIRS
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+
+#### Optional C++ restrictions
+set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Allow compiler C++ language extensions")
 
 IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
