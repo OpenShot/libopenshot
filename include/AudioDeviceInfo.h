@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Unit tests for openshot::Color
+ * @brief Header file for Audio Device Info struct
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @section LICENSE
@@ -25,35 +25,19 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-#include "../include/OpenShot.h"
+#ifndef OPENSHOT_AUDIODEVICEINFO_H
+#define OPENSHOT_AUDIODEVICEINFO_H
 
-using namespace std;
-using namespace openshot;
 
-TEST(Settings_Default_Constructor)
+/**
+ * @brief This struct hold information about Audio Devices
+ *
+ * The type and name of the audio device.
+ */
+struct AudioDeviceInfo
 {
-	// Create an empty color
-	Settings *s = Settings::Instance();
+	string name;
+	string type;
+};
 
-	CHECK_EQUAL(0, s->HARDWARE_DECODER);
-	CHECK_EQUAL(false, s->HIGH_QUALITY_SCALING);
-	CHECK_EQUAL(false, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
-}
-
-TEST(Settings_Change_Settings)
-{
-	// Create an empty color
-	Settings *s = Settings::Instance();
-	s->HARDWARE_DECODER = 1;
-	s->HIGH_QUALITY_SCALING = true;
-	s->WAIT_FOR_VIDEO_PROCESSING_TASK = true;
-
-	CHECK_EQUAL(1, s->HARDWARE_DECODER);
-	CHECK_EQUAL(true, s->HIGH_QUALITY_SCALING);
-	CHECK_EQUAL(true, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
-
-	CHECK_EQUAL(1, s->HARDWARE_DECODER);
-	CHECK_EQUAL(true, Settings::Instance()->HIGH_QUALITY_SCALING);
-	CHECK_EQUAL(true, Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK);
-}
+#endif
