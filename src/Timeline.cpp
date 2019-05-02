@@ -58,6 +58,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.has_audio = true;
 	info.has_video = true;
 	info.video_length = info.fps.ToFloat() * info.duration;
+	info.display_ratio = openshot::Fraction(width, height);
+	info.display_ratio.Reduce();
+	info.pixel_ratio = openshot::Fraction(1, 1);
 
     // Init max image size
 	SetMaxSize(info.width, info.height);
