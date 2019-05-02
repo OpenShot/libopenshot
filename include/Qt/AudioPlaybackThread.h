@@ -32,6 +32,8 @@
 #include "../ReaderBase.h"
 #include "../RendererBase.h"
 #include "../AudioReaderSource.h"
+#include "../AudioDeviceInfo.h"
+#include "../Settings.h"
 
 namespace openshot
 {
@@ -66,8 +68,11 @@ namespace openshot
 		/// Error found during JUCE initialise method
 		string initialise_error;
 
-		/// Create or get an instance of this singleton (invoke the class with this method)
-		static AudioDeviceManagerSingleton * Instance(int numChannels);
+		/// List of valid audio device names
+		vector<AudioDeviceInfo> audio_device_names;
+
+		/// Override with no channels and no preferred audio device
+		static AudioDeviceManagerSingleton * Instance();
 
 		/// Public device manager property
 		AudioDeviceManager audioDeviceManager;
@@ -126,7 +131,10 @@ namespace openshot
 		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
 		/// Get Audio Error (if any)
-		string getError() { return AudioDeviceManagerSingleton::Instance(numChannels)->initialise_error; }
+		string getError() { return AudioDeviceManagerSingleton::Instance()->initialise_error; }
+
+		/// Get Audio Device Names (if any)
+		vector<AudioDeviceInfo> getAudioDeviceNames() { return AudioDeviceManagerSingleton::Instance()->audio_device_names; };
 
 		friend class PlayerPrivate;
 		friend class QtPlayer;
