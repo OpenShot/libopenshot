@@ -7,15 +7,15 @@ our support for this in the future!
 
 The following table summarizes our current level of support:
 
-|                    |      Linux Decode      |     Linux Encode     |    Mac Decode    |   Mac Encode  |Windows Decode|  Windows Encode  | Notes            |
-|--------------------|------------------------|----------------------|------------------|---------------|--------------|------------------|------------------|
-| VA-API             |   :heavy_check_mark:   |  :heavy_check_mark:  |         -        |       -       |       -      |         -        | *Linux Only*     |
-| VDPAU              |  :heavy_check_mark:(+) |:white_check_mark:(++)|         -        |       -       |       -      |         -        | *Linux Only*     |
-| CUDA (NVDEC/NVENC) |        :x:(+++)        |  :heavy_check_mark:  |         -        |        -      |       -      |:heavy_check_mark:| *Cross Platform* |
-| VideoToolBox       |            -           |           -          |:heavy_check_mark:|   :x:(++++)   |       -      |         -        | *Mac Only*       |
-| DXVA2              |            -           |           -          |         -        |       -       |   :x:(+++)   |         -        | *Windows Only*   |
-| D3D11VA            |            -           |           -          |         -        |       -       |   :x:(+++)   |         -        | *Windows Only*   |
-| QSV                |        :x:(+++)        |          :x:         |        :x:       |      :x:      |      :x:     |        :x:       | *Cross Platform* |
+|                    |      Linux Decode      |     Linux Encode     |    Mac Decode    |    Mac Encode  |Windows Decode|  Windows Encode  | Notes            |
+|--------------------|------------------------|----------------------|------------------|----------------|--------------|------------------|------------------|
+| VA-API             |   :heavy_check_mark:   |  :heavy_check_mark:  |         -        |        -       |       -      |         -        | *Linux Only*     |
+| VDPAU              |  :heavy_check_mark:(+) |:white_check_mark:(++)|         -        |        -       |       -      |         -        | *Linux Only*     |
+| CUDA (NVDEC/NVENC) |        :x:(+++)        |  :heavy_check_mark:  |         -        |        -       |       -      |:heavy_check_mark:| *Cross Platform* |
+| VideoToolBox       |            -           |           -          |:heavy_check_mark:|   :x:(++++)    |       -      |         -        | *Mac Only*       |
+| DXVA2              |            -           |           -          |         -        |        -       |   :x:(+++)   |         -        | *Windows Only*   |
+| D3D11VA            |            -           |           -          |         -        |        -       |   :x:(+++)   |         -        | *Windows Only*   |
+| QSV                |        :x:(+++)        |          :x:         |        :x:       |       :x:      |      :x:     |        :x:       | *Cross Platform* |
 
 * *(+) VDPAU for some reason needs a card number one higher than it really is*
 * *(++) VDPAU is a decoder only.*
