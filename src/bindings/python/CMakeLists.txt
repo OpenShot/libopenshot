@@ -84,7 +84,7 @@ print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
 		endif()
 	endif()
 
-  ### Calculate the python module path (using distutils)
+	### Calculate the python module path (using distutils)
 			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
 print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
