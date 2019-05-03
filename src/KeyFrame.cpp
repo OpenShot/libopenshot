@@ -336,9 +336,8 @@ bool Keyframe::IsIncreasing(int index)
 			return false;
 		}
 	}
-	else
-		// return default true (since most curves increase)
-		return true;
+	// return default true (since most curves increase)
+	return true;
 }
 
 // Generate JSON string of this object
