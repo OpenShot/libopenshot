@@ -57,6 +57,14 @@ namespace std {
 
 
 %{
+/* Ruby and FFmpeg define competing RSHIFT macros,
+ * so we move Ruby's out of the way for now. We'll
+ * restore it after dealing with FFmpeg's
+ */
+#ifdef RSHIFT
+  #define RB_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
 #include "../../../include/Version.h"
 #include "../../../include/ReaderBase.h"
 #include "../../../include/WriterBase.h"
@@ -93,6 +101,15 @@ namespace std {
 #include "../../../include/ZmqLogger.h"
 #include "../../../include/AudioDeviceInfo.h"
 
+/* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
+#ifdef RSHIFT
+  #define FF_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+/* And restore Ruby's RSHIFT, if we captured it */
+#ifdef RB_RSHIFT
+  #define RSHIFT(a, b) RB_RSHIFT(a, b)
+#endif
 %}
 
 #ifdef USE_BLACKMAGIC
@@ -133,8 +150,29 @@ namespace std {
 %include "../../../include/EffectInfo.h"
 %include "../../../include/Enums.h"
 %include "../../../include/Exceptions.h"
+
+/* Ruby and FFmpeg define competing RSHIFT macros,
+ * so we move Ruby's out of the way for now. We'll
+ * restore it after dealing with FFmpeg's
+ */
+#ifdef RSHIFT
+  #define RB_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+
 %include "../../../include/FFmpegReader.h"
 %include "../../../include/FFmpegWriter.h"
+
+/* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
+#ifdef RSHIFT
+  #define FF_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+/* And restore Ruby's RSHIFT, if we captured it */
+#ifdef RB_RSHIFT
+  #define RSHIFT(a, b) RB_RSHIFT(a, b)
+#endif
+
 %include "../../../include/Fraction.h"
 %include "../../../include/Frame.h"
 %include "../../../include/FrameMapper.h"

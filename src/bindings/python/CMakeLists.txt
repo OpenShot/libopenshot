@@ -84,20 +84,21 @@ print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
 		endif()
 	endif()
 
-	if (NOT PYTHON_MODULE_PATH)
-		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "${py_detection}"
-		                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-		                  OUTPUT_STRIP_TRAILING_WHITESPACE )
+  ### Calculate the python module path (using distutils)
+			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+from distutils.sysconfig import get_python_lib; \
+print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+				OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-		                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-		${PY_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-		SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH}
-		    CACHE PATH "Install path for Python modules (relative to prefix)")
+			GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+					"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+			FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+					${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+			SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
+		endif()
 	endif()
-
-	message(STATUS "Will install Python module to: ${PYTHON_MODULE_PATH}")
+	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
 
 	############### INSTALL HEADERS & LIBRARY ################
 	### Install Python bindings
