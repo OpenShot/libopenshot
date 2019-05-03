@@ -74,11 +74,13 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 		if (PYBUILD_EXECUTABLE)
 			# We're on a Debian derivative, fall back to old path detection
 			set(py_detection "import site; print(site.getsitepackages()[0])")
+			set(PY_INSTALL_PREFIX "/usr/local") # An assumption (bad one?)
 		else()
 			# Use distutils to detect install path
 			set (py_detection "\
 from distutils.sysconfig import get_python_lib; \
 print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )")
+			set(PY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 		endif()
 	endif()
 
@@ -90,7 +92,7 @@ print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
 		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
 		                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
 		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-		     ${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+		${PY_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
 		SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH}
 		    CACHE PATH "Install path for Python modules (relative to prefix)")
 	endif()
