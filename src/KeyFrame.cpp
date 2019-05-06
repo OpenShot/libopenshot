@@ -327,11 +327,7 @@ bool Keyframe::IsIncreasing(int index)
 			}
 		}
 
-		if (current_value < next_value) {
-			// Increasing
-			return true;
-		}
-		else if (current_value >= next_value) {
+		if (current_value >= next_value) {
 			// Decreasing
 			return false;
 		}
