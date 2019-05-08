@@ -71,7 +71,7 @@ namespace openshot {
 		CacheMemory(int64_t max_bytes);
 
 		// Default destructor
-		~CacheMemory();
+		virtual ~CacheMemory();
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.

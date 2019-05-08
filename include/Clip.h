@@ -160,7 +160,7 @@ namespace openshot {
 		Clip(ReaderBase* new_reader);
 
 		/// Destructor
-		~Clip();
+		virtual ~Clip();
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

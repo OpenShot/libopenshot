@@ -884,9 +884,8 @@ void FFmpegWriter::flush_encoders() {
 }
 
 // Close the video codec
-void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st) {
-	AV_FREE_CONTEXT(video_codec);
-	video_codec = NULL;
+void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
+{
 #if IS_FFMPEG_3_2
 	//  #if defined(__linux__)
 		if (hw_en_on && hw_en_supported) {
@@ -900,10 +899,8 @@ void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st) {
 }
 
 // Close the audio codec
-void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st) {
-	AV_FREE_CONTEXT(audio_codec);
-	audio_codec = NULL;
-
+void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
+{
 	// Clear buffers
 	delete[] samples;
 	delete[] audio_outbuf;
@@ -942,12 +939,6 @@ void FFmpegWriter::Close() {
 	if (image_rescalers.size() > 0)
 		RemoveScalers();
 
-	// Free the streams
-	for (int i = 0; i < oc->nb_streams; i++) {
-		av_freep(AV_GET_CODEC_ATTRIBUTES(&oc->streams[i], &oc->streams[i]));
-		av_freep(&oc->streams[i]);
-	}
-
 	if (!(fmt->flags & AVFMT_NOFILE)) {
 		/* close the output file */
 		avio_close(oc->pb);
@@ -957,8 +948,9 @@ void FFmpegWriter::Close() {
 	write_video_count = 0;
 	write_audio_count = 0;
 
-	// Free the context
-	av_freep(&oc);
+	// Free the context which frees the streams too
+	avformat_free_context(oc);
+	oc = NULL;
 
 	// Close writer
 	is_open = false;

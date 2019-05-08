@@ -170,7 +170,7 @@ namespace openshot
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		/// Destructor
-		~FrameMapper();
+		virtual ~FrameMapper();
 
 		/// Change frame rate or audio mapping details
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);

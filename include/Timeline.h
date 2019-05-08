@@ -205,6 +205,8 @@ namespace openshot {
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
+        virtual ~Timeline();
+
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
 		void AddClip(Clip* clip);

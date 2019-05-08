@@ -61,6 +61,9 @@ FrameMapper::~FrameMapper() {
 	if (is_open)
 		// Auto Close if not already
 		Close();
+
+	delete reader;
+	reader = NULL;
 }
 
 /// Get the current reader

@@ -70,6 +70,11 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
+Timeline::~Timeline() {
+    delete final_cache;
+    final_cache = NULL;
+}
+
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
