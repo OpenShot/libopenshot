@@ -64,6 +64,8 @@ namespace openshot
 		/// Constructor for DummyReader.
 		DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration);
 
+		virtual ~DummyReader();
+
 		/// Close File
 		void Close();
 

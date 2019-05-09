@@ -71,6 +71,9 @@ DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, i
 	Close();
 }
 
+DummyReader::~DummyReader() {
+}
+
 // Open image file
 void DummyReader::Open()
 {

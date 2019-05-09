@@ -62,7 +62,6 @@ FrameMapper::~FrameMapper() {
 		// Auto Close if not already
 		Close();
 
-	delete reader;
 	reader = NULL;
 }
 

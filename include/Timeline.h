@@ -30,6 +30,7 @@
 
 #include <list>
 #include <memory>
+#include <set>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include "CacheBase.h"
@@ -152,6 +153,7 @@ namespace openshot {
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		list<EffectBase*> effects; ///<List of clips on this timeline
 		CacheBase *final_cache; ///<Final cache of timeline frames
+		set<FrameMapper*> allocated_frame_mappers; /// all the frame mappers we allocated and must free
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
