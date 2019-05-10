@@ -1120,11 +1120,13 @@ bool FFmpegReader::GetAVFrame() {
 #else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
 
+		// always allocate pFrame (because we do that in the ffmpeg >= 3.2 as well); it will always be freed later
+		pFrame = AV_ALLOCATE_FRAME();
+
 		// is frame finished
 		if (frameFinished) {
 			// AVFrames are clobbered on the each call to avcodec_decode_video, so we
 			// must make a copy of the image data before this method is called again.
-			pFrame = AV_ALLOCATE_FRAME();
 			avpicture_alloc((AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
 							info.height);
