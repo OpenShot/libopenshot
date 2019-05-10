@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/Settings.h"
+#include "Settings.h"
 
 using namespace std;
 using namespace openshot;
