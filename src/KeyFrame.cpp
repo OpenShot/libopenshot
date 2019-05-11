@@ -327,18 +327,13 @@ bool Keyframe::IsIncreasing(int index)
 			}
 		}
 
-		if (current_value < next_value) {
-			// Increasing
-			return true;
-		}
-		else if (current_value >= next_value) {
+		if (current_value >= next_value) {
 			// Decreasing
 			return false;
 		}
 	}
-	else
-		// return default true (since most curves increase)
-		return true;
+	// return default true (since most curves increase)
+	return true;
 }
 
 // Generate JSON string of this object

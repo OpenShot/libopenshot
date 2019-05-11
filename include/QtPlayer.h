@@ -62,6 +62,9 @@ namespace openshot
 	/// Get Error (if any)
 	string GetError();
 
+	/// Get Audio Devices from JUCE
+	vector<AudioDeviceInfo> GetAudioDeviceNames();
+
 	/// Play the video
 	void Play();
 	

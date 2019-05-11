@@ -130,6 +130,10 @@ void QtImageReader::Open()
 		info.display_ratio.num = size.num;
 		info.display_ratio.den = size.den;
 
+		// Set current max size
+		max_size.setWidth(info.width);
+		max_size.setHeight(info.height);
+
 		// Mark as "open"
 		is_open = true;
 	}
@@ -209,8 +213,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (cached_image->width() != max_width || cached_image->height() != max_height)) {
-
+	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
@@ -239,6 +242,10 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 		cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
+
+		// Set max size (to later determine if max_size is changed)
+		max_size.setWidth(max_width);
+		max_size.setHeight(max_height);
 	}
 
 	// Create or get frame object

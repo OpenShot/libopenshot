@@ -42,6 +42,9 @@
 	extern "C" {
 		#include <libavcodec/avcodec.h>
 		#include <libavformat/avformat.h>
+	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+		#include <libavutil/hwcontext.h> //PM
+	#endif
 		#include <libswscale/swscale.h>
 		// Change this to the first version swrescale works
 	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
@@ -112,6 +115,13 @@
 	#endif
 	#ifndef PIX_FMT_YUV420P
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
+	#endif
+
+	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
+	// definition in ruby/config.h, so we move it to FF_RSHIFT
+	#ifdef RSHIFT
+		#define FF_RSHIFT(a, b) RSHIFT(a, b)
+		#undef RSHIFT
 	#endif
 
 	#ifdef USE_SW

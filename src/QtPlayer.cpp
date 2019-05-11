@@ -56,7 +56,7 @@ QtPlayer::~QtPlayer()
 void QtPlayer::CloseAudioDevice()
 {
 	// Close audio device (only do this once, when all audio playback is finished)
-	AudioDeviceManagerSingleton::Instance(0)->CloseAudioDevice();
+	AudioDeviceManagerSingleton::Instance()->CloseAudioDevice();
 }
 
 // Return any error string during initialization
@@ -66,6 +66,15 @@ string QtPlayer::GetError() {
 		return p->audioPlayback->getError();
 	} else {
 		return "";
+	}
+}
+
+/// Get Audio Devices from JUCE
+vector<AudioDeviceInfo> QtPlayer::GetAudioDeviceNames() {
+	if (reader && threads_started) {
+		return p->audioPlayback->getAudioDeviceNames();
+	} else {
+		return vector<AudioDeviceInfo>();
 	}
 }
 
