@@ -31,7 +31,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true)
+		is_open(false), auto_map_clips(true), managed_cache(true)
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -84,8 +84,8 @@ Timeline::~Timeline() {
 	}
 	allocated_frame_mappers.clear();
 
-	// Remove cache
-	if (final_cache) {
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
 		delete final_cache;
 		final_cache = NULL;
 	}
@@ -923,6 +923,13 @@ vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, int num
 
 // Get the cache object used by this reader
 void Timeline::SetCache(CacheBase* new_cache) {
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+		managed_cache = false;
+	}
+
 	// Set new cache
 	final_cache = new_cache;
 }
