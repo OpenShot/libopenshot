@@ -75,8 +75,20 @@ Timeline::~Timeline() {
 		// Auto Close if not already
 		Close();
 
-	delete final_cache;
-	final_cache = NULL;
+	// Free all allocated frame mappers
+	set<FrameMapper *>::iterator frame_mapper_itr;
+	for (frame_mapper_itr = allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr) {
+		// Get frame mapper object from the iterator
+		FrameMapper *frame_mapper = (*frame_mapper_itr);
+		delete frame_mapper;
+	}
+	allocated_frame_mappers.clear();
+
+	// Remove cache
+	if (final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+	}
 }
 
 // Add an openshot::Clip to the timeline
@@ -647,16 +659,6 @@ void Timeline::Close()
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, false);
 	}
-
-	// Free all allocated frame mappers
-	set<FrameMapper*>::iterator frame_mapper_itr;
-	for (frame_mapper_itr=allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr)
-	{
-		// Get frame mapper object from the iterator
-		FrameMapper *frame_mapper = (*frame_mapper_itr);
-		delete frame_mapper;
-	}
-	allocated_frame_mappers.clear();
 
 	// Mark timeline as closed
 	is_open = false;
