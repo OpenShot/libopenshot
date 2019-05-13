@@ -70,6 +70,15 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
+Timeline::~Timeline() {
+	if (is_open)
+		// Auto Close if not already
+		Close();
+
+	delete final_cache;
+	final_cache = NULL;
+}
+
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
@@ -123,7 +132,9 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
-		clip_reader = (ReaderBase*) new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		allocated_frame_mappers.insert(mapper);
+		clip_reader = (ReaderBase*) mapper;
 	}
 
 	// Update the mapping
@@ -636,6 +647,16 @@ void Timeline::Close()
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, false);
 	}
+
+	// Free all allocated frame mappers
+	set<FrameMapper*>::iterator frame_mapper_itr;
+	for (frame_mapper_itr=allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr)
+	{
+		// Get frame mapper object from the iterator
+		FrameMapper *frame_mapper = (*frame_mapper_itr);
+		delete frame_mapper;
+	}
+	allocated_frame_mappers.clear();
 
 	// Mark timeline as closed
 	is_open = false;

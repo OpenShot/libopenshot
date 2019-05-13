@@ -159,7 +159,7 @@ namespace openshot
 		Frame& operator= (const Frame& other);
 
 		/// Destructor
-		~Frame();
+		virtual ~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, string new_color);

@@ -120,7 +120,7 @@ void Frame::DeepCopy(const Frame& other)
 		wave_image = std::shared_ptr<QImage>(new QImage(*(other.wave_image)));
 }
 
-// Descructor
+// Destructor
 Frame::~Frame() {
 	// Clear all pointers
 	image.reset();

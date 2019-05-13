@@ -243,7 +243,7 @@ namespace openshot {
 		FFmpegReader(string path, bool inspect_reader);
 
 		/// Destructor
-		~FFmpegReader();
+		virtual ~FFmpegReader();
 
 		/// Close File
 		void Close();

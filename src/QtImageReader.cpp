@@ -57,6 +57,10 @@ QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_
 	}
 }
 
+QtImageReader::~QtImageReader()
+{
+}
+
 // Open image file
 void QtImageReader::Open()
 {
@@ -147,7 +151,7 @@ void QtImageReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
-		
+
 		// Delete the image
 		image.reset();
 
