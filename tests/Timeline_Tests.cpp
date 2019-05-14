@@ -243,7 +243,6 @@ TEST(Timeline_Clip_Order)
 	clip_middle1.Position(0.5);
 	t.AddClip(&clip_middle1);
 
-
 	// Loop through clips again, and re-check order
 	counter = 0;
 	clips = t.Clips();

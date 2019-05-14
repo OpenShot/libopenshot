@@ -112,7 +112,10 @@ namespace openshot {
 
 		// File Reader object
 		ReaderBase* reader;
-		bool manage_reader;
+
+		/// If we allocated a reader, we store it here to free it later
+		/// (reader member variable itself may have been replaced)
+		ReaderBase* allocated_reader;
 
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
@@ -160,7 +163,7 @@ namespace openshot {
 		Clip(ReaderBase* new_reader);
 
 		/// Destructor
-		~Clip();
+		virtual ~Clip();
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

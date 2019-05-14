@@ -81,6 +81,8 @@ namespace openshot
 		/// when you are inflating the object using JSON after instantiating it.
 		QtImageReader(string path, bool inspect_reader);
 
+		virtual ~QtImageReader();
+
 		/// Close File
 		void Close();
 

@@ -576,6 +576,12 @@ void FFmpegReader::Close() {
 
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 
+		if (packet) {
+			// Remove previous packet before getting next one
+			RemoveAVPacket(packet);
+			packet = NULL;
+		}
+
 		// Close the codec
 		if (info.has_video) {
 			avcodec_flush_buffers(pCodecCtx);
@@ -624,6 +630,8 @@ void FFmpegReader::Close() {
 		seek_video_frame_found = 0;
 		current_video_frame = 0;
 		has_missing_frames = false;
+
+		last_video_frame.reset();
 	}
 }
 
@@ -926,7 +934,9 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 							// down processing considerably, but might be more stable on some systems.
 #pragma omp taskwait
 						}
-					}
+					} else {
+                        RemoveAVFrame(pFrame);
+                    }
 
 				}
 				// Audio packet
@@ -1063,7 +1073,7 @@ bool FFmpegReader::GetAVFrame() {
 				{
 					next_frame2 = next_frame;
 				}
-			pFrame = new AVFrame();
+			pFrame = AV_ALLOCATE_FRAME();
 			while (ret >= 0) {
 				ret =  avcodec_receive_frame(pCodecCtx, next_frame2);
 				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
@@ -1110,11 +1120,13 @@ bool FFmpegReader::GetAVFrame() {
 #else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
 
+		// always allocate pFrame (because we do that in the ffmpeg >= 3.2 as well); it will always be freed later
+		pFrame = AV_ALLOCATE_FRAME();
+
 		// is frame finished
 		if (frameFinished) {
 			// AVFrames are clobbered on the each call to avcodec_decode_video, so we
 			// must make a copy of the image data before this method is called again.
-			pFrame = AV_ALLOCATE_FRAME();
 			avpicture_alloc((AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
 							info.height);
@@ -1206,6 +1218,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	int width = info.width;
 	int64_t video_length = info.video_length;
 	AVFrame *my_frame = pFrame;
+	pFrame = NULL;
 
 	// Add video frame to list of processing video frames
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
