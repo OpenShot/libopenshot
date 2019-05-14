@@ -923,7 +923,7 @@ vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, int num
 	return matching_clips;
 }
 
-// Get the cache object used by this reader
+// Set the cache object used by this reader
 void Timeline::SetCache(CacheBase* new_cache) {
 	// Destroy previous cache (if managed by timeline)
 	if (managed_cache && final_cache) {
