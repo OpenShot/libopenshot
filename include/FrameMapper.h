@@ -213,6 +213,9 @@ namespace openshot
 		/// Get the current reader
 		ReaderBase* Reader();
 
+		/// Set the current reader
+		void Reader(ReaderBase *new_reader) { reader = new_reader; }
+
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);
 

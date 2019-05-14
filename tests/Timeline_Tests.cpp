@@ -185,9 +185,7 @@ TEST(Timeline_Check_Two_Track_Video)
 TEST(Timeline_Clip_Order)
 {
 	// Create a timeline
-	cout << "A" << endl;
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
-	cout << "B" << endl;
 
 	// Add some clips out of order
 	stringstream path_top;
@@ -195,51 +193,40 @@ TEST(Timeline_Clip_Order)
 	Clip clip_top(path_top.str());
 	clip_top.Layer(2);
 	t.AddClip(&clip_top);
-	cout << "C" << endl;
 
 	stringstream path_middle;
 	path_middle << TEST_MEDIA_PATH << "front.png";
 	Clip clip_middle(path_middle.str());
 	clip_middle.Layer(0);
 	t.AddClip(&clip_middle);
-	cout << "D" << endl;
 
 	stringstream path_bottom;
 	path_bottom << TEST_MEDIA_PATH << "back.png";
 	Clip clip_bottom(path_bottom.str());
 	clip_bottom.Layer(1);
 	t.AddClip(&clip_bottom);
-	cout << "E" << endl;
 
 	// Open Timeline
 	t.Open();
-	cout << "F" << endl;
 
 	// Loop through Clips and check order (they should have been sorted into the correct order)
 	// Bottom layer to top layer, then by position.
 	list<Clip*>::iterator clip_itr;
 	list<Clip*> clips = t.Clips();
-	cout << "G" << endl;
 	int counter = 0;
 	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
 	{
-		cout << "H" << endl;
 		// Get clip object from the iterator
 		Clip *clip = (*clip_itr);
 
-		cout << "I" << endl;
-
 		switch (counter) {
 		case 0:
-			cout << "J" << endl;
 			CHECK_EQUAL(0, clip->Layer());
 			break;
 		case 1:
-			cout << "K" << endl;
 			CHECK_EQUAL(1, clip->Layer());
 			break;
 		case 2:
-			cout << "L" << endl;
 			CHECK_EQUAL(2, clip->Layer());
 			break;
 		}
@@ -247,8 +234,6 @@ TEST(Timeline_Clip_Order)
 		// increment counter
 		counter++;
 	}
-
-	cout << "M" << endl;
 
 	// Add another clip
 	stringstream path_middle1;
@@ -258,35 +243,27 @@ TEST(Timeline_Clip_Order)
 	clip_middle1.Position(0.5);
 	t.AddClip(&clip_middle1);
 
-	cout << "N" << endl;
-
 	// Loop through clips again, and re-check order
 	counter = 0;
 	clips = t.Clips();
-	cout << "O" << endl;
 	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
 	{
 		// Get clip object from the iterator
 		Clip *clip = (*clip_itr);
-		cout << "P" << endl;
 
 		switch (counter) {
 		case 0:
-			cout << "Q" << endl;
 			CHECK_EQUAL(0, clip->Layer());
 			break;
 		case 1:
-			cout << "R" << endl;
 			CHECK_EQUAL(1, clip->Layer());
 			CHECK_CLOSE(0.0, clip->Position(), 0.0001);
 			break;
 		case 2:
-			cout << "S" << endl;
 			CHECK_EQUAL(1, clip->Layer());
 			CHECK_CLOSE(0.5, clip->Position(), 0.0001);
 			break;
 		case 3:
-			cout << "T" << endl;
 			CHECK_EQUAL(2, clip->Layer());
 			break;
 		}
@@ -295,12 +272,8 @@ TEST(Timeline_Clip_Order)
 		counter++;
 	}
 
-	cout << "U" << endl;
-
 	// Close reader
 	t.Close();
-
-	cout << "V" << endl;
 }
 
 

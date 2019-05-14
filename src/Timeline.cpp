@@ -80,6 +80,8 @@ Timeline::~Timeline() {
 	for (frame_mapper_itr = allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr) {
 		// Get frame mapper object from the iterator
 		FrameMapper *frame_mapper = (*frame_mapper_itr);
+		frame_mapper->Reader(NULL);
+		frame_mapper->Close();
 		delete frame_mapper;
 	}
 	allocated_frame_mappers.clear();
