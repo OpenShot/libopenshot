@@ -1038,6 +1038,8 @@ int FFmpegReader::GetNextPacket() {
 			// Update current packet pointer
 			packet = next_packet;
 		}
+        else
+            delete next_packet;
 	}
 	// Return if packet was found (or error number)
 	return found_packet;
