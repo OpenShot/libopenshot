@@ -480,6 +480,28 @@ const unsigned char* Frame::GetPixels(int row)
 	return image->scanLine(row);
 }
 
+// Check a specific pixel color value (returns True/False)
+bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha) {
+	int col_pos = col * 4; // Find column array position
+	if (!image || row < 0 || row >= (height - 1) ||
+		col_pos < 0 || col_pos >= (width - 1) ) {
+		// invalid row / col
+		return false;
+	}
+	// Check pixel color
+	const unsigned char* pixels = GetPixels(row);
+	if (pixels[col_pos + 0] == red &&
+		pixels[col_pos + 1] == green &&
+		pixels[col_pos + 2] == blue &&
+		pixels[col_pos + 3] == alpha) {
+		// Pixel color matches successfully
+		return true;
+	} else {
+		// Pixel color does not match
+		return false;
+	}
+}
+
 // Set Pixel Aspect Ratio
 void Frame::SetPixelRatio(int num, int den)
 {
