@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
 	Settings *s = Settings::Instance();
 	s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC
-	s->HW_DE_DEVICE_SET = 1;
+	s->HW_DE_DEVICE_SET = 0;
 
     FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
     r9.Open();

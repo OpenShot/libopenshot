@@ -934,9 +934,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 							// down processing considerably, but might be more stable on some systems.
 #pragma omp taskwait
 						}
-					} else {
-                        RemoveAVFrame(pFrame);
-                    }
+					}
 
 				}
 				// Audio packet
