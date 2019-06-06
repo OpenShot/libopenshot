@@ -1190,6 +1190,10 @@ bool FFmpegReader::CheckSeek(bool is_video) {
 	return is_seeking;
 }
 
+#define FIXED_1_0 (1 << 16)
+// Video PC, jpeg, Full color range
+#define Full_Range 1
+
 // Process a video packet
 void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Calculate current frame #
@@ -1315,8 +1319,23 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
 			scale_mode = SWS_LANCZOS;
 		}
-		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+		
+		// In case of 4:4:4 inputs, FFmpeg scaling optimization for fast_bilinear
+		// makes undesirable horizontal chroma simplifications.
+		// Do not reuse chroma for 2 pixels RGB/BGR in this case.
+		scale_mode |= SWS_FULL_CHR_H_INT;
+
+		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, pCodecCtx->pix_fmt, width,
+				height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+
+		// Scaling uses own numeration for color ranges Partial (mpeg, tv) = 0; Full (jpeg, pc) = 1;
+		// thus assuming that Partial color range was set.
+		int s_color_range = 0;
+		if (pCodecCtx->color_range == 2) s_color_range = Full_Range;
+
+		// Set decoding color details before scaling
+		sws_setColorspaceDetails(img_convert_ctx, sws_getCoefficients(pCodecCtx->colorspace), s_color_range,
+				sws_getCoefficients(SWS_CS_ITU709), Full_Range, 0, FIXED_1_0, FIXED_1_0);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
