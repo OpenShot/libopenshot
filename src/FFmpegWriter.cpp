@@ -344,7 +344,8 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
 				   name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
-				   name == "crf")) {
+				   name == "crf" || name == "color_range" || name == "color_primaries" || name == "color_trc" ||
+		      		   name == "colorspace")) {
 		// Check for specific named options
 		if (name == "g")
 			// Set gop_size
@@ -458,6 +459,65 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 				}
 			}
 #endif
+		}
+		// Color range, primiries, transfer characteristics, colorspace output settings.
+		// It also sets file container flags for color details if supported.
+		//
+		// The option may be set as keyword like:
+		//   SetOption(openshot.VIDEO_STREAM, "colorspace", "bt709")
+		//
+		// or integer number of the required numeration like:
+		//   SetOption(openshot.VIDEO_STREAM, "colorspace", str(int(1)) )
+		//
+		// the first one for convenience, the later - for future use.
+		//
+		// To preserve current OpenShot behavior and for compatibility with old hardware and software,
+		// do not set colorspace details if BT.601 standard is in use.
+		// The default color details of ITU-R BT601-6 625, ITU-R BT1358 625, ITU-R BT1700 625 PAL & SECAM, IEC 61966-2-4 xvYCC601
+		// will be applied in this case without setting file container flags (mainly used for SD quality videos).
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
+		else if (c->codec_type == AVMEDIA_TYPE_VIDEO) {
+#else
+		else if (c->codec_type == CODEC_TYPE_VIDEO) {
+#endif
+			if (name == "color_range") {
+				// Look for keywords first
+				if ((value == "mpeg") || (value == "limited") || (value == "tv") || (value == "partial") || (value == "auto"))
+					value = to_string(AVCOL_RANGE_MPEG);
+				else if ((value == "jpeg") || (value == "full") || (value == "pc"))
+					value = to_string(AVCOL_RANGE_JPEG);
+				// Apply the value
+				c->color_range = static_cast<AVColorRange>(stoi(value));
+			} else if (name == "color_primaries") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto")) value = to_string(AVCOL_PRI_BT709);
+				else if (value == "bt470m") value = to_string(AVCOL_PRI_BT470M);
+				else if (value == "bt470bg") value = to_string(AVCOL_PRI_BT470BG);
+				else if (value == "smpte170m") value = to_string(AVCOL_PRI_SMPTE170M);
+				else if (value == "smpte240m") value = to_string(AVCOL_PRI_SMPTE240M);
+				else if (value == "film") value = to_string(AVCOL_PRI_FILM);
+				// Apply the value
+				c->color_primaries = static_cast<AVColorPrimaries>(stoi(value));
+			} else if (name == "color_trc") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto")) value = to_string(AVCOL_TRC_BT709);
+				else if (value == "gamma22") value = to_string(AVCOL_TRC_GAMMA22);
+				// All PAL users uses BT.709 trc in Europe instead of next 2.8 gamma. More info in Charles Poynton's books.
+				else if (value == "gamma28") value = to_string(AVCOL_TRC_GAMMA28);
+				else if (value == "smpte240m") value = to_string(AVCOL_TRC_SMPTE240M);
+				// Apply the value
+				c->color_trc = static_cast<AVColorTransferCharacteristic>(stoi(value));
+			} else if (name == "colorspace") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto")) value = to_string(AVCOL_SPC_BT709);
+				else if (value == "rgb") value = to_string(AVCOL_SPC_RGB);
+				else if (value == "fcc") value = to_string(AVCOL_SPC_FCC);
+				else if (value == "bt470bg") value = to_string(AVCOL_SPC_BT470BG);
+				else if (value == "smpte170m") value = to_string(AVCOL_SPC_SMPTE170M);
+				else if (value == "smpte240m") value = to_string(AVCOL_SPC_SMPTE240M);
+				// Apply the value
+				c->colorspace = static_cast<AVColorSpace>(stoi(value));
+			}
 		} else {
 			// Set AVOption
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
