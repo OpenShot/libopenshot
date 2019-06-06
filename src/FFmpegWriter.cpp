@@ -2004,6 +2004,10 @@ void FFmpegWriter::OutputStreamInfo() {
 	av_dump_format(oc, 0, path.c_str(), 1);
 }
 
+#define FIXED_1_0 (1 << 16)
+// Video PC, jpeg, Full color range
+#define Full_Range 1
+
 // Init a collection of software rescalers (thread safe)
 void FFmpegWriter::InitScalers(int source_width, int source_height) {
 	int scale_mode = SWS_FAST_BILINEAR;
@@ -2020,9 +2024,18 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 		} else
 #endif
 		{
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR,
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, video_codec->pix_fmt, SWS_BILINEAR,
 											 NULL, NULL, NULL);
 		}
+
+		// Scaling uses own numeration for color ranges Partial (mpeg, tv) = 0; Full (jpeg, pc) = 1;
+		// thus assuming that Partial color range was set.
+		int d_color_range = 0;
+		if (video_codec->color_range == 2) d_color_range = Full_Range;
+
+		// Set encoding color details before scaling
+		sws_setColorspaceDetails(img_convert_ctx, sws_getCoefficients(SWS_CS_ITU709), Full_Range,
+				sws_getCoefficients(video_codec->colorspace), d_color_range, 0, FIXED_1_0, FIXED_1_0);
 
 		// Add rescaler to vector
 		image_rescalers.push_back(img_convert_ctx);
