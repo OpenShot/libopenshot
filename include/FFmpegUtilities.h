@@ -116,6 +116,9 @@
 	#ifndef PIX_FMT_YUV420P
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
 	#endif
+	#ifndef PIX_FMT_YUV444P
+		#define PIX_FMT_YUV444P AV_PIX_FMT_YUV444P
+	#endif
 
 	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
 	// definition in ruby/config.h, so we move it to FF_RSHIFT

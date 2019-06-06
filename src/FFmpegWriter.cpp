@@ -433,6 +433,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 						av_opt_set_int(c->priv_data, "crf", min(stoi(value), 51), 0); // 0-51
 						if (stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							c->pix_fmt = PIX_FMT_YUV444P;
 						}
 						break;
 					case AV_CODEC_ID_H265 :
