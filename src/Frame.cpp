@@ -481,7 +481,7 @@ const unsigned char* Frame::GetPixels(int row)
 }
 
 // Check a specific pixel color value (returns True/False)
-bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha) {
+bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold) {
 	int col_pos = col * 4; // Find column array position
 	if (!image || row < 0 || row >= (height - 1) ||
 		col_pos < 0 || col_pos >= (width - 1) ) {
@@ -490,10 +490,10 @@ bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha
 	}
 	// Check pixel color
 	const unsigned char* pixels = GetPixels(row);
-	if (pixels[col_pos + 0] == red &&
-		pixels[col_pos + 1] == green &&
-		pixels[col_pos + 2] == blue &&
-		pixels[col_pos + 3] == alpha) {
+	if (pixels[col_pos + 0] >= (red - threshold) && pixels[col_pos + 0] <= (red + threshold) &&
+		pixels[col_pos + 0] >= (green - threshold) && pixels[col_pos + 0] <= (green + threshold) &&
+		pixels[col_pos + 0] >= (blue - threshold) && pixels[col_pos + 0] <= (blue + threshold) &&
+		pixels[col_pos + 0] >= (alpha - threshold) && pixels[col_pos + 0] <= (alpha + threshold)) {
 		// Pixel color matches successfully
 		return true;
 	} else {
