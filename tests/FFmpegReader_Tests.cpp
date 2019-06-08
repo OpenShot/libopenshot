@@ -101,8 +101,8 @@ TEST(FFmpegReader_Check_Video_File)
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check pixel function
-	CHECK_EQUAL(true, f->CheckPixel(10, 112, 21, 191, 0, 255));
-	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0));
+	CHECK_EQUAL(true, f->CheckPixel(10, 112, 21, 191, 0, 255, 5));
+	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Get frame 1
 	f = r.GetFrame(2);
