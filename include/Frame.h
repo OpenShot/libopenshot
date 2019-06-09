@@ -249,6 +249,9 @@ namespace openshot
 		/// Get pixel data (for only a single scan-line)
 		const unsigned char* GetPixels(int row);
 
+		/// Check a specific pixel color value (returns True/False)
+		bool CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold);
+
 		/// Get height of image
 		int GetHeight();
 
