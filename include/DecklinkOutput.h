@@ -3,7 +3,10 @@
  * @brief Header file for DecklinkOutput class
  * @author Jonathan Thomas <jonathan@openshot.org>, Blackmagic Design
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2009 Blackmagic Design
  *

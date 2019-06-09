@@ -3,7 +3,10 @@
  * @brief Header file for RendererBase class
  * @author Duzy Chan <code@duzy.info>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of

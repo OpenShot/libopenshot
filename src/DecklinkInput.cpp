@@ -3,7 +3,10 @@
  * @brief Source file for DecklinkInput class
  * @author Jonathan Thomas <jonathan@openshot.org>, Blackmagic Design
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2009 Blackmagic Design
  *

@@ -3,7 +3,10 @@
  * @brief Source file for Example Executable (example app for libopenshot)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of

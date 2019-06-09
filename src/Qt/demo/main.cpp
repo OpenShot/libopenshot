@@ -3,7 +3,10 @@
  * @brief Demo Qt application to test the QtPlayer class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of

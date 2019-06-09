@@ -3,7 +3,10 @@
  * @brief Source code for Unit test executable (runs all tests and reports successes and failures)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of

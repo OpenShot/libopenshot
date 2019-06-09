@@ -6,7 +6,10 @@
  * @brief This header includes all commonly used effects for libopenshot, for ease-of-use.
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of

@@ -71,6 +71,7 @@
  * ### Want to Learn More? ###
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  *
+ * \anchor License
  * ### License & Copyright ###
  * Copyright (c) 2008-2014 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
