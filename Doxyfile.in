@@ -798,7 +798,9 @@ EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = "*/.*" \
                          "*/.*/*" \
                          "*/src/Main.cpp*" \
-                         "*/src/Main_Blackmagic.cpp*"
+                         "*/src/Main_Blackmagic.cpp*" \
+                         "*/src/bindings/*" \
+                         "*.py"
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
