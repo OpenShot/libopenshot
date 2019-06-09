@@ -45,7 +45,7 @@ message(STATUS "Determining Version Number (from Version.h file)")
 #### Get the lines related to libopenshot version from the Version.h header
 file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h
      OPENSHOT_VERSION_LINES
-     REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
+     REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+.*")
 
 #### Set each line into it's own variable
 list (GET OPENSHOT_VERSION_LINES 0 LINE_MAJOR)
@@ -54,10 +54,10 @@ list (GET OPENSHOT_VERSION_LINES 2 LINE_BUILD)
 list (GET OPENSHOT_VERSION_LINES 3 LINE_SO)
 
 #### Get the version number out of each line
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MAJOR[ ]+([0-9]+);(.*)" "\\1" MAJOR_VERSION "${LINE_MAJOR}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" MINOR_VERSION "${LINE_MINOR}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
+STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MAJOR[ ]+([0-9]+)(.*)" "\\1" MAJOR_VERSION "${LINE_MAJOR}")
+STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+)(.*)" "\\1" MINOR_VERSION "${LINE_MINOR}")
+STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+)(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
+STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+)(.*)" "\\1" SO_VERSION "${LINE_SO}")
 
 message(STATUS "MAJOR Version: ${MAJOR_VERSION}")
 message(STATUS "MINOR Version: ${MINOR_VERSION}")
