@@ -76,9 +76,9 @@ void Clip::init_settings()
 	wave_color = Color((unsigned char)0, (unsigned char)123, (unsigned char)255, (unsigned char)255);
 
 	// Init crop settings
-	crop_gravity = GRAVITY_CENTER;
-	crop_width = Keyframe(-1.0);
-	crop_height = Keyframe(-1.0);
+	crop_gravity = GRAVITY_TOP_LEFT;
+	crop_width = Keyframe(1.0);
+	crop_height = Keyframe(1.0);
 	crop_x = Keyframe(0.0);
 	crop_y = Keyframe(0.0);
 

@@ -457,6 +457,43 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		}
 	}
 
+    float crop_x = source_clip->crop_x.GetValue(clip_frame_number);
+    float crop_y = source_clip->crop_y.GetValue(clip_frame_number);
+    float crop_w = source_clip->crop_width.GetValue(clip_frame_number);
+    float crop_h = source_clip->crop_height.GetValue(clip_frame_number);
+    switch(source_clip->crop_gravity)
+    {
+      case (GRAVITY_TOP):
+          crop_x += 0.5;
+          break;
+      case (GRAVITY_TOP_RIGHT):
+          crop_x += 1.0;
+          break;
+      case (GRAVITY_LEFT):
+          crop_y += 0.5;
+          break;
+      case (GRAVITY_CENTER):
+          crop_x += 0.5;
+          crop_y += 0.5;
+          break;
+      case (GRAVITY_RIGHT):
+          crop_x += 1.0;
+          crop_y += 0.5;
+          break;
+      case (GRAVITY_BOTTOM_LEFT):
+          crop_y += 1.0;
+          break;
+      case (GRAVITY_BOTTOM):
+          crop_x += 0.5;
+          crop_y += 1.0;
+          break;
+      case (GRAVITY_BOTTOM_RIGHT):
+          crop_x += 1.0;
+          crop_y += 1.0;
+          break;
+    }
+
+
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
 	float x = 0.0; // left
 	float y = 0.0; // top
@@ -564,7 +601,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	// Composite a new layer onto the image
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawImage(0, 0, *source_image);
+    painter.drawImage(0, 0, *source_image, crop_x * scaled_source_width, crop_y * scaled_source_height, crop_w * scaled_source_width, crop_h * scaled_source_height);
 
     // Draw frame #'s on top of image (if needed)
     if (source_clip->display != FRAME_DISPLAY_NONE) {
