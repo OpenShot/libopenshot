@@ -601,7 +601,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	// Composite a new layer onto the image
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawImage(0, 0, *source_image, crop_x * scaled_source_width, crop_y * scaled_source_height, crop_w * scaled_source_width, crop_h * scaled_source_height);
+    painter.drawImage(0, 0, *source_image, crop_x * source_image->width(), crop_y * source_image->height(), crop_w * source_image->width(), crop_h * source_image->height());
 
     // Draw frame #'s on top of image (if needed)
     if (source_clip->display != FRAME_DISPLAY_NONE) {
