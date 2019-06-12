@@ -59,7 +59,11 @@ void ImageReader::Open()
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
+#if MagickLibVersion < 0x700
 			image->matte(true);
+#else
+			image->alpha(true);
+#endif
 		}
 		catch (Magick::Exception e) {
 			// raise exception
