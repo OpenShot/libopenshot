@@ -64,10 +64,6 @@
  * canvas (i.e. pan & scan).
  * \image html /doc/images/Timeline_Layers.png
  *
- * ### Build Instructions (Linux, Mac, and Windows) ###
- * For a step-by-step guide to building / compiling libopenshot, check out the
- * <a href="InstallationGuide.pdf" target="_blank">Official Installation Guide</a>.
- *
  * ### Want to Learn More? ###
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  *
