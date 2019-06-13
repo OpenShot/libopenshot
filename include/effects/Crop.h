@@ -69,7 +69,6 @@ namespace openshot
 
 		/// Default constructor, which takes 4 curves. These curves animate the crop over time.
 		///
-		/// @param color The curve to adjust the color of bars
 		/// @param left The curve to adjust the left bar size (between 0 and 1)
 		/// @param top The curve to adjust the top bar size (between 0 and 1)
 		/// @param right The curve to adjust the right bar size (between 0 and 1)
