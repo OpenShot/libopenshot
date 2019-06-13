@@ -105,12 +105,18 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 		STRING "Additional source files/directories separated by space")
 	set(DOXYFILE_SOURE_DIRS "\"${DOXYFILE_SOURCE_DIR}\" ${DOXYFILE_EXTRA_SOURCES}")
 
-	usedoxygen_set_default(DOXYFILE_LATEX YES BOOL "Generate LaTeX API documentation" OFF)
+	usedoxygen_set_default(DOXYFILE_LATEX OFF BOOL "Generate LaTeX API documentation")
 	usedoxygen_set_default(DOXYFILE_LATEX_DIR "latex" STRING "LaTex output directory")
 
 	mark_as_advanced(DOXYFILE_OUTPUT_DIR DOXYFILE_HTML_DIR DOXYFILE_LATEX_DIR
 		DOXYFILE_SOURCE_DIR DOXYFILE_EXTRA_SOURCE_DIRS DOXYFILE_IN)
 
+	## Dot
+	usedoxygen_set_default(DOXYFILE_USE_DOT ON BOOL "Use dot (part of graphviz) to generate graphs")
+	set(DOXYFILE_DOT "NO")
+	if(DOXYFILE_USE_DOT AND DOXYGEN_DOT_EXECUTABLE)
+		set(DOXYFILE_DOT "YES")
+	endif()
 
 	set_property(DIRECTORY 
 		APPEND PROPERTY
@@ -125,13 +131,12 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 
 	## LaTeX
 	set(DOXYFILE_PDFLATEX "NO")
-	set(DOXYFILE_DOT "NO")
 
 	set_property(DIRECTORY APPEND PROPERTY
 		ADDITIONAL_MAKE_CLEAN_FILES
 		"${DOXYFILE_OUTPUT_DIR}/${DOXYFILE_LATEX_DIR}")
 
-	if(DOXYFILE_LATEX STREQUAL "ON")
+	if(DOXYFILE_LATEX)
 		set(DOXYFILE_GENERATE_LATEX "YES")
 		find_package(LATEX)
 		find_program(DOXYFILE_MAKE make)
@@ -139,9 +144,6 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 		if(LATEX_COMPILER AND MAKEINDEX_COMPILER AND DOXYFILE_MAKE)
 			if(PDFLATEX_COMPILER)
 				set(DOXYFILE_PDFLATEX "YES")
-			endif()
-			if(DOXYGEN_DOT_EXECUTABLE)
-				set(DOXYFILE_DOT "YES")
 			endif()
 
 			add_custom_command(TARGET doxygen
