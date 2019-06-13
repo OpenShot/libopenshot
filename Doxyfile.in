@@ -797,8 +797,7 @@ EXCLUDE_SYMLINKS       = NO
 
 EXCLUDE_PATTERNS       = "*/.*" \
                          "*/.*/*" \
-                         "*/src/Main.cpp*" \
-                         "*/src/Main_Blackmagic.cpp*" \
+                         "*/src/examples/*" \
                          "*/src/bindings/*" \
                          "*.py"
 
