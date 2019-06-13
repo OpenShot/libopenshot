@@ -926,7 +926,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 	// Give image a transparent background color
 	magick_image->backgroundColor(Magick::Color("none"));
 	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	magick_image->matte(true);
+	MAGICK_IMAGE_ALPHA(magick_image, true);
 
 	return magick_image;
 }
@@ -945,20 +945,12 @@ void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
 	qbuffer = new unsigned char[bufferSize]();
 	unsigned char *buffer = (unsigned char*)qbuffer;
 
-    // Iterate through the pixel packets, and load our own buffer
-	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-	int numcopied = 0;
-    Magick::PixelPacket *pixels = new_image->getPixels(0,0, new_image->columns(), new_image->rows());
-    for (int n = 0, i = 0; n < new_image->columns() * new_image->rows(); n += 1, i += 4) {
-    	buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
-    	buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
-    	buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
-    	buffer[i+3] = 255 - MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].opacity);
-    	numcopied+=4;
-    }
+	MagickCore::ExceptionInfo exception;
+	// TODO: Actually do something, if we get an exception here
+	MagickCore::ExportImagePixels(new_image->constImage(), 0, 0, new_image->columns(), new_image->rows(), "RGBA", Magick::CharPixel, buffer, &exception);
 
-    // Create QImage of frame data
-    image = std::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
+	// Create QImage of frame data
+	image = std::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
 
 	// Update height and width
 	width = image->width();

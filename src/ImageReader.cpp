@@ -25,6 +25,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "../include/ImageReader.h"
 
 using namespace openshot;
@@ -59,7 +62,7 @@ void ImageReader::Open()
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
-			image->matte(true);
+			MAGICK_IMAGE_ALPHA(image, true);
 		}
 		catch (Magick::Exception e) {
 			// raise exception
@@ -106,7 +109,7 @@ void ImageReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
-		
+
 		// Delete the image
 		image.reset();
 	}
@@ -188,3 +191,5 @@ void ImageReader::SetJsonValue(Json::Value root) {
 		Open();
 	}
 }
+
+#endif //USE_IMAGEMAGICK

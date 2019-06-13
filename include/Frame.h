@@ -53,14 +53,14 @@
 #include <memory>
 #include <unistd.h>
 #include "ZmqLogger.h"
-#ifdef USE_IMAGEMAGICK
-	#include "Magick++.h"
-#endif
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
 #include "JuceHeader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "MagickUtilities.h"
+#endif
 
 #pragma SWIG nowarn=362
 using namespace std;
