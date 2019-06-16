@@ -53,7 +53,7 @@
 %shared_ptr(Frame)
 
 %{
-#include "../../../include/Version.h"
+#include "OpenShotVersion.h"
 #include "../../../include/ReaderBase.h"
 #include "../../../include/WriterBase.h"
 #include "../../../include/CacheBase.h"
@@ -117,7 +117,7 @@
 	}
 }
 
-%include "../../../include/Version.h"
+%include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
 %include "../../../include/CacheBase.h"

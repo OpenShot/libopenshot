@@ -93,7 +93,7 @@
  */
 
 // Include the version number of OpenShot Library
-#include "Version.h"
+#include "OpenShotVersion.h"
 
 // Include all other classes
 #include "AudioBufferSource.h"

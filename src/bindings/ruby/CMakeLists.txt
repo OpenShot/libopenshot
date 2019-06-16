@@ -24,6 +24,8 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Pick up our include directories from the parent context
+include_directories(${OPENSHOT_INCLUDE_DIRS})
 
 ############### RUBY BINDINGS ################
 FIND_PACKAGE(SWIG 2.0 REQUIRED)
