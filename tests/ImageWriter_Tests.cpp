@@ -27,7 +27,6 @@
 
 #include "UnitTest++.h"
 #include "../include/OpenShot.h"
-#include "../include/Tests.h"
 
 using namespace std;
 using namespace openshot;
