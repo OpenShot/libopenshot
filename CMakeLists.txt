@@ -38,8 +38,6 @@ For more information, please visit <http://www.openshot.org/>.
 
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-# Define install paths according to system conventions
-include(GNUInstallDirs)
 
 ################ PROJECT VERSION ####################
 set(PROJECT_VERSION_FULL "0.2.3-dev1")
@@ -62,6 +60,11 @@ Generating build files for OpenShot
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
+
+# Define install paths according to system conventions
+# XXX: This must be AFTER THE PROJECT() COMMAND w/ languages enabled,
+#      in order to properly configure CMAKE_INSTALL_LIBDIR path
+include(GNUInstallDirs)
 
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
