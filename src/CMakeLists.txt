@@ -399,17 +399,15 @@ add_subdirectory(bindings)
 
 
 ############### INSTALL HEADERS & LIBRARY ################
-set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
-
 # Install primary library
-INSTALL(  TARGETS openshot
-		ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-		LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-		COMPONENT library )
+INSTALL(TARGETS openshot
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	COMPONENT library )
 
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
-		DESTINATION ${CMAKE_INSTALL_PREFIX}/include/libopenshot
-		FILES_MATCHING PATTERN "*.h")
+	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
+	FILES_MATCHING PATTERN "*.h" )
 
 ############### CPACK PACKAGING ##############
 IF(MINGW)
