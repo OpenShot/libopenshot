@@ -194,7 +194,7 @@ if (USE_SYSTEM_JSONCPP)
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
 else()
-	include_directories("../thirdparty/jsoncpp/include")
+	include_directories("../thirdparty/jsoncpp")
 endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
