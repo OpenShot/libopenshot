@@ -992,14 +992,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
 	// Create a new audio stream
-#if (IS_FFMPEG_3_2 && (LIBAVFORMAT_VERSION_MAJOR < 58))
-_Pragma ("GCC diagnostic push")
-_Pragma ("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#endif
 	AV_FORMAT_NEW_STREAM(oc, audio_codec, codec, st)
-#if (IS_FFMPEG_3_2 && (LIBAVFORMAT_VERSION_MAJOR < 58))
-_Pragma ("GCC diagnostic pop")
-#endif
 
 	c->codec_id = codec->id;
 #if LIBAVFORMAT_VERSION_MAJOR >= 53
@@ -1082,14 +1075,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
 	// Create a new video stream
-#if (IS_FFMPEG_3_2 && (LIBAVFORMAT_VERSION_MAJOR < 58))
-_Pragma ("GCC diagnostic push")
-_Pragma ("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#endif
 	AV_FORMAT_NEW_STREAM(oc, video_codec, codec, st)
-#if (IS_FFMPEG_3_2 && (LIBAVFORMAT_VERSION_MAJOR < 58))
-_Pragma ("GCC diagnostic pop")
-#endif
 
 	c->codec_id = codec->id;
 #if LIBAVFORMAT_VERSION_MAJOR >= 53
