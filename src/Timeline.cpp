@@ -990,8 +990,12 @@ void Timeline::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -1083,8 +1087,12 @@ void Timeline::ApplyJsonDiff(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success || !root.isArray())
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid).", "");
