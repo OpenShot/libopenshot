@@ -110,8 +110,11 @@ TEST(Clip_Properties)
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( properties, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+	string errors;
+	bool success = reader->parse( properties.c_str(),
+	                 properties.c_str() + properties.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -135,7 +138,8 @@ TEST(Clip_Properties)
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader.parse( properties, root );
+	success = reader->parse( properties.c_str(),
+	            properties.c_str() + properties.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -159,7 +163,8 @@ TEST(Clip_Properties)
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader.parse( properties, root );
+	success = reader->parse( properties.c_str(),
+				properties.c_str() + properties.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -182,7 +187,8 @@ TEST(Clip_Properties)
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader.parse( properties, root );
+	success = reader->parse( properties.c_str(),
+	            properties.c_str() + properties.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
