@@ -209,9 +209,12 @@
 		#define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) 	av_st = avformat_new_stream(oc, NULL);\
 			if (!av_st) \
 				throw OutOfMemory("Could not allocate memory for the video stream.", path); \
-			c = avcodec_alloc_context3(av_codec); \
-			st_codec = c; \
-			av_st->codecpar->codec_id = av_codec->id;
+			_Pragma ("GCC diagnostic push"); \
+			_Pragma ("GCC diagnostic ignored \"-Wdeprecated-declarations\""); \
+			avcodec_get_context_defaults3(av_st->codec, av_codec); \
+			c = av_st->codec; \
+			_Pragma ("GCC diagnostic pop"); \
+			st_codec = c;
 		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) avcodec_parameters_from_context(av_stream->codecpar, av_codec);
 	#elif LIBAVFORMAT_VERSION_MAJOR >= 55
 		#define AV_REGISTER_ALL av_register_all();
