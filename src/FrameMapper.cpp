@@ -61,6 +61,8 @@ FrameMapper::~FrameMapper() {
 	if (is_open)
 		// Auto Close if not already
 		Close();
+
+	reader = NULL;
 }
 
 /// Get the current reader
@@ -648,6 +650,16 @@ void FrameMapper::Close()
 
 		// Close internal reader
 		reader->Close();
+
+		// Clear the fields & frames lists
+		fields.clear();
+		frames.clear();
+
+		// Mark as dirty
+		is_dirty = true;
+
+		// Clear cache
+		final_cache.Clear();
 
 		// Deallocate resample buffer
 		if (avr) {

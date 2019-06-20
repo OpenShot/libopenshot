@@ -107,6 +107,8 @@ namespace openshot
 		/// Constructor for the base reader, where many things are initialized.
 	    ReaderBase();
 
+	    virtual ~ReaderBase();
+
 		/// Information about the current media file
 		ReaderInfo info;
 

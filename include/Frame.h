@@ -159,7 +159,7 @@ namespace openshot
 		Frame& operator= (const Frame& other);
 
 		/// Destructor
-		~Frame();
+		virtual ~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, string new_color);
@@ -248,6 +248,9 @@ namespace openshot
 
 		/// Get pixel data (for only a single scan-line)
 		const unsigned char* GetPixels(int row);
+
+		/// Check a specific pixel color value (returns True/False)
+		bool CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold);
 
 		/// Get height of image
 		int GetHeight();

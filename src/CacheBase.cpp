@@ -42,6 +42,9 @@ CacheBase::CacheBase(int64_t max_bytes) : max_bytes(max_bytes) {
 	cacheCriticalSection = new CriticalSection();
 };
 
+CacheBase::~CacheBase() {
+};
+
 // Set maximum bytes to a different amount based on a ReaderInfo struct
 void CacheBase::SetMaxBytesFromInfo(int64_t number_of_frames, int width, int height, int sample_rate, int channels)
 {

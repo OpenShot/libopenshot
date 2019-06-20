@@ -31,7 +31,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true)
+		is_open(false), auto_map_clips(true), managed_cache(true)
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -68,6 +68,29 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init cache
 	final_cache = new CacheMemory();
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+}
+
+Timeline::~Timeline() {
+	if (is_open)
+		// Auto Close if not already
+		Close();
+
+	// Free all allocated frame mappers
+	set<FrameMapper *>::iterator frame_mapper_itr;
+	for (frame_mapper_itr = allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr) {
+		// Get frame mapper object from the iterator
+		FrameMapper *frame_mapper = (*frame_mapper_itr);
+		frame_mapper->Reader(NULL);
+		frame_mapper->Close();
+		delete frame_mapper;
+	}
+	allocated_frame_mappers.clear();
+
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+	}
 }
 
 // Add an openshot::Clip to the timeline
@@ -123,7 +146,9 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
-		clip_reader = (ReaderBase*) new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		allocated_frame_mappers.insert(mapper);
+		clip_reader = (ReaderBase*) mapper;
 	}
 
 	// Update the mapping
@@ -898,8 +923,15 @@ vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, int num
 	return matching_clips;
 }
 
-// Get the cache object used by this reader
+// Set the cache object used by this reader
 void Timeline::SetCache(CacheBase* new_cache) {
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+		managed_cache = false;
+	}
+
 	// Set new cache
 	final_cache = new_cache;
 }
