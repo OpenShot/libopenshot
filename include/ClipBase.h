@@ -105,6 +105,7 @@ namespace openshot {
 		/// of all properties at any time)
 		virtual string PropertiesJSON(int64_t requested_frame) = 0;
 
+		virtual ~ClipBase() = default;
 	};
 
 

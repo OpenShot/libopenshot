@@ -152,6 +152,8 @@ namespace openshot
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;
+
+		virtual ~ReaderBase() = default;
 	};
 
 }

@@ -77,9 +77,9 @@ AudioResampler::~AudioResampler()
 void AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate)
 {
 	if (sample_rate <= 0)
-		sample_rate == 44100;
+		sample_rate = 44100;
 	if (new_sample_rate <= 0)
-		new_sample_rate == 44100;
+		new_sample_rate = 44100;
 
 	// Set the sample ratio (the ratio of sample rate change)
 	source_ratio = sample_rate / new_sample_rate;

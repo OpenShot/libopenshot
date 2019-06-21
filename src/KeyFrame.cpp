@@ -786,7 +786,7 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 					// Add new value to the vector
 					Coordinate new_coord(current_frame, current_value);
 
-					if (Segment == 0 || Segment > 0 && current_frame > p1.co.X)
+					if (Segment == 0 || (Segment > 0 && current_frame > p1.co.X))
 						// Add to "values" vector
 						Values.push_back(new_coord);
 

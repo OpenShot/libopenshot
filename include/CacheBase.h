@@ -114,6 +114,7 @@ namespace openshot {
 		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+		virtual ~CacheBase() = default;
 
 	};
 
