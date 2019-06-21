@@ -65,39 +65,29 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME}
 	                      ${PYTHON_LIBRARIES} openshot)
 
-	### FIND THE PYTHON INTERPRETER (AND THE SITE PACKAGES FOLDER)
-	if (UNIX AND NOT APPLE)
-		### Special-case for Debian's crazy, by checking to see if pybuild
-		### is available. We don't use it, except as a canary in a coal mine
-		find_program(PYBUILD_EXECUTABLE pybuild
-		             DOC "Path to Debian's pybuild utility")
-		if (PYBUILD_EXECUTABLE)
-			# We're on a Debian derivative, fall back to old path detection
-			set(py_detection "import site; print(site.getsitepackages()[0])")
-			set(PY_INSTALL_PREFIX "/usr/local") # An assumption (bad one?)
-		else()
-			# Use distutils to detect install path
-			set (py_detection "\
+    ### Check if the following Debian-friendly python module path exists
+	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages")
+	if (NOT EXISTS ${PYTHON_MODULE_PATH})
+
+		### Check if another Debian-friendly python module path exists
+		SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
+		if (NOT EXISTS ${PYTHON_MODULE_PATH})
+
+			### Calculate the python module path (using distutils)
+			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )")
-			set(PY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
+				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+				OUTPUT_STRIP_TRAILING_WHITESPACE )
+
+			GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+					"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+			FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+					${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+			SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
 		endif()
 	endif()
-
-	if (NOT PYTHON_MODULE_PATH)
-		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "${py_detection}"
-		                  OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-		                  OUTPUT_STRIP_TRAILING_WHITESPACE )
-
-		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-		                       "${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-		${PY_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-		SET(PYTHON_MODULE_PATH ${_REL_PYTHON_MODULE_PATH}
-		    CACHE PATH "Install path for Python modules (relative to prefix)")
-	endif()
-
-	message(STATUS "Will install Python module to: ${PYTHON_MODULE_PATH}")
+	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
 
 	############### INSTALL HEADERS & LIBRARY ################
 	### Install Python bindings
