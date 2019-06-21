@@ -25,6 +25,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "../include/TextReader.h"
 
 using namespace openshot;
@@ -258,3 +261,5 @@ void TextReader::SetJsonValue(Json::Value root) {
 		Open();
 	}
 }
+
+#endif //USE_IMAGEMAGICK

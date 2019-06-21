@@ -238,11 +238,11 @@ void Mask::SetJsonValue(Json::Value root) {
 					reader->SetJsonValue(root["reader"]);
 
 	#ifdef USE_IMAGEMAGICK
-					} else if (type == "ImageReader") {
+				} else if (type == "ImageReader") {
 
-						// Create new reader
-						reader = new ImageReader(root["reader"]["path"].asString());
-						reader->SetJsonValue(root["reader"]);
+					// Create new reader
+					reader = new ImageReader(root["reader"]["path"].asString());
+					reader->SetJsonValue(root["reader"]);
 	#endif
 
 				} else if (type == "QtImageReader") {
@@ -294,4 +294,3 @@ string Mask::PropertiesJSON(int64_t requested_frame) {
 	// Return formatted string
 	return root.toStyledString();
 }
-

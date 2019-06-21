@@ -28,6 +28,9 @@
 #ifndef OPENSHOT_TEXT_READER_H
 #define OPENSHOT_TEXT_READER_H
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "ReaderBase.h"
 
 #include <cmath>
@@ -36,10 +39,10 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Enums.h"
 #include "Exceptions.h"
+#include "MagickUtilities.h"
 
 using namespace std;
 
@@ -91,7 +94,7 @@ namespace openshot
 		string text_color;
 		string background_color;
 		std::shared_ptr<Magick::Image> image;
-		list<Magick::Drawable> lines;
+		MAGICK_DRAWABLE lines;
 		bool is_open;
 		GravityType gravity;
 
@@ -144,4 +147,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_TEXT_READER_H
