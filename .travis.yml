@@ -16,7 +16,8 @@ matrix:
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
       - make os_test
-
+      - make install DESTDIR=dist/
+      
     - language: cpp
       name: "FFmpeg 3"
       before_script:
@@ -31,7 +32,8 @@ matrix:
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
       - make os_test
-
+      - make install DESTDIR=dist/
+      
     - language: cpp
       name: "FFmpeg 4"
       before_script:
@@ -48,3 +50,4 @@ matrix:
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
       - make os_test
+      - make install DESTDIR=dist/
