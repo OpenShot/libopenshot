@@ -64,15 +64,18 @@
  * canvas (i.e. pan & scan).
  * \image html /doc/images/Timeline_Layers.png
  *
- * ### Build Instructions (Linux, Mac, and Windows) ###
- * For a step-by-step guide to building / compiling libopenshot, check out the
- * <a href="InstallationGuide.pdf" target="_blank">Official Installation Guide</a>.
+ * ### Build Instructions ###
+ * Build instructions are available for all three major Operating Systems:
+ * * [Building libopenshot for Windows](doc/INSTALL-WINDOWS.md)
+ * * [Building libopenshot for MacOS](doc/INSTALL-MAC.md)
+ * * [Building libopenshot for Linux](doc/INSTALL-LINUX.md)
  *
  * ### Want to Learn More? ###
  * To continue learning about libopenshot, take a look at the <a href="annotated.html">full list of classes</a> available.
  *
+ * \anchor License
  * ### License & Copyright ###
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the

@@ -3,9 +3,12 @@
  * @brief Header file for FFmpegWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
