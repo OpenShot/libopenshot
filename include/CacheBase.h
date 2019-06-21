@@ -63,8 +63,6 @@ namespace openshot {
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		CacheBase(int64_t max_bytes);
 
-		virtual ~CacheBase();
-
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
 		virtual void Add(std::shared_ptr<Frame> frame) = 0;

@@ -32,9 +32,6 @@
 
 using namespace openshot;
 
-ClipBase::~ClipBase() {
-}
-
 // Generate Json::JsonValue for this object
 Json::Value ClipBase::JsonValue() {
 
