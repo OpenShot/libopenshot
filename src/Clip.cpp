@@ -713,8 +713,8 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
 
-	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, 0.0, 0.0, false, requested_frame);
-	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, 0.0, 0.0, false, requested_frame);
+	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
+	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
 	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
 	root["crop_height"] = add_property_json("Crop Height", crop_height.GetValue(requested_frame), "float", "", &crop_height, 0.0, 1.0, false, requested_frame);
 
