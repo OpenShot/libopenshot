@@ -1,3 +1,5 @@
+# Building libopenshot for MacOS
+
 ## Getting Started
 
 The best way to get started with libopenshot, is to learn about our build system, obtain all the source code, 
@@ -22,47 +24,47 @@ The following libraries are required to build libopenshot.  Instructions on how 
 dependencies vary for each operating system.  Libraries and Executables have been labeled in the 
 list below to help distinguish between them.
 
-* ### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
+### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
   * http://www.ffmpeg.org/ `(Library)`
   * This library is used to decode and encode video, audio, and image files.  It is also used to obtain information about media files, such as frame rate, sample rate, aspect ratio, and other common attributes.
 
-* ### ImageMagick++ (libMagick++, libMagickWand, libMagickCore)
+### ImageMagick++ (libMagick++, libMagickWand, libMagickCore)
   * http://www.imagemagick.org/script/magick++.php `(Library)`
   * This library is **optional**, and used to decode and encode images.
 
-* ### OpenShot Audio Library (libopenshot-audio)
+### OpenShot Audio Library (libopenshot-audio)
   * https://github.com/OpenShot/libopenshot-audio/ `(Library)`
   * This library is used to mix, resample, host plug-ins, and play audio. It is based on the JUCE project, which is an outstanding audio library used by many different applications
 
-* ### Qt 5 (libqt5)
+### Qt 5 (libqt5)
   * http://www.qt.io/qt5/ `(Library)`
   * Qt5 is used to display video, store image data, composite images, apply image effects, and many other utility functions, such as file system manipulation, high resolution timers, etc...
 
-* ### CMake (cmake)
+### CMake (cmake)
   * http://www.cmake.org/ `(Executable)`
   * This executable is used to automate the generation of Makefiles, check for dependencies, and is the backbone of libopenshot’s cross-platform build process.
 
-* ### SWIG (swig)
+### SWIG (swig)
   * http://www.swig.org/ `(Executable)`
   * This executable is used to generate the Python and Ruby bindings for libopenshot. It is a simple and powerful wrapper for C++ libraries, and supports many languages.
 
-* ### Python 3 (libpython)
+### Python 3 (libpython)
   * http://www.python.org/ `(Executable and Library)`
   * This library is used by swig to create the Python (version 3+) bindings for libopenshot. This is also the official language used by OpenShot Video Editor (a graphical interface to libopenshot).
 
-* ### Doxygen (doxygen)
+### Doxygen (doxygen)
   * http://www.stack.nl/~dimitri/doxygen/ `(Executable)`
   * This executable is used to auto-generate the documentation used by libopenshot.
 
-* ### UnitTest++ (libunittest++)
+### UnitTest++ (libunittest++)
   * https://github.com/unittest-cpp/ `(Library)`
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
 
-* ### ZeroMQ (libzmq)
+### ZeroMQ (libzmq)
   * http://zeromq.org/ `(Library)`
   * This library is used to communicate between libopenshot and other applications (publisher / subscriber). Primarily used to send debug data from libopenshot.
 
-* ### OpenMP (-fopenmp)
+### OpenMP (-fopenmp)
   * http://openmp.org/wp/ `(Compiler Flag)`
   * If your compiler supports this flag (GCC, Clang, and most other compilers), it provides libopenshot with easy methods of using parallel programming techniques to improve performance and take advantage of multi-core processors.
 
@@ -98,25 +100,25 @@ git clone https://github.com/OpenShot/libopenshot-audio.git
 
 The source code is divided up into the following folders.
 
-* ### build/
+### build/
    * This folder needs to be manually created, and is used by cmake to store the temporary build files, such as makefiles, as well as the final binaries (library and test executables).
 
-* ### cmake/
+### cmake/
    * This folder contains custom modules not included by default in cmake, used to find dependency libraries and headers and determine if these libraries are installed.
 
-* ### doc/
+### doc/
    * This folder contains documentation and related files, such as logos and images required by the doxygen auto-generated documentation.
 
-* ### include/
+### include/
    * This folder contains all headers (*.h) used by libopenshot.
 
-* ### src/
+### src/
    * This folder contains all source code (*.cpp) used by libopenshot.
 
-* ### tests/
+### tests/
    * This folder contains all unit test code.  Each class has it’s own test file (*.cpp), and uses UnitTest++ macros to keep the test code simple and manageable.
 
-* ### thirdparty/
+### thirdparty/
    * This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
 
 ## Install Dependencies

@@ -4,10 +4,10 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-SET(TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -135,7 +135,7 @@ add_definitions(${Qt5Gui_DEFINITIONS})
 add_definitions(${Qt5Multimedia_DEFINITIONS})
 add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
 
-SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES} 
+SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES}
 				 ${Qt5Core_LIBRARIES}
 				 ${Qt5Gui_LIBRARIES}
 				 ${Qt5Multimedia_LIBRARIES}
@@ -157,7 +157,7 @@ qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
 IF (ENABLE_BLACKMAGIC)
 	# Find BlackMagic DeckLinkAPI libraries
 	FIND_PACKAGE(BlackMagic)
-	
+
 	IF (BLACKMAGIC_FOUND)
 		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
@@ -194,7 +194,7 @@ if (USE_SYSTEM_JSONCPP)
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
 else()
-	include_directories("../thirdparty/jsoncpp/include")
+	include_directories("../thirdparty/jsoncpp")
 endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
@@ -224,8 +224,7 @@ IF (NOT DISABLE_TESTS)
 	# Link libraries to the new executable
 	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
 
-
 	#################### MAKE TEST ######################
-	# Hook up the 'make test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
+	# Hook up the 'make os_test' target to the 'openshot-test' executable
+	ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
 ENDIF (NOT DISABLE_TESTS)

@@ -3,9 +3,12 @@
  * @brief Header file for QtImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -65,9 +68,10 @@ namespace openshot
 	{
 	private:
 		string path;
-		std::shared_ptr<QImage> image; ///> Original image (full quality)
-		std::shared_ptr<QImage> cached_image; ///> Scaled for performance
-		bool is_open;
+		std::shared_ptr<QImage> image;			///> Original image (full quality)
+		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
+		bool is_open;	///> Is Reader opened
+		QSize max_size;	///> Current max_size as calculated with Clip properties
 
 	public:
 
@@ -79,6 +83,8 @@ namespace openshot
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
 		QtImageReader(string path, bool inspect_reader);
+
+		virtual ~QtImageReader();
 
 		/// Close File
 		void Close();

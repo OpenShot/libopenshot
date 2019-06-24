@@ -3,9 +3,12 @@
  * @brief Source file for global Settings class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -40,12 +43,18 @@ Settings *Settings::Instance()
 	if (!m_pInstance) {
 		// Create the actual instance of logger only once
 		m_pInstance = new Settings;
-		m_pInstance->HARDWARE_DECODE = false;
-		m_pInstance->HARDWARE_ENCODE = false;
+		m_pInstance->HARDWARE_DECODER = 0;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
 		m_pInstance->MAX_WIDTH = 0;
 		m_pInstance->MAX_HEIGHT = 0;
 		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
+		m_pInstance->OMP_THREADS = 12;
+		m_pInstance->FF_THREADS = 8;
+		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
+		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
+		m_pInstance->HW_DE_DEVICE_SET = 0;
+		m_pInstance->HW_EN_DEVICE_SET = 0;
+		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
 	}
 
 	return m_pInstance;

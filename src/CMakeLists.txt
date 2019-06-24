@@ -4,7 +4,7 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
 # OpenShot Library (libopenshot), an open-source project dedicated to 
 # delivering high quality video editing and animation solutions to the 
@@ -199,11 +199,13 @@ endif(RESVG_FOUND)
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
+	message(STATUS "Discovering system JsonCPP (USE_SYSTEM_JSONCPP enabled)")
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
+	message(STATUS "Discovering system JsonCPP - done")
 else()
-	message("-- Could NOT find JsonCpp library (Using embedded JsonCpp instead)")
-	include_directories("../thirdparty/jsoncpp/include")
+	message(STATUS "Using embedded JsonCpp (USE_SYSTEM_JSONCPP not enabled)")
+	include_directories("../thirdparty/jsoncpp")
 endif(USE_SYSTEM_JSONCPP)
 
 ###############  PROFILING  #################
@@ -260,9 +262,7 @@ SET ( OPENSHOT_SOURCE_FILES
 IF (NOT USE_SYSTEM_JSONCPP)
 	# Third Party JSON Parser
 	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			../thirdparty/jsoncpp/src/lib_json/json_reader.cpp
-			../thirdparty/jsoncpp/src/lib_json/json_value.cpp
-			../thirdparty/jsoncpp/src/lib_json/json_writer.cpp)
+			../thirdparty/jsoncpp/jsoncpp.cpp )
 ENDIF (NOT USE_SYSTEM_JSONCPP)
 
 # ImageMagic related files

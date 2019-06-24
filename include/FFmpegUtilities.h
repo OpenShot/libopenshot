@@ -3,9 +3,12 @@
  * @brief Header file for FFmpegUtilities
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -42,6 +45,9 @@
 	extern "C" {
 		#include <libavcodec/avcodec.h>
 		#include <libavformat/avformat.h>
+	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+		#include <libavutil/hwcontext.h> //PM
+	#endif
 		#include <libswscale/swscale.h>
 		// Change this to the first version swrescale works
 	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
@@ -112,6 +118,13 @@
 	#endif
 	#ifndef PIX_FMT_YUV420P
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
+	#endif
+
+	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
+	// definition in ruby/config.h, so we move it to FF_RSHIFT
+	#ifdef RSHIFT
+		#define FF_RSHIFT(a, b) RSHIFT(a, b)
+		#undef RSHIFT
 	#endif
 
 	#ifdef USE_SW
@@ -199,9 +212,12 @@
 		#define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) 	av_st = avformat_new_stream(oc, NULL);\
 			if (!av_st) \
 				throw OutOfMemory("Could not allocate memory for the video stream.", path); \
-			c = avcodec_alloc_context3(av_codec); \
-			st_codec = c; \
-			av_st->codecpar->codec_id = av_codec->id;
+			_Pragma ("GCC diagnostic push"); \
+			_Pragma ("GCC diagnostic ignored \"-Wdeprecated-declarations\""); \
+			avcodec_get_context_defaults3(av_st->codec, av_codec); \
+			c = av_st->codec; \
+			_Pragma ("GCC diagnostic pop"); \
+			st_codec = c;
 		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) avcodec_parameters_from_context(av_stream->codecpar, av_codec);
 	#elif LIBAVFORMAT_VERSION_MAJOR >= 55
 		#define AV_REGISTER_ALL av_register_all();

@@ -3,9 +3,12 @@
  * @brief Header file for Clip class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -36,7 +39,6 @@
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
-#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
@@ -47,6 +49,7 @@
 #include "Fraction.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
+#include "JuceHeader.h"
 
 using namespace std;
 using namespace openshot;
@@ -112,7 +115,10 @@ namespace openshot {
 
 		// File Reader object
 		ReaderBase* reader;
-		bool manage_reader;
+
+		/// If we allocated a reader, we store it here to free it later
+		/// (reader member variable itself may have been replaced)
+		ReaderBase* allocated_reader;
 
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
@@ -160,7 +166,7 @@ namespace openshot {
 		Clip(ReaderBase* new_reader);
 
 		/// Destructor
-		~Clip();
+		virtual ~Clip();
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

@@ -4,9 +4,12 @@
  * @author Duzy Chan <code@duzy.info>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -32,6 +35,8 @@
 #include "../ReaderBase.h"
 #include "../RendererBase.h"
 #include "../AudioReaderSource.h"
+#include "../AudioDeviceInfo.h"
+#include "../Settings.h"
 
 namespace openshot
 {
@@ -57,14 +62,20 @@ namespace openshot
 	class AudioDeviceManagerSingleton {
 	private:
 		/// Default constructor (Don't allow user to create an instance of this singleton)
-		AudioDeviceManagerSingleton(){};
+		AudioDeviceManagerSingleton(){ initialise_error=""; };
 
 		/// Private variable to keep track of singleton instance
 		static AudioDeviceManagerSingleton * m_pInstance;
 
 	public:
-		/// Create or get an instance of this singleton (invoke the class with this method)
-		static AudioDeviceManagerSingleton * Instance(int numChannels);
+		/// Error found during JUCE initialise method
+		string initialise_error;
+
+		/// List of valid audio device names
+		vector<AudioDeviceInfo> audio_device_names;
+
+		/// Override with no channels and no preferred audio device
+		static AudioDeviceManagerSingleton * Instance();
 
 		/// Public device manager property
 		AudioDeviceManager audioDeviceManager;
@@ -78,52 +89,58 @@ namespace openshot
      */
     class AudioPlaybackThread : Thread
     {
-	AudioSourcePlayer player;
-	AudioTransportSource transport;
-	MixerAudioSource mixer;
-	AudioReaderSource *source;
-	double sampleRate;
-	int numChannels;
-	WaitableEvent play;
-	WaitableEvent played;
-	int buffer_size;
-	bool is_playing;
-	SafeTimeSliceThread time_thread;
-	
-	/// Constructor
-	AudioPlaybackThread();
-	/// Destructor
-	~AudioPlaybackThread();
+		AudioSourcePlayer player;
+		AudioTransportSource transport;
+		MixerAudioSource mixer;
+		AudioReaderSource *source;
+		double sampleRate;
+		int numChannels;
+		WaitableEvent play;
+		WaitableEvent played;
+		int buffer_size;
+		bool is_playing;
+		SafeTimeSliceThread time_thread;
 
-	/// Set the current thread's reader
-	void Reader(ReaderBase *reader);
+		/// Constructor
+		AudioPlaybackThread();
+		/// Destructor
+		~AudioPlaybackThread();
 
-	/// Get the current frame object (which is filling the buffer)
-	std::shared_ptr<Frame> getFrame();
+		/// Set the current thread's reader
+		void Reader(ReaderBase *reader);
 
-	/// Get the current frame number being played
-	int64_t getCurrentFramePosition();
+		/// Get the current frame object (which is filling the buffer)
+		std::shared_ptr<Frame> getFrame();
 
-	/// Play the audio
-	void Play();
+		/// Get the current frame number being played
+		int64_t getCurrentFramePosition();
 
-	/// Seek the audio thread
-	void Seek(int64_t new_position);
+		/// Play the audio
+		void Play();
 
-	/// Stop the audio playback
-	void Stop();
+		/// Seek the audio thread
+		void Seek(int64_t new_position);
 
-	/// Start thread
-	void run();
-	
-    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-    void setSpeed(int new_speed) { if (source) source->setSpeed(new_speed); }
+		/// Stop the audio playback
+		void Stop();
 
-    /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-    int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
+		/// Start thread
+		void run();
 
-	friend class PlayerPrivate;
-	friend class QtPlayer;
+		/// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+		void setSpeed(int new_speed) { if (source) source->setSpeed(new_speed); }
+
+		/// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
+
+		/// Get Audio Error (if any)
+		string getError() { return AudioDeviceManagerSingleton::Instance()->initialise_error; }
+
+		/// Get Audio Device Names (if any)
+		vector<AudioDeviceInfo> getAudioDeviceNames() { return AudioDeviceManagerSingleton::Instance()->audio_device_names; };
+
+		friend class PlayerPrivate;
+		friend class QtPlayer;
     };
 
 }

@@ -3,9 +3,12 @@
  * @brief Header file for global Settings class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,7 +32,6 @@
 #define OPENSHOT_SETTINGS_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -40,6 +42,7 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
+#include "JuceHeader.h"
 
 
 using namespace std;
@@ -76,11 +79,19 @@ namespace openshot {
 		static Settings * m_pInstance;
 
 	public:
-		/// Use video card for faster video decoding (if supported)
-		bool HARDWARE_DECODE = false;
-
-		/// Use video card for faster video encoding (if supported)
-		bool HARDWARE_ENCODE = false;
+		/**
+		 * @brief Use video codec for faster video decoding (if supported)
+		 *
+		 * 0 - No acceleration,
+		 * 1 - Linux VA-API,
+		 * 2 - nVidia NVDEC,
+		 * 3 - Windows D3D9,
+		 * 4 - Windows D3D11,
+		 * 5 - MacOS / VideoToolBox,
+		 * 6 - Linux VDPAU,
+		 * 7 - Intel QSV
+		 */
+		int HARDWARE_DECODER = 0;
 
 		/// Scale mode used in FFmpeg decoding and encoding (used as an optimization for faster previews)
 		bool HIGH_QUALITY_SCALING = false;
@@ -93,6 +104,27 @@ namespace openshot {
 
 		/// Wait for OpenMP task to finish before continuing (used to limit threads on slower systems)
 		bool WAIT_FOR_VIDEO_PROCESSING_TASK = false;
+
+		/// Number of threads of OpenMP
+		int OMP_THREADS = 12;
+
+		/// Number of threads that ffmpeg uses
+		int FF_THREADS = 8;
+
+		/// Maximum rows that hardware decode can handle
+		int DE_LIMIT_HEIGHT_MAX = 1100;
+
+		/// Maximum columns that hardware decode can handle
+		int DE_LIMIT_WIDTH_MAX = 1950;
+
+		/// Which GPU to use to decode (0 is the first)
+		int HW_DE_DEVICE_SET = 0;
+
+		/// Which GPU to use to encode (0 is the first)
+		int HW_EN_DEVICE_SET = 0;
+
+		/// The audio device name to use during playback
+		string PLAYBACK_AUDIO_DEVICE_NAME = "";
 
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static Settings * Instance();

@@ -3,9 +3,12 @@
  * @brief Header file for ZeroMQ-based Logger class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,7 +32,6 @@
 #define OPENSHOT_LOGGER_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -40,6 +42,7 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
+#include "JuceHeader.h"
 
 
 using namespace std;

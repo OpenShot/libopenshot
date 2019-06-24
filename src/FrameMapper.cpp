@@ -3,9 +3,12 @@
  * @brief Source file for the FrameMapper class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -61,6 +64,8 @@ FrameMapper::~FrameMapper() {
 	if (is_open)
 		// Auto Close if not already
 		Close();
+
+	reader = NULL;
 }
 
 /// Get the current reader
@@ -649,6 +654,16 @@ void FrameMapper::Close()
 		// Close internal reader
 		reader->Close();
 
+		// Clear the fields & frames lists
+		fields.clear();
+		frames.clear();
+
+		// Mark as dirty
+		is_dirty = true;
+
+		// Clear cache
+		final_cache.Clear();
+
 		// Deallocate resample buffer
 		if (avr) {
 			SWR_CLOSE(avr);
@@ -682,8 +697,12 @@ void FrameMapper::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");

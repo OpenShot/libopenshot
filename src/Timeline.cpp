@@ -3,9 +3,12 @@
  * @brief Source file for Timeline class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -31,7 +34,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true)
+		is_open(false), auto_map_clips(true), managed_cache(true)
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -58,6 +61,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.has_audio = true;
 	info.has_video = true;
 	info.video_length = info.fps.ToFloat() * info.duration;
+	info.display_ratio = openshot::Fraction(width, height);
+	info.display_ratio.Reduce();
+	info.pixel_ratio = openshot::Fraction(1, 1);
 
     // Init max image size
 	SetMaxSize(info.width, info.height);
@@ -65,6 +71,29 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init cache
 	final_cache = new CacheMemory();
 	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+}
+
+Timeline::~Timeline() {
+	if (is_open)
+		// Auto Close if not already
+		Close();
+
+	// Free all allocated frame mappers
+	set<FrameMapper *>::iterator frame_mapper_itr;
+	for (frame_mapper_itr = allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr) {
+		// Get frame mapper object from the iterator
+		FrameMapper *frame_mapper = (*frame_mapper_itr);
+		frame_mapper->Reader(NULL);
+		frame_mapper->Close();
+		delete frame_mapper;
+	}
+	allocated_frame_mappers.clear();
+
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+	}
 }
 
 // Add an openshot::Clip to the timeline
@@ -120,7 +149,9 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
-		clip_reader = (ReaderBase*) new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		allocated_frame_mappers.insert(mapper);
+		clip_reader = (ReaderBase*) mapper;
 	}
 
 	// Update the mapping
@@ -277,9 +308,10 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
-	if (is_top_clip && source_frame)
+	if (is_top_clip && source_frame) {
 		#pragma omp critical (T_addLayer)
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
+	}
 
 	// Declare an image to hold the source frame's image
 	std::shared_ptr<QImage> source_image;
@@ -894,8 +926,15 @@ vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, int num
 	return matching_clips;
 }
 
-// Get the cache object used by this reader
+// Set the cache object used by this reader
 void Timeline::SetCache(CacheBase* new_cache) {
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+		managed_cache = false;
+	}
+
 	// Set new cache
 	final_cache = new_cache;
 }
@@ -954,8 +993,12 @@ void Timeline::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -1047,8 +1090,12 @@ void Timeline::ApplyJsonDiff(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success || !root.isArray())
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid).", "");
@@ -1370,6 +1417,33 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		else if (root_key == "fps" && sub_key == "den")
 			// Set fps.den
 			info.fps.den = change["value"].asInt();
+		else if (root_key == "display_ratio" && sub_key == "" && change["value"].isObject()) {
+			// Set display_ratio fraction
+			if (!change["value"]["num"].isNull())
+				info.display_ratio.num = change["value"]["num"].asInt();
+			if (!change["value"]["den"].isNull())
+				info.display_ratio.den = change["value"]["den"].asInt();
+		}
+		else if (root_key == "display_ratio" && sub_key == "num")
+			// Set display_ratio.num
+			info.display_ratio.num = change["value"].asInt();
+		else if (root_key == "display_ratio" && sub_key == "den")
+			// Set display_ratio.den
+			info.display_ratio.den = change["value"].asInt();
+		else if (root_key == "pixel_ratio" && sub_key == "" && change["value"].isObject()) {
+			// Set pixel_ratio fraction
+			if (!change["value"]["num"].isNull())
+				info.pixel_ratio.num = change["value"]["num"].asInt();
+			if (!change["value"]["den"].isNull())
+				info.pixel_ratio.den = change["value"]["den"].asInt();
+		}
+		else if (root_key == "pixel_ratio" && sub_key == "num")
+			// Set pixel_ratio.num
+			info.pixel_ratio.num = change["value"].asInt();
+		else if (root_key == "pixel_ratio" && sub_key == "den")
+			// Set pixel_ratio.den
+			info.pixel_ratio.den = change["value"].asInt();
+
 		else if (root_key == "sample_rate")
 			// Set sample rate
 			info.sample_rate = change["value"].asInt();
@@ -1379,9 +1453,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		else if (root_key == "channel_layout")
 			// Set channel layout
 			info.channel_layout = (ChannelLayout) change["value"].asInt();
-
 		else
-
 			// Error parsing JSON (or missing keys)
 			throw InvalidJSONKey("JSON change key is invalid", change.toStyledString());
 
@@ -1442,7 +1514,14 @@ void Timeline::ClearAllCache() {
 // Set Max Image Size (used for performance optimization). Convenience function for setting
 // Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
 void Timeline::SetMaxSize(int width, int height) {
-	// Init max image size (choose the smallest one)
-	Settings::Instance()->MAX_WIDTH = min(width, info.width);
-	Settings::Instance()->MAX_HEIGHT = min(height, info.height);
+	// Maintain aspect ratio regardless of what size is passed in
+	QSize display_ratio_size = QSize(info.display_ratio.num * info.pixel_ratio.ToFloat(), info.display_ratio.den * info.pixel_ratio.ToFloat());
+	QSize proposed_size = QSize(min(width, info.width), min(height, info.height));
+
+	// Scale QSize up to proposed size
+	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);
+
+	// Set max size
+	Settings::Instance()->MAX_WIDTH = display_ratio_size.width();
+	Settings::Instance()->MAX_HEIGHT = display_ratio_size.height();
 }

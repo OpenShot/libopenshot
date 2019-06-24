@@ -3,9 +3,12 @@
  * @brief Header file for the FrameMapper class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -170,7 +173,7 @@ namespace openshot
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		/// Destructor
-		~FrameMapper();
+		virtual ~FrameMapper();
 
 		/// Change frame rate or audio mapping details
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
@@ -212,6 +215,9 @@ namespace openshot
 
 		/// Get the current reader
 		ReaderBase* Reader();
+
+		/// Set the current reader
+		void Reader(ReaderBase *new_reader) { reader = new_reader; }
 
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);

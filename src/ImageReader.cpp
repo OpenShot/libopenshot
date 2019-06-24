@@ -3,9 +3,12 @@
  * @brief Source file for ImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -24,6 +27,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
+
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
 
 #include "../include/ImageReader.h"
 
@@ -59,7 +65,7 @@ void ImageReader::Open()
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
-			image->matte(true);
+			MAGICK_IMAGE_ALPHA(image, true);
 		}
 		catch (Magick::Exception e) {
 			// raise exception
@@ -153,8 +159,12 @@ void ImageReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -188,3 +198,5 @@ void ImageReader::SetJsonValue(Json::Value root) {
 		Open();
 	}
 }
+
+#endif //USE_IMAGEMAGICK

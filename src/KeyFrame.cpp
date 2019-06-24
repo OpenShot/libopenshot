@@ -3,9 +3,12 @@
  * @brief Source file for the Keyframe class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -327,18 +330,13 @@ bool Keyframe::IsIncreasing(int index)
 			}
 		}
 
-		if (current_value < next_value) {
-			// Increasing
-			return true;
-		}
-		else if (current_value >= next_value) {
+		if (current_value >= next_value) {
 			// Decreasing
 			return false;
 		}
 	}
-	else
-		// return default true (since most curves increase)
-		return true;
+	// return default true (since most curves increase)
+	return true;
 }
 
 // Generate JSON string of this object
@@ -371,8 +369,12 @@ void Keyframe::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -784,7 +786,7 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 					// Add new value to the vector
 					Coordinate new_coord(current_frame, current_value);
 
-					if (Segment == 0 || Segment > 0 && current_frame > p1.co.X)
+					if (Segment == 0 || (Segment > 0 && current_frame > p1.co.X))
 						// Add to "values" vector
 						Values.push_back(new_coord);
 

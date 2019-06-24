@@ -3,9 +3,12 @@
  * @brief Header file for ClipBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -101,6 +104,7 @@ namespace openshot {
 		/// of all properties at any time)
 		virtual string PropertiesJSON(int64_t requested_frame) = 0;
 
+		virtual ~ClipBase() = default;
 	};
 
 

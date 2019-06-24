@@ -4,7 +4,7 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
 # OpenShot Library (libopenshot), an open-source project dedicated to 
 # delivering high quality video editing and animation solutions to the 
@@ -87,6 +87,7 @@
 #include "../../../include/Settings.h"
 #include "../../../include/Timeline.h"
 #include "../../../include/ZmqLogger.h"
+#include "../../../include/AudioDeviceInfo.h"
 
 %}
 
@@ -154,6 +155,7 @@
 %include "../../../include/Settings.h"
 %include "../../../include/Timeline.h"
 %include "../../../include/ZmqLogger.h"
+%include "../../../include/AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "../../../include/ImageReader.h"
@@ -187,4 +189,5 @@ namespace std {
  %template(FieldVector) vector<Field>;
  %template(MappedFrameVector) vector<MappedFrame>;
  %template(MappedMetadata) map<string, string>;
+ %template(AudioDeviceInfoVector) vector<AudioDeviceInfo>;
 }

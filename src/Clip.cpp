@@ -3,9 +3,12 @@
  * @brief Source file for Clip class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -101,9 +104,6 @@ void Clip::init_settings()
 	// Init audio and video overrides
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
-
-	// Default pointers
-	manage_reader = false;
 }
 
 // Init reader's rotation (if any)
@@ -131,14 +131,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : reader(NULL), resampler(NULL), audio_cache(NULL)
+Clip::Clip() : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : reader(new_reader), resampler(NULL), audio_cache(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(new_reader), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -152,7 +152,7 @@ Clip::Clip(ReaderBase* new_reader) : reader(new_reader), resampler(NULL), audio_
 }
 
 // Constructor with filepath
-Clip::Clip(string path) : reader(NULL), resampler(NULL), audio_cache(NULL)
+Clip::Clip(string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -194,7 +194,7 @@ Clip::Clip(string path) : reader(NULL), resampler(NULL), audio_cache(NULL)
 	// Update duration
 	if (reader) {
 		End(reader->info.duration);
-		manage_reader = true;
+		allocated_reader = reader;
 		init_reader_rotation();
 	}
 }
@@ -203,9 +203,9 @@ Clip::Clip(string path) : reader(NULL), resampler(NULL), audio_cache(NULL)
 Clip::~Clip()
 {
 	// Delete the reader if clip created it
-	if (manage_reader && reader) {
-		delete reader;
-		reader = NULL;
+	if (allocated_reader) {
+		delete allocated_reader;
+		allocated_reader = NULL;
 	}
 
 	// Close the resampler
@@ -789,8 +789,12 @@ void Clip::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+	
+	string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -968,7 +972,7 @@ void Clip::SetJsonValue(Json::Value root) {
 			// mark as managed reader and set parent
 			if (reader) {
 				reader->SetClip(this);
-				manage_reader = true;
+				allocated_reader = reader;
 			}
 
 			// Re-Open reader (if needed)

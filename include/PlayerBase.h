@@ -3,9 +3,12 @@
  * @brief Header file for PlayerBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -104,6 +107,7 @@ namespace openshot
 		/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
 		virtual void Volume(float new_volume) = 0;
 
+		virtual ~PlayerBase() = default;
 	};
 
 }

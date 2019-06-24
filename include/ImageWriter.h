@@ -3,9 +3,12 @@
  * @brief Header file for ImageWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -32,9 +35,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifndef OPENSHOT_IMAGE_WRITER_H
 #define OPENSHOT_IMAGE_WRITER_H
+
+#ifdef USE_IMAGEMAGICK
 
 #include "ReaderBase.h"
 #include "WriterBase.h"
@@ -44,11 +48,10 @@
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
-
+#include "MagickUtilities.h"
 
 using namespace std;
 
@@ -145,4 +148,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_IMAGE_WRITER_H

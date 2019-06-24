@@ -3,9 +3,12 @@
  * @brief Source file for QtImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -55,6 +58,10 @@ QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_
 		Open();
 		Close();
 	}
+}
+
+QtImageReader::~QtImageReader()
+{
 }
 
 // Open image file
@@ -129,6 +136,10 @@ void QtImageReader::Open()
 		// Set the ratio based on the reduced fraction
 		info.display_ratio.num = size.num;
 		info.display_ratio.den = size.den;
+
+		// Set current max size
+		max_size.setWidth(info.width);
+		max_size.setHeight(info.height);
 
 		// Mark as "open"
 		is_open = true;
@@ -209,8 +220,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (cached_image && cached_image->width() != max_width || cached_image->height() != max_height)) {
-
+	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
@@ -239,6 +249,10 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 		cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
 		cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
+
+		// Set max size (to later determine if max_size is changed)
+		max_size.setWidth(max_width);
+		max_size.setHeight(max_height);
 	}
 
 	// Create or get frame object
@@ -275,8 +289,12 @@ void QtImageReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");

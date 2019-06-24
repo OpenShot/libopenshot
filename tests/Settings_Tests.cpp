@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::Color
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -36,8 +39,7 @@ TEST(Settings_Default_Constructor)
 	// Create an empty color
 	Settings *s = Settings::Instance();
 
-	CHECK_EQUAL(false, s->HARDWARE_DECODE);
-	CHECK_EQUAL(false, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(0, s->HARDWARE_DECODER);
 	CHECK_EQUAL(false, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(false, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }
@@ -46,18 +48,15 @@ TEST(Settings_Change_Settings)
 {
 	// Create an empty color
 	Settings *s = Settings::Instance();
-	s->HARDWARE_DECODE = true;
-	s->HARDWARE_ENCODE = true;
+	s->HARDWARE_DECODER = 1;
 	s->HIGH_QUALITY_SCALING = true;
 	s->WAIT_FOR_VIDEO_PROCESSING_TASK = true;
 
-	CHECK_EQUAL(true, s->HARDWARE_DECODE);
-	CHECK_EQUAL(true, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(1, s->HARDWARE_DECODER);
 	CHECK_EQUAL(true, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 
-	CHECK_EQUAL(true, s->HARDWARE_DECODE);
-	CHECK_EQUAL(true, s->HARDWARE_ENCODE);
+	CHECK_EQUAL(1, s->HARDWARE_DECODER);
 	CHECK_EQUAL(true, Settings::Instance()->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }

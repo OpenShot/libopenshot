@@ -3,9 +3,12 @@
  * @brief Header file for FFmpegReader class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -50,18 +53,17 @@
 
 using namespace std;
 
-namespace openshot
-{
+namespace openshot {
 	/**
 	 * @brief This struct holds the associated video frame and starting sample # for an audio packet.
 	 *
 	 * Because audio packets do not match up with video frames, this helps determine exactly
 	 * where the audio packet's samples belong.
 	 */
-	struct AudioLocation
-	{
+	struct AudioLocation {
 		int64_t frame;
 		int sample_start;
+
 		bool is_near(AudioLocation location, int samples_per_frame, int64_t amount);
 	};
 
@@ -91,14 +93,16 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class FFmpegReader : public ReaderBase
-	{
+	class FFmpegReader : public ReaderBase {
 	private:
 		string path;
 
 		AVFormatContext *pFormatCtx;
 		int i, videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
+#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+		AVBufferRef *hw_device_ctx = NULL; //PM
+#endif
 		AVStream *pStream, *aStream;
 		AVPacket *packet;
 		AVFrame *pFrame;
@@ -142,7 +146,15 @@ namespace openshot
 		int64_t video_pts_offset;
 		int64_t last_frame;
 		int64_t largest_frame_processed;
-		int64_t current_video_frame;	// can't reliably use PTS of video to determine this
+		int64_t current_video_frame;    // can't reliably use PTS of video to determine this
+
+		int hw_de_supported = 0;    // Is set by FFmpegReader
+#if IS_FFMPEG_3_2
+		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
+		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
+#endif
+
+		int IsHardwareDecodeSupported(int codecid);
 
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();
@@ -199,10 +211,10 @@ namespace openshot
 		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate its memory)
-		void RemoveAVFrame(AVFrame*);
+		void RemoveAVFrame(AVFrame *);
 
 		/// Remove AVPacket from cache (and deallocate its memory)
-		void RemoveAVPacket(AVPacket*);
+		void RemoveAVPacket(AVPacket *);
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 		void Seek(int64_t requested_frame);
@@ -234,13 +246,13 @@ namespace openshot
 		FFmpegReader(string path, bool inspect_reader);
 
 		/// Destructor
-		~FFmpegReader();
+		virtual ~FFmpegReader();
 
 		/// Close File
 		void Close();
 
 		/// Get the cache object used by this reader
-		CacheMemory* GetCache() { return &final_cache; };
+		CacheMemory *GetCache() { return &final_cache; };
 
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
