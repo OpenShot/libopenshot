@@ -215,6 +215,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		QtImageReader.cpp
 		QtPlayer.cpp
 		Timeline.cpp
+		QtTextReader.cpp
 		
 		# Qt Video Player
 		${QT_PLAYER_FILES}
