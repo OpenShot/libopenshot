@@ -130,7 +130,7 @@ namespace openshot
 		/// @param height Height in pixels of image
 		/// @param quality Quality of image (0 to 100, 70 is default)
 		/// @param loops Number of times to repeat the image (used on certain multi-frame image formats, such as GIF)
-		/// @param combine Combine frames into a single image (if possible), or save each frame as it's own image
+		/// @param combine Combine frames into a single image (if possible), or save each frame as its own image
 		void SetVideoOptions(string format, Fraction fps, int width, int height,
 				int quality, int loops, bool combine);
 

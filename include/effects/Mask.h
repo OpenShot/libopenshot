@@ -95,7 +95,7 @@ namespace openshot
 		/// modified openshot::Frame object
 		///
 		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from it's keyframes (starting at 1).
+		/// tells the effect which settings to use from its keyframes (starting at 1).
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it

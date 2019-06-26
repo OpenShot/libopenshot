@@ -45,7 +45,7 @@ ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
 	previous_location.number = 0;
 	previous_location.frame = 0;
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }

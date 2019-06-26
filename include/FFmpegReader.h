@@ -162,7 +162,7 @@ namespace openshot {
 		/// Check the current seek position and determine if we need to seek again
 		bool CheckSeek(bool is_video);
 
-		/// Check if a frame is missing and attempt to replace it's frame image (and
+		/// Check if a frame is missing and attempt to replace its frame image (and
 		bool CheckMissingFrame(int64_t requested_frame);
 
 		/// Check the working queue, and move finished frames to the finished queue
@@ -210,10 +210,10 @@ namespace openshot {
 		/// Read the stream until we find the requested Frame
 		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
 
-		/// Remove AVFrame from cache (and deallocate it's memory)
+		/// Remove AVFrame from cache (and deallocate its memory)
 		void RemoveAVFrame(AVFrame *);
 
-		/// Remove AVPacket from cache (and deallocate it's memory)
+		/// Remove AVPacket from cache (and deallocate its memory)
 		void RemoveAVPacket(AVPacket *);
 
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
@@ -240,7 +240,7 @@ namespace openshot {
 		/// frame 1, or it throws one of the following exceptions.
 		FFmpegReader(string path);
 
-		/// Constructor for FFmpegReader.  This only opens the media file to inspect it's properties
+		/// Constructor for FFmpegReader.  This only opens the media file to inspect its properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
 		FFmpegReader(string path, bool inspect_reader);

@@ -148,8 +148,8 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
-		GravityType gravity; ///< The gravity of a clip determines where it snaps to it's parent
-		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
+		GravityType gravity; ///< The gravity of a clip determines where it snaps to its parent
+		ScaleType scale; ///< The scale determines how a clip should be resized to fit its parent
 		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
         FrameDisplayType display; ///< The format to display the frame number (if any)
 		VolumeMixType mixing; ///< What strategy should be followed when mixing audio with other clips

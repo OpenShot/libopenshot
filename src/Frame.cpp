@@ -266,7 +266,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 	return wave_image;
 }
 
-// Clear the waveform image (and deallocate it's memory)
+// Clear the waveform image (and deallocate its memory)
 void Frame::ClearWaveform()
 {
 	if (wave_image)

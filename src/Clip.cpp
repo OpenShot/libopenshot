@@ -272,7 +272,7 @@ void Clip::Close()
 // Get end position of clip (trim end of video), which can be affected by the time curve.
 float Clip::End()
 {
-	// if a time curve is present, use it's length
+	// if a time curve is present, use its length
 	if (time.Points.size() > 1)
 	{
 		// Determine the FPS fo this clip
