@@ -104,7 +104,7 @@ namespace openshot {
 	 *            Fraction(25,1), // framerate
 	 *            44100, // sample rate
 	 *            2 // channels
-     *            ChannelLayout::LAYOUT_STEREO,
+	 *            ChannelLayout::LAYOUT_STEREO,
 	 *            );
 	 *
 	 * // Create some clips
