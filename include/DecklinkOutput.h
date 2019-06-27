@@ -3,7 +3,10 @@
  * @brief Header file for DecklinkOutput class
  * @author Jonathan Thomas <jonathan@openshot.org>, Blackmagic Design
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2009 Blackmagic Design
  *
@@ -30,7 +33,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -63,8 +66,8 @@
 
 #include "DeckLinkAPI.h"
 #include "CacheMemory.h"
-#include "../include/Frame.h"
-#include "../include/OpenMPUtilities.h"
+#include "Frame.h"
+#include "OpenMPUtilities.h"
 
 enum OutputSignal {
 	kOutputSignalPip		= 0,

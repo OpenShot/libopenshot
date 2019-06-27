@@ -3,9 +3,12 @@
  * @brief Source file for VideoCacheThread class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -100,6 +103,12 @@ namespace openshot
 			catch (const OutOfBoundsFrame & e)
 			{
 				// Ignore out of bounds frame exceptions
+			}
+
+			// Is cache position behind current display frame?
+			if (position < current_display_frame) {
+				// Jump ahead
+				position = current_display_frame;
 			}
 
 	    	// Increment frame number

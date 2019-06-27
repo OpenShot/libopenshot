@@ -3,9 +3,12 @@
  * @brief Header file for QtImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,19 +31,14 @@
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include "ReaderBase.h"
-
 #include <cmath>
 #include <ctime>
 #include <iostream>
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include <QtCore/QString>
-#include <QtGui/QImage>
-#include <QtGui/QPainter>
-#include "CacheMemory.h"
 #include "Exceptions.h"
+#include "ReaderBase.h"
 
 using namespace std;
 
@@ -70,9 +68,10 @@ namespace openshot
 	{
 	private:
 		string path;
-		std::shared_ptr<QImage> image; ///> Original image (full quality)
-		std::shared_ptr<QImage> cached_image; ///> Scaled for performance
-		bool is_open;
+		std::shared_ptr<QImage> image;			///> Original image (full quality)
+		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
+		bool is_open;	///> Is Reader opened
+		QSize max_size;	///> Current max_size as calculated with Clip properties
 
 	public:
 
@@ -80,10 +79,12 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		QtImageReader(string path);
 
-		/// Constructor for QtImageReader.  This only opens the media file to inspect it's properties
+		/// Constructor for QtImageReader.  This only opens the media file to inspect its properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
 		QtImageReader(string path, bool inspect_reader);
+
+		virtual ~QtImageReader();
 
 		/// Close File
 		void Close();
@@ -109,9 +110,6 @@ namespace openshot
 		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
-
-		/// Set Max Image Size (used for performance optimization)
-		void SetMaxSize(int width, int height);
 
 		/// Open File - which is called by the constructor automatically
 		void Open();

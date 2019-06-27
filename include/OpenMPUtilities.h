@@ -3,9 +3,12 @@
  * @brief Header file for OpenMPUtilities (set some common macros)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,8 +32,17 @@
 #define OPENSHOT_OPENMP_UTILITIES_H
 
 #include <omp.h>
+#include <stdlib.h>
+#include <string.h>
 
-	// Calculate the # of OpenMP Threads to allow
-	#define OPEN_MP_NUM_PROCESSORS omp_get_num_procs()
+#include "Settings.h"
+
+using namespace std;
+using namespace openshot;
+
+// Calculate the # of OpenMP Threads to allow
+#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->OMP_THREADS) ))
+#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->FF_THREADS) ))
+
 
 #endif

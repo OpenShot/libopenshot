@@ -3,9 +3,12 @@
  * @brief Source file for ImageWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -27,6 +30,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
+
+//Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
 
 #include "../include/ImageWriter.h"
 
@@ -97,7 +103,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	std::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
 	frame_image->magick( info.vcodec );
 	frame_image->backgroundColor(Magick::Color("none"));
-	frame_image->matte(true);
+	MAGICK_IMAGE_ALPHA(frame_image, true);
 	frame_image->quality(image_quality);
 	frame_image->animationDelay(info.video_timebase.ToFloat() * 100);
 	frame_image->animationIterations(number_of_loops);
@@ -153,3 +159,4 @@ void ImageWriter::Close()
 	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
 }
 
+#endif //USE_IMAGEMAGICK

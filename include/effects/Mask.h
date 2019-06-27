@@ -3,9 +3,12 @@
  * @brief Header file for Mask class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -25,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_WIPE_EFFECT_H
-#define OPENSHOT_WIPE_EFFECT_H
+#ifndef OPENSHOT_MASK_EFFECT_H
+#define OPENSHOT_MASK_EFFECT_H
 
 #include "../EffectBase.h"
 
@@ -45,6 +48,7 @@
 #include "../QtImageReader.h"
 #include "../ChunkReader.h"
 #ifdef USE_IMAGEMAGICK
+	#include "../MagickUtilities.h"
 	#include "../ImageReader.h"
 #endif
 
@@ -54,7 +58,7 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to apply alpha (or transparency) masks
+	 * @brief This class uses the image libraries to apply alpha (or transparency) masks
 	 * to any frame. It can also be animated, and used as a powerful Wipe transition.
 	 *
 	 * These masks / wipes can also be combined, such as a transparency mask on top of a clip, which
@@ -65,6 +69,7 @@ namespace openshot
 	private:
 		ReaderBase *reader;
 		std::shared_ptr<QImage> original_mask;
+		bool needs_refresh;
 
 		/// Init effect settings
 		void init_effect_details();
@@ -90,7 +95,7 @@ namespace openshot
 		/// modified openshot::Frame object
 		///
 		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from it's keyframes (starting at 1).
+		/// tells the effect which settings to use from its keyframes (starting at 1).
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it

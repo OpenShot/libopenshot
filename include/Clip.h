@@ -3,9 +3,12 @@
  * @brief Header file for Clip class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -36,7 +39,6 @@
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
-#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
@@ -44,18 +46,10 @@
 #include "EffectBase.h"
 #include "Effects.h"
 #include "EffectInfo.h"
-#include "FFmpegReader.h"
 #include "Fraction.h"
-#include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
-#include "QtImageReader.h"
-#include "ChunkReader.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
-#include "DummyReader.h"
+#include "JuceHeader.h"
 
 using namespace std;
 using namespace openshot;
@@ -121,7 +115,10 @@ namespace openshot {
 
 		// File Reader object
 		ReaderBase* reader;
-		bool manage_reader;
+
+		/// If we allocated a reader, we store it here to free it later
+		/// (reader member variable itself may have been replaced)
+		ReaderBase* allocated_reader;
 
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
@@ -136,7 +133,7 @@ namespace openshot {
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		/// Adjust the audio and image of a time mapped frame
-		std::shared_ptr<Frame> get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number);
+		void get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_number);
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -151,8 +148,8 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
-		GravityType gravity; ///< The gravity of a clip determines where it snaps to it's parent
-		ScaleType scale; ///< The scale determines how a clip should be resized to fit it's parent
+		GravityType gravity; ///< The gravity of a clip determines where it snaps to its parent
+		ScaleType scale; ///< The scale determines how a clip should be resized to fit its parent
 		AnchorType anchor; ///< The anchor determines what parent a clip should snap to
         FrameDisplayType display; ///< The format to display the frame number (if any)
 		VolumeMixType mixing; ///< What strategy should be followed when mixing audio with other clips
@@ -169,7 +166,7 @@ namespace openshot {
 		Clip(ReaderBase* new_reader);
 
 		/// Destructor
-		~Clip();
+		virtual ~Clip();
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

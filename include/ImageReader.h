@@ -3,9 +3,12 @@
  * @brief Header file for ImageReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,6 +31,9 @@
 #ifndef OPENSHOT_IMAGE_READER_H
 #define OPENSHOT_IMAGE_READER_H
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "ReaderBase.h"
 
 #include <cmath>
@@ -36,9 +42,9 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
+#include "MagickUtilities.h"
 
 using namespace std;
 
@@ -77,7 +83,7 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		ImageReader(string path);
 
-		/// Constructor for ImageReader.  This only opens the media file to inspect it's properties
+		/// Constructor for ImageReader.  This only opens the media file to inspect its properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
 		ImageReader(string path, bool inspect_reader);
@@ -113,4 +119,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_IMAGE_READER_H

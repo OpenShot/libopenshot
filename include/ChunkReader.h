@@ -3,9 +3,12 @@
  * @brief Header file for ChunkReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,8 +32,6 @@
 #define OPENSHOT_CHUNK_READER_H
 
 #include "ReaderBase.h"
-#include "FFmpegReader.h"
-
 #include <cmath>
 #include <ctime>
 #include <iostream>
@@ -107,7 +108,7 @@ namespace openshot
 		string path;
 		bool is_open;
 		int64_t chunk_size;
-		FFmpegReader *local_reader;
+		ReaderBase *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
 		std::shared_ptr<Frame> last_frame;

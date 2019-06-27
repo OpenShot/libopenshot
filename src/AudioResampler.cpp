@@ -3,9 +3,12 @@
  * @brief Source file for AudioResampler class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -74,9 +77,9 @@ AudioResampler::~AudioResampler()
 void AudioResampler::SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate)
 {
 	if (sample_rate <= 0)
-		sample_rate == 44100;
+		sample_rate = 44100;
 	if (new_sample_rate <= 0)
-		new_sample_rate == 44100;
+		new_sample_rate = 44100;
 
 	// Set the sample ratio (the ratio of sample rate change)
 	source_ratio = sample_rate / new_sample_rate;

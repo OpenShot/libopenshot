@@ -3,9 +3,12 @@
  * @brief Source file for TextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -25,6 +28,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "../include/TextReader.h"
 
 using namespace openshot;
@@ -32,7 +38,7 @@ using namespace openshot;
 /// Default constructor (blank text)
 TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER) {
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
@@ -40,7 +46,15 @@ TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), t
 TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
+	Open();
+	Close();
+}
+
+void TextReader::SetTextBackgroundColor(string color) {
+	text_background_color = color;
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
 	Open();
 	Close();
 }
@@ -96,6 +110,10 @@ void TextReader::Open()
 		lines.push_back(Magick::DrawableFont(font));
 		lines.push_back(Magick::DrawablePointSize(size));
 		lines.push_back(Magick::DrawableText(x_offset, y_offset, text));
+
+		if (!text_background_color.empty()) {
+			lines.push_back(Magick::DrawableTextUnderColor(Magick::Color(text_background_color)));
+		}
 
 		// Draw image
 		image->draw(lines);
@@ -190,6 +208,7 @@ Json::Value TextReader::JsonValue() {
 	root["size"] = size;
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
+	root["text_background_color"] = text_background_color;
 	root["gravity"] = gravity;
 
 	// return JsonValue
@@ -201,8 +220,12 @@ void TextReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -244,6 +267,8 @@ void TextReader::SetJsonValue(Json::Value root) {
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())
 		background_color = root["background_color"].asString();
+	if (!root["text_background_color"].isNull())
+		text_background_color = root["text_background_color"].asString();
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 
@@ -254,3 +279,5 @@ void TextReader::SetJsonValue(Json::Value root) {
 		Open();
 	}
 }
+
+#endif //USE_IMAGEMAGICK

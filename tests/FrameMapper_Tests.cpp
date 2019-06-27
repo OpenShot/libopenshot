@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::FrameMapper
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -199,9 +202,9 @@ TEST(FrameMapper_resample_audio_48000_to_41000)
 
 	// Check details
 	CHECK_EQUAL(1, map.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(882, map.GetFrame(1)->GetAudioSamplesCount());
-	CHECK_EQUAL(882, map.GetFrame(2)->GetAudioSamplesCount());
-	CHECK_EQUAL(882, map.GetFrame(50)->GetAudioSamplesCount());
+	CHECK_CLOSE(882, map.GetFrame(1)->GetAudioSamplesCount(), 10.0);
+	CHECK_CLOSE(882, map.GetFrame(2)->GetAudioSamplesCount(), 10.0);
+	CHECK_CLOSE(882, map.GetFrame(50)->GetAudioSamplesCount(), 10.0);
 
 	// Close mapper
 	map.Close();

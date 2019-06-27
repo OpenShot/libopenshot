@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::FFmpegReader
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -100,6 +103,10 @@ TEST(FFmpegReader_Check_Video_File)
 	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
+	// Check pixel function
+	CHECK_EQUAL(true, f->CheckPixel(10, 112, 21, 191, 0, 255, 5));
+	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
+
 	// Get frame 1
 	f = r.GetFrame(2);
 
@@ -112,6 +119,10 @@ TEST(FFmpegReader_Check_Video_File)
 	CHECK_EQUAL(96, (int)pixels[pixel_index + 1]);
 	CHECK_EQUAL(188, (int)pixels[pixel_index + 2]);
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+
+	// Check pixel function
+	CHECK_EQUAL(true, f->CheckPixel(10, 112, 0, 96, 188, 255, 5));
+	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Close reader
 	r.Close();

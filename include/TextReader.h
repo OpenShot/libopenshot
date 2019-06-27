@@ -3,9 +3,12 @@
  * @brief Header file for TextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,6 +31,9 @@
 #ifndef OPENSHOT_TEXT_READER_H
 #define OPENSHOT_TEXT_READER_H
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "ReaderBase.h"
 
 #include <cmath>
@@ -36,10 +42,10 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Enums.h"
 #include "Exceptions.h"
+#include "MagickUtilities.h"
 
 using namespace std;
 
@@ -90,8 +96,9 @@ namespace openshot
 		double size;
 		string text_color;
 		string background_color;
+		string text_background_color;
 		std::shared_ptr<Magick::Image> image;
-		list<Magick::Drawable> lines;
+		MAGICK_DRAWABLE lines;
 		bool is_open;
 		GravityType gravity;
 
@@ -110,8 +117,12 @@ namespace openshot
 		/// @param font The font of the text
 		/// @param size The size of the text
 		/// @param text_color The color of the text
-		/// @param background_color The background color of the text (also supports Transparent)
+		/// @param background_color The background color of the text frame image (also supports Transparent)
 		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
+
+		/// Draw a box under rendered text using the specified color.
+		/// @param text_background_color The background color behind the text
+		void SetTextBackgroundColor(string color);
 
 		/// Close Reader
 		void Close();
@@ -144,4 +155,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_TEXT_READER_H

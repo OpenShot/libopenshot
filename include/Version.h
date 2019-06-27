@@ -3,9 +3,12 @@
  * @brief Header file that includes the version number of libopenshot
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -35,9 +38,9 @@
 #endif
 
 #define OPENSHOT_VERSION_MAJOR 0;   /// Major version number is incremented when huge features are added or improved.
-#define OPENSHOT_VERSION_MINOR 1;   /// Minor version is incremented when smaller (but still very important) improvements are added.
-#define OPENSHOT_VERSION_BUILD 9;   /// Build number is incremented when minor bug fixes and less important improvements are added.
-#define OPENSHOT_VERSION_SO 14;     /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
+#define OPENSHOT_VERSION_MINOR 2;   /// Minor version is incremented when smaller (but still very important) improvements are added.
+#define OPENSHOT_VERSION_BUILD 3;   /// Build number is incremented when minor bug fixes and less important improvements are added.
+#define OPENSHOT_VERSION_SO 17;     /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 #define OPENSHOT_VERSION_MAJOR_MINOR STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR); /// A string of the "Major.Minor" version
 #define OPENSHOT_VERSION_ALL STRINGIZE(OPENSHOT_VERSION_MAJOR) "." STRINGIZE(OPENSHOT_VERSION_MINOR) "." STRINGIZE(OPENSHOT_VERSION_BUILD); /// A string of the entire version "Major.Minor.Build"
 

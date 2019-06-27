@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::Timeline
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -242,7 +245,6 @@ TEST(Timeline_Clip_Order)
 	clip_middle1.Layer(1);
 	clip_middle1.Position(0.5);
 	t.AddClip(&clip_middle1);
-
 
 	// Loop through clips again, and re-check order
 	counter = 0;

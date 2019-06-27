@@ -3,9 +3,12 @@
  * @brief Header file for the FrameMapper class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -34,11 +37,11 @@
 #include <vector>
 #include <memory>
 #include "CacheMemory.h"
-#include "../include/ReaderBase.h"
-#include "../include/Frame.h"
-#include "../include/Fraction.h"
-#include "../include/Exceptions.h"
-#include "../include/KeyFrame.h"
+#include "ReaderBase.h"
+#include "Frame.h"
+#include "Fraction.h"
+#include "Exceptions.h"
+#include "KeyFrame.h"
 
 
 // Include FFmpeg headers and macros
@@ -146,7 +149,7 @@ namespace openshot
 		ReaderBase *reader;		// The source video reader
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
-		AVAudioResampleContext *avr;	// Audio resampling context object
+		SWRCONTEXT *avr;	// Audio resampling context object
 
 		// Internal methods used by init
 		void AddField(int64_t frame);
@@ -170,7 +173,7 @@ namespace openshot
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		/// Destructor
-		~FrameMapper();
+		virtual ~FrameMapper();
 
 		/// Change frame rate or audio mapping details
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
@@ -212,6 +215,9 @@ namespace openshot
 
 		/// Get the current reader
 		ReaderBase* Reader();
+
+		/// Set the current reader
+		void Reader(ReaderBase *new_reader) { reader = new_reader; }
 
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);

@@ -3,9 +3,12 @@
  * @brief Header file for CrashHandler class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -53,13 +56,15 @@ namespace openshot {
 	class CrashHandler {
 	private:
 		/// Default constructor
-		CrashHandler(){}; 						 // Don't allow user to create an instance of this singleton
+		CrashHandler(){return;}; 						 // Don't allow user to create an instance of this singleton
 
 		/// Default copy method
-		CrashHandler(CrashHandler const&){};             // Don't allow the user to copy this instance
+		//CrashHandler(CrashHandler const&){};             // Don't allow the user to copy this instance
+		CrashHandler(CrashHandler const&) = delete;             // Don't allow the user to copy this instance
 
 		/// Default assignment operator
-		CrashHandler & operator=(CrashHandler const&){};  // Don't allow the user to assign this instance
+		//CrashHandler & operator=(CrashHandler const&){};  // Don't allow the user to assign this instance
+		CrashHandler & operator=(CrashHandler const&) = delete;  // Don't allow the user to assign this instance
 
 		/// Private variable to keep track of singleton instance
 		static CrashHandler *m_pInstance;

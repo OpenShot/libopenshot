@@ -3,9 +3,12 @@
  * @brief Source file for ChunkReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,6 +29,7 @@
  */
 
 #include "../include/ChunkReader.h"
+#include "../include/FFmpegReader.h"
 
 using namespace openshot;
 
@@ -41,7 +45,7 @@ ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
 	previous_location.number = 0;
 	previous_location.frame = 0;
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
@@ -75,8 +79,10 @@ void ChunkReader::load_json()
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( json_string.str(), root );
+	Json::CharReaderBuilder rbuilder;
+
+	string errors;
+	bool success = Json::parseFromStream(rbuilder, json_string, &root, &errors);
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("Chunk folder could not be opened.", path);
@@ -227,7 +233,6 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 			cout << "Load READER: " << chunk_video_path << endl;
 			// Load new FFmpegReader
 			local_reader = new FFmpegReader(chunk_video_path);
-			local_reader->enable_seek = false; // disable seeking
 			local_reader->Open(); // open reader
 
 		} catch (InvalidFile)
@@ -278,8 +283,12 @@ void ChunkReader::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+	
+	string errors;
+	bool success = reader->parse( value.c_str(),
+	                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
