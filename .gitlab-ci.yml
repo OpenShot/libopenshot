@@ -78,7 +78,6 @@ windows-builder-x64:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
     - Move-Item -Force -path "install-x64\lib\python3.6\site-packages\*openshot*" -destination "install-x64\python\"
-    - cp src\libopenshot.dll install-x64\lib
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
     - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
@@ -109,7 +108,6 @@ windows-builder-x86:
     - cmake -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MinGW Makefiles" -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32" ../
     - mingw32-make install
     - Move-Item -Force -path "install-x86\lib\python3.6\site-packages\*openshot*" -destination "install-x86\python\"
-    - cp src\libopenshot.dll install-x86\lib
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
     - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
