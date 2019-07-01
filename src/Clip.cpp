@@ -79,9 +79,9 @@ void Clip::init_settings()
 	wave_color = Color((unsigned char)0, (unsigned char)123, (unsigned char)255, (unsigned char)255);
 
 	// Init crop settings
-	crop_gravity = GRAVITY_CENTER;
-	crop_width = Keyframe(-1.0);
-	crop_height = Keyframe(-1.0);
+	crop_gravity = GRAVITY_TOP_LEFT;
+	crop_width = Keyframe(1.0);
+	crop_height = Keyframe(1.0);
 	crop_x = Keyframe(0.0);
 	crop_y = Keyframe(0.0);
 
@@ -715,6 +715,11 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["channel_mapping"] = add_property_json("Channel Mapping", channel_mapping.GetValue(requested_frame), "int", "", &channel_mapping, -1, 10, false, requested_frame);
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
+
+	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
+	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
+	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
+	root["crop_height"] = add_property_json("Crop Height", crop_height.GetValue(requested_frame), "float", "", &crop_height, 0.0, 1.0, false, requested_frame);
 
 	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", &wave_color.red, 0, 255, false, requested_frame);
 	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", &wave_color.red, 0, 255, false, requested_frame);
