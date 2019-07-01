@@ -38,8 +38,6 @@ For more information, please visit <http://www.openshot.org/>.
 
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-# Define install paths according to system conventions
-include(GNUInstallDirs)
 
 ################ PROJECT VERSION ####################
 set(PROJECT_VERSION_FULL "0.2.3-dev1")
@@ -63,33 +61,16 @@ Generating build files for OpenShot
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
 
-#### Work around a GCC < 9 bug with handling of _Pragma() in macros
-#### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
-if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
-    (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
-endif()
+# Define install paths according to system conventions
+# XXX: This must be AFTER THE PROJECT() COMMAND w/ languages enabled,
+#      in order to properly configure CMAKE_INSTALL_LIBDIR path
+include(GNUInstallDirs)
 
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
-
-
-############### Set up include paths #################
-list(APPEND OPENSHOT_INCLUDE_DIRS
-    include
-    include/effects
-    include/Qt
-    ${CMAKE_CURRENT_BINARY_DIR}/include )
-
-########## Configure Version.h header ##############
-configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
-# We'll want that installed later
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
-
 
 ############### Set up include paths #################
 list(APPEND OPENSHOT_INCLUDE_DIRS
@@ -118,6 +99,3 @@ add_subdirectory(tests)
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
-
-file(GLOB_RECURSE doc_files ${CMAKE_CURRENT_BINARY_DIR}/doc/html/*.*)
-INSTALL(FILES ${doc_files} DESTINATION ${CMAKE_INSTALL_DOCDIR})
