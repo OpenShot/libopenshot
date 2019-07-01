@@ -119,6 +119,8 @@ namespace openshot
 
 		/// Open the writer (and start initializing streams)
 		virtual void Open() = 0;
+
+		virtual ~WriterBase() = default;
 	};
 
 }

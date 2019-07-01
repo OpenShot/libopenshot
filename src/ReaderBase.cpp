@@ -66,9 +66,6 @@ ReaderBase::ReaderBase()
 	parent = NULL;
 }
 
-ReaderBase::~ReaderBase() {
-}
-
 // Display file information
 void ReaderBase::DisplayInfo() {
 	cout << fixed << setprecision(2) << boolalpha;

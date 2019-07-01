@@ -96,6 +96,7 @@ namespace openshot
 		double size;
 		string text_color;
 		string background_color;
+		string text_background_color;
 		std::shared_ptr<Magick::Image> image;
 		MAGICK_DRAWABLE lines;
 		bool is_open;
@@ -116,8 +117,12 @@ namespace openshot
 		/// @param font The font of the text
 		/// @param size The size of the text
 		/// @param text_color The color of the text
-		/// @param background_color The background color of the text (also supports Transparent)
+		/// @param background_color The background color of the text frame image (also supports Transparent)
 		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
+
+		/// Draw a box under rendered text using the specified color.
+		/// @param text_background_color The background color behind the text
+		void SetTextBackgroundColor(string color);
 
 		/// Close Reader
 		void Close();

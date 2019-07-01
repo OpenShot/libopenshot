@@ -41,6 +41,9 @@ using namespace openshot;
 #pragma message "You are compiling only with software encode"
 #endif
 
+// Multiplexer parameters temporary storage
+AVDictionary *mux_dict = NULL;
+
 #if IS_FFMPEG_3_2
 int hw_en_on = 1;					// Is set in UI
 int hw_en_supported = 0;	// Is set by FFmpegWriter
@@ -467,6 +470,17 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::SetOption (" + (string)name + ")", "stream == VIDEO_STREAM", stream == VIDEO_STREAM, "", -1, "", -1, "", -1, "", -1, "", -1);
 
+	// Muxing dictionary is not part of the codec context.
+	// Just reusing SetOption function to set popular multiplexing presets.
+	} else if (name == "muxing_preset") {
+		if (value == "mp4_faststart") {
+			// 'moov' box to the beginning; only for MOV, MP4
+			av_dict_set(&mux_dict, "movflags", "faststart", 0);
+		} else if (value == "mp4_fragmented") {
+			// write selfcontained fragmented file, minimum length of the fragment 8 sec; only for MOV, MP4
+			av_dict_set(&mux_dict, "movflags", "frag_keyframe", 0);
+			av_dict_set(&mux_dict, "min_frag_duration", "8000000", 0);
+			}
 	} else {
 		throw InvalidOptions("The option is not valid for this codec.", path);
 	}
@@ -514,16 +528,28 @@ void FFmpegWriter::WriteHeader() {
 	snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", path.c_str());
 
 	// Write the stream header, if any
-	// TODO: add avoptions / parameters instead of NULL
 
 	// Add general metadata (if any)
 	for (std::map<string, string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter) {
 		av_dict_set(&oc->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	if (avformat_write_header(oc, NULL) != 0) {
+	// Set multiplexing parameters
+	AVDictionary *dict = NULL;
+
+	bool is_mp4 = strcmp(oc->oformat->name, "mp4");
+	bool is_mov = strcmp(oc->oformat->name, "mov");
+	// Set dictionary preset only for MP4 and MOV files
+	if (is_mp4 || is_mov)
+		av_dict_copy(&dict, mux_dict, 0);
+
+	if (avformat_write_header(oc, &dict) != 0) {
 		throw InvalidFile("Could not write header to file.", path);
 	};
+
+	// Free multiplexing dictionaries sets
+	if (dict) av_dict_free(&dict);
+	if (mux_dict) av_dict_free(&mux_dict);
 
 	// Mark as 'written'
 	write_header = true;

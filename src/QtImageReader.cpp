@@ -46,14 +46,14 @@ using namespace openshot;
 
 QtImageReader::QtImageReader(string path) : path(path), is_open(false)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
 QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_open(false)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
 		Open();
 		Close();
@@ -220,7 +220,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (cached_image && max_size.width() != max_width || max_size.height() != max_height)) {
+	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.

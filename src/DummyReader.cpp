@@ -69,7 +69,7 @@ DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, i
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }

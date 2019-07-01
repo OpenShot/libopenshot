@@ -107,6 +107,7 @@ namespace openshot
 		/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
 		virtual void Volume(float new_volume) = 0;
 
+		virtual ~PlayerBase() = default;
 	};
 
 }

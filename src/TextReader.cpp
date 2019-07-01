@@ -38,7 +38,7 @@ using namespace openshot;
 /// Default constructor (blank text)
 TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER) {
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
@@ -46,7 +46,15 @@ TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), t
 TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
+	Open();
+	Close();
+}
+
+void TextReader::SetTextBackgroundColor(string color) {
+	text_background_color = color;
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
 	Open();
 	Close();
 }
@@ -102,6 +110,10 @@ void TextReader::Open()
 		lines.push_back(Magick::DrawableFont(font));
 		lines.push_back(Magick::DrawablePointSize(size));
 		lines.push_back(Magick::DrawableText(x_offset, y_offset, text));
+
+		if (!text_background_color.empty()) {
+			lines.push_back(Magick::DrawableTextUnderColor(Magick::Color(text_background_color)));
+		}
 
 		// Draw image
 		image->draw(lines);
@@ -196,6 +208,7 @@ Json::Value TextReader::JsonValue() {
 	root["size"] = size;
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
+	root["text_background_color"] = text_background_color;
 	root["gravity"] = gravity;
 
 	// return JsonValue
@@ -254,6 +267,8 @@ void TextReader::SetJsonValue(Json::Value root) {
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())
 		background_color = root["background_color"].asString();
+	if (!root["text_background_color"].isNull())
+		text_background_color = root["text_background_color"].asString();
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 

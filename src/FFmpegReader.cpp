@@ -100,7 +100,7 @@ FFmpegReader::FFmpegReader(string path)
 	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
@@ -122,7 +122,7 @@ FFmpegReader::FFmpegReader(string path, bool inspect_reader)
 	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 
-	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
 		Open();
 		Close();
@@ -2027,7 +2027,7 @@ bool FFmpegReader::IsPartialFrame(int64_t requested_frame) {
 	return seek_trash;
 }
 
-// Check if a frame is missing and attempt to replace it's frame image (and
+// Check if a frame is missing and attempt to replace its frame image (and
 bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	// Lock
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
@@ -2347,7 +2347,7 @@ void FFmpegReader::CheckFPS() {
 	}
 }
 
-// Remove AVFrame from cache (and deallocate it's memory)
+// Remove AVFrame from cache (and deallocate its memory)
 void FFmpegReader::RemoveAVFrame(AVFrame *remove_frame) {
 	// Remove pFrame (if exists)
 	if (remove_frame) {
@@ -2362,7 +2362,7 @@ void FFmpegReader::RemoveAVFrame(AVFrame *remove_frame) {
 	}
 }
 
-// Remove AVPacket from cache (and deallocate it's memory)
+// Remove AVPacket from cache (and deallocate its memory)
 void FFmpegReader::RemoveAVPacket(AVPacket *remove_packet) {
 	// deallocate memory for packet
 	AV_FREE_PACKET(remove_packet);
@@ -2427,7 +2427,7 @@ void FFmpegReader::SetJson(string value) {
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse(value.c_str(), value.c_str() + value.size(),
 	                 &root, &errors);

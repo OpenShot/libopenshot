@@ -72,7 +72,6 @@ namespace openshot {
 
 		/// Constructor for the base clip
 		ClipBase() { };
-		virtual ~ClipBase();
 
 		// Compare a clip using the Position() property
 		bool operator< ( ClipBase& a) { return (Position() < a.Position()); }
@@ -105,6 +104,7 @@ namespace openshot {
 		/// of all properties at any time)
 		virtual string PropertiesJSON(int64_t requested_frame) = 0;
 
+		virtual ~ClipBase() = default;
 	};
 
 

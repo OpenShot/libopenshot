@@ -63,8 +63,6 @@ namespace openshot {
 		/// @param max_bytes The maximum bytes to allow in the cache. Once exceeded, the cache will purge the oldest frames.
 		CacheBase(int64_t max_bytes);
 
-		virtual ~CacheBase();
-
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
 		virtual void Add(std::shared_ptr<Frame> frame) = 0;
@@ -114,6 +112,7 @@ namespace openshot {
 		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+		virtual ~CacheBase() = default;
 
 	};
 
