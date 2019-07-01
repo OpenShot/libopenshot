@@ -24,6 +24,9 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Pick up our include directories from the parent context
+include_directories(${OPENSHOT_INCLUDE_DIRS})
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
@@ -299,7 +302,7 @@ add_library(openshot SHARED
 set_target_properties(openshot
 		PROPERTIES
 		VERSION ${PROJECT_VERSION}
-		SOVERSION ${SO_VERSION}
+		SOVERSION ${PROJECT_SO_VERSION}
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
