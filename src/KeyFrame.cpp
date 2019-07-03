@@ -200,7 +200,7 @@ Point Keyframe::GetPreviousPoint(Point p) {
 		else
 			return Points[0];
 
-	} catch (OutOfBoundsPoint) {
+	} catch (const OutOfBoundsPoint& e) {
 		// No previous point
 		return Point(-1, -1);
 	}
@@ -384,7 +384,7 @@ void Keyframe::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");

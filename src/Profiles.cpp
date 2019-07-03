@@ -120,7 +120,7 @@ Profile::Profile(string path) {
 		}
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing profile file
 		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
@@ -182,7 +182,7 @@ void Profile::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");

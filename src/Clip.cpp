@@ -123,7 +123,7 @@ void Clip::init_reader_rotation() {
 		try {
 			float rotate_metadata = strtof(reader->info.metadata["rotate"].c_str(), 0);
 			rotation = Keyframe(rotate_metadata);
-		} catch (exception e) {}
+		} catch (const std::exception& e) {}
 	}
 	else
 		// Default no rotation
@@ -809,7 +809,7 @@ void Clip::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
