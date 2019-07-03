@@ -128,7 +128,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length);
 
 	// Loop through each frame (and encoded it)
 	for (int64_t number = start; number <= length; number++)
@@ -156,7 +156,7 @@ void ImageWriter::Close()
 	// Close writer
 	is_open = false;
 
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close");
 }
 
 #endif //USE_IMAGEMAGICK
