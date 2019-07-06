@@ -128,6 +128,8 @@
 	#include "ImageWriter.h"
 	#include "TextReader.h"
 #endif
+#include "QtTextReader.h"
+#include "QtHtmlReader.h"
 #include "KeyFrame.h"
 #include "PlayerBase.h"
 #include "Point.h"
