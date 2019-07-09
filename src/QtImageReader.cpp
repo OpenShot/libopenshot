@@ -229,10 +229,15 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 			path.find(".svgz") != std::string::npos) {
 			ResvgRenderer renderer(QString::fromStdString(path));
 			if (renderer.isValid()) {
+				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
+				QSize svg_size(renderer.defaultSize().width(), renderer.defaultSize().height());
+				svg_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
-				cached_image = std::shared_ptr<QImage>(new QImage(QSize(max_width, max_height), QImage::Format_RGBA8888));
+				// Create empty QImage
+				cached_image = std::shared_ptr<QImage>(new QImage(QSize(svg_size.width(), svg_size.height()), QImage::Format_RGBA8888));
 				cached_image->fill(Qt::transparent);
 
+				// Render SVG into QImage
 				QPainter p(cached_image.get());
 				renderer.render(&p);
 				p.end();
