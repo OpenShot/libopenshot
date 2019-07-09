@@ -77,12 +77,15 @@ void QtImageReader::Open()
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.find(".svg") != std::string::npos ||
-				path.find(".svgz") != std::string::npos) {
+		if (path.find(".svg") != std::string::npos || path.find(".svgz") != std::string::npos) {
 
 			ResvgRenderer renderer(QString::fromStdString(path));
 			if (!renderer.isValid()) {
-				success = false;
+				// Attempt to open file (old method using Qt5 limited SVG parsing)
+				success = image->load(QString::fromStdString(path));
+				if (success) {
+					image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
+				}
 			} else {
 
 				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_RGBA8888));
@@ -225,8 +228,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.find(".svg") != std::string::npos ||
-			path.find(".svgz") != std::string::npos) {
+		if (path.find(".svg") != std::string::npos || path.find(".svgz") != std::string::npos) {
 			ResvgRenderer renderer(QString::fromStdString(path));
 			if (renderer.isValid()) {
 				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
@@ -241,6 +243,10 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				QPainter p(cached_image.get());
 				renderer.render(&p);
 				p.end();
+			} else {
+				// Resize current rasterized SVG (since we failed to parse original SVG file with resvg)
+				cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+				cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
 			}
 		} else {
 			// We need to resize the original image to a smaller image (for performance reasons)
