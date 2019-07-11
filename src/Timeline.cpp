@@ -1034,8 +1034,10 @@ void Timeline::SetJson(string value) {
 	Json::CharReader* reader(rbuilder.newCharReader());
 
 	string errors;
-	bool success = reader->parse( value.c_str(), 
+	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -1131,8 +1133,10 @@ void Timeline::ApplyJsonDiff(string value) {
 	Json::CharReader* reader(rbuilder.newCharReader());
 
 	string errors;
-	bool success = reader->parse( value.c_str(), 
+	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success || !root.isArray())
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid).", "");

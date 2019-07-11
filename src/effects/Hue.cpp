@@ -130,8 +130,10 @@ void Hue::SetJson(string value) {
 	Json::CharReader* reader(rbuilder.newCharReader());
 
 	string errors;
-	bool success = reader->parse( value.c_str(), 
+	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -177,4 +179,3 @@ string Hue::PropertiesJSON(int64_t requested_frame) {
 	// Return formatted string
 	return root.toStyledString();
 }
-

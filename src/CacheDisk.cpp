@@ -495,6 +495,8 @@ Json::Value CacheDisk::JsonValue() {
 	string errors;
 	bool success = reader->parse( json_ranges.c_str(),
 	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
+	delete reader;
+
 	if (success)
 		root["ranges"] = ranges;
 
@@ -512,7 +514,9 @@ void CacheDisk::SetJson(string value) {
 
 	string errors;
 	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
+	               value.c_str() + value.size(), &root, &errors );
+ 	delete reader;
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
