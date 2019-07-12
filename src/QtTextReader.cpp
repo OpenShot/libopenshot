@@ -78,25 +78,25 @@ void QtTextReader::Open()
 			align_flag = Qt::AlignLeft | Qt::AlignTop;
 			break;
 		case GRAVITY_TOP:
-			align_flag = Qt::AlignTop;
+			align_flag = Qt::AlignHCenter | Qt::AlignTop;
 			break;
 		case GRAVITY_TOP_RIGHT:
 			align_flag = Qt::AlignRight | Qt::AlignTop;
 			break;
 		case GRAVITY_LEFT:
-			align_flag = Qt::AlignLeft;
+			align_flag = Qt::AlignVCenter | Qt::AlignLeft;
 			break;
 		case GRAVITY_CENTER:
 			align_flag = Qt::AlignCenter;
 			break;
 		case GRAVITY_RIGHT:
-			align_flag = Qt::AlignRight;
+			align_flag = Qt::AlignVCenter | Qt::AlignRight;
 			break;
 		case GRAVITY_BOTTOM_LEFT:
 			align_flag = Qt::AlignLeft | Qt::AlignBottom;
 			break;
 		case GRAVITY_BOTTOM:
-			align_flag = Qt::AlignBottom;
+			align_flag = Qt::AlignHCenter | Qt::AlignBottom;
 			break;
 		case GRAVITY_BOTTOM_RIGHT:
 			align_flag = Qt::AlignRight | Qt::AlignBottom;

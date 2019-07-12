@@ -136,6 +136,7 @@
 #include "Point.h"
 #include "Profiles.h"
 #include "QtImageReader.h"
+#include "QtTextReader.h"
 #include "Timeline.h"
 #include "Settings.h"
 
