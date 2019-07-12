@@ -5,8 +5,6 @@
 #  LIBOPENSHOT_AUDIO_INCLUDE_DIRS - The juce.h include directories
 #  LIBOPENSHOT_AUDIO_LIBRARIES - The libraries needed to use juce
 
-include(GNUInstallDirs)
-
 if("$ENV{LIBOPENSHOT_AUDIO_DIR}" AND NOT "${OpenShotAudio_FIND_QUIETLY}")
     message(STATUS "Looking for OpenShotAudio in: $ENV{LIBOPENSHOT_AUDIO_DIR}")
 endif()
