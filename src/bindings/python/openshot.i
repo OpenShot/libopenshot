@@ -27,6 +27,9 @@
 
 %module openshot
 
+/* Suppress warnings about ignored operator= */
+%warnfilter(362);
+
 /* Enable inline documentation */
 %feature("autodoc", "1");
 
