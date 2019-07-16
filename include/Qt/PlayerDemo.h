@@ -57,7 +57,7 @@ public:
     ~PlayerDemo();
 
 protected:
-    void keyPressEvent(QKeyEvent *event);
+    override void keyPressEvent(QKeyEvent *event);
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
