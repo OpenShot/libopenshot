@@ -106,140 +106,166 @@ git clone https://github.com/OpenShot/libopenshot-audio.git
 
 The source code is divided up into the following folders.
 
-### build/
+*   `build/`
 
-*   This folder needs to be manually created, and is used by cmake to store the temporary build files, such as makefiles, as well as the final binaries (library and test executables).
+    This folder needs to be manually created, and is used by cmake to store the temporary build files, such as makefiles, as well as the final binaries (library and test executables).
 
-### cmake/
+*   `cmake/`
 
-*   This folder contains custom modules not included by default in cmake, used to find dependency libraries and headers and determine if these libraries are installed.
+    This folder contains custom modules not included by default in cmake, used to find dependency libraries and headers and determine if these libraries are installed.
 
-### doc/
+*   `doc/`
 
-*   This folder contains documentation and related files, such as logos and images required by the doxygen auto-generated documentation.
+    This folder contains documentation and related files, such as logos and images required by the doxygen auto-generated documentation.
 
-### include/
+*   `include/`
 
-*   This folder contains all headers (`*.h`) used by libopenshot.
+    This folder contains all headers (`*.h`) used by libopenshot.
 
-### src/
+*   `src/`
 
-*   This folder contains all source code (`*.cpp`) used by libopenshot.
+    This folder contains all source code (`*.cpp`) used by libopenshot.
 
-### tests/
+*   `tests/`
 
-*   This folder contains all unit test code.  Each class has it’s own test file (`*.cpp`), and uses UnitTest++ macros to keep the test code simple and manageable.
+    This folder contains all unit test code.  Each class has it’s own test file (`*.cpp`), and uses UnitTest++ macros to keep the test code simple and manageable.
 
-### thirdparty/
+*   `thirdparty/`
 
-*   This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
+    This folder contains code not written by the OpenShot team. For example, jsoncpp, an open-source JSON parser.
 
 ## Install MSYS2 Dependencies
 
-Most Windows dependencies needed for libopenshot-audio, libopenshot, and openshot-qt can be installed easily with MSYS2 and the pacman package manager. Follow these directions to setup a Windows build environment for OpenShot.
+Most Windows dependencies needed for libopenshot-audio, libopenshot, and openshot-qt can be installed easily with MSYS2 and the `pacman` package manager. Follow these directions to setup a Windows build environment for OpenShot.
 
-1.  Install MSYS2: <http://www.msys2.org/>
+1)  Install MSYS2: <http://www.msys2.org/>
 
-2.  Run MSYS2 command prompt (for example: `C:\msys64\msys2_shell.cmd`)
+2)  Run MSYS2 command prompt (for example: `C:\msys64\msys2_shell.cmd`)
 
-3.  Append PATH (so MSYS2 can find executables and libraries). This only needs to be done when we are manually compiling things (such as libopenshot, libopenshot-audio, resvg, unittest++):
+3)  Append PATH (so MSYS2 can find executables and libraries). This only needs to be done when we are manually compiling things (such as libopenshot, libopenshot-audio, resvg, unittest++):
 
-    **64-Bit Builds:**
+**64-Bit Builds:**
 
-        PATH=$PATH:/c/msys64/mingw64/bin:/c/msys64/mingw64/lib
+```
+PATH=$PATH:/c/msys64/mingw64/bin:/c/msys64/mingw64/lib
+```
 
-    **32-Bit Builds:**
+**32-Bit Builds:**
 
-        PATH=$PATH:/c/msys32/mingw32/bin:/c/msys32/mingw32/lib
+```
+PATH=$PATH:/c/msys32/mingw32/bin:/c/msys32/mingw32/lib
+```
 
-4.  Update and upgrade all packages
+4)  Update and upgrade all packages
 
-        pacman -Syu
+```
+pacman -Syu
+```
 
-5.  Install the following packages
+5)  Install the following packages
 
-    **64-Bit Builds:**
+**64-Bit Builds:**
 
-        pacman -S --needed base-devel mingw-w64-x86_64-toolchain \
-        mingw64/mingw-w64-x86_64-ffmpeg \
-        mingw64/mingw-w64-x86_64-python3-pyqt5 --disable-download-timeout \
-        mingw64/mingw-w64-x86_64-swig \
-        mingw64/mingw-w64-x86_64-cmake \
-        mingw64/mingw-w64-x86_64-doxygen --disable-download-timeout \
-        mingw64/mingw-w64-x86_64-python3-pip \
-        mingw32/mingw-w64-i686-zeromq \
-        mingw64/mingw-w64-x86_64-python3-pyzmq \
-        mingw64/mingw-w64-x86_64-python3-cx_Freeze \
-        mingw64/mingw-w64-x86_64-rust \
-        git
+```
+pacman -S --needed --disable-download-timeout \
+base-devel \
+git \
+mingw-w64-x86_64-toolchain \
+mingw64/mingw-w64-x86_64-ffmpeg \
+mingw64/mingw-w64-x86_64-python3-pyqt5  \
+mingw64/mingw-w64-x86_64-swig \
+mingw64/mingw-w64-x86_64-cmake \
+mingw64/mingw-w64-x86_64-doxygen \
+mingw64/mingw-w64-x86_64-python3-pip \
+mingw64/mingw-w64-x86_64-zeromq \
+mingw64/mingw-w64-x86_64-python3-pyzmq \
+mingw64/mingw-w64-x86_64-python3-cx_Freeze \
+mingw64/mingw-w64-x86_64-rust
 
-        # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
-        pacman -S mingw64/mingw-w64-x86_64-imagemagick
+# Install ImageMagick if desired (OPTIONAL and NOT NEEDED)
+pacman -S mingw64/mingw-w64-x86_64-imagemagick
+```
 
-    **32-Bit Builds:**
+**32-Bit Builds:**
 
-        pacman -S --needed base-devel mingw32/mingw-w64-i686-toolchain \
-        mingw32/mingw-w64-i686-ffmpeg \
-        mingw32/mingw-w64-i686-python3-pyqt5 \
-        mingw32/mingw-w64-i686-swig \
-        mingw32/mingw-w64-i686-cmake \
-        mingw32/mingw-w64-i686-doxygen \
-        mingw32/mingw-w64-i686-python3-pip \
-        mingw32/mingw-w64-i686-zeromq \
-        mingw32/mingw-w64-i686-python3-pyzmq \
-        mingw32/mingw-w64-i686-python3-cx_Freeze \
-        mingw32/mingw-w64-i686-rust \
-        git
+(Note: 32-bit builds still assume you are building on 64-bit Windows. Building on 32-bit Windows is untested and unsupported, but may be possible if you replace all of the `mingw-w64-i686...` packages below with `mingw-w32-i686...`.)
 
-        # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
-        pacman -S mingw32/mingw-w32-x86_32-imagemagick
+```
+pacman -S --needed --disable-download-timeout \
+base-devel \
+git \
+mingw32/mingw-w64-i686-toolchain \
+mingw32/mingw-w64-i686-ffmpeg \
+mingw32/mingw-w64-i686-python3-pyqt5 \
+mingw32/mingw-w64-i686-swig \
+mingw32/mingw-w64-i686-cmake \
+mingw32/mingw-w64-i686-doxygen \
+mingw32/mingw-w64-i686-python3-pip \
+mingw32/mingw-w64-i686-zeromq \
+mingw32/mingw-w64-i686-python3-pyzmq \
+mingw32/mingw-w64-i686-python3-cx_Freeze \
+mingw32/mingw-w64-i686-rust
 
-6.  Install Python PIP Dependencies
+# Install ImageMagick if desired (OPTIONAL and NOT NEEDED)
+pacman -S mingw32/mingw-w64-i686-imagemagick
+```
 
-        pip3 install requests
+6)  Install Python PIP Dependencies
 
-    For the OpenShot build servers, additional packages are needed (these are only useful for automated packaging of OpenShot and **are not required or useful** when building libopenshot):
+```
+pip3 install requests
+```
 
-        pip3 install httplib2 slacker tinys3 github3.py
+For the OpenShot build servers, additional packages are needed (these are only useful for automated packaging of OpenShot and **are not required or useful** when building libopenshot):
 
-7.  Download Unittest++ (<https://github.com/unittest-cpp/unittest-cpp>) into `/MSYS2/[USER]/unittest-cpp-master/`
+```
+pip3 install httplib2 slacker tinys3 github3.py
+```
 
-        git clone https://github.com/unittest-cpp/unittest-cpp.git
-        cd unittest-cpp/builds
-        cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_INSTALL_PREFIX:PATH=/usr ../
-        mingw32-make install
+7)  Download Unittest++ (<https://github.com/unittest-cpp/unittest-cpp>) into `/MSYS2/[USER]/unittest-cpp-master/`
 
-    **NOTE: Be sure to create a `UNITTEST_DIR` system environment variable pointing to the install directory: `C:\msys64\usr`.**
+```
+git clone https://github.com/unittest-cpp/unittest-cpp.git
+cd unittest-cpp/builds
+cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_INSTALL_PREFIX:PATH=/usr ../
+mingw32-make install
+```
 
-8.  Download Resvg <https://github.com/RazrFalcon/resvg> into `/MSYS2/[USER]/resvg/`
+**NOTE: Be sure to create a `UNITTEST_DIR` system environment variable pointing to the install directory: `C:\msys64\usr`.**
 
-    **64-Bit Builds:**
+8)  Download Resvg <https://github.com/RazrFalcon/resvg> into `/MSYS2/[USER]/resvg/`
 
-        git clone https://github.com/RazrFalcon/resvg
-        cd resvg/capi
-        export QT_DIR="C:\msys64\mingw64\"
-        cargo build --verbose --release --features="qt-backend"
-        cd ..
+**64-Bit Builds:**
 
-        # copy all required files into the system directories
-        cp target/release/resvg.dll /usr/lib/
-        mkdir -p /usr/include/resvg/
-        cp capi/include/*.h /usr/include/resvg/
+```
+git clone https://github.com/RazrFalcon/resvg
+cd resvg/capi
+export QT_DIR="C:\msys64\mingw64\"
+cargo build --verbose --release --features="qt-backend"
+cd ..
 
-    **32-Bit Builds:**
+# copy all required files into the system directories
+cp target/release/resvg.dll /usr/lib/
+mkdir -p /usr/include/resvg/
+cp capi/include/*.h /usr/include/resvg/
+```
 
-        git clone https://github.com/RazrFalcon/resvg
-        cd resvg/capi
-        export QT_DIR="C:\msys32\mingw32\"
-        cargo build --verbose --release --features="qt-backend"
-        cd ..
+**32-Bit Builds:**
 
-        # copy all required files into the system directories
-        cp target/release/resvg.dll /usr/lib/
-        mkdir -p /usr/include/resvg/
-        cp capi/include/*.h /usr/include/resvg/
+```
+git clone https://github.com/RazrFalcon/resvg
+cd resvg/capi
+export QT_DIR="C:\msys32\mingw32\"
+cargo build --verbose --release --features="qt-backend"
+cd ..
 
-    **NOTE: Be sure to create a `RESVGDIR` system environment variable pointing to the install directory: `C:\msys64\usr`.**
+# copy all required files into the system directories
+cp target/release/resvg.dll /usr/lib/
+mkdir -p /usr/include/resvg/
+cp capi/include/*.h /usr/include/resvg/
+```
+
+**NOTE: Be sure to create a `RESVGDIR` system environment variable pointing to the install directory: `C:\msys64\usr`.**
 
 ## Manual Dependencies
 
@@ -283,17 +309,21 @@ openshot-audio-test-sound  (This should play a test sound)
 
 Run the following commands to build libopenshot:
 
+#### Generate build files and compile
+
 ```
 cd [libopenshot repo folder]
 mkdir build
 cd build
-cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_INSTALL_PREFIX:PATH="C:\openshot\" ../
+cmake -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_INSTALL_PREFIX:PATH="C:\Program Files\openshot\" ../
 mingw32-make
 ```
 
 If you are missing any dependencies for libopenshot, you will receive error messages at this point.  Just install the missing dependencies, and run the above commands again.  Repeat until no error messages are displayed and the build process completes.
 
 Also, if you are having trouble building, please see the CMake Flags section above, as it might provide a solution for finding a missing folder path, missing Python 3 library, etc...
+
+#### Run unit tests and generate documentation
 
 To run all unit tests (and verify everything is working correctly), in the terminal where you built libopenshot, enter:
 
@@ -307,26 +337,35 @@ To auto-generate the documentation for libopenshot, in the terminal where you bu
 mingw32-make doc
 ```
 
-This will use doxygen to generate a folder of HTML files, with all classes and methods documented. The folder is located at build/doc/html/. Once libopenshot has been successfully built, we need to install it (i.e. copy it to the correct folder, so other libraries can find it).
+This will use doxygen to generate a folder of HTML files, with all classes and methods documented. The folder is located at `build/doc/html/`.
+
+#### Install compiled library, language bindings, and support files
+
+Once libopenshot has been successfully built, we need to install it (i.e. copy it to the correct folder, so other libraries can find it).
 
 ```
 mingw32-make install
 ```
 
-This should copy the binary files to `C:\openshot\lib\`, and the header files to `C:\openshot\include\...` This is where other projects will look for the libopenshot files when building. Python 3 bindings are also installed at this point.
+This should copy the binary files to `C:\Program Files\openshot\lib\`, and the header files to `C:\Program Files\openshot\include\...` This is where other projects will look for the libopenshot files when building. Python 3 bindings are also installed at this point.
+
+#### Test Python bindings and libopenshot library
 
 Let's verify the Python bindings work. Launch a terminal and enter:
 
 ```
 # Replace "python3.7" with the Python version you have installed, if different
-cd C:\openshot\lib\python3.7\site-packages\
+cd "C:\Program Files\openshot\lib"
+set PYTHONPATH="C:\Program Files\openshot\lib\python3.7\site-packages\"
 python3
 ```
 
 When the Python interpreter prompt (`>>>`) comes up, type:
 
-```python
+```{python}
 >>> import openshot
+>>> print(openshot.GetVersion.ToString())
+0.2.3
 ```
 
-If no errors are displayed, you have successfully compiled and installed libopenshot on your system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! Welcome to the OpenShot developer community! We look forward to meeting you!
+If no errors are displayed and the current libopenshot version is printed in response to the `print(...)` statement, you have successfully compiled and installed libopenshot on your system. Congratulations and be sure to read our wiki on [Becoming an OpenShot Developer](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)! Welcome to the OpenShot developer community! We look forward to meeting you!
