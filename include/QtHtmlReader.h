@@ -102,12 +102,9 @@ namespace openshot
 		/// @param x_offset The number of pixels to offset the text on the X axis (horizontal)
 		/// @param y_offset The number of pixels to offset the text on the Y axis (vertical)
 		/// @param gravity The alignment / gravity of the text
-		/// @param text The text you want to generate / display
-		/// @param font The font of the text
-		/// @param size The size of the text
-		/// @param text_color The color of the text
+		/// @param html The text you want to generate / display
 		/// @param background_color The background color of the text (also supports Transparent)
-		QtHtmlReader(int width, int height, int x_offset, int y_offset, string html, string background_color);
+		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string html, string background_color);
 
 		/// Close Reader
 		void Close();
