@@ -30,6 +30,10 @@
 
 #include "../include/ZmqLogger.h"
 
+#if USE_RESVG == 1
+	#include "ResvgQt.h"
+#endif
+
 using namespace std;
 using namespace openshot;
 
@@ -54,6 +58,13 @@ ZmqLogger *ZmqLogger::Instance()
 
 		// Init enabled to False (force user to call Enable())
 		m_pInstance->enabled = false;
+
+		#if USE_RESVG == 1
+			// Init resvg logging (if needed)
+			// This can only happen 1 time or it will crash
+			ResvgRenderer::initLog();
+		#endif
+
 	}
 
 	return m_pInstance;
