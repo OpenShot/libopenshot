@@ -716,6 +716,14 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
 
+	// Add enable audio/video choices (dropdown style)
+	root["has_audio"]["choices"].append(add_property_choice_json("Auto", -1, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("Off", 0, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("On", 1, has_audio.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Auto", -1, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Off", 0, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("On", 1, has_video.GetValue(requested_frame)));
+
 	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
 	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
 	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
