@@ -25,8 +25,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_QT_TEXT_READER_H
-#define OPENSHOT_QT_TEXT_READER_H
+#ifndef OPENSHOT_QT_HTML_READER_H
+#define OPENSHOT_QT_HTML_READER_H
 
 #include "ReaderBase.h"
 

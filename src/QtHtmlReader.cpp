@@ -30,6 +30,7 @@
 #include <QPainter>
 #include <QTextDocument>
 #include <QGuiApplication>
+#include <QAbstractTextDocumentLayout>
 
 using namespace openshot;
 
@@ -55,14 +56,6 @@ void QtHtmlReader::Open()
 	// Open reader if not already open
 	if (!is_open)
 	{
-		/*bool hasGuiApp = (qobject_cast<QGuiApplication*>(QCoreApplication::instance())!=0) || (qobject_cast<QApplication*>(QCoreApplication::instance())!=0);
-		if(!hasGuiApp){
-			static char appname[] = {"appname"};
-			static char* argv[1] = {appname};
-
-			static int argc = 1;
-			static QGuiApplication app(argc, argv);
-		}*/
 		// create image
 		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 		image->fill(QColor(background_color.c_str()));
