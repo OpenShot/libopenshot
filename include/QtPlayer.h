@@ -4,9 +4,12 @@
  * @author Duzy Chan <code@duzy.info>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -31,9 +34,9 @@
 
 #include <iostream>
 #include <vector>
-#include "../include/PlayerBase.h"
-#include "../include/Qt/PlayerPrivate.h"
-#include "../include/RendererBase.h"
+#include "PlayerBase.h"
+#include "Qt/PlayerPrivate.h"
+#include "RendererBase.h"
 
 using namespace std;
 
@@ -58,6 +61,12 @@ namespace openshot
 
 	/// Close audio device
 	void CloseAudioDevice();
+
+	/// Get Error (if any)
+	string GetError();
+
+	/// Get Audio Devices from JUCE
+	vector<AudioDeviceInfo> GetAudioDeviceNames();
 
 	/// Play the video
 	void Play();

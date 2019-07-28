@@ -4,9 +4,12 @@
  * @author Duzy Chan <code@duzy.info>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -56,7 +59,26 @@ QtPlayer::~QtPlayer()
 void QtPlayer::CloseAudioDevice()
 {
 	// Close audio device (only do this once, when all audio playback is finished)
-	AudioDeviceManagerSingleton::Instance(0)->CloseAudioDevice();
+	AudioDeviceManagerSingleton::Instance()->CloseAudioDevice();
+}
+
+// Return any error string during initialization
+string QtPlayer::GetError() {
+	if (reader && threads_started) {
+		// Get error from audio thread (if any)
+		return p->audioPlayback->getError();
+	} else {
+		return "";
+	}
+}
+
+/// Get Audio Devices from JUCE
+vector<AudioDeviceInfo> QtPlayer::GetAudioDeviceNames() {
+	if (reader && threads_started) {
+		return p->audioPlayback->getAudioDeviceNames();
+	} else {
+		return vector<AudioDeviceInfo>();
+	}
 }
 
 void QtPlayer::SetSource(const std::string &source)
@@ -64,16 +86,12 @@ void QtPlayer::SetSource(const std::string &source)
 	FFmpegReader *ffreader = new FFmpegReader(source);
 	ffreader->DisplayInfo();
 
-	//reader = new FrameMapper(ffreader, ffreader->info.fps, PULLDOWN_NONE, ffreader->info.sample_rate, ffreader->info.channels, ffreader->info.channel_layout);
 	reader = new Timeline(ffreader->info.width, ffreader->info.height, ffreader->info.fps, ffreader->info.sample_rate, ffreader->info.channels, ffreader->info.channel_layout);
 	Clip *c = new Clip(source);
 
 	Timeline* tm = (Timeline*)reader;
 	tm->AddClip(c);
 	tm->Open();
-
-//	ZmqLogger::Instance()->Path("/home/jonathan/.openshot_qt/libopenshot.log");
-//	ZmqLogger::Instance()->Enable(true);
 
     // Set the reader
 	Reader(reader);

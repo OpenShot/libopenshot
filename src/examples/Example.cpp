@@ -3,9 +3,12 @@
  * @brief Source file for Example Executable (example app for libopenshot)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -35,6 +38,10 @@ using namespace openshot;
 
 
 int main(int argc, char* argv[]) {
+
+	Settings *s = Settings::Instance();
+	s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC
+	s->HW_DE_DEVICE_SET = 0;
 
     FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
     r9.Open();

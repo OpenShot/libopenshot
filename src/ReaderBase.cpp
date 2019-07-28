@@ -3,9 +3,12 @@
  * @brief Source file for ReaderBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -58,8 +61,9 @@ ReaderBase::ReaderBase()
 	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
 	info.audio_timebase = Fraction();
-	max_width = 0;
-	max_height = 0;
+
+	// Init parent clip
+	parent = NULL;
 }
 
 // Display file information
@@ -245,4 +249,14 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 			info.metadata[key] = root["metadata"][key].asString();
 		}
 	}
+}
+
+/// Parent clip object of this reader (which can be unparented and NULL)
+ClipBase* ReaderBase::GetClip() {
+	return parent;
+}
+
+/// Set parent clip object of this reader
+void ReaderBase::SetClip(ClipBase* clip) {
+	parent = clip;
 }

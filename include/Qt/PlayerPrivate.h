@@ -4,9 +4,12 @@
  * @author Duzy Chan <code@duzy.info>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,12 +32,12 @@
 #ifndef OPENSHOT_PLAYER_PRIVATE_H
 #define OPENSHOT_PLAYER_PRIVATE_H
 
-#include "../../include/ReaderBase.h"
-#include "../../include/RendererBase.h"
-#include "../../include/AudioReaderSource.h"
-#include "../../include/Qt/AudioPlaybackThread.h"
-#include "../../include/Qt/VideoPlaybackThread.h"
-#include "../../include/Qt/VideoCacheThread.h"
+#include "../ReaderBase.h"
+#include "../RendererBase.h"
+#include "../AudioReaderSource.h"
+#include "../Qt/AudioPlaybackThread.h"
+#include "../Qt/VideoPlaybackThread.h"
+#include "../Qt/VideoCacheThread.h"
 
 namespace openshot
 {

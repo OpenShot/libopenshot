@@ -4,10 +4,10 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -24,25 +24,31 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.1...3.14 FATAL_ERROR)
 
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Welcome to the OpenShot Build System! CMake will now check for all required build")
-MESSAGE("dependencies and notify you of any missing files or other issues. If you have any")
-MESSAGE("questions or issues, please visit <http://www.openshot.org/>.")
+message("\
+-----------------------------------------------------------------
+          Welcome to the OpenShot Build System!
+
+CMake will now check libopenshot's build dependencies and inform
+you of any missing files or other issues.
+
+For more information, please visit <http://www.openshot.org/>.
+-----------------------------------------------------------------")
 
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ GET VERSION INFORMATION FROM VERSION.H ##################
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Determining Version Number (from Version.h file)")
+message(STATUS "Determining Version Number (from Version.h file)")
 
 #### Get the lines related to libopenshot version from the Version.h header
-file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h OPENSHOT_VERSION_LINES
-  REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
-  
-#### Set each line into it's own variable
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h
+     OPENSHOT_VERSION_LINES
+     REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
+
+#### Set each line into its own variable
+
 list (GET OPENSHOT_VERSION_LINES 0 LINE_MAJOR)
 list (GET OPENSHOT_VERSION_LINES 1 LINE_MINOR)
 list (GET OPENSHOT_VERSION_LINES 2 LINE_BUILD)
@@ -53,22 +59,34 @@ STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MAJOR[ ]+([0-9]+);(.*)" "\\1" 
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" MINOR_VERSION "${LINE_MINOR}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
 STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
-set(PROJECT_VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION}")
 
-MESSAGE("--> MAJOR Version: ${MAJOR_VERSION}")
-MESSAGE("--> MINOR Version: ${MINOR_VERSION}")
-MESSAGE("--> BUILD Version: ${BUILD_VERSION}")
-MESSAGE("--> SO/API/ABI Version: ${SO_VERSION}")
-MESSAGE("--> VERSION: ${PROJECT_VERSION}")
-MESSAGE("")
+message(STATUS "MAJOR Version: ${MAJOR_VERSION}")
+message(STATUS "MINOR Version: ${MINOR_VERSION}")
+message(STATUS "BUILD Version: ${BUILD_VERSION}")
+message(STATUS "SO/API/ABI Version: ${SO_VERSION}")
+message(STATUS "Determining Version Number - done")
 
 ################### SETUP PROJECT ###################
-PROJECT(openshot)
-MESSAGE("--------------------------------------------------------------")
-MESSAGE("Generating build files for ${PROJECT_NAME} (${PROJECT_VERSION})")
+PROJECT(libopenshot LANGUAGES C CXX
+        VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
+
+message("
+Generating build files for OpenShot
+  Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
+  SO/API/ABI Version: ${SO_VERSION}
+")
+
+#### Work around a GCC < 9 bug with handling of _Pragma() in macros
+#### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
+if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
+    (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
+endif()
 
 #### Enable C++11 (for std::shared_ptr support)
-set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")

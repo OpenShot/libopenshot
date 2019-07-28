@@ -4,10 +4,10 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-SET(TEST_MEDIA_PATH "${openshot_SOURCE_DIR}/src/examples/")
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -79,7 +79,33 @@ ENDIF (ImageMagick_FOUND)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
 # Include FFmpeg headers (needed for compile)
-include_directories(${FFMPEG_INCLUDE_DIR})
+IF (AVCODEC_FOUND)
+	include_directories(${AVCODEC_INCLUDE_DIRS})
+ENDIF (AVCODEC_FOUND)
+IF (AVDEVICE_FOUND)
+	include_directories(${AVDEVICE_INCLUDE_DIRS})
+ENDIF (AVDEVICE_FOUND)
+IF (AVFORMAT_FOUND)
+	include_directories(${AVFORMAT_INCLUDE_DIRS})
+ENDIF (AVFORMAT_FOUND)
+IF (AVFILTER_FOUND)
+	include_directories(${AVFILTER_INCLUDE_DIRS})
+ENDIF (AVFILTER_FOUND)
+IF (AVUTIL_FOUND)
+	include_directories(${AVUTIL_INCLUDE_DIRS})
+ENDIF (AVUTIL_FOUND)
+IF (POSTPROC_FOUND)
+	include_directories(${POSTPROC_INCLUDE_DIRS})
+ENDIF (POSTPROC_FOUND)
+IF (SWSCALE_FOUND)
+	include_directories(${SWSCALE_INCLUDE_DIRS})
+ENDIF (SWSCALE_FOUND)
+IF (SWRESAMPLE_FOUND)
+	include_directories(${SWRESAMPLE_INCLUDE_DIRS})
+ENDIF (SWRESAMPLE_FOUND)
+IF (AVRESAMPLE_FOUND)
+	include_directories(${AVRESAMPLE_INCLUDE_DIRS})
+ENDIF (AVRESAMPLE_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -109,7 +135,7 @@ add_definitions(${Qt5Gui_DEFINITIONS})
 add_definitions(${Qt5Multimedia_DEFINITIONS})
 add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
 
-SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES} 
+SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES}
 				 ${Qt5Core_LIBRARIES}
 				 ${Qt5Gui_LIBRARIES}
 				 ${Qt5Multimedia_LIBRARIES}
@@ -131,7 +157,7 @@ qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
 IF (ENABLE_BLACKMAGIC)
 	# Find BlackMagic DeckLinkAPI libraries
 	FIND_PACKAGE(BlackMagic)
-	
+
 	IF (BLACKMAGIC_FOUND)
 		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
@@ -150,12 +176,26 @@ endif(OPENMP_FOUND)
 # Find ZeroMQ library (used for socket communication & logging)
 FIND_PACKAGE(ZMQ REQUIRED)
 
-# Include FFmpeg headers (needed for compile)
+# Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+
+################### RESVG #####################
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG)
+
+# Include resvg headers (optional SVG library)
+if (RESVG_FOUND)
+	include_directories(${RESVG_INCLUDE_DIRS})
+endif(RESVG_FOUND)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
-include_directories("../thirdparty/jsoncpp/include")
+if (USE_SYSTEM_JSONCPP)
+	find_package(JsonCpp REQUIRED)
+	include_directories(${JSONCPP_INCLUDE_DIRS})
+else()
+	include_directories("../thirdparty/jsoncpp")
+endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
 	###############  SET TEST SOURCE FILES  #################
@@ -172,6 +212,7 @@ IF (NOT DISABLE_TESTS)
 		   FrameMapper_Tests.cpp
 		   KeyFrame_Tests.cpp
 		   Point_Tests.cpp
+		   Settings_Tests.cpp
 		   Timeline_Tests.cpp )
 
 	################ TESTER EXECUTABLE #################
@@ -183,8 +224,7 @@ IF (NOT DISABLE_TESTS)
 	# Link libraries to the new executable
 	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
 
-
 	#################### MAKE TEST ######################
-	# Hook up the 'make test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(test ${CMAKE_CURRENT_BINARY_DIR}/openshot-test)
+	# Hook up the 'make os_test' target to the 'openshot-test' executable
+	ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
 ENDIF (NOT DISABLE_TESTS)

@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::ReaderBase
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -44,9 +47,9 @@ TEST(ReaderBase_Derived_Class)
 		std::shared_ptr<Frame> GetFrame(int64_t number) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
-		string Json() { };
+		string Json() { return NULL; };
 		void SetJson(string value) { };
-		Json::Value JsonValue() { };
+		Json::Value JsonValue() { return (int) NULL; };
 		void SetJsonValue(Json::Value root) { };
 		bool IsOpen() { return true; };
 		string Name() { return "TestReader"; };

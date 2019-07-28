@@ -3,9 +3,12 @@
  * @brief Source file for the Keyframe class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -296,18 +299,44 @@ bool Keyframe::IsIncreasing(int index)
 		Process();
 
 	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return long(round(Values[index].IsIncreasing()));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return long(round(Values[0].IsIncreasing()));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return long(round(Values[Values.size() - 1].IsIncreasing()));
-	else
-		// return the default direction of most curves (i.e. increasing is true)
-		return true;
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		if (current_value >= next_value) {
+			// Decreasing
+			return false;
+		}
+	}
+	// return default true (since most curves increase)
+	return true;
 }
 
 // Generate JSON string of this object
@@ -340,8 +369,12 @@ void Keyframe::SetJson(string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	string errors;
+	bool success = reader->parse( value.c_str(), 
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -385,6 +418,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 }
 
 // Get the fraction that represents how many times this value is repeated in the curve
+// This is depreciated and will be removed soon.
 Fraction Keyframe::GetRepeatFraction(int64_t index)
 {
 	// Check if it needs to be processed
@@ -392,17 +426,42 @@ Fraction Keyframe::GetRepeatFraction(int64_t index)
 		Process();
 
 	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return Values[index].Repeat();
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return Values[0].Repeat();
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return Values[Values.size() - 1].Repeat();
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		int64_t total_repeats = previous_repeats + next_repeats;
+		return Fraction(previous_repeats, total_repeats);
+	}
 	else
-		// return a blank coordinate (0,0)
+		// return a blank coordinate
 		return Fraction(1,1);
 }
 
@@ -414,17 +473,48 @@ double Keyframe::GetDelta(int64_t index)
 		Process();
 
 	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return Values[index].Delta();
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return Values[0].Delta();
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return Values[Values.size() - 1].Delta();
+	if (index >= 1 && (index + 1) < Values.size()) {
+		int64_t current_value = GetLong(index);
+		int64_t previous_value = 0;
+		int64_t next_value = 0;
+		int64_t previous_repeats = 0;
+		int64_t next_repeats = 0;
+
+		// Loop backwards and look for the next unique value
+		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+			previous_value = long(round((*backwards_it).Y));
+			if (previous_value == current_value) {
+				// Found same value
+				previous_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Loop forwards and look for the next unique value
+		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+			next_value = long(round((*forwards_it).Y));
+			if (next_value == current_value) {
+				// Found same value
+				next_repeats++;
+			} else {
+				// Found non repeating value, no more repeats found
+				break;
+			}
+		}
+
+		// Check for matching previous value (special case for 1st element)
+		if (current_value == previous_value)
+			previous_value = 0;
+
+		if (previous_repeats == 1)
+			return current_value - previous_value;
+		else
+			return 0.0;
+	}
 	else
-		// return a blank coordinate (0,0)
+		// return a blank coordinate
 		return 0.0;
 }
 
@@ -529,7 +619,7 @@ void Keyframe::PrintValues() {
 
 	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
-		cout << long(round(c.X)) << "\t" << c.Y << "\t" << c.IsIncreasing() << "\t" << c.Repeat().num << "\t" << c.Repeat().den << "\t" << c.Delta() << endl;
+		cout << long(round(c.X)) << "\t" << c.Y << "\t" << IsIncreasing(c.X) << "\t" << GetRepeatFraction(c.X).num << "\t" << GetRepeatFraction(c.X).den << "\t" << GetDelta(c.X) << endl;
 	}
 }
 
@@ -566,69 +656,6 @@ void Keyframe::Process() {
 
 				// process segment p1,p2
 				ProcessSegment(x, p1, p2);
-			}
-
-			// Loop through each Value, and set the direction of the coordinate.  This is used
-			// when time mapping, to determine what direction the audio waveforms play.
-			bool increasing = true;
-			int repeat_count = 1;
-			int64_t last_value = 0;
-			for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
-				int current_value = long(round((*it).Y));
-				int64_t next_value = long(round((*it).Y));
-				int64_t prev_value = long(round((*it).Y));
-				if (it + 1 != Values.end())
-					next_value = long(round((*(it + 1)).Y));
-				if (it - 1 >= Values.begin())
-					prev_value = long(round((*(it - 1)).Y));
-
-				// Loop forward and look for the next unique value (to determine direction)
-				for (vector<Coordinate>::iterator direction_it = it + 1; direction_it != Values.end(); direction_it++) {
-					int64_t next = long(round((*direction_it).Y));
-
-					// Detect direction
-					if (current_value < next)
-					{
-						increasing = true;
-						break;
-					}
-					else if (current_value > next)
-					{
-						increasing = false;
-						break;
-					}
-				}
-
-				// Set direction
-				(*it).IsIncreasing(increasing);
-
-				// Detect repeated Y value
-				if (current_value == last_value)
-					// repeated, so increment count
-					repeat_count++;
-				else
-					// reset repeat counter
-					repeat_count = 1;
-
-				// Detect how many 'more' times it's repeated
-				int additional_repeats = 0;
-				for (vector<Coordinate>::iterator repeat_it = it + 1; repeat_it != Values.end(); repeat_it++) {
-					int64_t next = long(round((*repeat_it).Y));
-					if (next == current_value)
-						// repeated, so increment count
-						additional_repeats++;
-					else
-						break; // stop looping
-				}
-
-				// Set repeat fraction
-				(*it).Repeat(Fraction(repeat_count, repeat_count + additional_repeats));
-
-				// Set delta (i.e. different from previous unique Y value)
-				(*it).Delta(current_value - last_value);
-
-				// track the last value
-				last_value = current_value;
 			}
 		}
 
@@ -759,7 +786,7 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 					// Add new value to the vector
 					Coordinate new_coord(current_frame, current_value);
 
-					if (Segment == 0 || Segment > 0 && current_frame > p1.co.X)
+					if (Segment == 0 || (Segment > 0 && current_frame > p1.co.X))
 						// Add to "values" vector
 						Values.push_back(new_coord);
 

@@ -3,9 +3,12 @@
  * @brief Header file for Hue effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -70,7 +73,7 @@ namespace openshot
 		/// modified openshot::Frame object
 		///
 		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from it's keyframes (starting at 1).
+		/// tells the effect which settings to use from its keyframes (starting at 1).
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it

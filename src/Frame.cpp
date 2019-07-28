@@ -3,9 +3,12 @@
  * @brief Source file for Frame class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -120,7 +123,7 @@ void Frame::DeepCopy(const Frame& other)
 		wave_image = std::shared_ptr<QImage>(new QImage(*(other.wave_image)));
 }
 
-// Descructor
+// Destructor
 Frame::~Frame() {
 	// Clear all pointers
 	image.reset();
@@ -263,7 +266,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 	return wave_image;
 }
 
-// Clear the waveform image (and deallocate it's memory)
+// Clear the waveform image (and deallocate its memory)
 void Frame::ClearWaveform()
 {
 	if (wave_image)
@@ -480,6 +483,28 @@ const unsigned char* Frame::GetPixels(int row)
 	return image->scanLine(row);
 }
 
+// Check a specific pixel color value (returns True/False)
+bool Frame::CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold) {
+	int col_pos = col * 4; // Find column array position
+	if (!image || row < 0 || row >= (height - 1) ||
+		col_pos < 0 || col_pos >= (width - 1) ) {
+		// invalid row / col
+		return false;
+	}
+	// Check pixel color
+	const unsigned char* pixels = GetPixels(row);
+	if (pixels[col_pos + 0] >= (red - threshold) && pixels[col_pos + 0] <= (red + threshold) &&
+		pixels[col_pos + 1] >= (green - threshold) && pixels[col_pos + 1] <= (green + threshold) &&
+		pixels[col_pos + 2] >= (blue - threshold) && pixels[col_pos + 2] <= (blue + threshold) &&
+		pixels[col_pos + 3] >= (alpha - threshold) && pixels[col_pos + 3] <= (alpha + threshold)) {
+		// Pixel color matches successfully
+		return true;
+	} else {
+		// Pixel color does not match
+		return false;
+	}
+}
+
 // Set Pixel Aspect Ratio
 void Frame::SetPixelRatio(int num, int den)
 {
@@ -512,6 +537,8 @@ int Frame::GetSamplesPerFrame(int64_t number, Fraction fps, int sample_rate, int
 	// Subtract the previous frame's total samples with this frame's total samples.  Not all sample rates can
 	// be evenly divided into frames, so each frame can have have different # of samples.
 	int samples_per_frame = round(total_samples - previous_samples);
+	if (samples_per_frame < 0)
+		samples_per_frame = 0;
 	return samples_per_frame;
 }
 
@@ -902,7 +929,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 	// Give image a transparent background color
 	magick_image->backgroundColor(Magick::Color("none"));
 	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	magick_image->matte(true);
+	MAGICK_IMAGE_ALPHA(magick_image, true);
 
 	return magick_image;
 }
@@ -921,20 +948,12 @@ void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
 	qbuffer = new unsigned char[bufferSize]();
 	unsigned char *buffer = (unsigned char*)qbuffer;
 
-    // Iterate through the pixel packets, and load our own buffer
-	// Each color needs to be scaled to 8 bit (using the ImageMagick built-in ScaleQuantumToChar function)
-	int numcopied = 0;
-    Magick::PixelPacket *pixels = new_image->getPixels(0,0, new_image->columns(), new_image->rows());
-    for (int n = 0, i = 0; n < new_image->columns() * new_image->rows(); n += 1, i += 4) {
-    	buffer[i+0] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].red);
-    	buffer[i+1] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].green);
-    	buffer[i+2] = MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].blue);
-    	buffer[i+3] = 255 - MagickCore::ScaleQuantumToChar((Magick::Quantum) pixels[n].opacity);
-    	numcopied+=4;
-    }
+	MagickCore::ExceptionInfo exception;
+	// TODO: Actually do something, if we get an exception here
+	MagickCore::ExportImagePixels(new_image->constImage(), 0, 0, new_image->columns(), new_image->rows(), "RGBA", Magick::CharPixel, buffer, &exception);
 
-    // Create QImage of frame data
-    image = std::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
+	// Create QImage of frame data
+	image = std::shared_ptr<QImage>(new QImage(qbuffer, width, height, width * BPP, QImage::Format_RGBA8888, (QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer));
 
 	// Update height and width
 	width = image->width();
@@ -951,11 +970,15 @@ void Frame::Play()
 		return;
 
 	AudioDeviceManager deviceManager;
-	deviceManager.initialise (0, /* number of input channels */
+	String error = deviceManager.initialise (0, /* number of input channels */
 	        2, /* number of output channels */
 	        0, /* no XML settings.. */
 	        true  /* select default device on failure */);
-	//deviceManager.playTestSound();
+
+	// Output error (if any)
+	if (error.isNotEmpty()) {
+		cout << "Error on initialise(): " << error.toStdString() << endl;
+	}
 
 	AudioSourcePlayer audioSourcePlayer;
 	deviceManager.addAudioCallback (&audioSourcePlayer);

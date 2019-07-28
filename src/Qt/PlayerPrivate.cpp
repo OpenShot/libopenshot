@@ -4,9 +4,12 @@
  * @author Duzy Chan <code@duzy.info>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -149,7 +152,7 @@ namespace openshot
 		else
 		{
 			// Update cache on which frame was retrieved
-			videoCache->current_display_frame = video_position;
+			videoCache->setCurrentFramePosition(video_position);
 
 			// return frame from reader
 			return reader->GetFrame(video_position);

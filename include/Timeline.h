@@ -3,9 +3,12 @@
  * @brief Header file for Timeline class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -30,6 +33,7 @@
 
 #include <list>
 #include <memory>
+#include <set>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include "CacheBase.h"
@@ -48,6 +52,7 @@
 #include "KeyFrame.h"
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
+#include "Settings.h"
 
 using namespace std;
 using namespace openshot;
@@ -99,6 +104,7 @@ namespace openshot {
 	 *            Fraction(25,1), // framerate
 	 *            44100, // sample rate
 	 *            2 // channels
+	 *            ChannelLayout::LAYOUT_STEREO,
 	 *            );
 	 *
 	 * // Create some clips
@@ -151,6 +157,8 @@ namespace openshot {
 		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
 		list<EffectBase*> effects; ///<List of clips on this timeline
 		CacheBase *final_cache; ///<Final cache of timeline frames
+		set<FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
+		bool managed_cache; ///< Does this timeline instance manage the cache object
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
@@ -204,6 +212,8 @@ namespace openshot {
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
+        virtual ~Timeline();
+
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
 		void AddClip(Clip* clip);
@@ -236,7 +246,8 @@ namespace openshot {
 		/// Get the cache object used by this reader
 		CacheBase* GetCache() { return final_cache; };
 
-		/// Get the cache object used by this reader
+		/// Set the cache object used by this reader. You must now manage the lifecycle
+		/// of this cache object though (Timeline will not delete it for you).
 		void SetCache(CacheBase* new_cache);
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
@@ -264,6 +275,10 @@ namespace openshot {
 		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+
+		/// Set Max Image Size (used for performance optimization). Convenience function for setting
+		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
+		void SetMaxSize(int width, int height);
 
 		/// @brief Apply a special formatted JSON object, which represents a change to the timeline (add, update, delete)
 		/// This is primarily designed to keep the timeline (and its child objects... such as clips and effects) in sync

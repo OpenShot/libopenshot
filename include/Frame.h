@@ -3,9 +3,12 @@
  * @brief Header file for Frame class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -53,16 +56,16 @@
 #include <memory>
 #include <unistd.h>
 #include "ZmqLogger.h"
-#ifdef USE_IMAGEMAGICK
-	#include "Magick++.h"
-#endif
-#include "JuceLibraryCode/JuceHeader.h"
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
+#include "JuceHeader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "MagickUtilities.h"
+#endif
 
-
+#pragma SWIG nowarn=362
 using namespace std;
 
 namespace openshot
@@ -159,7 +162,7 @@ namespace openshot
 		Frame& operator= (const Frame& other);
 
 		/// Destructor
-		~Frame();
+		virtual ~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, string new_color);
@@ -197,7 +200,7 @@ namespace openshot
 		/// Clean up buffer after QImage is deleted
 		static void cleanUpBuffer(void *info);
 
-		/// Clear the waveform image (and deallocate it's memory)
+		/// Clear the waveform image (and deallocate its memory)
 		void ClearWaveform();
 
 		/// Copy data and pointers from another Frame instance
@@ -248,6 +251,9 @@ namespace openshot
 
 		/// Get pixel data (for only a single scan-line)
 		const unsigned char* GetPixels(int row);
+
+		/// Check a specific pixel color value (returns True/False)
+		bool CheckPixel(int row, int col, int red, int green, int blue, int alpha, int threshold);
 
 		/// Get height of image
 		int GetHeight();
