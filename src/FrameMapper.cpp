@@ -99,7 +99,7 @@ void FrameMapper::AddField(Field field)
 // whether the frame rate is increasing or decreasing.
 void FrameMapper::Init()
 {
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Init (Calculate frame mappings)", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Init (Calculate frame mappings)");
 
 	// Do not initialize anything if just a picture with no audio
 	if (info.has_video and !info.has_audio and info.has_single_image)
@@ -342,7 +342,7 @@ MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 		TargetFrameNumber = frames.size();
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetMappedFrame", "TargetFrameNumber", TargetFrameNumber, "frames.size()", frames.size(), "frames[...].Odd", frames[TargetFrameNumber - 1].Odd.Frame, "frames[...].Even", frames[TargetFrameNumber - 1].Even.Frame, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetMappedFrame", "TargetFrameNumber", TargetFrameNumber, "frames.size()", frames.size(), "frames[...].Odd", frames[TargetFrameNumber - 1].Odd.Frame, "frames[...].Even", frames[TargetFrameNumber - 1].Even.Frame);
 
 	// Return frame
 	return frames[TargetFrameNumber - 1];
@@ -358,7 +358,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
@@ -375,7 +375,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
 
 	// Create blank frame
 	new_frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels);
@@ -409,14 +409,14 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	int minimum_frames = 1;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames);
 
 	// Loop through all requested frames
 	for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 	{
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame);
 
 		// Get the mapped frame
 		MappedFrame mapped = GetMappedFrame(frame_number);
@@ -634,7 +634,7 @@ void FrameMapper::Open()
 {
 	if (reader)
 	{
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Open", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Open");
 
 		// Open the reader
 		reader->Open();
@@ -649,7 +649,7 @@ void FrameMapper::Close()
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close");
 
 		// Close internal reader
 		reader->Close();
@@ -784,7 +784,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	int samples_in_frame = frame->GetAudioSamplesCount();
 	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "original_frame_number", original_frame_number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "original_frame_number", original_frame_number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame);
 
 	// Get audio sample array
 	float* frame_samples_float = NULL;
@@ -820,7 +820,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
 	if (error_code < 0)
 	{
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code);
 		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
 	}
 
@@ -919,7 +919,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		// Add samples to frame for this channel
 		frame->AddAudio(true, channel_filter, 0, channel_buffer, position, 1.0f);
 
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position, "channel_filter", channel_filter, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position, "channel_filter", channel_filter);
 	}
 
 	// Update frame's audio meta data
