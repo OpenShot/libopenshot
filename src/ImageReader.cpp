@@ -67,7 +67,7 @@ void ImageReader::Open()
 			image->backgroundColor(Magick::Color("none"));
 			MAGICK_IMAGE_ALPHA(image, true);
 		}
-		catch (Magick::Exception e) {
+		catch (const Magick::Exception& e) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path);
 		}
@@ -176,7 +176,7 @@ void ImageReader::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
