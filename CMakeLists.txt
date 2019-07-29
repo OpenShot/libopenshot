@@ -99,3 +99,12 @@ add_subdirectory(tests)
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
+
+# Install docs, if the user builds them with `make doc`
+install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+        DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+        MESSAGE_NEVER # Don't spew about file copies
+        OPTIONAL )    # No error if the docs aren't found
