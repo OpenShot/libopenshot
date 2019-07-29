@@ -65,9 +65,6 @@
 	#include "MagickUtilities.h"
 #endif
 
-#pragma SWIG nowarn=362
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -131,7 +128,7 @@ namespace openshot
 		int width;
 		int height;
 		int sample_rate;
-		string color;
+		std::string color;
 		int64_t max_audio_sample; ///< The max audio sample count added to this frame
 
 		/// Constrain a color value from 0 to 255
@@ -147,13 +144,13 @@ namespace openshot
 		Frame();
 
 		/// Constructor - image only (48kHz audio silence)
-		Frame(int64_t number, int width, int height, string color);
+		Frame(int64_t number, int width, int height, std::string color);
 
 		/// Constructor - audio only (300x200 blank image)
 		Frame(int64_t number, int samples, int channels);
 
 		/// Constructor - image & audio
-		Frame(int64_t number, int width, int height, string color, int samples, int channels);
+		Frame(int64_t number, int width, int height, std::string color, int samples, int channels);
 
 		/// Copy constructor
 		Frame ( const Frame &other );
@@ -165,7 +162,7 @@ namespace openshot
 		virtual ~Frame();
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
-		void AddColor(int new_width, int new_height, string new_color);
+		void AddColor(int new_width, int new_height, std::string new_color);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
@@ -283,7 +280,7 @@ namespace openshot
 		void SampleRate(int orig_sample_rate) { sample_rate = orig_sample_rate; };
 
 		/// Save the frame image to the specified path.  The image format can be BMP, JPG, JPEG, PNG, PPM, XBM, XPM
-		void Save(string path, float scale, string format="PNG", int quality=100);
+		void Save(std::string path, float scale, std::string format="PNG", int quality=100);
 
 		/// Set frame number
 		void SetFrameNumber(int64_t number);
@@ -293,8 +290,8 @@ namespace openshot
 
 		/// Thumbnail the frame image with tons of options to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG).
 		/// This method allows for masks, overlays, background color, and much more accurate resizing (including padding and centering)
-		void Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-				string background_color, bool ignore_aspect, string format="png", int quality=100, float rotate=0.0);
+		void Thumbnail(std::string path, int new_width, int new_height, std::string mask_path, std::string overlay_path,
+				std::string background_color, bool ignore_aspect, std::string format="png", int quality=100, float rotate=0.0);
 
 		/// Play audio samples for this frame
 		void Play();
