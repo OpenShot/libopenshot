@@ -26,7 +26,7 @@
 
 
 ############### SWIG PYTHON BINDINGS ################
-FIND_PACKAGE(SWIG 2.0 REQUIRED)
+FIND_PACKAGE(SWIG 3.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
