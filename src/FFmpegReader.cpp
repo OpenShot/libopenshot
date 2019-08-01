@@ -445,8 +445,8 @@ void FFmpegReader::Open() {
 // TODO: needs va_config!
 #if ENABLE_VAAPI
 					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
-#endif
 					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
+#endif
 					if (constraints) {
 						if (pCodecCtx->coded_width < constraints->min_width  	||
 								pCodecCtx->coded_height < constraints->min_height ||
