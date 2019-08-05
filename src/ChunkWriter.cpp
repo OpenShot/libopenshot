@@ -157,9 +157,9 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	// Write the frames once it reaches the correct chunk size
 	if (frame_count % chunk_size == 0 && frame_count >= chunk_size)
 	{
-		cout << "Done with chunk" << endl;
-		cout << "frame_count: " << frame_count << endl;
-		cout << "chunk_size: " << chunk_size << endl;
+		std::cout << "Done with chunk" << std::endl;
+		std::cout << "frame_count: " << frame_count << std::endl;
+		std::cout << "chunk_size: " << chunk_size << std::endl;
 
 		// Pad an additional 12 frames
 		for (int z = 0; z<12; z++)
@@ -229,9 +229,9 @@ void ChunkWriter::Close()
 	// Write the frames once it reaches the correct chunk size
 	if (is_writing)
 	{
-		cout << "Final chunk" << endl;
-		cout << "frame_count: " << frame_count << endl;
-		cout << "chunk_size: " << chunk_size << endl;
+		std::cout << "Final chunk" << std::endl;
+		std::cout << "frame_count: " << frame_count << std::endl;
+		std::cout << "chunk_size: " << chunk_size << std::endl;
 
 		// Pad an additional 12 frames
 		for (int z = 0; z<12; z++)
@@ -277,9 +277,9 @@ void ChunkWriter::write_json_meta_data()
 	std::string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
 
 	// Write JSON file
-	ofstream myfile;
+	std::ofstream myfile;
 	myfile.open (json_path.c_str());
-	myfile << local_reader->Json() << endl;
+	myfile << local_reader->Json() << std::endl;
 	myfile.close();
 }
 
