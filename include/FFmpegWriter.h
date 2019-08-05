@@ -57,8 +57,6 @@
 #include "Settings.h"
 
 
-using namespace std;
-
 namespace openshot {
 
 	/// This enumeration designates the type of stream when encoding (video or audio)
@@ -144,7 +142,7 @@ namespace openshot {
 	 */
 	class FFmpegWriter : public WriterBase {
 	private:
-		string path;
+		std::string path;
 		int cache_size;
 		bool is_writing;
 		bool is_open;
@@ -168,7 +166,7 @@ namespace openshot {
 
 		int num_of_rescalers;
 		int rescaler_position;
-		vector<SwsContext *> image_rescalers;
+		std::vector<SwsContext *> image_rescalers;
 
 		int audio_outbuf_size;
 		int audio_input_frame_size;
@@ -183,16 +181,16 @@ namespace openshot {
 		int original_channels;
 
 		std::shared_ptr<Frame> last_frame;
-		deque<std::shared_ptr<Frame> > spooled_audio_frames;
-		deque<std::shared_ptr<Frame> > spooled_video_frames;
+		std::deque<std::shared_ptr<Frame> > spooled_audio_frames;
+		std::deque<std::shared_ptr<Frame> > spooled_video_frames;
 
-		deque<std::shared_ptr<Frame> > queued_audio_frames;
-		deque<std::shared_ptr<Frame> > queued_video_frames;
+		std::deque<std::shared_ptr<Frame> > queued_audio_frames;
+		std::deque<std::shared_ptr<Frame> > queued_video_frames;
 
-		deque<std::shared_ptr<Frame> > processed_frames;
-		deque<std::shared_ptr<Frame> > deallocate_frames;
+		std::deque<std::shared_ptr<Frame> > processed_frames;
+		std::deque<std::shared_ptr<Frame> > deallocate_frames;
 
-		map<std::shared_ptr<Frame>, AVFrame *> av_frames;
+		std::map<std::shared_ptr<Frame>, AVFrame *> av_frames;
 
 		/// Add an AVFrame to the cache
 		void add_avframe(std::shared_ptr<Frame> frame, AVFrame *av_frame);
@@ -248,7 +246,7 @@ namespace openshot {
 
 		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.
 		/// @param path The file path of the video file you want to open and read
-		FFmpegWriter(string path);
+		FFmpegWriter(std::string path);
 
 		/// Close the writer
 		void Close();
@@ -260,7 +258,7 @@ namespace openshot {
 		bool IsOpen() { return is_open; };
 
 		/// Determine if codec name is valid
-		static bool IsValidCodec(string codec_name);
+		static bool IsValidCodec(std::string codec_name);
 
 		/// Open writer
 		void Open();
@@ -287,7 +285,7 @@ namespace openshot {
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
-		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate);
+		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate);
 
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
@@ -303,14 +301,14 @@ namespace openshot {
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		void SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
 		/// @param stream The stream (openshot::StreamType) this option should apply to
 		/// @param name The name of the option you want to set (i.e. qmin, qmax, etc...)
 		/// @param value The new value of this option
-		void SetOption(StreamType stream, string name, string value);
+		void SetOption(StreamType stream, std::string name, std::string value);
 
 		/// @brief Write the file header (after the options are set). This method is called automatically
 		/// by the Open() method if this method has not yet been called.
