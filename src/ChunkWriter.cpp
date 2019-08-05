@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-ChunkWriter::ChunkWriter(string path, ReaderBase *reader) :
+ChunkWriter::ChunkWriter(std::string path, ReaderBase *reader) :
 		local_reader(reader), path(path), chunk_size(24*3), chunk_count(1), frame_count(1), is_writing(false),
 		default_extension(".webm"), default_vcodec("libvpx"), default_acodec("libvorbis"), last_frame_needed(false), is_open(false)
 {
@@ -54,10 +54,10 @@ ChunkWriter::ChunkWriter(string path, ReaderBase *reader) :
 }
 
 // get a formatted path of a specific chunk
-string ChunkWriter::get_chunk_path(int64_t chunk_number, string folder, string extension)
+std::string ChunkWriter::get_chunk_path(int64_t chunk_number, std::string folder, std::string extension)
 {
 	// Create path of new chunk video
-	stringstream chunk_count_string;
+	std::stringstream chunk_count_string;
 	chunk_count_string << chunk_number;
 	QString padded_count = "%1"; //chunk_count_string.str().c_str();
 	padded_count = padded_count.arg(chunk_count_string.str().c_str(), 6, '0');
@@ -274,7 +274,7 @@ void ChunkWriter::Close()
 void ChunkWriter::write_json_meta_data()
 {
 	// Load path of chunk folder
-	string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
+	std::string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
 
 	// Write JSON file
 	ofstream myfile;
@@ -284,7 +284,7 @@ void ChunkWriter::write_json_meta_data()
 }
 
 // check for chunk folder
-void ChunkWriter::create_folder(string path)
+void ChunkWriter::create_folder(std::string path)
 {
 	QDir dir(path.c_str());
 	if (!dir.exists()) {
@@ -303,5 +303,3 @@ void ChunkWriter::Open()
 {
 	is_open = true;
 }
-
-
