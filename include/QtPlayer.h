@@ -52,7 +52,7 @@ namespace openshot
     public:
 	/// Default constructor
 	explicit QtPlayer();
-	explicit QtPlayer(RendererBase *rb);
+	explicit QtPlayer(openshot::RendererBase *rb);
 
 	/// Default destructor
 	virtual ~QtPlayer();
@@ -64,7 +64,7 @@ namespace openshot
 	std::string GetError();
 
 	/// Get Audio Devices from JUCE
-	std::vector<AudioDeviceInfo> GetAudioDeviceNames();
+	std::vector<openshot::AudioDeviceInfo> GetAudioDeviceNames();
 
 	/// Play the video
 	void Play();
@@ -73,7 +73,7 @@ namespace openshot
 	void Loading();
 
 	/// Get the current mode
-	PlaybackMode Mode();
+	openshot::PlaybackMode Mode();
 
 	/// Pause the video
 	void Pause();
@@ -105,10 +105,10 @@ namespace openshot
 	void Stop();
 
 	/// Set the current reader
-	void Reader(ReaderBase *new_reader);
+	void Reader(openshot::ReaderBase *new_reader);
 
 	/// Get the current reader, such as a FFmpegReader
-	ReaderBase* Reader();
+	openshot::ReaderBase* Reader();
 
 	/// Get the Volume
 	float Volume();

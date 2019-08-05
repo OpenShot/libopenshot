@@ -45,10 +45,10 @@ namespace openshot {
 	class Color{
 
 	public:
-		Keyframe red; ///<Curve representing the red value (0 - 255)
-		Keyframe green; ///<Curve representing the green value (0 - 255)
-		Keyframe blue; ///<Curve representing the red value (0 - 255)
-		Keyframe alpha; ///<Curve representing the alpha value (0 - 255)
+		openshot::Keyframe red; ///<Curve representing the red value (0 - 255)
+		openshot::Keyframe green; ///<Curve representing the green value (0 - 255)
+		openshot::Keyframe blue; ///<Curve representing the red value (0 - 255)
+		openshot::Keyframe alpha; ///<Curve representing the alpha value (0 - 255)
 
 		/// Default constructor
 		Color() {};
@@ -60,7 +60,7 @@ namespace openshot {
 		Color(unsigned char Red, unsigned char Green, unsigned char Blue, unsigned char Alpha);
 
 		/// Constructor which takes 4 existing Keyframe curves
-		Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha);
+		Color(openshot::Keyframe Red, openshot::Keyframe Green, openshot::Keyframe Blue, openshot::Keyframe Alpha);
 
 		/// Get the HEX value of a color at a specific frame
 		std::string GetColorHex(int64_t frame_number);

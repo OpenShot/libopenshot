@@ -130,7 +130,7 @@ namespace openshot {
 		int64_t pts_counter;
 		int64_t num_packets_since_video_frame;
 		int64_t num_checks_since_final;
-		std::shared_ptr<Frame> last_video_frame;
+		std::shared_ptr<openshot::Frame> last_video_frame;
 
 		bool is_seeking;
 		int64_t seeking_pts;
@@ -176,7 +176,7 @@ namespace openshot {
 		int64_t ConvertVideoPTStoFrame(int64_t pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		std::shared_ptr<Frame> CreateFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> CreateFrame(int64_t requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
 		AudioLocation GetAudioPTSLocation(int64_t pts);
@@ -206,7 +206,7 @@ namespace openshot {
 		void ProcessAudioPacket(int64_t requested_frame, int64_t target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> ReadStream(int64_t requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate its memory)
 		void RemoveAVFrame(AVFrame *);
@@ -256,7 +256,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

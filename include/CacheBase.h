@@ -65,7 +65,7 @@ namespace openshot {
 
 		/// @brief Add a Frame to the cache
 		/// @param frame The openshot::Frame object needing to be cached.
-		virtual void Add(std::shared_ptr<Frame> frame) = 0;
+		virtual void Add(std::shared_ptr<openshot::Frame> frame) = 0;
 
 		/// Clear the cache of all frames
 		virtual void Clear() = 0;
@@ -75,13 +75,13 @@ namespace openshot {
 
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
-		virtual std::shared_ptr<Frame> GetFrame(int64_t frame_number) = 0;
+		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) = 0;
 
 		/// Gets the maximum bytes value
 		virtual int64_t GetBytes() = 0;
 
 		/// Get the smallest frame number
-		virtual std::shared_ptr<Frame> GetSmallestFrame() = 0;
+		virtual std::shared_ptr<openshot::Frame> GetSmallestFrame() = 0;
 
 		/// @brief Remove a specific frame
 		/// @param frame_number The frame number of the cached frame

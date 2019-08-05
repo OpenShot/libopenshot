@@ -106,10 +106,10 @@ namespace openshot
 		std::string path;
 		bool is_open;
 		int64_t chunk_size;
-		ReaderBase *local_reader;
+		openshot::ReaderBase *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
-		std::shared_ptr<Frame> last_frame;
+		std::shared_ptr<openshot::Frame> last_frame;
 
 		/// Check if folder path existing
 		bool does_folder_exist(std::string path);
@@ -143,12 +143,12 @@ namespace openshot
 		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() { return NULL; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

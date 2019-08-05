@@ -180,20 +180,20 @@ namespace openshot {
 		int original_sample_rate;
 		int original_channels;
 
-		std::shared_ptr<Frame> last_frame;
-		std::deque<std::shared_ptr<Frame> > spooled_audio_frames;
-		std::deque<std::shared_ptr<Frame> > spooled_video_frames;
+		std::shared_ptr<openshot::Frame> last_frame;
+		std::deque<std::shared_ptr<openshot::Frame> > spooled_audio_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > spooled_video_frames;
 
-		std::deque<std::shared_ptr<Frame> > queued_audio_frames;
-		std::deque<std::shared_ptr<Frame> > queued_video_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > queued_audio_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > queued_video_frames;
 
-		std::deque<std::shared_ptr<Frame> > processed_frames;
-		std::deque<std::shared_ptr<Frame> > deallocate_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > processed_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > deallocate_frames;
 
-		std::map<std::shared_ptr<Frame>, AVFrame *> av_frames;
+		std::map<std::shared_ptr<openshot::Frame>, AVFrame *> av_frames;
 
 		/// Add an AVFrame to the cache
-		void add_avframe(std::shared_ptr<Frame> frame, AVFrame *av_frame);
+		void add_avframe(std::shared_ptr<openshot::Frame> frame, AVFrame *av_frame);
 
 		/// Add an audio output stream
 		AVStream *add_audio_stream();
@@ -231,13 +231,13 @@ namespace openshot {
 		void open_video(AVFormatContext *oc, AVStream *st);
 
 		/// process video frame
-		void process_video_packet(std::shared_ptr<Frame> frame);
+		void process_video_packet(std::shared_ptr<openshot::Frame> frame);
 
 		/// write all queued frames' audio to the video file
 		void write_audio_packets(bool is_final);
 
 		/// write video frame
-		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final);
+		bool write_video_packet(std::shared_ptr<openshot::Frame> frame, AVFrame *frame_final);
 
 		/// write all queued frames
 		void write_queued_frames();
@@ -285,7 +285,7 @@ namespace openshot {
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
-		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate);
+		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, openshot::ChannelLayout channel_layout, int bit_rate);
 
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
@@ -301,14 +301,14 @@ namespace openshot {
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		void SetVideoOptions(bool has_video, std::string codec, openshot::Fraction fps, int width, int height, openshot::Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
 		/// @param stream The stream (openshot::StreamType) this option should apply to
 		/// @param name The name of the option you want to set (i.e. qmin, qmax, etc...)
 		/// @param value The new value of this option
-		void SetOption(StreamType stream, std::string name, std::string value);
+		void SetOption(openshot::StreamType stream, std::string name, std::string value);
 
 		/// @brief Write the file header (after the options are set). This method is called automatically
 		/// by the Open() method if this method has not yet been called.
@@ -316,13 +316,13 @@ namespace openshot {
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(std::shared_ptr<Frame> frame);
+		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase *reader, int64_t start, int64_t length);
+		void WriteFrame(openshot::ReaderBase *reader, int64_t start, int64_t length);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
 		/// by the Close() method if this method has not yet been called.

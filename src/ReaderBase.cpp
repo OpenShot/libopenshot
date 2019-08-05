@@ -252,11 +252,11 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 }
 
 /// Parent clip object of this reader (which can be unparented and NULL)
-ClipBase* ReaderBase::GetClip() {
+openshot::ClipBase* ReaderBase::GetClip() {
 	return parent;
 }
 
 /// Set parent clip object of this reader
-void ReaderBase::SetClip(ClipBase* clip) {
+void ReaderBase::SetClip(openshot::ClipBase* clip) {
 	parent = clip;
 }

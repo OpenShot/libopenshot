@@ -98,7 +98,7 @@ namespace openshot
 		std::shared_ptr<Magick::Image> image;
 		MAGICK_DRAWABLE lines;
 		bool is_open;
-		GravityType gravity;
+		openshot::GravityType gravity;
 
 	public:
 
@@ -126,14 +126,14 @@ namespace openshot
 		void Close();
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };

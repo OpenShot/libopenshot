@@ -61,7 +61,7 @@ namespace openshot
 	protected:
 		float speed;
 		float volume;
-		ReaderBase *reader;
+		openshot::ReaderBase *reader;
 		PlaybackMode mode;
 
 	public:
@@ -97,7 +97,7 @@ namespace openshot
 		virtual ReaderBase* Reader() = 0;
 
 		/// Set the current reader, such as a FFmpegReader
-		virtual void Reader(ReaderBase *new_reader) = 0;
+		virtual void Reader(openshot::ReaderBase *new_reader) = 0;
 
 		/// Get the Volume
 		virtual float Volume() = 0;
