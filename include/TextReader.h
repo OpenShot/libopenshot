@@ -47,8 +47,6 @@
 #include "Exceptions.h"
 #include "MagickUtilities.h"
 
-using namespace std;
-
 namespace openshot
 {
 
@@ -91,12 +89,12 @@ namespace openshot
 		int height;
 		int x_offset;
 		int y_offset;
-		string text;
-		string font;
+		std::string text;
+		std::string font;
 		double size;
-		string text_color;
-		string background_color;
-		string text_background_color;
+		std::string text_color;
+		std::string background_color;
+		std::string text_background_color;
 		std::shared_ptr<Magick::Image> image;
 		MAGICK_DRAWABLE lines;
 		bool is_open;
@@ -118,11 +116,11 @@ namespace openshot
 		/// @param size The size of the text
 		/// @param text_color The color of the text
 		/// @param background_color The background color of the text frame image (also supports Transparent)
-		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
+		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
 		/// @param text_background_color The background color behind the text
-		void SetTextBackgroundColor(string color);
+		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
 		void Close();
@@ -141,11 +139,11 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "TextReader"; };
+		std::string Name() { return "TextReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
