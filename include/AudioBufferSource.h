@@ -52,25 +52,25 @@ namespace openshot
 	 * The <a href="http://www.juce.com/">JUCE</a> library cannot play audio directly from an AudioSampleBuffer, so this class exposes
 	 * an AudioSampleBuffer as a AudioSource, so that JUCE can play the audio.
 	 */
-	class AudioBufferSource : public PositionableAudioSource
+	class AudioBufferSource : public juce::PositionableAudioSource
 	{
 	private:
 		int position;
 		int start;
 		bool repeat;
-		AudioSampleBuffer *buffer;
+		juce::AudioSampleBuffer *buffer;
 
 	public:
 		/// @brief Default constructor
 		/// @param audio_buffer This buffer contains the samples you want to play through JUCE.
-		AudioBufferSource(AudioSampleBuffer *audio_buffer);
+		AudioBufferSource(juce::AudioSampleBuffer *audio_buffer);
 
 		/// Destructor
 		~AudioBufferSource();
 
 		/// @brief Get the next block of audio samples
 		/// @param info This struct informs us of which samples are needed next.
-		void getNextAudioBlock (const AudioSourceChannelInfo& info);
+		void getNextAudioBlock (const juce::AudioSourceChannelInfo& info);
 
 		/// Prepare to play this audio source
 		void prepareToPlay(int, double);
@@ -96,7 +96,7 @@ namespace openshot
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
-		void setBuffer (AudioSampleBuffer *audio_buffer);
+		void setBuffer (juce::AudioSampleBuffer *audio_buffer);
 	};
 
 }
