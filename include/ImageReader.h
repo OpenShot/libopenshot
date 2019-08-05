@@ -46,8 +46,6 @@
 #include "Exceptions.h"
 #include "MagickUtilities.h"
 
-using namespace std;
-
 namespace openshot
 {
 

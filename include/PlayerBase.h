@@ -34,8 +34,6 @@
 #include <iostream>
 #include "ReaderBase.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**

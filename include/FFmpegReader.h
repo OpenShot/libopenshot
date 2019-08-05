@@ -51,8 +51,6 @@
 #include "Settings.h"
 
 
-using namespace std;
-
 namespace openshot {
 	/**
 	 * @brief This struct holds the associated video frame and starting sample # for an audio packet.

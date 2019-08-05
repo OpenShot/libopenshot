@@ -36,8 +36,6 @@
 #include "Fraction.h"
 #include "Json.h"
 
-using namespace std;
-
 namespace openshot {
 
 	/**
