@@ -63,7 +63,7 @@ void QtPlayer::CloseAudioDevice()
 }
 
 // Return any error string during initialization
-string QtPlayer::GetError() {
+std::string QtPlayer::GetError() {
 	if (reader && threads_started) {
 		// Get error from audio thread (if any)
 		return p->audioPlayback->getError();
@@ -73,11 +73,11 @@ string QtPlayer::GetError() {
 }
 
 /// Get Audio Devices from JUCE
-vector<AudioDeviceInfo> QtPlayer::GetAudioDeviceNames() {
+std::vector<AudioDeviceInfo> QtPlayer::GetAudioDeviceNames() {
 	if (reader && threads_started) {
 		return p->audioPlayback->getAudioDeviceNames();
 	} else {
-		return vector<AudioDeviceInfo>();
+		return std::vector<AudioDeviceInfo>();
 	}
 }
 

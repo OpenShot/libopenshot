@@ -44,14 +44,14 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(string path) : path(path), is_open(false)
+QtImageReader::QtImageReader(std::string path) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_open(false)
+QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -277,7 +277,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string QtImageReader::Json() {
+std::string QtImageReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -296,14 +296,14 @@ Json::Value QtImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtImageReader::SetJson(string value) {
+void QtImageReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;

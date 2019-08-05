@@ -38,8 +38,6 @@
 #include "Qt/PlayerPrivate.h"
 #include "RendererBase.h"
 
-using namespace std;
-
 namespace openshot
 {
     /**
@@ -63,26 +61,26 @@ namespace openshot
 	void CloseAudioDevice();
 
 	/// Get Error (if any)
-	string GetError();
+	std::string GetError();
 
 	/// Get Audio Devices from JUCE
-	vector<AudioDeviceInfo> GetAudioDeviceNames();
+	std::vector<AudioDeviceInfo> GetAudioDeviceNames();
 
 	/// Play the video
 	void Play();
-	
+
 	/// Display a loading animation
 	void Loading();
-	
+
 	/// Get the current mode
 	PlaybackMode Mode();
 
 	/// Pause the video
 	void Pause();
-	
+
 	/// Get the current frame number being played
 	int Position();
-	
+
 	/// Seek to a specific frame in the player
 	void Seek(int64_t new_frame);
 
