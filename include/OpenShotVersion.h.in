@@ -43,7 +43,6 @@
 #define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 
 #include <sstream>
-using namespace std;
 
 namespace openshot
 {
@@ -55,8 +54,8 @@ namespace openshot
 		int so; /// Shared Object Number (incremented when API or ABI changes)
 
 		/// Get a string version of the version (i.e. "Major.Minor.Build")
-		string ToString() {
-			stringstream version_string;
+		std::string ToString() {
+			std::stringstream version_string;
 			version_string << major << "." << minor << "." << build;
 			return version_string.str();
 		}
