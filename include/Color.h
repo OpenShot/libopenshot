@@ -54,7 +54,7 @@ namespace openshot {
 		Color() {};
 
 		/// Constructor which takes a HEX color code
-		Color(string color_hex);
+		Color(std::string color_hex);
 
 		/// Constructor which takes R,G,B,A
 		Color(unsigned char Red, unsigned char Green, unsigned char Blue, unsigned char Alpha);
@@ -63,15 +63,15 @@ namespace openshot {
 		Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha);
 
 		/// Get the HEX value of a color at a specific frame
-		string GetColorHex(int64_t frame_number);
+		std::string GetColorHex(int64_t frame_number);
 
 		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
 		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value); ///< Load JSON string into this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 
