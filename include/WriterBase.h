@@ -39,8 +39,6 @@
 #include "ReaderBase.h"
 #include "ZmqLogger.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -63,20 +61,20 @@ namespace openshot
 		int video_bit_rate;		///< The bit rate of the video stream (in bytes)
 		Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
 		Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
-		string vcodec;				///< The name of the video codec used to encode / decode the video stream
+		std::string vcodec;				///< The name of the video codec used to encode / decode the video stream
 		int64_t video_length;		///< The number of frames in the video stream
 		int video_stream_index;		///< The index of the video stream
 		Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
 		bool interlaced_frame;		///< Are the contents of this frame interlaced
 		bool top_field_first;		///< Which interlaced field should be displayed first
-		string acodec;				///< The name of the audio codec used to encode / decode the video stream
+		std::string acodec;				///< The name of the audio codec used to encode / decode the video stream
 		int audio_bit_rate;		///< The bit rate of the audio stream (in bytes)
 		int sample_rate;			///< The number of audio samples per second (44100 is a common sample rate)
 		int channels;				///< The number of audio channels used in the audio stream
 		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
 		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
-		std::map<string, string> metadata;	///< An optional map/dictionary of video & audio metadata
+		std::map<std::string, std::string> metadata;	///< An optional map/dictionary of video & audio metadata
 	};
 
 	/**
@@ -109,9 +107,9 @@ namespace openshot
 		virtual void WriteFrame(ReaderBase* reader, int64_t start, int64_t length) = 0;
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value); ///< Load JSON string into this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Display file information in the standard output stream (stdout)

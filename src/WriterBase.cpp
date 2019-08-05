@@ -139,7 +139,7 @@ void WriterBase::DisplayInfo() {
 }
 
 // Generate JSON string of this object
-string WriterBase::Json() {
+std::string WriterBase::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -154,7 +154,7 @@ Json::Value WriterBase::JsonValue() {
 	root["has_audio"] = info.has_audio;
 	root["has_single_image"] = info.has_single_image;
 	root["duration"] = info.duration;
-	stringstream filesize_stream;
+	std::stringstream filesize_stream;
 	filesize_stream << info.file_size;
 	root["file_size"] = filesize_stream.str();
 	root["height"] = info.height;
@@ -171,7 +171,7 @@ Json::Value WriterBase::JsonValue() {
 	root["display_ratio"]["num"] = info.display_ratio.num;
 	root["display_ratio"]["den"] = info.display_ratio.den;
 	root["vcodec"] = info.vcodec;
-	stringstream video_length_stream;
+	std::stringstream video_length_stream;
 	video_length_stream << info.video_length;
 	root["video_length"] = video_length_stream.str();
 	root["video_stream_index"] = info.video_stream_index;
@@ -195,14 +195,14 @@ Json::Value WriterBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void WriterBase::SetJson(string value) {
+void WriterBase::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
