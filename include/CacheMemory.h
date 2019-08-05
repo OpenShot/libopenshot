@@ -50,13 +50,13 @@ namespace openshot {
 	 */
 	class CacheMemory : public CacheBase {
 	private:
-		map<int64_t, std::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
-		deque<int64_t> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
+		std::map<int64_t, std::shared_ptr<Frame> > frames;	///< This map holds the frame number and Frame objects
+		std::deque<int64_t> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
 		bool needs_range_processing; ///< Something has changed, and the range data needs to be re-calculated
-		string json_ranges; ///< JSON ranges of frame numbers
-		vector<int64_t> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
-		map<int64_t, int64_t> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
+		std::string json_ranges; ///< JSON ranges of frame numbers
+		std::vector<int64_t> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
+		std::map<int64_t, int64_t> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
 		int64_t range_version; ///< The version of the JSON range data (incremented with each change)
 
 		/// Clean up cached frames that exceed the max number of bytes
@@ -110,8 +110,8 @@ namespace openshot {
 		void Remove(int64_t start_frame_number, int64_t end_frame_number);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 	};

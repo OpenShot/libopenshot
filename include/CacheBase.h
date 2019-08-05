@@ -48,7 +48,7 @@ namespace openshot {
 	class CacheBase
 	{
 	protected:
-		string cache_type; ///< This is a friendly type name of the derived cache instance
+		std::string cache_type; ///< This is a friendly type name of the derived cache instance
 		int64_t max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
 		/// Section lock for multiple threads
@@ -108,8 +108,8 @@ namespace openshot {
 		void SetMaxBytesFromInfo(int64_t number_of_frames, int width, int height, int sample_rate, int channels);
 
 		/// Get and Set JSON methods
-		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
+		virtual std::string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 		virtual ~CacheBase() = default;
