@@ -73,7 +73,7 @@ namespace openshot
 	class ImageReader : public ReaderBase
 	{
 	private:
-		string path;
+		std::string path;
 		std::shared_ptr<Magick::Image> image;
 		bool is_open;
 
@@ -81,12 +81,12 @@ namespace openshot
 
 		/// Constructor for ImageReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		ImageReader(string path);
+		ImageReader(std::string path);
 
 		/// Constructor for ImageReader.  This only opens the media file to inspect its properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
-		ImageReader(string path, bool inspect_reader);
+		ImageReader(std::string path, bool inspect_reader);
 
 		/// Close File
 		void Close();
@@ -105,11 +105,11 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "ImageReader"; };
+		std::string Name() { return "ImageReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
