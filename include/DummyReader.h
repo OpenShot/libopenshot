@@ -43,8 +43,6 @@
 #include "Exceptions.h"
 #include "Fraction.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -86,11 +84,11 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "DummyReader"; };
+		std::string Name() { return "DummyReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

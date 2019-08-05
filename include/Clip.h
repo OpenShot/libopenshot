@@ -51,9 +51,6 @@
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
-using namespace std;
-using namespace openshot;
-
 namespace openshot {
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
@@ -107,7 +104,7 @@ namespace openshot {
 
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
-		list<EffectBase*> effects; ///<List of clips on this timeline
+		std::list<EffectBase*> effects; ///<List of clips on this timeline
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
@@ -127,7 +124,7 @@ namespace openshot {
 		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame);
 
 		/// Get file extension
-		string get_file_extension(string path);
+		std::string get_file_extension(std::string path);
 
 		/// Get a frame object or create a blank one
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
@@ -159,7 +156,7 @@ namespace openshot {
 
 		/// @brief Constructor with filepath (reader is automatically created... by guessing file extensions)
 		/// @param path The path of a reader (video file, image file, etc...). The correct reader will be used automatically.
-		Clip(string path);
+		Clip(std::string path);
 
 		/// @brief Constructor with reader
 		/// @param new_reader The reader to be used by this clip
@@ -176,7 +173,7 @@ namespace openshot {
 		void Close();
 
 		/// Return the list of effects on the timeline
-		list<EffectBase*> Effects() { return effects; };
+		std::list<EffectBase*> Effects() { return effects; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
 		///
@@ -199,14 +196,14 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		string PropertiesJSON(int64_t requested_frame);
+		std::string PropertiesJSON(int64_t requested_frame);
 
 		/// @brief Remove an effect from the clip
 		/// @param effect Remove an effect from the clip.

@@ -152,13 +152,13 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(
 }
 
 // Constructor with filepath
-Clip::Clip(string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 
 	// Get file extension (and convert to lower case)
-	string ext = get_file_extension(path);
+	std::string ext = get_file_extension(path);
 	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
@@ -354,7 +354,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 }
 
 // Get file extension
-string Clip::get_file_extension(string path)
+std::string Clip::get_file_extension(std::string path)
 {
 	// return last part of path
 	return path.substr(path.find_last_of(".") + 1);
@@ -645,14 +645,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 }
 
 // Generate JSON string of this object
-string Clip::Json() {
+std::string Clip::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Get all properties for a specific frame
-string Clip::PropertiesJSON(int64_t requested_frame) {
+std::string Clip::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -782,7 +782,7 @@ Json::Value Clip::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	list<EffectBase*>::iterator effect_itr;
+	std::list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
 		// Get clip object from the iterator
@@ -798,14 +798,14 @@ Json::Value Clip::JsonValue() {
 }
 
 // Load JSON string into this object
-void Clip::SetJson(string value) {
+void Clip::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -943,7 +943,7 @@ void Clip::SetJsonValue(Json::Value root) {
 			}
 
 			// Create new reader (and load properties)
-			string type = root["reader"]["type"].asString();
+			std::string type = root["reader"]["type"].asString();
 
 			if (type == "FFmpegReader") {
 
@@ -1025,7 +1025,7 @@ void Clip::RemoveEffect(EffectBase* effect)
 std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
-	list<EffectBase*>::iterator effect_itr;
+	std::list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
 		// Get clip object from the iterator
