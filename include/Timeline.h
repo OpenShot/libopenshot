@@ -238,7 +238,7 @@ namespace openshot {
 		void Close();
 
 		/// Return the list of effects on the timeline
-		list<EffectBase*> Effects() { return effects; };
+		std::list<EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
 		CacheBase* GetCache() { return final_cache; };

@@ -194,8 +194,8 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
 			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-			max_width = max(float(max_width), max_width * max_scale_x);
-			max_height = max(float(max_height), max_height * max_scale_y);
+			max_width = std::max(float(max_width), max_width * max_scale_x);
+			max_height = std::max(float(max_height), max_height * max_scale_y);
 
 		} else if (parent->scale == SCALE_CROP) {
 			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
@@ -207,12 +207,12 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 							  max_height * max_scale_y);
 			// respect aspect ratio
 			if (width_size.width() >= max_width && width_size.height() >= max_height) {
-				max_width = max(max_width, width_size.width());
-				max_height = max(max_height, width_size.height());
+				max_width = std::max(max_width, width_size.width());
+				max_height = std::max(max_height, width_size.height());
 			}
 			else {
-				max_width = max(max_width, height_size.width());
-				max_height = max(max_height, height_size.height());
+				max_width = std::max(max_width, height_size.width());
+				max_height = std::max(max_height, height_size.height());
 			}
 
 		} else {

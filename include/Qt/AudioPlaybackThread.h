@@ -69,10 +69,10 @@ namespace openshot
 
 	public:
 		/// Error found during JUCE initialise method
-		string initialise_error;
+		std::string initialise_error;
 
 		/// List of valid audio device names
-		vector<AudioDeviceInfo> audio_device_names;
+		std::vector<AudioDeviceInfo> audio_device_names;
 
 		/// Override with no channels and no preferred audio device
 		static AudioDeviceManagerSingleton * Instance();
@@ -134,10 +134,10 @@ namespace openshot
 		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
 		/// Get Audio Error (if any)
-		string getError() { return AudioDeviceManagerSingleton::Instance()->initialise_error; }
+		std::string getError() { return AudioDeviceManagerSingleton::Instance()->initialise_error; }
 
 		/// Get Audio Device Names (if any)
-		vector<AudioDeviceInfo> getAudioDeviceNames() { return AudioDeviceManagerSingleton::Instance()->audio_device_names; };
+		std::vector<AudioDeviceInfo> getAudioDeviceNames() { return AudioDeviceManagerSingleton::Instance()->audio_device_names; };
 
 		friend class PlayerPrivate;
 		friend class QtPlayer;

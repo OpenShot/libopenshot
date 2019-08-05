@@ -1023,7 +1023,7 @@ Json::Value Timeline::JsonValue() {
 }
 
 // Load JSON string into this object
-void Timeline::SetJson(string value) {
+void Timeline::SetJson(std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
@@ -1557,7 +1557,7 @@ void Timeline::ClearAllCache() {
 void Timeline::SetMaxSize(int width, int height) {
 	// Maintain aspect ratio regardless of what size is passed in
 	QSize display_ratio_size = QSize(info.display_ratio.num * info.pixel_ratio.ToFloat(), info.display_ratio.den * info.pixel_ratio.ToFloat());
-	QSize proposed_size = QSize(min(width, info.width), min(height, info.height));
+	QSize proposed_size = QSize(std::min(width, info.width), std::min(height, info.height));
 
 	// Scale QSize up to proposed size
 	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);

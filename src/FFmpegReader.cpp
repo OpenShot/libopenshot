@@ -293,7 +293,7 @@ void FFmpegReader::Open() {
 				retry_decode_open = 0;
 
 				// Set number of threads equal to number of processors (not to exceed 16)
-				pCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
+				pCodecCtx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
 				if (pCodec == NULL) {
 					throw InvalidCodec("A valid video codec could not be found for this file.", path);
@@ -528,7 +528,7 @@ void FFmpegReader::Open() {
 			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
-			aCodecCtx->thread_count = min(FF_NUM_PROCESSORS, 16);
+			aCodecCtx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
 			if (aCodec == NULL) {
 				throw InvalidCodec("A valid audio codec could not be found for this file.", path);
@@ -1257,8 +1257,8 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
 				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-				max_width = max(float(max_width), max_width * max_scale_x);
-				max_height = max(float(max_height), max_height * max_scale_y);
+				max_width = std::max(float(max_width), max_width * max_scale_x);
+				max_height = std::max(float(max_height), max_height * max_scale_y);
 
 			} else if (parent->scale == SCALE_CROP) {
 				// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
@@ -1270,11 +1270,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 								  max_height * max_scale_y);
 				// respect aspect ratio
 				if (width_size.width() >= max_width && width_size.height() >= max_height) {
-					max_width = max(max_width, width_size.width());
-					max_height = max(max_height, width_size.height());
+					max_width = std::max(max_width, width_size.width());
+					max_height = std::max(max_height, width_size.height());
 				} else {
-					max_width = max(max_width, height_size.width());
-					max_height = max(max_height, height_size.height());
+					max_width = std::max(max_width, height_size.width());
+					max_height = std::max(max_height, height_size.height());
 				}
 
 			} else {
@@ -1716,7 +1716,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = max(OPEN_MP_NUM_PROCESSORS, 8);
+	int buffer_amount = std::max(OPEN_MP_NUM_PROCESSORS, 8);
 	if (requested_frame - buffer_amount < 20) {
 		// Close and re-open file (basically seeking to frame 1)
 		Close();
@@ -1828,7 +1828,7 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
 			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			video_pts_offset = 0 - max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
+			video_pts_offset = 0 - std::max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1838,7 +1838,7 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		if (audio_pts_offset == 99999) // Has the offset been set yet?
 		{
 			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			audio_pts_offset = 0 - max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
+			audio_pts_offset = 0 - std::max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Audio)", "audio_pts_offset", audio_pts_offset, "is_video", is_video);

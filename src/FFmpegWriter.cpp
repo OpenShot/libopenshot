@@ -420,29 +420,29 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "crf", min(stoi(value),63), 0);
+						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value),63), 0);
 						break;
 #endif
 					case AV_CODEC_ID_VP8 :
 						c->bit_rate = 10000000;
-						av_opt_set_int(c->priv_data, "crf", max(min(stoi(value), 63), 4), 0); // 4-63
+						av_opt_set_int(c->priv_data, "crf", std::max(std::min(stoi(value), 63), 4), 0); // 4-63
 						break;
 					case AV_CODEC_ID_VP9 :
 						c->bit_rate = 0;        // Must be zero!
-						av_opt_set_int(c->priv_data, "crf", min(stoi(value), 63), 0); // 0-63
+						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 63), 0); // 0-63
 						if (stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
 						}
 						break;
 					case AV_CODEC_ID_H264 :
-						av_opt_set_int(c->priv_data, "crf", min(stoi(value), 51), 0); // 0-51
+						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 51), 0); // 0-51
 						if (stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
 					case AV_CODEC_ID_H265 :
-						av_opt_set_int(c->priv_data, "crf", min(stoi(value), 51), 0); // 0-51
+						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 51), 0); // 0-51
 						if (stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
@@ -1227,7 +1227,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
-	audio_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
+	audio_codec->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
 	// Find the audio encoder
 	codec = avcodec_find_encoder_by_name(info.acodec.c_str());
@@ -1298,7 +1298,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	AV_GET_CODEC_FROM_STREAM(st, video_codec)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
-	video_codec->thread_count = min(FF_NUM_PROCESSORS, 16);
+	video_codec->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
 #if IS_FFMPEG_3_2
 	if (hw_en_on && hw_en_supported) {
@@ -1928,10 +1928,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		if (ret < 0 ) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent)");
 			if (ret == AVERROR(EAGAIN) ) {
-				cerr << "Frame EAGAIN" << "\n";
+				std::cerr << "Frame EAGAIN" << "\n";
 			}
 			if (ret == AVERROR_EOF ) {
-				cerr << "Frame AVERROR_EOF" << "\n";
+				std::cerr << "Frame AVERROR_EOF" << "\n";
 			}
 			avcodec_send_frame(video_codec, NULL);
 		}
@@ -1955,10 +1955,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Write video packet (older than FFmpeg 3.2)
 		error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 		if (error_code != 0) {
-			cerr << "Frame AVERROR_EOF" << "\n";
+			std::cerr << "Frame AVERROR_EOF" << "\n";
 		}
 		if (got_packet_ptr == 0) {
-			cerr << "Frame gotpacket error" << "\n";
+			std::cerr << "Frame gotpacket error" << "\n";
 		}
 #else
 		// Write video packet (even older versions of FFmpeg)
