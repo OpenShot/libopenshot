@@ -39,8 +39,8 @@
  */
 struct AudioDeviceInfo
 {
-	string name;
-	string type;
+	std::string name;
+	std::string type;
 };
 
 #endif
