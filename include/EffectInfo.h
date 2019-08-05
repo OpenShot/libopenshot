@@ -34,8 +34,6 @@
 #include "Effects.h"
 
 
-using namespace std;
-
 namespace openshot
 {
 
@@ -49,10 +47,10 @@ namespace openshot
 	{
 	public:
 		// Create an instance of an effect (factory style)
-		EffectBase* CreateEffect(string effect_type);
+		EffectBase* CreateEffect(std::string effect_type);
 
 		/// JSON methods
-		static string Json(); ///< Generate JSON string of this object
+		static std::string Json(); ///< Generate JSON string of this object
 		static Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 
 	};

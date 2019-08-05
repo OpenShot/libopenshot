@@ -74,7 +74,7 @@ int EffectBase::constrain(int color_value)
 }
 
 // Generate JSON string of this object
-string EffectBase::Json() {
+std::string EffectBase::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -98,14 +98,14 @@ Json::Value EffectBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void EffectBase::SetJson(string value) {
+void EffectBase::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
