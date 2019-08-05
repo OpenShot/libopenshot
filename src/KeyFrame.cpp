@@ -307,7 +307,7 @@ bool Keyframe::IsIncreasing(int index)
 		int64_t next_repeats = 0;
 
 		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+		for (std::vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
 			previous_value = long(round((*backwards_it).Y));
 			if (previous_value == current_value) {
 				// Found same value
@@ -319,7 +319,7 @@ bool Keyframe::IsIncreasing(int index)
 		}
 
 		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+		for (std::vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
 			next_value = long(round((*forwards_it).Y));
 			if (next_value == current_value) {
 				// Found same value
@@ -340,7 +340,7 @@ bool Keyframe::IsIncreasing(int index)
 }
 
 // Generate JSON string of this object
-string Keyframe::Json() {
+std::string Keyframe::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -365,14 +365,14 @@ Json::Value Keyframe::JsonValue() {
 }
 
 // Load JSON string into this object
-void Keyframe::SetJson(string value) {
+void Keyframe::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -436,7 +436,7 @@ Fraction Keyframe::GetRepeatFraction(int64_t index)
 		int64_t next_repeats = 0;
 
 		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+		for (std::vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
 			previous_value = long(round((*backwards_it).Y));
 			if (previous_value == current_value) {
 				// Found same value
@@ -448,7 +448,7 @@ Fraction Keyframe::GetRepeatFraction(int64_t index)
 		}
 
 		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+		for (std::vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
 			next_value = long(round((*forwards_it).Y));
 			if (next_value == current_value) {
 				// Found same value
@@ -483,7 +483,7 @@ double Keyframe::GetDelta(int64_t index)
 		int64_t next_repeats = 0;
 
 		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
+		for (std::vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
 			previous_value = long(round((*backwards_it).Y));
 			if (previous_value == current_value) {
 				// Found same value
@@ -495,7 +495,7 @@ double Keyframe::GetDelta(int64_t index)
 		}
 
 		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
+		for (std::vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
 			next_value = long(round((*forwards_it).Y));
 			if (next_value == current_value) {
 				// Found same value
@@ -605,7 +605,7 @@ void Keyframe::PrintPoints() {
 		Process();
 
 	cout << fixed << setprecision(4);
-	for (vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
+	for (std::vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
 		Point p = *it;
 		cout << p.co.X << "\t" << p.co.Y << endl;
 	}
@@ -619,7 +619,7 @@ void Keyframe::PrintValues() {
 	cout << fixed << setprecision(4);
 	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)" << endl;
 
-	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
+	for (std::vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
 		Coordinate c = *it;
 		cout << long(round(c.X)) << "\t" << c.Y << "\t" << IsIncreasing(c.X) << "\t" << GetRepeatFraction(c.X).num << "\t" << GetRepeatFraction(c.X).den << "\t" << GetDelta(c.X) << endl;
 	}
@@ -722,13 +722,13 @@ void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
 		double X_diff = p2.co.X - p1.co.X;
 		double Y_diff = p2.co.Y - p1.co.Y;
 
-		vector<Coordinate> segment_coordinates;
+		std::vector<Coordinate> segment_coordinates;
 		segment_coordinates.push_back(p1.co);
 		segment_coordinates.push_back(Coordinate(p1.co.X + (p1.handle_right.X * X_diff), p1.co.Y + (p1.handle_right.Y * Y_diff)));
 		segment_coordinates.push_back(Coordinate(p1.co.X + (p2.handle_left.X * X_diff), p1.co.Y + (p2.handle_left.Y * Y_diff)));
 		segment_coordinates.push_back(p2.co);
 
-		vector<Coordinate> raw_coordinates;
+		std::vector<Coordinate> raw_coordinates;
 		int64_t npts = segment_coordinates.size();
 		int64_t icount, jcount;
 		double step, t;
@@ -904,7 +904,7 @@ void Keyframe::ScalePoints(double scale)
 void Keyframe::FlipPoints()
 {
 	// Loop through each point
-	vector<Point> FlippedPoints;
+	std::vector<Point> FlippedPoints;
 	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < Points.size(); point_index++, reverse_index--) {
 		// Flip the points
 		Point p = Points[point_index];
