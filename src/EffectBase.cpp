@@ -50,15 +50,15 @@ void EffectBase::InitEffectInfo()
 
 // Display file information
 void EffectBase::DisplayInfo() {
-	cout << fixed << setprecision(2) << boolalpha;
-	cout << "----------------------------" << endl;
-	cout << "----- Effect Information -----" << endl;
-	cout << "----------------------------" << endl;
-	cout << "--> Name: " << info.name << endl;
-	cout << "--> Description: " << info.description << endl;
-	cout << "--> Has Video: " << info.has_video << endl;
-	cout << "--> Has Audio: " << info.has_audio << endl;
-	cout << "----------------------------" << endl;
+	std::cout << std::fixed << std::setprecision(2) << std::boolalpha;
+	std::cout << "----------------------------" << std::endl;
+	std::cout << "----- Effect Information -----" << std::endl;
+	std::cout << "----------------------------" << std::endl;
+	std::cout << "--> Name: " << info.name << std::endl;
+	std::cout << "--> Description: " << info.description << std::endl;
+	std::cout << "--> Has Video: " << info.has_video << std::endl;
+	std::cout << "--> Has Audio: " << info.has_audio << std::endl;
+	std::cout << "----------------------------" << std::endl;
 }
 
 // Constrain a color value from 0 to 255
