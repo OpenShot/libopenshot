@@ -83,7 +83,7 @@ int hw_de_on = 0;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
 
-FFmpegReader::FFmpegReader(string path)
+FFmpegReader::FFmpegReader(std::string path)
 		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
@@ -105,7 +105,7 @@ FFmpegReader::FFmpegReader(string path)
 	Close();
 }
 
-FFmpegReader::FFmpegReader(string path, bool inspect_reader)
+FFmpegReader::FFmpegReader(std::string path, bool inspect_reader)
 		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
@@ -1455,7 +1455,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	// Add audio frame to list of processing audio frames
 	{
 		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
-		processing_audio_frames.insert(pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
+		processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 	}
 
 	while (pts_remaining_samples) {
@@ -1478,7 +1478,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 			// Add audio frame to list of processing audio frames
 			{
 				const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
-				processing_audio_frames.insert(pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
+				processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 			}
 
 		} else {
@@ -1882,8 +1882,8 @@ int64_t FFmpegReader::ConvertVideoPTStoFrame(int64_t pts) {
 		while (current_video_frame < frame) {
 			if (!missing_video_frames.count(current_video_frame)) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (tracking missing frame)", "current_video_frame", current_video_frame, "previous_video_frame", previous_video_frame);
-				missing_video_frames.insert(pair<int64_t, int64_t>(current_video_frame, previous_video_frame));
-				missing_video_frames_source.insert(pair<int64_t, int64_t>(previous_video_frame, current_video_frame));
+				missing_video_frames.insert(std::pair<int64_t, int64_t>(current_video_frame, previous_video_frame));
+				missing_video_frames_source.insert(std::pair<int64_t, int64_t>(previous_video_frame, current_video_frame));
 			}
 
 			// Mark this reader as containing missing frames
@@ -1975,7 +1975,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts) {
 			for (int64_t audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
 				if (!missing_audio_frames.count(audio_frame)) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame);
-					missing_audio_frames.insert(pair<int64_t, int64_t>(audio_frame, previous_packet_location.frame - 1));
+					missing_audio_frames.insert(std::pair<int64_t, int64_t>(audio_frame, previous_packet_location.frame - 1));
 				}
 			}
 		}
@@ -2046,7 +2046,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_count);
 
 	// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
-	map<int64_t, int64_t>::iterator itr;
+	std::map<int64_t, int64_t>::iterator itr;
 	bool found_missing_frame = false;
 
 	// Special MP3 Handling (ignore more than 1 video frame)
@@ -2059,8 +2059,8 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		if (checked_count > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
 			last_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
-			missing_video_frames.insert(pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
-			missing_video_frames_source.insert(pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
+			missing_video_frames.insert(std::pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
+			missing_video_frames_source.insert(std::pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
 			missing_frames.Add(last_video_frame);
 		}
 	}
@@ -2374,7 +2374,7 @@ void FFmpegReader::RemoveAVPacket(AVPacket *remove_packet) {
 /// Get the smallest video frame that is still being processed
 int64_t FFmpegReader::GetSmallestVideoFrame() {
 	// Loop through frame numbers
-	map<int64_t, int64_t>::iterator itr;
+	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 	for (itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr) {
@@ -2389,7 +2389,7 @@ int64_t FFmpegReader::GetSmallestVideoFrame() {
 /// Get the smallest audio frame that is still being processed
 int64_t FFmpegReader::GetSmallestAudioFrame() {
 	// Loop through frame numbers
-	map<int64_t, int64_t>::iterator itr;
+	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 	for (itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr) {
@@ -2402,7 +2402,7 @@ int64_t FFmpegReader::GetSmallestAudioFrame() {
 }
 
 // Generate JSON string of this object
-string FFmpegReader::Json() {
+std::string FFmpegReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -2421,14 +2421,14 @@ Json::Value FFmpegReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void FFmpegReader::SetJson(string value) {
+void FFmpegReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse(value.c_str(), value.c_str() + value.size(),
 	                 &root, &errors);
 	delete reader;
