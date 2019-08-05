@@ -133,7 +133,7 @@ std::shared_ptr<Frame> Shift::GetFrame(std::shared_ptr<Frame> frame, int64_t fra
 }
 
 // Generate JSON string of this object
-string Shift::Json() {
+std::string Shift::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -153,14 +153,14 @@ Json::Value Shift::JsonValue() {
 }
 
 // Load JSON string into this object
-void Shift::SetJson(string value) {
+void Shift::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -195,7 +195,7 @@ void Shift::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Shift::PropertiesJSON(int64_t requested_frame) {
+std::string Shift::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

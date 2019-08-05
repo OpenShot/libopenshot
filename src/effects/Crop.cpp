@@ -114,7 +114,7 @@ std::shared_ptr<Frame> Crop::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 }
 
 // Generate JSON string of this object
-string Crop::Json() {
+std::string Crop::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -136,14 +136,14 @@ Json::Value Crop::JsonValue() {
 }
 
 // Load JSON string into this object
-void Crop::SetJson(string value) {
+void Crop::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
 	                 value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -182,7 +182,7 @@ void Crop::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Crop::PropertiesJSON(int64_t requested_frame) {
+std::string Crop::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

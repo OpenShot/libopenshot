@@ -96,7 +96,7 @@ std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64
 }
 
 // Generate JSON string of this object
-string Deinterlace::Json() {
+std::string Deinterlace::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -115,14 +115,14 @@ Json::Value Deinterlace::JsonValue() {
 }
 
 // Load JSON string into this object
-void Deinterlace::SetJson(string value) {
+void Deinterlace::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -155,7 +155,7 @@ void Deinterlace::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Deinterlace::PropertiesJSON(int64_t requested_frame) {
+std::string Deinterlace::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;
