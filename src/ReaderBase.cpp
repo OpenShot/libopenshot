@@ -108,7 +108,7 @@ void ReaderBase::DisplayInfo() {
 	cout << "----------------------------" << endl;
 
 	// Iterate through metadata
-	map<string, string>::iterator it;
+	std::map<std::string, std::string>::iterator it;
 	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
 		cout << "--> " << it->first << ": " << it->second << endl;
 }
@@ -122,7 +122,7 @@ Json::Value ReaderBase::JsonValue() {
 	root["has_audio"] = info.has_audio;
 	root["has_single_image"] = info.has_single_image;
 	root["duration"] = info.duration;
-	stringstream filesize_stream;
+	std::stringstream filesize_stream;
 	filesize_stream << info.file_size;
 	root["file_size"] = filesize_stream.str();
 	root["height"] = info.height;
@@ -139,7 +139,7 @@ Json::Value ReaderBase::JsonValue() {
 	root["display_ratio"]["num"] = info.display_ratio.num;
 	root["display_ratio"]["den"] = info.display_ratio.den;
 	root["vcodec"] = info.vcodec;
-	stringstream video_length_stream;
+	std::stringstream video_length_stream;
 	video_length_stream << info.video_length;
 	root["video_length"] = video_length_stream.str();
 	root["video_stream_index"] = info.video_stream_index;
@@ -160,7 +160,7 @@ Json::Value ReaderBase::JsonValue() {
 
 	// Append metadata map
 	root["metadata"] = Json::Value(Json::objectValue);
-	map<string, string>::iterator it;
+	std::map<std::string, std::string>::iterator it;
 	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
 		root["metadata"][it->first] = it->second;
 
@@ -245,7 +245,7 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 	}
 	if (!root["metadata"].isNull() && root["metadata"].isObject()) {
 		for( Json::Value::iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
-			string key = itr.key().asString();
+			std::string key = itr.key().asString();
 			info.metadata[key] = root["metadata"][key].asString();
 		}
 	}
