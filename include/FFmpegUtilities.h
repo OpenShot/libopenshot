@@ -284,5 +284,7 @@
 		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 	#endif
 
+	// Deprecated macro aliases, will be removed in a future release
+	#define AV_GET_CODEC_TYPE(av_stream) _Pragma ("GCC warning \"AV_GET_CODEC_TYPE is deprecated, use AVSTREAM_GET_CODEC_TYPE\"") AVSTREAM_GET_CODEC_TYPE(av_stream)
 
 #endif
