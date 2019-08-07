@@ -157,7 +157,7 @@
     	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
-		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
+		#define AVSTREAM_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
 		#define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codecpar->codec_id
 		auto AV_GET_CODEC_CONTEXT = [](AVStream* av_stream, AVCodec* av_codec) { \
 			AVCodecContext *context = avcodec_alloc_context3(av_codec); \
@@ -193,7 +193,7 @@
     	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
-		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
+		#define AVSTREAM_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
 		#define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codecpar->codec_id
 		auto AV_GET_CODEC_CONTEXT = [](AVStream* av_stream, AVCodec* av_codec) { \
 			AVCodecContext *context = avcodec_alloc_context3(av_codec); \
@@ -232,7 +232,7 @@
     	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_close(av_context)
-		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
+		#define AVSTREAM_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
 		#define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codec->codec_id
 		#define AV_GET_CODEC_CONTEXT(av_stream, av_codec) av_stream->codec
 		#define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_stream->codec
@@ -263,7 +263,7 @@
 		#define AV_FREE_FRAME(av_frame) avcodec_free_frame(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_free_packet(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_close(av_context)
-		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
+		#define AVSTREAM_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
 		#define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codec->codec_id
 		#define AV_GET_CODEC_CONTEXT(av_stream, av_codec) av_stream->codec
 		#define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_stream->codec

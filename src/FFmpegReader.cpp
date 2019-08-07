@@ -255,11 +255,11 @@ void FFmpegReader::Open() {
 		// Loop through each stream, and identify the video and audio stream index
 		for (unsigned int i = 0; i < pFormatCtx->nb_streams; i++) {
 			// Is this a video stream?
-			if (AV_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
+			if (AVSTREAM_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_VIDEO && videoStream < 0) {
 				videoStream = i;
 			}
 			// Is this an audio stream?
-			if (AV_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
+			if (AVSTREAM_GET_CODEC_TYPE(pFormatCtx->streams[i]) == AVMEDIA_TYPE_AUDIO && audioStream < 0) {
 				audioStream = i;
 			}
 		}
