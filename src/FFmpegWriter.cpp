@@ -1388,7 +1388,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count);
 
 }
 
