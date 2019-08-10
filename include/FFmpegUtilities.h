@@ -105,13 +105,13 @@
 	// Define this for compatibility
 	#ifndef PixelFormat
 		#define PixelFormat AVPixelFormat
-    #endif
+	#endif
 	#ifndef PIX_FMT_RGBA
 		#define PIX_FMT_RGBA AV_PIX_FMT_RGBA
-    #endif
+	#endif
 	#ifndef PIX_FMT_NONE
 		#define PIX_FMT_NONE AV_PIX_FMT_NONE
-    #endif
+	#endif
 	#ifndef PIX_FMT_RGB24
 		#define PIX_FMT_RGB24 AV_PIX_FMT_RGB24
 	#endif
@@ -154,7 +154,7 @@
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
@@ -190,7 +190,7 @@
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
@@ -229,7 +229,7 @@
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) avpicture_alloc((AVPicture *) av_frame, pix_fmt, width, height)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_close(av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
