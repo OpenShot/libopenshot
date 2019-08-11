@@ -2032,11 +2032,6 @@ void FFmpegWriter::OutputStreamInfo() {
 
 // Init a collection of software rescalers (thread safe)
 void FFmpegWriter::InitScalers(int source_width, int source_height) {
-	int scale_mode = SWS_FAST_BILINEAR;
-	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-		scale_mode = SWS_LANCZOS;
-	}
-
 	// Init software rescalers vector (many of them, one for each thread)
 	for (int x = 0; x < num_of_rescalers; x++) {
 		// Init the software scaler from FFMpeg
