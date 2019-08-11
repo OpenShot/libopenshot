@@ -5,7 +5,7 @@
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -48,7 +48,7 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
+	 * @brief This class uses Qt libraries, to create frames with "Text", and return
 	 * openshot::Frame objects.
 	 *
 	 * All system fonts are supported, including many different font properties, such as size, color,

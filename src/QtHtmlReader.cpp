@@ -5,7 +5,7 @@
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -35,8 +35,8 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtHtmlReader::QtHtmlReader() : width(1024), height(768), x_offset(0), y_offset(0), html(""), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER){
-
+QtHtmlReader::QtHtmlReader() : width(1024), height(768), x_offset(0), y_offset(0), html(""), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+{
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
@@ -59,10 +59,12 @@ void QtHtmlReader::Open()
 		// create image
 		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 		image->fill(QColor(background_color.c_str()));
+
 		//start painting
 		QPainter painter;
-		if(!painter.begin(image.get()))
+		if (!painter.begin(image.get())) {
 			return;
+		}
 
 		//set background
 		painter.setBackground(QBrush(background_color.c_str()));
@@ -74,22 +76,25 @@ void QtHtmlReader::Open()
 		
 		int td_height = text_document.documentLayout()->documentSize().height();
  
- 		if(gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_TOP || gravity == GRAVITY_TOP_RIGHT)
+ 		if (gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_TOP || gravity == GRAVITY_TOP_RIGHT) {
  			painter.translate(x_offset, y_offset);
- 		else if(gravity == GRAVITY_LEFT || gravity == GRAVITY_CENTER || gravity == GRAVITY_RIGHT)
+ 		} else if (gravity == GRAVITY_LEFT || gravity == GRAVITY_CENTER || gravity == GRAVITY_RIGHT) {
  			painter.translate(x_offset, (height - td_height) / 2 + y_offset);
- 		else if(gravity == GRAVITY_BOTTOM_LEFT || gravity == GRAVITY_BOTTOM_RIGHT || gravity == GRAVITY_BOTTOM)
+ 		} else if (gravity == GRAVITY_BOTTOM_LEFT || gravity == GRAVITY_BOTTOM_RIGHT || gravity == GRAVITY_BOTTOM) {
  			painter.translate(x_offset, height - td_height + y_offset);
+ 		}
  
- 		if(gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_LEFT || gravity == GRAVITY_BOTTOM_LEFT)
+ 		if (gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_LEFT || gravity == GRAVITY_BOTTOM_LEFT) {
  			text_document.setDefaultTextOption(QTextOption(Qt::AlignLeft));
- 		else if(gravity == GRAVITY_CENTER || gravity == GRAVITY_TOP || gravity == GRAVITY_BOTTOM)
+ 		} else if (gravity == GRAVITY_CENTER || gravity == GRAVITY_TOP || gravity == GRAVITY_BOTTOM) {
  			text_document.setDefaultTextOption(QTextOption(Qt::AlignHCenter));
- 		else if(gravity == GRAVITY_TOP_RIGHT || gravity == GRAVITY_RIGHT|| gravity == GRAVITY_BOTTOM_RIGHT)
+ 		} else if (gravity == GRAVITY_TOP_RIGHT || gravity == GRAVITY_RIGHT|| gravity == GRAVITY_BOTTOM_RIGHT) {
  			text_document.setDefaultTextOption(QTextOption(Qt::AlignRight));
+ 		}
 
+ 		// Draw image
 		text_document.drawContents(&painter);
-		//end painting
+
 		painter.end();
 
 		// Update image properties
@@ -228,8 +233,6 @@ void QtHtmlReader::SetJsonValue(Json::Value root) {
 
 	if (!root["gravity"].isNull())
  		gravity = (GravityType) root["gravity"].asInt();
-
-	
 
 	// Re-Open path, and re-init everything (if needed)
 	if (is_open)

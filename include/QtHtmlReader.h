@@ -5,7 +5,7 @@
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -48,11 +48,10 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
+	 * @brief This class uses Qt libraries, to create frames with rendered HTML, and return
 	 * openshot::Frame objects.
 	 *
-	 * All system fonts are supported, including many different font properties, such as size, color,
-	 * alignment, padding, etc...
+	 * Supports HTML/CSS subset available via Qt libraries, see: https://doc.qt.io/qt-5/richtext-html-subset.html
 	 *
 	 * @code
 	 * // Create a reader to generate an openshot::Frame containing text
@@ -61,10 +60,7 @@ namespace openshot
 	 *              5, // x_offset
 	 *              5, // y_offset
 	 *              GRAVITY_CENTER, // gravity
-	 *              "Check out this Text!", // text
-	 *              "Arial", // font
-	 *              15.0, // size
-	 *              "#fff000", // text_color
+	 *              "<b>Check out</b> this Text!", // html
 	 *              "#000000" // background_color
 	 *              );
 	 * r.Open(); // Open the reader
@@ -102,7 +98,7 @@ namespace openshot
 		/// @param x_offset The number of pixels to offset the text on the X axis (horizontal)
 		/// @param y_offset The number of pixels to offset the text on the Y axis (vertical)
 		/// @param gravity The alignment / gravity of the text
-		/// @param html The text you want to generate / display
+		/// @param html The html you want to render / display
 		/// @param background_color The background color of the text (also supports Transparent)
 		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string html, string background_color);
 

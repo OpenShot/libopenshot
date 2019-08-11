@@ -5,7 +5,7 @@
  *
  * @section LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -32,8 +32,8 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER) {
-
+QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+{
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
@@ -56,18 +56,19 @@ void QtTextReader::Open()
 		// create image
 		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
 		image->fill(QColor(background_color.c_str()));
-		//start painting
-		QPainter painter;
-		if(!painter.begin(image.get()))
-			return;
 
-		//set background
+		QPainter painter;
+		if (!painter.begin(image.get())) {
+			return;
+		}
+
+		// set background
 		painter.setBackground(QBrush(background_color.c_str()));
 
-		//set font color
+		// set font color
 		painter.setPen(QPen(text_color.c_str()));
 
-		//set font
+		// set font
 		painter.setFont(QFont(font.c_str(), size));
 
 		// Set gravity (map between OpenShot and Qt)
@@ -103,10 +104,9 @@ void QtTextReader::Open()
 			break;
 		}
 
-		//draw text
+		// Draw image
 		painter.drawText(x_offset, y_offset, width, height, align_flag, text.c_str());
 
-		//end painting
 		painter.end();
 
 		// Update image properties
