@@ -42,7 +42,7 @@ QtHtmlReader::QtHtmlReader() : width(1024), height(768), x_offset(0), y_offset(0
 	Close();
 }
 
-QtHtmlReader::QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string html, string background_color)
+QtHtmlReader::QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), gravity(gravity), html(html), background_color(background_color), is_open(false)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
@@ -163,7 +163,7 @@ std::shared_ptr<Frame> QtHtmlReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string QtHtmlReader::Json() {
+std::string QtHtmlReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -188,12 +188,16 @@ Json::Value QtHtmlReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtHtmlReader::SetJson(string value) {
+void QtHtmlReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");

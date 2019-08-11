@@ -40,8 +40,6 @@
 #include "Enums.h"
 #include "Exceptions.h"
 
-using namespace std;
-
 class QImage;
 
 namespace openshot
@@ -86,14 +84,14 @@ namespace openshot
 		int height;
 		int x_offset;
 		int y_offset;
-		string text;
-		string font;
+		std::string text;
+		std::string font;
 		double size;
-		string text_color;
-		string background_color;
+		std::string text_color;
+		std::string background_color;
 		std::shared_ptr<QImage> image;
 		bool is_open;
-		GravityType gravity;
+		openshot::GravityType gravity;
 
 	public:
 
@@ -111,29 +109,29 @@ namespace openshot
 		/// @param size The size of the text
 		/// @param text_color The color of the text
 		/// @param background_color The background color of the text (also supports Transparent)
-		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
+		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
 
 		/// Close Reader
 		void Close();
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "QtTextReader"; };
+		std::string Name() { return "QtTextReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		void SetJson(string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
