@@ -371,12 +371,15 @@ ENDIF(WIN32)
 target_link_libraries(openshot ${REQUIRED_LIBRARIES})
 
 
-############### CLI EXECUTABLE ################
+############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
+
+add_executable(openshot-html-test examples/ExampleHtml.cpp)
+target_link_libraries(openshot-html-test openshot)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
