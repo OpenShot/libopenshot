@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -259,7 +259,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Timeline.cpp
 		QtTextReader.cpp
 		QtHtmlReader.cpp
-		
+
 
 		# Qt Video Player
 		${QT_PLAYER_FILES}
@@ -308,6 +308,9 @@ set_target_properties(openshot
 		SOVERSION ${PROJECT_SO_VERSION}
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
+
+# Linked executables will need this propagated to them
+target_compile_options(openshot PUBLIC ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS}  ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS})
 
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
@@ -379,7 +382,10 @@ add_executable(openshot-example examples/Example.cpp)
 target_link_libraries(openshot-example openshot)
 
 add_executable(openshot-html-test examples/ExampleHtml.cpp)
-target_link_libraries(openshot-html-test openshot)
+target_link_libraries(openshot-html-test openshot Qt5::Gui)
+
+add_executable(openshot-text-test examples/ExampleText.cpp)
+target_link_libraries(openshot-text-test openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
