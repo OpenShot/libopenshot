@@ -33,6 +33,7 @@
 #include <memory>
 #include "../../include/OpenShot.h"
 //#include "../../include/CrashHandler.h"
+#include <QGuiApplication>
 
 using namespace openshot;
 
@@ -49,8 +50,7 @@ int main(int argc, char* argv[]) {
 	             );
 	r.Open(); // Open the reader
 
-	// XXX: Not implemented
-	// r.DisplayInfo();
+	r.DisplayInfo();
 
     /* WRITER ---------------- */
     FFmpegWriter w9("/var/tmp/metadata.mp4");
