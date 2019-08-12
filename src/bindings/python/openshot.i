@@ -27,6 +27,9 @@
 
 %module openshot
 
+/* Suppress warnings about ignored operator= */
+%warnfilter(362);
+
 /* Enable inline documentation */
 %feature("autodoc", "1");
 
@@ -53,7 +56,7 @@
 %shared_ptr(Frame)
 
 %{
-#include "../../../include/Version.h"
+#include "OpenShotVersion.h"
 #include "../../../include/ReaderBase.h"
 #include "../../../include/WriterBase.h"
 #include "../../../include/CacheBase.h"
@@ -117,7 +120,7 @@
 	}
 }
 
-%include "../../../include/Version.h"
+%include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
 %include "../../../include/CacheBase.h"

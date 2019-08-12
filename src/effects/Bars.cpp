@@ -145,8 +145,10 @@ void Bars::SetJson(string value) {
 	Json::CharReader* reader(rbuilder.newCharReader());
 
 	string errors;
-	bool success = reader->parse( value.c_str(), 
+	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -156,7 +158,7 @@ void Bars::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
@@ -207,4 +209,3 @@ string Bars::PropertiesJSON(int64_t requested_frame) {
 	// Return formatted string
 	return root.toStyledString();
 }
-

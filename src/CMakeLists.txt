@@ -24,6 +24,9 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Pick up our include directories from the parent context
+include_directories(${OPENSHOT_INCLUDE_DIRS})
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
@@ -109,7 +112,7 @@ ENDIF (AVRESAMPLE_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-FIND_PACKAGE(OpenShotAudio REQUIRED)
+FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
@@ -302,7 +305,7 @@ add_library(openshot SHARED
 set_target_properties(openshot
 		PROPERTIES
 		VERSION ${PROJECT_VERSION}
-		SOVERSION ${SO_VERSION}
+		SOVERSION ${PROJECT_SO_VERSION}
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
@@ -403,6 +406,7 @@ set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
 INSTALL(  TARGETS openshot
 		ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 		LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+		RUNTIME DESTINATION ${LIB_INSTALL_DIR}
 		COMPONENT library )
 
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/include/

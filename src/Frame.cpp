@@ -833,10 +833,11 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 			int start = 0;
 			if (only_odd_lines)
 				start = 1;
-				for (int row = start; row < image->height(); row += 2) {
-					memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
-					new_pixels += image->bytesPerLine();
-				}
+
+			for (int row = start; row < image->height(); row += 2) {
+				memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+				new_pixels += image->bytesPerLine();
+			}
 
 			// Update height and width
 			width = image->width();

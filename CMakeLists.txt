@@ -39,49 +39,45 @@ For more information, please visit <http://www.openshot.org/>.
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-################ GET VERSION INFORMATION FROM VERSION.H ##################
-message(STATUS "Determining Version Number (from Version.h file)")
+################ PROJECT VERSION ####################
+set(PROJECT_VERSION_FULL "0.2.3-dev1")
+set(PROJECT_SO_VERSION 17)
 
-#### Get the lines related to libopenshot version from the Version.h header
-file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/include/Version.h
-     OPENSHOT_VERSION_LINES
-     REGEX "#define[ ]+OPENSHOT_VERSION_.*[0-9]+;.*")
-
-#### Set each line into its own variable
-
-list (GET OPENSHOT_VERSION_LINES 0 LINE_MAJOR)
-list (GET OPENSHOT_VERSION_LINES 1 LINE_MINOR)
-list (GET OPENSHOT_VERSION_LINES 2 LINE_BUILD)
-list (GET OPENSHOT_VERSION_LINES 3 LINE_SO)
-
-#### Get the version number out of each line
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MAJOR[ ]+([0-9]+);(.*)" "\\1" MAJOR_VERSION "${LINE_MAJOR}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_MINOR[ ]+([0-9]+);(.*)" "\\1" MINOR_VERSION "${LINE_MINOR}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_BUILD[ ]+([0-9]+);(.*)" "\\1" BUILD_VERSION "${LINE_BUILD}")
-STRING(REGEX REPLACE "#define[ ]+OPENSHOT_VERSION_SO[ ]+([0-9]+);(.*)" "\\1" SO_VERSION "${LINE_SO}")
-
-message(STATUS "MAJOR Version: ${MAJOR_VERSION}")
-message(STATUS "MINOR Version: ${MINOR_VERSION}")
-message(STATUS "BUILD Version: ${BUILD_VERSION}")
-message(STATUS "SO/API/ABI Version: ${SO_VERSION}")
-message(STATUS "Determining Version Number - done")
+# Remove the dash and anything following, to get the #.#.# version for project()
+STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 
 ################### SETUP PROJECT ###################
-PROJECT(libopenshot LANGUAGES C CXX
-        VERSION ${MAJOR_VERSION}.${MINOR_VERSION}.${BUILD_VERSION})
+# This will define the following variables
+# PROJECT_NAME
+# PROJECT_VERSION, libopenshot_VERSION
+# PROJECT_VERSION_MAJOR, libopenshot_VERSION_MAJOR
+# PROJECT_VERSION_MINOR, libopenshot_VERSION_MINOR
+# PROJECT_VERSION_PATCH, libopenshot_VERSION_PATCH
+PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
 Generating build files for OpenShot
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
-  SO/API/ABI Version: ${SO_VERSION}
+  SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
 
-#### Work around a GCC < 9 bug with handling of _Pragma() in macros
-#### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
-if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
-    (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
-endif()
+# Define install paths according to system conventions
+# XXX: This must be AFTER THE PROJECT() COMMAND w/ languages enabled,
+#      in order to properly configure CMAKE_INSTALL_LIBDIR path
+include(GNUInstallDirs)
+
+########## Configure Version.h header ##############
+configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
+# We'll want that installed later
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
+
+############### Set up include paths #################
+list(APPEND OPENSHOT_INCLUDE_DIRS
+    include
+    include/effects
+    include/Qt
+    ${CMAKE_CURRENT_BINARY_DIR}/include )
 
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
@@ -104,5 +100,11 @@ add_subdirectory(tests)
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
 
-file(GLOB_RECURSE doc_files ${CMAKE_CURRENT_BINARY_DIR}/doc/html/*.*)
-INSTALL(FILES ${doc_files} DESTINATION share/doc/libopenshot)
+# Install docs, if the user builds them with `make doc`
+install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+        DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+        MESSAGE_NEVER # Don't spew about file copies
+        OPTIONAL )    # No error if the docs aren't found

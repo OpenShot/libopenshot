@@ -79,9 +79,9 @@ void Clip::init_settings()
 	wave_color = Color((unsigned char)0, (unsigned char)123, (unsigned char)255, (unsigned char)255);
 
 	// Init crop settings
-	crop_gravity = GRAVITY_CENTER;
-	crop_width = Keyframe(-1.0);
-	crop_height = Keyframe(-1.0);
+	crop_gravity = GRAVITY_TOP_LEFT;
+	crop_width = Keyframe(1.0);
+	crop_height = Keyframe(1.0);
 	crop_x = Keyframe(0.0);
 	crop_y = Keyframe(0.0);
 
@@ -123,7 +123,7 @@ void Clip::init_reader_rotation() {
 		try {
 			float rotate_metadata = strtof(reader->info.metadata["rotate"].c_str(), 0);
 			rotation = Keyframe(rotate_metadata);
-		} catch (exception e) {}
+		} catch (const std::exception& e) {}
 	}
 	else
 		// Default no rotation
@@ -259,7 +259,7 @@ void Clip::Open()
 void Clip::Close()
 {
 	if (reader) {
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
 
 		// Close the reader
 		reader->Close();
@@ -616,7 +616,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
@@ -634,7 +634,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
 
 	// Create blank frame
 	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
@@ -716,6 +716,19 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
 
+	// Add enable audio/video choices (dropdown style)
+	root["has_audio"]["choices"].append(add_property_choice_json("Auto", -1, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("Off", 0, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("On", 1, has_audio.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Auto", -1, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Off", 0, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("On", 1, has_video.GetValue(requested_frame)));
+
+	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
+	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
+	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
+	root["crop_height"] = add_property_json("Crop Height", crop_height.GetValue(requested_frame), "float", "", &crop_height, 0.0, 1.0, false, requested_frame);
+
 	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", &wave_color.red, 0, 255, false, requested_frame);
 	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", &wave_color.red, 0, 255, false, requested_frame);
 	root["wave_color"]["blue"] = add_property_json("Blue", wave_color.blue.GetValue(requested_frame), "float", "", &wave_color.blue, 0, 255, false, requested_frame);
@@ -791,10 +804,12 @@ void Clip::SetJson(string value) {
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -804,7 +819,7 @@ void Clip::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");

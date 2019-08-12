@@ -27,6 +27,9 @@
 
 %module openshot
 
+/* Suppress warnings about ignored operator= */
+%warnfilter(362);
+
 /* Enable inline documentation */
 %feature("autodoc", "1");
 
@@ -65,7 +68,7 @@ namespace std {
   #define RB_RSHIFT(a, b) RSHIFT(a, b)
   #undef RSHIFT
 #endif
-#include "../../../include/Version.h"
+#include "OpenShotVersion.h"
 #include "../../../include/ReaderBase.h"
 #include "../../../include/WriterBase.h"
 #include "../../../include/CacheBase.h"
@@ -127,7 +130,7 @@ namespace std {
 	%}
 #endif
 
-%include "../../../include/Version.h"
+%include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
 %include "../../../include/CacheBase.h"

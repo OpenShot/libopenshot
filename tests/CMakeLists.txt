@@ -24,6 +24,9 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Pick up our include directories from the parent context
+include_directories(${OPENSHOT_INCLUDE_DIRS})
+
 SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
@@ -109,7 +112,7 @@ ENDIF (AVRESAMPLE_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-FIND_PACKAGE(OpenShotAudio REQUIRED)
+FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})

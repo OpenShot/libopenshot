@@ -121,7 +121,7 @@ void ChunkReader::load_json()
 		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON could not be parsed (or is invalid).", path);
@@ -235,7 +235,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 			local_reader = new FFmpegReader(chunk_video_path);
 			local_reader->Open(); // open reader
 
-		} catch (InvalidFile)
+		} catch (const InvalidFile& e)
 		{
 			// Invalid Chunk (possibly it is not found)
 			throw ChunkNotFound(path, requested_frame, location.number, location.frame);
@@ -285,10 +285,11 @@ void ChunkReader::SetJson(string value) {
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse( value.c_str(),
 	                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -298,7 +299,7 @@ void ChunkReader::SetJson(string value) {
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");

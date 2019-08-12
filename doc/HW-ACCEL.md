@@ -7,20 +7,22 @@ our support for this in the future!
 
 The following table summarizes our current level of support:
 
-|                    |      Linux Decode      |     Linux Encode     |    Mac Decode    |    Mac Encode  |Windows Decode|  Windows Encode  | Notes            |
-|--------------------|------------------------|----------------------|------------------|----------------|--------------|------------------|------------------|
-| VA-API             |   :heavy_check_mark:   |  :heavy_check_mark:  |         -        |        -       |       -      |         -        | *Linux Only*     |
-| VDPAU              |  :heavy_check_mark:(+) |:white_check_mark:(++)|         -        |        -       |       -      |         -        | *Linux Only*     |
-| CUDA (NVDEC/NVENC) |        :x:(+++)        |  :heavy_check_mark:  |         -        |        -       |       -      |:heavy_check_mark:| *Cross Platform* |
-| VideoToolBox       |            -           |           -          |:heavy_check_mark:|   :x:(++++)    |       -      |         -        | *Mac Only*       |
-| DXVA2              |            -           |           -          |         -        |        -       |   :x:(+++)   |         -        | *Windows Only*   |
-| D3D11VA            |            -           |           -          |         -        |        -       |   :x:(+++)   |         -        | *Windows Only*   |
-| QSV                |        :x:(+++)        |          :x:         |        :x:       |       :x:      |      :x:     |        :x:       | *Cross Platform* |
+|                    |  Linux Decode   | Linux Encode   | Mac Decode |    Mac Encode  | Windows Decode | Windows Encode | Notes            |
+|--------------------|:---------------:|:--------------:|:----------:|:--------------:|:--------------:|:--------------:|------------------|
+| VA-API             |   ✔️ &nbsp;      |    ✔️ &nbsp;    |      -     |        -       |       -        |        -       | *Linux Only*     |
+| VDPAU              | ✔️ <sup>1</sup>  | ✅ <sup>2</sup> |      -    |        -       |       -        |        -       | *Linux Only*     |
+| CUDA (NVDEC/NVENC) | ❌ <sup>3</sup> |   ✔️ &nbsp;     |      -     |        -       |       -        |    ✔️ &nbsp;    | *Cross Platform* |
+| VideoToolBox       |           -     |         -      |  ✔️ &nbsp;  | ❌ <sup>4</sup> |      -        |       -         | *Mac Only*       |
+| DXVA2              |           -     |         -      |      -     |        -       | ❌ <sup>3</sup> |      -         | *Windows Only*   |
+| D3D11VA            |           -     |         -      |      -     |        -       | ❌ <sup>3</sup> |      -         | *Windows Only*   |
+| QSV                | ❌ <sup>3</sup> |   ❌ &nbsp;   |  ❌ &nbsp; |   ❌ &nbsp;    |   ❌ &nbsp;     |    ❌ &nbsp;   | *Cross Platform* |
 
-* *(+) VDPAU for some reason needs a card number one higher than it really is*
-* *(++) VDPAU is a decoder only.*
-* *(+++) Green frames (pixel data not correctly tranferred back to system memory)*
-* *(++++) Crashes and burns*
+#### Notes
+
+1.  VDPAU for some reason needs a card number one higher than it really is
+2.  VDPAU is a decoder only
+3.  Green frames (pixel data not correctly tranferred back to system memory)
+4.  Crashes and burns
 
 ## Supported FFmpeg Versions
 
@@ -37,7 +39,7 @@ included.
 The following settings are use by libopenshot to enable, disable, and control
 the various hardware acceleration features.
 
-```
+```{cpp}
 /// Use video codec for faster video decoding (if supported)
 int HARDWARE_DECODER = 0;
 
@@ -76,9 +78,9 @@ in Ubuntu 18.04) for the AppImage to work with hardware acceleration.
 An AppImage that works on both systems (supporting libva and libva2),
 might be possible when no libva is included in the AppImage.
 
-* vaapi is working for intel and AMD
-* vaapi is working for decode only for nouveau
-* nVidia driver is working for export only
+*  vaapi is working for intel and AMD
+*  vaapi is working for decode only for nouveau
+*  nVidia driver is working for export only
 
 ## AMD Graphics Cards (RadeonOpenCompute/ROCm)
 

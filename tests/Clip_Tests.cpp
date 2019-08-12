@@ -30,7 +30,6 @@
 
 #include "UnitTest++.h"
 #include "../include/OpenShot.h"
-#include "../include/Tests.h"
 
 using namespace std;
 using namespace openshot;
@@ -118,6 +117,7 @@ TEST(Clip_Properties)
 	string errors;
 	bool success = reader->parse( properties.c_str(),
 	                 properties.c_str() + properties.size(), &root, &errors );
+
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
@@ -129,7 +129,7 @@ TEST(Clip_Properties)
 		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
@@ -154,7 +154,7 @@ TEST(Clip_Properties)
 		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
@@ -178,7 +178,7 @@ TEST(Clip_Properties)
 		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
@@ -203,12 +203,15 @@ TEST(Clip_Properties)
 		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
 	}
 
+
+	// Free up the reader we allocated
+	delete reader;
 }
 
 TEST(Clip_Effects)
