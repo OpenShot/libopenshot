@@ -160,6 +160,9 @@ void ZmqLogger::Path(string new_path)
 
 void ZmqLogger::Close()
 {
+	// Disable logger as it no longer needed
+	enabled = false;
+
 	// Close file (if already open)
 	if (log_file.is_open())
 		log_file.close();
