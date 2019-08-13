@@ -67,6 +67,7 @@ namespace openshot
 	 *              5, // y_offset
 	 *              GRAVITY_CENTER, // gravity
 	 *              "<b>Check out</b> this Text!", // html
+	 *              "b { color: #ff0000 }", // css
 	 *              "#000000" // background_color
 	 *              );
 	 * r.Open(); // Open the reader
@@ -89,6 +90,7 @@ namespace openshot
 		int x_offset;
 		int y_offset;
 		std::string html;
+		std::string css;
 		std::string background_color;
 		std::shared_ptr<QImage> image;
 		bool is_open;
@@ -106,7 +108,7 @@ namespace openshot
 		/// @param gravity The alignment / gravity of the text
 		/// @param html The html you want to render / display
 		/// @param background_color The background color of the text (also supports Transparent)
-		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string background_color);
+		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string css, std::string background_color);
 
 		/// Close Reader
 		void Close();

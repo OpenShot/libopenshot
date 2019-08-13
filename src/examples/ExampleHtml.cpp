@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
 	             5, // y_offset
 	             GRAVITY_CENTER, // gravity
 	             "<span style=\"font-family:sans-serif; color:#fff;\"><b>Check out</b> this Text!</span>", // html
+				 "b { color: #ff0000; }",
 	             "#000000" // background_color
 	             );
 	r.Open(); // Open the reader
