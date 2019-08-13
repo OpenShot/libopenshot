@@ -76,6 +76,11 @@ void QtHtmlReader::Open()
 
 		//draw text
 		QTextDocument text_document;
+
+		//disable redo/undo stack as not needed
+		text_document.setUndoRedoEnabled(false);
+
+		//create the HTML/CSS document
 		text_document.setTextWidth(width);
 		text_document.setDefaultStyleSheet(css.c_str());
 		text_document.setHtml(html.c_str());
