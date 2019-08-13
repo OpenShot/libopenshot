@@ -34,24 +34,28 @@
 #include "../../include/OpenShot.h"
 //#include "../../include/CrashHandler.h"
 #include <QGuiApplication>
+#include <QTimer>
 
 using namespace openshot;
 
 int main(int argc, char* argv[]) {
 
-	// Create a reader to generate an openshot::Frame containing text
-	QtHtmlReader r(720, // width
-	             480, // height
-	             5, // x_offset
-	             5, // y_offset
-	             GRAVITY_CENTER, // gravity
-	             "<span style=\"font-family:sans-serif; color:#fff;\"><b>Check out</b> this Text!</span>", // html
-				 "b { color: #ff0000; }",
-	             "#000000" // background_color
-	             );
-	r.Open(); // Open the reader
+    QGuiApplication app(argc, argv);
 
-	r.DisplayInfo();
+    // Create a reader to generate an openshot::Frame containing text
+    QtHtmlReader r(720, // width
+                   480, // height
+                   5, // x_offset
+                   5, // y_offset
+                   GRAVITY_CENTER, // gravity
+                   "<span style=\"font-family:sans-serif; color:#fff;\"><b>Check out</b> this Text!</span>", // html
+                   "b { color: #ff0000; }",
+                   "#000000" // background_color
+                   );
+
+    r.Open(); // Open the reader
+
+    r.DisplayInfo();
 
     /* WRITER ---------------- */
     FFmpegWriter w9("/var/tmp/metadata.mp4");
@@ -61,30 +65,31 @@ int main(int argc, char* argv[]) {
     w9.SetVideoOptions(true, "libx264", Fraction{30000, 1000}, 720, 480, Fraction(1,1), false, false, 3000000);
 
     w9.info.metadata["title"] = "testtest";
-	w9.info.metadata["artist"] = "aaa";
-	w9.info.metadata["album"] = "bbb";
-	w9.info.metadata["year"] = "2015";
-	w9.info.metadata["description"] = "ddd";
-	w9.info.metadata["comment"] = "eee";
-	w9.info.metadata["comment"] = "comment";
+    w9.info.metadata["artist"] = "aaa";
+    w9.info.metadata["album"] = "bbb";
+    w9.info.metadata["year"] = "2015";
+    w9.info.metadata["description"] = "ddd";
+    w9.info.metadata["comment"] = "eee";
+    w9.info.metadata["comment"] = "comment";
     w9.info.metadata["copyright"] = "copyright OpenShot!";
 
     // Open writer
     w9.Open();
 
-    for (long int frame = 1; frame <= 30; frame++)
+    for (long int frame = 1; frame <= 30; ++frame)
     {
-        std::shared_ptr<Frame> f = r.GetFrame(1); // Same frame every time
+        std::shared_ptr<Frame> f = r.GetFrame(frame); // Same frame every time
         w9.WriteFrame(f);
     }
 
     // Close writer & reader
     w9.Close();
-
-    // Close timeline
     r.Close();
 
-	cout << "Completed successfully!" << endl;
+    // Set a timer with 0 timeout to terminate immediately after
+    // processing events
+    QTimer::singleShot(0, &app, SLOT(quit()));
 
-    return 0;
+    // Run QGuiApplication to completion
+    return app.exec();
 }
