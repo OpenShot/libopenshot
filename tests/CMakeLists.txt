@@ -24,6 +24,8 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+include(CTest)
+
 # Pick up our include directories from the parent context
 include_directories(${OPENSHOT_INCLUDE_DIRS})
 
@@ -201,33 +203,40 @@ else()
 endif(USE_SYSTEM_JSONCPP)
 
 IF (NOT DISABLE_TESTS)
-	###############  SET TEST SOURCE FILES  #################
-	SET ( OPENSHOT_TEST_FILES tests.cpp
-		   Cache_Tests.cpp
-		   Clip_Tests.cpp
-		   Color_Tests.cpp
-		   Coordinate_Tests.cpp
-		   ReaderBase_Tests.cpp
-		   ImageWriter_Tests.cpp
-		   FFmpegReader_Tests.cpp
-		   FFmpegWriter_Tests.cpp
-		   Fraction_Tests.cpp
-		   FrameMapper_Tests.cpp
-		   KeyFrame_Tests.cpp
-		   Point_Tests.cpp
-		   Settings_Tests.cpp
-		   Timeline_Tests.cpp )
+	# Each testname is expected to correspond to a file ${testname}_Tests.cpp
+	# in the tests/ directory
+	SET ( OPENSHOT_TESTS
+		   Cache
+		   Clip
+		   Color
+		   Coordinate
+		   ReaderBase
+		   ImageWriter
+		   FFmpegReader
+		   FFmpegWriter
+		   Fraction
+		   FrameMapper
+		   KeyFrame
+		   Point
+		   Settings
+		   Timeline )
 
-	################ TESTER EXECUTABLE #################
-	# Create unit test executable (openshot-test)
-	add_executable(openshot-test
-				   tests.cpp
-				   ${OPENSHOT_TEST_FILES} )
+	foreach(testname IN LISTS OPENSHOT_TESTS)
+		# Create unit test executable (openshot-${testname}-test)
+		add_executable(openshot-${testname}-test
+			tests.cpp
+			"${testname}_Tests.cpp" )
 
-	# Link libraries to the new executable
-	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+		# Link libraries to the new executable
+		target_link_libraries(openshot-${testname}-test
+			openshot
+			${UNITTEST++_LIBRARY} )
 
-	#################### MAKE TEST ######################
-	# Hook up the 'make os_test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
+		add_test(NAME ${testname} COMMAND openshot-${testname}-test)
+		list(APPEND TEST_TARGETS COMMAND openshot-${testname}-test)
+	endforeach()
+
+	# Legacy: Add a custom os_test target that depends on all of the
+	# other test executables
+	add_custom_target(os_test ALL ${TEST_TARGETS})
 ENDIF (NOT DISABLE_TESTS)

@@ -61,6 +61,9 @@ Generating build files for OpenShot
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
 
+# CTest testing framework
+include(CTest)
+
 # Define install paths according to system conventions
 # XXX: This must be AFTER THE PROJECT() COMMAND w/ languages enabled,
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
@@ -94,7 +97,11 @@ FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
 
 ############## PROCESS SUB-DIRECTORIES ##############
 add_subdirectory(src)
-add_subdirectory(tests)
+
+if (NOT DISABLE_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)

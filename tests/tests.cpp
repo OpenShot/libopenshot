@@ -37,14 +37,9 @@ using namespace UnitTest;
 int main()
 {
 	int exit_code = 0;
-	cout << "----------------------------" << endl;
-	cout << "     RUNNING ALL TESTS" << endl;
-	cout << "----------------------------" << endl;
 
 	// Run all unit tests
 	exit_code = RunAllTests();
-
-	cout << "----------------------------" << endl;
 
 	return exit_code;
 }
