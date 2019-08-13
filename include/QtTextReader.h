@@ -2,6 +2,8 @@
  * @file
  * @brief Header file for QtTextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -56,6 +58,9 @@ namespace openshot
 	 * alignment, padding, etc...
 	 *
 	 * @code
+	 * // Any application using this class must instantiate either QGuiApplication or QApplication
+	 * QApplication a(argc, argv);
+	 *
 	 * // Create a reader to generate an openshot::Frame containing text
 	 * QtTextReader r(720, // width
 	 *              480, // height
@@ -64,7 +69,7 @@ namespace openshot
 	 *              GRAVITY_CENTER, // gravity
 	 *              "Check out this Text!", // text
 	 *              "Arial", // font
-	 *              15.0, // size
+	 *              15.0, // font size
 	 *              "#fff000", // text_color
 	 *              "#000000" // background_color
 	 *              );
@@ -89,7 +94,7 @@ namespace openshot
 		int y_offset;
 		std::string text;
 		std::string font;
-		double size;
+		double font_size;
 		std::string text_color;
 		std::string background_color;
 		std::shared_ptr<QImage> image;
@@ -109,10 +114,10 @@ namespace openshot
 		/// @param gravity The alignment / gravity of the text
 		/// @param text The text you want to generate / display
 		/// @param font The font of the text
-		/// @param size The size of the text
+		/// @param font_size The size of the text
 		/// @param text_color The color of the text
 		/// @param background_color The background color of the text (also supports Transparent)
-		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
+		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, std::string text_color, std::string background_color);
 
 		/// Close Reader
 		void Close();

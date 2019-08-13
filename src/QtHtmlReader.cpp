@@ -2,6 +2,8 @@
  * @file
  * @brief Source file for QtHtmlReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -38,15 +40,15 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtHtmlReader::QtHtmlReader() : width(1024), height(768), x_offset(0), y_offset(0), html(""), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+QtHtmlReader::QtHtmlReader() : width(1024), height(768), x_offset(0), y_offset(0), html(""), css(""), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtHtmlReader::QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), gravity(gravity), html(html), background_color(background_color), is_open(false)
+QtHtmlReader::QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string css, std::string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), gravity(gravity), html(html), css(css), background_color(background_color), is_open(false)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -74,7 +76,13 @@ void QtHtmlReader::Open()
 
 		//draw text
 		QTextDocument text_document;
+
+		//disable redo/undo stack as not needed
+		text_document.setUndoRedoEnabled(false);
+
+		//create the HTML/CSS document
 		text_document.setTextWidth(width);
+		text_document.setDefaultStyleSheet(css.c_str());
 		text_document.setHtml(html.c_str());
 		
 		int td_height = text_document.documentLayout()->documentSize().height();
@@ -183,6 +191,7 @@ Json::Value QtHtmlReader::JsonValue() {
 	root["x_offset"] = x_offset;
 	root["y_offset"] = y_offset;
 	root["html"] = html;
+	root["css"] = css;
 	root["background_color"] = background_color;
 	root["gravity"] = gravity;
 
@@ -234,10 +243,10 @@ void QtHtmlReader::SetJsonValue(Json::Value root) {
 		y_offset = root["y_offset"].asInt();
 	if (!root["html"].isNull())
 		html = root["html"].asString();
-	
+	if (!root["css"].isNull())
+		css = root["css"].asString();
 	if (!root["background_color"].isNull())
 		background_color = root["background_color"].asString();
-
 	if (!root["gravity"].isNull())
  		gravity = (GravityType) root["gravity"].asInt();
 

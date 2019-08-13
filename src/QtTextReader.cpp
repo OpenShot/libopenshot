@@ -2,6 +2,8 @@
  * @file
  * @brief Source file for QtTextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -35,15 +37,15 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), font_size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
+QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, std::string text_color, std::string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), font_size(font_size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -72,7 +74,7 @@ void QtTextReader::Open()
 		painter.setPen(QPen(text_color.c_str()));
 
 		// set font
-		painter.setFont(QFont(font.c_str(), size));
+		painter.setFont(QFont(font.c_str(), font_size));
 
 		// Set gravity (map between OpenShot and Qt)
 		int align_flag = 0;
@@ -129,14 +131,14 @@ void QtTextReader::Open()
 		info.video_length = round(info.duration * info.fps.ToDouble());
 
 		// Calculate the DAR (display aspect ratio)
-		Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
+		Fraction font_size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
 
 		// Reduce size fraction
-		size.Reduce();
+		font_size.Reduce();
 
 		// Set the ratio based on the reduced fraction
-		info.display_ratio.num = size.num;
-		info.display_ratio.den = size.den;
+		info.display_ratio.num = font_size.num;
+		info.display_ratio.den = font_size.den;
 
 		// Mark as "open"
 		is_open = true;
@@ -196,7 +198,7 @@ Json::Value QtTextReader::JsonValue() {
 	root["y_offset"] = y_offset;
 	root["text"] = text;
 	root["font"] = font;
-	root["size"] = size;
+	root["font_size"] = font_size;
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
 	root["gravity"] = gravity;
@@ -251,8 +253,8 @@ void QtTextReader::SetJsonValue(Json::Value root) {
 		text = root["text"].asString();
 	if (!root["font"].isNull())
 		font = root["font"].asString();
-	if (!root["size"].isNull())
-		size = root["size"].asDouble();
+	if (!root["font_size"].isNull())
+		font_size = root["font_size"].asDouble();
 	if (!root["text_color"].isNull())
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())

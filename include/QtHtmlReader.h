@@ -2,6 +2,8 @@
  * @file
  * @brief Header file for QtHtmlReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -55,6 +57,9 @@ namespace openshot
 	 * Supports HTML/CSS subset available via Qt libraries, see: https://doc.qt.io/qt-5/richtext-html-subset.html
 	 *
 	 * @code
+	 * // Any application using this class must instantiate either QGuiApplication or QApplication
+	 * QApplication a(argc, argv);
+	 *
 	 * // Create a reader to generate an openshot::Frame containing text
 	 * QtHtmlReader r(720, // width
 	 *              480, // height
@@ -62,6 +67,7 @@ namespace openshot
 	 *              5, // y_offset
 	 *              GRAVITY_CENTER, // gravity
 	 *              "<b>Check out</b> this Text!", // html
+	 *              "b { color: #ff0000 }", // css
 	 *              "#000000" // background_color
 	 *              );
 	 * r.Open(); // Open the reader
@@ -84,6 +90,7 @@ namespace openshot
 		int x_offset;
 		int y_offset;
 		std::string html;
+		std::string css;
 		std::string background_color;
 		std::shared_ptr<QImage> image;
 		bool is_open;
@@ -101,7 +108,7 @@ namespace openshot
 		/// @param gravity The alignment / gravity of the text
 		/// @param html The html you want to render / display
 		/// @param background_color The background color of the text (also supports Transparent)
-		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string background_color);
+		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string css, std::string background_color);
 
 		/// Close Reader
 		void Close();
