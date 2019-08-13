@@ -384,9 +384,6 @@ target_link_libraries(openshot-example openshot)
 add_executable(openshot-html-test examples/ExampleHtml.cpp)
 target_link_libraries(openshot-html-test openshot Qt5::Gui)
 
-add_executable(openshot-text-test examples/ExampleText.cpp)
-target_link_libraries(openshot-text-test openshot Qt5::Gui)
-
 ############### PLAYER EXECUTABLE ################
 # Create test executable
 add_executable(openshot-player Qt/demo/main.cpp)
