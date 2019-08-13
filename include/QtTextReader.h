@@ -2,6 +2,8 @@
  * @file
  * @brief Header file for QtTextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */

@@ -2,6 +2,8 @@
  * @file
  * @brief Source file for QtHtmlReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
