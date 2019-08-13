@@ -55,6 +55,9 @@ namespace openshot
 	 * Supports HTML/CSS subset available via Qt libraries, see: https://doc.qt.io/qt-5/richtext-html-subset.html
 	 *
 	 * @code
+	 * // Any application using this class must instantiate either QGuiApplication or QApplication
+	 * QApplication a(argc, argv);
+	 *
 	 * // Create a reader to generate an openshot::Frame containing text
 	 * QtHtmlReader r(720, // width
 	 *              480, // height
