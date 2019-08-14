@@ -1,7 +1,8 @@
 /**
  * @file
- * @brief Source file for Example Executable (example app for libopenshot)
+ * @brief Source file for QtHtmlReader Example (example app for libopenshot)
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  *
  * @ref License
  */
