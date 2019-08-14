@@ -43,13 +43,15 @@ int main(int argc, char* argv[]) {
 
     QGuiApplication app(argc, argv);
 
+    std::string html_code = "<span style=\"font-family:sans-serif; color:#ffffff;\"><b>Check out</b> this Text!</span>";
+
     // Create a reader to generate an openshot::Frame containing text
     QtHtmlReader r(720, // width
                    480, // height
                    5, // x_offset
                    5, // y_offset
                    GRAVITY_CENTER, // gravity
-                   "<span style=\"font-family:sans-serif; color:#fff;\"><b>Check out</b> this Text!</span>", // html
+                   html_code, // html
                    "b { color: #ff0000; }",
                    "#000000" // background_color
                    );
@@ -59,32 +61,32 @@ int main(int argc, char* argv[]) {
     r.DisplayInfo();
 
     /* WRITER ---------------- */
-    FFmpegWriter w9("/var/tmp/metadata.mp4");
+    FFmpegWriter w("cppHtmlExample.mp4");
 
     // Set options
-    //w9.SetAudioOptions(true, "libmp3lame", r.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
-    w9.SetVideoOptions(true, "libx264", Fraction{30000, 1000}, 720, 480, Fraction(1,1), false, false, 3000000);
+    //w.SetAudioOptions(true, "libmp3lame", r.info.sample_rate, r.info.channels, r.info.channel_layout, 128000);
+    w.SetVideoOptions(true, "libx264", Fraction(30000, 1000), 720, 480, Fraction(1, 1), false, false, 3000000);
 
-    w9.info.metadata["title"] = "testtest";
-    w9.info.metadata["artist"] = "aaa";
-    w9.info.metadata["album"] = "bbb";
-    w9.info.metadata["year"] = "2015";
-    w9.info.metadata["description"] = "ddd";
-    w9.info.metadata["comment"] = "eee";
-    w9.info.metadata["comment"] = "comment";
-    w9.info.metadata["copyright"] = "copyright OpenShot!";
+    w.info.metadata["title"] = "testtest";
+    w.info.metadata["artist"] = "aaa";
+    w.info.metadata["album"] = "bbb";
+    w.info.metadata["year"] = "2015";
+    w.info.metadata["description"] = "ddd";
+    w.info.metadata["comment"] = "eee";
+    w.info.metadata["comment"] = "comment";
+    w.info.metadata["copyright"] = "copyright OpenShot!";
 
     // Open writer
-    w9.Open();
+    w.Open();
 
     for (long int frame = 1; frame <= 30; ++frame)
     {
         std::shared_ptr<Frame> f = r.GetFrame(frame); // Same frame every time
-        w9.WriteFrame(f);
+        w.WriteFrame(f);
     }
 
     // Close writer & reader
-    w9.Close();
+    w.Close();
     r.Close();
 
     // Set a timer with 0 timeout to terminate immediately after
