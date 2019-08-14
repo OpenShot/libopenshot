@@ -74,9 +74,9 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
 
 ############### Set up include paths #################
 list(APPEND OPENSHOT_INCLUDE_DIRS
-    include
-    include/effects
-    include/Qt
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/effects
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt
     ${CMAKE_CURRENT_BINARY_DIR}/include )
 
 #### Enable C++11 (for std::shared_ptr support)
