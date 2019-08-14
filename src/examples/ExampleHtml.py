@@ -55,26 +55,26 @@ r.Open()  # Open the reader
 r.DisplayInfo()  # Display metadata
 
 # Set up Writer
-w = openshot.FFmpegWriter("/var/tmp/pyHtmlExample.mp4")
+w = openshot.FFmpegWriter("pyHtmlExample.mp4")
 
 w.SetVideoOptions(True, "libx264", openshot.Fraction(30000, 1000), 720, 480,
                   openshot.Fraction(1, 1), False, False, 3000000)
 
-w.info.metadata["title"] = "testtest";
-w.info.metadata["artist"] = "aaa";
-w.info.metadata["album"] = "bbb";
-w.info.metadata["year"] = "2015";
-w.info.metadata["description"] = "ddd";
-w.info.metadata["comment"] = "eee";
-w.info.metadata["comment"] = "comment";
-w.info.metadata["copyright"] = "copyright OpenShot!";
+w.info.metadata["title"] = "testtest"
+w.info.metadata["artist"] = "aaa"
+w.info.metadata["album"] = "bbb"
+w.info.metadata["year"] = "2015"
+w.info.metadata["description"] = "ddd"
+w.info.metadata["comment"] = "eee"
+w.info.metadata["comment"] = "comment"
+w.info.metadata["copyright"] = "copyright OpenShot!"
 
 # Open the Writer
 w.Open()
 
 # Grab 30 frames from Reader and encode to Writer
-for i in range(30):
-    f = r.GetFrame(i)
+for frame in range(30):
+    f = r.GetFrame(frame)
     w.WriteFrame(f)
 
 # Close out Reader & Writer
