@@ -84,9 +84,9 @@ void QtHtmlReader::Open()
 		text_document.setTextWidth(width);
 		text_document.setDefaultStyleSheet(css.c_str());
 		text_document.setHtml(html.c_str());
-		
+
 		int td_height = text_document.documentLayout()->documentSize().height();
- 
+
  		if (gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_TOP || gravity == GRAVITY_TOP_RIGHT) {
  			painter.translate(x_offset, y_offset);
  		} else if (gravity == GRAVITY_LEFT || gravity == GRAVITY_CENTER || gravity == GRAVITY_RIGHT) {
@@ -94,7 +94,7 @@ void QtHtmlReader::Open()
  		} else if (gravity == GRAVITY_BOTTOM_LEFT || gravity == GRAVITY_BOTTOM_RIGHT || gravity == GRAVITY_BOTTOM) {
  			painter.translate(x_offset, height - td_height + y_offset);
  		}
- 
+
  		if (gravity == GRAVITY_TOP_LEFT || gravity == GRAVITY_LEFT || gravity == GRAVITY_BOTTOM_LEFT) {
  			text_document.setDefaultTextOption(QTextOption(Qt::AlignLeft));
  		} else if (gravity == GRAVITY_CENTER || gravity == GRAVITY_TOP || gravity == GRAVITY_BOTTOM) {
@@ -216,6 +216,8 @@ void QtHtmlReader::SetJson(std::string value) {
 	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+	
 	if (!success)
 		// Raise exception
 		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
