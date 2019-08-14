@@ -153,6 +153,12 @@ void QtTextReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
+
+		// Delete the image
+		image.reset();
+
+		info.vcodec = "";
+		info.acodec = "";
 	}
 }
 
