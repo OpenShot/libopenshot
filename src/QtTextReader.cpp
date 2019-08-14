@@ -118,7 +118,7 @@ void QtTextReader::Open()
 		info.has_audio = false;
 		info.has_video = true;
 		info.file_size = 0;
-		info.vcodec = "Constant image uniform color";
+		info.vcodec = "QImage";
 		info.width = width;
 		info.height = height;
 		info.pixel_ratio.num = 1;
