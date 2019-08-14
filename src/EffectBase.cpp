@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
+// Initialize the values of the EffectInfo struct
 void EffectBase::InitEffectInfo()
 {
 	// Init clip settings
