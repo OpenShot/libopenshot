@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -83,8 +83,10 @@
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
+#include "../../../include/QtHtmlReader.h"
 #include "../../../include/QtImageReader.h"
 #include "../../../include/QtPlayer.h"
+#include "../../../include/QtTextReader.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Settings.h"
@@ -151,8 +153,10 @@
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
+%include "../../../include/QtHtmlReader.h"
 %include "../../../include/QtImageReader.h"
 %include "../../../include/QtPlayer.h"
+%include "../../../include/QtTextReader.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Settings.h"
