@@ -238,5 +238,5 @@ IF (NOT DISABLE_TESTS)
 
 	# Legacy: Add a custom os_test target that depends on all of the
 	# other test executables
-	add_custom_target(os_test ALL ${TEST_TARGETS})
+	add_custom_target(os_test ${TEST_TARGETS})
 ENDIF (NOT DISABLE_TESTS)

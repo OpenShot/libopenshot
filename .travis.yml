@@ -31,7 +31,7 @@ matrix:
       - mkdir -p build; cd build;
       - cmake -D"CMAKE_BUILD_TYPE:STRING=Debug" ../
       - make VERBOSE=1
-      - make os_test
+      - make test
       - make install DESTDIR=dist/
       
     - language: cpp
