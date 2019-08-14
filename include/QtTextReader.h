@@ -115,8 +115,8 @@ namespace openshot
 		/// @param text The text you want to generate / display
 		/// @param font The font of the text
 		/// @param font_size The size of the text
-		/// @param text_color The color of the text
-		/// @param background_color The background color of the text (also supports Transparent)
+		/// @param text_color The color of the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
+		/// @param background_color The background color of the frame image (valid values are a color string in #RRGGBB or #AARRGGBB notation, a CSS color name, or 'transparent')
 		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, std::string text_color, std::string background_color);
 
 		/// Close Reader
