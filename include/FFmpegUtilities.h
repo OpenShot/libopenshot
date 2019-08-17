@@ -105,13 +105,13 @@
 	// Define this for compatibility
 	#ifndef PixelFormat
 		#define PixelFormat AVPixelFormat
-    #endif
+	#endif
 	#ifndef PIX_FMT_RGBA
 		#define PIX_FMT_RGBA AV_PIX_FMT_RGBA
-    #endif
+	#endif
 	#ifndef PIX_FMT_NONE
 		#define PIX_FMT_NONE AV_PIX_FMT_NONE
-    #endif
+	#endif
 	#ifndef PIX_FMT_RGB24
 		#define PIX_FMT_RGB24 AV_PIX_FMT_RGB24
 	#endif
@@ -149,11 +149,12 @@
 		#define AV_REGISTER_ALL
 		#define AVCODEC_REGISTER_ALL
 		#define AV_FILENAME url
+		#define AV_SET_FILENAME(oc, f) oc->AV_FILENAME = av_strdup(f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE AV_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
@@ -184,11 +185,12 @@
 		#define AV_REGISTER_ALL av_register_all();
 		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
 		#define AV_FILENAME filename
+		#define AV_SET_FILENAME(oc, f) snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_free_context(&av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
@@ -222,11 +224,12 @@
 		#define AV_REGISTER_ALL av_register_all();
 		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
 		#define AV_FILENAME filename
+		#define AV_SET_FILENAME(oc, f) snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) avpicture_alloc((AVPicture *) av_frame, pix_fmt, width, height)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
-    	#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
+		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
 		#define AV_FREE_CONTEXT(av_context) avcodec_close(av_context)
 		#define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
@@ -252,6 +255,7 @@
 		#define AV_REGISTER_ALL av_register_all();
 		#define AVCODEC_REGISTER_ALL	avcodec_register_all();
 		#define AV_FILENAME filename
+		#define AV_SET_FILENAME(oc, f) snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() avcodec_alloc_frame()
 		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) avpicture_alloc((AVPicture *) av_frame, pix_fmt, width, height)

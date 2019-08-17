@@ -525,9 +525,7 @@ void FFmpegWriter::WriteHeader() {
 	}
 
 	// Force the output filename (which doesn't always happen for some reason)
-	snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", path.c_str());
-
-	// Write the stream header, if any
+	AV_SET_FILENAME(oc, path.c_str());
 
 	// Add general metadata (if any)
 	for (std::map<std::string, std::string>::iterator iter = info.metadata.begin(); iter != info.metadata.end(); ++iter) {
@@ -543,6 +541,7 @@ void FFmpegWriter::WriteHeader() {
 	if (is_mp4 || is_mov)
 		av_dict_copy(&dict, mux_dict, 0);
 
+	// Write the stream header
 	if (avformat_write_header(oc, &dict) != 0) {
 		throw InvalidFile("Could not write header to file.", path);
 	};
@@ -1389,7 +1388,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		av_dict_set(&st->metadata, iter->first.c_str(), iter->second.c_str(), 0);
 	}
 
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video", "video_codec->thread_count", video_codec->thread_count);
 
 }
 
