@@ -1855,8 +1855,8 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			video_pts_offset = 0 - std::max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
+			// The difference of obtained PTS from 0, for the first frame
+			video_pts_offset = 0 - GetVideoPTS();
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1865,8 +1865,8 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// AUDIO PACKET
 		if (audio_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			audio_pts_offset = 0 - std::max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
+			// The difference of obtained PTS from 0, for the first frame
+			audio_pts_offset = 0 - packet->pts;
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Audio)", "audio_pts_offset", audio_pts_offset, "is_video", is_video);
