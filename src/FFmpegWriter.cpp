@@ -172,59 +172,50 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 		AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if IS_FFMPEG_3_2
-		#if defined(__linux__)
-		if ( (strcmp(codec.c_str(),"h264_vaapi") == 0)) {
+#if defined(__linux__)
+		if (strstr(codec.c_str(), "_vaapi") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
 			hw_en_supported = 1;
 			hw_en_av_pix_fmt = AV_PIX_FMT_VAAPI;
 			hw_en_av_device_type = AV_HWDEVICE_TYPE_VAAPI;
-		}
-		else {
-			if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
-				new_codec = avcodec_find_encoder_by_name(codec.c_str());
-				hw_en_on = 1;
-				hw_en_supported = 1;
-				hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
-				hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-			}
-			else {
-				new_codec = avcodec_find_encoder_by_name(codec.c_str());
-				hw_en_on = 0;
-				hw_en_supported = 0;
-			}
+		} else if (strstr(codec.c_str(), "_nvenc") != NULL) {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 1;
+			hw_en_supported = 1;
+			hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+		} else {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 0;
+			hw_en_supported = 0;
 		}
 #elif defined(_WIN32)
-		if ( (strcmp(codec.c_str(),"h264_dxva2") == 0)) {
+		if (strstr(codec.c_str(), "_dxva2") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
 			hw_en_supported = 1;
 			hw_en_av_pix_fmt = AV_PIX_FMT_DXVA2_VLD;
 			hw_en_av_device_type = AV_HWDEVICE_TYPE_DXVA2;
-		}
-		else {
-			if ( (strcmp(codec.c_str(),"h264_nvenc") == 0)) {
-				new_codec = avcodec_find_encoder_by_name(codec.c_str());
-				hw_en_on = 1;
-				hw_en_supported = 1;
-				hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
-				hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
-			}
-			else {
-				new_codec = avcodec_find_encoder_by_name(codec.c_str());
-				hw_en_on = 0;
-				hw_en_supported = 0;
-			}
+		} else if (strstr(codec.c_str(), "_nvenc") != NULL) {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 1;
+			hw_en_supported = 1;
+			hw_en_av_pix_fmt = AV_PIX_FMT_CUDA;
+			hw_en_av_device_type = AV_HWDEVICE_TYPE_CUDA;
+		} else {
+			new_codec = avcodec_find_encoder_by_name(codec.c_str());
+			hw_en_on = 0;
+			hw_en_supported = 0;
 		}
 #elif defined(__APPLE__)
-		if ( (strcmp(codec.c_str(),"h264_videotoolbox") == 0)) {
+		if (strstr(codec.c_str(), "_videotoolbox") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
 			hw_en_supported = 1;
 			hw_en_av_pix_fmt = AV_PIX_FMT_VIDEOTOOLBOX;
 			hw_en_av_device_type = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-		}
-		else {
+		} else {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 0;
 			hw_en_supported = 0;
@@ -350,7 +341,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
 				   name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
-				   name == "crf")) {
+				   name == "crf" || name == "cqp")) {
 		// Check for specific named options
 		if (name == "g")
 			// Set gop_size
@@ -396,7 +387,57 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 			// Buffer size
 			convert >> c->rc_buffer_size;
 
-		else if (name == "crf") {
+		else if (name == "cqp") {
+			// encode quality and special settings like lossless
+			// This might be better in an extra methods as more options
+			// and way to set quality are possible
+		#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
+			#if IS_FFMPEG_3_2
+				if (hw_en_on) {
+					av_opt_set_int(c->priv_data, "qp", min(stoi(value),63), 0); // 0-63
+				} else
+			#endif
+				{
+				switch (c->codec_id) {
+					#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+					case AV_CODEC_ID_AV1 :
+						c->bit_rate = 0;
+						av_opt_set_int(c->priv_data, "qp", min(stoi(value),63), 0); // 0-63
+						break;
+					#endif
+					case AV_CODEC_ID_VP8 :
+						c->bit_rate = 10000000;
+						av_opt_set_int(c->priv_data, "qp", max(min(stoi(value), 63), 4), 0); // 4-63
+						break;
+					case AV_CODEC_ID_VP9 :
+						c->bit_rate = 0;        // Must be zero!
+						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 63), 0); // 0-63
+						if (stoi(value) == 0) {
+							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							av_opt_set_int(c->priv_data, "lossless", 1, 0);
+						}
+						break;
+					case AV_CODEC_ID_H264 :
+						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 51), 0); // 0-51
+						if (stoi(value) == 0) {
+							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						}
+						break;
+					case AV_CODEC_ID_H265 :
+						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 51), 0); // 0-51
+						if (stoi(value) == 0) {
+							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							av_opt_set_int(c->priv_data, "lossless", 1, 0);
+						}
+						break;
+					default:
+						// For all other codecs assume a range of 0-63
+						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 63), 0); // 0-63
+						c->bit_rate = 0;
+				}
+			}
+		#endif
+		} else if (name == "crf") {
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
@@ -480,7 +521,7 @@ void FFmpegWriter::SetOption(StreamType stream, string name, string value) {
 			// write selfcontained fragmented file, minimum length of the fragment 8 sec; only for MOV, MP4
 			av_dict_set(&mux_dict, "movflags", "frag_keyframe", 0);
 			av_dict_set(&mux_dict, "min_frag_duration", "8000000", 0);
-			}
+		}
 	} else {
 		throw InvalidOptions("The option is not valid for this codec.", path);
 	}
@@ -543,6 +584,7 @@ void FFmpegWriter::WriteHeader() {
 
 	// Write the stream header
 	if (avformat_write_header(oc, &dict) != 0) {
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteHeader (avformat_write_header)");
 		throw InvalidFile("Could not write header to file.", path);
 	};
 
@@ -1241,7 +1283,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 
 	// Open the codec
 	if (avcodec_open2(audio_codec, codec, &opts) < 0)
-		throw InvalidCodec("Could not open codec", path);
+		throw InvalidCodec("Could not open audio codec", path);
 	AV_COPY_PARAMS_FROM_CONTEXT(st, audio_codec);
 
 	// Free options
@@ -1330,7 +1372,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 #elif defined(__APPLE__)
 		if( adapter_ptr != NULL ) {
 #endif
-				ZmqLogger::Instance()->AppendDebugMethod("Encode Device present using device");
+				ZmqLogger::Instance()->AppendDebugMethod("Encode Device present using device", "adapter", adapter_num);
 		}
 		else {
 				adapter_ptr = NULL;  // use default
@@ -1361,23 +1403,58 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 
 #if IS_FFMPEG_3_2
 	if (hw_en_on && hw_en_supported) {
-		video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
 		video_codec->pix_fmt   = hw_en_av_pix_fmt;
-		video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
-		av_opt_set(video_codec->priv_data,"preset","slow",0);
-		av_opt_set(video_codec->priv_data,"tune","zerolatency",0);
-		av_opt_set(video_codec->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+
+		// for the list of possible options, see the list of codec-specific options:
+		// e.g. ffmpeg -h encoder=h264_vaapi or ffmpeg -h encoder=hevc_vaapi
+		// and "man ffmpeg-codecs"
+
+		// For VAAPI, it is safer to explicitly set rc_mode instead of relying on auto-selection
+		// which is ffmpeg version-specific.
+		if (hw_en_av_pix_fmt == AV_PIX_FMT_VAAPI) {
+			int64_t qp;
+			if (av_opt_get_int(video_codec->priv_data, "qp", 0, &qp) != 0 || qp == 0) {
+				// unless "qp" was set for CQP, switch to VBR RC mode
+				av_opt_set(video_codec->priv_data, "rc_mode", "VBR", 0);
+
+				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR, 
+				// one has to specify both bit_rate and maxrate, otherwise a small low quality file is generated on Intel iGPU).
+				video_codec->rc_max_rate = video_codec->bit_rate;
+			}
+		}
+
+		switch (video_codec->codec_id) {
+			case AV_CODEC_ID_H264:
+				video_codec->max_b_frames = 0;        // At least this GPU doesn't support b-frames
+				video_codec->profile = FF_PROFILE_H264_BASELINE | FF_PROFILE_H264_CONSTRAINED;
+				av_opt_set(video_codec->priv_data, "preset", "slow", 0);
+				av_opt_set(video_codec->priv_data, "tune", "zerolatency", 0);
+				av_opt_set(video_codec->priv_data, "vprofile", "baseline", AV_OPT_SEARCH_CHILDREN);
+				break;
+			case AV_CODEC_ID_HEVC:
+				// tested to work with defaults
+				break;
+			case AV_CODEC_ID_VP9:
+				// tested to work with defaults
+				break;
+			default:
+				ZmqLogger::Instance()->AppendDebugMethod("No codec-specific options defined for this codec. HW encoding may fail",
+					"codec_id", video_codec->codec_id);
+				break;
+		}
+
 		// set hw_frames_ctx for encoder's AVCodecContext
 		int err;
 		if ((err = set_hwframe_ctx(video_codec, hw_device_ctx, info.width, info.height)) < 0) {
-				fprintf(stderr, "Failed to set hwframe context.\n");
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video (set_hwframe_ctx) ERROR faled to set hwframe context",
+					"width", info.width, "height", info.height, av_err2str(err), -1);
 		}
 	}
 #endif
 
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, &opts) < 0)
-		throw InvalidCodec("Could not open codec", path);
+		throw InvalidCodec("Could not open video codec", path);
 	AV_COPY_PARAMS_FROM_CONTEXT(st, video_codec);
 
 	// Free options
