@@ -79,9 +79,9 @@ namespace openshot
 	void Pause();
 
 	/// Get the current frame number being played
-	int Position();
+	int64_t Position();
 
-	/// Seek to a specific frame in the player
+  /// Seek to a specific frame in the player
 	void Seek(int64_t new_frame);
 
 	/// Set the source URL/path of this player (which will create an internal Reader)

@@ -921,6 +921,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 						continue;
 					}
 
+					// Packet may become NULL on Close inside Seek if CheckSeek returns false
+					if (!packet)
+						// Jump to the next iteration of this loop
+						continue;
+
 					// Get the AVFrame from the current packet
 					frame_finished = GetAVFrame();
 
@@ -956,6 +961,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 						// Jump to the next iteration of this loop
 						continue;
 					}
+
+					// Packet may become NULL on Close inside Seek if CheckSeek returns false
+					if (!packet)
+						// Jump to the next iteration of this loop
+						continue;
 
 					// Update PTS / Frame Offset (if any)
 					UpdatePTSOffset(false);

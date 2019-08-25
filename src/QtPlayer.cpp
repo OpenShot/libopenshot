@@ -127,7 +127,7 @@ void QtPlayer::Pause()
     Speed(0);
 }
 
-int QtPlayer::Position()
+int64_t QtPlayer::Position()
 {
     return p->video_position;
 }
