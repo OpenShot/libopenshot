@@ -37,17 +37,22 @@ import openshot
 
 app = QGuiApplication(sys.argv)
 
-html_code = "<span style=\"font-family:sans-serif; color:#ffffff;\"><b>Check out</b> this Text!</span>"
+html_code = """<p><span id="red">Check out</span> this HTML!</p>"""
+
+css_code = """
+    * {font-family:sans-serif; font-size:18pt; color:#ffffff;}
+    #red {color: #ff0000;}
+"""
 
 # Create a QtHtmlReader
-r = openshot.QtHtmlReader(720,
-                          480,
-                          5,
-                          5,
-                          openshot.GRAVITY_CENTER,
+r = openshot.QtHtmlReader(1280,      # width
+                          720,       # height
+                          -16,       # x offset
+                          -16,       # y offset
+                          openshot.GRAVITY_BOTTOM_RIGHT,
                           html_code,
-                          "b { color: #ff0000; }",
-                          "#000000"
+                          css_code,
+                          "#000000"  # background color
                           )
 
 r.Open()  # Open the reader
@@ -57,7 +62,7 @@ r.DisplayInfo()  # Display metadata
 # Set up Writer
 w = openshot.FFmpegWriter("pyHtmlExample.mp4")
 
-w.SetVideoOptions(True, "libx264", openshot.Fraction(30000, 1000), 720, 480,
+w.SetVideoOptions(True, "libx264", openshot.Fraction(30000, 1000), 1280, 720,
                   openshot.Fraction(1, 1), False, False, 3000000)
 
 w.info.metadata["title"] = "testtest"
@@ -73,7 +78,7 @@ w.info.metadata["copyright"] = "copyright OpenShot!"
 w.Open()
 
 # Grab 30 frames from Reader and encode to Writer
-for frame in range(30):
+for frame in range(100):
     f = r.GetFrame(frame)
     w.WriteFrame(f)
 

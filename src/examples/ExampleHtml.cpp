@@ -43,18 +43,23 @@ int main(int argc, char* argv[]) {
 
     QGuiApplication app(argc, argv);
 
-    std::string html_code = "<span style=\"font-family:sans-serif; color:#ffffff;\"><b>Check out</b> this Text!</span>";
+    std::string html_code = R"html(<p><span id="red">Check out</span> this HTML!</p>)html";
 
-    // Create a reader to generate an openshot::Frame containing text
-    QtHtmlReader r(720, // width
-                   480, // height
-                   5, // x_offset
-                   5, // y_offset
-                   GRAVITY_CENTER, // gravity
-                   html_code, // html
-                   "b { color: #ff0000; }",
-                   "#000000" // background_color
-                   );
+    std::string css_code = R"css(
+        * {font-family:sans-serif; font-size:18pt; color:#ffffff;}
+        #red {color: #ff0000;}
+    )css";
+
+// Create a reader to generate an openshot::Frame containing text
+QtHtmlReader r(1280, // width
+               720, // height
+               -16, // x_offset
+               -16, // y_offset
+               GRAVITY_BOTTOM_RIGHT, // gravity
+               html_code, // html
+               css_code, // css
+               "#000000" // background_color
+               );
 
     r.Open(); // Open the reader
 
@@ -65,7 +70,7 @@ int main(int argc, char* argv[]) {
 
     // Set options
     //w.SetAudioOptions(true, "libmp3lame", r.info.sample_rate, r.info.channels, r.info.channel_layout, 128000);
-    w.SetVideoOptions(true, "libx264", Fraction(30000, 1000), 720, 480, Fraction(1, 1), false, false, 3000000);
+    w.SetVideoOptions(true, "libx264", Fraction(30000, 1000), 1280, 720, Fraction(1, 1), false, false, 3000000);
 
     w.info.metadata["title"] = "testtest";
     w.info.metadata["artist"] = "aaa";
@@ -79,7 +84,7 @@ int main(int argc, char* argv[]) {
     // Open writer
     w.Open();
 
-    for (long int frame = 1; frame <= 30; ++frame)
+    for (long int frame = 1; frame <= 100; ++frame)
     {
         std::shared_ptr<Frame> f = r.GetFrame(frame); // Same frame every time
         w.WriteFrame(f);
