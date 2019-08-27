@@ -111,7 +111,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidChannels(std::string message, std::string file_path)
+		InvalidChannels(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidChannels() noexcept {}
 	};
@@ -121,7 +121,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidCodec(std::string message, std::string file_path)
+		InvalidCodec(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidCodec() noexcept {}
 	};
@@ -141,7 +141,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidFormat(std::string message, std::string file_path)
+		InvalidFormat(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidFormat() noexcept {}
 	};
@@ -151,7 +151,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidJSON(std::string message, std::string file_path)
+		InvalidJSON(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidJSON() noexcept {}
 	};
@@ -161,7 +161,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidOptions(std::string message, std::string file_path)
+		InvalidOptions(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidOptions() noexcept {}
 	};
@@ -171,7 +171,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidSampleRate(std::string message, std::string file_path)
+		InvalidSampleRate(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidSampleRate() noexcept {}
 	};
@@ -191,7 +191,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		NoStreamsFound(std::string message, std::string file_path)
+		NoStreamsFound(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~NoStreamsFound() noexcept {}
 	};
@@ -223,7 +223,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		OutOfMemory(std::string message, std::string file_path)
+		OutOfMemory(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~OutOfMemory() noexcept {}
 	};
@@ -233,7 +233,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		ReaderClosed(std::string message, std::string file_path)
+		ReaderClosed(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~ReaderClosed() noexcept {}
 	};
@@ -243,7 +243,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		ResampleError(std::string message, std::string file_path)
+		ResampleError(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~ResampleError() noexcept {}
 	};
@@ -253,7 +253,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		TooManySeeks(std::string message, std::string file_path)
+		TooManySeeks(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~TooManySeeks() noexcept {}
 	};
@@ -263,7 +263,7 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		WriterClosed(std::string message, std::string file_path)
+		WriterClosed(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~WriterClosed() noexcept {}
 	};
