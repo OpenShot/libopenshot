@@ -115,7 +115,7 @@ ENDIF (AVRESAMPLE_FOUND)
 FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 
 # Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
+include_directories(${OpenShotAudio_INCLUDE_DIRS})
 
 ################# QT5 ###################
 # Find QT5 libraries
