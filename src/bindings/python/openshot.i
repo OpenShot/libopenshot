@@ -120,6 +120,34 @@
 	}
 }
 
+/* Instantiate the required template specializations */
+%template() std::map<std::string, int>;
+
+/* Make openshot.Fraction more Pythonic */
+%extend openshot::Fraction {
+%{
+	#include <sstream>
+	#include <map>
+%}
+	double __float__() {
+		return $self->ToDouble();
+	}
+	int __int__() {
+		return $self->ToInt();
+	}
+	std::map<std::string, int> GetMap() {
+		std::map<std::string, int> map1;
+		map1.insert({"num", $self->num});
+		map1.insert({"den", $self->den});
+		return map1;
+	}
+	std::string __repr__() {
+		std::ostringstream result;
+		result << $self->num << ":" << $self->den;
+		return result.str();
+	}
+}
+
 %include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
