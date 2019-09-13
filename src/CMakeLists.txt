@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -161,7 +161,7 @@ IF (ENABLE_BLACKMAGIC)
 	FIND_PACKAGE(BlackMagic)
 
 	IF (BLACKMAGIC_FOUND)
-		# Include headers (needed for compile)
+		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 
 		# define a global var (used in the C++)
@@ -181,10 +181,17 @@ endif(OPENMP_FOUND)
 
 ################### ZEROMQ #####################
 # Find ZeroMQ library (used for socket communication & logging)
-FIND_PACKAGE(ZMQ REQUIRED)
+
+# Some platforms package the header-only cppzmq C++ bindings separately,
+# others (Ubuntu) bundle them in with libzmq itself
+find_package(cppzmq QUIET)
+find_package(ZMQ REQUIRED)
 
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+if (cppzmq_FOUND)
+    include_directories(${cppzmq_INCLUDE_DIRS})
+endif()
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
