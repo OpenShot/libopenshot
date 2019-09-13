@@ -39,9 +39,9 @@ using namespace openshot;
 
 int main(int argc, char* argv[]) {
 
-	Settings *s = Settings::Instance();
-	s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC
-	s->HW_DE_DEVICE_SET = 0;
+    Settings *s = Settings::Instance();
+    s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU
+    s->HW_DE_DEVICE_SET = 0;
 
     std::string input_filepath = TEST_MEDIA_PATH;
     input_filepath += "sintel_trailer-720p.mp4";
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
     // Close timeline
     r9.Close();
 
-	cout << "Completed successfully!" << endl;
+    cout << "Completed successfully!" << endl;
 
     return 0;
 }
