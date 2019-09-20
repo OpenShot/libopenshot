@@ -52,6 +52,14 @@ QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, Gr
 	Close();
 }
 
+void QtTextReader::SetTextBackgroundColor(string color) {
+	text_background_color = color;
+
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
+	Open();
+	Close();
+}
+
 // Open reader
 void QtTextReader::Open()
 {
@@ -68,7 +76,10 @@ void QtTextReader::Open()
 		}
 
 		// set background
-		painter.setBackground(QBrush(background_color.c_str()));
+		if (!text_background_color.empty()) {
+			painter.setBackgroundMode(Qt::OpaqueMode);
+			painter.setBackground(QBrush(text_background_color.c_str()));
+		}
 
 		// set font color
 		painter.setPen(QPen(text_color.c_str()));
@@ -210,6 +221,7 @@ Json::Value QtTextReader::JsonValue() {
 	root["font_size"] = font_size;
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
+	root["text_background_color"] = text_background_color;
 	root["gravity"] = gravity;
 
 	// return JsonValue
@@ -270,6 +282,8 @@ void QtTextReader::SetJsonValue(Json::Value root) {
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())
 		background_color = root["background_color"].asString();
+	if (!root["text_background_color"].isNull())
+		text_background_color = root["text_background_color"].asString();
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 
