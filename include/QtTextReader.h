@@ -125,7 +125,7 @@ namespace openshot
 		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, bool is_bold, bool is_italic, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
-		/// @param text_background_color The background color behind the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
+		/// @param color The background color behind the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
 		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
