@@ -95,6 +95,8 @@ namespace openshot
 		std::string text;
 		std::string font;
 		double font_size;
+		bool is_bold;
+		bool is_italic;
 		std::string text_color;
 		std::string background_color;
 		std::shared_ptr<QImage> image;
@@ -115,9 +117,11 @@ namespace openshot
 		/// @param text The text you want to generate / display
 		/// @param font The font of the text
 		/// @param font_size The size of the text
+		/// @param is_bold Set to true to make text bold
+		/// @param is_italic Set to true to make text italic
 		/// @param text_color The color of the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
 		/// @param background_color The background color of the frame image (valid values are a color string in #RRGGBB or #AARRGGBB notation, a CSS color name, or 'transparent')
-		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, std::string text_color, std::string background_color);
+		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, bool is_bold, bool is_italic, std::string text_color, std::string background_color);
 
 		/// Close Reader
 		void Close();

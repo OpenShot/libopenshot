@@ -37,15 +37,15 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), font_size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), font_size(10.0), is_bold(false), is_italic(false), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, std::string text_color, std::string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), font_size(font_size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
+QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, bool is_bold, bool is_italic, std::string text_color, std::string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), font_size(font_size), is_bold(is_bold), is_italic(is_italic), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -74,7 +74,10 @@ void QtTextReader::Open()
 		painter.setPen(QPen(text_color.c_str()));
 
 		// set font
-		painter.setFont(QFont(font.c_str(), font_size));
+		QFont qFont(font.c_str(), font_size);
+		qFont.setBold(is_bold);
+		qFont.setItalic(is_italic);
+		painter.setFont(qFont);
 
 		// Set gravity (map between OpenShot and Qt)
 		int align_flag = 0;
