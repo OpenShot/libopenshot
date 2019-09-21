@@ -60,7 +60,7 @@ protected:
     QRect centeredViewport(int width, int height);
 
 private slots:
-	void present(const QImage &image);
+    void present(const QImage &image);
 
 };
 

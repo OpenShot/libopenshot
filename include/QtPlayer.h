@@ -44,9 +44,9 @@ namespace openshot
      * @brief This class is used to playback a video from a reader.
      *
      */
-    class QtPlayer : public PlayerBase
+    class QtPlayer : public openshot::PlayerBase
     {
-	PlayerPrivate *p;
+	openshot::PlayerPrivate *p;
 	bool threads_started;
 
     public:
@@ -116,7 +116,6 @@ namespace openshot
 	/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
 	void Volume(float new_volume);
     };
-
 }
 
 #endif

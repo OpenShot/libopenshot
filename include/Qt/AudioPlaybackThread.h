@@ -40,16 +40,13 @@
 
 namespace openshot
 {
-    using juce::Thread;
-    using juce::WaitableEvent;
-
-	struct SafeTimeSliceThread : TimeSliceThread
+	struct SafeTimeSliceThread : juce::TimeSliceThread
 	{
-		SafeTimeSliceThread(const String & s) : TimeSliceThread(s) {}
+		SafeTimeSliceThread(const String & s) : juce::TimeSliceThread(s) {}
 		void run()
 		{
 			try {
-				TimeSliceThread::run();
+				juce::TimeSliceThread::run();
 			} catch (const TooManySeeks & e) {
 				// ...
 			}
@@ -72,7 +69,7 @@ namespace openshot
 		std::string initialise_error;
 
 		/// List of valid audio device names
-		std::vector<AudioDeviceInfo> audio_device_names;
+		std::vector<openshot::AudioDeviceInfo> audio_device_names;
 
 		/// Override with no channels and no preferred audio device
 		static AudioDeviceManagerSingleton * Instance();
@@ -87,7 +84,7 @@ namespace openshot
     /**
      *  @brief The audio playback thread
      */
-    class AudioPlaybackThread : Thread
+    class AudioPlaybackThread : juce::Thread
     {
 		AudioSourcePlayer player;
 		AudioTransportSource transport;
@@ -95,8 +92,8 @@ namespace openshot
 		AudioReaderSource *source;
 		double sampleRate;
 		int numChannels;
-		WaitableEvent play;
-		WaitableEvent played;
+		juce::WaitableEvent play;
+		juce::WaitableEvent played;
 		int buffer_size;
 		bool is_playing;
 		SafeTimeSliceThread time_thread;
@@ -107,10 +104,10 @@ namespace openshot
 		~AudioPlaybackThread();
 
 		/// Set the current thread's reader
-		void Reader(ReaderBase *reader);
+		void Reader(openshot::ReaderBase *reader);
 
 		/// Get the current frame object (which is filling the buffer)
-		std::shared_ptr<Frame> getFrame();
+		std::shared_ptr<openshot::Frame> getFrame();
 
 		/// Get the current frame number being played
 		int64_t getCurrentFramePosition();
@@ -133,11 +130,17 @@ namespace openshot
 		/// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
-		/// Get Audio Error (if any)
-		std::string getError() { return AudioDeviceManagerSingleton::Instance()->initialise_error; }
+        /// Get Audio Error (if any)
+        std::string getError()
+        {
+            return AudioDeviceManagerSingleton::Instance()->initialise_error;
+        }
 
-		/// Get Audio Device Names (if any)
-		std::vector<AudioDeviceInfo> getAudioDeviceNames() { return AudioDeviceManagerSingleton::Instance()->audio_device_names; };
+        /// Get Audio Device Names (if any)
+        std::vector<openshot::AudioDeviceInfo> getAudioDeviceNames()
+        {
+            return AudioDeviceManagerSingleton::Instance()->audio_device_names;
+        };
 
 		friend class PlayerPrivate;
 		friend class QtPlayer;

@@ -39,7 +39,7 @@ PlayerDemo::PlayerDemo(QWidget *parent)
     , vbox(new QVBoxLayout(this))
     , menu(new QMenuBar(this))
     , video(new VideoRenderWidget(this))
-    , player(new QtPlayer(video->GetRenderer()))
+    , player(new openshot::QtPlayer(video->GetRenderer()))
 {
     setWindowTitle("OpenShot Player");
 

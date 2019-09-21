@@ -94,7 +94,7 @@ namespace openshot
 		virtual void Stop() = 0;
 
 		/// Get the current reader, such as a FFmpegReader
-		virtual ReaderBase* Reader() = 0;
+		virtual openshot::ReaderBase* Reader() = 0;
 
 		/// Set the current reader, such as a FFmpegReader
 		virtual void Reader(openshot::ReaderBase *new_reader) = 0;
