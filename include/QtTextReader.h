@@ -93,10 +93,7 @@ namespace openshot
 		int x_offset;
 		int y_offset;
 		std::string text;
-		std::string font;
-		double font_size;
-		bool is_bold;
-		bool is_italic;
+		QFont font;
 		std::string text_color;
 		std::string background_color;
 		std::string text_background_color;
@@ -122,7 +119,7 @@ namespace openshot
 		/// @param is_italic Set to true to make text italic
 		/// @param text_color The color of the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
 		/// @param background_color The background color of the frame image (valid values are a color string in #RRGGBB or #AARRGGBB notation, a CSS color name, or 'transparent')
-		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, bool is_bold, bool is_italic, std::string text_color, std::string background_color);
+		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
 		/// @param color The background color behind the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)

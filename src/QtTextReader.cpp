@@ -37,15 +37,15 @@
 using namespace openshot;
 
 /// Default constructor (blank text)
-QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), font_size(10.0), is_bold(false), is_italic(false), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
+QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font(QFont("Arial", 10)), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double font_size, bool is_bold, bool is_italic, std::string text_color, std::string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), font_size(font_size), is_bold(is_bold), is_italic(is_italic), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
+QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
@@ -85,10 +85,7 @@ void QtTextReader::Open()
 		painter.setPen(QPen(text_color.c_str()));
 
 		// set font
-		QFont qFont(font.c_str(), font_size);
-		qFont.setBold(is_bold);
-		qFont.setItalic(is_italic);
-		painter.setFont(qFont);
+		painter.setFont(font);
 
 		// Set gravity (map between OpenShot and Qt)
 		int align_flag = 0;
@@ -217,8 +214,7 @@ Json::Value QtTextReader::JsonValue() {
 	root["x_offset"] = x_offset;
 	root["y_offset"] = y_offset;
 	root["text"] = text;
-	root["font"] = font;
-	root["font_size"] = font_size;
+	root["font"] = font.toString().toStdString();
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
 	root["text_background_color"] = text_background_color;
@@ -275,9 +271,7 @@ void QtTextReader::SetJsonValue(Json::Value root) {
 	if (!root["text"].isNull())
 		text = root["text"].asString();
 	if (!root["font"].isNull())
-		font = root["font"].asString();
-	if (!root["font_size"].isNull())
-		font_size = root["font_size"].asDouble();
+		font.fromString(QString::fromStdString(root["font"].asString()));
 	if (!root["text_color"].isNull())
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())
