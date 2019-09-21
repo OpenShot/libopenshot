@@ -249,6 +249,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Frame.cpp
 		FrameMapper.cpp
 		KeyFrame.cpp
+		OpenShotVersion.cpp
 		ZmqLogger.cpp
 		PlayerBase.cpp
 		Point.cpp

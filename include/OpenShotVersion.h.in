@@ -43,36 +43,28 @@
 #define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 
 #include <sstream>
-using namespace std;
 
 namespace openshot
 {
 	/// This struct holds version number information. Use the GetVersion() method to access the current version of libopenshot.
 	struct OpenShotVersion {
-		int major; /// Major version number
-		int minor; /// Minor version number
-		int build; /// Build number
-		int so; /// Shared Object Number (incremented when API or ABI changes)
+		static const int Major = OPENSHOT_VERSION_MAJOR; /// Major version number
+		static const int Minor = OPENSHOT_VERSION_MINOR; /// Minor version number
+		static const int Build = OPENSHOT_VERSION_BUILD; /// Build number
+		static const int So = OPENSHOT_VERSION_SO; /// Shared Object Number (incremented when API or ABI changes)
 
 		/// Get a string version of the version (i.e. "Major.Minor.Build")
-		string ToString() {
-			stringstream version_string;
-			version_string << major << "." << minor << "." << build;
+		inline static const std::string ToString() {
+			std::stringstream version_string;
+			version_string << Major << "." << Minor << "." << Build;
 			return version_string.str();
 		}
 	};
 
+	static const openshot::OpenShotVersion Version;
+
 	/// Get the current version number of libopenshot (major, minor, and build number)
-	static OpenShotVersion GetVersion() {
-		OpenShotVersion version;
-
-		// Set version info
-		version.major = OPENSHOT_VERSION_MAJOR;
-		version.minor = OPENSHOT_VERSION_MINOR;
-		version.build = OPENSHOT_VERSION_BUILD;
-		version.so = OPENSHOT_VERSION_SO;
-
-		return version;
-	}
+	openshot::OpenShotVersion GetVersion();
 }
-#endif
+
+#endif // OPENSHOT_VERSION_H
