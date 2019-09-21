@@ -123,7 +123,7 @@
 %extend openshot::OpenShotVersion {
     // Give the struct a string representation
 	const std::string __str__() {
-		return std::string(openshot::OpenShotVersion::ToString());
+		return std::string(OPENSHOT_VERSION_FULL);
 	}
 }
 
