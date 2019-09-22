@@ -752,6 +752,8 @@ void FFmpegReader::UpdateVideoInfo() {
 				check_interlace = false;
 				break;
 		}
+		// check_interlace will prevent these checks being repeated,
+		// unless it was cleared because we got an AV_FIELD_UNKNOWN response.
 	}
 
 	// Set the video timebase
