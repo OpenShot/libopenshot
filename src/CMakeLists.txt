@@ -82,33 +82,14 @@ ENDIF (ImageMagick_FOUND)
 # Find FFmpeg libraries (used for video encoding / decoding)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
-IF (AVCODEC_FOUND)
-	include_directories(${AVCODEC_INCLUDE_DIRS})
-ENDIF (AVCODEC_FOUND)
-IF (AVDEVICE_FOUND)
-	include_directories(${AVDEVICE_INCLUDE_DIRS})
-ENDIF (AVDEVICE_FOUND)
-IF (AVFORMAT_FOUND)
-	include_directories(${AVFORMAT_INCLUDE_DIRS})
-ENDIF (AVFORMAT_FOUND)
-IF (AVFILTER_FOUND)
-	include_directories(${AVFILTER_INCLUDE_DIRS})
-ENDIF (AVFILTER_FOUND)
-IF (AVUTIL_FOUND)
-	include_directories(${AVUTIL_INCLUDE_DIRS})
-ENDIF (AVUTIL_FOUND)
-IF (POSTPROC_FOUND)
-	include_directories(${POSTPROC_INCLUDE_DIRS})
-ENDIF (POSTPROC_FOUND)
-IF (SWSCALE_FOUND)
-	include_directories(${SWSCALE_INCLUDE_DIRS})
-ENDIF (SWSCALE_FOUND)
-IF (SWRESAMPLE_FOUND)
-	include_directories(${SWRESAMPLE_INCLUDE_DIRS})
-ENDIF (SWRESAMPLE_FOUND)
-IF (AVRESAMPLE_FOUND)
-	include_directories(${AVRESAMPLE_INCLUDE_DIRS})
-ENDIF (AVRESAMPLE_FOUND)
+foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
+	if(${ffmpeg_comp}_FOUND)
+		# message(STATUS "Adding include dir for ${ffmpeg_comp}")
+		include_directories(${${ffmpeg_comp}_INCLUDE_DIRS})
+		add_definitions(${${ffmpeg_comp}_DEFINITIONS})
+		list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
+  endif()
+endforeach()
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -119,38 +100,17 @@ include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 ################# QT5 ###################
 # Find QT5 libraries
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5Multimedia REQUIRED)
-find_package(Qt5MultimediaWidgets REQUIRED)
-
-# Include Qt headers (needed for compile)
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-include_directories(${Qt5Core_INCLUDE_DIRS})
-include_directories(${Qt5Gui_INCLUDE_DIRS})
-include_directories(${Qt5Multimedia_INCLUDE_DIRS})
-include_directories(${Qt5MultimediaWidgets_INCLUDE_DIRS})
-
-add_definitions(${Qt5Widgets_DEFINITIONS})
-add_definitions(${Qt5Core_DEFINITIONS})
-add_definitions(${Qt5Gui_DEFINITIONS})
-add_definitions(${Qt5Multimedia_DEFINITIONS})
-add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
-
-SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES}
-		${Qt5Core_LIBRARIES}
-		${Qt5Gui_LIBRARIES}
-		${Qt5Multimedia_LIBRARIES}
-		${Qt5MultimediaWidgets_LIBRARIES})
-
-# Set compiler flags for Qt
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb ")
+foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
+	find_package(${qt_lib} REQUIRED)
+	# Header files
+	include_directories(${${qt_lib}_INCLUDE_DIRS})
+	# Compiler definitions
+	add_definitions(${${qt_lib}_DEFINITIONS})
+	# Other CFLAGS
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
+	# For use when linking
+	list(APPEND QT_LIBRARIES ${${qt_lib}_LIBRARIES})
+endforeach()
 
 # Manually moc Qt files
 qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
@@ -309,59 +269,32 @@ set_target_properties(openshot
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
+		${FF_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
 		${JSONCPP_LIBRARY}
 		${ZMQ_LIBRARIES}
 		)
 
-IF (AVCODEC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVCODEC_LIBRARIES} )
-ENDIF (AVCODEC_FOUND)
-IF (AVDEVICE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVDEVICE_LIBRARIES} )
-ENDIF (AVDEVICE_FOUND)
-IF (AVFORMAT_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVFORMAT_LIBRARIES} )
-ENDIF (AVFORMAT_FOUND)
-IF (AVFILTER_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVFILTER_LIBRARIES} )
-ENDIF (AVFILTER_FOUND)
-IF (AVUTIL_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVUTIL_LIBRARIES} )
-ENDIF (AVUTIL_FOUND)
-IF (POSTPROC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${POSTPROC_LIBRARIES} )
-ENDIF (POSTPROC_FOUND)
-IF (SWSCALE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${SWSCALE_LIBRARIES} )
-ENDIF (SWSCALE_FOUND)
-IF (SWRESAMPLE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${SWRESAMPLE_LIBRARIES} )
-ENDIF (SWRESAMPLE_FOUND)
-IF (AVRESAMPLE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVRESAMPLE_LIBRARIES} )
-ENDIF (AVRESAMPLE_FOUND)
-
 IF (RESVG_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${RESVG_LIBRARIES} )
+	list(APPEND REQUIRED_LIBRARIES ${RESVG_LIBRARIES})
 ENDIF(RESVG_FOUND)
 
 IF (OPENMP_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )
+	list(APPEND REQUIRED_LIBRARIES ${OpenMP_CXX_FLAGS})
 ENDIF (OPENMP_FOUND)
 
 IF (ImageMagick_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${ImageMagick_LIBRARIES} )
+  list(APPEND REQUIRED_LIBRARIES ${ImageMagick_LIBRARIES})
 ENDIF (ImageMagick_FOUND)
 
 IF (BLACKMAGIC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )
+	list(APPEND REQUIRED_LIBRARIES ${BLACKMAGIC_LIBRARY_DIR})
 ENDIF (BLACKMAGIC_FOUND)
 
 IF (WIN32)
 	# Required for exception handling on Windows
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} "imagehlp" "dbghelp" )
+	list(APPEND REQUIRED_LIBRARIES "imagehlp" "dbghelp" )
 ENDIF(WIN32)
 
 # Link all referenced libraries
@@ -400,7 +333,7 @@ add_subdirectory(bindings)
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
 
 # Install primary library
-INSTALL(  TARGETS openshot
+INSTALL(TARGETS openshot
 		ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 		LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 		RUNTIME DESTINATION ${LIB_INSTALL_DIR}
