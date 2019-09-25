@@ -82,11 +82,11 @@ ENDIF (ImageMagick_FOUND)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
 foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-	if(${ffmpeg_comp}_FOUND)
-		# Include FFmpeg headers (needed for compile)
-		list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-		add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-  endif()
+    if(${ffmpeg_comp}_FOUND)
+        # Include FFmpeg headers (needed for compile)
+        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
+        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
+    endif()
 endforeach()
 list(REMOVE_DUPLICATES FF_INCLUDES)
 include_directories(${FF_INCLUDES})
@@ -101,13 +101,13 @@ include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 ################# QT5 ###################
 # Find QT5 libraries
 foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
-	find_package(${qt_lib} REQUIRED)
-	# Header files
-	list(APPEND QT_INCLUDES ${${qt_lib}_INCLUDE_DIRS})
-	# Compiler definitions
-	add_definitions(${${qt_lib}_DEFINITIONS})
-	# Other CFLAGS
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
+    find_package(${qt_lib} REQUIRED)
+    # Header files
+    list(APPEND QT_INCLUDES ${${qt_lib}_INCLUDE_DIRS})
+    # Compiler definitions
+    add_definitions(${${qt_lib}_DEFINITIONS})
+    # Other CFLAGS
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
 endforeach()
 list(REMOVE_DUPLICATES QT_INCLUDES)
 include_directories(${QT_INCLUDES})

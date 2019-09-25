@@ -89,11 +89,11 @@ ENDIF (ImageMagick_FOUND)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
 foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-	if(${ffmpeg_comp}_FOUND)
-		list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-		add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-		list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
-  endif()
+    if(${ffmpeg_comp}_FOUND)
+        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
+        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
+        list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
+    endif()
 endforeach()
 list(REMOVE_DUPLICATES FF_INCLUDES)
 include_directories(${FF_INCLUDES})
@@ -108,15 +108,15 @@ include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 ################# QT5 ###################
 # Find QT5 libraries
 foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
-	find_package(${qt_lib} REQUIRED)
-	# Header files
-	include_directories(${${qt_lib}_INCLUDE_DIRS})
-	# Compiler definitions
-	add_definitions(${${qt_lib}_DEFINITIONS})
-	# Other CFLAGS
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
-	# For use when linking
-	list(APPEND QT_LIBRARIES ${${qt_lib}_LIBRARIES})
+    find_package(${qt_lib} REQUIRED)
+    # Header files
+    include_directories(${${qt_lib}_INCLUDE_DIRS})
+    # Compiler definitions
+    add_definitions(${${qt_lib}_DEFINITIONS})
+    # Other CFLAGS
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
+    # For use when linking
+    list(APPEND QT_LIBRARIES ${${qt_lib}_LIBRARIES})
 endforeach()
 
 # Manually moc Qt files
@@ -337,9 +337,9 @@ add_subdirectory(bindings)
 
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
-	INCLUDE_QUIET_PACKAGES
-        DESCRIPTION "Build configuration:"
-        VAR featuresText)
+    INCLUDE_QUIET_PACKAGES
+    DESCRIPTION "Build configuration:"
+    VAR featuresText)
 message("\n${featuresText}")
 
 ############### INSTALL HEADERS & LIBRARY ################
