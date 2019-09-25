@@ -90,12 +90,13 @@ FIND_PACKAGE(FFmpeg REQUIRED)
 
 foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
 	if(${ffmpeg_comp}_FOUND)
-		# message(STATUS "Adding include dir for ${ffmpeg_comp}")
-		include_directories(${${ffmpeg_comp}_INCLUDE_DIRS})
+		list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
 		add_definitions(${${ffmpeg_comp}_DEFINITIONS})
 		list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
   endif()
 endforeach()
+list(REMOVE_DUPLICATES FF_INCLUDES)
+include_directories(${FF_INCLUDES})
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
