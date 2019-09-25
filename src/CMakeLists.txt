@@ -27,6 +27,12 @@
 # Pick up our include directories from the parent context
 include_directories(${OPENSHOT_INCLUDE_DIRS})
 
+####### Display summary of options/dependencies ######
+include(FeatureSummary)
+#set_property(GLOBAL APPEND PROPERTY FeatureSummary_PKG_TYPES BUILD)
+#find_package(FOO)
+#set_package_properties(FOO PROPERTIES TYPE BUILD)
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
@@ -328,6 +334,12 @@ ENDIF (BLACKMAGIC_FOUND)
 ############### INCLUDE SWIG BINDINGS ################
 add_subdirectory(bindings)
 
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+	INCLUDE_QUIET_PACKAGES
+        DESCRIPTION "Build configuration:"
+        VAR featuresText)
+message("\n${featuresText}")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
