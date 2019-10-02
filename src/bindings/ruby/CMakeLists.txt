@@ -57,6 +57,13 @@ IF (RUBY_FOUND)
 	separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
 	set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
 
+	### Take include dirs from target, automatically if possible
+	if (CMAKE_VERSION VERSION_GREATER 3.13)
+		set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
+	else ()
+		set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+	endif ()
+
 	### Add the SWIG interface file (which defines all the SWIG methods)
 	if (CMAKE_VERSION VERSION_LESS 3.8.0)
 		swig_add_module(rbopenshot ruby openshot.i)
