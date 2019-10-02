@@ -2002,7 +2002,15 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts) {
 std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 	// Check working cache
 	std::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
+
 	if (!output) {
+		// Lock
+		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+
+		// (re-)Check working cache
+		output = working_cache.GetFrame(requested_frame);
+		if(output) return output;
+
 		// Create a new frame on the working cache
 		output = std::make_shared<Frame>(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels);
 		output->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
@@ -2015,8 +2023,7 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 		if (requested_frame > largest_frame_processed)
 			largest_frame_processed = requested_frame;
 	}
-
-	// Return new frame
+	// Return frame
 	return output;
 }
 
