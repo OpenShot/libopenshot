@@ -67,12 +67,16 @@ For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 #]=======================================================================]
 include(FindPackageHandleStandardArgs)
 
-# The default components were taken from a survey over other FindFFMPEG.cmake files
+set(FFmpeg_ALL_COMPONENTS avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
+
+# Default to all components, if not specified
+if (FFMPEG_FIND_COMPONENTS AND NOT FFmpeg_FIND_COMPONENTS)
+  set(FFmpeg_FIND_COMPONENTS ${FFMPEG_FIND_COMPONENTS})
+endif ()
 if (NOT FFmpeg_FIND_COMPONENTS)
-  set(FFmpeg_FIND_COMPONENTS avcodec avformat avutil)
+  set(FFmpeg_FIND_COMPONENTS ${FFmpeg_ALL_COMPONENTS})
 endif ()
 
-set(FFmpeg_ALL_COMPONENTS avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
 
 #
 ### Macro: set_component_found
@@ -81,12 +85,12 @@ set(FFmpeg_ALL_COMPONENTS avcodec avdevice avformat avfilter avutil postproc sws
 #
 macro(set_component_found _component )
   if (${_component}_LIBRARIES AND ${_component}_INCLUDE_DIRS)
-		# message(STATUS "FFmpeg - ${_component} found.")
+    # message(STATUS "FFmpeg - ${_component} found.")
     set(${_component}_FOUND TRUE)
   else ()
-		if (NOT FFmpeg_FIND_QUIETLY AND NOT FFMPEG_FIND_QUIETLY)
-			message(STATUS "FFmpeg - ${_component} not found.")
-		endif ()
+    if (NOT FFmpeg_FIND_QUIETLY AND NOT FFMPEG_FIND_QUIETLY)
+      message(STATUS "FFmpeg - ${_component} not found.")
+    endif ()
   endif ()
 endmacro()
 
@@ -108,25 +112,25 @@ macro(find_component _component _pkgconfig _library _header)
   endif (NOT WIN32)
 
   find_path(${_component}_INCLUDE_DIRS ${_header}
-      HINTS
-      /opt/
-      /opt/include/
-      ${PC_${_component}_INCLUDEDIR}
-      ${PC_${_component}_INCLUDE_DIRS}
-      $ENV{FFMPEGDIR}/include/
-      $ENV{FFMPEGDIR}/include/ffmpeg/
-      PATH_SUFFIXES
-      ffmpeg
-      )
+    HINTS
+    /opt/
+    /opt/include/
+    ${PC_${_component}_INCLUDEDIR}
+    ${PC_${_component}_INCLUDE_DIRS}
+    $ENV{FFMPEGDIR}/include/
+    $ENV{FFMPEGDIR}/include/ffmpeg/
+    PATH_SUFFIXES
+    ffmpeg
+    )
 
   find_library(${_component}_LIBRARIES NAMES ${_library}
-      HINTS
-      ${PC_${_component}_LIBDIR}
-      ${PC_${_component}_LIBRARY_DIRS}
-      $ENV{FFMPEGDIR}/lib/
-      $ENV{FFMPEGDIR}/lib/ffmpeg/
-      $ENV{FFMPEGDIR}/bin/
-      )
+    HINTS
+    ${PC_${_component}_LIBDIR}
+    ${PC_${_component}_LIBRARY_DIRS}
+    $ENV{FFMPEGDIR}/lib/
+    $ENV{FFMPEGDIR}/lib/ffmpeg/
+    $ENV{FFMPEGDIR}/bin/
+    )
 
   set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")
   set(${_component}_VERSION      ${PC_${_component}_VERSION}      CACHE STRING "The ${_component} version number.")
@@ -134,10 +138,11 @@ macro(find_component _component _pkgconfig _library _header)
   set_component_found(${_component})
 
   mark_as_advanced(
-      ${_component}_INCLUDE_DIRS
-      ${_component}_LIBRARIES
-      ${_component}_DEFINITIONS
-      ${_component}_VERSION)
+    ${_component}_INCLUDE_DIRS
+    ${_component}_LIBRARIES
+    ${_component}_DEFINITIONS
+    ${_component}_VERSION
+    )
 
 endmacro()
 
@@ -166,12 +171,12 @@ endif()
 foreach (_component ${FFmpeg_FIND_COMPONENTS})
   string(TOLOWER "${_component}" _component)
   if (${_component}_FOUND)
-		# message(STATUS "Requested component ${_component} present.")
+    # message(STATUS "Requested component ${_component} present.")
     set(FFmpeg_LIBRARIES   ${FFmpeg_LIBRARIES}   ${${_component}_LIBRARIES})
     set(FFmpeg_DEFINITIONS ${FFmpeg_DEFINITIONS} ${${_component}_DEFINITIONS})
     list(APPEND FFmpeg_INCLUDE_DIRS ${${_component}_INCLUDE_DIRS})
   else ()
-		# message(STATUS "Requested component ${_component} missing.")
+    # message(STATUS "Requested component ${_component} missing.")
   endif ()
 endforeach ()
 
@@ -186,8 +191,8 @@ set(FFmpeg_LIBRARIES    ${FFmpeg_LIBRARIES}    CACHE STRING "The FFmpeg librarie
 set(FFmpeg_DEFINITIONS  ${FFmpeg_DEFINITIONS}  CACHE STRING "The FFmpeg cflags." FORCE)
 
 mark_as_advanced(FFmpeg_INCLUDE_DIRS
-    FFmpeg_LIBRARIES
-    FFmpeg_DEFINITIONS)
+  FFmpeg_LIBRARIES
+  FFmpeg_DEFINITIONS)
 
 # Backwards compatibility
 foreach(_suffix INCLUDE_DIRS LIBRARIES DEFINITIONS)
@@ -210,7 +215,9 @@ endforeach()
 # Compile the list of required vars
 set(_FFmpeg_REQUIRED_VARS FFmpeg_LIBRARIES FFmpeg_INCLUDE_DIRS)
 foreach (_component ${FFmpeg_FIND_COMPONENTS})
-  list(APPEND _FFmpeg_REQUIRED_VARS ${_component}_LIBRARIES ${_component}_INCLUDE_DIRS)
+  list(APPEND _FFmpeg_REQUIRED_VARS
+    ${_component}_LIBRARIES
+    ${_component}_INCLUDE_DIRS)
 endforeach ()
 
 # Give a nice error message if some of the required vars are missing.
@@ -220,7 +227,7 @@ find_package_handle_standard_args(FFmpeg DEFAULT_MSG ${_FFmpeg_REQUIRED_VARS})
 foreach (_component ${FFmpeg_ALL_COMPONENTS})
 
   if(${_component}_FOUND)
-		# message(STATUS "Creating IMPORTED target FFmpeg::${_component}")
+    # message(STATUS "Creating IMPORTED target FFmpeg::${_component}")
 
     if(NOT TARGET FFmpeg::${_component})
       add_library(FFmpeg::${_component} UNKNOWN IMPORTED)
