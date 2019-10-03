@@ -35,7 +35,8 @@ include(FeatureSummary)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
-OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -166,18 +167,6 @@ if (RESVG_FOUND)
    SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	message(STATUS "Discovering system JsonCPP (USE_SYSTEM_JSONCPP enabled)")
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-	message(STATUS "Discovering system JsonCPP - done")
-else()
-	message(STATUS "Using embedded JsonCpp (USE_SYSTEM_JSONCPP not enabled)")
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -229,12 +218,6 @@ SET ( OPENSHOT_SOURCE_FILES
 		${QT_PLAYER_FILES}
 		${MOC_FILES})
 
-IF (NOT USE_SYSTEM_JSONCPP)
-	# Third Party JSON Parser
-	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			../thirdparty/jsoncpp/jsoncpp.cpp )
-ENDIF (NOT USE_SYSTEM_JSONCPP)
-
 # ImageMagic related files
 IF (ImageMagick_FOUND)
 	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
@@ -273,13 +256,35 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+################### JSONCPP #####################
+# Include jsoncpp headers (needed for JSON parsing)
+if (USE_SYSTEM_JSONCPP)
+	message(STATUS "Looking for system JsonCpp")
+	find_package(JsonCpp)
+endif ()
+
+if (JSONCPP_FOUND)
+	target_include_directories(openshot PUBLIC ${JSONCPP_INCLUDE_DIRS})
+  target_link_libraries(openshot PUBLIC ${JSONCPP_LIBRARY})
+elseif (NOT DISABLE_BUNDLED_JSONCPP)
+	message(STATUS "Using embedded JsonCpp (not found or USE_SYSTEM_JSONCPP disabled)")
+	target_include_directories(openshot PUBLIC "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
+	target_sources(openshot PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+else ()
+  message(STATUS "Required package JsonCpp not available, aborting")
+  set(JsonCpp_FOUND False)
+  find_package(JsonCpp CONFIG REQUIRED
+		NO_DEFAULT_PATH
+		NO_CMAKE_PACKAGE_REGISTRY
+		NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
+endif ()
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${FF_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
-		${JSONCPP_LIBRARY}
 		${ZMQ_LIBRARIES}
 		)
 
@@ -305,7 +310,7 @@ IF (WIN32)
 ENDIF(WIN32)
 
 # Link all referenced libraries
-target_link_libraries(openshot ${REQUIRED_LIBRARIES})
+target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 
 
 ############### CLI EXECUTABLE ################
