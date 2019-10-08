@@ -275,7 +275,7 @@ set_target_properties(openshot
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
+FIND_PACKAGE(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)
 
 foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
   if(TARGET FFmpeg::${ff_comp})
