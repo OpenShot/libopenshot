@@ -66,7 +66,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 	}
 
 	// Debug
-	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::GetMoreSamplesFromReader", "amount_needed", amount_needed, "amount_remaining", amount_remaining, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::GetMoreSamplesFromReader", "amount_needed", amount_needed, "amount_remaining", amount_remaining);
 
 	// Init estimated buffer equal to the current frame position (before getting more samples)
 	estimated_frame = frame_number;
@@ -149,7 +149,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	int channels = buffer->getNumChannels();
 
 	// Debug
-	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
 
 	// Reverse array (create new buffer to hold the reversed version)
 	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);

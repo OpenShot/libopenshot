@@ -34,7 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <stdlib.h>
+#include <cstdlib>
 #include <sstream>
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"
@@ -57,8 +57,7 @@ namespace openshot
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
 	 * Each derived class of ReaderBase is responsible for updating this struct to reflect accurate information
-	 * about the streams. Derived classes of ReaderBase should call the InitFileInfo() method to initialize the
-	 * default values of this struct.
+	 * about the streams.
 	 */
 	struct ReaderInfo
 	{
@@ -95,7 +94,7 @@ namespace openshot
 	 *
 	 * Readers are types of classes that read video, audio, and image files, and
 	 * return openshot::Frame objects. The only requirements for a 'reader', are to
-	 * derive from this base class, implement the GetFrame method, and call the InitFileInfo() method.
+	 * derive from this base class, implement the GetFrame method, and populate ReaderInfo.
 	 */
 	class ReaderBase
 	{

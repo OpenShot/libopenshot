@@ -26,7 +26,7 @@
 
 
 ############### SWIG PYTHON BINDINGS ################
-FIND_PACKAGE(SWIG 2.0 REQUIRED)
+FIND_PACKAGE(SWIG 3.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
@@ -50,6 +50,12 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 	SET(CMAKE_SWIG_FLAGS "")
 
+	### Suppress a ton of warnings in the generated SWIG C++ code
+	set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
+-Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
+	separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
+	set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+
 	### Add the SWIG interface file (which defines all the SWIG methods)
 	if (CMAKE_VERSION VERSION_LESS 3.8.0)
 		swig_add_module(pyopenshot python openshot.i)
@@ -65,7 +71,7 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME}
 	                      ${PYTHON_LIBRARIES} openshot)
 
-    ### Check if the following Debian-friendly python module path exists
+	### Check if the following Debian-friendly python module path exists
 	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages")
 	if (NOT EXISTS ${PYTHON_MODULE_PATH})
 
