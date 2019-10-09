@@ -27,28 +27,6 @@
 # Pick up our include directories from the parent context
 include_directories(${OPENSHOT_INCLUDE_DIRS})
 
-SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
-SET(TEST_PLUGINS_PATH "${PROJECT_SOURCE_DIR}/plugins/")
-add_definitions( -DTEST_PLUGINS_PATH="${TEST_PLUGINS_PATH}" )
-
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-IF (WIN32)
-	STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-ENDIF(WIN32)
-
-add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-################### UNITTEST++ #####################
-# Find UnitTest++ libraries (used for unit testing)
-FIND_PACKAGE(UnitTest++ REQUIRED)
-
-# Include UnitTest++ headers (needed for compile)
-include_directories(${UNITTEST++_INCLUDE_DIR})
-
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
 IF (MAGICKCORE_QUANTUM_DEPTH)
@@ -159,38 +137,25 @@ if (USE_SYSTEM_JSONCPP)
 	find_package(JsonCpp REQUIRED)
 	include_directories(${JSONCPP_INCLUDE_DIRS})
 else()
-	include_directories("../thirdparty/jsoncpp")
+	include_directories("../../thirdparty/jsoncpp")
 endif(USE_SYSTEM_JSONCPP)
 
-IF (NOT DISABLE_TESTS)
-	###############  SET TEST SOURCE FILES  #################
-	SET ( OPENSHOT_TEST_FILES tests.cpp
-		   Cache_Tests.cpp
-		   Clip_Tests.cpp
-		   Color_Tests.cpp
-		   Coordinate_Tests.cpp
-           DynamicEffects_Tests.cpp
-		   ReaderBase_Tests.cpp
-		   ImageWriter_Tests.cpp
-		   FFmpegReader_Tests.cpp
-		   FFmpegWriter_Tests.cpp
-		   Fraction_Tests.cpp
-		   FrameMapper_Tests.cpp
-		   KeyFrame_Tests.cpp
-		   Point_Tests.cpp
-		   Settings_Tests.cpp
-		   Timeline_Tests.cpp )
+SET ( EFFECT_SOURCE_FILES
+		SuperBlur.cpp)
 
-	################ TESTER EXECUTABLE #################
-	# Create unit test executable (openshot-test)
-	add_executable(openshot-test
-				   tests.cpp
-				   ${OPENSHOT_TEST_FILES} )
+IF (NOT DISABLE_EXTERNAL_EFFECTS)
+	# Create shared openshot library
+	add_library(libeffectsuperblur SHARED
+			${EFFECT_SOURCE_FILES})
 
-	# Link libraries to the new executable
-	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} libeffectsuperblur)
+	set(LIB_INSTALL_DIR libeffect${LIB_SUFFIX}) # determine correct lib folder
 
-	#################### MAKE TEST ######################
-	# Hook up the 'make os_test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
-ENDIF (NOT DISABLE_TESTS)
+	add_custom_command(
+			TARGET libeffectsuperblur
+			POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy
+			$<TARGET_FILE:libeffectsuperblur>
+			${PROJECT_SOURCE_DIR}/plugins/$<TARGET_FILE_NAME:libeffectsuperblur>
+	)
+
+ENDIF (NOT DISABLE_EXTERNAL_EFFECTS)

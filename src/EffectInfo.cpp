@@ -30,9 +30,9 @@
 
 #include "../include/EffectInfo.h"
 
-
 using namespace openshot;
-
+static map<string, EffectBase*(*)()> m_loadedDynamicEffects;
+static vector<void*> m_loadedDynamicHandles;
 
 // Generate JSON string of this object
 string EffectInfo::Json() {
@@ -43,6 +43,11 @@ string EffectInfo::Json() {
 
 // Create a new effect instance
 EffectBase* EffectInfo::CreateEffect(string effect_type) {
+    // Try to find dynamically loaded effect
+    auto effect_factory = m_loadedDynamicEffects.find(effect_type);
+    if (effect_factory != m_loadedDynamicEffects.end())
+        return effect_factory->second();
+
 	// Init the matching effect object
 	if (effect_type == "Bars")
 		return new Bars();
@@ -88,6 +93,52 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 	return NULL;
 }
 
+#if defined(__linux__)
+EffectBase* EffectInfo::LoadEffect(string location){
+    pthread_mutex_lock(&m_mutex);
+
+    void * file = dlopen(location.c_str(), RTLD_NOW);
+    if (file == nullptr){
+        pthread_mutex_unlock(&m_mutex);
+        return nullptr;
+    }
+    void * factory_ptr = dlsym(file, "factory");
+    if (factory_ptr == nullptr){
+        pthread_mutex_unlock(&m_mutex);
+        return nullptr;
+    }
+
+    EffectBase * (*factory)();
+    factory = (EffectBase* (*)()) factory_ptr;
+
+    EffectBase* instance = factory();
+    m_loadedDynamicEffects.insert(make_pair(instance->info.name, factory));
+    m_loadedDynamicHandles.insert(m_loadedDynamicHandles.end(), file);
+
+    pthread_mutex_unlock(&m_mutex);
+    return instance;
+}
+
+void EffectInfo::UnloadDynamicEffects(){
+    pthread_mutex_lock(&m_mutex);
+    for (auto & handle : m_loadedDynamicHandles){
+        dlclose(handle);
+    }
+
+    m_loadedDynamicEffects.clear();
+    m_loadedDynamicHandles.clear();
+    pthread_mutex_unlock(&m_mutex);
+}
+#else
+EffectBase* EffectInfo::LoadEffect(string location){
+    return NULL;
+}
+
+void EffectInfo::UnloadDynamicEffects(){
+
+}
+#endif
+
 // Generate Json::JsonValue for this object
 Json::Value EffectInfo::JsonValue() {
 
@@ -109,6 +160,12 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+
+	for (auto & effect : m_loadedDynamicEffects){
+	    auto instance = effect.second();
+	    root.append(instance->JsonInfo());
+	    delete instance;
+	}
 
 	// return JsonValue
 	return root;
