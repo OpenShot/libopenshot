@@ -261,18 +261,34 @@ set_target_properties(openshot
 if (USE_SYSTEM_JSONCPP)
 	message(STATUS "Looking for system JsonCpp")
 	find_package(JsonCpp)
+	if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
+		# Create the expected target, for older installs that don't
+		add_library(jsoncpp_lib INTERFACE)
+		target_include_directories(jsoncpp_lib INTERFACE
+			${JSONCPP_INCLUDE_DIRS})
+		target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
+	endif ()
 endif ()
 
-if (JSONCPP_FOUND)
-	target_include_directories(openshot PUBLIC ${JSONCPP_INCLUDE_DIRS})
-  target_link_libraries(openshot PUBLIC ${JSONCPP_LIBRARY})
-elseif (NOT DISABLE_BUNDLED_JSONCPP)
+if (NOT JSONCPP_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
 	message(STATUS "Using embedded JsonCpp (not found or USE_SYSTEM_JSONCPP disabled)")
-	target_include_directories(openshot PUBLIC "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
-	target_sources(openshot PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+  if (NOT TARGET jsoncpp_lib)
+    add_library(jsoncpp_lib INTERFACE)
+    target_include_directories(jsoncpp_lib INTERFACE
+      "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
+  	target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+  endif ()
+	add_feature_info("JsonCpp (embedded)" TRUE "JsonCpp will be compiled from the bundled sources")
+endif ()
+
+# If we found any usable JsonCpp, use it. Otherwise, bail.
+if (TARGET jsoncpp_lib)
+  target_link_libraries(openshot PUBLIC jsoncpp_lib)
 else ()
+  # The following find_package will always fail, and is just meant to abort in
+  # a contrived manner, tying the failure to JsonCpp package discovery.
   message(STATUS "Required package JsonCpp not available, aborting")
-  set(JsonCpp_FOUND False)
+  set(JSONCPP_FOUND False)
   find_package(JsonCpp CONFIG REQUIRED
 		NO_DEFAULT_PATH
 		NO_CMAKE_PACKAGE_REGISTRY
