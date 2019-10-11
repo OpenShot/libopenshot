@@ -284,16 +284,11 @@ endif ()
 # If we found any usable JsonCpp, use it. Otherwise, bail.
 if (TARGET jsoncpp_lib)
   target_link_libraries(openshot PUBLIC jsoncpp_lib)
-else ()
-  # The following find_package will always fail, and is just meant to abort in
-  # a contrived manner, tying the failure to JsonCpp package discovery.
-  message(STATUS "Required package JsonCpp not available, aborting")
-  set(JSONCPP_FOUND False)
-  find_package(JsonCpp CONFIG REQUIRED
-		NO_DEFAULT_PATH
-		NO_CMAKE_PACKAGE_REGISTRY
-		NO_CMAKE_SYSTEM_PACKAGE_REGISTRY)
 endif ()
+
+# JsonCpp is actually required, even though we probe for it optionally
+# (This tells feature_summary() to bail if it's not found, later)
+set_package_properties(JsonCpp PROPERTIES TYPE REQUIRED)
 
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
@@ -359,9 +354,8 @@ add_subdirectory(bindings)
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
     INCLUDE_QUIET_PACKAGES
-    DESCRIPTION "Build configuration:"
-    VAR featuresText)
-message("\n${featuresText}")
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
