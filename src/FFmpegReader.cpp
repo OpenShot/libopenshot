@@ -729,6 +729,33 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
+	// Get scan type and order from codec context/params
+	if (!check_interlace) {
+		check_interlace = true;
+		AVFieldOrder field_order = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->field_order;
+		switch(field_order) {
+			case AV_FIELD_PROGRESSIVE:
+				info.interlaced_frame = false;
+				break;
+			case AV_FIELD_TT:
+			case AV_FIELD_TB:
+				info.interlaced_frame = true;
+				info.top_field_first = true;
+				break;
+			case AV_FIELD_BT:
+			case AV_FIELD_BB:
+				info.interlaced_frame = true;
+				info.top_field_first = false;
+				break;
+			case AV_FIELD_UNKNOWN:
+				// Check again later?
+				check_interlace = false;
+				break;
+		}
+		// check_interlace will prevent these checks being repeated,
+		// unless it was cleared because we got an AV_FIELD_UNKNOWN response.
+	}
+
 	// Set the video timebase
 	info.video_timebase.num = pStream->time_base.num;
 	info.video_timebase.den = pStream->time_base.den;
@@ -1078,14 +1105,14 @@ bool FFmpegReader::GetAVFrame() {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)");
 		}
 		else {
-				AVFrame *next_frame2;
-				if (hw_de_on && hw_de_supported) {
-					next_frame2 = AV_ALLOCATE_FRAME();
-				}
-				else
-				{
-					next_frame2 = next_frame;
-				}
+			AVFrame *next_frame2;
+			if (hw_de_on && hw_de_supported) {
+				next_frame2 = AV_ALLOCATE_FRAME();
+			}
+			else
+			{
+				next_frame2 = next_frame;
+			}
 			pFrame = AV_ALLOCATE_FRAME();
 			while (ret >= 0) {
 				ret =  avcodec_receive_frame(pCodecCtx, next_frame2);
@@ -1119,11 +1146,6 @@ bool FFmpegReader::GetAVFrame() {
 					av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
 					av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
 												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
-					if (!check_interlace)	{
-						check_interlace = true;
-						info.interlaced_frame = next_frame->interlaced_frame;
-						info.top_field_first = next_frame->top_field_first;
-					}
 				}
 			}
 			if (hw_de_on && hw_de_supported) {
@@ -1143,13 +1165,6 @@ bool FFmpegReader::GetAVFrame() {
 			avpicture_alloc((AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
 							info.height);
-
-			// Detect interlaced frame (only once)
-			if (!check_interlace) {
-				check_interlace = true;
-				info.interlaced_frame = next_frame->interlaced_frame;
-				info.top_field_first = next_frame->top_field_first;
-			}
 		}
 #endif
 	}
