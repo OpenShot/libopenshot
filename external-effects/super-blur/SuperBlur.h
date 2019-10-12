@@ -55,7 +55,7 @@ using namespace std;
 extern "C" {
 #endif
 
-void * factory();
+void * factory(uint16_t);
 
 #ifdef __cplusplus
 }

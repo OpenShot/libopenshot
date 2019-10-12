@@ -31,22 +31,22 @@
 #include "../include/EffectInfo.h"
 
 using namespace openshot;
-static map<string, EffectBase*(*)()> m_loadedDynamicEffects;
+static map<std::string, EffectBase*(*)(uint16_t)> m_loadedDynamicEffects;
 static vector<void*> m_loadedDynamicHandles;
 
 // Generate JSON string of this object
-string EffectInfo::Json() {
+std::string EffectInfo::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Create a new effect instance
-EffectBase* EffectInfo::CreateEffect(string effect_type) {
+EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
     // Try to find dynamically loaded effect
     auto effect_factory = m_loadedDynamicEffects.find(effect_type);
     if (effect_factory != m_loadedDynamicEffects.end())
-        return effect_factory->second();
+        return effect_factory->second(OPENSHOT_PLUGIN_API_VERSION);
 
 	// Init the matching effect object
 	if (effect_type == "Bars")
@@ -94,24 +94,31 @@ EffectBase* EffectInfo::CreateEffect(string effect_type) {
 }
 
 #if defined(__linux__)
-EffectBase* EffectInfo::LoadEffect(string location){
+EffectBase* EffectInfo::LoadEffect(std::string location){
     pthread_mutex_lock(&m_mutex);
 
     void * file = dlopen(location.c_str(), RTLD_NOW);
     if (file == nullptr){
         pthread_mutex_unlock(&m_mutex);
-        return nullptr;
+        throw InvalidFile("Can not open file", location.c_str());
     }
     void * factory_ptr = dlsym(file, "factory");
+
     if (factory_ptr == nullptr){
         pthread_mutex_unlock(&m_mutex);
-        return nullptr;
+        throw InvalidFile("Can not find requested plugin API in file", location.c_str());
     }
 
-    EffectBase * (*factory)();
-    factory = (EffectBase* (*)()) factory_ptr;
+    EffectBase * (*factory)(uint16_t);
+    factory = (EffectBase* (*)(uint16_t)) factory_ptr;
 
-    EffectBase* instance = factory();
+    EffectBase* instance = factory(OPENSHOT_PLUGIN_API_VERSION);
+
+    if (instance == nullptr){
+        pthread_mutex_unlock(&m_mutex);
+        throw InvalidFile("Plugin does not support current version of openshot", location.c_str());
+    }
+
     m_loadedDynamicEffects.insert(make_pair(instance->info.name, factory));
     m_loadedDynamicHandles.insert(m_loadedDynamicHandles.end(), file);
 
@@ -130,7 +137,7 @@ void EffectInfo::UnloadDynamicEffects(){
     pthread_mutex_unlock(&m_mutex);
 }
 #else
-EffectBase* EffectInfo::LoadEffect(string location){
+EffectBase* EffectInfo::LoadEffect(std::string location){
     return NULL;
 }
 
@@ -162,7 +169,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Wave().JsonInfo());
 
 	for (auto & effect : m_loadedDynamicEffects){
-	    auto instance = effect.second();
+	    auto instance = effect.second(OPENSHOT_PLUGIN_API_VERSION);
 	    root.append(instance->JsonInfo());
 	    delete instance;
 	}

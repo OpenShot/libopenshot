@@ -143,19 +143,8 @@ endif(USE_SYSTEM_JSONCPP)
 SET ( EFFECT_SOURCE_FILES
 		SuperBlur.cpp)
 
-IF (NOT DISABLE_EXTERNAL_EFFECTS)
-	# Create shared openshot library
-	add_library(libeffectsuperblur SHARED
-			${EFFECT_SOURCE_FILES})
+# Create shared openshot library
+add_library(effectsuperblur SHARED
+		${EFFECT_SOURCE_FILES})
 
-	set(LIB_INSTALL_DIR libeffect${LIB_SUFFIX}) # determine correct lib folder
-
-	add_custom_command(
-			TARGET libeffectsuperblur
-			POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy
-			$<TARGET_FILE:libeffectsuperblur>
-			${PROJECT_SOURCE_DIR}/plugins/$<TARGET_FILE_NAME:libeffectsuperblur>
-	)
-
-ENDIF (NOT DISABLE_EXTERNAL_EFFECTS)
+set(LIB_INSTALL_DIR libeffect${LIB_SUFFIX}) # determine correct lib folder

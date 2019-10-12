@@ -28,8 +28,6 @@
 include_directories(${OPENSHOT_INCLUDE_DIRS})
 
 SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
-SET(TEST_PLUGINS_PATH "${PROJECT_SOURCE_DIR}/plugins/")
-add_definitions( -DTEST_PLUGINS_PATH="${TEST_PLUGINS_PATH}" )
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -187,8 +185,15 @@ IF (NOT DISABLE_TESTS)
 				   tests.cpp
 				   ${OPENSHOT_TEST_FILES} )
 
-	# Link libraries to the new executable
-	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} libeffectsuperblur)
+	IF (NOT DISABLE_EXTERNAL_EFFECTS)
+		# Link libraries to the new executable
+		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} effectsuperblur)
+		add_definitions(-DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffectsuperblur.so"
+						-DTEST_PLUGIN_NAME="SuperBlur")
+	ELSE()
+		# Link libraries to the new executable
+		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+	ENDIF(NOT DISABLE_EXTERNAL_EFFECTS)
 
 	#################### MAKE TEST ######################
 	# Hook up the 'make os_test' target to the 'openshot-test' executable

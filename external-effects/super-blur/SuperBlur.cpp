@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-void * factory(){
+void * factory(uint16_t openshot_version){
     return (void *)new SuperBlur();
 }
 

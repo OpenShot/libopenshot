@@ -41,9 +41,6 @@
 #include <dlfcn.h>
 #endif
 
-
-using namespace std;
-
 namespace openshot
 {
 
@@ -57,16 +54,16 @@ namespace openshot
 	{
 	public:
 		// Create an instance of an effect (factory style)
-		EffectBase* CreateEffect(string effect_type);
+		EffectBase* CreateEffect(std::string effect_type);
 
 		// Load effect built in shared library (factory style)
-		EffectBase* LoadEffect(string location);
+		EffectBase* LoadEffect(std::string location);
 
 		// Unload all effect loaded dynamically
 		void UnloadDynamicEffects();
 
 		/// JSON methods
-		static string Json(); ///< Generate JSON string of this object
+		static std::string Json(); ///< Generate JSON string of this object
 		static Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 
     private:

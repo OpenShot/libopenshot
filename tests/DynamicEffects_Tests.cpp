@@ -31,13 +31,9 @@
 #include "UnitTest++.h"
 #include "../include/OpenShot.h"
 
-#ifdef TEST_PLUGINS_PATH
-#define TEST_PLUGINS_PATH_LIB TEST_PLUGINS_PATH "liblibeffectsuperblur.so"
-#else
-#define TEST_PLUGINS_PATH_LIB "liblibeffectsuperblur.so"
-#endif
+#ifdef TEST_PLUGIN
+#if defined(__linux__)
 
-using namespace std;
 using namespace openshot;
 
 
@@ -46,7 +42,7 @@ TEST(DynamicEffect_Loader)
     auto effect_info = EffectInfo();
     effect_info.UnloadDynamicEffects();
 
-    auto effect = effect_info.LoadEffect(TEST_PLUGINS_PATH_LIB);
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
 
     CHECK(effect != nullptr);
 
@@ -59,13 +55,13 @@ TEST(DynamicEffect_DoubleLoader)
     auto effect_info = EffectInfo();
     effect_info.UnloadDynamicEffects();
 
-    auto effect = effect_info.LoadEffect(TEST_PLUGINS_PATH_LIB);
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
 
     CHECK(effect != nullptr);
 
     delete effect;
 
-    effect = effect_info.LoadEffect(TEST_PLUGINS_PATH_LIB);
+    effect = effect_info.LoadEffect(TEST_PLUGIN);
 
     CHECK(effect != nullptr);
 
@@ -78,16 +74,18 @@ TEST(DynamicEffect_ReachByName)
     auto effect_info = EffectInfo();
     effect_info.UnloadDynamicEffects();
 
-    auto effect = effect_info.LoadEffect(TEST_PLUGINS_PATH_LIB);
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
 
     CHECK(effect != nullptr);
 
     delete effect;
 
-    effect = effect_info.CreateEffect("SuperBlur");
+    effect = effect_info.CreateEffect(TEST_PLUGIN_NAME);
 
     CHECK(effect != nullptr);
 
     delete effect;
 }
 
+#endif
+#endif
