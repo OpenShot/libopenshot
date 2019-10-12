@@ -61,6 +61,14 @@ namespace openshot {
 		int64_t frame_number;
 		int64_t chunk_number;
 		int64_t chunk_frame;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param frame_number The frame number being processed
+		 * @param chunk_number The chunk requested
+		 * @param chunk_frame The chunk frame
+		 */
 		ChunkNotFound(std::string message, int64_t frame_number, int64_t chunk_number, int64_t chunk_frame)
 			: BaseException(message), frame_number(frame_number), chunk_number(chunk_number), chunk_frame(chunk_frame) { }
 		virtual ~ChunkNotFound() noexcept {}
@@ -71,6 +79,11 @@ namespace openshot {
 	class DecklinkError : public BaseException
 	{
 	public:
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 */
 		DecklinkError(std::string message)
 			: BaseException(message) { }
 		virtual ~DecklinkError() noexcept {}
@@ -81,6 +94,12 @@ namespace openshot {
 	{
 	public:
 		int64_t frame_number;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param frame_number The frame number being processed
+		 */
 		ErrorDecodingAudio(std::string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorDecodingAudio() noexcept {}
@@ -91,6 +110,12 @@ namespace openshot {
 	{
 	public:
 		int64_t frame_number;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param frame_number The frame number being processed
+		 */
 		ErrorEncodingAudio(std::string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingAudio() noexcept {}
@@ -101,6 +126,12 @@ namespace openshot {
 	{
 	public:
 		int64_t frame_number;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param frame_number The frame number being processed
+		 */
 		ErrorEncodingVideo(std::string message, int64_t frame_number)
 			: BaseException(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingVideo() noexcept {}
@@ -111,7 +142,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidChannels(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidChannels(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidChannels() noexcept {}
 	};
@@ -121,7 +158,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidCodec(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidCodec(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidCodec() noexcept {}
 	};
@@ -131,6 +174,12 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path The input file being processed
+		 */
 		InvalidFile(std::string message, std::string file_path)
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidFile() noexcept {}
@@ -141,7 +190,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidFormat(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidFormat(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidFormat() noexcept {}
 	};
@@ -151,7 +206,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidJSON(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidJSON(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidJSON() noexcept {}
 	};
@@ -161,7 +222,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidOptions(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidOptions(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidOptions() noexcept {}
 	};
@@ -171,7 +238,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		InvalidSampleRate(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		InvalidSampleRate(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~InvalidSampleRate() noexcept {}
 	};
@@ -181,6 +254,12 @@ namespace openshot {
 	{
 	public:
 		std::string json;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param json The json data being processed
+		 */
 		InvalidJSONKey(std::string message, std::string json)
 			: BaseException(message), json(json) { }
 		virtual ~InvalidJSONKey() noexcept {}
@@ -191,7 +270,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		NoStreamsFound(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		NoStreamsFound(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~NoStreamsFound() noexcept {}
 	};
@@ -202,6 +287,13 @@ namespace openshot {
 	public:
 		int64_t FrameRequested;
 		int64_t MaxFrames;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param frame_requested The out-of-bounds frame number requested
+		 * @param max_frames The maximum available frame number
+		 */
 		OutOfBoundsFrame(std::string message, int64_t frame_requested, int64_t max_frames)
 			: BaseException(message), FrameRequested(frame_requested), MaxFrames(max_frames) { }
 		virtual ~OutOfBoundsFrame() noexcept {}
@@ -213,6 +305,13 @@ namespace openshot {
 	public:
 		int PointRequested;
 		int MaxPoints;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param point_requested The out-of-bounds point requested
+		 * @param max_points The maximum available point value
+		 */
 		OutOfBoundsPoint(std::string message, int point_requested, int max_points)
 			: BaseException(message), PointRequested(point_requested), MaxPoints(max_points) { }
 		virtual ~OutOfBoundsPoint() noexcept {}
@@ -223,7 +322,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		OutOfMemory(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		OutOfMemory(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~OutOfMemory() noexcept {}
 	};
@@ -233,7 +338,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		ReaderClosed(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		ReaderClosed(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~ReaderClosed() noexcept {}
 	};
@@ -243,7 +354,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		ResampleError(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		ResampleError(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~ResampleError() noexcept {}
 	};
@@ -253,7 +370,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		TooManySeeks(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		TooManySeeks(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~TooManySeeks() noexcept {}
 	};
@@ -263,7 +386,13 @@ namespace openshot {
 	{
 	public:
 		std::string file_path;
-		WriterClosed(std::string message, std::string file_path)
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The output file being written
+		 */
+		WriterClosed(std::string message, std::string file_path="")
 			: BaseException(message), file_path(file_path) { }
 		virtual ~WriterClosed() noexcept {}
 	};
