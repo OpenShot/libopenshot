@@ -187,8 +187,8 @@ IF (NOT DISABLE_TESTS)
 
 	IF (NOT DISABLE_EXTERNAL_EFFECTS)
 		# Link libraries to the new executable
-		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} effectsuperblur)
-		add_definitions(-DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffectsuperblur.so"
+		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} effect-superblur)
+		add_definitions(-DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffect-superblur.so"
 						-DTEST_PLUGIN_NAME="SuperBlur")
 	ELSE()
 		# Link libraries to the new executable

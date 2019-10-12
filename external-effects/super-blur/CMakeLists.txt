@@ -144,7 +144,7 @@ SET ( EFFECT_SOURCE_FILES
 		SuperBlur.cpp)
 
 # Create shared openshot library
-add_library(effectsuperblur SHARED
+add_library(effect-superblur SHARED
 		${EFFECT_SOURCE_FILES})
 
 set(LIB_INSTALL_DIR libeffect${LIB_SUFFIX}) # determine correct lib folder
