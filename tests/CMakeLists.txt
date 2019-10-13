@@ -167,7 +167,6 @@ IF (NOT DISABLE_TESTS)
 		   Clip_Tests.cpp
 		   Color_Tests.cpp
 		   Coordinate_Tests.cpp
-           DynamicEffects_Tests.cpp
 		   ReaderBase_Tests.cpp
 		   ImageWriter_Tests.cpp
 		   FFmpegReader_Tests.cpp
@@ -179,20 +178,25 @@ IF (NOT DISABLE_TESTS)
 		   Settings_Tests.cpp
 		   Timeline_Tests.cpp )
 
+
+	IF (NOT DISABLE_EXTERNAL_EFFECTS)
+		list(APPEND OPENSHOT_TEST_FILES
+				DynamicEffects_Tests.cpp)
+	ENDIF(NOT DISABLE_EXTERNAL_EFFECTS)
+
 	################ TESTER EXECUTABLE #################
 	# Create unit test executable (openshot-test)
 	add_executable(openshot-test
 				   tests.cpp
 				   ${OPENSHOT_TEST_FILES} )
 
+
+	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+
 	IF (NOT DISABLE_EXTERNAL_EFFECTS)
-		# Link libraries to the new executable
-		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY} effect-superblur)
 		add_definitions(-DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffect-superblur.so"
 						-DTEST_PLUGIN_NAME="SuperBlur")
-	ELSE()
-		# Link libraries to the new executable
-		target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+		add_dependencies(openshot-test effect-superblur)
 	ENDIF(NOT DISABLE_EXTERNAL_EFFECTS)
 
 	#################### MAKE TEST ######################
