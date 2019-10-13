@@ -121,7 +121,7 @@ EffectBase* EffectInfo::LoadEffect(std::string location){
         throw InvalidFile("Plugin does not support current version of openshot", location.c_str());
     }
 
-    m_loadedDynamicEffects.insert(make_pair(instance->info.name, factory));
+    m_loadedDynamicEffects.insert(make_pair(std::string(instance->info.name), factory));
     m_loadedDynamicHandles.insert(m_loadedDynamicHandles.end(), file);
 
     pthread_mutex_unlock(&m_mutex);
@@ -130,6 +130,7 @@ EffectBase* EffectInfo::LoadEffect(std::string location){
 
 void EffectInfo::UnloadDynamicEffects(){
     pthread_mutex_lock(&m_mutex);
+
     for (auto & handle : m_loadedDynamicHandles){
         dlclose(handle);
     }
