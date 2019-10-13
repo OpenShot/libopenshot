@@ -106,6 +106,7 @@ EffectBase* EffectInfo::LoadEffect(std::string location){
 
     if (factory_ptr == nullptr){
         pthread_mutex_unlock(&m_mutex);
+        dlclose(file);
         throw InvalidFile("Can not find requested plugin API in file", location.c_str());
     }
 
@@ -116,6 +117,7 @@ EffectBase* EffectInfo::LoadEffect(std::string location){
 
     if (instance == nullptr){
         pthread_mutex_unlock(&m_mutex);
+        dlclose(file);
         throw InvalidFile("Plugin does not support current version of openshot", location.c_str());
     }
 
