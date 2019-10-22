@@ -2064,18 +2064,11 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	// Lock
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 
-	// Init # of times this frame has been checked so far
-	int checked_count = 0;
-
 	// Increment check count for this frame (or init to 1)
-	if (checked_frames.count(requested_frame) == 0)
-		checked_frames[requested_frame] = 1;
-	else
-		checked_frames[requested_frame]++;
-	checked_count = checked_frames[requested_frame];
+	++checked_frames[requested_frame];
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_count);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_frames[requested_frame]);
 
 	// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
 	map<int64_t, int64_t>::iterator itr;
@@ -2088,7 +2081,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		// If MP3 with single video frame, handle this special case by copying the previously
 		// decoded image to the new frame. Otherwise, it will spend a huge amount of
 		// CPU time looking for missing images for all the audio-only frames.
-		if (checked_count > 8 && !missing_video_frames.count(requested_frame) &&
+		if (checked_frames[requested_frame] > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
 			last_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
 			missing_video_frames.insert(pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
@@ -2102,10 +2095,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		int64_t missing_source_frame = missing_video_frames.find(requested_frame)->second;
 
 		// Increment missing source frame check count (or init to 1)
-		if (checked_frames.count(missing_source_frame) == 0)
-			checked_frames[missing_source_frame] = 1;
-		else
-			checked_frames[missing_source_frame]++;
+		++checked_frames[missing_source_frame];
 
 		// Get the previous frame of this missing frame (if it's available in missing cache)
 		std::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(missing_source_frame);
