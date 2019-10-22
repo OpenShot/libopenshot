@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -138,14 +138,6 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### OPENMP #####################
-# Check for OpenMP (used for multi-core processing)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
-endif(OPENMP_FOUND)
-
 ################### ZEROMQ #####################
 # Find ZeroMQ library (used for socket communication & logging)
 FIND_PACKAGE(ZMQ REQUIRED)
@@ -274,6 +266,24 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+################### OPENMP #####################
+# Check for OpenMP (used for multi-core processing)
+
+# OpenMP is required by FFmpegReader/Writer
+find_package(OpenMP REQUIRED)
+
+if(NOT TARGET OpenMP::OpenMP_CXX)
+    # Older CMake versions (< 3.9) don't create find targets.
+    add_library(OpenMP_TARGET INTERFACE)
+    add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
+    target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+    find_package(Threads REQUIRED)
+    target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
+    target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+endif()
+
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
@@ -288,9 +298,6 @@ IF (RESVG_FOUND)
 	list(APPEND REQUIRED_LIBRARIES ${RESVG_LIBRARIES})
 ENDIF(RESVG_FOUND)
 
-IF (OPENMP_FOUND)
-	list(APPEND REQUIRED_LIBRARIES ${OpenMP_CXX_FLAGS})
-ENDIF (OPENMP_FOUND)
 
 IF (ImageMagick_FOUND)
   list(APPEND REQUIRED_LIBRARIES ${ImageMagick_LIBRARIES})
@@ -306,8 +313,10 @@ IF (WIN32)
 ENDIF(WIN32)
 
 # Link all referenced libraries
-target_link_libraries(openshot ${REQUIRED_LIBRARIES})
+target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 
+# Pick up parameters from OpenMP target and propagate
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
 ############### CLI EXECUTABLE ################
 # Create test executable
