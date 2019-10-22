@@ -322,6 +322,14 @@ target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
 
+# Define path to test input files
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
+IF (WIN32)
+        STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
+ENDIF(WIN32)
+target_compile_definitions(openshot-example PRIVATE
+	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
+
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
 
