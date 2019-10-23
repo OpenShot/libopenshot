@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -129,7 +129,7 @@ IF (ENABLE_BLACKMAGIC)
 	FIND_PACKAGE(BlackMagic)
 
 	IF (BLACKMAGIC_FOUND)
-		# Include headers (needed for compile)
+		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 
 		# define a global var (used in the C++)
@@ -139,20 +139,19 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### OPENMP #####################
-# Check for OpenMP (used for multi-core processing)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
-endif(OPENMP_FOUND)
-
 ################### ZEROMQ #####################
 # Find ZeroMQ library (used for socket communication & logging)
-FIND_PACKAGE(ZMQ REQUIRED)
+
+# Some platforms package the header-only cppzmq C++ bindings separately,
+# others (Ubuntu) bundle them in with libzmq itself
+find_package(cppzmq QUIET)
+find_package(ZMQ REQUIRED)
 
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+if (cppzmq_FOUND)
+    include_directories(${cppzmq_INCLUDE_DIRS})
+endif()
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
@@ -205,6 +204,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Frame.cpp
 		FrameMapper.cpp
 		KeyFrame.cpp
+		OpenShotVersion.cpp
 		ZmqLogger.cpp
 		PlayerBase.cpp
 		Point.cpp
@@ -294,6 +294,24 @@ if (TARGET jsoncpp_lib)
   target_link_libraries(openshot PUBLIC jsoncpp_lib)
 endif ()
 
+################### OPENMP #####################
+# Check for OpenMP (used for multi-core processing)
+
+# OpenMP is required by FFmpegReader/Writer
+find_package(OpenMP REQUIRED)
+
+if(NOT TARGET OpenMP::OpenMP_CXX)
+    # Older CMake versions (< 3.9) don't create find targets.
+    add_library(OpenMP_TARGET INTERFACE)
+    add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
+    target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+    find_package(Threads REQUIRED)
+    target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
+    target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+endif()
+
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
@@ -307,9 +325,6 @@ IF (RESVG_FOUND)
 	list(APPEND REQUIRED_LIBRARIES ${RESVG_LIBRARIES})
 ENDIF(RESVG_FOUND)
 
-IF (OPENMP_FOUND)
-	list(APPEND REQUIRED_LIBRARIES ${OpenMP_CXX_FLAGS})
-ENDIF (OPENMP_FOUND)
 
 IF (ImageMagick_FOUND)
   list(APPEND REQUIRED_LIBRARIES ${ImageMagick_LIBRARIES})
@@ -327,10 +342,20 @@ ENDIF(WIN32)
 # Link all referenced libraries
 target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 
+# Pick up parameters from OpenMP target and propagate
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
 ############### CLI EXECUTABLE ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
+
+# Define path to test input files
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
+IF (WIN32)
+        STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
+ENDIF(WIN32)
+target_compile_definitions(openshot-example PRIVATE
+	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
