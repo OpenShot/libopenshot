@@ -235,7 +235,7 @@ ReaderBase* Clip::Reader()
 		return reader;
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Open the internal reader
@@ -252,7 +252,7 @@ void Clip::Open()
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Close the internal reader
@@ -266,7 +266,7 @@ void Clip::Close()
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
@@ -282,7 +282,7 @@ float Clip::End()
 			fps = reader->info.fps.ToFloat();
 		else
 			// Throw error if reader not initialized
-			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 		return float(time.GetLength()) / fps;
 	}
@@ -350,7 +350,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get file extension
@@ -394,7 +394,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for valid reader
 	if (!reader)
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 	// Check for a valid time map curve
 	if (time.Values.size() > 1)
@@ -812,7 +812,7 @@ void Clip::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -822,7 +822,7 @@ void Clip::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

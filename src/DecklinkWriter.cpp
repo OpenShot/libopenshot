@@ -234,7 +234,7 @@ void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw WriterClosed("The DecklinkWriter is closed.  Call Open() before calling this method.", "");
+		throw WriterClosed("The DecklinkWriter is closed.  Call Open() before calling this method.");
 
 	delegate->WriteFrame(frame);
 }

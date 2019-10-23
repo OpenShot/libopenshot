@@ -220,9 +220,9 @@ void FFmpegWriter::SetVideoOptions(bool has_video, string codec, Fraction fps, i
 			hw_en_on = 0;
 			hw_en_supported = 0;
 		}
-#else  // is FFmpeg 3 but not linux
+	#else  // is FFmpeg 3 but not linux
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
-#endif //__linux__
+	#endif //__linux__
 #else // not ffmpeg 3
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif //IS_FFMPEG_3_2

@@ -50,7 +50,6 @@ IF (RUBY_FOUND)
 	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
-	SET(CMAKE_SWIG_FLAGS "")
 	### Suppress a ton of warnings in the generated SWIG C++ code
 	set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
 -Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
