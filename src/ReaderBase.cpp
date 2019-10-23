@@ -181,7 +181,7 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 	if (!root["duration"].isNull())
 		info.duration = root["duration"].asDouble();
 	if (!root["file_size"].isNull())
-		info.file_size = atoll(root["file_size"].asString().c_str());
+		info.file_size = std::stoll(root["file_size"].asString());
 	if (!root["height"].isNull())
 		info.height = root["height"].asInt();
 	if (!root["width"].isNull())
@@ -211,7 +211,7 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 	if (!root["vcodec"].isNull())
 		info.vcodec = root["vcodec"].asString();
 	if (!root["video_length"].isNull())
-		info.video_length = atoll(root["video_length"].asString().c_str());
+		info.video_length = std::stoll(root["video_length"].asString());
 	if (!root["video_stream_index"].isNull())
 		info.video_stream_index = root["video_stream_index"].asInt();
 	if (!root["video_timebase"].isNull() && root["video_timebase"].isObject()) {

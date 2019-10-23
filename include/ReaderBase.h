@@ -34,7 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <stdlib.h>
+#include <cstdlib>
 #include <sstream>
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"

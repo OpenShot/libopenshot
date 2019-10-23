@@ -372,7 +372,7 @@ void CacheMemory::SetJson(std::string value) {
 	delete reader;
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -382,7 +382,7 @@ void CacheMemory::SetJson(std::string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

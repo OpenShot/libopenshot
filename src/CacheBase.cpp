@@ -71,5 +71,5 @@ void CacheBase::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["max_bytes"].isNull())
-		max_bytes = atoll(root["max_bytes"].asString().c_str());
+		max_bytes = std::stoll(root["max_bytes"].asString());
 }

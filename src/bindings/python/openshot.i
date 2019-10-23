@@ -30,6 +30,9 @@
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
 
+/* Don't generate multiple wrappers for functions with default args */
+%feature("compactdefaultargs", "1");
+
 /* Enable inline documentation */
 %feature("autodoc", "1");
 
@@ -116,6 +119,13 @@
 	}
 	catch (std::exception &e) {
 		SWIG_exception_fail(SWIG_RuntimeError, e.what());
+	}
+}
+
+%extend openshot::OpenShotVersion {
+    // Give the struct a string representation
+	const std::string __str__() {
+		return std::string(OPENSHOT_VERSION_FULL);
 	}
 }
 

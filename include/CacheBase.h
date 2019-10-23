@@ -32,6 +32,7 @@
 #define OPENSHOT_CACHE_BASE_H
 
 #include <memory>
+#include <cstdlib>
 #include "Frame.h"
 #include "Exceptions.h"
 #include "Json.h"

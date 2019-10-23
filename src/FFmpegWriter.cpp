@@ -172,7 +172,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 		AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if IS_FFMPEG_3_2
-		#if defined(__linux__)
+	#if defined(__linux__)
 		if ( (strcmp(codec.c_str(),"h264_vaapi") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
@@ -194,7 +194,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 				hw_en_supported = 0;
 			}
 		}
-#elif defined(_WIN32)
+	#elif defined(_WIN32)
 		if ( (strcmp(codec.c_str(),"h264_dxva2") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
@@ -216,7 +216,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 				hw_en_supported = 0;
 			}
 		}
-#elif defined(__APPLE__)
+	#elif defined(__APPLE__)
 		if ( (strcmp(codec.c_str(),"h264_videotoolbox") == 0)) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
 			hw_en_on = 1;
@@ -229,9 +229,9 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 			hw_en_on = 0;
 			hw_en_supported = 0;
 		}
-#else  // is FFmpeg 3 but not linux
+	#else  // is FFmpeg 3 but not linux
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
-#endif //__linux__
+	#endif //__linux__
 #else // not ffmpeg 3
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif //IS_FFMPEG_3_2
