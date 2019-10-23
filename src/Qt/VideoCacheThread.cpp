@@ -93,7 +93,7 @@ namespace openshot
 			try
 			{
 				if (reader) {
-					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame), "", -1, "", -1);
+					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
 
 					// Force the frame to be generated
 					reader->GetFrame(position);

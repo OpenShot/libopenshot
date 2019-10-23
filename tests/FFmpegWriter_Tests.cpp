@@ -75,8 +75,8 @@ TEST(FFmpegWriter_Test_Webm)
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(23, (int)pixels[pixel_index]);
-	CHECK_EQUAL(23, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(23, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_CLOSE(23, (int)pixels[pixel_index], 5);
+	CHECK_CLOSE(23, (int)pixels[pixel_index + 1], 5);
+	CHECK_CLOSE(23, (int)pixels[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
 }

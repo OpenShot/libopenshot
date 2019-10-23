@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -29,6 +29,9 @@
 
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
+
+/* Don't generate multiple wrappers for functions with default args */
+%feature("compactdefaultargs", "1");
 
 /* Enable inline documentation */
 %feature("autodoc", "1");
@@ -145,6 +148,13 @@
 		std::ostringstream result;
 		result << $self->num << ":" << $self->den;
 		return result.str();
+  }
+}
+
+%extend openshot::OpenShotVersion {
+    // Give the struct a string representation
+	const std::string __str__() {
+		return std::string(OPENSHOT_VERSION_FULL);
 	}
 }
 
