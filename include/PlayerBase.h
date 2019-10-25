@@ -81,7 +81,7 @@ namespace openshot
 		virtual void Pause() = 0;
 
 		/// Get the current frame number being played
-		virtual int Position() = 0;
+		virtual int64_t Position() = 0;
 
 		/// Seek to a specific frame in the player
 		virtual void Seek(int64_t new_frame) = 0;

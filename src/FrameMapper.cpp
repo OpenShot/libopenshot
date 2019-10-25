@@ -75,7 +75,7 @@ ReaderBase* FrameMapper::Reader()
         return reader;
     else
         // Throw error if reader not initialized
-        throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.", "");
+        throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.");
 }
 
 void FrameMapper::AddField(int64_t frame)
@@ -707,7 +707,7 @@ void FrameMapper::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -717,7 +717,7 @@ void FrameMapper::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

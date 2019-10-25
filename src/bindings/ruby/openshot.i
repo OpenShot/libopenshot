@@ -30,6 +30,9 @@
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
 
+/* Don't generate multiple wrappers for functions with default args */
+%feature("compactdefaultargs", "1");
+
 /* Enable inline documentation */
 %feature("autodoc", "1");
 

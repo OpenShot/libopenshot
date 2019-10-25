@@ -64,7 +64,7 @@ namespace openshot
 		if (need_render && frame)
 		{
 			// Debug
-			ZmqLogger::Instance()->AppendDebugMethod("VideoPlaybackThread::run (before render)", "frame->number", frame->number, "need_render", need_render, "", -1, "", -1, "", -1, "", -1);
+			ZmqLogger::Instance()->AppendDebugMethod("VideoPlaybackThread::run (before render)", "frame->number", frame->number, "need_render", need_render);
 
 			// Render the frame to the screen
 			renderer->paint(frame);

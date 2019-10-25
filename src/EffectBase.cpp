@@ -32,7 +32,7 @@
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
+// Initialize the values of the EffectInfo struct
 void EffectBase::InitEffectInfo()
 {
 	// Init clip settings
@@ -112,7 +112,7 @@ void EffectBase::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -122,7 +122,7 @@ void EffectBase::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

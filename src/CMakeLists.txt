@@ -27,6 +27,12 @@
 # Pick up our include directories from the parent context
 include_directories(${OPENSHOT_INCLUDE_DIRS})
 
+####### Display summary of options/dependencies ######
+include(FeatureSummary)
+#set_property(GLOBAL APPEND PROPERTY FeatureSummary_PKG_TYPES BUILD)
+#find_package(FOO)
+#set_package_properties(FOO PROPERTIES TYPE BUILD)
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
@@ -82,33 +88,15 @@ ENDIF (ImageMagick_FOUND)
 # Find FFmpeg libraries (used for video encoding / decoding)
 FIND_PACKAGE(FFmpeg REQUIRED)
 
-IF (AVCODEC_FOUND)
-	include_directories(${AVCODEC_INCLUDE_DIRS})
-ENDIF (AVCODEC_FOUND)
-IF (AVDEVICE_FOUND)
-	include_directories(${AVDEVICE_INCLUDE_DIRS})
-ENDIF (AVDEVICE_FOUND)
-IF (AVFORMAT_FOUND)
-	include_directories(${AVFORMAT_INCLUDE_DIRS})
-ENDIF (AVFORMAT_FOUND)
-IF (AVFILTER_FOUND)
-	include_directories(${AVFILTER_INCLUDE_DIRS})
-ENDIF (AVFILTER_FOUND)
-IF (AVUTIL_FOUND)
-	include_directories(${AVUTIL_INCLUDE_DIRS})
-ENDIF (AVUTIL_FOUND)
-IF (POSTPROC_FOUND)
-	include_directories(${POSTPROC_INCLUDE_DIRS})
-ENDIF (POSTPROC_FOUND)
-IF (SWSCALE_FOUND)
-	include_directories(${SWSCALE_INCLUDE_DIRS})
-ENDIF (SWSCALE_FOUND)
-IF (SWRESAMPLE_FOUND)
-	include_directories(${SWRESAMPLE_INCLUDE_DIRS})
-ENDIF (SWRESAMPLE_FOUND)
-IF (AVRESAMPLE_FOUND)
-	include_directories(${AVRESAMPLE_INCLUDE_DIRS})
-ENDIF (AVRESAMPLE_FOUND)
+foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
+    if(${ffmpeg_comp}_FOUND)
+        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
+        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
+        list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
+    endif()
+endforeach()
+list(REMOVE_DUPLICATES FF_INCLUDES)
+include_directories(${FF_INCLUDES})
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -119,38 +107,17 @@ include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 ################# QT5 ###################
 # Find QT5 libraries
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5Multimedia REQUIRED)
-find_package(Qt5MultimediaWidgets REQUIRED)
-
-# Include Qt headers (needed for compile)
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-include_directories(${Qt5Core_INCLUDE_DIRS})
-include_directories(${Qt5Gui_INCLUDE_DIRS})
-include_directories(${Qt5Multimedia_INCLUDE_DIRS})
-include_directories(${Qt5MultimediaWidgets_INCLUDE_DIRS})
-
-add_definitions(${Qt5Widgets_DEFINITIONS})
-add_definitions(${Qt5Core_DEFINITIONS})
-add_definitions(${Qt5Gui_DEFINITIONS})
-add_definitions(${Qt5Multimedia_DEFINITIONS})
-add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
-
-SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES}
-		${Qt5Core_LIBRARIES}
-		${Qt5Gui_LIBRARIES}
-		${Qt5Multimedia_LIBRARIES}
-		${Qt5MultimediaWidgets_LIBRARIES})
-
-# Set compiler flags for Qt
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb ")
+foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
+    find_package(${qt_lib} REQUIRED)
+    # Header files
+    include_directories(${${qt_lib}_INCLUDE_DIRS})
+    # Compiler definitions
+    add_definitions(${${qt_lib}_DEFINITIONS})
+    # Other CFLAGS
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
+    # For use when linking
+    list(APPEND QT_LIBRARIES ${${qt_lib}_LIBRARIES})
+endforeach()
 
 # Manually moc Qt files
 qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
@@ -161,7 +128,7 @@ IF (ENABLE_BLACKMAGIC)
 	FIND_PACKAGE(BlackMagic)
 
 	IF (BLACKMAGIC_FOUND)
-		# Include headers (needed for compile)
+		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 
 		# define a global var (used in the C++)
@@ -171,20 +138,19 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### OPENMP #####################
-# Check for OpenMP (used for multi-core processing)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
-endif(OPENMP_FOUND)
-
 ################### ZEROMQ #####################
 # Find ZeroMQ library (used for socket communication & logging)
-FIND_PACKAGE(ZMQ REQUIRED)
+
+# Some platforms package the header-only cppzmq C++ bindings separately,
+# others (Ubuntu) bundle them in with libzmq itself
+find_package(cppzmq QUIET)
+find_package(ZMQ REQUIRED)
 
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+if (cppzmq_FOUND)
+    include_directories(${cppzmq_INCLUDE_DIRS})
+endif()
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
@@ -249,6 +215,7 @@ SET ( OPENSHOT_SOURCE_FILES
 		Frame.cpp
 		FrameMapper.cpp
 		KeyFrame.cpp
+		OpenShotVersion.cpp
 		ZmqLogger.cpp
 		PlayerBase.cpp
 		Point.cpp
@@ -309,74 +276,70 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
-# Linked executables will need this propagated to them
-target_compile_options(openshot PUBLIC ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS}  ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS})
+################### OPENMP #####################
+# Check for OpenMP (used for multi-core processing)
+
+# OpenMP is required by FFmpegReader/Writer
+find_package(OpenMP REQUIRED)
+
+if(NOT TARGET OpenMP::OpenMP_CXX)
+    # Older CMake versions (< 3.9) don't create find targets.
+    add_library(OpenMP_TARGET INTERFACE)
+    add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
+    target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+    find_package(Threads REQUIRED)
+    target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
+    target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+endif()
+
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+
 
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
+		${FF_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
 		${JSONCPP_LIBRARY}
 		${ZMQ_LIBRARIES}
 		)
 
-IF (AVCODEC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVCODEC_LIBRARIES} )
-ENDIF (AVCODEC_FOUND)
-IF (AVDEVICE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVDEVICE_LIBRARIES} )
-ENDIF (AVDEVICE_FOUND)
-IF (AVFORMAT_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVFORMAT_LIBRARIES} )
-ENDIF (AVFORMAT_FOUND)
-IF (AVFILTER_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVFILTER_LIBRARIES} )
-ENDIF (AVFILTER_FOUND)
-IF (AVUTIL_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVUTIL_LIBRARIES} )
-ENDIF (AVUTIL_FOUND)
-IF (POSTPROC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${POSTPROC_LIBRARIES} )
-ENDIF (POSTPROC_FOUND)
-IF (SWSCALE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${SWSCALE_LIBRARIES} )
-ENDIF (SWSCALE_FOUND)
-IF (SWRESAMPLE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${SWRESAMPLE_LIBRARIES} )
-ENDIF (SWRESAMPLE_FOUND)
-IF (AVRESAMPLE_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${AVRESAMPLE_LIBRARIES} )
-ENDIF (AVRESAMPLE_FOUND)
-
 IF (RESVG_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${RESVG_LIBRARIES} )
+	list(APPEND REQUIRED_LIBRARIES ${RESVG_LIBRARIES})
 ENDIF(RESVG_FOUND)
 
-IF (OPENMP_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenMP_CXX_FLAGS} )
-ENDIF (OPENMP_FOUND)
 
 IF (ImageMagick_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${ImageMagick_LIBRARIES} )
+  list(APPEND REQUIRED_LIBRARIES ${ImageMagick_LIBRARIES})
 ENDIF (ImageMagick_FOUND)
 
 IF (BLACKMAGIC_FOUND)
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${BLACKMAGIC_LIBRARY_DIR} )
+	list(APPEND REQUIRED_LIBRARIES ${BLACKMAGIC_LIBRARY_DIR})
 ENDIF (BLACKMAGIC_FOUND)
 
 IF (WIN32)
 	# Required for exception handling on Windows
-	SET ( REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} "imagehlp" "dbghelp" )
+	list(APPEND REQUIRED_LIBRARIES "imagehlp" "dbghelp" )
 ENDIF(WIN32)
 
 # Link all referenced libraries
-target_link_libraries(openshot ${REQUIRED_LIBRARIES})
+target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 
+# Pick up parameters from OpenMP target and propagate
+target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
 ############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
+
+# Define path to test input files
+SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
+IF (WIN32)
+        STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
+ENDIF(WIN32)
+target_compile_definitions(openshot-example PRIVATE
+	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
@@ -404,12 +367,18 @@ ENDIF (BLACKMAGIC_FOUND)
 ############### INCLUDE SWIG BINDINGS ################
 add_subdirectory(bindings)
 
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+    INCLUDE_QUIET_PACKAGES
+    DESCRIPTION "Build configuration:"
+    VAR featuresText)
+message("\n${featuresText}")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
 
 # Install primary library
-INSTALL(  TARGETS openshot
+INSTALL(TARGETS openshot
 		ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 		LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 		RUNTIME DESTINATION ${LIB_INSTALL_DIR}

@@ -309,7 +309,7 @@ void FFmpegReader::Open() {
 					char *adapter_ptr = NULL;
 					int adapter_num;
 					adapter_num = openshot::Settings::Instance()->HW_DE_DEVICE_SET;
-					fprintf(stderr, "\n\nDecodiing Device Nr: %d\n", adapter_num);
+					fprintf(stderr, "Hardware decoding device number: %d\n", adapter_num);
 
 					// Set hardware pix format (callback)
 					pCodecCtx->get_format = get_hw_dec_format;
@@ -729,6 +729,33 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
 
+	// Get scan type and order from codec context/params
+	if (!check_interlace) {
+		check_interlace = true;
+		AVFieldOrder field_order = AV_GET_CODEC_ATTRIBUTES(pStream, pCodecCtx)->field_order;
+		switch(field_order) {
+			case AV_FIELD_PROGRESSIVE:
+				info.interlaced_frame = false;
+				break;
+			case AV_FIELD_TT:
+			case AV_FIELD_TB:
+				info.interlaced_frame = true;
+				info.top_field_first = true;
+				break;
+			case AV_FIELD_BT:
+			case AV_FIELD_BB:
+				info.interlaced_frame = true;
+				info.top_field_first = false;
+				break;
+			case AV_FIELD_UNKNOWN:
+				// Check again later?
+				check_interlace = false;
+				break;
+		}
+		// check_interlace will prevent these checks being repeated,
+		// unless it was cleared because we got an AV_FIELD_UNKNOWN response.
+	}
+
 	// Set the video timebase
 	info.video_timebase.num = pStream->time_base.num;
 	info.video_timebase.den = pStream->time_base.den;
@@ -921,6 +948,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 						continue;
 					}
 
+					// Packet may become NULL on Close inside Seek if CheckSeek returns false
+					if (!packet)
+						// Jump to the next iteration of this loop
+						continue;
+
 					// Get the AVFrame from the current packet
 					frame_finished = GetAVFrame();
 
@@ -956,6 +988,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 						// Jump to the next iteration of this loop
 						continue;
 					}
+
+					// Packet may become NULL on Close inside Seek if CheckSeek returns false
+					if (!packet)
+						// Jump to the next iteration of this loop
+						continue;
 
 					// Update PTS / Frame Offset (if any)
 					UpdatePTSOffset(false);
@@ -1068,14 +1105,14 @@ bool FFmpegReader::GetAVFrame() {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)");
 		}
 		else {
-				AVFrame *next_frame2;
-				if (hw_de_on && hw_de_supported) {
-					next_frame2 = AV_ALLOCATE_FRAME();
-				}
-				else
-				{
-					next_frame2 = next_frame;
-				}
+			AVFrame *next_frame2;
+			if (hw_de_on && hw_de_supported) {
+				next_frame2 = AV_ALLOCATE_FRAME();
+			}
+			else
+			{
+				next_frame2 = next_frame;
+			}
 			pFrame = AV_ALLOCATE_FRAME();
 			while (ret >= 0) {
 				ret =  avcodec_receive_frame(pCodecCtx, next_frame2);
@@ -1109,11 +1146,6 @@ bool FFmpegReader::GetAVFrame() {
 					av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
 					av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
 												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
-					if (!check_interlace)	{
-						check_interlace = true;
-						info.interlaced_frame = next_frame->interlaced_frame;
-						info.top_field_first = next_frame->top_field_first;
-					}
 				}
 			}
 			if (hw_de_on && hw_de_supported) {
@@ -1133,13 +1165,6 @@ bool FFmpegReader::GetAVFrame() {
 			avpicture_alloc((AVPicture *) pFrame, pCodecCtx->pix_fmt, info.width, info.height);
 			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
 							info.height);
-
-			// Detect interlaced frame (only once)
-			if (!check_interlace) {
-				check_interlace = true;
-				info.interlaced_frame = next_frame->interlaced_frame;
-				info.top_field_first = next_frame->top_field_first;
-			}
 		}
 #endif
 	}
@@ -1992,7 +2017,15 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts) {
 std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 	// Check working cache
 	std::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
+
 	if (!output) {
+		// Lock
+		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+
+		// (re-)Check working cache
+		output = working_cache.GetFrame(requested_frame);
+		if(output) return output;
+
 		// Create a new frame on the working cache
 		output = std::make_shared<Frame>(requested_frame, info.width, info.height, "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels);
 		output->SetPixelRatio(info.pixel_ratio.num, info.pixel_ratio.den); // update pixel ratio
@@ -2005,8 +2038,7 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 		if (requested_frame > largest_frame_processed)
 			largest_frame_processed = requested_frame;
 	}
-
-	// Return new frame
+	// Return frame
 	return output;
 }
 
@@ -2032,18 +2064,11 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	// Lock
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 
-	// Init # of times this frame has been checked so far
-	int checked_count = 0;
-
 	// Increment check count for this frame (or init to 1)
-	if (checked_frames.count(requested_frame) == 0)
-		checked_frames[requested_frame] = 1;
-	else
-		checked_frames[requested_frame]++;
-	checked_count = checked_frames[requested_frame];
+	++checked_frames[requested_frame];
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_count);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckMissingFrame", "requested_frame", requested_frame, "has_missing_frames", has_missing_frames, "missing_video_frames.size()", missing_video_frames.size(), "checked_count", checked_frames[requested_frame]);
 
 	// Missing frames (sometimes frame #'s are skipped due to invalid or missing timestamps)
 	map<int64_t, int64_t>::iterator itr;
@@ -2056,7 +2081,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		// If MP3 with single video frame, handle this special case by copying the previously
 		// decoded image to the new frame. Otherwise, it will spend a huge amount of
 		// CPU time looking for missing images for all the audio-only frames.
-		if (checked_count > 8 && !missing_video_frames.count(requested_frame) &&
+		if (checked_frames[requested_frame] > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
 			last_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
 			missing_video_frames.insert(pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
@@ -2070,10 +2095,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		int64_t missing_source_frame = missing_video_frames.find(requested_frame)->second;
 
 		// Increment missing source frame check count (or init to 1)
-		if (checked_frames.count(missing_source_frame) == 0)
-			checked_frames[missing_source_frame] = 1;
-		else
-			checked_frames[missing_source_frame]++;
+		++checked_frames[missing_source_frame];
 
 		// Get the previous frame of this missing frame (if it's available in missing cache)
 		std::shared_ptr<Frame> parent_frame = missing_frames.GetFrame(missing_source_frame);
@@ -2435,7 +2457,7 @@ void FFmpegReader::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try {
 		// Set all values that match
@@ -2443,7 +2465,7 @@ void FFmpegReader::SetJson(string value) {
 	}
 	catch (const std::exception& e) {
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
