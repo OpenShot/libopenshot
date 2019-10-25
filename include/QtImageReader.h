@@ -67,7 +67,7 @@ namespace openshot
 	class QtImageReader : public ReaderBase
 	{
 	private:
-		string path;
+		QString path;
 		std::shared_ptr<QImage> image;			///> Original image (full quality)
 		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
 		bool is_open;	///> Is Reader opened

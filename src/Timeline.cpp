@@ -746,7 +746,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 		// Check for open reader (or throw exception)
 		if (!is_open)
-			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.", "");
+			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.");
 
 		// Check cache again (due to locking)
 		#pragma omp critical (T_GetFrame)
@@ -1040,7 +1040,7 @@ void Timeline::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -1050,7 +1050,7 @@ void Timeline::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -1139,7 +1139,7 @@ void Timeline::ApplyJsonDiff(string value) {
 
 	if (!success || !root.isArray())
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid).", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid).");
 
 	try
 	{
@@ -1167,7 +1167,7 @@ void Timeline::ApplyJsonDiff(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
