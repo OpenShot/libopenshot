@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.1...3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.2...3.14 FATAL_ERROR)
 
 message("\
 -----------------------------------------------------------------
@@ -56,7 +56,7 @@ STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
-Generating build files for OpenShot
+Generating build files for OpenShot with CMake ${CMAKE_VERSION}
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
