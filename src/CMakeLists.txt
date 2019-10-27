@@ -36,6 +36,7 @@ include(FeatureSummary)
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -180,6 +181,21 @@ endif(USE_SYSTEM_JSONCPP)
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
+
+if(ENABLE_IWYU)
+	find_program(IWYU_PATH NAMES "iwyu"
+		DOC "include-what-you-use source code scanner executable")
+	if(IWYU_PATH)
+		if(IWYU_OPTS)
+			separate_arguments(IWYU_OPTS)
+			list(APPEND _iwyu_cmd ${IWYU_PATH} "-Xiwyu" ${IWYU_OPTS})
+		endif()
+		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${_iwyu_cmd})
+	else()
+		set(ENABLE_IWYU FALSE)
+	endif()
+endif()
+add_feature_info("IWYU (include-what-you-use)" ENABLE_IWYU "Scan all source files with 'iwyu'")
 
 #### GET LIST OF EFFECT FILES ####
 FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")
