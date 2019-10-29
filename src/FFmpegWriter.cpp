@@ -394,7 +394,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 		#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 			#if IS_FFMPEG_3_2
 				if (hw_en_on) {
-					av_opt_set_int(c->priv_data, "qp", min(stoi(value),63), 0); // 0-63
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 				} else
 			#endif
 				{
@@ -402,37 +402,37 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 					#if (LIBAVCODEC_VERSION_MAJOR >= 58)
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "qp", min(stoi(value),63), 0); // 0-63
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 						break;
 					#endif
 					case AV_CODEC_ID_VP8 :
 						c->bit_rate = 10000000;
-						av_opt_set_int(c->priv_data, "qp", max(min(stoi(value), 63), 4), 0); // 4-63
+						av_opt_set_int(c->priv_data, "qp", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
 						break;
 					case AV_CODEC_ID_VP9 :
 						c->bit_rate = 0;        // Must be zero!
-						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 63), 0); // 0-63
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
 						}
 						break;
 					case AV_CODEC_ID_H264 :
-						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 51), 0); // 0-51
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
 					case AV_CODEC_ID_H265 :
-						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 51), 0); // 0-51
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
 						}
 						break;
 					default:
 						// For all other codecs assume a range of 0-63
-						av_opt_set_int(c->priv_data, "qp", min(stoi(value), 63), 0); // 0-63
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
 						c->bit_rate = 0;
 				}
 			}
@@ -450,7 +450,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						mbs = 380000.0;
 					}
 					else {
-						mbs *= pow(0.912,info.video_bit_rate);
+						mbs *= std::pow(0.912,info.video_bit_rate);
 					}
 				}
 				c->bit_rate = (int)(mbs);
@@ -461,30 +461,30 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value),63), 0);
+						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 						break;
 #endif
 					case AV_CODEC_ID_VP8 :
 						c->bit_rate = 10000000;
-						av_opt_set_int(c->priv_data, "crf", std::max(std::min(stoi(value), 63), 4), 0); // 4-63
+						av_opt_set_int(c->priv_data, "crf", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
 						break;
 					case AV_CODEC_ID_VP9 :
 						c->bit_rate = 0;        // Must be zero!
-						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 63), 0); // 0-63
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 63), 0); // 0-63
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
 						}
 						break;
 					case AV_CODEC_ID_H264 :
-						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 51), 0); // 0-51
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
 					case AV_CODEC_ID_H265 :
-						av_opt_set_int(c->priv_data, "crf", std::min(stoi(value), 51), 0); // 0-51
-						if (stoi(value) == 0) {
+						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
 						}
@@ -497,7 +497,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 							if (info.video_bit_rate > 42) {
 								mbs = 380000.0;
 							} else {
-								mbs *= pow(0.912, info.video_bit_rate);
+								mbs *= std::pow(0.912, info.video_bit_rate);
 							}
 						}
 						c->bit_rate = (int) (mbs);
