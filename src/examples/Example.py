@@ -30,7 +30,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 
-
 # This can be run against an uninstalled build of libopenshot, just set the
 # environment variable PYTHONPATH to the location of the Python bindings.
 #

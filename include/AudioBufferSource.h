@@ -80,13 +80,13 @@ namespace openshot
 
 		/// @brief Set the next read position of this source
 		/// @param newPosition The sample # to start reading from
-		void setNextReadPosition (int64 newPosition);
+		void setNextReadPosition (juce::int64 newPosition);
 
 		/// Get the next read position of this source
-		int64 getNextReadPosition() const;
+		juce::int64 getNextReadPosition() const;
 
 		/// Get the total length (in samples) of this audio source
-		int64 getTotalLength() const;
+		juce::int64 getTotalLength() const;
 
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;

@@ -49,10 +49,10 @@ AudioResampler::AudioResampler()
 	buffer_source = new AudioBufferSource(buffer);
 
 	// Init resampling source
-	resample_source = new ResamplingAudioSource(buffer_source, false, 2);
+	resample_source = new juce::ResamplingAudioSource(buffer_source, false, 2);
 
 	// Init resampled buffer
-	resampled_buffer = new AudioSampleBuffer(2, 1);
+	resampled_buffer = new juce::AudioSampleBuffer(2, 1);
 	resampled_buffer->clear();
 
 	// Init callback buffer

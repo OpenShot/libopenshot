@@ -119,8 +119,8 @@ namespace openshot
 		std::shared_ptr<QImage> wave_image;
 		std::shared_ptr<juce::AudioSampleBuffer> audio;
 		std::shared_ptr<QApplication> previewApp;
-		CriticalSection addingImageSection;
-        CriticalSection addingAudioSection;
+		juce::CriticalSection addingImageSection;
+        juce::CriticalSection addingAudioSection;
 		const unsigned char *qbuffer;
 		openshot::Fraction pixel_ratio;
 		int channels;

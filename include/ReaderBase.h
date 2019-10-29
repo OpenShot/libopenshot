@@ -98,8 +98,8 @@ namespace openshot
 	{
 	protected:
 		/// Section lock for multiple threads
-	    CriticalSection getFrameCriticalSection;
-	    CriticalSection processingCriticalSection;
+	  juce::CriticalSection getFrameCriticalSection;
+	  juce::CriticalSection processingCriticalSection;
 		openshot::ClipBase* parent;
 
 	public:

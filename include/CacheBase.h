@@ -53,7 +53,7 @@ namespace openshot {
 		int64_t max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
 		/// Section lock for multiple threads
-	    CriticalSection *cacheCriticalSection;
+	    juce::CriticalSection *cacheCriticalSection;
 
 
 	public:

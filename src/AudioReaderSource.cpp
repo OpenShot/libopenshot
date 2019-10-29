@@ -152,7 +152,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
 
 	// Reverse array (create new buffer to hold the reversed version)
-	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -177,7 +177,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 }
 
 // Get the next block of audio samples
-void AudioReaderSource::getNextAudioBlock(const AudioSourceChannelInfo& info)
+void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& info)
 {
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
@@ -248,7 +248,7 @@ void AudioReaderSource::prepareToPlay(int, double) { }
 void AudioReaderSource::releaseResources() { }
 
 // Set the next read position of this source
-void AudioReaderSource::setNextReadPosition (int64 newPosition)
+void AudioReaderSource::setNextReadPosition (juce::int64 newPosition)
 {
 	// set position (if the new position is in range)
 	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
@@ -256,14 +256,14 @@ void AudioReaderSource::setNextReadPosition (int64 newPosition)
 }
 
 // Get the next read position of this source
-int64 AudioReaderSource::getNextReadPosition() const
+juce::int64 AudioReaderSource::getNextReadPosition() const
 {
 	// return the next read position
 	return position;
 }
 
 // Get the total length (in samples) of this audio source
-int64 AudioReaderSource::getTotalLength() const
+juce::int64 AudioReaderSource::getTotalLength() const
 {
 	// Get the length
 	if (reader)
@@ -287,7 +287,7 @@ void AudioReaderSource::setLooping (bool shouldLoop)
 }
 
 // Update the internal buffer used by this source
-void AudioReaderSource::setBuffer (AudioSampleBuffer *audio_buffer)
+void AudioReaderSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);
