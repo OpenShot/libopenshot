@@ -55,7 +55,7 @@ namespace openshot {
 	 */
 	class ZmqLogger {
 	private:
-		CriticalSection loggerCriticalSection;
+		juce::CriticalSection loggerCriticalSection;
 		std::string connection;
 
 		// Logfile related vars
