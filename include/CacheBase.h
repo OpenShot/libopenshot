@@ -32,6 +32,7 @@
 #define OPENSHOT_CACHE_BASE_H
 
 #include <memory>
+#include <cstdlib>
 #include "Frame.h"
 #include "Exceptions.h"
 #include "Json.h"
@@ -52,7 +53,7 @@ namespace openshot {
 		int64_t max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
 		/// Section lock for multiple threads
-	    CriticalSection *cacheCriticalSection;
+	    juce::CriticalSection *cacheCriticalSection;
 
 
 	public:

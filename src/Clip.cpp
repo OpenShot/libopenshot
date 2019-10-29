@@ -123,7 +123,7 @@ void Clip::init_reader_rotation() {
 		try {
 			float rotate_metadata = strtof(reader->info.metadata["rotate"].c_str(), 0);
 			rotation = Keyframe(rotate_metadata);
-		} catch (exception e) {}
+		} catch (const std::exception& e) {}
 	}
 	else
 		// Default no rotation
@@ -235,7 +235,7 @@ ReaderBase* Clip::Reader()
 		return reader;
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Open the internal reader
@@ -252,21 +252,21 @@ void Clip::Open()
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Close the internal reader
 void Clip::Close()
 {
 	if (reader) {
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
 
 		// Close the reader
 		reader->Close();
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
@@ -282,7 +282,7 @@ float Clip::End()
 			fps = reader->info.fps.ToFloat();
 		else
 			// Throw error if reader not initialized
-			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 		return float(time.GetLength()) / fps;
 	}
@@ -350,7 +350,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get file extension
@@ -367,7 +367,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 	int channels = buffer->getNumChannels();
 
 	// Reverse array (create new buffer to hold the reversed version)
-	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -394,12 +394,12 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for valid reader
 	if (!reader)
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 	// Check for a valid time map curve
 	if (time.Values.size() > 1)
 	{
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -423,7 +423,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 			if (time.GetRepeatFraction(frame_number).den > 1) {
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *resampled_buffer = NULL;
+				juce::AudioSampleBuffer *resampled_buffer = NULL;
 				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
@@ -482,7 +482,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame <= new_frame_number; delta_frame++) {
 						// buffer to hold detal samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -526,7 +526,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame >= new_frame_number; delta_frame--) {
 						// buffer to hold delta samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -557,7 +557,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
 
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
+				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
 				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame
@@ -616,7 +616,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
@@ -634,7 +634,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
 
 	// Create blank frame
 	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
@@ -716,6 +716,14 @@ string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["has_audio"] = add_property_json("Enable Audio", has_audio.GetValue(requested_frame), "int", "", &has_audio, -1, 1.0, false, requested_frame);
 	root["has_video"] = add_property_json("Enable Video", has_video.GetValue(requested_frame), "int", "", &has_video, -1, 1.0, false, requested_frame);
 
+	// Add enable audio/video choices (dropdown style)
+	root["has_audio"]["choices"].append(add_property_choice_json("Auto", -1, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("Off", 0, has_audio.GetValue(requested_frame)));
+	root["has_audio"]["choices"].append(add_property_choice_json("On", 1, has_audio.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Auto", -1, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("Off", 0, has_video.GetValue(requested_frame)));
+	root["has_video"]["choices"].append(add_property_choice_json("On", 1, has_video.GetValue(requested_frame)));
+
 	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
 	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
 	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
@@ -796,23 +804,25 @@ void Clip::SetJson(string value) {
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

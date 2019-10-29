@@ -94,7 +94,7 @@ void ChunkReader::load_json()
 		info.has_video = root["has_video"].asBool();
 		info.has_audio = root["has_audio"].asBool();
 		info.duration = root["duration"].asDouble();
-		info.file_size = atoll(root["file_size"].asString().c_str());
+		info.file_size = std::stoll(root["file_size"].asString());
 		info.height = root["height"].asInt();
 		info.width = root["width"].asInt();
 		info.pixel_format = root["pixel_format"].asInt();
@@ -106,7 +106,7 @@ void ChunkReader::load_json()
 		info.display_ratio.num = root["display_ratio"]["num"].asInt();
 		info.display_ratio.den = root["display_ratio"]["den"].asInt();
 		info.vcodec = root["vcodec"].asString();
-		info.video_length = atoll(root["video_length"].asString().c_str());
+		info.video_length = std::stoll(root["video_length"].asString());
 		info.video_stream_index = root["video_stream_index"].asInt();
 		info.video_timebase.num = root["video_timebase"]["num"].asInt();
 		info.video_timebase.den = root["video_timebase"]["den"].asInt();
@@ -121,7 +121,7 @@ void ChunkReader::load_json()
 		info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
 		throw InvalidJSON("JSON could not be parsed (or is invalid).", path);
@@ -235,7 +235,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 			local_reader = new FFmpegReader(chunk_video_path);
 			local_reader->Open(); // open reader
 
-		} catch (InvalidFile)
+		} catch (const InvalidFile& e)
 		{
 			// Invalid Chunk (possibly it is not found)
 			throw ChunkNotFound(path, requested_frame, location.number, location.frame);
@@ -285,23 +285,24 @@ void ChunkReader::SetJson(string value) {
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse( value.c_str(),
 	                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -315,7 +316,7 @@ void ChunkReader::SetJsonValue(Json::Value root) {
 	if (!root["path"].isNull())
 		path = root["path"].asString();
 	if (!root["chunk_size"].isNull())
-		chunk_size = atoll(root["chunk_size"].asString().c_str());
+		chunk_size = std::stoll(root["chunk_size"].asString());
 	if (!root["chunk_version"].isNull())
 		version = (ChunkVersion) root["chunk_version"].asInt();
 

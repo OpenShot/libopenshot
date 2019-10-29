@@ -29,6 +29,8 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 
 using namespace std;
@@ -121,64 +123,64 @@ TEST(Timeline_Check_Two_Track_Video)
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK_EQUAL(21, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(191, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(21, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(191, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(2);
 
 	// Check image properties
-	CHECK_EQUAL(176, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(176, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(186, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(3);
 
 	// Check image properties
-	CHECK_EQUAL(23, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(190, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(23, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(190, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(24);
 
 	// Check image properties
-	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(106, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(186, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(106, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(5);
 
 	// Check image properties
-	CHECK_EQUAL(23, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(190, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(23, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(190, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(25);
 
 	// Check image properties
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(94, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(94, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(186, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Get frame
 	f = t.GetFrame(4);
 
 	// Check image properties
-	CHECK_EQUAL(176, (int)f->GetPixels(pixel_row)[pixel_index]);
-	CHECK_EQUAL(0, (int)f->GetPixels(pixel_row)[pixel_index + 1]);
-	CHECK_EQUAL(186, (int)f->GetPixels(pixel_row)[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)f->GetPixels(pixel_row)[pixel_index + 3]);
+	CHECK_CLOSE(176, (int)f->GetPixels(pixel_row)[pixel_index], 5);
+	CHECK_CLOSE(0, (int)f->GetPixels(pixel_row)[pixel_index + 1], 5);
+	CHECK_CLOSE(186, (int)f->GetPixels(pixel_row)[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)f->GetPixels(pixel_row)[pixel_index + 3], 5);
 
 	// Close reader
 	t.Close();

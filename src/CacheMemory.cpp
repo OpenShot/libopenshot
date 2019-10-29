@@ -345,10 +345,11 @@ Json::Value CacheMemory::JsonValue() {
 	Json::Value ranges;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	
+
 	string errors;
 	bool success = reader->parse( json_ranges.c_str(),
 	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
+	delete reader;
 
 	if (success)
 		root["ranges"] = ranges;
@@ -368,19 +369,20 @@ void CacheMemory::SetJson(string value) {
 	string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

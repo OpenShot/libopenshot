@@ -120,7 +120,7 @@ Profile::Profile(string path) {
 		}
 
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing profile file
 		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
@@ -171,21 +171,23 @@ void Profile::SetJson(string value) {
 	Json::CharReader* reader(rbuilder.newCharReader());
 
 	string errors;
-	bool success = reader->parse( value.c_str(), 
+	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

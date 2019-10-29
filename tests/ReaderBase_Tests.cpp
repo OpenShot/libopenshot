@@ -29,6 +29,8 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 
 using namespace std;
@@ -59,7 +61,6 @@ TEST(ReaderBase_Derived_Class)
 	TestReader t1;
 
 	// Check some of the default values of the FileInfo struct on the base class
-	// If InitFileInfo() is not called in the derived class, these checks would fail.
 	CHECK_EQUAL(false, t1.info.has_audio);
 	CHECK_EQUAL(false, t1.info.has_audio);
 	CHECK_CLOSE(0.0f, t1.info.duration, 0.00001);

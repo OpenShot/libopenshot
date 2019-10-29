@@ -29,6 +29,8 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 
 using namespace std;
@@ -75,9 +77,9 @@ TEST(ImageWriter_Test_Gif)
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK_EQUAL(20, (int)pixels[pixel_index]);
-	CHECK_EQUAL(18, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(11, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_CLOSE(20, (int)pixels[pixel_index], 5);
+	CHECK_CLOSE(18, (int)pixels[pixel_index + 1], 5);
+	CHECK_CLOSE(11, (int)pixels[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
 }
 #endif

@@ -75,8 +75,8 @@ namespace openshot
 		/// Default constructor, which takes 2 curves. The curves adjust the brightness and
 		// contrast of a frame's image.
 		///
-		/// @param new_brightness The curve to adjust the brightness (between 100 and -100)
-		/// @param new_contrast The curve to adjust the contrast (3 is typical, 20 is a lot, 0 is invalid)
+		/// @param new_brightness The curve to adjust the brightness (from -1 to +1, 0 is default/"off")
+		/// @param new_contrast The curve to adjust the contrast (3 is typical, 20 is a lot, 100 is max. 0 is invalid)
 		Brightness(Keyframe new_brightness, Keyframe new_contrast);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a

@@ -340,7 +340,7 @@ float* Frame::GetAudioSamples(int channel)
 float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
-	AudioSampleBuffer *buffer(audio.get());
+	juce::AudioSampleBuffer *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -386,7 +386,7 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
-	AudioSampleBuffer *buffer(audio.get());
+	juce::AudioSampleBuffer *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -430,7 +430,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 	if (audio)
 		return audio->getNumChannels();
 	else
@@ -440,7 +440,7 @@ int Frame::GetAudioChannelsCount()
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 	return max_audio_sample;
 }
 
@@ -735,7 +735,7 @@ void Frame::AddColor(int new_width, int new_height, string new_color)
 	color = new_color;
 
 	// Create new image object, and fill with pixel data
-	const GenericScopedLock<CriticalSection> lock(addingImageSection);
+	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 	#pragma omp critical (AddImage)
 	{
 		image = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
@@ -753,7 +753,7 @@ void Frame::AddColor(int new_width, int new_height, string new_color)
 void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
-	const GenericScopedLock<CriticalSection> lock(addingImageSection);
+	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 	int buffer_size = new_width * new_height * bytes_per_pixel;
 	qbuffer = new unsigned char[buffer_size]();
 
@@ -784,7 +784,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 		return;
 
 	// assign image data
-	const GenericScopedLock<CriticalSection> lock(addingImageSection);
+	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 	#pragma omp critical (AddImage)
 	{
 		image = new_image;
@@ -823,7 +823,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 			return;
 
 		// Get the frame's image
-		const GenericScopedLock<CriticalSection> lock(addingImageSection);
+		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		#pragma omp critical (AddImage)
 		{
 			const unsigned char *pixels = image->bits();
@@ -833,10 +833,11 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 			int start = 0;
 			if (only_odd_lines)
 				start = 1;
-				for (int row = start; row < image->height(); row += 2) {
-					memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
-					new_pixels += image->bytesPerLine();
-				}
+
+			for (int row = start; row < image->height(); row += 2) {
+				memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
+				new_pixels += image->bytesPerLine();
+			}
 
 			// Update height and width
 			width = image->width();
@@ -850,7 +851,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
 {
-    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Resize JUCE audio buffer
 	audio->setSize(channels, length, true, true, false);
@@ -863,7 +864,7 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
-	const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+	const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 	#pragma omp critical (adding_audio)
     {
 		// Clamp starting sample to 0
@@ -894,7 +895,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 // Apply gain ramp (i.e. fading volume)
 void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
 {
-    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Apply gain ramp
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
@@ -969,7 +970,7 @@ void Frame::Play()
 	if (!GetAudioSamplesCount())
 		return;
 
-	AudioDeviceManager deviceManager;
+	juce::AudioDeviceManager deviceManager;
 	String error = deviceManager.initialise (0, /* number of input channels */
 	        2, /* number of output channels */
 	        0, /* no XML settings.. */
@@ -980,14 +981,14 @@ void Frame::Play()
 		cout << "Error on initialise(): " << error.toStdString() << endl;
 	}
 
-	AudioSourcePlayer audioSourcePlayer;
+	juce::AudioSourcePlayer audioSourcePlayer;
 	deviceManager.addAudioCallback (&audioSourcePlayer);
 
 	ScopedPointer<AudioBufferSource> my_source;
 	my_source = new AudioBufferSource(audio.get());
 
 	// Create TimeSliceThread for audio buffering
-	TimeSliceThread my_thread("Audio buffer thread");
+	juce::TimeSliceThread my_thread("Audio buffer thread");
 
 	// Start thread
 	my_thread.startThread();
@@ -1003,7 +1004,7 @@ void Frame::Play()
 
 
 	// Create MIXER
-	MixerAudioSource mixer;
+	juce::MixerAudioSource mixer;
 	mixer.addInputSource(&transport1, false);
 	audioSourcePlayer.setSource (&mixer);
 
@@ -1046,7 +1047,7 @@ void Frame::cleanUpBuffer(void *info)
 // Add audio silence
 void Frame::AddAudioSilence(int numSamples)
 {
-    const GenericScopedLock<CriticalSection> lock(addingAudioSection);
+    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);
