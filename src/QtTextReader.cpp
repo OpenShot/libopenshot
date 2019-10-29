@@ -134,7 +134,7 @@ void QtTextReader::Open()
 		info.height = height;
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
-		info.duration = 60 * 60 * 24; // 24 hour duration
+		info.duration = 60 * 60 * 1;  // 1 hour duration
 		info.fps.num = 30;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
