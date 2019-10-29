@@ -77,20 +77,6 @@ IF (ImageMagick_FOUND)
 
 ENDIF (ImageMagick_FOUND)
 
-################### FFMPEG #####################
-# Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
-
-foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-    if(${ffmpeg_comp}_FOUND)
-        # Include FFmpeg headers (needed for compile)
-        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-    endif()
-endforeach()
-list(REMOVE_DUPLICATES FF_INCLUDES)
-include_directories(${FF_INCLUDES})
-
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)

@@ -29,9 +29,6 @@ include_directories(${OPENSHOT_INCLUDE_DIRS})
 
 ####### Display summary of options/dependencies ######
 include(FeatureSummary)
-#set_property(GLOBAL APPEND PROPERTY FeatureSummary_PKG_TYPES BUILD)
-#find_package(FOO)
-#set_package_properties(FOO PROPERTIES TYPE BUILD)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
@@ -83,20 +80,6 @@ IF (ImageMagick_FOUND)
 	SET(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 
 ENDIF (ImageMagick_FOUND)
-
-################### FFMPEG #####################
-# Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
-
-foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-    if(${ffmpeg_comp}_FOUND)
-        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-        list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
-    endif()
-endforeach()
-list(REMOVE_DUPLICATES FF_INCLUDES)
-include_directories(${FF_INCLUDES})
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -273,6 +256,17 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+
+################### FFMPEG #####################
+# Find FFmpeg libraries (used for video encoding / decoding)
+FIND_PACKAGE(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)
+
+foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
+  if(TARGET FFmpeg::${ff_comp})
+		target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
+  endif()
+endforeach()
+
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
 
@@ -291,10 +285,10 @@ endif()
 
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
-		${FF_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
 		${JSONCPP_LIBRARY}
