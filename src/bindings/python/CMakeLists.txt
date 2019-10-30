@@ -78,26 +78,21 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
                         PUBLIC ${PYTHON_LIBRARIES} openshot)
 
 	### Check if the following Debian-friendly python module path exists
-	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages")
+	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
 	if (NOT EXISTS ${PYTHON_MODULE_PATH})
 
-		### Check if another Debian-friendly python module path exists
-		SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
-		if (NOT EXISTS ${PYTHON_MODULE_PATH})
-
-			### Calculate the python module path (using distutils)
-			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+		### Calculate the python module path (using distutils)
+		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
 print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
-				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-				OUTPUT_STRIP_TRAILING_WHITESPACE )
+			OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+			OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-			GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-					"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-			FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-					${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-			SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
-		endif()
+		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+				"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+				${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+		SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
 	endif()
 	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
 
