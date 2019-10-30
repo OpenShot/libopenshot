@@ -367,7 +367,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 	int channels = buffer->getNumChannels();
 
 	// Reverse array (create new buffer to hold the reversed version)
-	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -399,7 +399,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for a valid time map curve
 	if (time.Values.size() > 1)
 	{
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -423,7 +423,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 			if (time.GetRepeatFraction(frame_number).den > 1) {
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *resampled_buffer = NULL;
+				juce::AudioSampleBuffer *resampled_buffer = NULL;
 				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
@@ -482,7 +482,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame <= new_frame_number; delta_frame++) {
 						// buffer to hold detal samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -526,7 +526,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame >= new_frame_number; delta_frame--) {
 						// buffer to hold delta samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -557,7 +557,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
 
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
+				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
 				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame

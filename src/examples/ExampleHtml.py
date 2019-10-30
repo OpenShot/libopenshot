@@ -2,7 +2,7 @@
 
 """
  @file
- @brief Python source file for openshot.py example
+ @brief Python source file for QtHtmlReader example
  @author Jonathan Thomas <jonathan@openshot.org>
  @author FeRD (Frank Dana) <ferdnyc@gmail.com>
 
@@ -30,25 +30,38 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 
-# This can be run against an uninstalled build of libopenshot, just set the
-# environment variable PYTHONPATH to the location of the Python bindings.
-#
-# For example:
-# $ PYTHONPATH=../../build/src/bindings/python python3 Example.py
-#
+import sys
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QGuiApplication
 import openshot
 
+app = QGuiApplication(sys.argv)
 
-# Create an FFmpegReader
-r = openshot.FFmpegReader("sintel_trailer-720p.mp4")
+html_code = """<p><span id="red">Check out</span> this HTML!</p>"""
 
-r.Open()         # Open the reader
+css_code = """
+    * {font-family:sans-serif; font-size:18pt; color:#ffffff;}
+    #red {color: #ff0000;}
+"""
+
+# Create a QtHtmlReader
+r = openshot.QtHtmlReader(1280,      # width
+                          720,       # height
+                          -16,       # x offset
+                          -16,       # y offset
+                          openshot.GRAVITY_BOTTOM_RIGHT,
+                          html_code,
+                          css_code,
+                          "#000000"  # background color
+                          )
+
+r.Open()  # Open the reader
+
 r.DisplayInfo()  # Display metadata
 
 # Set up Writer
-w = openshot.FFmpegWriter("pythonExample.mp4")
+w = openshot.FFmpegWriter("pyHtmlExample.mp4")
 
-w.SetAudioOptions(True, "libmp3lame", r.info.sample_rate, r.info.channels, r.info.channel_layout, 128000)
 w.SetVideoOptions(True, "libx264", openshot.Fraction(30000, 1000), 1280, 720,
                   openshot.Fraction(1, 1), False, False, 3000000)
 
@@ -73,4 +86,8 @@ for frame in range(100):
 w.Close()
 r.Close()
 
-print("Completed successfully!")
+# Set a timer to terminate the app as soon as the event queue empties
+QTimer.singleShot(0, app.quit)
+
+# Run QGuiApplication to completion
+sys.exit(app.exec())

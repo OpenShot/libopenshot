@@ -29,6 +29,8 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 
 using namespace std;
@@ -219,4 +221,3 @@ TEST(FFmpegReader_Multiple_Open_and_Close)
 	// Close reader
 	r.Close();
 }
-

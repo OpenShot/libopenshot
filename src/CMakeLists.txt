@@ -29,13 +29,11 @@ include_directories(${OPENSHOT_INCLUDE_DIRS})
 
 ####### Display summary of options/dependencies ######
 include(FeatureSummary)
-#set_property(GLOBAL APPEND PROPERTY FeatureSummary_PKG_TYPES BUILD)
-#find_package(FOO)
-#set_package_properties(FOO PROPERTIES TYPE BUILD)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -83,20 +81,6 @@ IF (ImageMagick_FOUND)
 	SET(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 
 ENDIF (ImageMagick_FOUND)
-
-################### FFMPEG #####################
-# Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
-
-foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-    if(${ffmpeg_comp}_FOUND)
-        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-        list(APPEND FF_LIBRARIES ${${ffmpeg_comp}_LIBRARIES})
-    endif()
-endforeach()
-list(REMOVE_DUPLICATES FF_INCLUDES)
-include_directories(${FF_INCLUDES})
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -181,6 +165,26 @@ endif(USE_SYSTEM_JSONCPP)
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
+if(CMAKE_VERSION VERSION_LESS 3.3)
+  # IWYU wasn't supported internally in 3.2
+  set(ENABLE_IWYU FALSE)
+endif()
+
+if(ENABLE_IWYU)
+	find_program(IWYU_PATH NAMES "iwyu"
+		DOC "include-what-you-use source code scanner executable")
+	if(IWYU_PATH)
+		if(IWYU_OPTS)
+			separate_arguments(IWYU_OPTS)
+			list(APPEND _iwyu_opts "-Xiwyu" ${IWYU_OPTS})
+		endif()
+		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH} ${_iwyu_opts})
+	else()
+		set(ENABLE_IWYU FALSE)
+	endif()
+endif()
+add_feature_info("IWYU (include-what-you-use)" ENABLE_IWYU "Scan all source files with 'iwyu'")
+
 #### GET LIST OF EFFECT FILES ####
 FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")
 
@@ -224,6 +228,9 @@ SET ( OPENSHOT_SOURCE_FILES
 		QtPlayer.cpp
 		Settings.cpp
 		Timeline.cpp
+		QtTextReader.cpp
+		QtHtmlReader.cpp
+
 
 		# Qt Video Player
 		${QT_PLAYER_FILES}
@@ -273,6 +280,16 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+################### FFMPEG #####################
+# Find FFmpeg libraries (used for video encoding / decoding)
+FIND_PACKAGE(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)
+
+foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
+  if(TARGET FFmpeg::${ff_comp})
+		target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
+  endif()
+endforeach()
+
 ################### Threads ####################
 # Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -297,10 +314,10 @@ endif()
 
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
+
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
-		${FF_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
 		${JSONCPP_LIBRARY}
@@ -331,7 +348,7 @@ target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 # Pick up parameters from OpenMP target and propagate
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
-############### CLI EXECUTABLE ################
+############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
 
@@ -345,6 +362,9 @@ target_compile_definitions(openshot-example PRIVATE
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
+
+add_executable(openshot-html-test examples/ExampleHtml.cpp)
+target_link_libraries(openshot-html-test openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable

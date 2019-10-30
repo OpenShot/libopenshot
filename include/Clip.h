@@ -103,15 +103,15 @@ namespace openshot {
 	class Clip : public ClipBase {
 	protected:
 		/// Section lock for multiple threads
-	    CriticalSection getFrameCriticalSection;
+	    juce::CriticalSection getFrameCriticalSection;
 
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
-		list<EffectBase*> effects; ///<List of clips on this timeline
+		std::list<EffectBase*> effects; ///<List of clips on this timeline
 
 		// Audio resampler (if time mapping)
 		AudioResampler *resampler;
-		AudioSampleBuffer *audio_cache;
+		juce::AudioSampleBuffer *audio_cache;
 
 		// File Reader object
 		ReaderBase* reader;
@@ -127,7 +127,7 @@ namespace openshot {
 		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame);
 
 		/// Get file extension
-		string get_file_extension(string path);
+		std::string get_file_extension(std::string path);
 
 		/// Get a frame object or create a blank one
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
