@@ -33,7 +33,7 @@ include(FeatureSummary)
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
-option(ENABLE_IWYU "Enable 'Include What You Use' scanner" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -165,15 +165,20 @@ endif(USE_SYSTEM_JSONCPP)
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
+if(CMAKE_VERSION VERSION_LESS 3.3)
+  # IWYU wasn't supported internally in 3.2
+  set(ENABLE_IWYU FALSE)
+endif()
+
 if(ENABLE_IWYU)
 	find_program(IWYU_PATH NAMES "iwyu"
 		DOC "include-what-you-use source code scanner executable")
 	if(IWYU_PATH)
 		if(IWYU_OPTS)
 			separate_arguments(IWYU_OPTS)
-			list(APPEND _iwyu_cmd ${IWYU_PATH} "-Xiwyu" ${IWYU_OPTS})
+			list(APPEND _iwyu_opts "-Xiwyu" ${IWYU_OPTS})
 		endif()
-		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${_iwyu_cmd})
+		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH} ${_iwyu_opts})
 	else()
 		set(ENABLE_IWYU FALSE)
 	endif()
