@@ -1,7 +1,8 @@
 /**
  * @file
- * @brief Unit tests for openshot::Coordinate
+ * @brief Source file for GetVersion function
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  *
  * @ref License
  */
@@ -28,28 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "OpenShotVersion.h"
 
-using namespace std;
-using namespace openshot;
-
-TEST(Coordinate_Default_Constructor)
-{
-	// Create an empty coordinate
-	Coordinate c1;
-
-	CHECK_CLOSE(0.0f, c1.X, 0.00001);
-	CHECK_CLOSE(0.0f, c1.Y, 0.00001);
-}
-
-TEST(Coordinate_X_Y_Constructor)
-{
-	// Create an empty coordinate
-	Coordinate c1(2,8);
-
-	CHECK_CLOSE(2.0f, c1.X, 0.00001);
-	CHECK_CLOSE(8.0f, c1.Y, 0.00001);
+namespace openshot {
+    OpenShotVersion GetVersion() {
+        return openshot::Version;
+    }
 }

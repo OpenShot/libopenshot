@@ -77,20 +77,6 @@ IF (ImageMagick_FOUND)
 
 ENDIF (ImageMagick_FOUND)
 
-################### FFMPEG #####################
-# Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
-
-foreach(ffmpeg_comp AVCODEC AVDEVICE AVFORMAT AVFILTER AVUTIL POSTPROC SWSCALE SWRESAMPLE AVRESAMPLE)
-    if(${ffmpeg_comp}_FOUND)
-        # Include FFmpeg headers (needed for compile)
-        list(APPEND FF_INCLUDES ${${ffmpeg_comp}_INCLUDE_DIRS})
-        add_definitions(${${ffmpeg_comp}_DEFINITIONS})
-    endif()
-endforeach()
-list(REMOVE_DUPLICATES FF_INCLUDES)
-include_directories(${FF_INCLUDES})
-
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
@@ -127,20 +113,20 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### OPENMP #####################
-# Check for OpenMP (used for multi-core processing)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
-endif(OPENMP_FOUND)
 
 ################### ZEROMQ #####################
 # Find ZeroMQ library (used for socket communication & logging)
+
+# Some platforms package the header-only cppzmq C++ bindings separately,
+# others (Ubuntu) bundle them in with libzmq itself
+find_package(cppzmq QUIET)
 FIND_PACKAGE(ZMQ REQUIRED)
 
 # Include ZeroMQ headers (needed for compile)
 include_directories(${ZMQ_INCLUDE_DIRS})
+if (cppzmq_FOUND)
+    include_directories(${cppzmq_INCLUDE_DIRS})
+endif()
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
@@ -160,46 +146,64 @@ else()
 	include_directories("../thirdparty/jsoncpp")
 endif(USE_SYSTEM_JSONCPP)
 
-IF (NOT DISABLE_TESTS)
-	###############  SET TEST SOURCE FILES  #################
-	SET ( OPENSHOT_TEST_FILES tests.cpp
-		   Cache_Tests.cpp
-		   Clip_Tests.cpp
-		   Color_Tests.cpp
-		   Coordinate_Tests.cpp
-		   ReaderBase_Tests.cpp
-		   ImageWriter_Tests.cpp
-		   FFmpegReader_Tests.cpp
-		   FFmpegWriter_Tests.cpp
-		   Fraction_Tests.cpp
-		   FrameMapper_Tests.cpp
-		   KeyFrame_Tests.cpp
-		   Point_Tests.cpp
-		   Settings_Tests.cpp
-		   Timeline_Tests.cpp )
+
+###############  SET TEST SOURCE FILES  #################
+SET ( OPENSHOT_TEST_FILES
+	   Cache_Tests.cpp
+	   Clip_Tests.cpp
+	   Color_Tests.cpp
+	   Coordinate_Tests.cpp
+	   ReaderBase_Tests.cpp
+	   ImageWriter_Tests.cpp
+	   FFmpegReader_Tests.cpp
+	   FFmpegWriter_Tests.cpp
+	   Fraction_Tests.cpp
+	   FrameMapper_Tests.cpp
+	   KeyFrame_Tests.cpp
+	   Point_Tests.cpp
+	   Settings_Tests.cpp
+	   Timeline_Tests.cpp )
+
+if(NOT DISABLE_EXTERNAL_EFFECTS)
+	list(APPEND OPENSHOT_TEST_FILES DynamicEffects_Tests.cpp)
+	add_definitions(-DTEST_PLUGIN_NAME="SuperBlur"
+    -DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffect-superblur.so")
+endif()
 
 
-	IF (NOT DISABLE_EXTERNAL_EFFECTS)
-		list(APPEND OPENSHOT_TEST_FILES
-				DynamicEffects_Tests.cpp)
-	ENDIF(NOT DISABLE_EXTERNAL_EFFECTS)
+################ TESTER EXECUTABLE #################
+# Create unit test executable (openshot-test)
+message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
+add_executable(openshot-test
+			   tests.cpp
+			   ${OPENSHOT_TEST_FILES} )
 
-	################ TESTER EXECUTABLE #################
-	# Create unit test executable (openshot-test)
-	add_executable(openshot-test
-				   tests.cpp
-				   ${OPENSHOT_TEST_FILES} )
+# Link libraries to the new executable
+target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+
+if(NOT DISABLE_EXTERNAL_EFFECTS)
+	add_dependencies(openshot-test effect-superblur)
+endif()
 
 
-	target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+##### RUNNING TESTS (make os_test / make test) #####
+# Hook up the 'make os_test' target to the 'openshot-test' executable
+ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
+list(APPEND OS_TEST_CMDS "'make os_test'")
 
-	IF (NOT DISABLE_EXTERNAL_EFFECTS)
-		add_definitions(-DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffect-superblur.so"
-						-DTEST_PLUGIN_NAME="SuperBlur")
-		add_dependencies(openshot-test effect-superblur)
-	ENDIF(NOT DISABLE_EXTERNAL_EFFECTS)
+# Also hook up 'make test', if possible
+# This requires CMake 3.11+, where the CMP0037 policy
+# configured to 'NEW' mode will not reserve target names
+# unless the corresponding feature is actually used
+if (POLICY CMP0037)
+	cmake_policy(SET CMP0037 NEW)
+endif()
+if (CMAKE_VERSION VERSION_GREATER 3.11)
+	message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
+	add_custom_target(test COMMAND openshot-test)
+	list(APPEND OS_TEST_CMDS " or " "'make test'")
+endif()
 
-	#################### MAKE TEST ######################
-	# Hook up the 'make os_test' target to the 'openshot-test' executable
-	ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
-ENDIF (NOT DISABLE_TESTS)
+string(CONCAT t ${OS_TEST_CMDS})
+message("\nTo run unit tests, use: ${t}")
+

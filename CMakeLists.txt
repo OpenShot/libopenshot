@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.1...3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.2...3.14 FATAL_ERROR)
 
 message("\
 -----------------------------------------------------------------
@@ -56,7 +56,7 @@ STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
-Generating build files for OpenShot
+Generating build files for OpenShot with CMake ${CMAKE_VERSION}
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
@@ -92,9 +92,8 @@ ENDIF(WIN32)
 set(QT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt)
 FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
 
-############## PROCESS SUB-DIRECTORIES ##############
+############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
-add_subdirectory(tests)
 
 IF (NOT DISABLE_EXTERNAL_EFFECTS)
 	add_subdirectory(external-effects)
@@ -104,6 +103,11 @@ ENDIF (NOT DISABLE_EXTERNAL_EFFECTS)
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
 
+# Doxygen was found
+if (TARGET doc)
+	message(STATUS "Doxygen found, documentation target enabled")
+	message("\nTo compile documentation in doc/html, run: 'make doc'")
+
 # Install docs, if the user builds them with `make doc`
 install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
 install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
@@ -112,3 +116,9 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
         DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
         MESSAGE_NEVER # Don't spew about file copies
         OPTIONAL )    # No error if the docs aren't found
+endif()
+
+############# PROCESS tests/ DIRECTORY ##############
+if(NOT DISABLE_TESTS)
+  add_subdirectory(tests)
+endif()

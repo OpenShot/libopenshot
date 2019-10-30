@@ -44,14 +44,14 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(string path) : path(path), is_open(false)
+QtImageReader::QtImageReader(string path) : path{QString::fromStdString(path)}, is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtImageReader::QtImageReader(string path, bool inspect_reader) : path(path), is_open(false)
+QtImageReader::QtImageReader(string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -77,12 +77,12 @@ void QtImageReader::Open()
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.find(".svg") != std::string::npos || path.find(".svgz") != std::string::npos) {
+		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
 
-			ResvgRenderer renderer(QString::fromStdString(path));
+			ResvgRenderer renderer(path);
 			if (!renderer.isValid()) {
 				// Attempt to open file (old method using Qt5 limited SVG parsing)
-				success = image->load(QString::fromStdString(path));
+				success = image->load(path);
 				if (success) {
 					image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 				}
@@ -98,20 +98,20 @@ void QtImageReader::Open()
 
 		} else {
 			// Attempt to open file (old method)
-			success = image->load(QString::fromStdString(path));
+			success = image->load(path);
 			if (success)
 				image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 		}
 #else
 		// Attempt to open file using Qt's build in image processing capabilities
-		success = image->load(QString::fromStdString(path));
+		success = image->load(path);
 		if (success)
 			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
 
 		if (!success)
 			// raise exception
-			throw InvalidFile("File could not be opened.", path);
+			throw InvalidFile("File could not be opened.", path.toStdString());
 
 		// Update image properties
 		info.has_audio = false;
@@ -123,7 +123,7 @@ void QtImageReader::Open()
 		info.height = image->height();
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
-		info.duration = 60 * 60 * 24; // 24 hour duration
+		info.duration = 60 * 60 * 1;  // 1 hour duration
 		info.fps.num = 30;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
@@ -171,7 +171,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The Image is closed.  Call Open() before calling this method.", path);
+		throw ReaderClosed("The Image is closed.  Call Open() before calling this method.", path.toStdString());
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
@@ -228,8 +228,8 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.find(".svg") != std::string::npos || path.find(".svgz") != std::string::npos) {
-			ResvgRenderer renderer(QString::fromStdString(path));
+		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+			ResvgRenderer renderer(path);
 			if (renderer.isValid()) {
 				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
 				QSize svg_size(renderer.defaultSize().width(), renderer.defaultSize().height());
@@ -289,7 +289,7 @@ Json::Value QtImageReader::JsonValue() {
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "QtImageReader";
-	root["path"] = path;
+	root["path"] = path.toStdString();
 
 	// return JsonValue
 	return root;
@@ -310,7 +310,7 @@ void QtImageReader::SetJson(string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -320,7 +320,7 @@ void QtImageReader::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -332,7 +332,7 @@ void QtImageReader::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["path"].isNull())
-		path = root["path"].asString();
+		path = QString::fromStdString(root["path"].asString());
 
 	// Re-Open path, and re-init everything (if needed)
 	if (is_open)
