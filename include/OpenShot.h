@@ -135,7 +135,9 @@
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"
+#include "QtHtmlReader.h"
 #include "QtImageReader.h"
+#include "QtTextReader.h"
 #include "Timeline.h"
 #include "Settings.h"
 
