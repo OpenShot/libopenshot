@@ -223,6 +223,9 @@ SET ( OPENSHOT_SOURCE_FILES
 		QtPlayer.cpp
 		Settings.cpp
 		Timeline.cpp
+		QtTextReader.cpp
+		QtHtmlReader.cpp
+
 
 		# Qt Video Player
 		${QT_PLAYER_FILES}
@@ -335,7 +338,7 @@ target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 # Pick up parameters from OpenMP target and propagate
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
-############### CLI EXECUTABLE ################
+############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
 
@@ -349,6 +352,9 @@ target_compile_definitions(openshot-example PRIVATE
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
+
+add_executable(openshot-html-test examples/ExampleHtml.cpp)
+target_link_libraries(openshot-html-test openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
