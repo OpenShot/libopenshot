@@ -123,14 +123,6 @@ if (RESVG_FOUND)
 	include_directories(${RESVG_INCLUDE_DIRS})
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-else()
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
 
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES
