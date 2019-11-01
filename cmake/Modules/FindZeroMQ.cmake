@@ -3,12 +3,16 @@ find_package(PkgConfig)
 pkg_check_modules(PC_LIBZMQ QUIET libzmq)
 
 set(ZeroMQ_VERSION ${PC_LIBZMQ_VERSION})
-find_path(ZeroMQ_INCLUDE_DIR zmq.h PATHS ${PC_LIBZMQ_INCLUDE_DIRS} $ENV{ZMQDIR})
+find_path(ZeroMQ_INCLUDE_DIR zmq.h
+          HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
+          PATHS ${PC_LIBZMQ_INCLUDE_DIRS})
 
 find_library(ZeroMQ_LIBRARY NAMES libzmq.so libzmq.dylib libzmq.dll
-PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS} $ENV{ZMQDIR})
+             HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
+             PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS})
 find_library(ZeroMQ_STATIC_LIBRARY NAMES libzmq-static.a libzmq.a libzmq.dll.a
-             PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS} $ENV{ZMQDIR})
+             HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
+             PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS})
 
 if(ZeroMQ_LIBRARY OR ZeroMQ_STATIC_LIBRARY)
     set(ZeroMQ_FOUND ON)
