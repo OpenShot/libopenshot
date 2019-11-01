@@ -3,6 +3,7 @@ find_package(PkgConfig)
 pkg_check_modules(PC_LIBZMQ QUIET libzmq)
 
 set(ZeroMQ_VERSION ${PC_LIBZMQ_VERSION})
+
 find_path(ZeroMQ_INCLUDE_DIR zmq.h
 	  PATHS ${ZeroMQ_DIR}/include
                 ${PC_LIBZMQ_INCLUDE_DIRS})
