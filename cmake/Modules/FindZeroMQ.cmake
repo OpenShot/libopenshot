@@ -23,13 +23,17 @@ set(ZeroMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR})
 list(APPEND ZeroMQ_INCLUDE_DIRS ${PC_LIBZMQ_INCLUDE_DIRS})
 list(REMOVE_DUPLICATES ZeroMQ_INCLUDE_DIRS)
 
-add_library(libzmq SHARED IMPORTED)
-set_property(TARGET libzmq PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
-set_property(TARGET libzmq PROPERTY IMPORTED_LOCATION ${ZeroMQ_LIBRARY})
+if(ZeroMQ_LIBRARY)
+    add_library(libzmq SHARED IMPORTED)
+    set_property(TARGET libzmq PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
+    set_property(TARGET libzmq PROPERTY IMPORTED_LOCATION ${ZeroMQ_LIBRARY})
+endif()
 
-add_library(libzmq-static STATIC IMPORTED ${ZeroMQ_INCLUDE_DIRS})
-set_property(TARGET libzmq-static PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
-set_property(TARGET libzmq-static PROPERTY IMPORTED_LOCATION ${ZeroMQ_STATIC_LIBRARY})
+if(ZeroMQ_LIBRARY_STATIC)
+    add_library(libzmq-static STATIC IMPORTED ${ZeroMQ_INCLUDE_DIRS})
+    set_property(TARGET libzmq-static PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
+    set_property(TARGET libzmq-static PROPERTY IMPORTED_LOCATION ${ZeroMQ_STATIC_LIBRARY})
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(ZeroMQ
