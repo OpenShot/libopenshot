@@ -330,11 +330,9 @@ find_package(ZeroMQ REQUIRED) # Creates libzmq target
 # others (Ubuntu) bundle them in with libzmq itself
 find_package(cppzmq QUIET) # Creates cppzmq target
 
-# Link ZeroMQ (shared or static, whichever's found)
+# Link ZeroMQ library
 if (TARGET libzmq)
 	target_link_libraries(openshot PUBLIC libzmq)
-elseif (TARGET libzmq-static)
-	target_link_libraries(openshot PRIVATE libzmq-static)
 endif()
 # Include cppzmq headers, if not bundled into libzmq
 if (TARGET cppzmq)
@@ -372,6 +370,7 @@ target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 
 # Pick up parameters from OpenMP target and propagate
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+
 
 ############### CLI EXECUTABLES ################
 # Create test executable
