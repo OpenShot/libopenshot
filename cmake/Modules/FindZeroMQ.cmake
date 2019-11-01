@@ -4,14 +4,14 @@ pkg_check_modules(PC_LIBZMQ QUIET libzmq)
 
 set(ZeroMQ_VERSION ${PC_LIBZMQ_VERSION})
 find_path(ZeroMQ_INCLUDE_DIR zmq.h
-	  PATHS ${ZeroMQ_DIR}/include
+          PATHS ${ZeroMQ_DIR}/include
                 ${PC_LIBZMQ_INCLUDE_DIRS})
 
 find_library(ZeroMQ_LIBRARY
-	     NAMES zmq
-	     PATHS ${ZeroMQ_DIR}/lib
-                   ${PC_LIBZMQ_LIBDIR}
-		   ${PC_LIBZMQ_LIBRARY_DIRS})
+             NAMES zmq
+             PATHS ${ZeroMQ_DIR}/lib
+               ${PC_LIBZMQ_LIBDIR}
+               ${PC_LIBZMQ_LIBRARY_DIRS})
 
 if(ZeroMQ_LIBRARY)
     set(ZeroMQ_FOUND ON)
