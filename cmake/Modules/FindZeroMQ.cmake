@@ -4,44 +4,37 @@ pkg_check_modules(PC_LIBZMQ QUIET libzmq)
 
 set(ZeroMQ_VERSION ${PC_LIBZMQ_VERSION})
 find_path(ZeroMQ_INCLUDE_DIR zmq.h
-          HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
-          PATHS ${PC_LIBZMQ_INCLUDE_DIRS})
+	  PATHS ${ZeroMQ_DIR}/include
+                ${PC_LIBZMQ_INCLUDE_DIRS})
 
-find_library(ZeroMQ_LIBRARY NAMES libzmq.so libzmq.dylib libzmq.dll
-             HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
-             PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS})
-find_library(ZeroMQ_STATIC_LIBRARY NAMES libzmq-static.a libzmq.a libzmq.dll.a
-             HINTS ${ZeroMQ_DIR} $ENV{ZMQDIR}
-             PATHS ${PC_LIBZMQ_LIBDIR} ${PC_LIBZMQ_LIBRARY_DIRS})
+find_library(ZeroMQ_LIBRARY
+	     NAMES zmq
+	     PATHS ${ZeroMQ_DIR}/lib
+                   ${PC_LIBZMQ_LIBDIR}
+		   ${PC_LIBZMQ_LIBRARY_DIRS})
 
-if(ZeroMQ_LIBRARY OR ZeroMQ_STATIC_LIBRARY)
+if(ZeroMQ_LIBRARY)
     set(ZeroMQ_FOUND ON)
 endif()
 
-if (TARGET libzmq)
-    # avoid errors defining targets twice
-    return()
+set ( ZeroMQ_LIBRARIES ${ZeroMQ_LIBRARY} )
+set ( ZeroMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR} )
+
+if(NOT TARGET ZeroMQ::libzmq)
+	add_library(ZeroMQ::libzmq UNKNOWN IMPORTED)
+	set_target_properties(ZeroMQ::libzmq PROPERTIES
+		IMPORTED_LOCATION ${ZeroMQ_LIBRARIES}
+		INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
+endif()
+# For cppzmq
+if(NOT TARGET libzmq)
+  add_library(libzmq UNKNOWN IMPORTED)
+	set_target_properties(libzmq PROPERTIES
+		IMPORTED_LOCATION ${ZeroMQ_LIBRARIES}
+		INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
 endif()
 
-set(ZeroMQ_INCLUDE_DIRS ${ZeroMQ_INCLUDE_DIR})
-list(APPEND ZeroMQ_INCLUDE_DIRS ${PC_LIBZMQ_INCLUDE_DIRS})
-list(REMOVE_DUPLICATES ZeroMQ_INCLUDE_DIRS)
-
-if(ZeroMQ_LIBRARY)
-    add_library(libzmq SHARED IMPORTED)
-    set_property(TARGET libzmq PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
-    set_property(TARGET libzmq PROPERTY IMPORTED_LOCATION ${ZeroMQ_LIBRARY})
-endif()
-
-if(ZeroMQ_LIBRARY_STATIC)
-    add_library(libzmq-static STATIC IMPORTED ${ZeroMQ_INCLUDE_DIRS})
-    set_property(TARGET libzmq-static PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ZeroMQ_INCLUDE_DIRS})
-    set_property(TARGET libzmq-static PROPERTY IMPORTED_LOCATION ${ZeroMQ_STATIC_LIBRARY})
-endif()
-
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(ZeroMQ
-  REQUIRED_VARS
-    ZeroMQ_LIBRARY ZeroMQ_INCLUDE_DIRS
-  VERSION_VAR
-    ZeroMQ_VERSION)
+include ( FindPackageHandleStandardArgs )
+# handle the QUIETLY and REQUIRED arguments and set ZMQ_FOUND to TRUE
+# if all listed variables are TRUE
+find_package_handle_standard_args ( ZeroMQ DEFAULT_MSG ZeroMQ_LIBRARIES ZeroMQ_INCLUDE_DIRS )
