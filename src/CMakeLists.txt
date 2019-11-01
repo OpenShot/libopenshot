@@ -32,7 +32,8 @@ include(FeatureSummary)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
-OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
 ################ WINDOWS ##################
@@ -149,18 +150,6 @@ if (RESVG_FOUND)
    SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	message(STATUS "Discovering system JsonCPP (USE_SYSTEM_JSONCPP enabled)")
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-	message(STATUS "Discovering system JsonCPP - done")
-else()
-	message(STATUS "Using embedded JsonCpp (USE_SYSTEM_JSONCPP not enabled)")
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -236,12 +225,6 @@ SET ( OPENSHOT_SOURCE_FILES
 		${QT_PLAYER_FILES}
 		${MOC_FILES})
 
-IF (NOT USE_SYSTEM_JSONCPP)
-	# Third Party JSON Parser
-	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			../thirdparty/jsoncpp/jsoncpp.cpp )
-ENDIF (NOT USE_SYSTEM_JSONCPP)
-
 # ImageMagic related files
 IF (ImageMagick_FOUND)
 	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
@@ -280,6 +263,43 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+################### JSONCPP #####################
+# Include jsoncpp headers (needed for JSON parsing)
+if (USE_SYSTEM_JSONCPP)
+	message(STATUS "Looking for system JsonCpp")
+	find_package(JsonCpp)
+	if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
+		# Create the expected target, for older installs that don't
+		add_library(jsoncpp_lib INTERFACE)
+		target_include_directories(jsoncpp_lib INTERFACE
+			${JSONCPP_INCLUDE_DIRS})
+		target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
+	endif ()
+endif ()
+
+if (NOT JSONCPP_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
+  message(STATUS "Using embedded JsonCpp (not found or USE_SYSTEM_JSONCPP disabled)")
+  if (NOT TARGET jsoncpp_lib)
+    add_library(jsoncpp_lib INTERFACE)
+    target_include_directories(jsoncpp_lib INTERFACE
+      "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
+    target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+    # Because this satisfies the requirement, an installed JsonCpp is optional
+    set_package_properties(JsonCpp PROPERTIES TYPE OPTIONAL)
+  endif ()
+  add_feature_info("JsonCpp (embedded)" TRUE "JsonCpp will be compiled from the bundled sources")
+endif ()
+
+if (JSONCPP_FOUND)
+  # JsonCpp is actually required, even though we probe for it optionally
+  # (This tells feature_summary() to bail if it's not found, later)
+  set_package_properties(JsonCpp PROPERTIES TYPE REQUIRED)
+endif ()
+
+# If we found any usable JsonCpp, use it. Otherwise, bail.
+if (TARGET jsoncpp_lib)
+  target_link_libraries(openshot PUBLIC jsoncpp_lib)
+endif ()
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
@@ -290,6 +310,7 @@ foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swres
 		target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
   endif()
 endforeach()
+
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
@@ -315,7 +336,6 @@ SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
-		${JSONCPP_LIBRARY}
 		${ZMQ_LIBRARIES}
 		)
 
@@ -384,9 +404,8 @@ add_subdirectory(bindings)
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
     INCLUDE_QUIET_PACKAGES
-    DESCRIPTION "Build configuration:"
-    VAR featuresText)
-message("\n${featuresText}")
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder
