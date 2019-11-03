@@ -55,7 +55,7 @@ void Keyframe::ReorderPoints() {
 	}
 }
 
-// Constructor which sets the default point & coordinate at X=0
+// Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) : needs_update(true) {
 	// Init the factorial table, needed by bezier curves
 	CreateFactorialTable();
