@@ -90,20 +90,6 @@ FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
-################# QT5 ###################
-# Find QT5 libraries
-foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
-    find_package(${qt_lib} REQUIRED)
-    # Header files
-    include_directories(${${qt_lib}_INCLUDE_DIRS})
-    # Compiler definitions
-    add_definitions(${${qt_lib}_DEFINITIONS})
-    # Other CFLAGS
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
-    # For use when linking
-    list(APPEND QT_LIBRARIES ${${qt_lib}_LIBRARIES})
-endforeach()
-
 # Manually moc Qt files
 qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
 
@@ -287,6 +273,17 @@ endif ()
 if (TARGET jsoncpp_lib)
   target_link_libraries(openshot PUBLIC jsoncpp_lib)
 endif ()
+
+################# QT5 ###################
+# Find QT5 libraries
+set(_qt_components Widgets Core Gui Multimedia MultimediaWidgets)
+find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
+
+foreach(_qt_comp IN LISTS _qt_components)
+  if(TARGET Qt5::${_qt_comp})
+    target_link_libraries(openshot PUBLIC Qt5::${_qt_comp})
+  endif()
+endforeach()
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
