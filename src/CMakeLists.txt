@@ -370,10 +370,19 @@ endif()
 # Link remaining dependency libraries
 target_link_libraries(openshot PUBLIC
 	${LIBOPENSHOT_AUDIO_LIBRARIES}
-	${PROFILER}
-	$<$<BOOL:${ImageMagick_FOUND}>:${ImageMagick_LIBRARIES}>
-	$<$<BOOL:${RESVG_FOUND}>:${RESVG_LIBRARIES}>
-  $<$<BOOL:${BLACKMAGIC_FOUND}>:${BLACKMAGIC_LIBRARY_DIR}>)
+  ${PROFILER})
+
+if(ImageMagick_FOUND)
+  target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
+endif()
+
+if(RESVG_FOUND)
+  target_link_libraries(openshot PUBLIC ${RESVG_LIBRARIES})
+endif()
+
+if(BLACKMAGIC_FOUND)
+  target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
+endif()
 
 if(WIN32)
 	# Required for exception handling on Windows
