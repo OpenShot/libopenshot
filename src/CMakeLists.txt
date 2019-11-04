@@ -367,34 +367,18 @@ endif()
 
 
 ###############  LINK LIBRARY  #################
-SET ( REQUIRED_LIBRARIES
-		${LIBOPENSHOT_AUDIO_LIBRARIES}
-		${PROFILER}
-		)
+# Link remaining dependency libraries
+target_link_libraries(openshot PUBLIC
+	${LIBOPENSHOT_AUDIO_LIBRARIES}
+	${PROFILER}
+	$<$<BOOL:${ImageMagick_FOUND}>:${ImageMagick_LIBRARIES}>
+	$<$<BOOL:${RESVG_FOUND}>:${RESVG_LIBRARIES}>
+  $<$<BOOL:${BLACKMAGIC_FOUND}>:${BLACKMAGIC_LIBRARY_DIR}>)
 
-IF (RESVG_FOUND)
-	list(APPEND REQUIRED_LIBRARIES ${RESVG_LIBRARIES})
-ENDIF(RESVG_FOUND)
-
-
-IF (ImageMagick_FOUND)
-  list(APPEND REQUIRED_LIBRARIES ${ImageMagick_LIBRARIES})
-ENDIF (ImageMagick_FOUND)
-
-IF (BLACKMAGIC_FOUND)
-	list(APPEND REQUIRED_LIBRARIES ${BLACKMAGIC_LIBRARY_DIR})
-ENDIF (BLACKMAGIC_FOUND)
-
-IF (WIN32)
+if(WIN32)
 	# Required for exception handling on Windows
-	list(APPEND REQUIRED_LIBRARIES "imagehlp" "dbghelp" )
-ENDIF(WIN32)
-
-# Link all referenced libraries
-target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
-
-# Pick up parameters from OpenMP target and propagate
-target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+	target_link_libraries(openshot PUBLIC "imagehlp" "dbghelp" )
+endif()
 
 ############### CLI EXECUTABLES ################
 # Create test executable
