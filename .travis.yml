@@ -94,6 +94,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libomp-dev
 
 script:
   - mkdir -p build; cd build;
