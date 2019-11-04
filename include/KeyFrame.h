@@ -98,7 +98,7 @@ namespace openshot {
 		/// Default constructor for the Keyframe class
 		Keyframe();
 
-		/// Constructor which sets the default point & coordinate at X=0
+		/// Constructor which sets the default point & coordinate at X=1
 		Keyframe(double value);
 
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
