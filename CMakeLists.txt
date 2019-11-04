@@ -72,13 +72,6 @@ configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
-############### Set up include paths #################
-list(APPEND OPENSHOT_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/effects
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt
-    ${CMAKE_CURRENT_BINARY_DIR}/include )
-
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -88,9 +81,9 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
-############## FIND ALL QT RELATED HEADERS ##############
-set(QT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt)
-FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)

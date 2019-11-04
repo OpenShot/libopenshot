@@ -24,10 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-# Pick up our include directories from the parent context
-include_directories(${OPENSHOT_INCLUDE_DIRS})
-
-####### Display summary of options/dependencies ######
+# Collect and display summary of options/dependencies
 include(FeatureSummary)
 
 ################ OPTIONS ##################
@@ -35,6 +32,9 @@ include(FeatureSummary)
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+
+# Automatically process Qt classes with meta-object compiler
+set(CMAKE_AUTOMOC True)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -90,9 +90,6 @@ FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
-# Manually moc Qt files
-qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
-
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 IF (ENABLE_BLACKMAGIC)
@@ -147,73 +144,71 @@ if(ENABLE_IWYU)
 endif()
 add_feature_info("IWYU (include-what-you-use)" ENABLE_IWYU "Scan all source files with 'iwyu'")
 
-#### GET LIST OF EFFECT FILES ####
-FILE(GLOB EFFECT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/effects/*.cpp")
+# Main library sources
+set(OPENSHOT_SOURCES
+  AudioBufferSource.cpp
+  AudioReaderSource.cpp
+  AudioResampler.cpp
+  CacheBase.cpp
+  CacheDisk.cpp
+  CacheMemory.cpp
+  ChunkReader.cpp
+  ChunkWriter.cpp
+  Color.cpp
+  Clip.cpp
+  ClipBase.cpp
+  Coordinate.cpp
+  CrashHandler.cpp
+  DummyReader.cpp
+  ReaderBase.cpp
+  RendererBase.cpp
+  WriterBase.cpp
+  EffectBase.cpp
+  EffectInfo.cpp
+  FFmpegReader.cpp
+  FFmpegWriter.cpp
+  Fraction.cpp
+  Frame.cpp
+  FrameMapper.cpp
+  KeyFrame.cpp
+  OpenShotVersion.cpp
+  ZmqLogger.cpp
+  PlayerBase.cpp
+  Point.cpp
+  Profiles.cpp
+  QtHtmlReader.cpp
+  QtImageReader.cpp
+  QtPlayer.cpp
+  QtTextReader.cpp
+  Settings.cpp
+  Timeline.cpp)
 
-#### GET LIST OF QT PLAYER FILES ####
-FILE(GLOB QT_PLAYER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Qt/*.cpp")
+# Video effects
+set(EFFECTS_SOURCES
+  effects/Bars.cpp
+  effects/Blur.cpp
+  effects/Brightness.cpp
+  effects/ChromaKey.cpp
+  effects/ColorShift.cpp
+  effects/Crop.cpp
+  effects/Deinterlace.cpp
+  effects/Hue.cpp
+  effects/Mask.cpp
+  effects/Negate.cpp
+  effects/Pixelate.cpp
+  effects/Saturation.cpp
+  effects/Shift.cpp
+  effects/Wave.cpp)
 
-###############  SET LIBRARY SOURCE FILES  #################
-SET ( OPENSHOT_SOURCE_FILES
-		AudioBufferSource.cpp
-		AudioReaderSource.cpp
-		AudioResampler.cpp
-		CacheBase.cpp
-		CacheDisk.cpp
-		CacheMemory.cpp
-		ChunkReader.cpp
-		ChunkWriter.cpp
-		Color.cpp
-		Clip.cpp
-		ClipBase.cpp
-		Coordinate.cpp
-		CrashHandler.cpp
-		DummyReader.cpp
-		ReaderBase.cpp
-		RendererBase.cpp
-		WriterBase.cpp
-		EffectBase.cpp
-		${EFFECT_FILES}
-		EffectInfo.cpp
-		FFmpegReader.cpp
-		FFmpegWriter.cpp
-		Fraction.cpp
-		Frame.cpp
-		FrameMapper.cpp
-		KeyFrame.cpp
-		OpenShotVersion.cpp
-		ZmqLogger.cpp
-		PlayerBase.cpp
-		Point.cpp
-		Profiles.cpp
-		QtImageReader.cpp
-		QtPlayer.cpp
-		Settings.cpp
-		Timeline.cpp
-		QtTextReader.cpp
-		QtHtmlReader.cpp
-
-
-		# Qt Video Player
-		${QT_PLAYER_FILES}
-		${MOC_FILES})
-
-# ImageMagic related files
-IF (ImageMagick_FOUND)
-	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			ImageReader.cpp
-			ImageWriter.cpp
-			TextReader.cpp)
-ENDIF (ImageMagick_FOUND)
-
-# BlackMagic related files
-IF (BLACKMAGIC_FOUND)
-	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			DecklinkInput.cpp
-			DecklinkReader.cpp
-			DecklinkOutput.cpp
-			DecklinkWriter.cpp)
-ENDIF (BLACKMAGIC_FOUND)
+# Qt video player components
+set(QT_PLAYER_SOURCES
+  Qt/AudioPlaybackThread.cpp
+  Qt/PlayerDemo.cpp
+  Qt/PlayerPrivate.cpp
+  Qt/VideoCacheThread.cpp
+  Qt/VideoPlaybackThread.cpp
+  Qt/VideoRenderer.cpp
+  Qt/VideoRenderWidget.cpp)
 
 
 # Get list of headers
@@ -224,9 +219,13 @@ SET(CMAKE_MACOSX_RPATH 0)
 
 ############### CREATE LIBRARY #################
 # Create shared openshot library
-add_library(openshot SHARED
-		${OPENSHOT_SOURCE_FILES}
-		${headers} )
+add_library(openshot SHARED)
+
+target_sources(openshot
+  PRIVATE
+    ${OPENSHOT_SOURCES} ${EFFECTS_SOURCES} ${QT_PLAYER_SOURCES}
+  PUBLIC
+    ${headers})
 
 # Set SONAME and other library properties
 set_target_properties(openshot
@@ -235,6 +234,34 @@ set_target_properties(openshot
 		SOVERSION ${PROJECT_SO_VERSION}
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
+
+# Add optional ImageMagic-dependent sources
+if(ImageMagick_FOUND)
+	target_sources(openshot PRIVATE
+    ImageReader.cpp
+    ImageWriter.cpp
+    TextReader.cpp)
+endif()
+
+# BlackMagic related files
+if(BLACKMAGIC_FOUND)
+  target_sources(openshot PRIVATE
+    DecklinkInput.cpp
+    DecklinkReader.cpp
+    DecklinkOutput.cpp
+    DecklinkWriter.cpp)
+endif()
+
+# Location of our includes, both internally and when installed
+target_include_directories(openshot
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}/include
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
+
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -342,7 +369,6 @@ endif()
 ###############  LINK LIBRARY  #################
 SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
-		${QT_LIBRARIES}
 		${PROFILER}
 		)
 
