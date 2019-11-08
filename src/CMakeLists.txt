@@ -32,8 +32,9 @@ include(FeatureSummary)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
-OPTION(USE_SYSTEM_JSONCPP "Use system installed JsonCpp" OFF)
-option(ENABLE_IWYU "Enable 'Include What You Use' scanner" OFF)
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -122,19 +123,6 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### ZEROMQ #####################
-# Find ZeroMQ library (used for socket communication & logging)
-
-# Some platforms package the header-only cppzmq C++ bindings separately,
-# others (Ubuntu) bundle them in with libzmq itself
-find_package(cppzmq QUIET)
-find_package(ZMQ REQUIRED)
-
-# Include ZeroMQ headers (needed for compile)
-include_directories(${ZMQ_INCLUDE_DIRS})
-if (cppzmq_FOUND)
-    include_directories(${cppzmq_INCLUDE_DIRS})
-endif()
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
@@ -149,21 +137,14 @@ if (RESVG_FOUND)
    SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	message(STATUS "Discovering system JsonCPP (USE_SYSTEM_JSONCPP enabled)")
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-	message(STATUS "Discovering system JsonCPP - done")
-else()
-	message(STATUS "Using embedded JsonCpp (USE_SYSTEM_JSONCPP not enabled)")
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
+
+if(CMAKE_VERSION VERSION_LESS 3.3)
+  # IWYU wasn't supported internally in 3.2
+  set(ENABLE_IWYU FALSE)
+endif()
 
 if(ENABLE_IWYU)
 	find_program(IWYU_PATH NAMES "iwyu"
@@ -171,9 +152,9 @@ if(ENABLE_IWYU)
 	if(IWYU_PATH)
 		if(IWYU_OPTS)
 			separate_arguments(IWYU_OPTS)
-			list(APPEND _iwyu_cmd ${IWYU_PATH} "-Xiwyu" ${IWYU_OPTS})
+			list(APPEND _iwyu_opts "-Xiwyu" ${IWYU_OPTS})
 		endif()
-		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${_iwyu_cmd})
+		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH} ${_iwyu_opts})
 	else()
 		set(ENABLE_IWYU FALSE)
 	endif()
@@ -223,16 +204,13 @@ SET ( OPENSHOT_SOURCE_FILES
 		QtPlayer.cpp
 		Settings.cpp
 		Timeline.cpp
+		QtTextReader.cpp
+		QtHtmlReader.cpp
+
 
 		# Qt Video Player
 		${QT_PLAYER_FILES}
 		${MOC_FILES})
-
-IF (NOT USE_SYSTEM_JSONCPP)
-	# Third Party JSON Parser
-	SET ( OPENSHOT_SOURCE_FILES ${OPENSHOT_SOURCE_FILES}
-			../thirdparty/jsoncpp/jsoncpp.cpp )
-ENDIF (NOT USE_SYSTEM_JSONCPP)
 
 # ImageMagic related files
 IF (ImageMagick_FOUND)
@@ -272,6 +250,43 @@ set_target_properties(openshot
 		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 		)
 
+################### JSONCPP #####################
+# Include jsoncpp headers (needed for JSON parsing)
+if (USE_SYSTEM_JSONCPP)
+	message(STATUS "Looking for system JsonCpp")
+	find_package(JsonCpp)
+	if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
+		# Create the expected target, for older installs that don't
+		add_library(jsoncpp_lib INTERFACE)
+		target_include_directories(jsoncpp_lib INTERFACE
+			${JSONCPP_INCLUDE_DIRS})
+		target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
+	endif ()
+endif ()
+
+if (NOT JSONCPP_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
+  message(STATUS "Using embedded JsonCpp (not found or USE_SYSTEM_JSONCPP disabled)")
+  if (NOT TARGET jsoncpp_lib)
+    add_library(jsoncpp_lib INTERFACE)
+    target_include_directories(jsoncpp_lib INTERFACE
+      "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
+    target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+    # Because this satisfies the requirement, an installed JsonCpp is optional
+    set_package_properties(JsonCpp PROPERTIES TYPE OPTIONAL)
+  endif ()
+  add_feature_info("JsonCpp (embedded)" TRUE "JsonCpp will be compiled from the bundled sources")
+endif ()
+
+if (JSONCPP_FOUND)
+  # JsonCpp is actually required, even though we probe for it optionally
+  # (This tells feature_summary() to bail if it's not found, later)
+  set_package_properties(JsonCpp PROPERTIES TYPE REQUIRED)
+endif ()
+
+# If we found any usable JsonCpp, use it. Otherwise, bail.
+if (TARGET jsoncpp_lib)
+  target_link_libraries(openshot PUBLIC jsoncpp_lib)
+endif ()
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
@@ -282,6 +297,13 @@ foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swres
 		target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
   endif()
 endforeach()
+
+################### Threads ####################
+# Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
+target_link_libraries(openshot PUBLIC Threads::Threads)
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
@@ -294,12 +316,28 @@ if(NOT TARGET OpenMP::OpenMP_CXX)
     add_library(OpenMP_TARGET INTERFACE)
     add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
     target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
-    find_package(Threads REQUIRED)
     target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
     target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
 endif()
 
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+
+################### ZEROMQ #####################
+# Find ZeroMQ library (used for socket communication & logging)
+find_package(ZeroMQ REQUIRED) # Creates libzmq target
+
+# Some platforms package the header-only cppzmq C++ bindings separately,
+# others (Ubuntu) bundle them in with libzmq itself
+find_package(cppzmq QUIET) # Creates cppzmq target
+
+# Link ZeroMQ library
+if (TARGET libzmq)
+	target_link_libraries(openshot PUBLIC libzmq)
+endif()
+# Include cppzmq headers, if not bundled into libzmq
+if (TARGET cppzmq)
+  target_link_libraries(openshot PUBLIC cppzmq)
+endif()
 
 
 ###############  LINK LIBRARY  #################
@@ -307,8 +345,6 @@ SET ( REQUIRED_LIBRARIES
 		${LIBOPENSHOT_AUDIO_LIBRARIES}
 		${QT_LIBRARIES}
 		${PROFILER}
-		${JSONCPP_LIBRARY}
-		${ZMQ_LIBRARIES}
 		)
 
 IF (RESVG_FOUND)
@@ -335,7 +371,8 @@ target_link_libraries(openshot PUBLIC ${REQUIRED_LIBRARIES})
 # Pick up parameters from OpenMP target and propagate
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
-############### CLI EXECUTABLE ################
+
+############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
 
@@ -349,6 +386,9 @@ target_compile_definitions(openshot-example PRIVATE
 
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
+
+add_executable(openshot-html-test examples/ExampleHtml.cpp)
+target_link_libraries(openshot-html-test openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
@@ -373,9 +413,8 @@ add_subdirectory(bindings)
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
     INCLUDE_QUIET_PACKAGES
-    DESCRIPTION "Build configuration:"
-    VAR featuresText)
-message("\n${featuresText}")
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder

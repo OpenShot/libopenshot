@@ -114,20 +114,6 @@ IF (ENABLE_BLACKMAGIC)
 ENDIF (ENABLE_BLACKMAGIC)
 
 
-################### ZEROMQ #####################
-# Find ZeroMQ library (used for socket communication & logging)
-
-# Some platforms package the header-only cppzmq C++ bindings separately,
-# others (Ubuntu) bundle them in with libzmq itself
-find_package(cppzmq QUIET)
-FIND_PACKAGE(ZMQ REQUIRED)
-
-# Include ZeroMQ headers (needed for compile)
-include_directories(${ZMQ_INCLUDE_DIRS})
-if (cppzmq_FOUND)
-    include_directories(${cppzmq_INCLUDE_DIRS})
-endif()
-
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
 FIND_PACKAGE(RESVG)
@@ -137,14 +123,6 @@ if (RESVG_FOUND)
 	include_directories(${RESVG_INCLUDE_DIRS})
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-else()
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
 
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES
