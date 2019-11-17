@@ -50,7 +50,7 @@ namespace openshot
     public:
 
 	/// Paint(render) a video Frame.
-	void paint(const std::shared_ptr<Frame> & frame);
+	void paint(const std::shared_ptr<openshot::Frame> & frame);
 
 	/// Allow manual override of the QWidget that is used to display
 	virtual void OverrideWidget(int64_t qwidget_address) = 0;
@@ -58,7 +58,7 @@ namespace openshot
     protected:
 	RendererBase();
 	virtual ~RendererBase();
-	
+
 	virtual void render(std::shared_ptr<QImage> image) = 0;
     };
 

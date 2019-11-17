@@ -56,7 +56,6 @@
 #endif
 %shared_ptr(juce::AudioSampleBuffer)
 %shared_ptr(openshot::Frame)
-%shared_ptr(Frame)
 
 %{
 #include "OpenShotVersion.h"
@@ -226,13 +225,11 @@
 
 
 /* Wrap std templates (list, vector, etc...) */
-namespace std {
- %template(ClipList) list<Clip *>;
- %template(EffectBaseList) list<EffectBase *>;
- %template(CoordinateVector) vector<Coordinate>;
- %template(PointsVector) vector<Point>;
- %template(FieldVector) vector<Field>;
- %template(MappedFrameVector) vector<MappedFrame>;
- %template(MappedMetadata) map<string, string>;
- %template(AudioDeviceInfoVector) vector<AudioDeviceInfo>;
-}
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MappedMetadata) std::map<std::string, std::string>;
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

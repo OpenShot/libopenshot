@@ -38,8 +38,6 @@
 #include "Json.h"
 #include "Frame.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -51,10 +49,10 @@ namespace openshot
 	 */
 	struct EffectInfoStruct
 	{
-		string class_name; ///< The class name of the effect
-		string short_name; ///< A short name of the effect, commonly used for icon names, etc...
-		string name; ///< The name of the effect
-		string description; ///< The description of this effect and what it does
+		std::string class_name; ///< The class name of the effect
+		std::string short_name; ///< A short name of the effect, commonly used for icon names, etc...
+		std::string name; ///< The name of the effect
+		std::string description; ///< The description of this effect and what it does
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
 	};
@@ -90,15 +88,15 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		virtual std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) = 0;
+		virtual std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) = 0;
 
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.
 		void InitEffectInfo();
 
 		/// Get and Set JSON methods
-		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
+		virtual std::string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 		Json::Value JsonInfo(); ///< Generate JSON object of meta data / info

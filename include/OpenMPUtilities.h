@@ -37,12 +37,9 @@
 
 #include "Settings.h"
 
-using namespace std;
-using namespace openshot;
-
 // Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->OMP_THREADS) ))
-#define FF_NUM_PROCESSORS (min(omp_get_num_procs(), max(2, openshot::Settings::Instance()->FF_THREADS) ))
+#define OPEN_MP_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->OMP_THREADS) ))
+#define FF_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->FF_THREADS) ))
 
 
 #endif

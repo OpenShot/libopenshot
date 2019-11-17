@@ -46,7 +46,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), 
 };
 
 // Constructor - image only (48kHz audio silence)
-Frame::Frame(int64_t number, int width, int height, string color)
+Frame::Frame(int64_t number, int width, int height, std::string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height), color(color),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 	  max_audio_sample(0)
@@ -72,7 +72,7 @@ Frame::Frame(int64_t number, int samples, int channels) :
 };
 
 // Constructor - image & audio
-Frame::Frame(int64_t number, int width, int height, string color, int samples, int channels)
+Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
 	: number(number), pixel_ratio(1,1), channels(channels), width(width), height(height), color(color),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 	  max_audio_sample(0)
@@ -574,7 +574,7 @@ ChannelLayout Frame::ChannelsLayout()
 
 
 // Save the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
-void Frame::Save(string path, float scale, string format, int quality)
+void Frame::Save(std::string path, float scale, std::string format, int quality)
 {
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
@@ -605,8 +605,8 @@ void Frame::Save(string path, float scale, string format, int quality)
 }
 
 // Thumbnail the frame image to the specified path.  The image format is determined from the extension (i.e. image.PNG, image.JPEG)
-void Frame::Thumbnail(string path, int new_width, int new_height, string mask_path, string overlay_path,
-		string background_color, bool ignore_aspect, string format, int quality, float rotate) {
+void Frame::Thumbnail(std::string path, int new_width, int new_height, std::string mask_path, std::string overlay_path,
+		std::string background_color, bool ignore_aspect, std::string format, int quality, float rotate) {
 
 	// Create blank thumbnail image & fill background color
 	std::shared_ptr<QImage> thumbnail = std::shared_ptr<QImage>(new QImage(new_width, new_height, QImage::Format_RGBA8888));
@@ -729,7 +729,7 @@ int Frame::constrain(int color_value)
 }
 
 // Add (or replace) pixel data to the frame (based on a solid color)
-void Frame::AddColor(int new_width, int new_height, string new_color)
+void Frame::AddColor(int new_width, int new_height, std::string new_color)
 {
 	// Set color
 	color = new_color;

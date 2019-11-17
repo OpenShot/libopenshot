@@ -42,9 +42,6 @@
 #include "Point.h"
 #include "Json.h"
 
-using namespace std;
-using namespace openshot;
-
 namespace openshot {
 
 	/**
@@ -92,8 +89,8 @@ namespace openshot {
 		double Bernstein(int64_t n, int64_t i, double t);
 
 	public:
-		vector<Point> Points;			///< Vector of all Points
-		vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
+		std::vector<Point> Points;			///< Vector of all Points
+		std::vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
 
 		/// Default constructor for the Keyframe class
 		Keyframe();
@@ -160,9 +157,9 @@ namespace openshot {
 		bool IsIncreasing(int index);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value); ///< Load JSON string into this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/**

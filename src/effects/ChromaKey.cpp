@@ -101,7 +101,7 @@ std::shared_ptr<Frame> ChromaKey::GetFrame(std::shared_ptr<Frame> frame, int64_t
 }
 
 // Generate JSON string of this object
-string ChromaKey::Json() {
+std::string ChromaKey::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -121,14 +121,14 @@ Json::Value ChromaKey::JsonValue() {
 }
 
 // Load JSON string into this object
-void ChromaKey::SetJson(string value) {
+void ChromaKey::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -163,7 +163,7 @@ void ChromaKey::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string ChromaKey::PropertiesJSON(int64_t requested_frame) {
+std::string ChromaKey::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

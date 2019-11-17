@@ -675,7 +675,7 @@ void FrameMapper::Close()
 
 
 // Generate JSON string of this object
-string FrameMapper::Json() {
+std::string FrameMapper::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -693,14 +693,14 @@ Json::Value FrameMapper::JsonValue() {
 }
 
 // Load JSON string into this object
-void FrameMapper::SetJson(string value) {
+void FrameMapper::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -820,7 +820,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
 	if (error_code < 0)
 	{
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (string)av_err2str(error_code) + "]", "error_code", error_code);
+		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
 		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
 	}
 

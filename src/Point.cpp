@@ -108,7 +108,7 @@ void Point::Initialize_RightHandle(float x, float y) {
 }
 
 // Generate JSON string of this object
-string Point::Json() {
+std::string Point::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -132,14 +132,14 @@ Json::Value Point::JsonValue() {
 }
 
 // Load JSON string into this object
-void Point::SetJson(string value) {
+void Point::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;

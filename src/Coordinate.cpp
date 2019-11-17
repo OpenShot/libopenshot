@@ -45,7 +45,7 @@ Coordinate::Coordinate(double x, double y) :
 
 
 // Generate JSON string of this object
-string Coordinate::Json() {
+std::string Coordinate::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -69,14 +69,14 @@ Json::Value Coordinate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Coordinate::SetJson(string value) {
+void Coordinate::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;

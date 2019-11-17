@@ -46,8 +46,6 @@ namespace openshot
     class QtPlayer;
 }
 
-using openshot::QtPlayer;
-
 class PlayerDemo : public QWidget
 {
     Q_OBJECT
@@ -67,7 +65,7 @@ private:
     QVBoxLayout *vbox;
     QMenuBar *menu;
     VideoRenderWidget *video;
-    QtPlayer *player;
+    openshot::QtPlayer *player;
 };
 
 #endif // OPENSHOT_PLAYER_H

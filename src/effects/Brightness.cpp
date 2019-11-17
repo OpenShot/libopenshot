@@ -108,7 +108,7 @@ std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, int64_
 }
 
 // Generate JSON string of this object
-string Brightness::Json() {
+std::string Brightness::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -128,14 +128,14 @@ Json::Value Brightness::JsonValue() {
 }
 
 // Load JSON string into this object
-void Brightness::SetJson(string value) {
+void Brightness::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -170,7 +170,7 @@ void Brightness::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Brightness::PropertiesJSON(int64_t requested_frame) {
+std::string Brightness::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

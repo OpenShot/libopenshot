@@ -53,8 +53,6 @@
 #include "OpenMPUtilities.h"
 #include "MagickUtilities.h"
 
-using namespace std;
-
 namespace openshot
 {
 
@@ -88,12 +86,12 @@ namespace openshot
 	class ImageWriter : public WriterBase
 	{
 	private:
-		string path;
+		std::string path;
 		int cache_size;
 		bool is_writing;
 		bool is_open;
 		int64_t write_video_count;
-		vector<Magick::Image> frames;
+		std::vector<Magick::Image> frames;
 		int image_quality;
 		int number_of_loops;
 		bool combine_frames;
@@ -104,7 +102,7 @@ namespace openshot
 
 		/// @brief Constructor for ImageWriter. Throws one of the following exceptions.
 		/// @param path The path of the file you want to create
-		ImageWriter(string path);
+		ImageWriter(std::string path);
 
 		/// @brief Close the writer and encode/output final image to the disk. This is a requirement of ImageMagick,
 		/// which writes all frames of a multi-frame image at one time.
@@ -131,7 +129,7 @@ namespace openshot
 		/// @param quality Quality of image (0 to 100, 70 is default)
 		/// @param loops Number of times to repeat the image (used on certain multi-frame image formats, such as GIF)
 		/// @param combine Combine frames into a single image (if possible), or save each frame as its own image
-		void SetVideoOptions(string format, Fraction fps, int width, int height,
+		void SetVideoOptions(std::string format, Fraction fps, int width, int height,
 				int quality, int loops, bool combine);
 
 		/// @brief Add a frame to the stack waiting to be encoded.
