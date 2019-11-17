@@ -2111,7 +2111,7 @@ void FFmpegWriter::OutputStreamInfo() {
 void FFmpegWriter::InitScalers(int source_width, int source_height) {
 	int scale_mode = SWS_FAST_BILINEAR;
 	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-		scale_mode = SWS_LANCZOS;
+		scale_mode = SWS_BICUBIC;
 	}
 
 	// Init software rescalers vector (many of them, one for each thread)
