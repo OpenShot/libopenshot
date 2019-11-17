@@ -114,15 +114,12 @@ namespace openshot
 		/// @param gravity The alignment / gravity of the text
 		/// @param text The text you want to generate / display
 		/// @param font The font of the text
-		/// @param font_size The size of the text
-		/// @param is_bold Set to true to make text bold
-		/// @param is_italic Set to true to make text italic
-		/// @param text_color The color of the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
-		/// @param background_color The background color of the frame image (valid values are a color string in #RRGGBB or #AARRGGBB notation, a CSS color name, or 'transparent')
+		/// @param text_color The color of the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)
+		/// @param background_color The background color of the frame image (valid values are a color string in \#RRGGBB or \#AARRGGBB notation, a CSS color name, or 'transparent')
 		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
-		/// @param color The background color behind the text (valid values are a color string in #RRGGBB or #AARRGGBB notation or a CSS color name)
+		/// @param color The background color behind the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)
 		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
