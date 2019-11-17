@@ -1339,7 +1339,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 		int scale_mode = SWS_FAST_BILINEAR;
 		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-			scale_mode = SWS_LANCZOS;
+			scale_mode = SWS_BICUBIC;
 		}
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
 															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);

@@ -2111,7 +2111,7 @@ void FFmpegWriter::OutputStreamInfo() {
 void FFmpegWriter::InitScalers(int source_width, int source_height) {
 	int scale_mode = SWS_FAST_BILINEAR;
 	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-		scale_mode = SWS_LANCZOS;
+		scale_mode = SWS_BICUBIC;
 	}
 
 	// Init software rescalers vector (many of them, one for each thread)
@@ -2119,11 +2119,11 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 		// Init the software scaler from FFMpeg
 #if IS_FFMPEG_3_2
 		if (hw_en_on && hw_en_supported) {
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, SWS_BILINEAR, NULL, NULL, NULL);
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
 		} else
 #endif
 		{
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), SWS_BILINEAR,
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), scale_mode,
 											 NULL, NULL, NULL);
 		}
 
