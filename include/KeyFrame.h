@@ -65,6 +65,8 @@ namespace openshot {
 	private:
 		bool needs_update;
 		double FactorialLookup[4];
+		std::vector<Point> Points;			///< Vector of all Points
+		std::vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
 
 		// Process an individual segment
 		void ProcessSegment(int Segment, Point p1, Point p2);
@@ -82,8 +84,6 @@ namespace openshot {
 		double Bernstein(int64_t n, int64_t i, double t);
 
 	public:
-		std::vector<Point> Points;			///< Vector of all Points
-		std::vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
 
 		/// Default constructor for the Keyframe class
 		Keyframe();

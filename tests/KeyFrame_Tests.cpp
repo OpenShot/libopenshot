@@ -51,7 +51,7 @@ TEST(Keyframe_GetPoint_With_1_Points)
 	k1.AddPoint(openshot::Point(2,3));
 
 	CHECK_THROW(k1.GetPoint(-1), OutOfBoundsPoint);
-	CHECK_EQUAL(1, k1.Points.size());
+	CHECK_EQUAL(1, k1.GetCount());
 	CHECK_CLOSE(2.0f, k1.GetPoint(0).co.X, 0.00001);
 	CHECK_CLOSE(3.0f, k1.GetPoint(0).co.Y, 0.00001);
 	CHECK_THROW(k1.GetPoint(1), OutOfBoundsPoint);
@@ -98,7 +98,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	CHECK_CLOSE(3.81602f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(4.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.Values.size(), 51);
+	CHECK_EQUAL(kf.GetLength(), 51);
 }
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
@@ -121,7 +121,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.Values.size(), 201);
+	CHECK_EQUAL(kf.GetLength(), 201);
 }
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
@@ -144,7 +144,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.Values.size(), 201);
+	CHECK_EQUAL(kf.GetLength(), 201);
 }
 
 TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
@@ -164,7 +164,7 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 	CHECK_CLOSE(4.4f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.Values.size(), 51);
+	CHECK_EQUAL(kf.GetLength(), 51);
 }
 
 TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
@@ -185,7 +185,7 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 	CHECK_CLOSE(8.0f, kf.GetValue(49), 0.0001);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.Values.size(), 51);
+	CHECK_EQUAL(kf.GetLength(), 51);
 }
 
 TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
