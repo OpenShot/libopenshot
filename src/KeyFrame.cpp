@@ -35,16 +35,6 @@
 using namespace std;
 using namespace openshot;
 
-// Because points can be added in any order, we need to reorder them
-// in ascending order based on the point.co.X value.  This simplifies
-// processing the curve, due to all the points going from left to right.
-void Keyframe::ReorderPoints() {
-	std::sort(
-			begin(Points), end(Points),
-			[](Point const & l, Point const & r) {
-				return l.co.X < r.co.X;
-			});
-}
 
 // Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) : needs_update(true) {
@@ -67,17 +57,28 @@ void Keyframe::AddPoint(Point p) {
 	// mark as dirty
 	needs_update = true;
 
-	// Check for duplicate point (and remove it)
-	Point closest = GetClosestPoint(p);
-	if (closest.co.X == p.co.X)
-		// Remove existing point
-		RemovePoint(closest);
-
-	// Add point at correct spot
-	Points.push_back(p);
-
-	// Sort / Re-order points based on X coordinate
-	ReorderPoints();
+	// candidate is not less (greater or equal) than the new point in
+	// the X coordinate.
+	std::vector<Point>::iterator candidate =
+		std::lower_bound(begin(Points), end(Points), p, [](Point const & l, Point const & r) {
+															return l.co.X < r.co.X;
+														});
+	if (candidate == end(Points)) {
+		// New point X is greater than all other points' X, add to
+		// back.
+		Points.push_back(p);
+	} else if ((*candidate).co.X == p.co.X) {
+		// New point is at same X coordinate as some point, overwrite
+		// point.
+		*candidate = p;
+	} else {
+		// New point needs to be inserted before candidate; thus move
+		// candidate and all following one to the right and insert new
+		// point then where candidate was.
+		Points.push_back(p); // Make space; could also be a dummy point.
+		std::move_backward(candidate, end(Points) - 1, end(Points));
+		*candidate = p;
+	}
 }
 
 // Add a new point on the key-frame, with some defaults set (BEZIER)

@@ -66,13 +66,6 @@ namespace openshot {
 		bool needs_update;
 		double FactorialLookup[4];
 
-		/*
-		 * Because points can be added in any order, we need to reorder them
-		 * in ascending order based on the point.co.X value.  This simplifies
-		 * processing the curve, due to all the points going from left to right.
-		 */
-		void ReorderPoints();
-
 		// Process an individual segment
 		void ProcessSegment(int Segment, Point p1, Point p2);
 
