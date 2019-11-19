@@ -550,9 +550,6 @@ int64_t Keyframe::GetCount() {
 
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) {
-	// mark as dirty
-	needs_update = true;
-
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -562,6 +559,8 @@ void Keyframe::RemovePoint(Point p) {
 		if (p.co.X == existing_point.co.X && p.co.Y == existing_point.co.Y) {
 			// Remove the matching point, and break out of loop
 			Points.erase(Points.begin() + x);
+			// mark as dirty
+			needs_update = true;
 			return;
 		}
 	}
@@ -572,12 +571,11 @@ void Keyframe::RemovePoint(Point p) {
 
 // Remove a point by index
 void Keyframe::RemovePoint(int64_t index) {
-	// mark as dirty
-	needs_update = true;
-
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 	{
+		// mark as dirty
+		needs_update = true;
 		// Remove a specific point by index
 		Points.erase(Points.begin() + index);
 	}
