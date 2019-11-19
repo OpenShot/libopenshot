@@ -479,9 +479,7 @@ double Keyframe::GetDelta(int64_t index)
 	if (index >= 1 && (index + 1) < Values.size()) {
 		int64_t current_value = GetLong(index);
 		int64_t previous_value = 0;
-		int64_t next_value = 0;
 		int64_t previous_repeats = 0;
-		int64_t next_repeats = 0;
 
 		// Loop backwards and look for the next unique value
 		for (std::vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
@@ -489,18 +487,6 @@ double Keyframe::GetDelta(int64_t index)
 			if (previous_value == current_value) {
 				// Found same value
 				previous_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Loop forwards and look for the next unique value
-		for (std::vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
-			next_value = long(round((*forwards_it).Y));
-			if (next_value == current_value) {
-				// Found same value
-				next_repeats++;
 			} else {
 				// Found non repeating value, no more repeats found
 				break;
