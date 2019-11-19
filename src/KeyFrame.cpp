@@ -587,17 +587,11 @@ void Keyframe::RemovePoint(int64_t index) {
 }
 
 void Keyframe::UpdatePoint(int64_t index, Point p) {
-	// mark as dirty
-	needs_update = true;
-
 	// Remove matching point
 	RemovePoint(index);
 
 	// Add new point
 	AddPoint(p);
-
-	// Reorder points
-	ReorderPoints();
 }
 
 void Keyframe::PrintPoints() {
