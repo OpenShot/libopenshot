@@ -85,6 +85,15 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include)
 
+############## Code Coverage #########################
+option(ENABLE_COVERAGE "Enable coverage reporting." OFF)
+
+if (ENABLE_COVERAGE)
+  include(CodeCoverage)
+  APPEND_COVERAGE_COMPILER_FLAGS()
+endif()
+
+
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
 
