@@ -888,11 +888,7 @@ double Keyframe::Bernstein(int64_t n, int64_t i, double t) {
 void Keyframe::ScalePoints(double scale)
 {
 	// Loop through each point (skipping the 1st point)
-	for (int64_t point_index = 0; point_index < Points.size(); point_index++) {
-		// Skip the 1st point
-		if (point_index == 0)
-			continue;
-
+	for (int64_t point_index = 1; point_index < Points.size(); point_index++) {
 		// Scale X value
 		Points[point_index].co.X = round(Points[point_index].co.X * scale);
 
