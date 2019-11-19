@@ -29,6 +29,7 @@
  */
 
 #include "../include/KeyFrame.h"
+#include <algorithm>
 #include <utility>
 
 using namespace std;
@@ -38,22 +39,11 @@ using namespace openshot;
 // in ascending order based on the point.co.X value.  This simplifies
 // processing the curve, due to all the points going from left to right.
 void Keyframe::ReorderPoints() {
-	// Loop through all coordinates, and sort them by the X attribute
-	for (int64_t x = 0; x < Points.size(); x++) {
-		int64_t compare_index = x;
-		int64_t smallest_index = x;
-
-		for (int64_t compare_index = x + 1; compare_index < Points.size(); compare_index++) {
-			if (Points[compare_index].co.X < Points[smallest_index].co.X) {
-				smallest_index = compare_index;
-			}
-		}
-
-		// swap items
-		if (smallest_index != compare_index) {
-			swap(Points[compare_index], Points[smallest_index]);
-		}
-	}
+	std::sort(
+			begin(Points), end(Points),
+			[](Point const & l, Point const & r) {
+				return l.co.X < r.co.X;
+			});
 }
 
 // Constructor which sets the default point & coordinate at X=1
