@@ -29,6 +29,7 @@
  */
 
 #include "../include/KeyFrame.h"
+#include <utility>
 
 using namespace std;
 using namespace openshot;
@@ -904,16 +905,11 @@ void Keyframe::ScalePoints(double scale)
 void Keyframe::FlipPoints()
 {
 	// Loop through each point
-	std::vector<Point> FlippedPoints;
-	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < Points.size(); point_index++, reverse_index--) {
+	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
 		// Flip the points
-		Point p = Points[point_index];
-		p.co.Y = Points[reverse_index].co.Y;
-		FlippedPoints.push_back(p);
+		using std::swap;
+		swap(Points[point_index].co.Y, Points[reverse_index].co.Y);
 	}
-
-	// Swap vectors
-	Points.swap(FlippedPoints);
 
 	// Mark for re-processing
 	needs_update = true;
