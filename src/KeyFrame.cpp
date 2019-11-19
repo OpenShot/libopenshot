@@ -251,45 +251,13 @@ double Keyframe::GetValue(int64_t index)
 // Get the rounded INT value at a specific index
 int Keyframe::GetInt(int64_t index)
 {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return int(round(Values[index].Y));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return int(round(Values[0].Y));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return int(round(Values[Values.size() - 1].Y));
-	else
-		// return a blank coordinate (0,0)
-		return 0;
+	return int(round(GetValue(index)));
 }
 
 // Get the rounded INT value at a specific index
 int64_t Keyframe::GetLong(int64_t index)
 {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return long(round(Values[index].Y));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return long(round(Values[0].Y));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return long(round(Values[Values.size() - 1].Y));
-	else
-		// return a blank coordinate (0,0)
-		return 0;
+	return long(round(GetValue(index)));
 }
 
 // Get the direction of the curve at a specific index (increasing or decreasing)
