@@ -75,9 +75,10 @@ void Keyframe::AddPoint(Point p) {
 		// New point needs to be inserted before candidate; thus move
 		// candidate and all following one to the right and insert new
 		// point then where candidate was.
-		Points.push_back(p); // Make space; could also be a dummy point.
-		std::move_backward(candidate, end(Points) - 1, end(Points));
-		*candidate = p;
+		size_t const candidate_index = candidate - begin(Points);
+		Points.push_back(p); // Make space; could also be a dummy point. INVALIDATES candidate!
+		std::move_backward(begin(Points) + candidate_index, end(Points) - 1, end(Points));
+		Points[candidate_index] = p;
 	}
 }
 
