@@ -125,7 +125,7 @@ namespace openshot {
 		double GetDelta(int64_t index);
 
 		/// Get a point at a specific index
-		Point& GetPoint(int64_t index);
+		Point const & GetPoint(int64_t index);
 
 		/// Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
 		Point GetClosestPoint(Point p);

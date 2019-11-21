@@ -449,7 +449,7 @@ double Keyframe::GetDelta(int64_t index)
 }
 
 // Get a point at a specific index
-Point& Keyframe::GetPoint(int64_t index) {
+Point const & Keyframe::GetPoint(int64_t index) {
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 		return Points[index];
