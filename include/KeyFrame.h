@@ -63,25 +63,7 @@ namespace openshot {
 	 */
 	class Keyframe {
 	private:
-		bool needs_update;
-		double FactorialLookup[4];
 		std::vector<Point> Points;			///< Vector of all Points
-		std::vector<Coordinate> Values;		///< Vector of all Values (i.e. the processed coordinates from the curve)
-
-		// Process an individual segment
-		void ProcessSegment(int Segment, Point p1, Point p2);
-
-		// create lookup table for fast factorial calculation
-		void CreateFactorialTable();
-
-		// Get a factorial for a coordinate
-		double Factorial(int64_t n);
-
-		// Calculate the factorial function for Bernstein basis
-		double Ni(int64_t n, int64_t i);
-
-		// Calculate Bernstein Basis
-		double Bernstein(int64_t n, int64_t i, double t);
 
 	public:
 
@@ -154,14 +136,6 @@ namespace openshot {
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
-
-		/**
-		 * @brief Calculate all of the values for this keyframe.
-		 *
-		 * This clears any existing data in the "values" vector.  This method is automatically called
-		 * by AddPoint(), so you don't typically need to call this method.
-		 */
-		void Process();
 
 		/// Remove a point by matching a coordinate
 		void RemovePoint(Point p);
