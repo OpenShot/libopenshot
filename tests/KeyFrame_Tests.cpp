@@ -399,3 +399,86 @@ TEST(Keyframe_Large_Number_Values)
 	CHECK_CLOSE(kf.GetPoint(0).co.Y, 1.0, 0.01);
 	CHECK_CLOSE(kf.GetPoint(1).co.Y, 100.0, 0.01);
 }
+
+TEST(Keyframe_Remove_Point)
+{
+	Keyframe kf;
+	kf.AddPoint(openshot::Point(Coordinate(1, 1), CONSTANT));
+	kf.AddPoint(openshot::Point(Coordinate(3, 100), CONSTANT));
+	CHECK_EQUAL(1, kf.GetInt(2));
+	kf.AddPoint(openshot::Point(Coordinate(2, 50), CONSTANT));
+	CHECK_EQUAL(50, kf.GetInt(2));
+	kf.RemovePoint(1); // This is the index of point with X == 2
+	CHECK_EQUAL(1, kf.GetInt(2));
+	CHECK_THROW(kf.RemovePoint(100), OutOfBoundsPoint);
+}
+
+TEST(Keyframe_Constant_Interpolation_First_Segment)
+{
+	Keyframe kf;
+	kf.AddPoint(Point(Coordinate(1, 1), CONSTANT));
+	kf.AddPoint(Point(Coordinate(2, 50), CONSTANT));
+	kf.AddPoint(Point(Coordinate(3, 100), CONSTANT));
+	CHECK_EQUAL(1, kf.GetInt(0));
+	CHECK_EQUAL(1, kf.GetInt(1));
+	CHECK_EQUAL(50, kf.GetInt(2));
+	CHECK_EQUAL(100, kf.GetInt(3));
+	CHECK_EQUAL(100, kf.GetInt(4));
+}
+
+TEST(Keyframe_isIncreasing)
+{
+	// Which cases need to be tested to keep same behaviour as
+	// previously?
+	//
+	// - "invalid point" => true
+	// - point where all next values are equal => false
+	// - point where first non-eq next value is smaller => false
+	// - point where first non-eq next value is larger => true
+	Keyframe kf;
+	kf.AddPoint(1, 1, LINEAR); // testing with linear
+	kf.AddPoint(3, 5, BEZIER); // testing with bezier
+	kf.AddPoint(6, 10, CONSTANT); // first non-eq is smaller
+	kf.AddPoint(8, 8, CONSTANT); // first non-eq is larger
+	kf.AddPoint(10, 10, CONSTANT); // all next values are equal
+	kf.AddPoint(15, 10, CONSTANT);
+
+	// "invalid points"
+	CHECK_EQUAL(true, kf.IsIncreasing(0));
+	CHECK_EQUAL(true, kf.IsIncreasing(15));
+	// all next equal
+	CHECK_EQUAL(false, kf.IsIncreasing(12));
+	// first non-eq is larger
+	CHECK_EQUAL(true, kf.IsIncreasing(8));
+	// first non-eq is smaller
+	CHECK_EQUAL(false, kf.IsIncreasing(6));
+	// bezier and linear
+	CHECK_EQUAL(true, kf.IsIncreasing(4));
+	CHECK_EQUAL(true, kf.IsIncreasing(2));
+}
+
+TEST(Keyframe_GetLength)
+{
+	Keyframe f;
+	CHECK_EQUAL(0, f.GetLength());
+	f.AddPoint(1, 1);
+	CHECK_EQUAL(1, f.GetLength());
+	f.AddPoint(2, 1);
+	CHECK_EQUAL(3, f.GetLength());
+	f.AddPoint(200, 1);
+	CHECK_EQUAL(201, f.GetLength());
+
+	Keyframe g;
+	g.AddPoint(200, 1);
+	CHECK_EQUAL(1, g.GetLength());
+	g.AddPoint(1,1);
+	CHECK_EQUAL(201, g.GetLength());
+}
+
+TEST(Keyframe_Use_Interpolation_of_Segment_End_Point)
+{
+	Keyframe f;
+	f.AddPoint(1,0, CONSTANT);
+	f.AddPoint(100,155, BEZIER);
+	CHECK_CLOSE(75.9, f.GetValue(50), 0.1);
+}
