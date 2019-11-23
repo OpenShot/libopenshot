@@ -64,7 +64,7 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		Keyframe saturation;	///< The color saturation: 0.0 = black and white, 1.0 = normal, 2.0 = double saturation
+		Keyframe saturation;	///< Overall color saturation: 0.0 = black and white, 1.0 = normal, 2.0 = double saturation
 		Keyframe saturation_R;	///< Red color saturation
 		Keyframe saturation_G;	///< Green color saturation
 		Keyframe saturation_B;	///< Blue color saturation
