@@ -74,8 +74,8 @@ namespace openshot
 
 		/// Default constructor, which takes 1 curve, to adjust the color saturation over time.
 		///
-		/// @param new_saturation The curve to adjust the saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
-		Saturation(Keyframe new_saturation, Keyframe new_saturation_R, Keyframe new_saturation_G, Keyframe new_saturation_B);
+		/// @param saturation The curve to adjust the saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
+		Saturation(Keyframe saturation, Keyframe saturation_R, Keyframe saturation_G, Keyframe saturation_B);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
