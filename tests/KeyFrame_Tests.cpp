@@ -98,7 +98,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	CHECK_CLOSE(3.79733f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(4.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.GetLength(), 51);
+	CHECK_EQUAL(51, kf.GetLength());
 }
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
@@ -121,7 +121,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	CHECK_CLOSE(1.73860f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.GetLength(), 201);
+	CHECK_EQUAL(201, kf.GetLength());
 }
 
 TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
@@ -144,7 +144,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	CHECK_CLOSE(1.73860f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.GetLength(), 201);
+	CHECK_EQUAL(201, kf.GetLength());
 }
 
 TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
@@ -164,7 +164,7 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 	CHECK_CLOSE(4.4f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.GetLength(), 51);
+	CHECK_EQUAL(51, kf.GetLength());
 }
 
 TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
@@ -185,7 +185,7 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 	CHECK_CLOSE(8.0f, kf.GetValue(49), 0.0001);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
-	CHECK_EQUAL(kf.GetLength(), 51);
+	CHECK_EQUAL(51, kf.GetLength());
 }
 
 TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
@@ -197,29 +197,29 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	kf.AddPoint(500, 500);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetInt(1), 500);
-	CHECK_EQUAL(kf.IsIncreasing(1), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).num, 1);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 13);
-	CHECK_EQUAL(kf.GetDelta(1), 500);
+	CHECK_EQUAL(500, kf.GetInt(1));
+	CHECK_EQUAL(false, kf.IsIncreasing(1));
+	CHECK_EQUAL(1, kf.GetRepeatFraction(1).num);
+	CHECK_EQUAL(13, kf.GetRepeatFraction(1).den);
+	CHECK_EQUAL(500, kf.GetDelta(1));
 
-	CHECK_EQUAL(kf.GetInt(24), 498);
-	CHECK_EQUAL(kf.IsIncreasing(24), false);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).num, 3);
-	CHECK_EQUAL(kf.GetRepeatFraction(24).den, 6);
-	CHECK_EQUAL(kf.GetDelta(24), 0);
+	CHECK_EQUAL(498, kf.GetInt(24));
+	CHECK_EQUAL(false, kf.IsIncreasing(24));
+	CHECK_EQUAL(3, kf.GetRepeatFraction(24).num);
+	CHECK_EQUAL(6, kf.GetRepeatFraction(24).den);
+	CHECK_EQUAL(0, kf.GetDelta(24));
 
-	CHECK_EQUAL(kf.GetLong(390), 100);
-	CHECK_EQUAL(kf.IsIncreasing(390), true);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 3);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 16);
-	CHECK_EQUAL(kf.GetDelta(390), 0);
+	CHECK_EQUAL(100, kf.GetLong(390));
+	CHECK_EQUAL(true, kf.IsIncreasing(390));
+	CHECK_EQUAL(3, kf.GetRepeatFraction(390).num);
+	CHECK_EQUAL(16, kf.GetRepeatFraction(390).den);
+	CHECK_EQUAL(0, kf.GetDelta(390));
 
-	CHECK_EQUAL(kf.GetLong(391), 100);
-	CHECK_EQUAL(kf.IsIncreasing(391), true);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 4);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 16);
-	CHECK_EQUAL(kf.GetDelta(388), -1);
+	CHECK_EQUAL(100, kf.GetLong(391));
+	CHECK_EQUAL(true, kf.IsIncreasing(391));
+	CHECK_EQUAL(4, kf.GetRepeatFraction(391).num);
+	CHECK_EQUAL(16, kf.GetRepeatFraction(391).den);
+	CHECK_EQUAL(-1, kf.GetDelta(388));
 }
 
 
@@ -232,22 +232,22 @@ TEST(Keyframe_Get_Closest_Point)
 	kf.AddPoint(2500, 0.0);
 
 	// Spot check values from the curve (to the right)
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(900, 900)).co.X, 1000);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1, 1)).co.X, 1);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(5, 5)).co.X, 1000);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1000, 1000)).co.X, 1000);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1001, 1001)).co.X, 2500);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(2500, 2500)).co.X, 2500);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000)).co.X, 2500);
+	CHECK_EQUAL(1000, kf.GetClosestPoint(openshot::Point(900, 900)).co.X);
+	CHECK_EQUAL(1, kf.GetClosestPoint(openshot::Point(1, 1)).co.X);
+	CHECK_EQUAL(1000, kf.GetClosestPoint(openshot::Point(5, 5)).co.X);
+	CHECK_EQUAL(1000, kf.GetClosestPoint(openshot::Point(1000, 1000)).co.X);
+	CHECK_EQUAL(2500, kf.GetClosestPoint(openshot::Point(1001, 1001)).co.X);
+	CHECK_EQUAL(2500, kf.GetClosestPoint(openshot::Point(2500, 2500)).co.X);
+	CHECK_EQUAL(2500, kf.GetClosestPoint(openshot::Point(3000, 3000)).co.X);
 
 	// Spot check values from the curve (to the left)
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(900, 900), true).co.X, 1);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1, 1), true).co.X, 1);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(5, 5), true).co.X, 1);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1000, 1000), true).co.X, 1);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(1001, 1001), true).co.X, 1000);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(2500, 2500), true).co.X, 1000);
-	CHECK_EQUAL(kf.GetClosestPoint(openshot::Point(3000, 3000), true).co.X, 2500);
+	CHECK_EQUAL(1, kf.GetClosestPoint(openshot::Point(900, 900), true).co.X);
+	CHECK_EQUAL(1, kf.GetClosestPoint(openshot::Point(1, 1), true).co.X);
+	CHECK_EQUAL(1, kf.GetClosestPoint(openshot::Point(5, 5), true).co.X);
+	CHECK_EQUAL(1, kf.GetClosestPoint(openshot::Point(1000, 1000), true).co.X);
+	CHECK_EQUAL(1000, kf.GetClosestPoint(openshot::Point(1001, 1001), true).co.X);
+	CHECK_EQUAL(1000, kf.GetClosestPoint(openshot::Point(2500, 2500), true).co.X);
+	CHECK_EQUAL(2500, kf.GetClosestPoint(openshot::Point(3000, 3000), true).co.X);
 }
 
 
@@ -260,13 +260,13 @@ TEST(Keyframe_Get_Previous_Point)
 	kf.AddPoint(2500, 0.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(900, 900))).co.X, 1);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1, 1))).co.X, 1);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(5, 5))).co.X, 1);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1000, 1000))).co.X, 1);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1001, 1001))).co.X, 1000);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(2500, 2500))).co.X, 1000);
-	CHECK_EQUAL(kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(3000, 3000))).co.X, 1000);
+	CHECK_EQUAL(1, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(900, 900))).co.X);
+	CHECK_EQUAL(1, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1, 1))).co.X);
+	CHECK_EQUAL(1, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(5, 5))).co.X);
+	CHECK_EQUAL(1, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1000, 1000))).co.X);
+	CHECK_EQUAL(1000, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(1001, 1001))).co.X);
+	CHECK_EQUAL(1000, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(2500, 2500))).co.X);
+	CHECK_EQUAL(1000, kf.GetPreviousPoint(kf.GetClosestPoint(openshot::Point(3000, 3000))).co.X);
 
 }
 
@@ -277,22 +277,22 @@ TEST(Keyframe_Get_Max_Point)
 	kf.AddPoint(1, 1.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 1.0);
+	CHECK_EQUAL(1.0, kf.GetMaxPoint().co.Y);
 
 	kf.AddPoint(2, 0.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 1.0);
+	CHECK_EQUAL(1.0, kf.GetMaxPoint().co.Y);
 
 	kf.AddPoint(3, 2.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 2.0);
+	CHECK_EQUAL(2.0, kf.GetMaxPoint().co.Y);
 
 	kf.AddPoint(4, 1.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetMaxPoint().co.Y, 2.0);
+	CHECK_EQUAL(2.0, kf.GetMaxPoint().co.Y);
 }
 
 TEST(Keyframe_Scale_Keyframe)
@@ -380,14 +380,14 @@ TEST(Keyframe_Remove_Duplicate_Point)
 	kf.AddPoint(1, 2.0);
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetLength(), 1);
-	CHECK_CLOSE(kf.GetPoint(0).co.Y, 2.0, 0.01);
+	CHECK_EQUAL(1, kf.GetLength());
+	CHECK_CLOSE(2.0, kf.GetPoint(0).co.Y, 0.01);
 }
 
 TEST(Keyframe_Large_Number_Values)
 {
 	// Large value
-	int64_t large_value = 30 * 60 * 90;
+	int64_t const large_value = 30 * 60 * 90;
 
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -395,9 +395,9 @@ TEST(Keyframe_Large_Number_Values)
 	kf.AddPoint(large_value, 100.0); // 90 minutes long
 
 	// Spot check values from the curve
-	CHECK_EQUAL(kf.GetLength(), large_value + 1);
-	CHECK_CLOSE(kf.GetPoint(0).co.Y, 1.0, 0.01);
-	CHECK_CLOSE(kf.GetPoint(1).co.Y, 100.0, 0.01);
+	CHECK_EQUAL(large_value + 1, kf.GetLength());
+	CHECK_CLOSE(1.0, kf.GetPoint(0).co.Y, 0.01);
+	CHECK_CLOSE(100.0, kf.GetPoint(1).co.Y, 0.01);
 }
 
 TEST(Keyframe_Remove_Point)
