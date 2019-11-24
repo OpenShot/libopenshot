@@ -72,7 +72,7 @@ namespace openshot
 		/// Blank constructor, useful when using Json to load the effect properties
 		Saturation();
 
-		/// Default constructor, which takes 1 curve, to adjust the color saturation over time.
+		/// Default constructor, which takes four curves (one common curve and one curve per color), to adjust the color saturation over time.
 		///
 		/// @param saturation The curve to adjust the saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
 		/// @param saturation_R The curve to adjust red saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
