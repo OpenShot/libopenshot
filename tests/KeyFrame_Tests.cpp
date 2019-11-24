@@ -92,10 +92,10 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	// Spot check values from the curve
 	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
-	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(1.14025f, kf.GetValue(9), 0.0001);
-	CHECK_CLOSE(1.91492f, kf.GetValue(20), 0.0001);
-	CHECK_CLOSE(3.81602f, kf.GetValue(40), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(1.12414f, kf.GetValue(9), 0.0001);
+	CHECK_CLOSE(1.86370f, kf.GetValue(20), 0.0001);
+	CHECK_CLOSE(3.79733f, kf.GetValue(40), 0.0001);
 	CHECK_CLOSE(4.0f, kf.GetValue(50), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.GetLength(), 51);
@@ -114,11 +114,11 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	// Spot check values from the curve
 	CHECK_CLOSE(kf.GetValue(-1), 1.0f, 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
-	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(2.73656f, kf.GetValue(27), 0.0001);
-	CHECK_CLOSE(7.55139f, kf.GetValue(77), 0.0001);
-	CHECK_CLOSE(4.08102f, kf.GetValue(127), 0.0001);
-	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(2.68197f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.47719f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.20468f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.73860f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.GetLength(), 201);
@@ -137,11 +137,11 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	// Spot check values from the curve
 	CHECK_CLOSE(1.0f, kf.GetValue(-1), 0.0001);
 	CHECK_CLOSE(1.0f, kf.GetValue(0), 0.0001);
-	CHECK_CLOSE(1.00023f, kf.GetValue(1), 0.0001);
-	CHECK_CLOSE(2.73656f, kf.GetValue(27), 0.0001);
-	CHECK_CLOSE(7.55139f, kf.GetValue(77), 0.0001);
-	CHECK_CLOSE(4.08102f, kf.GetValue(127), 0.0001);
-	CHECK_CLOSE(1.77569f, kf.GetValue(177), 0.0001);
+	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.0001);
+	CHECK_CLOSE(2.68197f, kf.GetValue(27), 0.0001);
+	CHECK_CLOSE(7.47719f, kf.GetValue(77), 0.0001);
+	CHECK_CLOSE(4.20468f, kf.GetValue(127), 0.0001);
+	CHECK_CLOSE(1.73860f, kf.GetValue(177), 0.0001);
 	CHECK_CLOSE(3.0f, kf.GetValue(200), 0.0001);
 	// Check the expected number of values
 	CHECK_EQUAL(kf.GetLength(), 201);
@@ -200,7 +200,7 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	CHECK_EQUAL(kf.GetInt(1), 500);
 	CHECK_EQUAL(kf.IsIncreasing(1), false);
 	CHECK_EQUAL(kf.GetRepeatFraction(1).num, 1);
-	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 12);
+	CHECK_EQUAL(kf.GetRepeatFraction(1).den, 13);
 	CHECK_EQUAL(kf.GetDelta(1), 500);
 
 	CHECK_EQUAL(kf.GetInt(24), 498);
@@ -212,13 +212,13 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 	CHECK_EQUAL(kf.GetLong(390), 100);
 	CHECK_EQUAL(kf.IsIncreasing(390), true);
 	CHECK_EQUAL(kf.GetRepeatFraction(390).num, 3);
-	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 15);
+	CHECK_EQUAL(kf.GetRepeatFraction(390).den, 16);
 	CHECK_EQUAL(kf.GetDelta(390), 0);
 
 	CHECK_EQUAL(kf.GetLong(391), 100);
 	CHECK_EQUAL(kf.IsIncreasing(391), true);
 	CHECK_EQUAL(kf.GetRepeatFraction(391).num, 4);
-	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 15);
+	CHECK_EQUAL(kf.GetRepeatFraction(391).den, 16);
 	CHECK_EQUAL(kf.GetDelta(388), -1);
 }
 
@@ -307,8 +307,8 @@ TEST(Keyframe_Scale_Keyframe)
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(3.68f, kf.GetValue(40), 0.01);
-	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
+	CHECK_CLOSE(3.85f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(2.01f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
 
 	// Resize / Scale the keyframe
@@ -316,12 +316,12 @@ TEST(Keyframe_Scale_Keyframe)
 
 	// Spot check values from the curve
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
-	CHECK_CLOSE(4.21f, kf.GetValue(24), 0.01);
-	CHECK_CLOSE(4.47f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(7.57f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(4.08f, kf.GetValue(24), 0.01);
+	CHECK_CLOSE(4.36f, kf.GetValue(25), 0.01);
+	CHECK_CLOSE(7.53f, kf.GetValue(40), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(50), 0.01);
-	CHECK_CLOSE(2.35f, kf.GetValue(90), 0.01);
+	CHECK_CLOSE(2.39f, kf.GetValue(90), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(100), 0.01);
 
 	// Resize / Scale the keyframe
@@ -331,8 +331,8 @@ TEST(Keyframe_Scale_Keyframe)
 	CHECK_CLOSE(1.0f, kf.GetValue(1), 0.01);
 	CHECK_CLOSE(7.99f, kf.GetValue(24), 0.01);
 	CHECK_CLOSE(8.0f, kf.GetValue(25), 0.01);
-	CHECK_CLOSE(3.68f, kf.GetValue(40), 0.01);
-	CHECK_CLOSE(2.0f, kf.GetValue(49), 0.01);
+	CHECK_CLOSE(3.85f, kf.GetValue(40), 0.01);
+	CHECK_CLOSE(2.01f, kf.GetValue(49), 0.01);
 	CHECK_CLOSE(2.0f, kf.GetValue(50), 0.01);
 
 }
