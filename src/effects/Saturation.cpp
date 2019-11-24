@@ -118,39 +118,24 @@ std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_
 		 * of the original subpixel (dependening on the color channel's slider value).
 		 */
 
-		// Three subpixels producing either R or white with brightness of R
-		int Rr = R;
-		int Gr = 0;
-		int Br = 0;
-
-		// Three subpixels producing either G or white with brightness of G
-		int Rg = 0;
-		int Gg = G;
-		int Bg = 0;
-
-		// Three subpixels producing either B or white with brightness of B
-		int Rb = 0;
-		int Gb = 0;
-		int Bb = B;
-
 		// Compute the brightness ("saturation multiplier") of the replaced subpixels
 		// Actually mathematical no-ops mostly, verbosity is kept just for clarification
-		const double p_r = sqrt( (Rr * Rr * pR) + (Gr * Gr * pG) + (Br * Br * pB) );
-		const double p_g = sqrt( (Rg * Rg * pR) + (Gg * Gg * pG) + (Bg * Bg * pB) );
-		const double p_b = sqrt( (Rb * Rb * pR) + (Gb * Gb * pG) + (Bb * Bb * pB) );
+		const double p_r = sqrt(R * R * pR);
+		const double p_g = sqrt(G * G * pG);
+		const double p_b = sqrt(B * B * pB);
 
 		// Adjust the saturation
-		Rr = p_r + (Rr - p_r) * saturation_value_R;
-		Gr = p_r + (Gr - p_r) * saturation_value_R;
-		Br = p_r + (Br - p_r) * saturation_value_R;
+		const int Rr = p_r + (R - p_r) * saturation_value_R;
+		const int Gr = p_r + (0 - p_r) * saturation_value_R;
+		const int Br = p_r + (0 - p_r) * saturation_value_R;
 
-		Rg = p_g + (Rg - p_g) * saturation_value_G;
-		Gg = p_g + (Gg - p_g) * saturation_value_G;
-		Bg = p_g + (Bg - p_g) * saturation_value_G;
+		const int Rg = p_g + (0 - p_g) * saturation_value_G;
+		const int Gg = p_g + (G - p_g) * saturation_value_G;
+		const int Bg = p_g + (0 - p_g) * saturation_value_G;
 
-		Rb = p_b + (Rb - p_b) * saturation_value_B;
-		Gb = p_b + (Gb - p_b) * saturation_value_B;
-		Bb = p_b + (Bb - p_b) * saturation_value_B;
+		const int Rb = p_b + (0 - p_b) * saturation_value_B;
+		const int Gb = p_b + (0 - p_b) * saturation_value_B;
+		const int Bb = p_b + (B - p_b) * saturation_value_B;
 
 		// Recombine brightness of sub-subpixels (Rx, Gx and Bx) into sub-pixels (R, G and B) again
 		R = Rr + Rg + Rb;
