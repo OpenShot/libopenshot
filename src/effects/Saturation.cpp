@@ -39,7 +39,8 @@ Saturation::Saturation() : saturation(1.0), saturation_R(1.0), saturation_G(1.0)
 }
 
 // Default constructor
-Saturation::Saturation(Keyframe saturation, Keyframe saturation_R, Keyframe saturation_G, Keyframe saturation_B) : saturation(saturation), saturation_R(saturation_R), saturation_G(saturation_G), saturation_B(saturation_B)
+Saturation::Saturation(Keyframe saturation, Keyframe saturation_R, Keyframe saturation_G, Keyframe saturation_B) :
+		saturation(saturation), saturation_R(saturation_R), saturation_G(saturation_G), saturation_B(saturation_B)
 {
 	// Init effect properties
 	init_effect_details();
