@@ -35,6 +35,12 @@
 using namespace std;
 using namespace openshot;
 
+namespace {
+	bool IsPointBeforeX(Point const & p, double const x) {
+		return p.co.X < x;
+	}
+}
+
 
 // Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) {
@@ -48,9 +54,7 @@ void Keyframe::AddPoint(Point p) {
 	// candidate is not less (greater or equal) than the new point in
 	// the X coordinate.
 	std::vector<Point>::iterator candidate =
-		std::lower_bound(begin(Points), end(Points), p, [](Point const & l, Point const & r) {
-															return l.co.X < r.co.X;
-														});
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
 	if (candidate == end(Points)) {
 		// New point X is greater than all other points' X, add to
 		// back.
@@ -212,9 +216,7 @@ double Keyframe::GetValue(int64_t index) const {
 		return 0;
 	}
 	std::vector<Point>::const_iterator candidate =
-		std::lower_bound(begin(Points), end(Points), Point(index, -1), [](Point const & l, Point const & r) {
-															return l.co.X < r.co.X;
-														});
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
 
 	if (candidate == end(Points)) {
 		// index is behind last point
