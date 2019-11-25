@@ -91,7 +91,7 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 }
 
 // Get the index of a point by matching a coordinate
-int64_t Keyframe::FindIndex(Point p) {
+int64_t Keyframe::FindIndex(Point p) const {
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -109,7 +109,7 @@ int64_t Keyframe::FindIndex(Point p) {
 }
 
 // Determine if point already exists
-bool Keyframe::Contains(Point p) {
+bool Keyframe::Contains(Point p) const {
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -127,7 +127,7 @@ bool Keyframe::Contains(Point p) {
 }
 
 // Get current point (or closest point) from the X coordinate (i.e. the frame number)
-Point Keyframe::GetClosestPoint(Point p, bool useLeft) {
+Point Keyframe::GetClosestPoint(Point p, bool useLeft) const {
 	Point closest(-1, -1);
 
 	// loop through points, and find a matching coordinate
@@ -164,12 +164,12 @@ Point Keyframe::GetClosestPoint(Point p, bool useLeft) {
 }
 
 // Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
-Point Keyframe::GetClosestPoint(Point p) {
+Point Keyframe::GetClosestPoint(Point p) const {
 	return GetClosestPoint(p, false);
 }
 
 // Get previous point (if any)
-Point Keyframe::GetPreviousPoint(Point p) {
+Point Keyframe::GetPreviousPoint(Point p) const {
 
 	// Lookup the index of this point
 	try {
@@ -188,7 +188,7 @@ Point Keyframe::GetPreviousPoint(Point p) {
 }
 
 // Get max point (by Y coordinate)
-Point Keyframe::GetMaxPoint() {
+Point Keyframe::GetMaxPoint() const {
 	Point maxPoint(-1, -1);
 
 	// loop through points, and find the largest Y value
@@ -207,12 +207,11 @@ Point Keyframe::GetMaxPoint() {
 }
 
 // Get the value at a specific index
-double Keyframe::GetValue(int64_t index)
-{
+double Keyframe::GetValue(int64_t index) const {
 	if (Points.empty()) {
 		return 0;
 	}
-	std::vector<Point>::iterator candidate =
+	std::vector<Point>::const_iterator candidate =
 		std::lower_bound(begin(Points), end(Points), Point(index, -1), [](Point const & l, Point const & r) {
 															return l.co.X < r.co.X;
 														});
@@ -229,7 +228,7 @@ double Keyframe::GetValue(int64_t index)
 		// index is directly on a point
 		return candidate->co.Y;
 	}
-	std::vector<Point>::iterator predecessor = candidate - 1;
+	std::vector<Point>::const_iterator predecessor = candidate - 1;
 	assert(predecessor->co.X < index);
 	assert(index < candidate->co.X);
 
@@ -284,19 +283,17 @@ double Keyframe::GetValue(int64_t index)
 }
 
 // Get the rounded INT value at a specific index
-int Keyframe::GetInt(int64_t index)
-{
+int Keyframe::GetInt(int64_t index) const {
 	return int(round(GetValue(index)));
 }
 
 // Get the rounded INT value at a specific index
-int64_t Keyframe::GetLong(int64_t index)
-{
+int64_t Keyframe::GetLong(int64_t index) const {
 	return long(round(GetValue(index)));
 }
 
 // Get the direction of the curve at a specific index (increasing or decreasing)
-bool Keyframe::IsIncreasing(int index)
+bool Keyframe::IsIncreasing(int index) const
 {
 	if (index < 1 || (index + 1) >= GetLength()) {
 		return true;
@@ -312,14 +309,14 @@ bool Keyframe::IsIncreasing(int index)
 }
 
 // Generate JSON string of this object
-std::string Keyframe::Json() {
+std::string Keyframe::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value Keyframe::JsonValue() {
+Json::Value Keyframe::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -389,8 +386,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 
 // Get the fraction that represents how many times this value is repeated in the curve
 // This is depreciated and will be removed soon.
-Fraction Keyframe::GetRepeatFraction(int64_t index)
-{
+Fraction Keyframe::GetRepeatFraction(int64_t index) const {
 	// Is index a valid point?
 	if (index >= 1 && (index + 1) < GetLength()) {
 		int64_t current_value = GetLong(index);
@@ -428,8 +424,7 @@ Fraction Keyframe::GetRepeatFraction(int64_t index)
 }
 
 // Get the change in Y value (from the previous Y value)
-double Keyframe::GetDelta(int64_t index)
-{
+double Keyframe::GetDelta(int64_t index) const {
 	if (index < 1) return 0;
 	if (index == 1 && ! Points.empty()) return Points[0].co.Y;
 	if (index >= GetLength()) return 0;
@@ -437,7 +432,7 @@ double Keyframe::GetDelta(int64_t index)
 }
 
 // Get a point at a specific index
-Point const & Keyframe::GetPoint(int64_t index) {
+Point const & Keyframe::GetPoint(int64_t index) const {
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 		return Points[index];
@@ -447,14 +442,14 @@ Point const & Keyframe::GetPoint(int64_t index) {
 }
 
 // Get the number of values (i.e. coordinates on the X axis)
-int64_t Keyframe::GetLength() {
+int64_t Keyframe::GetLength() const {
 	if (Points.empty()) return 0;
 	if (Points.size() == 1) return 1;
 	return round(Points.back().co.X) + 1;
 }
 
 // Get the number of points (i.e. # of points)
-int64_t Keyframe::GetCount() {
+int64_t Keyframe::GetCount() const {
 
 	return Points.size();
 }
@@ -499,15 +494,15 @@ void Keyframe::UpdatePoint(int64_t index, Point p) {
 	AddPoint(p);
 }
 
-void Keyframe::PrintPoints() {
+void Keyframe::PrintPoints() const {
 	cout << fixed << setprecision(4);
-	for (std::vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
+	for (std::vector<Point>::const_iterator it = Points.begin(); it != Points.end(); it++) {
 		Point p = *it;
 		cout << p.co.X << "\t" << p.co.Y << endl;
 	}
 }
 
-void Keyframe::PrintValues() {
+void Keyframe::PrintValues() const {
 	cout << fixed << setprecision(4);
 	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
 
@@ -534,8 +529,7 @@ void Keyframe::ScalePoints(double scale)
 }
 
 // Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
-void Keyframe::FlipPoints()
-{
+void Keyframe::FlipPoints() {
 	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
 		// Flip the points
 		using std::swap;
