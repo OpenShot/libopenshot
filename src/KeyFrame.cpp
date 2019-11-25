@@ -235,18 +235,18 @@ double Keyframe::GetValue(int64_t index) const {
 	assert(index < candidate->co.X);
 
 	// CONSTANT and LINEAR interpolations are fast to compute!
-	if (candidate->interpolation == CONSTANT) {
-		return predecessor->co.Y;
-	}
-	if (candidate->interpolation == LINEAR) {
+	switch (candidate->interpolation) {
+	case CONSTANT: return predecessor->co.Y;
+	case LINEAR: {
 		double const diff_Y = candidate->co.Y - predecessor->co.Y;
 		double const diff_X = candidate->co.X - predecessor->co.X;
 		double const slope = diff_Y / diff_X;
 		return predecessor->co.Y + slope * (index - predecessor->co.X);
 	}
+	case BEZIER: break;
+	}
 
 	// BEZIER curve!
-	// TODO: use switch instead of if for compiler warning support!
 	assert(candidate->interpolation == BEZIER);
 
 	double const X_diff = candidate->co.X - predecessor->co.X;
