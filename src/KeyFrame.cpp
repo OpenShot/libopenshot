@@ -42,10 +42,6 @@ Keyframe::Keyframe(double value) {
 	AddPoint(Point(value));
 }
 
-// Keyframe constructor
-Keyframe::Keyframe() {
-}
-
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {

@@ -68,7 +68,7 @@ namespace openshot {
 	public:
 
 		/// Default constructor for the Keyframe class
-		Keyframe();
+		Keyframe() = default;
 
 		/// Constructor which sets the default point & coordinate at X=1
 		Keyframe(double value);
