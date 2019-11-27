@@ -3,9 +3,12 @@
  * @brief Header file for ChunkReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -36,13 +39,11 @@
 #include <omp.h>
 #include <QtCore/qdir.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <memory>
 #include "Json.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
-
-using namespace std;
 
 namespace openshot
 {
@@ -102,22 +103,22 @@ namespace openshot
 	class ChunkReader : public ReaderBase
 	{
 	private:
-		string path;
+		std::string path;
 		bool is_open;
 		int64_t chunk_size;
-		ReaderBase *local_reader;
+		openshot::ReaderBase *local_reader;
 		ChunkLocation previous_location;
 		ChunkVersion version;
-		std::shared_ptr<Frame> last_frame;
+		std::shared_ptr<openshot::Frame> last_frame;
 
 		/// Check if folder path existing
-		bool does_folder_exist(string path);
+		bool does_folder_exist(std::string path);
 
 		/// Find the location of a frame in a chunk
 		ChunkLocation find_chunk_frame(int64_t requested_frame);
 
 		/// get a formatted path of a specific chunk
-		string get_chunk_path(int64_t chunk_number, string folder, string extension);
+		std::string get_chunk_path(int64_t chunk_number, std::string folder, std::string extension);
 
 		/// Load JSON meta data about this chunk folder
 		void load_json();
@@ -128,7 +129,7 @@ namespace openshot
 		/// frame 1, or it throws one of the following exceptions.
 		/// @param path				The folder path / location of a chunk (chunks are stored as folders)
 		/// @param chunk_version	Choose the video version / quality (THUMBNAIL, PREVIEW, or FINAL)
-		ChunkReader(string path, ChunkVersion chunk_version);
+		ChunkReader(std::string path, ChunkVersion chunk_version);
 
 		/// Close the reader
 		void Close();
@@ -142,22 +143,22 @@ namespace openshot
 		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() { return NULL; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "ChunkReader"; };
+		std::string Name() { return "ChunkReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

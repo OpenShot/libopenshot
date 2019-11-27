@@ -3,9 +3,12 @@
  * @brief Source file for ZeroMQ-based Logger class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,6 +29,10 @@
  */
 
 #include "../include/ZmqLogger.h"
+
+#if USE_RESVG == 1
+	#include "ResvgQt.h"
+#endif
 
 using namespace std;
 using namespace openshot;
@@ -51,6 +58,13 @@ ZmqLogger *ZmqLogger::Instance()
 
 		// Init enabled to False (force user to call Enable())
 		m_pInstance->enabled = false;
+
+		#if USE_RESVG == 1
+			// Init resvg logging (if needed)
+			// This can only happen 1 time or it will crash
+			ResvgRenderer::initLog();
+		#endif
+
 	}
 
 	return m_pInstance;
@@ -146,6 +160,9 @@ void ZmqLogger::Path(string new_path)
 
 void ZmqLogger::Close()
 {
+	// Disable logger as it no longer needed
+	enabled = false;
+
 	// Close file (if already open)
 	if (log_file.is_open())
 		log_file.close();
@@ -159,12 +176,13 @@ void ZmqLogger::Close()
 }
 
 // Append debug information
-void ZmqLogger::AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
-								   string arg2_name, float arg2_value,
-								   string arg3_name, float arg3_value,
-								   string arg4_name, float arg4_value,
-								   string arg5_name, float arg5_value,
-								   string arg6_name, float arg6_value)
+void ZmqLogger::AppendDebugMethod(string method_name,
+				  string arg1_name, float arg1_value,
+				  string arg2_name, float arg2_value,
+				  string arg3_name, float arg3_value,
+				  string arg4_name, float arg4_value,
+				  string arg5_name, float arg5_value,
+				  string arg6_name, float arg6_value)
 {
 	if (!enabled)
 		// Don't do anything

@@ -3,7 +3,10 @@
  * @brief Header file for DecklinkOutput class
  * @author Jonathan Thomas <jonathan@openshot.org>, Blackmagic Design
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
  * Copyright (c) 2009 Blackmagic Design
  *
@@ -30,7 +33,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -90,14 +93,14 @@ protected:
 
 	unsigned long 							frameCount;
 	//map<int, IDeckLinkMutableVideoFrame* > 	temp_cache;
-	map<int, uint8_t * > 	temp_cache;
+	std::map<int, uint8_t * > 	temp_cache;
 
 	BMDTimeValue frameRateDuration, frameRateScale;
 
 	// Queue of raw video frames
 	//deque<IDeckLinkMutableVideoFrame*> final_frames;
-	deque<uint8_t * > final_frames;
-	deque<std::shared_ptr<openshot::Frame> > raw_video_frames;
+	std::deque<uint8_t * > final_frames;
+	std::deque<std::shared_ptr<openshot::Frame> > raw_video_frames;
 
 	// Convert between YUV and RGB
 	IDeckLinkOutput *deckLinkOutput;

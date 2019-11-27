@@ -3,9 +3,12 @@
  * @brief Header file for EffectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -32,10 +35,8 @@
 #include <iomanip>
 #include <memory>
 #include "ClipBase.h"
-#include "Frame.h"
 #include "Json.h"
-
-using namespace std;
+#include "Frame.h"
 
 namespace openshot
 {
@@ -48,10 +49,10 @@ namespace openshot
 	 */
 	struct EffectInfoStruct
 	{
-		string class_name; ///< The class name of the effect
-		string short_name; ///< A short name of the effect, commonly used for icon names, etc...
-		string name; ///< The name of the effect
-		string description; ///< The description of this effect and what it does
+		std::string class_name; ///< The class name of the effect
+		std::string short_name; ///< A short name of the effect, commonly used for icon names, etc...
+		std::string name; ///< The name of the effect
+		std::string description; ///< The description of this effect and what it does
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
 	};
@@ -82,20 +83,20 @@ namespace openshot
 		/// modified openshot::Frame object
 		///
 		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from it's keyframes (starting at 1).
+		/// tells the effect which settings to use from its keyframes (starting at 1).
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		virtual std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) = 0;
+		virtual std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) = 0;
 
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.
 		void InitEffectInfo();
 
 		/// Get and Set JSON methods
-		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
+		virtual std::string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 		Json::Value JsonInfo(); ///< Generate JSON object of meta data / info
@@ -105,6 +106,7 @@ namespace openshot
 
 		/// Set the order that this effect should be executed.
 		void Order(int new_order) { order = new_order; }
+		virtual ~EffectBase() = default;
 	};
 
 }

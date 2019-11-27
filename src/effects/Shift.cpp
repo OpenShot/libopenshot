@@ -3,9 +3,12 @@
  * @brief Source file for Shift effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -130,7 +133,7 @@ std::shared_ptr<Frame> Shift::GetFrame(std::shared_ptr<Frame> frame, int64_t fra
 }
 
 // Generate JSON string of this object
-string Shift::Json() {
+std::string Shift::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -150,25 +153,31 @@ Json::Value Shift::JsonValue() {
 }
 
 // Load JSON string into this object
-void Shift::SetJson(string value) {
+void Shift::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -186,7 +195,7 @@ void Shift::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Shift::PropertiesJSON(int64_t requested_frame) {
+std::string Shift::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -204,4 +213,3 @@ string Shift::PropertiesJSON(int64_t requested_frame) {
 	// Return formatted string
 	return root.toStyledString();
 }
-

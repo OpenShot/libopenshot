@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::Cache
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,10 +29,11 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 
-using namespace std;
 using namespace openshot;
 
 TEST(Cache_Default_Constructor)

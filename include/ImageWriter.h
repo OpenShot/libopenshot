@@ -3,9 +3,12 @@
  * @brief Header file for ImageWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -32,9 +35,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifndef OPENSHOT_IMAGE_WRITER_H
 #define OPENSHOT_IMAGE_WRITER_H
+
+#ifdef USE_IMAGEMAGICK
 
 #include "ReaderBase.h"
 #include "WriterBase.h"
@@ -44,13 +48,10 @@
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
 #include "OpenMPUtilities.h"
-
-
-using namespace std;
+#include "MagickUtilities.h"
 
 namespace openshot
 {
@@ -85,12 +86,12 @@ namespace openshot
 	class ImageWriter : public WriterBase
 	{
 	private:
-		string path;
+		std::string path;
 		int cache_size;
 		bool is_writing;
 		bool is_open;
 		int64_t write_video_count;
-		vector<Magick::Image> frames;
+		std::vector<Magick::Image> frames;
 		int image_quality;
 		int number_of_loops;
 		bool combine_frames;
@@ -101,7 +102,7 @@ namespace openshot
 
 		/// @brief Constructor for ImageWriter. Throws one of the following exceptions.
 		/// @param path The path of the file you want to create
-		ImageWriter(string path);
+		ImageWriter(std::string path);
 
 		/// @brief Close the writer and encode/output final image to the disk. This is a requirement of ImageMagick,
 		/// which writes all frames of a multi-frame image at one time.
@@ -127,8 +128,8 @@ namespace openshot
 		/// @param height Height in pixels of image
 		/// @param quality Quality of image (0 to 100, 70 is default)
 		/// @param loops Number of times to repeat the image (used on certain multi-frame image formats, such as GIF)
-		/// @param combine Combine frames into a single image (if possible), or save each frame as it's own image
-		void SetVideoOptions(string format, Fraction fps, int width, int height,
+		/// @param combine Combine frames into a single image (if possible), or save each frame as its own image
+		void SetVideoOptions(std::string format, Fraction fps, int width, int height,
 				int quality, int loops, bool combine);
 
 		/// @brief Add a frame to the stack waiting to be encoded.
@@ -145,4 +146,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_IMAGE_WRITER_H

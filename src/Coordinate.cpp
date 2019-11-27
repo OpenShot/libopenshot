@@ -3,9 +3,12 @@
  * @brief Source file for Coordinate class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -42,7 +45,7 @@ Coordinate::Coordinate(double x, double y) :
 
 
 // Generate JSON string of this object
-string Coordinate::Json() {
+std::string Coordinate::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -66,25 +69,31 @@ Json::Value Coordinate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Coordinate::SetJson(string value) {
+void Coordinate::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

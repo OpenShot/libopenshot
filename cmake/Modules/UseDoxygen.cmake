@@ -1,4 +1,30 @@
-# - Run Doxygen
+# Redistribution and use is allowed according to the terms of the New
+# BSD license:
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+#  - Run Doxygen
 #
 # Adds a doxygen target that runs doxygen to generate the html
 # and optionally the LaTeX API documentation.
@@ -48,7 +74,6 @@
 #
 #  Redistribution and use is allowed according to the terms of the New
 #  BSD license.
-#  For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 #
 
 macro(usedoxygen_set_default name value type docstring)
@@ -80,12 +105,18 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 		STRING "Additional source files/directories separated by space")
 	set(DOXYFILE_SOURE_DIRS "\"${DOXYFILE_SOURCE_DIR}\" ${DOXYFILE_EXTRA_SOURCES}")
 
-	usedoxygen_set_default(DOXYFILE_LATEX YES BOOL "Generate LaTeX API documentation" OFF)
+	usedoxygen_set_default(DOXYFILE_LATEX OFF BOOL "Generate LaTeX API documentation")
 	usedoxygen_set_default(DOXYFILE_LATEX_DIR "latex" STRING "LaTex output directory")
 
 	mark_as_advanced(DOXYFILE_OUTPUT_DIR DOXYFILE_HTML_DIR DOXYFILE_LATEX_DIR
 		DOXYFILE_SOURCE_DIR DOXYFILE_EXTRA_SOURCE_DIRS DOXYFILE_IN)
 
+	## Dot
+	usedoxygen_set_default(DOXYFILE_USE_DOT ON BOOL "Use dot (part of graphviz) to generate graphs")
+	set(DOXYFILE_DOT "NO")
+	if(DOXYFILE_USE_DOT AND DOXYGEN_DOT_EXECUTABLE)
+		set(DOXYFILE_DOT "YES")
+	endif()
 
 	set_property(DIRECTORY 
 		APPEND PROPERTY
@@ -100,13 +131,12 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 
 	## LaTeX
 	set(DOXYFILE_PDFLATEX "NO")
-	set(DOXYFILE_DOT "NO")
 
 	set_property(DIRECTORY APPEND PROPERTY
 		ADDITIONAL_MAKE_CLEAN_FILES
 		"${DOXYFILE_OUTPUT_DIR}/${DOXYFILE_LATEX_DIR}")
 
-	if(DOXYFILE_LATEX STREQUAL "ON")
+	if(DOXYFILE_LATEX)
 		set(DOXYFILE_GENERATE_LATEX "YES")
 		find_package(LATEX)
 		find_program(DOXYFILE_MAKE make)
@@ -114,9 +144,6 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 		if(LATEX_COMPILER AND MAKEINDEX_COMPILER AND DOXYFILE_MAKE)
 			if(PDFLATEX_COMPILER)
 				set(DOXYFILE_PDFLATEX "YES")
-			endif()
-			if(DOXYGEN_DOT_EXECUTABLE)
-				set(DOXYFILE_DOT "YES")
 			endif()
 
 			add_custom_command(TARGET doxygen
@@ -134,7 +161,9 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 
 	configure_file("${DOXYFILE_IN}" "${DOXYFILE}" @ONLY)
 
-	get_target_property(DOC_TARGET doc TYPE)
+	if(TARGET doc)
+		get_target_property(DOC_TARGET doc TYPE)
+	endif()
 	if(NOT DOC_TARGET)
 		add_custom_target(doc)
 	endif()

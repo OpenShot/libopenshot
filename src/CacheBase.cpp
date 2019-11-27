@@ -3,9 +3,12 @@
  * @brief Source file for CacheBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -55,7 +58,7 @@ Json::Value CacheBase::JsonValue() {
 
 	// Create root json object
 	Json::Value root;
-	stringstream max_bytes_stream;
+	std::stringstream max_bytes_stream;
 	max_bytes_stream << max_bytes;
 	root["max_bytes"] = max_bytes_stream.str();
 
@@ -68,5 +71,5 @@ void CacheBase::SetJsonValue(Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["max_bytes"].isNull())
-		max_bytes = atoll(root["max_bytes"].asString().c_str());
+		max_bytes = std::stoll(root["max_bytes"].asString());
 }

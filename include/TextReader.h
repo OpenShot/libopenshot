@@ -3,9 +3,12 @@
  * @brief Header file for TextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,6 +31,9 @@
 #ifndef OPENSHOT_TEXT_READER_H
 #define OPENSHOT_TEXT_READER_H
 
+// Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "ReaderBase.h"
 
 #include <cmath>
@@ -36,12 +42,10 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Magick++.h"
 #include "CacheMemory.h"
 #include "Enums.h"
 #include "Exceptions.h"
-
-using namespace std;
+#include "MagickUtilities.h"
 
 namespace openshot
 {
@@ -85,15 +89,16 @@ namespace openshot
 		int height;
 		int x_offset;
 		int y_offset;
-		string text;
-		string font;
+		std::string text;
+		std::string font;
 		double size;
-		string text_color;
-		string background_color;
+		std::string text_color;
+		std::string background_color;
+		std::string text_background_color;
 		std::shared_ptr<Magick::Image> image;
-		list<Magick::Drawable> lines;
+		MAGICK_DRAWABLE lines;
 		bool is_open;
-		GravityType gravity;
+		openshot::GravityType gravity;
 
 	public:
 
@@ -110,31 +115,35 @@ namespace openshot
 		/// @param font The font of the text
 		/// @param size The size of the text
 		/// @param text_color The color of the text
-		/// @param background_color The background color of the text (also supports Transparent)
-		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color);
+		/// @param background_color The background color of the text frame image (also supports Transparent)
+		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
+
+		/// Draw a box under rendered text using the specified color.
+		/// @param text_background_color The background color behind the text
+		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
 		void Close();
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "TextReader"; };
+		std::string Name() { return "TextReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
@@ -144,4 +153,5 @@ namespace openshot
 
 }
 
-#endif
+#endif //USE_IMAGEMAGICK
+#endif //OPENSHOT_TEXT_READER_H

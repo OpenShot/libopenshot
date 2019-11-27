@@ -3,9 +3,12 @@
  * @brief Source file for AudioBufferSource class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -31,7 +34,7 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor
-AudioBufferSource::AudioBufferSource(AudioSampleBuffer *audio_buffer)
+AudioBufferSource::AudioBufferSource(juce::AudioSampleBuffer *audio_buffer)
 		: position(0), start(0), repeat(false), buffer(audio_buffer)
 { }
 
@@ -43,7 +46,7 @@ AudioBufferSource::~AudioBufferSource()
 };
 
 // Get the next block of audio samples
-void AudioBufferSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
+void AudioBufferSource::getNextAudioBlock (const juce::AudioSourceChannelInfo& info)
 {
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
@@ -95,7 +98,7 @@ void AudioBufferSource::prepareToPlay(int, double) { }
 void AudioBufferSource::releaseResources() { }
 
 // Set the next read position of this source
-void AudioBufferSource::setNextReadPosition (int64 newPosition)
+void AudioBufferSource::setNextReadPosition (juce::int64 newPosition)
 {
 	// set position (if the new position is in range)
 	if (newPosition >= 0 && newPosition < buffer->getNumSamples())
@@ -103,14 +106,14 @@ void AudioBufferSource::setNextReadPosition (int64 newPosition)
 }
 
 // Get the next read position of this source
-int64 AudioBufferSource::getNextReadPosition() const
+juce::int64 AudioBufferSource::getNextReadPosition() const
 {
 	// return the next read position
 	return position;
 }
 
 // Get the total length (in samples) of this audio source
-int64 AudioBufferSource::getTotalLength() const
+juce::int64 AudioBufferSource::getTotalLength() const
 {
 	// Get the length
 	return buffer->getNumSamples();
@@ -131,7 +134,7 @@ void AudioBufferSource::setLooping (bool shouldLoop)
 }
 
 // Use a different AudioSampleBuffer for this source
-void AudioBufferSource::setBuffer (AudioSampleBuffer *audio_buffer)
+void AudioBufferSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);
