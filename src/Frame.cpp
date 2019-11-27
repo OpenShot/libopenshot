@@ -692,7 +692,7 @@ void Frame::Thumbnail(std::string path, int new_width, int new_height, std::stri
 
 		// Get pixels
 		unsigned char *pixels = (unsigned char *) thumbnail->bits();
-		unsigned char const *mask_pixels = (unsigned char *) mask->constBits();
+		const unsigned char *mask_pixels = (const unsigned char *) mask->constBits();
 
 		// Convert the mask image to grayscale
 		// Loop through pixels
@@ -922,7 +922,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 		AddColor(width, height, "#000000");
 
 	// Get the pixels from the frame image
-	QRgb const *tmpBits = (const QRgb*)image->constBits();
+	const QRgb *tmpBits = (const QRgb*)image->constBits();
 
 	// Create new image object, and fill with pixel data
 	std::shared_ptr<Magick::Image> magick_image = std::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));
