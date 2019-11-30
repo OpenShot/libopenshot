@@ -121,39 +121,32 @@ bool Keyframe::Contains(Point p) const {
 
 // Get current point (or closest point) from the X coordinate (i.e. the frame number)
 Point Keyframe::GetClosestPoint(Point p, bool useLeft) const {
-	Point closest(-1, -1);
-
-	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// find a match
-		if (existing_point.co.X >= p.co.X && !useLeft) {
-			// New closest point found (to the Right)
-			closest = existing_point;
-			break;
-		} else if (existing_point.co.X < p.co.X && useLeft) {
-			// New closest point found (to the Left)
-			closest = existing_point;
-		} else if (existing_point.co.X >= p.co.X && useLeft) {
-			// We've gone past the left point... so break
-			break;
-		}
+	if (Points.size() == 0) {
+		return Point(-1, -1);
 	}
 
-	// Handle edge cases (if no point was found)
-	if (closest.co.X == -1) {
-		if (p.co.X <= 1 && Points.size() > 0)
-			// Assign 1st point
-			closest = Points[0];
-		else if (Points.size() > 0)
-			// Assign last point
-			closest = Points[Points.size() - 1];
-	}
+	// Finds a point with an X coordinate which is "not less" (greater
+	// or equal) than the queried X coordinate.
+	std::vector<Point>::const_iterator candidate =
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
 
-	// no matching point found
-	return closest;
+	if (candidate == end(Points)) {
+		// All points are before the queried point.
+		//
+		// Note: Behavior the same regardless of useLeft!
+		return Points.back();
+	}
+	if (candidate == begin(Points)) {
+		// First point is greater or equal to the queried point.
+		//
+		// Note: Behavior the same regardless of useLeft!
+		return Points.front();
+	}
+	if (useLeft) {
+		return *(candidate - 1);
+	} else {
+		return *candidate;
+	}
 }
 
 // Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
