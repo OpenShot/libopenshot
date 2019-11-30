@@ -114,20 +114,9 @@ int64_t Keyframe::FindIndex(Point p) const {
 
 // Determine if point already exists
 bool Keyframe::Contains(Point p) const {
-	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// find a match
-		if (p.co.X == existing_point.co.X) {
-			// Remove the matching point, and break out of loop
-			return true;
-		}
-	}
-
-	// no matching point found
-	return false;
+	std::vector<Point>::const_iterator i =
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
+	return i != end(Points) && i->co.X == p.co.X;
 }
 
 // Get current point (or closest point) from the X coordinate (i.e. the frame number)
