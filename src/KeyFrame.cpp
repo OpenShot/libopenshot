@@ -215,14 +215,8 @@ Point Keyframe::GetPreviousPoint(Point p) const {
 Point Keyframe::GetMaxPoint() const {
 	Point maxPoint(-1, -1);
 
-	// loop through points, and find the largest Y value
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// Is point larger than max point
+	for (Point const & existing_point: Points) {
 		if (existing_point.co.Y >= maxPoint.co.Y) {
-			// New max point found
 			maxPoint = existing_point;
 		}
 	}
