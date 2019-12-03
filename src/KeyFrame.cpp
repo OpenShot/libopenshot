@@ -282,13 +282,23 @@ bool Keyframe::IsIncreasing(int index) const
 	if (index < 1 || (index + 1) >= GetLength()) {
 		return true;
 	}
-	int64_t const current = GetLong(index);
-	// TODO: skip over constant sections.
+	std::vector<Point>::const_iterator candidate =
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
+	if (candidate == end(Points)) {
+		return false; // After the last point, thus constant.
+	}
+	if ((candidate->co.X == index) || (candidate == begin(Points))) {
+		++candidate;
+	}
+	int64_t const value = GetLong(index);
 	do {
-		int64_t const next = GetLong(++index);
-		if (next > current) return true;
-		if (next < current) return false;
-	} while (index < GetLength());
+		if (value < round(candidate->co.Y)) {
+			return true;
+		} else if (value > round(candidate->co.Y)) {
+			return false;
+		}
+		++candidate;
+	} while (candidate != end(Points));
 	return false;
 }
 
