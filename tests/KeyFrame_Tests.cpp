@@ -482,3 +482,15 @@ TEST(Keyframe_Use_Interpolation_of_Segment_End_Point)
 	f.AddPoint(100,155, BEZIER);
 	CHECK_CLOSE(75.9, f.GetValue(50), 0.1);
 }
+
+TEST(Keyframe_Handle_Large_Segment)
+{
+	Keyframe kf;
+	kf.AddPoint(1, 0, CONSTANT);
+	kf.AddPoint(1000000, 1, LINEAR);
+	UNITTEST_TIME_CONSTRAINT(10); // 10 milliseconds would still be relatively slow, but need to think about slower build machines!
+	CHECK_CLOSE(0.5, kf.GetValue(500000), 0.01);
+	CHECK_EQUAL(true, kf.IsIncreasing(10));
+	Fraction fr = kf.GetRepeatFraction(250000);
+	CHECK_CLOSE(0.5, (double)fr.num / fr.den, 0.01);
+}
