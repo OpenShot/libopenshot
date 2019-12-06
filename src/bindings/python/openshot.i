@@ -153,9 +153,15 @@
 }
 
 %extend openshot::OpenShotVersion {
-    // Give the struct a string representation
+        // Give the struct a string representation
 	const std::string __str__() {
 		return std::string(OPENSHOT_VERSION_FULL);
+	}
+	// And a repr for interactive use
+	const std::string __repr__() {
+		std::ostringstream result;
+		result << "OpenShotVersion('" << OPENSHOT_VERSION_FULL << "')";
+		return result.str();
 	}
 }
 
