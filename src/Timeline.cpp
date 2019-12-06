@@ -824,7 +824,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Adding solid color)", "frame_number", frame_number, "info.width", info.width, "info.height", info.height);
 
 				// Add Background Color to 1st layer (if animated or not black)
-				if ((color.red.Points.size() > 1 || color.green.Points.size() > 1 || color.blue.Points.size() > 1) ||
+				if ((color.red.GetCount() > 1 || color.green.GetCount() > 1 || color.blue.GetCount() > 1) ||
 					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
 				new_frame->AddColor(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, color.GetColorHex(frame_number));
 
