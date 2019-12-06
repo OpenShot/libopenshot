@@ -379,40 +379,123 @@ void Keyframe::SetJsonValue(Json::Value root) {
 // Get the fraction that represents how many times this value is repeated in the curve
 // This is depreciated and will be removed soon.
 Fraction Keyframe::GetRepeatFraction(int64_t index) const {
-	// Is index a valid point?
-	if (index >= 1 && (index + 1) < GetLength()) {
-		int64_t current_value = GetLong(index);
-		int64_t previous_repeats = 0;
-		int64_t next_repeats = 0;
-
-		// Loop backwards and look for the next unique value
-		for (int64_t i = index; i > 0; --i) {
-			if (GetLong(i) == current_value) {
-				// Found same value
-				previous_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Loop forwards and look for the next unique value
-		for (int64_t i = index + 1; i < GetLength(); ++i) {
-			if (GetLong(i) == current_value) {
-				// Found same value
-				next_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		int64_t total_repeats = previous_repeats + next_repeats;
-		return Fraction(previous_repeats, total_repeats);
-	}
-	else
-		// return a blank coordinate
+	// Frame numbers (index) outside of the "defined" range of this
+	// keyframe result in a 1/1 default value.
+	if (index < 1 || (index + 1) >= GetLength()) {
 		return Fraction(1,1);
+	}
+	assert(Points.size() > 1); // Due to ! ((index + 1) >= GetLength) there are at least two points!
+
+	// First, get the value at the given frame and the closest point
+	// to the right.
+	int64_t const current_value = GetLong(index);
+	std::vector<Point>::const_iterator const candidate =
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
+	assert(candidate != end(Points)); // Due to the (index + 1) >= GetLength check above!
+
+	// Calculate how many of the next values are going to be the same:
+	int64_t next_repeats = 0;
+	std::vector<Point>::const_iterator i = candidate;
+	// If the index (frame number) is the X coordinate of the closest
+	// point, then look at the segment to the right; the "current"
+	// segement is not interesting because we're already at the last
+	// value of it.
+	if (i->co.X == index) {
+		++i;
+	}
+	// Skip over "constant" (when rounded) segments.
+	bool all_constant = true;
+	for (; i != end(Points); ++i) {
+		if (current_value != round(i->co.Y)) {
+			all_constant = false;
+			break;
+		}
+	}
+	if (! all_constant) {
+		// Found a point which defines a segment which will give a
+		// different value than the current value.  This means we
+		// moved at least one segment to the right, thus we cannot be
+		// at the first point.
+		assert(i != begin(Points));
+		Point const left = *(i - 1);
+		Point const right = *i;
+		// Binary search for the first value which is different from
+		// the current value.
+		bool const increasing = current_value < round(i->co.Y);
+		int64_t start = left.co.X;
+		int64_t stop = right.co.X;
+		while (start < stop) {
+			int64_t const mid = (start + stop + 1) / 2;
+			double const value = InterpolateBetween(left, right, mid, 0.01);
+			bool const smaller = round(value) <= current_value;
+			bool const larger = round(value) >= current_value;
+			if ((increasing && smaller) || (!increasing && larger)) {
+				start = mid;
+			} else {
+				stop = mid - 1;
+			}
+		}
+		next_repeats = start - index;
+	} else {
+		// All values to the right are the same!
+		next_repeats = Points.back().co.X - index;
+	}
+
+	// Now look to the left, to the previous values.
+	all_constant = true;
+	i = candidate;
+	if (i != begin(Points)) {
+		// The binary search below assumes i to be the left point;
+		// candidate is the right point of the current segment
+		// though. So change this if possible. If this branch is NOT
+		// taken, then we're at/before the first point and all is
+		// constant!
+		--i;
+	}
+	int64_t previous_repeats = 0;
+	// Skip over constant (when rounded) segments!
+	for (; i != begin(Points); --i) {
+		if (current_value != round(i->co.Y)) {
+			all_constant = false;
+			break;
+		}
+	}
+	// Special case when skipped until the first point, but the first
+	// point is actually different.  Will not happen if index is
+	// before the first point!
+	if (current_value != round(i->co.Y)) {
+		assert(i != candidate);
+		all_constant = false;
+	}
+	if (! all_constant) {
+		// There are at least two points, and we're not at the end,
+		// thus the following is safe!
+		Point const left = *i;
+		Point const right = *(i + 1);
+		// Binary search for the last value (seen from the left to
+		// right) to be different than the current value.
+		bool const increasing = current_value > round(left.co.Y);
+		int64_t start = left.co.X;
+		int64_t stop = right.co.X;
+		while (start < stop) {
+			int64_t const mid = (start + stop + 1) / 2;
+			double const value = InterpolateBetween(left, right, mid, 0.01);
+			bool const smaller = round(value) < current_value;
+			bool const larger = round(value) > current_value;
+			if ((increasing && smaller) || (!increasing && larger)) {
+				start = mid;
+			} else {
+				stop = mid - 1;
+			}
+		}
+		previous_repeats = index - start;
+	} else {
+		// Every previous value is the same (rounded) as the current
+		// value.
+		previous_repeats = index;
+	}
+	int64_t total_repeats = previous_repeats + next_repeats;
+	return Fraction(previous_repeats, total_repeats);
 }
 
 // Get the change in Y value (from the previous Y value)
