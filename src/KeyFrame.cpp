@@ -30,6 +30,7 @@
 
 #include "../include/KeyFrame.h"
 #include <algorithm>
+#include <functional>
 #include <utility>
 
 using namespace std;
@@ -92,6 +93,23 @@ namespace {
 		case LINEAR: return InterpolateLinearCurve(left, right, target);
 		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
 		}
+	}
+
+
+	template<typename Check>
+	int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
+		int64_t start = left.co.X;
+		int64_t stop = right.co.X;
+		while (start < stop) {
+			int64_t const mid = (start + stop + 1) / 2;
+			double const value = InterpolateBetween(left, right, mid, 0.01);
+			if (check(round(value), current)) {
+				start = mid;
+			} else {
+				stop = mid - 1;
+			}
+		}
+		return start;
 	}
 }
 
@@ -419,23 +437,14 @@ Fraction Keyframe::GetRepeatFraction(int64_t index) const {
 		assert(i != begin(Points));
 		Point const left = *(i - 1);
 		Point const right = *i;
-		// Binary search for the first value which is different from
-		// the current value.
-		bool const increasing = current_value < round(i->co.Y);
-		int64_t start = left.co.X;
-		int64_t stop = right.co.X;
-		while (start < stop) {
-			int64_t const mid = (start + stop + 1) / 2;
-			double const value = InterpolateBetween(left, right, mid, 0.01);
-			bool const smaller = round(value) <= current_value;
-			bool const larger = round(value) >= current_value;
-			if ((increasing && smaller) || (!increasing && larger)) {
-				start = mid;
-			} else {
-				stop = mid - 1;
-			}
+		int64_t change_at;
+		if (current_value < round(i->co.Y)) {
+			change_at = SearchBetweenPoints(left, right, current_value, std::less_equal<double>{});
+		} else {
+			assert(current_value > round(i->co.Y));
+			change_at = SearchBetweenPoints(left, right, current_value, std::greater_equal<double>{});
 		}
-		next_repeats = start - index;
+		next_repeats = change_at - index;
 	} else {
 		// All values to the right are the same!
 		next_repeats = Points.back().co.X - index;
@@ -472,23 +481,14 @@ Fraction Keyframe::GetRepeatFraction(int64_t index) const {
 		// thus the following is safe!
 		Point const left = *i;
 		Point const right = *(i + 1);
-		// Binary search for the last value (seen from the left to
-		// right) to be different than the current value.
-		bool const increasing = current_value > round(left.co.Y);
-		int64_t start = left.co.X;
-		int64_t stop = right.co.X;
-		while (start < stop) {
-			int64_t const mid = (start + stop + 1) / 2;
-			double const value = InterpolateBetween(left, right, mid, 0.01);
-			bool const smaller = round(value) < current_value;
-			bool const larger = round(value) > current_value;
-			if ((increasing && smaller) || (!increasing && larger)) {
-				start = mid;
-			} else {
-				stop = mid - 1;
-			}
+		int64_t change_at;
+		if (current_value > round(left.co.Y)) {
+			change_at = SearchBetweenPoints(left, right, current_value, std::less<double>{});
+		} else {
+			assert(current_value < round(left.co.Y));
+			change_at = SearchBetweenPoints(left, right, current_value, std::greater<double>{});
 		}
-		previous_repeats = index - start;
+		previous_repeats = index - change_at;
 	} else {
 		// Every previous value is the same (rounded) as the current
 		// value.
