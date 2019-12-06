@@ -40,7 +40,14 @@ namespace {
 		return p.co.X < x;
 	}
 
-	double InterpolateBezierCurve(Point const & left, Point const & right, bool const needY, double const target, double const allowed_error) {
+	double InterpolateLinearCurve(Point const & left, Point const & right, double const target) {
+		double const diff_Y = right.co.Y - left.co.Y;
+		double const diff_X = right.co.X - left.co.X;
+		double const slope = diff_Y / diff_X;
+		return left.co.Y + slope * (target - left.co.X);
+	}
+
+	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error) {
 		double const X_diff = right.co.X - left.co.X;
 		double const Y_diff = right.co.Y - left.co.Y;
 		Coordinate const p0 = left.co;
@@ -63,12 +70,10 @@ namespace {
 			}
 			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
 			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
-			bool const stop = abs(target - (needY ? x : y)) < allowed_error;
-			bool const move_left = (needY ? x : y) > target;
-			if (stop) {
-				return needY ? y : x;
+			if (abs(target - x) < allowed_error) {
+				return y;
 			}
-			if (move_left) {
+			if (x > target) {
 				t -= t_step;
 			}
 			else {
@@ -76,6 +81,17 @@ namespace {
 			}
 			t_step /= 2;
 		} while (true);
+	}
+
+
+	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
+		assert(left.co.X < target);
+		assert(target <= right.co.X);
+		switch (right.interpolation) {
+		case CONSTANT: return left.co.Y;
+		case LINEAR: return InterpolateLinearCurve(left, right, target);
+		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
+		}
 	}
 }
 
@@ -245,25 +261,7 @@ double Keyframe::GetValue(int64_t index) const {
 		return candidate->co.Y;
 	}
 	std::vector<Point>::const_iterator predecessor = candidate - 1;
-	assert(predecessor->co.X < index);
-	assert(index < candidate->co.X);
-
-	// CONSTANT and LINEAR interpolations are fast to compute!
-	switch (candidate->interpolation) {
-	case CONSTANT: return predecessor->co.Y;
-	case LINEAR: {
-		double const diff_Y = candidate->co.Y - predecessor->co.Y;
-		double const diff_X = candidate->co.X - predecessor->co.X;
-		double const slope = diff_Y / diff_X;
-		return predecessor->co.Y + slope * (index - predecessor->co.X);
-	}
-	case BEZIER: break;
-	}
-
-	// BEZIER curve!
-	assert(candidate->interpolation == BEZIER);
-
-	return InterpolateBezierCurve(*predecessor, *candidate, true, index, 0.01);
+	return InterpolateBetween(*predecessor, *candidate, index, 0.01);
 }
 
 // Get the rounded INT value at a specific index
