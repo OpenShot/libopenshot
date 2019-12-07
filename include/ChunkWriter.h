@@ -49,8 +49,6 @@
 #include "Json.h"
 
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -83,27 +81,27 @@ namespace openshot
 	class ChunkWriter : public WriterBase
 	{
 	private:
-		string path;
+		std::string path;
 		int64_t chunk_count;
 		int64_t chunk_size;
 		int64_t frame_count;
 		bool is_open;
 		bool is_writing;
-		ReaderBase *local_reader;
-		FFmpegWriter *writer_thumb;
-		FFmpegWriter *writer_preview;
-		FFmpegWriter *writer_final;
+		openshot::ReaderBase *local_reader;
+		openshot::FFmpegWriter *writer_thumb;
+		openshot::FFmpegWriter *writer_preview;
+		openshot::FFmpegWriter *writer_final;
 	    std::shared_ptr<Frame> last_frame;
 	    bool last_frame_needed;
-	    string default_extension;
-	    string default_vcodec;
-	    string default_acodec;
+	    std::string default_extension;
+	    std::string default_vcodec;
+	    std::string default_acodec;
 
 		/// check for chunk folder
-		void create_folder(string path);
+		void create_folder(std::string path);
 
 		/// get a formatted path of a specific chunk
-		string get_chunk_path(int64_t chunk_number, string folder, string extension);
+		std::string get_chunk_path(int64_t chunk_number, std::string folder, std::string extension);
 
 		/// check for valid chunk json
 		bool is_chunk_valid();
@@ -116,7 +114,7 @@ namespace openshot
 		/// @brief Constructor for ChunkWriter. Throws one of the following exceptions.
 		/// @param path The folder path of the chunk file to be created
 		/// @param reader The initial reader to base this chunk file's meta data on (such as fps, height, width, etc...)
-		ChunkWriter(string path, ReaderBase *reader);
+		ChunkWriter(std::string path, openshot::ReaderBase *reader);
 
 		/// Close the writer
 		void Close();
@@ -136,7 +134,7 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object that needs to be written to this chunk file.
-		void WriteFrame(std::shared_ptr<Frame> frame);
+		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param start The starting frame number to write (of the reader passed into the constructor)
@@ -147,7 +145,7 @@ namespace openshot
 		/// @param reader The reader containing the frames you need
 		/// @param start The starting frame number to write
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length);
+		void WriteFrame(openshot::ReaderBase* reader, int64_t start, int64_t length);
 
 	};
 

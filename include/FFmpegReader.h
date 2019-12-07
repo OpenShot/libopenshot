@@ -51,8 +51,6 @@
 #include "Settings.h"
 
 
-using namespace std;
-
 namespace openshot {
 	/**
 	 * @brief This struct holds the associated video frame and starting sample # for an audio packet.
@@ -95,7 +93,7 @@ namespace openshot {
 	 */
 	class FFmpegReader : public ReaderBase {
 	private:
-		string path;
+		std::string path;
 
 		AVFormatContext *pFormatCtx;
 		int i, videoStream, audioStream;
@@ -114,15 +112,15 @@ namespace openshot {
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
-		map<int64_t, int64_t> processing_video_frames;
-		multimap<int64_t, int64_t> processing_audio_frames;
-		map<int64_t, int64_t> processed_video_frames;
-		map<int64_t, int64_t> processed_audio_frames;
-		multimap<int64_t, int64_t> missing_video_frames;
-		multimap<int64_t, int64_t> missing_video_frames_source;
-		multimap<int64_t, int64_t> missing_audio_frames;
-		multimap<int64_t, int64_t> missing_audio_frames_source;
-		map<int64_t, int> checked_frames;
+		std::map<int64_t, int64_t> processing_video_frames;
+		std::multimap<int64_t, int64_t> processing_audio_frames;
+		std::map<int64_t, int64_t> processed_video_frames;
+		std::map<int64_t, int64_t> processed_audio_frames;
+		std::multimap<int64_t, int64_t> missing_video_frames;
+		std::multimap<int64_t, int64_t> missing_video_frames_source;
+		std::multimap<int64_t, int64_t> missing_audio_frames;
+		std::multimap<int64_t, int64_t> missing_audio_frames_source;
+		std::map<int64_t, int> checked_frames;
 		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
@@ -132,7 +130,7 @@ namespace openshot {
 		int64_t pts_counter;
 		int64_t num_packets_since_video_frame;
 		int64_t num_checks_since_final;
-		std::shared_ptr<Frame> last_video_frame;
+		std::shared_ptr<openshot::Frame> last_video_frame;
 
 		bool is_seeking;
 		int64_t seeking_pts;
@@ -178,7 +176,7 @@ namespace openshot {
 		int64_t ConvertVideoPTStoFrame(int64_t pts);
 
 		/// Create a new Frame (or return an existing one) and add it to the working queue.
-		std::shared_ptr<Frame> CreateFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> CreateFrame(int64_t requested_frame);
 
 		/// Calculate Starting video frame and sample # for an audio PTS
 		AudioLocation GetAudioPTSLocation(int64_t pts);
@@ -208,7 +206,7 @@ namespace openshot {
 		void ProcessAudioPacket(int64_t requested_frame, int64_t target_frame, int starting_sample);
 
 		/// Read the stream until we find the requested Frame
-		std::shared_ptr<Frame> ReadStream(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> ReadStream(int64_t requested_frame);
 
 		/// Remove AVFrame from cache (and deallocate its memory)
 		void RemoveAVFrame(AVFrame *);
@@ -238,12 +236,12 @@ namespace openshot {
 
 		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
 		/// frame 1, or it throws one of the following exceptions.
-		FFmpegReader(string path);
+		FFmpegReader(std::string path);
 
 		/// Constructor for FFmpegReader.  This only opens the media file to inspect its properties
 		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiating it.
-		FFmpegReader(string path, bool inspect_reader);
+		FFmpegReader(std::string path, bool inspect_reader);
 
 		/// Destructor
 		virtual ~FFmpegReader();
@@ -258,17 +256,17 @@ namespace openshot {
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "FFmpegReader"; };
+		std::string Name() { return "FFmpegReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

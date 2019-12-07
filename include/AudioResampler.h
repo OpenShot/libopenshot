@@ -57,7 +57,7 @@ namespace openshot {
 	private:
 		juce::AudioSampleBuffer *buffer;
 		juce::AudioSampleBuffer *resampled_buffer;
-		AudioBufferSource *buffer_source;
+		openshot::AudioBufferSource *buffer_source;
 		juce::ResamplingAudioSource *resample_source;
 		juce::AudioSourceChannelInfo resample_callback_buffer;
 

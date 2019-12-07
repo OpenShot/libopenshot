@@ -124,7 +124,7 @@ std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string DummyReader::Json() {
+std::string DummyReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -142,14 +142,14 @@ Json::Value DummyReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void DummyReader::SetJson(string value) {
+void DummyReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;

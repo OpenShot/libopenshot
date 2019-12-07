@@ -58,7 +58,7 @@ Json::Value CacheBase::JsonValue() {
 
 	// Create root json object
 	Json::Value root;
-	stringstream max_bytes_stream;
+	std::stringstream max_bytes_stream;
 	max_bytes_stream << max_bytes;
 	root["max_bytes"] = max_bytes_stream.str();
 

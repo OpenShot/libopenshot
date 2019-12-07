@@ -49,9 +49,6 @@
 #include "OpenMPUtilities.h"
 
 
-
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -166,8 +163,8 @@ namespace openshot
 
 	public:
 		// Init some containers
-		vector<Field> fields;		// List of all fields
-		vector<MappedFrame> frames;	// List of all frames
+		std::vector<Field> fields;		// List of all fields
+		std::vector<MappedFrame> frames;	// List of all frames
 
 		/// Default constructor for openshot::FrameMapper class
 		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
@@ -199,11 +196,11 @@ namespace openshot
 		bool IsOpen();
 
 		/// Return the type name of the class
-		string Name() { return "FrameMapper"; };
+		std::string Name() { return "FrameMapper"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

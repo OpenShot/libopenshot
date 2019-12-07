@@ -35,14 +35,14 @@ using namespace openshot;
 
 
 // Generate JSON string of this object
-string EffectInfo::Json() {
+std::string EffectInfo::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Create a new effect instance
-EffectBase* EffectInfo::CreateEffect(string effect_type) {
+EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	// Init the matching effect object
 	if (effect_type == "Bars")
 		return new Bars();

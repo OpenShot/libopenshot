@@ -41,27 +41,25 @@
 
 namespace openshot
 {
-    using juce::Thread;
-
     /**
      *  @brief The private part of QtPlayer class, which contains an audio thread and video thread,
      *  and controls the video timing and audio synchronization code.
      */
-    class PlayerPrivate : Thread
+    class PlayerPrivate : juce::Thread
     {
-    std::shared_ptr<Frame> frame; /// The current frame
+    std::shared_ptr<openshot::Frame> frame; /// The current frame
 	int64_t video_position; /// The current frame position.
 	int64_t audio_position; /// The current frame position.
-	ReaderBase *reader; /// The reader which powers this player
-	AudioPlaybackThread *audioPlayback; /// The audio thread
-	VideoPlaybackThread *videoPlayback; /// The video thread
-	VideoCacheThread *videoCache; /// The cache thread
+	openshot::ReaderBase *reader; /// The reader which powers this player
+	openshot::AudioPlaybackThread *audioPlayback; /// The audio thread
+	openshot::VideoPlaybackThread *videoPlayback; /// The video thread
+	openshot::VideoCacheThread *videoCache; /// The cache thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-	RendererBase *renderer;
+	openshot::RendererBase *renderer;
 	int64_t last_video_position; /// The last frame actually displayed
 
 	/// Constructor
-	PlayerPrivate(RendererBase *rb);
+	PlayerPrivate(openshot::RendererBase *rb);
 	/// Destructor
 	virtual ~PlayerPrivate();
 
@@ -75,7 +73,7 @@ namespace openshot
 	void stopPlayback(int timeOutMilliseconds = -1);
 
 	/// Get the next frame (based on speed and direction)
-	std::shared_ptr<Frame> getFrame();
+	std::shared_ptr<openshot::Frame> getFrame();
 
 	/// The parent class of PlayerPrivate
 	friend class QtPlayer;

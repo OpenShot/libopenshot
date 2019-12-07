@@ -37,8 +37,8 @@ if (POLICY CMP0086)
 	cmake_policy(SET CMP0086 OLD)
 endif()
 
-FIND_PACKAGE(PythonLibs 3)
 FIND_PACKAGE(PythonInterp 3)
+FIND_PACKAGE(PythonLibs 3)
 if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
 	### Include Python header files

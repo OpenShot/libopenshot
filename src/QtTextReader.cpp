@@ -52,7 +52,7 @@ QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, Gr
 	Close();
 }
 
-void QtTextReader::SetTextBackgroundColor(string color) {
+void QtTextReader::SetTextBackgroundColor(std::string color) {
 	text_background_color = color;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
@@ -239,17 +239,17 @@ void QtTextReader::SetJson(std::string value) {
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
