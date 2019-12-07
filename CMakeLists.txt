@@ -66,6 +66,15 @@ Generating build files for OpenShot with CMake ${CMAKE_VERSION}
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
 include(GNUInstallDirs)
 
+# Collect and display summary of options/dependencies
+include(FeatureSummary)
+
+################ OPTIONS ##################
+# Optional build settings for libopenshot
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
@@ -111,3 +120,9 @@ endif()
 if(NOT DISABLE_TESTS)
   add_subdirectory(tests)
 endif()
+
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+    INCLUDE_QUIET_PACKAGES
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
