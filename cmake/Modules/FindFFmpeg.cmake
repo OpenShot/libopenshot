@@ -180,9 +180,16 @@ foreach (_component ${FFmpeg_FIND_COMPONENTS})
   endif ()
 endforeach ()
 
-# Build the include path with duplicates removed.
+# Build the result lists with duplicates removed, in case of repeated
+# invocations.
 if (FFmpeg_INCLUDE_DIRS)
   list(REMOVE_DUPLICATES FFmpeg_INCLUDE_DIRS)
+endif()
+if (FFmpeg_LIBRARIES)
+  list(REMOVE_DUPLICATES FFmpeg_LIBRARIES)
+endif()
+if(FFmpeg_DEFINITIONS)
+  list(REMOVE_DUPLICATES FFmpeg_DEFINITIONS)
 endif ()
 
 # cache the vars.

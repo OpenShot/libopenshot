@@ -38,23 +38,21 @@
 #include "Qt/PlayerPrivate.h"
 #include "RendererBase.h"
 
-using namespace std;
-
 namespace openshot
 {
     /**
      * @brief This class is used to playback a video from a reader.
      *
      */
-    class QtPlayer : public PlayerBase
+    class QtPlayer : public openshot::PlayerBase
     {
-	PlayerPrivate *p;
+	openshot::PlayerPrivate *p;
 	bool threads_started;
 
     public:
 	/// Default constructor
 	explicit QtPlayer();
-	explicit QtPlayer(RendererBase *rb);
+	explicit QtPlayer(openshot::RendererBase *rb);
 
 	/// Default destructor
 	virtual ~QtPlayer();
@@ -63,27 +61,27 @@ namespace openshot
 	void CloseAudioDevice();
 
 	/// Get Error (if any)
-	string GetError();
+	std::string GetError();
 
 	/// Get Audio Devices from JUCE
-	vector<AudioDeviceInfo> GetAudioDeviceNames();
+	std::vector<openshot::AudioDeviceInfo> GetAudioDeviceNames();
 
 	/// Play the video
 	void Play();
-	
+
 	/// Display a loading animation
 	void Loading();
-	
+
 	/// Get the current mode
-	PlaybackMode Mode();
+	openshot::PlaybackMode Mode();
 
 	/// Pause the video
 	void Pause();
-	
+
 	/// Get the current frame number being played
 	int64_t Position();
-	
-	/// Seek to a specific frame in the player
+
+  /// Seek to a specific frame in the player
 	void Seek(int64_t new_frame);
 
 	/// Set the source URL/path of this player (which will create an internal Reader)
@@ -107,10 +105,10 @@ namespace openshot
 	void Stop();
 
 	/// Set the current reader
-	void Reader(ReaderBase *new_reader);
+	void Reader(openshot::ReaderBase *new_reader);
 
 	/// Get the current reader, such as a FFmpegReader
-	ReaderBase* Reader();
+	openshot::ReaderBase* Reader();
 
 	/// Get the Volume
 	float Volume();
@@ -118,7 +116,6 @@ namespace openshot
 	/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
 	void Volume(float new_volume);
     };
-
 }
 
 #endif

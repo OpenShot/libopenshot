@@ -1,7 +1,9 @@
 /**
  * @file
- * @brief Header file for TextReader class
+ * @brief Header file for QtHtmlReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -28,11 +30,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_TEXT_READER_H
-#define OPENSHOT_TEXT_READER_H
-
-// Require ImageMagick support
-#ifdef USE_IMAGEMAGICK
+#ifndef OPENSHOT_QT_HTML_READER_H
+#define OPENSHOT_QT_HTML_READER_H
 
 #include "ReaderBase.h"
 
@@ -45,29 +44,30 @@
 #include "CacheMemory.h"
 #include "Enums.h"
 #include "Exceptions.h"
-#include "MagickUtilities.h"
+
+class QImage;
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
+	 * @brief This class uses Qt libraries, to create frames with rendered HTML, and return
 	 * openshot::Frame objects.
 	 *
-	 * All system fonts are supported, including many different font properties, such as size, color,
-	 * alignment, padding, etc...
+	 * Supports HTML/CSS subset available via Qt libraries, see: https://doc.qt.io/qt-5/richtext-html-subset.html
 	 *
 	 * @code
+	 * // Any application using this class must instantiate either QGuiApplication or QApplication
+	 * QApplication a(argc, argv);
+	 *
 	 * // Create a reader to generate an openshot::Frame containing text
-	 * TextReader r(720, // width
+	 * QtHtmlReader r(720, // width
 	 *              480, // height
 	 *              5, // x_offset
 	 *              5, // y_offset
 	 *              GRAVITY_CENTER, // gravity
-	 *              "Check out this Text!", // text
-	 *              "Arial", // font
-	 *              15.0, // size
-	 *              "#fff000", // text_color
+	 *              "<b>Check out</b> this Text!", // html
+	 *              "b { color: #ff0000 }", // css
 	 *              "#000000" // background_color
 	 *              );
 	 * r.Open(); // Open the reader
@@ -82,45 +82,34 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class TextReader : public ReaderBase
+	class QtHtmlReader : public ReaderBase
 	{
 	private:
 		int width;
 		int height;
 		int x_offset;
 		int y_offset;
-		std::string text;
-		std::string font;
-		double size;
-		std::string text_color;
+		std::string html;
+		std::string css;
 		std::string background_color;
-		std::string text_background_color;
-		std::shared_ptr<Magick::Image> image;
-		MAGICK_DRAWABLE lines;
+		std::shared_ptr<QImage> image;
 		bool is_open;
 		openshot::GravityType gravity;
-
 	public:
 
 		/// Default constructor (blank text)
-		TextReader();
+		QtHtmlReader();
 
-		/// @brief Constructor for TextReader with all parameters.
+		/// @brief Constructor for QtHtmlReader with all parameters.
 		/// @param width The width of the requested openshot::Frame (not the size of the text)
 		/// @param height The height of the requested openshot::Frame (not the size of the text)
 		/// @param x_offset The number of pixels to offset the text on the X axis (horizontal)
 		/// @param y_offset The number of pixels to offset the text on the Y axis (vertical)
 		/// @param gravity The alignment / gravity of the text
-		/// @param text The text you want to generate / display
-		/// @param font The font of the text
-		/// @param size The size of the text
-		/// @param text_color The color of the text
-		/// @param background_color The background color of the text frame image (also supports Transparent)
-		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
-
-		/// Draw a box under rendered text using the specified color.
-		/// @param text_background_color The background color behind the text
-		void SetTextBackgroundColor(std::string color);
+		/// @param html The HTML you want to render / display
+		/// @param css The CSS you want to apply to style the HTML
+		/// @param background_color The background color of the frame image (valid values are a color string in \#RRGGBB or \#AARRGGBB notation, a CSS color name, or 'transparent')
+		QtHtmlReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string html, std::string css, std::string background_color);
 
 		/// Close Reader
 		void Close();
@@ -139,7 +128,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "TextReader"; };
+		std::string Name() { return "QtHtmlReader"; };
 
 		/// Get and Set JSON methods
 		std::string Json(); ///< Generate JSON string of this object
@@ -153,5 +142,4 @@ namespace openshot
 
 }
 
-#endif //USE_IMAGEMAGICK
-#endif //OPENSHOT_TEXT_READER_H
+#endif

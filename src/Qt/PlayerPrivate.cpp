@@ -33,22 +33,22 @@
 
 namespace openshot
 {
-	// Constructor
-    PlayerPrivate::PlayerPrivate(RendererBase *rb)
-	: renderer(rb), Thread("player"), video_position(1), audio_position(0)
-	, audioPlayback(new AudioPlaybackThread())
-	, videoPlayback(new VideoPlaybackThread(rb))
-    , videoCache(new VideoCacheThread())
+    // Constructor
+    PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
+    : renderer(rb), Thread("player"), video_position(1), audio_position(0)
+    , audioPlayback(new openshot::AudioPlaybackThread())
+    , videoPlayback(new openshot::VideoPlaybackThread(rb))
+    , videoCache(new openshot::VideoCacheThread())
     , speed(1), reader(NULL), last_video_position(1)
     { }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
     {
-	stopPlayback(1000);
-	delete audioPlayback;
-	delete videoCache;
-	delete videoPlayback;
+        stopPlayback(1000);
+        delete audioPlayback;
+        delete videoCache;
+        delete videoPlayback;
     }
 
     // Start thread
@@ -138,7 +138,7 @@ namespace openshot
     }
 
     // Get the next displayed frame (based on speed and direction)
-    std::shared_ptr<Frame> PlayerPrivate::getFrame()
+    std::shared_ptr<openshot::Frame> PlayerPrivate::getFrame()
     {
 	try {
 		// Get the next frame (based on speed)
@@ -158,35 +158,33 @@ namespace openshot
 			return reader->GetFrame(video_position);
 		}
 
-	} catch (const ReaderClosed & e) {
-	    // ...
-	} catch (const TooManySeeks & e) {
-	    // ...
-	} catch (const OutOfBoundsFrame & e) {
-	    // ...
-	}
-	return std::shared_ptr<Frame>();
+    } catch (const ReaderClosed & e) {
+        // ...
+    } catch (const TooManySeeks & e) {
+        // ...
+    } catch (const OutOfBoundsFrame & e) {
+        // ...
+    }
+    return std::shared_ptr<openshot::Frame>();
     }
 
     // Start video/audio playback
     bool PlayerPrivate::startPlayback()
     {
-		if (video_position < 0) return false;
+        if (video_position < 0) return false;
 
-		stopPlayback(-1);
-		startThread(1);
-		return true;
+        stopPlayback(-1);
+        startThread(1);
+        return true;
     }
 
     // Stop video/audio playback
     void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
     {
-    	if (isThreadRunning()) stopThread(timeOutMilliseconds);
-    	if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(timeOutMilliseconds);
-    	if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(timeOutMilliseconds);
-    	if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
-
+        if (isThreadRunning()) stopThread(timeOutMilliseconds);
+        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(timeOutMilliseconds);
+        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(timeOutMilliseconds);
+        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
     }
-
 
 }

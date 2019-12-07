@@ -43,8 +43,6 @@
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
-using namespace std;
-
 /// This namespace is the default namespace for all code in the openshot library
 namespace openshot
 {

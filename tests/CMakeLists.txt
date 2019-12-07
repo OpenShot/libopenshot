@@ -24,9 +24,6 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-# Pick up our include directories from the parent context
-include_directories(${OPENSHOT_INCLUDE_DIRS})
-
 SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
@@ -84,23 +81,6 @@ FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
-################# QT5 ###################
-# Find QT5 libraries
-foreach(qt_lib Qt5Widgets Qt5Core Qt5Gui Qt5Multimedia Qt5MultimediaWidgets)
-    find_package(${qt_lib} REQUIRED)
-    # Header files
-    list(APPEND QT_INCLUDES ${${qt_lib}_INCLUDE_DIRS})
-    # Compiler definitions
-    add_definitions(${${qt_lib}_DEFINITIONS})
-    # Other CFLAGS
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${qt_lib}_EXECUTABLE_COMPILE_FLAGS}")
-endforeach()
-list(REMOVE_DUPLICATES QT_INCLUDES)
-include_directories(${QT_INCLUDES})
-
-# Manually moc Qt files
-qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
-
 
 ################# BLACKMAGIC DECKLINK ###################
 IF (ENABLE_BLACKMAGIC)
@@ -114,20 +94,6 @@ IF (ENABLE_BLACKMAGIC)
 ENDIF (ENABLE_BLACKMAGIC)
 
 
-################### ZEROMQ #####################
-# Find ZeroMQ library (used for socket communication & logging)
-
-# Some platforms package the header-only cppzmq C++ bindings separately,
-# others (Ubuntu) bundle them in with libzmq itself
-find_package(cppzmq QUIET)
-FIND_PACKAGE(ZMQ REQUIRED)
-
-# Include ZeroMQ headers (needed for compile)
-include_directories(${ZMQ_INCLUDE_DIRS})
-if (cppzmq_FOUND)
-    include_directories(${cppzmq_INCLUDE_DIRS})
-endif()
-
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
 FIND_PACKAGE(RESVG)
@@ -137,14 +103,6 @@ if (RESVG_FOUND)
 	include_directories(${RESVG_INCLUDE_DIRS})
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-else()
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
 
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES

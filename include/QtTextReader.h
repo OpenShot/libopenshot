@@ -1,7 +1,9 @@
 /**
  * @file
- * @brief Header file for TextReader class
+ * @brief Header file for QtTextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -28,11 +30,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_TEXT_READER_H
-#define OPENSHOT_TEXT_READER_H
-
-// Require ImageMagick support
-#ifdef USE_IMAGEMAGICK
+#ifndef OPENSHOT_QT_TEXT_READER_H
+#define OPENSHOT_QT_TEXT_READER_H
 
 #include "ReaderBase.h"
 
@@ -45,28 +44,32 @@
 #include "CacheMemory.h"
 #include "Enums.h"
 #include "Exceptions.h"
-#include "MagickUtilities.h"
+
+class QImage;
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
+	 * @brief This class uses Qt libraries, to create frames with "Text", and return
 	 * openshot::Frame objects.
 	 *
 	 * All system fonts are supported, including many different font properties, such as size, color,
 	 * alignment, padding, etc...
 	 *
 	 * @code
+	 * // Any application using this class must instantiate either QGuiApplication or QApplication
+	 * QApplication a(argc, argv);
+	 *
 	 * // Create a reader to generate an openshot::Frame containing text
-	 * TextReader r(720, // width
+	 * QtTextReader r(720, // width
 	 *              480, // height
 	 *              5, // x_offset
 	 *              5, // y_offset
 	 *              GRAVITY_CENTER, // gravity
 	 *              "Check out this Text!", // text
 	 *              "Arial", // font
-	 *              15.0, // size
+	 *              15.0, // font size
 	 *              "#fff000", // text_color
 	 *              "#000000" // background_color
 	 *              );
@@ -82,7 +85,7 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class TextReader : public ReaderBase
+	class QtTextReader : public ReaderBase
 	{
 	private:
 		int width;
@@ -90,22 +93,20 @@ namespace openshot
 		int x_offset;
 		int y_offset;
 		std::string text;
-		std::string font;
-		double size;
+		QFont font;
 		std::string text_color;
 		std::string background_color;
 		std::string text_background_color;
-		std::shared_ptr<Magick::Image> image;
-		MAGICK_DRAWABLE lines;
+		std::shared_ptr<QImage> image;
 		bool is_open;
 		openshot::GravityType gravity;
 
 	public:
 
 		/// Default constructor (blank text)
-		TextReader();
+		QtTextReader();
 
-		/// @brief Constructor for TextReader with all parameters.
+		/// @brief Constructor for QtTextReader with all parameters.
 		/// @param width The width of the requested openshot::Frame (not the size of the text)
 		/// @param height The height of the requested openshot::Frame (not the size of the text)
 		/// @param x_offset The number of pixels to offset the text on the X axis (horizontal)
@@ -113,13 +114,12 @@ namespace openshot
 		/// @param gravity The alignment / gravity of the text
 		/// @param text The text you want to generate / display
 		/// @param font The font of the text
-		/// @param size The size of the text
-		/// @param text_color The color of the text
-		/// @param background_color The background color of the text frame image (also supports Transparent)
-		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
+		/// @param text_color The color of the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)
+		/// @param background_color The background color of the frame image (valid values are a color string in \#RRGGBB or \#AARRGGBB notation, a CSS color name, or 'transparent')
+		QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
-		/// @param text_background_color The background color behind the text
+		/// @param color The background color behind the text (valid values are a color string in \#RRGGBB or \#AARRGGBB notation or a CSS color name)
 		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
@@ -139,7 +139,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "TextReader"; };
+		std::string Name() { return "QtTextReader"; };
 
 		/// Get and Set JSON methods
 		std::string Json(); ///< Generate JSON string of this object
@@ -153,5 +153,4 @@ namespace openshot
 
 }
 
-#endif //USE_IMAGEMAGICK
-#endif //OPENSHOT_TEXT_READER_H
+#endif

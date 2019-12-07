@@ -113,7 +113,7 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 }
 
 // Generate JSON string of this object
-string Wave::Json() {
+std::string Wave::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -136,14 +136,14 @@ Json::Value Wave::JsonValue() {
 }
 
 // Load JSON string into this object
-void Wave::SetJson(string value) {
+void Wave::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
@@ -184,7 +184,7 @@ void Wave::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Wave::PropertiesJSON(int64_t requested_frame) {
+std::string Wave::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

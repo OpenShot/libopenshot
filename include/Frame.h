@@ -122,7 +122,7 @@ namespace openshot
 		juce::CriticalSection addingImageSection;
         juce::CriticalSection addingAudioSection;
 		const unsigned char *qbuffer;
-		Fraction pixel_ratio;
+		openshot::Fraction pixel_ratio;
 		int channels;
 		ChannelLayout channel_layout;
 		int width;
@@ -189,10 +189,10 @@ namespace openshot
 
 		/// Channel Layout of audio samples. A frame needs to keep track of this, since Writers do not always
 		/// know the original channel layout of a frame's audio samples (i.e. mono, stereo, 5 point surround, etc...)
-		ChannelLayout ChannelsLayout();
+		openshot::ChannelLayout ChannelsLayout();
 
 		// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
-		void ChannelsLayout(ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
+		void ChannelsLayout(openshot::ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
 
 		/// Clean up buffer after QImage is deleted
 		static void cleanUpBuffer(void *info);
@@ -216,10 +216,10 @@ namespace openshot
 		float* GetAudioSamples(int channel);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
-		float* GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
+		float* GetInterleavedAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count);
 
 		// Get a planar array of sample data, using any sample rate
-		float* GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count);
+		float* GetPlanarAudioSamples(int new_sample_rate, openshot::AudioResampler* resampler, int* sample_count);
 
 		/// Get number of audio channels
 		int GetAudioChannelsCount();
@@ -241,7 +241,7 @@ namespace openshot
 #endif
 
 		/// Set Pixel Aspect Ratio
-		Fraction GetPixelRatio() { return pixel_ratio; };
+		openshot::Fraction GetPixelRatio() { return pixel_ratio; };
 
 		/// Get pixel data (as packets)
 		const unsigned char* GetPixels();
@@ -256,10 +256,10 @@ namespace openshot
 		int GetHeight();
 
 		/// Calculate the # of samples per video frame (for the current frame number)
-		int GetSamplesPerFrame(Fraction fps, int sample_rate, int channels);
+		int GetSamplesPerFrame(openshot::Fraction fps, int sample_rate, int channels);
 
 		/// Calculate the # of samples per video frame (for a specific frame number and frame rate)
-		static int GetSamplesPerFrame(int64_t frame_number, Fraction fps, int sample_rate, int channels);
+		static int GetSamplesPerFrame(int64_t frame_number, openshot::Fraction fps, int sample_rate, int channels);
 
 		/// Get an audio waveform image
 		std::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);
@@ -271,7 +271,7 @@ namespace openshot
 		int GetWidth();
 
 		/// Resize audio container to hold more (or less) samples and channels
-		void ResizeAudio(int channels, int length, int sample_rate, ChannelLayout channel_layout);
+		void ResizeAudio(int channels, int length, int sample_rate, openshot::ChannelLayout channel_layout);
 
 		/// Get the original sample rate of this frame's audio data
 		int SampleRate();

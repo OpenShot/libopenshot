@@ -1,7 +1,9 @@
 /**
  * @file
- * @brief Source file for TextReader class
+ * @brief Source file for QtTextReader class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Sergei Kolesov (jediserg)
+ * @author Jeff Shillitto (jeffski)
  *
  * @ref License
  */
@@ -28,30 +30,29 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Require ImageMagick support
-#ifdef USE_IMAGEMAGICK
-
-#include "../include/TextReader.h"
+#include "../include/QtTextReader.h"
+#include <QImage>
+#include <QPainter>
 
 using namespace openshot;
 
 /// Default constructor (blank text)
-TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font("Arial"), size(10.0), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER) {
-
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
-TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color)
-: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
+QtTextReader::QtTextReader() : width(1024), height(768), x_offset(0), y_offset(0), text(""), font(QFont("Arial", 10)), text_color("#ffffff"), background_color("#000000"), is_open(false), gravity(GRAVITY_CENTER)
 {
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-void TextReader::SetTextBackgroundColor(std::string color) {
+QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, QFont font, std::string text_color, std::string background_color)
+: width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
+{
+	// Open and Close the reader, to populate it's attributes (such as height, width, etc...)
+	Open();
+	Close();
+}
+
+void QtTextReader::SetTextBackgroundColor(std::string color) {
 	text_background_color = color;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
@@ -60,71 +61,77 @@ void TextReader::SetTextBackgroundColor(std::string color) {
 }
 
 // Open reader
-void TextReader::Open()
+void QtTextReader::Open()
 {
 	// Open reader if not already open
 	if (!is_open)
 	{
 		// create image
-		image = std::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width,height), Magick::Color(background_color)));
+		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+		image->fill(QColor(background_color.c_str()));
 
-		// Give image a transparent background color
-		image->backgroundColor(Magick::Color("none"));
+		QPainter painter;
+		if (!painter.begin(image.get())) {
+			return;
+		}
 
-		// Set gravity (map between OpenShot and ImageMagick)
+		// set background
+		if (!text_background_color.empty()) {
+			painter.setBackgroundMode(Qt::OpaqueMode);
+			painter.setBackground(QBrush(text_background_color.c_str()));
+		}
+
+		// set font color
+		painter.setPen(QPen(text_color.c_str()));
+
+		// set font
+		painter.setFont(font);
+
+		// Set gravity (map between OpenShot and Qt)
+		int align_flag = 0;
 		switch (gravity)
 		{
 		case GRAVITY_TOP_LEFT:
-			lines.push_back(Magick::DrawableGravity(Magick::NorthWestGravity));
+			align_flag = Qt::AlignLeft | Qt::AlignTop;
 			break;
 		case GRAVITY_TOP:
-			lines.push_back(Magick::DrawableGravity(Magick::NorthGravity));
+			align_flag = Qt::AlignHCenter | Qt::AlignTop;
 			break;
 		case GRAVITY_TOP_RIGHT:
-			lines.push_back(Magick::DrawableGravity(Magick::NorthEastGravity));
+			align_flag = Qt::AlignRight | Qt::AlignTop;
 			break;
 		case GRAVITY_LEFT:
-			lines.push_back(Magick::DrawableGravity(Magick::WestGravity));
+			align_flag = Qt::AlignVCenter | Qt::AlignLeft;
 			break;
 		case GRAVITY_CENTER:
-			lines.push_back(Magick::DrawableGravity(Magick::CenterGravity));
+			align_flag = Qt::AlignCenter;
 			break;
 		case GRAVITY_RIGHT:
-			lines.push_back(Magick::DrawableGravity(Magick::EastGravity));
+			align_flag = Qt::AlignVCenter | Qt::AlignRight;
 			break;
 		case GRAVITY_BOTTOM_LEFT:
-			lines.push_back(Magick::DrawableGravity(Magick::SouthWestGravity));
+			align_flag = Qt::AlignLeft | Qt::AlignBottom;
 			break;
 		case GRAVITY_BOTTOM:
-			lines.push_back(Magick::DrawableGravity(Magick::SouthGravity));
+			align_flag = Qt::AlignHCenter | Qt::AlignBottom;
 			break;
 		case GRAVITY_BOTTOM_RIGHT:
-			lines.push_back(Magick::DrawableGravity(Magick::SouthEastGravity));
+			align_flag = Qt::AlignRight | Qt::AlignBottom;
 			break;
-		}
-
-		// Set stroke properties
-		lines.push_back(Magick::DrawableStrokeColor(Magick::Color("none")));
-		lines.push_back(Magick::DrawableStrokeWidth(0.0));
-		lines.push_back(Magick::DrawableFillColor(text_color));
-		lines.push_back(Magick::DrawableFont(font));
-		lines.push_back(Magick::DrawablePointSize(size));
-		lines.push_back(Magick::DrawableText(x_offset, y_offset, text));
-
-		if (!text_background_color.empty()) {
-			lines.push_back(Magick::DrawableTextUnderColor(Magick::Color(text_background_color)));
 		}
 
 		// Draw image
-		image->draw(lines);
+		painter.drawText(x_offset, y_offset, width, height, align_flag, text.c_str());
+
+		painter.end();
 
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
-		info.file_size = image->fileSize();
-		info.vcodec = image->format();
-		info.width = image->size().width();
-		info.height = image->size().height();
+		info.file_size = 0;
+		info.vcodec = "QImage";
+		info.width = width;
+		info.height = height;
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
 		info.duration = 60 * 60 * 1;  // 1 hour duration
@@ -135,14 +142,14 @@ void TextReader::Open()
 		info.video_length = round(info.duration * info.fps.ToDouble());
 
 		// Calculate the DAR (display aspect ratio)
-		Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
+		Fraction font_size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
 
 		// Reduce size fraction
-		size.Reduce();
+		font_size.Reduce();
 
 		// Set the ratio based on the reduced fraction
-		info.display_ratio.num = size.num;
-		info.display_ratio.den = size.den;
+		info.display_ratio.num = font_size.num;
+		info.display_ratio.den = font_size.den;
 
 		// Mark as "open"
 		is_open = true;
@@ -150,35 +157,38 @@ void TextReader::Open()
 }
 
 // Close reader
-void TextReader::Close()
+void QtTextReader::Close()
 {
 	// Close all objects, if reader is 'open'
 	if (is_open)
 	{
 		// Mark as "closed"
 		is_open = false;
+
+		// Delete the image
+		image.reset();
+
+		info.vcodec = "";
+		info.acodec = "";
 	}
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
+std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 {
 	if (image)
 	{
 		// Create or get frame object
-		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), background_color, 0, 2));
 
 		// Add Image data to frame
-		std::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
-		copy_image->modifyImage(); // actually copy the image data to this object
-		//TODO: Reimplement this with QImage
-		image_frame->AddMagickImage(copy_image);
+		image_frame->AddImage(image);
 
 		// return frame object
 		return image_frame;
 	} else {
 		// return empty frame
-		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
+		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, background_color, 0, 2));
 
 		// return frame object
 		return image_frame;
@@ -187,25 +197,24 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-std::string TextReader::Json() {
+std::string QtTextReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value TextReader::JsonValue() {
+Json::Value QtTextReader::JsonValue() {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
-	root["type"] = "TextReader";
+	root["type"] = "QtTextReader";
 	root["width"] = width;
 	root["height"] = height;
 	root["x_offset"] = x_offset;
 	root["y_offset"] = y_offset;
 	root["text"] = text;
-	root["font"] = font;
-	root["size"] = size;
+	root["font"] = font.toString().toStdString();
 	root["text_color"] = text_color;
 	root["background_color"] = background_color;
 	root["text_background_color"] = text_background_color;
@@ -216,7 +225,7 @@ Json::Value TextReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void TextReader::SetJson(std::string value) {
+void QtTextReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
@@ -245,7 +254,7 @@ void TextReader::SetJson(std::string value) {
 }
 
 // Load Json::JsonValue into this object
-void TextReader::SetJsonValue(Json::Value root) {
+void QtTextReader::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
@@ -262,9 +271,7 @@ void TextReader::SetJsonValue(Json::Value root) {
 	if (!root["text"].isNull())
 		text = root["text"].asString();
 	if (!root["font"].isNull())
-		font = root["font"].asString();
-	if (!root["size"].isNull())
-		size = root["size"].asDouble();
+		font.fromString(QString::fromStdString(root["font"].asString()));
 	if (!root["text_color"].isNull())
 		text_color = root["text_color"].asString();
 	if (!root["background_color"].isNull())
@@ -281,5 +288,3 @@ void TextReader::SetJsonValue(Json::Value root) {
 		Open();
 	}
 }
-
-#endif //USE_IMAGEMAGICK

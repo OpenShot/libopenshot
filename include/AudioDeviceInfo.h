@@ -37,10 +37,11 @@
  *
  * The type and name of the audio device.
  */
-struct AudioDeviceInfo
-{
-	string name;
-	string type;
-};
-
+namespace openshot {
+	struct AudioDeviceInfo
+	{
+		std::string name;
+		std::string type;
+	};
+}
 #endif

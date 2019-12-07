@@ -63,12 +63,12 @@ void PlayerBase::Stop() {
 }
 
 // Get the current reader, such as a FFmpegReader
-ReaderBase* PlayerBase::Reader() {
+openshot::ReaderBase* PlayerBase::Reader() {
 	return reader;
 }
 
 // Set the current reader, such as a FFmpegReader
-void PlayerBase::Reader(ReaderBase *new_reader) {
+void PlayerBase::Reader(openshot::ReaderBase *new_reader) {
 	reader = new_reader;
 }
 

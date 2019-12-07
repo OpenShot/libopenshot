@@ -72,13 +72,6 @@ configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
-############### Set up include paths #################
-list(APPEND OPENSHOT_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/effects
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt
-    ${CMAKE_CURRENT_BINARY_DIR}/include )
-
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -88,9 +81,9 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
-############## FIND ALL QT RELATED HEADERS ##############
-set(QT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt)
-FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
@@ -104,14 +97,14 @@ if (TARGET doc)
 	message(STATUS "Doxygen found, documentation target enabled")
 	message("\nTo compile documentation in doc/html, run: 'make doc'")
 
-# Install docs, if the user builds them with `make doc`
-install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+  # Install docs, if the user builds them with `make doc`
+  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+  install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-        DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-        MESSAGE_NEVER # Don't spew about file copies
-        OPTIONAL )    # No error if the docs aren't found
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+          MESSAGE_NEVER # Don't spew about file copies
+          OPTIONAL )    # No error if the docs aren't found
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############

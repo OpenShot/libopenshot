@@ -1,4 +1,4 @@
 # Add 'build' label to CMake changes
 build:
-  - **/CMakeList.txt
+  - /**/CMakeList.txt
   - /cmake/**/*.cmake

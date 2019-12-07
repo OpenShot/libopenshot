@@ -1,4 +1,5 @@
 language: cpp
+compiler: gcc
 
 # This section uses a rather esoteric (and tricky!) feature of YAML,
 # &aliases and *anchors, to build package lists out of sublists without
@@ -32,7 +33,7 @@ addons:
 
 matrix:
   include:
-    - name: "FFmpeg 2 (Ubuntu 16.04 Xenial)"
+    - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
       env: BUILD_VERSION=ffmpeg2
       os: linux
       dist: xenial
@@ -44,7 +45,7 @@ matrix:
           packages:
           - *ff_common
 
-    - name: "FFmpeg 3 (Ubuntu 18.04 Bionic)"
+    - name: "FFmpeg 3 GCC (Ubuntu 18.04 Bionic)"
       env: BUILD_VERSION=ffmpeg3
       os: linux
       dist: bionic
@@ -57,7 +58,7 @@ matrix:
           - *ff_common
           - qt5-default
 
-    - name: "FFmpeg 4 (Ubuntu 18.04 Bionic)"
+    - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
       env: BUILD_VERSION=ffmpeg4
       os: linux
       dist: bionic
@@ -79,6 +80,21 @@ matrix:
           - libpostproc55
           - libavresample4
           - libswresample3
+
+    - name: "FFmpeg 3 Clang (Ubuntu 18.04 Bionic)"
+      env: BUILD_VERSION=ffmpeg3
+      os: linux
+      dist: bionic
+      compiler: clang
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+          packages:
+          - *ff_common
+          - qt5-default
+          - libomp-dev
 
 script:
   - mkdir -p build; cd build;

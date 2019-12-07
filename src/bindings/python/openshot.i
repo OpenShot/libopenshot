@@ -56,7 +56,6 @@
 #endif
 %shared_ptr(juce::AudioSampleBuffer)
 %shared_ptr(openshot::Frame)
-%shared_ptr(Frame)
 
 %{
 #include "OpenShotVersion.h"
@@ -86,8 +85,10 @@
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
+#include "../../../include/QtHtmlReader.h"
 #include "../../../include/QtImageReader.h"
 #include "../../../include/QtPlayer.h"
+#include "../../../include/QtTextReader.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Settings.h"
@@ -152,9 +153,15 @@
 }
 
 %extend openshot::OpenShotVersion {
-    // Give the struct a string representation
+        // Give the struct a string representation
 	const std::string __str__() {
 		return std::string(OPENSHOT_VERSION_FULL);
+	}
+	// And a repr for interactive use
+	const std::string __repr__() {
+		std::ostringstream result;
+		result << "OpenShotVersion('" << OPENSHOT_VERSION_FULL << "')";
+		return result.str();
 	}
 }
 
@@ -189,8 +196,10 @@
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
+%include "../../../include/QtHtmlReader.h"
 %include "../../../include/QtImageReader.h"
 %include "../../../include/QtPlayer.h"
+%include "../../../include/QtTextReader.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Settings.h"
@@ -222,13 +231,11 @@
 
 
 /* Wrap std templates (list, vector, etc...) */
-namespace std {
- %template(ClipList) list<Clip *>;
- %template(EffectBaseList) list<EffectBase *>;
- %template(CoordinateVector) vector<Coordinate>;
- %template(PointsVector) vector<Point>;
- %template(FieldVector) vector<Field>;
- %template(MappedFrameVector) vector<MappedFrame>;
- %template(MappedMetadata) map<string, string>;
- %template(AudioDeviceInfoVector) vector<AudioDeviceInfo>;
-}
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MappedMetadata) std::map<std::string, std::string>;
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

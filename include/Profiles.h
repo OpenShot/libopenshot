@@ -45,8 +45,6 @@
 #include "Fraction.h"
 #include "Json.h"
 
-using namespace std;
-
 namespace openshot
 {
 
@@ -58,7 +56,7 @@ namespace openshot
 	 */
 	struct ProfileInfo
 	{
-		string description;	///< The description of this profile.
+		std::string description;	///< The description of this profile.
 		int height;		///< The height of the video (in pixels)
 		int width;		///< The width of the video (in pixels)
 		int pixel_format;	///< The pixel format (i.e. YUV420P, RGB24, etc...)
@@ -89,12 +87,12 @@ namespace openshot
 
 		/// @brief Constructor for Profile.
 		/// @param path 	The folder path / location of a profile file
-		Profile(string path);
+		Profile(std::string path);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value); ///< Load JSON string into this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 

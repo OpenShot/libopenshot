@@ -52,9 +52,9 @@
     // IM6: list<Magick::Drawable>
     // (both have the push_back() method which is all we use)
     #if NEW_MAGICK
-        #define MAGICK_DRAWABLE vector<Magick::Drawable>
+        #define MAGICK_DRAWABLE std::vector<Magick::Drawable>
     #else
-        #define MAGICK_DRAWABLE list<Magick::Drawable>
+        #define MAGICK_DRAWABLE std::list<Magick::Drawable>
     #endif
 
 #endif

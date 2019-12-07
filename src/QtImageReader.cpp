@@ -44,14 +44,14 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(string path) : path{QString::fromStdString(path)}, is_open(false)
+QtImageReader::QtImageReader(std::string path) : path{QString::fromStdString(path)}, is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-QtImageReader::QtImageReader(string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
+QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -194,8 +194,8 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
 			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-			max_width = max(float(max_width), max_width * max_scale_x);
-			max_height = max(float(max_height), max_height * max_scale_y);
+			max_width = std::max(float(max_width), max_width * max_scale_x);
+			max_height = std::max(float(max_height), max_height * max_scale_y);
 
 		} else if (parent->scale == SCALE_CROP) {
 			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
@@ -207,12 +207,12 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 							  max_height * max_scale_y);
 			// respect aspect ratio
 			if (width_size.width() >= max_width && width_size.height() >= max_height) {
-				max_width = max(max_width, width_size.width());
-				max_height = max(max_height, width_size.height());
+				max_width = std::max(max_width, width_size.width());
+				max_height = std::max(max_height, width_size.height());
 			}
 			else {
-				max_width = max(max_width, height_size.width());
-				max_height = max(max_height, height_size.height());
+				max_width = std::max(max_width, height_size.width());
+				max_height = std::max(max_height, height_size.height());
 			}
 
 		} else {
@@ -277,7 +277,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string QtImageReader::Json() {
+std::string QtImageReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -296,14 +296,14 @@ Json::Value QtImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtImageReader::SetJson(string value) {
+void QtImageReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
