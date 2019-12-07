@@ -151,11 +151,3 @@ endif()
 
 string(CONCAT t ${OS_TEST_CMDS})
 message("\nTo run unit tests, use: ${t}")
-
-if (ENABLE_COVERAGE)
-  setup_target_for_coverage_lcov(
-    NAME test_coverage
-    EXECUTABLE openshot-test
-    DEPENDENCIES openshot-test)
-endif()
-
