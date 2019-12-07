@@ -280,7 +280,7 @@ const unsigned char* Frame::GetWaveformPixels(int width, int height, int Red, in
 	wave_image = GetWaveform(width, height, Red, Green, Blue, Alpha);
 
 	// Return array of pixel packets
-	return wave_image->bits();
+	return wave_image->constBits();
 }
 
 // Display the wave form
@@ -473,14 +473,14 @@ const unsigned char* Frame::GetPixels()
 		AddColor(width, height, color);
 
 	// Return array of pixel packets
-	return image->bits();
+	return image->constBits();
 }
 
 // Get pixel data (for only a single scan-line)
 const unsigned char* Frame::GetPixels(int row)
 {
 	// Return array of pixel packets
-	return image->scanLine(row);
+	return image->constScanLine(row);
 }
 
 // Check a specific pixel color value (returns True/False)
@@ -692,7 +692,7 @@ void Frame::Thumbnail(std::string path, int new_width, int new_height, std::stri
 
 		// Get pixels
 		unsigned char *pixels = (unsigned char *) thumbnail->bits();
-		unsigned char *mask_pixels = (unsigned char *) mask->bits();
+		const unsigned char *mask_pixels = (const unsigned char *) mask->constBits();
 
 		// Convert the mask image to grayscale
 		// Loop through pixels
@@ -826,8 +826,8 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		#pragma omp critical (AddImage)
 		{
-			const unsigned char *pixels = image->bits();
-			const unsigned char *new_pixels = new_image->bits();
+			const unsigned char *pixels = image->constBits();
+			const unsigned char *new_pixels = new_image->constBits();
 
 			// Loop through the scanlines of the image (even or odd)
 			int start = 0;
@@ -922,7 +922,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 		AddColor(width, height, "#000000");
 
 	// Get the pixels from the frame image
-	QRgb const *tmpBits = (const QRgb*)image->bits();
+	const QRgb *tmpBits = (const QRgb*)image->constBits();
 
 	// Create new image object, and fill with pixel data
 	std::shared_ptr<Magick::Image> magick_image = std::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));

@@ -109,10 +109,10 @@ void Clip::init_settings()
 // Init reader's rotation (if any)
 void Clip::init_reader_rotation() {
 	// Only init rotation from reader when needed
-	if (rotation.Points.size() > 1)
+	if (rotation.GetCount() > 1)
 		// Do nothing if more than 1 rotation Point
 		return;
-	else if (rotation.Points.size() == 1 && rotation.GetValue(1) != 0.0)
+	else if (rotation.GetCount() == 1 && rotation.GetValue(1) != 0.0)
 		// Do nothing if 1 Point, and it's not the default value
 		return;
 
@@ -273,7 +273,7 @@ void Clip::Close()
 float Clip::End()
 {
 	// if a time curve is present, use its length
-	if (time.Points.size() > 1)
+	if (time.GetCount() > 1)
 	{
 		// Determine the FPS fo this clip
 		float fps = 24.0;
@@ -314,8 +314,8 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Is a time map detected
 		int64_t new_frame_number = requested_frame;
 		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
-		if (time.Values.size() > 1)
-            new_frame_number = time_mapped_number;
+		if (time.GetLength() > 1)
+			new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
@@ -397,7 +397,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 	// Check for a valid time map curve
-	if (time.Values.size() > 1)
+	if (time.GetLength() > 1)
 	{
 		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
 
@@ -914,7 +914,7 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
+				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
 
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);

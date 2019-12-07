@@ -66,6 +66,15 @@ Generating build files for OpenShot with CMake ${CMAKE_VERSION}
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
 include(GNUInstallDirs)
 
+# Collect and display summary of options/dependencies
+include(FeatureSummary)
+
+################ OPTIONS ##################
+# Optional build settings for libopenshot
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
@@ -106,17 +115,23 @@ if (TARGET doc)
 	message(STATUS "Doxygen found, documentation target enabled")
 	message("\nTo compile documentation in doc/html, run: 'make doc'")
 
-# Install docs, if the user builds them with `make doc`
-install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+  # Install docs, if the user builds them with `make doc`
+  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+  install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-        DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-        MESSAGE_NEVER # Don't spew about file copies
-        OPTIONAL )    # No error if the docs aren't found
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+          MESSAGE_NEVER # Don't spew about file copies
+          OPTIONAL )    # No error if the docs aren't found
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############
 if(NOT DISABLE_TESTS)
   add_subdirectory(tests)
 endif()
+
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+    INCLUDE_QUIET_PACKAGES
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
