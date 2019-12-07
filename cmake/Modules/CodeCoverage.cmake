@@ -75,7 +75,8 @@ find_program( GCOV_PATH gcov )
 find_program( LCOV_PATH  NAMES lcov lcov.bat lcov.exe lcov.perl)
 find_program( GENHTML_PATH NAMES genhtml genhtml.perl genhtml.bat )
 find_program( GCOVR_PATH gcovr PATHS ${CMAKE_SOURCE_DIR}/scripts/test)
-find_package(Python COMPONENTS Interpreter)
+find_package( Python COMPONENTS Interpreter )
+find_program( CPPFILT_PATH NAMES c++filt )
 
 if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
@@ -149,6 +150,9 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
         message(FATAL_ERROR "genhtml not found! Aborting...")
     endif() # NOT GENHTML_PATH
 
+    # Conditional arguments
+    set(GENHTML_ARGS $<$<BOOL:${CPPFILT_PATH}:>:"--demangle-cpp">)
+
     # Setup target
     add_custom_target(${Coverage_NAME}
 
@@ -165,8 +169,12 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
         # add baseline counters
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -a ${Coverage_NAME}.base -a ${Coverage_NAME}.info --output-file ${Coverage_NAME}.total
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --remove ${Coverage_NAME}.total ${COVERAGE_LCOV_EXCLUDES} --output-file ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
-        COMMAND ${GENHTML_PATH} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+
+        # Generate HTML output
+        COMMAND ${GENHTML_PATH} ${GENHTML_ARGS} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+
         COMMAND ${CMAKE_COMMAND} -E remove ${Coverage_NAME}.base ${Coverage_NAME}.total ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+        BYPRODUCTS ${Coverage_NAME}.info
 
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
@@ -184,6 +192,11 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
         COMMAND ;
         COMMENT "Open ./${Coverage_NAME}/index.html in your browser to view the coverage report."
     )
+
+    # Clean up output on 'make clean'
+    set_property(DIRECTORY APPEND PROPERTY
+        ADDITIONAL_MAKE_CLEAN_FILES
+        ${Coverage_NAME})
 
 endfunction() # SETUP_TARGET_FOR_COVERAGE_LCOV
 
@@ -240,6 +253,11 @@ function(SETUP_TARGET_FOR_COVERAGE_GCOVR_XML)
         COMMENT "Cobertura code coverage report saved in ${Coverage_NAME}.xml."
     )
 
+    # Clean up output on 'make clean'
+    set_property(DIRECTORY APPEND PROPERTY
+        ADDITIONAL_MAKE_CLEAN_FILES
+        ${Coverage_NAME})
+
 endfunction() # SETUP_TARGET_FOR_COVERAGE_GCOVR_XML
 
 # Defines a target for running and collection code coverage information
@@ -283,7 +301,7 @@ function(SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML)
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/${Coverage_NAME}
 
         # Running gcovr
-        COMMAND ${Python_EXECUTABLE} ${GCOVR_PATH} --html --html-details
+        COMMAND ${GCOVR_PATH} --html --html-details
             -r ${PROJECT_SOURCE_DIR} ${GCOVR_EXCLUDES}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}/index.html
@@ -297,6 +315,11 @@ function(SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML)
         COMMAND ;
         COMMENT "Open ./${Coverage_NAME}/index.html in your browser to view the coverage report."
     )
+
+    # Clean up output on 'make clean'
+    set_property(DIRECTORY APPEND PROPERTY
+        ADDITIONAL_MAKE_CLEAN_FILES
+        ${Coverage_NAME})
 
 endfunction() # SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML
 
