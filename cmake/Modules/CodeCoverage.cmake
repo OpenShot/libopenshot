@@ -150,7 +150,9 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
     endif() # NOT GENHTML_PATH
 
     # Conditional arguments
-    set(GENHTML_ARGS $<$<BOOL:${CPPFILT_PATH}:>:"--demangle-cpp">)
+    if(CPPFILT_PATH)
+      set(GENHTML_EXTRA_ARGS "--demangle-cpp")
+    endif()
 
     # Setup target
     add_custom_target(${Coverage_NAME}
@@ -170,7 +172,7 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --remove ${Coverage_NAME}.total ${COVERAGE_LCOV_EXCLUDES} --output-file ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
 
         # Generate HTML output
-        COMMAND ${GENHTML_PATH} ${GENHTML_ARGS} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+        COMMAND ${GENHTML_PATH} ${GENHTML_EXTRA_ARGS} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
 
         COMMAND ${CMAKE_COMMAND} -E remove ${Coverage_NAME}.base ${Coverage_NAME}.total ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
         BYPRODUCTS ${Coverage_NAME}.info
