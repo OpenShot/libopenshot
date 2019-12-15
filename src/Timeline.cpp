@@ -780,7 +780,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
 			// Loop through clips
-			for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
+			for (std::vector<Clip>::size_type clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
 			{
 				// Get clip object from the iterator
 				Clip *clip = nearby_clips[clip_index];
@@ -832,7 +832,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size());
 
 				// Find Clips near this time
-				for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
+				for (std::vector<Clip>::size_type clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
 				{
 					// Get clip object from the iterator
 					Clip *clip = nearby_clips[clip_index];
@@ -850,7 +850,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 						// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
 						bool is_top_clip = true;
 						float max_volume = 0.0;
-						for (int top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
+						for (std::vector<Clip>::size_type top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
 						{
 							Clip *nearby_clip = nearby_clips[top_clip_index];
                             long nearby_clip_start_position = round(nearby_clip->Position() * info.fps.ToDouble()) + 1;
@@ -1069,7 +1069,7 @@ void Timeline::SetJsonValue(Json::Value root) {
 		clips.clear();
 
 		// loop through clips
-		for (int x = 0; x < root["clips"].size(); x++) {
+		for (Json::Value::ArrayIndex x = 0; x < root["clips"].size(); x++) {
 			// Get each clip
 			Json::Value existing_clip = root["clips"][x];
 
@@ -1089,7 +1089,7 @@ void Timeline::SetJsonValue(Json::Value root) {
 		effects.clear();
 
 		// loop through effects
-		for (int x = 0; x < root["effects"].size(); x++) {
+		for (Json::Value::ArrayIndex x = 0; x < root["effects"].size(); x++) {
 			// Get each effect
 			Json::Value existing_effect = root["effects"][x];
 
@@ -1144,7 +1144,7 @@ void Timeline::ApplyJsonDiff(std::string value) {
 	try
 	{
 		// Process the JSON change array, loop through each item
-		for (int x = 0; x < root.size(); x++) {
+		for (Json::Value::ArrayIndex x = 0; x < root.size(); x++) {
 			// Get each change
 			Json::Value change = root[x];
 			std::string root_key = change["key"][(uint)0].asString();
@@ -1180,7 +1180,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 	Clip *existing_clip = NULL;
 
 	// Find id of clip (if any)
-	for (int x = 0; x < change["key"].size(); x++) {
+	for (Json::Value::ArrayIndex x = 0; x < change["key"].size(); x++) {
 		// Get each change
 		Json::Value key_part = change["key"][x];
 
@@ -1308,7 +1308,7 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 	EffectBase *existing_effect = NULL;
 
 	// Find id of an effect (if any)
-	for (int x = 0; x < change["key"].size(); x++) {
+	for (Json::Value::ArrayIndex x = 0; x < change["key"].size(); x++) {
 		// Get each change
 		Json::Value key_part = change["key"][x];
 

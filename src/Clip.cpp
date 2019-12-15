@@ -905,7 +905,7 @@ void Clip::SetJsonValue(Json::Value root) {
 		effects.clear();
 
 		// loop through effects
-		for (int x = 0; x < root["effects"].size(); x++) {
+		for (Json::Value::ArrayIndex x = 0; x < root["effects"].size(); x++) {
 			// Get each effect
 			Json::Value existing_effect = root["effects"][x];
 
