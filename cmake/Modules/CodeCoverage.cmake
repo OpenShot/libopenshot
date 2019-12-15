@@ -55,9 +55,10 @@
 # 3.a (OPTIONAL) Set appropriate optimization flags, e.g. -O0, -O1 or -Og
 #
 # 4. If you need to exclude additional directories from the report, specify them
-#    using the COVERAGE_LCOV_EXCLUDES variable before calling SETUP_TARGET_FOR_COVERAGE_LCOV.
+#    using full paths in the COVERAGE_LCOV_EXCLUDES variable before calling
+#    setup_target_for_coverage_lcov().
 #    Example:
-#      set(COVERAGE_LCOV_EXCLUDES 'dir1/*' 'dir2/*')
+#      set(COVERAGE_LCOV_EXCLUDES '${PROJECT_SOURCE_DIR}/dir1/*' '/path/to/my/dir2/*')
 #
 # 5. Use the functions described below to create a custom make target which
 #    runs your test executable and produces a code coverage report.
