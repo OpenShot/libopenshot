@@ -42,6 +42,13 @@
 # - Merged with modified version from github.com/ufz/ogs
 #
 #
+# 2019-12-10, FeRD (Frank Dana)
+# - Set PROJECT_SOURCE_DIR as lcov basedir with -b argument
+# - Add automatic --demangle-cpp if 'c++filt' is available
+# - Remove Python detection, since version mismatches will break gcovr
+# - Remove output dir, .info file on 'make clean'
+# - Minor cleanup (lowercase function names, update excludes example...)
+#
 # USAGE:
 #
 # 1. Copy this file into your cmake modules path.
@@ -50,7 +57,7 @@
 #      include(CodeCoverage)
 #
 # 3. Append necessary compiler flags:
-#      APPEND_COVERAGE_COMPILER_FLAGS()
+#      append_coverage_compiler_flags()
 #
 # 3.a (OPTIONAL) Set appropriate optimization flags, e.g. -O0, -O1 or -Og
 #
@@ -130,12 +137,12 @@ endif()
 # NOTE! The executable should always have a ZERO as exit code otherwise
 # the coverage generation will not complete.
 #
-# SETUP_TARGET_FOR_COVERAGE_LCOV(
+# setup_target_for_coverage_lcov(
 #     NAME testrunner_coverage                    # New target name
 #     EXECUTABLE testrunner -j ${PROCESSOR_COUNT} # Executable in PROJECT_BINARY_DIR
 #     DEPENDENCIES testrunner                     # Dependencies to build first
 # )
-function(SETUP_TARGET_FOR_COVERAGE_LCOV)
+function(setup_target_for_coverage_lcov)
 
     set(options NONE)
     set(oneValueArgs NAME)
@@ -200,19 +207,19 @@ function(SETUP_TARGET_FOR_COVERAGE_LCOV)
         ADDITIONAL_MAKE_CLEAN_FILES
         ${Coverage_NAME})
 
-endfunction() # SETUP_TARGET_FOR_COVERAGE_LCOV
+endfunction() # setup_target_for_coverage_lcov
 
 # Defines a target for running and collection code coverage information
 # Builds dependencies, runs the given executable and outputs reports.
 # NOTE! The executable should always have a ZERO as exit code otherwise
 # the coverage generation will not complete.
 #
-# SETUP_TARGET_FOR_COVERAGE_GCOVR_XML(
+# setup_target_for_coverage_gcovr_xml(
 #     NAME ctest_coverage                    # New target name
 #     EXECUTABLE ctest -j ${PROCESSOR_COUNT} # Executable in PROJECT_BINARY_DIR
 #     DEPENDENCIES executable_target         # Dependencies to build first
 # )
-function(SETUP_TARGET_FOR_COVERAGE_GCOVR_XML)
+function(setup_target_for_coverage_gcovr_xml)
 
     set(options NONE)
     set(oneValueArgs NAME)
@@ -256,19 +263,19 @@ function(SETUP_TARGET_FOR_COVERAGE_GCOVR_XML)
         ADDITIONAL_MAKE_CLEAN_FILES
         ${Coverage_NAME})
 
-endfunction() # SETUP_TARGET_FOR_COVERAGE_GCOVR_XML
+endfunction() # setup_target_for_coverage_gcovr_xml
 
 # Defines a target for running and collection code coverage information
 # Builds dependencies, runs the given executable and outputs reports.
 # NOTE! The executable should always have a ZERO as exit code otherwise
 # the coverage generation will not complete.
 #
-# SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML(
+# setup_target_for_coverage_gcovr_html(
 #     NAME ctest_coverage                    # New target name
 #     EXECUTABLE ctest -j ${PROCESSOR_COUNT} # Executable in PROJECT_BINARY_DIR
 #     DEPENDENCIES executable_target         # Dependencies to build first
 # )
-function(SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML)
+function(setup_target_for_coverage_gcovr_html)
 
     set(options NONE)
     set(oneValueArgs NAME)
@@ -315,10 +322,10 @@ function(SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML)
         ADDITIONAL_MAKE_CLEAN_FILES
         ${Coverage_NAME})
 
-endfunction() # SETUP_TARGET_FOR_COVERAGE_GCOVR_HTML
+endfunction() # setup_target_for_coverage_gcovr_html
 
-function(APPEND_COVERAGE_COMPILER_FLAGS)
+function(append_coverage_compiler_flags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
     message(STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
-endfunction() # APPEND_COVERAGE_COMPILER_FLAGS
+endfunction() # append_coverage_compiler_flags
