@@ -1563,6 +1563,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 					output_sample_fmt = AV_SAMPLE_FMT_U8;
 					break;
 				}
+				default: {
+					// This is only here to silence unused-enum warnings
+					break;
+				}
 			}
 
 			// Update total samples & input frame size (due to bigger or smaller data types)

@@ -191,10 +191,10 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 #if defined(__APPLE__)
 			// Apple pix formats
 			case AV_PIX_FMT_VIDEOTOOLBOX:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-					return *p;
-					break;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+				return *p;
+				break;
 #endif
 				// Cross-platform pix formats
 			case AV_PIX_FMT_CUDA:
@@ -206,6 +206,9 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
 				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
 				return *p;
+				break;
+			default:
+				// This is only here to silence unused-enum warnings
 				break;
 		}
 	}

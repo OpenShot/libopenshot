@@ -466,34 +466,37 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
     float crop_h = source_clip->crop_height.GetValue(clip_frame_number);
     switch(source_clip->crop_gravity)
     {
-      case (GRAVITY_TOP):
-          crop_x += 0.5;
-          break;
-      case (GRAVITY_TOP_RIGHT):
-          crop_x += 1.0;
-          break;
-      case (GRAVITY_LEFT):
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_CENTER):
-          crop_x += 0.5;
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_RIGHT):
-          crop_x += 1.0;
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_BOTTOM_LEFT):
-          crop_y += 1.0;
-          break;
-      case (GRAVITY_BOTTOM):
-          crop_x += 0.5;
-          crop_y += 1.0;
-          break;
-      case (GRAVITY_BOTTOM_RIGHT):
-          crop_x += 1.0;
-          crop_y += 1.0;
-          break;
+    case (GRAVITY_TOP_LEFT):
+        // This is only here to prevent unused-enum warnings
+        break;
+    case (GRAVITY_TOP):
+        crop_x += 0.5;
+        break;
+    case (GRAVITY_TOP_RIGHT):
+        crop_x += 1.0;
+        break;
+    case (GRAVITY_LEFT):
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_CENTER):
+        crop_x += 0.5;
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_RIGHT):
+        crop_x += 1.0;
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_BOTTOM_LEFT):
+        crop_y += 1.0;
+        break;
+    case (GRAVITY_BOTTOM):
+        crop_x += 0.5;
+        crop_y += 1.0;
+        break;
+    case (GRAVITY_BOTTOM_RIGHT):
+        crop_x += 1.0;
+        crop_y += 1.0;
+        break;
     }
 
 
@@ -509,6 +512,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	switch (source_clip->gravity)
 	{
+	case (GRAVITY_TOP_LEFT):
+		// This is only here to prevent unused-enum warnings
+		break;
 	case (GRAVITY_TOP):
 		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
 		break;
@@ -611,6 +617,10 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
         std::stringstream frame_number_str;
         switch (source_clip->display)
         {
+            case (FRAME_DISPLAY_NONE):
+                // This is only here to prevent unused-enum warnings
+                break;
+
             case (FRAME_DISPLAY_CLIP):
                 frame_number_str << clip_frame_number;
                 break;
