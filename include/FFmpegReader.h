@@ -195,6 +195,9 @@ namespace openshot {
 		/// Get the PTS for the current video packet
 		int64_t GetVideoPTS();
 
+		/// Check if there's an album art
+		bool HasAlbumArt();
+
 		/// Remove partial frames due to seek
 		bool IsPartialFrame(int64_t requested_frame);
 
