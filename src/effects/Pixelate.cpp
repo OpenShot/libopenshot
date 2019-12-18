@@ -68,7 +68,7 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get current keyframe values
-	double pixelization_value = 1.0 - min(fabs(pixelization.GetValue(frame_number)), 1.0);
+	double pixelization_value = 1.0 - std::min(fabs(pixelization.GetValue(frame_number)), 1.0);
 	double left_value = left.GetValue(frame_number);
 	double top_value = top.GetValue(frame_number);
 	double right_value = right.GetValue(frame_number);
@@ -76,7 +76,7 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 
 	if (pixelization_value > 0.0) {
 		// Resize frame image smaller (based on pixelization value)
-		std::shared_ptr<QImage> smaller_frame_image = std::shared_ptr<QImage>(new QImage(frame_image->scaledToWidth(max(frame_image->width() * pixelization_value, 2.0), Qt::SmoothTransformation)));
+		std::shared_ptr<QImage> smaller_frame_image = std::shared_ptr<QImage>(new QImage(frame_image->scaledToWidth(std::max(frame_image->width() * pixelization_value, 2.0), Qt::SmoothTransformation)));
 
 		// Resize image back to original size (with no smoothing to create pixelated image)
 		std::shared_ptr<QImage> pixelated_image = std::shared_ptr<QImage>(new QImage(smaller_frame_image->scaledToWidth(frame_image->width(), Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888)));
@@ -110,7 +110,7 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 }
 
 // Generate JSON string of this object
-string Pixelate::Json() {
+std::string Pixelate::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -133,21 +133,21 @@ Json::Value Pixelate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Pixelate::SetJson(string value) {
+void Pixelate::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -157,7 +157,7 @@ void Pixelate::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -181,7 +181,7 @@ void Pixelate::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Pixelate::PropertiesJSON(int64_t requested_frame) {
+std::string Pixelate::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

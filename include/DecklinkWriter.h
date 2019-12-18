@@ -50,8 +50,6 @@
 #include "Frame.h"
 #include "DecklinkOutput.h"
 
-using namespace std;
-
 namespace openshot
 {
 

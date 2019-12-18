@@ -109,10 +109,10 @@ void Clip::init_settings()
 // Init reader's rotation (if any)
 void Clip::init_reader_rotation() {
 	// Only init rotation from reader when needed
-	if (rotation.Points.size() > 1)
+	if (rotation.GetCount() > 1)
 		// Do nothing if more than 1 rotation Point
 		return;
-	else if (rotation.Points.size() == 1 && rotation.GetValue(1) != 0.0)
+	else if (rotation.GetCount() == 1 && rotation.GetValue(1) != 0.0)
 		// Do nothing if 1 Point, and it's not the default value
 		return;
 
@@ -152,13 +152,13 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(
 }
 
 // Constructor with filepath
-Clip::Clip(string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 
 	// Get file extension (and convert to lower case)
-	string ext = get_file_extension(path);
+	std::string ext = get_file_extension(path);
 	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
@@ -235,7 +235,7 @@ ReaderBase* Clip::Reader()
 		return reader;
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Open the internal reader
@@ -252,7 +252,7 @@ void Clip::Open()
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Close the internal reader
@@ -266,14 +266,14 @@ void Clip::Close()
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
 float Clip::End()
 {
 	// if a time curve is present, use its length
-	if (time.Points.size() > 1)
+	if (time.GetCount() > 1)
 	{
 		// Determine the FPS fo this clip
 		float fps = 24.0;
@@ -282,7 +282,7 @@ float Clip::End()
 			fps = reader->info.fps.ToFloat();
 		else
 			// Throw error if reader not initialized
-			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+			throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 		return float(time.GetLength()) / fps;
 	}
@@ -314,8 +314,8 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Is a time map detected
 		int64_t new_frame_number = requested_frame;
 		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
-		if (time.Values.size() > 1)
-            new_frame_number = time_mapped_number;
+		if (time.GetLength() > 1)
+			new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
@@ -350,11 +350,11 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 	}
 	else
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
 // Get file extension
-string Clip::get_file_extension(string path)
+std::string Clip::get_file_extension(std::string path)
 {
 	// return last part of path
 	return path.substr(path.find_last_of(".") + 1);
@@ -367,7 +367,7 @@ void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
 	int channels = buffer->getNumChannels();
 
 	// Reverse array (create new buffer to hold the reversed version)
-	AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -394,12 +394,12 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for valid reader
 	if (!reader)
 		// Throw error if reader not initialized
-		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.", "");
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 
 	// Check for a valid time map curve
-	if (time.Values.size() > 1)
+	if (time.GetLength() > 1)
 	{
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -423,7 +423,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 			if (time.GetRepeatFraction(frame_number).den > 1) {
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *resampled_buffer = NULL;
+				juce::AudioSampleBuffer *resampled_buffer = NULL;
 				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
@@ -482,7 +482,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame <= new_frame_number; delta_frame++) {
 						// buffer to hold detal samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -526,7 +526,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame >= new_frame_number; delta_frame--) {
 						// buffer to hold delta samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -557,7 +557,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
 
 				// Resample data, and return new buffer pointer
-				AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
+				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
 				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame
@@ -645,14 +645,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 }
 
 // Generate JSON string of this object
-string Clip::Json() {
+std::string Clip::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Get all properties for a specific frame
-string Clip::PropertiesJSON(int64_t requested_frame) {
+std::string Clip::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -782,7 +782,7 @@ Json::Value Clip::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	list<EffectBase*>::iterator effect_itr;
+	std::list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
 		// Get clip object from the iterator
@@ -798,21 +798,21 @@ Json::Value Clip::JsonValue() {
 }
 
 // Load JSON string into this object
-void Clip::SetJson(string value) {
+void Clip::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -822,7 +822,7 @@ void Clip::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -914,7 +914,7 @@ void Clip::SetJsonValue(Json::Value root) {
 
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				if (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) {
+				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
 
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
@@ -943,7 +943,7 @@ void Clip::SetJsonValue(Json::Value root) {
 			}
 
 			// Create new reader (and load properties)
-			string type = root["reader"]["type"].asString();
+			std::string type = root["reader"]["type"].asString();
 
 			if (type == "FFmpegReader") {
 
@@ -1025,7 +1025,7 @@ void Clip::RemoveEffect(EffectBase* effect)
 std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
-	list<EffectBase*>::iterator effect_itr;
+	std::list<EffectBase*>::iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
 		// Get clip object from the iterator

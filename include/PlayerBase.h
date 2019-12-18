@@ -34,8 +34,6 @@
 #include <iostream>
 #include "ReaderBase.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -63,7 +61,7 @@ namespace openshot
 	protected:
 		float speed;
 		float volume;
-		ReaderBase *reader;
+		openshot::ReaderBase *reader;
 		PlaybackMode mode;
 
 	public:
@@ -81,7 +79,7 @@ namespace openshot
 		virtual void Pause() = 0;
 
 		/// Get the current frame number being played
-		virtual int Position() = 0;
+		virtual int64_t Position() = 0;
 
 		/// Seek to a specific frame in the player
 		virtual void Seek(int64_t new_frame) = 0;
@@ -96,10 +94,10 @@ namespace openshot
 		virtual void Stop() = 0;
 
 		/// Get the current reader, such as a FFmpegReader
-		virtual ReaderBase* Reader() = 0;
+		virtual openshot::ReaderBase* Reader() = 0;
 
 		/// Set the current reader, such as a FFmpegReader
-		virtual void Reader(ReaderBase *new_reader) = 0;
+		virtual void Reader(openshot::ReaderBase *new_reader) = 0;
 
 		/// Get the Volume
 		virtual float Volume() = 0;

@@ -39,16 +39,19 @@ using namespace openshot;
 
 int main(int argc, char* argv[]) {
 
-	Settings *s = Settings::Instance();
-	s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC
-	s->HW_DE_DEVICE_SET = 0;
+    Settings *s = Settings::Instance();
+    s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU
+    s->HW_DE_DEVICE_SET = 0;
 
-    FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-720p.mp4");
+    std::string input_filepath = TEST_MEDIA_PATH;
+    input_filepath += "sintel_trailer-720p.mp4";
+
+    FFmpegReader r9(input_filepath);
     r9.Open();
     r9.DisplayInfo();
 
     /* WRITER ---------------- */
-    FFmpegWriter w9("/home/jonathan/metadata.mp4");
+    FFmpegWriter w9("metadata.mp4");
 
     // Set options
     w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
@@ -80,7 +83,7 @@ int main(int argc, char* argv[]) {
     // Close timeline
     r9.Close();
 
-	cout << "Completed successfully!" << endl;
+	std::cout << "Completed successfully!" << std::endl;
 
     return 0;
 }

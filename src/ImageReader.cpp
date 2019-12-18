@@ -35,14 +35,14 @@
 
 using namespace openshot;
 
-ImageReader::ImageReader(string path) : path(path), is_open(false)
+ImageReader::ImageReader(std::string path) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	Open();
 	Close();
 }
 
-ImageReader::ImageReader(string path, bool inspect_reader) : path(path), is_open(false)
+ImageReader::ImageReader(std::string path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -82,7 +82,7 @@ void ImageReader::Open()
 		info.height = image->size().height();
 		info.pixel_ratio.num = 1;
 		info.pixel_ratio.den = 1;
-		info.duration = 60 * 60 * 24; // 24 hour duration
+		info.duration = 60 * 60 * 1;  // 1 hour duration
 		info.fps.num = 30;
 		info.fps.den = 1;
 		info.video_timebase.num = 1;
@@ -136,7 +136,7 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string ImageReader::Json() {
+std::string ImageReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -155,21 +155,21 @@ Json::Value ImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void ImageReader::SetJson(string value) {
+void ImageReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -179,7 +179,7 @@ void ImageReader::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

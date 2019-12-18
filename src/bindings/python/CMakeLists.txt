@@ -37,8 +37,8 @@ if (POLICY CMP0086)
 	cmake_policy(SET CMP0086 OLD)
 endif()
 
-FIND_PACKAGE(PythonLibs 3)
 FIND_PACKAGE(PythonInterp 3)
+FIND_PACKAGE(PythonLibs 3)
 if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
 	### Include Python header files
@@ -48,13 +48,19 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 	### Enable C++ support in SWIG
 	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
-	SET(CMAKE_SWIG_FLAGS "")
 
 	### Suppress a ton of warnings in the generated SWIG C++ code
 	set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
 -Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
 	separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
 	set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+
+  ### Take include dirs from target, automatically if possible
+  if (CMAKE_VERSION VERSION_GREATER 3.13)
+    set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
+  else ()
+    set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+  endif ()
 
 	### Add the SWIG interface file (which defines all the SWIG methods)
 	if (CMAKE_VERSION VERSION_LESS 3.8.0)
@@ -69,29 +75,24 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
 	### Link the new python wrapper library with libopenshot
 	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME}
-	                      ${PYTHON_LIBRARIES} openshot)
+                        PUBLIC ${PYTHON_LIBRARIES} openshot)
 
 	### Check if the following Debian-friendly python module path exists
-	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages")
+	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
 	if (NOT EXISTS ${PYTHON_MODULE_PATH})
 
-		### Check if another Debian-friendly python module path exists
-		SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
-		if (NOT EXISTS ${PYTHON_MODULE_PATH})
-
-			### Calculate the python module path (using distutils)
-			execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+		### Calculate the python module path (using distutils)
+		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
 print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
-				OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-				OUTPUT_STRIP_TRAILING_WHITESPACE )
+			OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
+			OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-			GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-					"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-			FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-					${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-			SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
-		endif()
+		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
+				"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
+		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
+				${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
+		SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
 	endif()
 	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
 

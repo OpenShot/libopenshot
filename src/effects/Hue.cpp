@@ -103,7 +103,7 @@ std::shared_ptr<Frame> Hue::GetFrame(std::shared_ptr<Frame> frame, int64_t frame
 }
 
 // Generate JSON string of this object
-string Hue::Json() {
+std::string Hue::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -122,21 +122,21 @@ Json::Value Hue::JsonValue() {
 }
 
 // Load JSON string into this object
-void Hue::SetJson(string value) {
+void Hue::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -146,7 +146,7 @@ void Hue::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -162,7 +162,7 @@ void Hue::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Hue::PropertiesJSON(int64_t requested_frame) {
+std::string Hue::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

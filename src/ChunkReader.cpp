@@ -33,7 +33,7 @@
 
 using namespace openshot;
 
-ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
+ChunkReader::ChunkReader(std::string path, ChunkVersion chunk_version)
 		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
 {
 	// Check if folder exists?
@@ -51,7 +51,7 @@ ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
 }
 
 // Check if folder path existing
-bool ChunkReader::does_folder_exist(string path)
+bool ChunkReader::does_folder_exist(std::string path)
 {
 	QDir dir(path.c_str());
 	return dir.exists();
@@ -61,12 +61,12 @@ bool ChunkReader::does_folder_exist(string path)
 void ChunkReader::load_json()
 {
 	// Load path of chunk folder
-	string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
-	stringstream json_string;
+	std::string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
+	std::stringstream json_string;
 
 	// Read the JSON file
-	ifstream myfile (json_path.c_str());
-	string line = "";
+	std::ifstream myfile (json_path.c_str());
+	std::string line = "";
 	if (myfile.is_open())
 	{
 		while (myfile.good())
@@ -81,7 +81,7 @@ void ChunkReader::load_json()
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 
-	string errors;
+	std::string errors;
 	bool success = Json::parseFromStream(rbuilder, json_string, &root, &errors);
 	if (!success)
 		// Raise exception
@@ -94,7 +94,7 @@ void ChunkReader::load_json()
 		info.has_video = root["has_video"].asBool();
 		info.has_audio = root["has_audio"].asBool();
 		info.duration = root["duration"].asDouble();
-		info.file_size = atoll(root["file_size"].asString().c_str());
+		info.file_size = std::stoll(root["file_size"].asString());
 		info.height = root["height"].asInt();
 		info.width = root["width"].asInt();
 		info.pixel_format = root["pixel_format"].asInt();
@@ -106,7 +106,7 @@ void ChunkReader::load_json()
 		info.display_ratio.num = root["display_ratio"]["num"].asInt();
 		info.display_ratio.den = root["display_ratio"]["den"].asInt();
 		info.vcodec = root["vcodec"].asString();
-		info.video_length = atoll(root["video_length"].asString().c_str());
+		info.video_length = std::stoll(root["video_length"].asString());
 		info.video_stream_index = root["video_stream_index"].asInt();
 		info.video_timebase.num = root["video_timebase"]["num"].asInt();
 		info.video_timebase.den = root["video_timebase"]["den"].asInt();
@@ -170,10 +170,10 @@ void ChunkReader::Close()
 }
 
 // get a formatted path of a specific chunk
-string ChunkReader::get_chunk_path(int64_t chunk_number, string folder, string extension)
+std::string ChunkReader::get_chunk_path(int64_t chunk_number, std::string folder, std::string extension)
 {
 	// Create path of new chunk video
-	stringstream chunk_count_string;
+	std::stringstream chunk_count_string;
 	chunk_count_string << chunk_number;
 	QString padded_count = "%1"; //chunk_count_string.str().c_str();
 	padded_count = padded_count.arg(chunk_count_string.str().c_str(), 6, '0');
@@ -202,7 +202,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 	if (previous_location.number != location.number)
 	{
 		// Determine version of chunk
-		string folder_name = "";
+		std::string folder_name = "";
 		switch (version)
 		{
 		case THUMBNAIL:
@@ -217,12 +217,12 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 		}
 
 		// Load path of chunk video
-		string chunk_video_path = get_chunk_path(location.number, folder_name, ".webm");
+		std::string chunk_video_path = get_chunk_path(location.number, folder_name, ".webm");
 
 		// Close existing reader (if needed)
 		if (local_reader)
 		{
-			cout << "Close READER" << endl;
+			std::cout << "Close READER" << std::endl;
 			// Close and delete old reader
 			local_reader->Close();
 			delete local_reader;
@@ -230,7 +230,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 
 		try
 		{
-			cout << "Load READER: " << chunk_video_path << endl;
+			std::cout << "Load READER: " << chunk_video_path << std::endl;
 			// Load new FFmpegReader
 			local_reader = new FFmpegReader(chunk_video_path);
 			local_reader->Open(); // open reader
@@ -256,7 +256,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string ChunkReader::Json() {
+std::string ChunkReader::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -269,7 +269,7 @@ Json::Value ChunkReader::JsonValue() {
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "ChunkReader";
 	root["path"] = path;
-	stringstream chunk_size_stream;
+	std::stringstream chunk_size_stream;
 	chunk_size_stream << chunk_size;
 	root["chunk_size"] = chunk_size_stream.str();
 	root["chunk_version"] = version;
@@ -279,20 +279,20 @@ Json::Value ChunkReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void ChunkReader::SetJson(string value) {
+void ChunkReader::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
 	                 value.c_str() + value.size(), &root, &errors );
 	delete reader;
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -302,7 +302,7 @@ void ChunkReader::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -316,7 +316,7 @@ void ChunkReader::SetJsonValue(Json::Value root) {
 	if (!root["path"].isNull())
 		path = root["path"].asString();
 	if (!root["chunk_size"].isNull())
-		chunk_size = atoll(root["chunk_size"].asString().c_str());
+		chunk_size = std::stoll(root["chunk_size"].asString());
 	if (!root["chunk_version"].isNull())
 		version = (ChunkVersion) root["chunk_version"].asInt();
 

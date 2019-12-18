@@ -79,7 +79,7 @@ public:
 	unsigned long 			final_frameCount;
 
 	// Queue of raw video frames
-	deque<IDeckLinkMutableVideoFrame*> raw_video_frames;
+	std::deque<IDeckLinkMutableVideoFrame*> raw_video_frames;
 	openshot::CacheMemory final_frames;
 
 	// Convert between YUV and RGB

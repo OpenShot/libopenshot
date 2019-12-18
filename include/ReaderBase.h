@@ -34,7 +34,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <stdlib.h>
+#include <cstdlib>
 #include <sstream>
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"
@@ -49,16 +49,13 @@
 #include <QGraphicsPixmapItem>
 #include <QPixmap>
 
-using namespace std;
-
 namespace openshot
 {
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
 	 * Each derived class of ReaderBase is responsible for updating this struct to reflect accurate information
-	 * about the streams. Derived classes of ReaderBase should call the InitFileInfo() method to initialize the
-	 * default values of this struct.
+	 * about the streams.
 	 */
 	struct ReaderInfo
 	{
@@ -70,24 +67,24 @@ namespace openshot
 		int height;					///< The height of the video (in pixels)
 		int width;					///< The width of the video (in pixesl)
 		int pixel_format;			///< The pixel format (i.e. YUV420P, RGB24, etc...)
-		Fraction fps;				///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
+		openshot::Fraction fps;				///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
 		int video_bit_rate;			///< The bit rate of the video stream (in bytes)
-		Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
-		Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
-		string vcodec;				///< The name of the video codec used to encode / decode the video stream
+		openshot::Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
+		openshot::Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
+		std::string vcodec;				///< The name of the video codec used to encode / decode the video stream
 		int64_t video_length;		///< The number of frames in the video stream
 		int video_stream_index;		///< The index of the video stream
-		Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
+		openshot::Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
 		bool interlaced_frame;		// Are the contents of this frame interlaced
 		bool top_field_first;		// Which interlaced field should be displayed first
-		string acodec;				///< The name of the audio codec used to encode / decode the video stream
+		std::string acodec;				///< The name of the audio codec used to encode / decode the video stream
 		int audio_bit_rate;			///< The bit rate of the audio stream (in bytes)
 		int sample_rate;			///< The number of audio samples per second (44100 is a common sample rate)
 		int channels;				///< The number of audio channels used in the audio stream
-		ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
+		openshot::ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
-		Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
-		std::map<string, string> metadata;	///< An optional map/dictionary of metadata for this reader
+		openshot::Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
+		std::map<std::string, std::string> metadata;	///< An optional map/dictionary of metadata for this reader
 	};
 
 	/**
@@ -95,15 +92,15 @@ namespace openshot
 	 *
 	 * Readers are types of classes that read video, audio, and image files, and
 	 * return openshot::Frame objects. The only requirements for a 'reader', are to
-	 * derive from this base class, implement the GetFrame method, and call the InitFileInfo() method.
+	 * derive from this base class, implement the GetFrame method, and populate ReaderInfo.
 	 */
 	class ReaderBase
 	{
 	protected:
 		/// Section lock for multiple threads
-	    CriticalSection getFrameCriticalSection;
-	    CriticalSection processingCriticalSection;
-		ClipBase* parent;
+	  juce::CriticalSection getFrameCriticalSection;
+	  juce::CriticalSection processingCriticalSection;
+		openshot::ClipBase* parent;
 
 	public:
 
@@ -111,13 +108,13 @@ namespace openshot
 	    ReaderBase();
 
 		/// Information about the current media file
-		ReaderInfo info;
+		openshot::ReaderInfo info;
 
 		/// Parent clip object of this reader (which can be unparented and NULL)
-		ClipBase* GetClip();
+		openshot::ClipBase* GetClip();
 
 		/// Set parent clip object of this reader
-		void SetClip(ClipBase* clip);
+		void SetClip(openshot::ClipBase* clip);
 
 		/// Close the reader (and any resources it was consuming)
 		virtual void Close() = 0;
@@ -126,7 +123,7 @@ namespace openshot
 		void DisplayInfo();
 
 		/// Get the cache object used by this reader (note: not all readers use cache)
-		virtual CacheBase* GetCache() = 0;
+		virtual openshot::CacheBase* GetCache() = 0;
 
 		/// This method is required for all derived classes of ReaderBase, and returns the
 		/// openshot::Frame object, which contains the image and audio information for that
@@ -134,17 +131,17 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param[in] number The frame number that is requested.
-		virtual std::shared_ptr<Frame> GetFrame(int64_t number) = 0;
+		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t number) = 0;
 
 		/// Determine if reader is open or closed
 		virtual bool IsOpen() = 0;
 
 		/// Return the type name of the class
-		virtual string Name() = 0;
+		virtual std::string Name() = 0;
 
 		/// Get and Set JSON methods
-		virtual string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(string value) = 0; ///< Load JSON string into this object
+		virtual std::string Json() = 0; ///< Generate JSON string of this object
+		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
 		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
 

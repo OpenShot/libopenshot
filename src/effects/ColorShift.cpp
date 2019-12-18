@@ -194,7 +194,7 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 }
 
 // Generate JSON string of this object
-string ColorShift::Json() {
+std::string ColorShift::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -220,21 +220,21 @@ Json::Value ColorShift::JsonValue() {
 }
 
 // Load JSON string into this object
-void ColorShift::SetJson(string value) {
+void ColorShift::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -244,7 +244,7 @@ void ColorShift::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -274,7 +274,7 @@ void ColorShift::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string ColorShift::PropertiesJSON(int64_t requested_frame) {
+std::string ColorShift::PropertiesJSON(int64_t requested_frame) {
 
 	// Generate JSON properties list
 	Json::Value root;

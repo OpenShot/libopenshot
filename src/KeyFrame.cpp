@@ -29,64 +29,121 @@
  */
 
 #include "../include/KeyFrame.h"
+#include <algorithm>
+#include <functional>
+#include <utility>
 
 using namespace std;
 using namespace openshot;
 
-// Because points can be added in any order, we need to reorder them
-// in ascending order based on the point.co.X value.  This simplifies
-// processing the curve, due to all the points going from left to right.
-void Keyframe::ReorderPoints() {
-	// Loop through all coordinates, and sort them by the X attribute
-	for (int64_t x = 0; x < Points.size(); x++) {
-		int64_t compare_index = x;
-		int64_t smallest_index = x;
+namespace {
+	bool IsPointBeforeX(Point const & p, double const x) {
+		return p.co.X < x;
+	}
 
-		for (int64_t compare_index = x + 1; compare_index < Points.size(); compare_index++) {
-			if (Points[compare_index].co.X < Points[smallest_index].co.X) {
-				smallest_index = compare_index;
+	double InterpolateLinearCurve(Point const & left, Point const & right, double const target) {
+		double const diff_Y = right.co.Y - left.co.Y;
+		double const diff_X = right.co.X - left.co.X;
+		double const slope = diff_Y / diff_X;
+		return left.co.Y + slope * (target - left.co.X);
+	}
+
+	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error) {
+		double const X_diff = right.co.X - left.co.X;
+		double const Y_diff = right.co.Y - left.co.Y;
+		Coordinate const p0 = left.co;
+		Coordinate const p1 = Coordinate(p0.X + left.handle_right.X * X_diff, p0.Y + left.handle_right.Y * Y_diff);
+		Coordinate const p2 = Coordinate(p0.X + right.handle_left.X * X_diff, p0.Y + right.handle_left.Y * Y_diff);
+		Coordinate const p3 = right.co;
+
+		double t = 0.5;
+		double t_step = 0.25;
+		do {
+			// Bernstein polynoms
+			double B[4] = {1, 3, 3, 1};
+			double oneMinTExp = 1;
+			double tExp = 1;
+			for (int i = 0; i < 4; ++i, tExp *= t) {
+				B[i] *= tExp;
+			}
+			for (int i = 0; i < 4; ++i, oneMinTExp *= 1 - t) {
+				B[4 - i - 1] *= oneMinTExp;
+			}
+			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
+			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
+			if (abs(target - x) < allowed_error) {
+				return y;
+			}
+			if (x > target) {
+				t -= t_step;
+			}
+			else {
+				t += t_step;
+			}
+			t_step /= 2;
+		} while (true);
+	}
+
+
+	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
+		assert(left.co.X < target);
+		assert(target <= right.co.X);
+		switch (right.interpolation) {
+		case CONSTANT: return left.co.Y;
+		case LINEAR: return InterpolateLinearCurve(left, right, target);
+		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
+		}
+	}
+
+
+	template<typename Check>
+	int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
+		int64_t start = left.co.X;
+		int64_t stop = right.co.X;
+		while (start < stop) {
+			int64_t const mid = (start + stop + 1) / 2;
+			double const value = InterpolateBetween(left, right, mid, 0.01);
+			if (check(round(value), current)) {
+				start = mid;
+			} else {
+				stop = mid - 1;
 			}
 		}
-
-		// swap items
-		if (smallest_index != compare_index) {
-			swap(Points[compare_index], Points[smallest_index]);
-		}
+		return start;
 	}
 }
 
-// Constructor which sets the default point & coordinate at X=0
-Keyframe::Keyframe(double value) : needs_update(true) {
-	// Init the factorial table, needed by bezier curves
-	CreateFactorialTable();
 
+// Constructor which sets the default point & coordinate at X=1
+Keyframe::Keyframe(double value) {
 	// Add initial point
 	AddPoint(Point(value));
-}
-
-// Keyframe constructor
-Keyframe::Keyframe() : needs_update(true) {
-	// Init the factorial table, needed by bezier curves
-	CreateFactorialTable();
 }
 
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {
-	// mark as dirty
-	needs_update = true;
-
-	// Check for duplicate point (and remove it)
-	Point closest = GetClosestPoint(p);
-	if (closest.co.X == p.co.X)
-		// Remove existing point
-		RemovePoint(closest);
-
-	// Add point at correct spot
-	Points.push_back(p);
-
-	// Sort / Re-order points based on X coordinate
-	ReorderPoints();
+	// candidate is not less (greater or equal) than the new point in
+	// the X coordinate.
+	std::vector<Point>::iterator candidate =
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
+	if (candidate == end(Points)) {
+		// New point X is greater than all other points' X, add to
+		// back.
+		Points.push_back(p);
+	} else if ((*candidate).co.X == p.co.X) {
+		// New point is at same X coordinate as some point, overwrite
+		// point.
+		*candidate = p;
+	} else {
+		// New point needs to be inserted before candidate; thus move
+		// candidate and all following one to the right and insert new
+		// point then where candidate was.
+		size_t const candidate_index = candidate - begin(Points);
+		Points.push_back(p); // Make space; could also be a dummy point. INVALIDATES candidate!
+		std::move_backward(begin(Points) + candidate_index, end(Points) - 1, end(Points));
+		Points[candidate_index] = p;
+	}
 }
 
 // Add a new point on the key-frame, with some defaults set (BEZIER)
@@ -110,7 +167,7 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 }
 
 // Get the index of a point by matching a coordinate
-int64_t Keyframe::FindIndex(Point p) {
+int64_t Keyframe::FindIndex(Point p) const {
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -128,67 +185,49 @@ int64_t Keyframe::FindIndex(Point p) {
 }
 
 // Determine if point already exists
-bool Keyframe::Contains(Point p) {
-	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// find a match
-		if (p.co.X == existing_point.co.X) {
-			// Remove the matching point, and break out of loop
-			return true;
-		}
-	}
-
-	// no matching point found
-	return false;
+bool Keyframe::Contains(Point p) const {
+	std::vector<Point>::const_iterator i =
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
+	return i != end(Points) && i->co.X == p.co.X;
 }
 
 // Get current point (or closest point) from the X coordinate (i.e. the frame number)
-Point Keyframe::GetClosestPoint(Point p, bool useLeft) {
-	Point closest(-1, -1);
-
-	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// find a match
-		if (existing_point.co.X >= p.co.X && !useLeft) {
-			// New closest point found (to the Right)
-			closest = existing_point;
-			break;
-		} else if (existing_point.co.X < p.co.X && useLeft) {
-			// New closest point found (to the Left)
-			closest = existing_point;
-		} else if (existing_point.co.X >= p.co.X && useLeft) {
-			// We've gone past the left point... so break
-			break;
-		}
+Point Keyframe::GetClosestPoint(Point p, bool useLeft) const {
+	if (Points.size() == 0) {
+		return Point(-1, -1);
 	}
 
-	// Handle edge cases (if no point was found)
-	if (closest.co.X == -1) {
-		if (p.co.X <= 1 && Points.size() > 0)
-			// Assign 1st point
-			closest = Points[0];
-		else if (Points.size() > 0)
-			// Assign last point
-			closest = Points[Points.size() - 1];
-	}
+	// Finds a point with an X coordinate which is "not less" (greater
+	// or equal) than the queried X coordinate.
+	std::vector<Point>::const_iterator candidate =
+		std::lower_bound(begin(Points), end(Points), p.co.X, IsPointBeforeX);
 
-	// no matching point found
-	return closest;
+	if (candidate == end(Points)) {
+		// All points are before the queried point.
+		//
+		// Note: Behavior the same regardless of useLeft!
+		return Points.back();
+	}
+	if (candidate == begin(Points)) {
+		// First point is greater or equal to the queried point.
+		//
+		// Note: Behavior the same regardless of useLeft!
+		return Points.front();
+	}
+	if (useLeft) {
+		return *(candidate - 1);
+	} else {
+		return *candidate;
+	}
 }
 
 // Get current point (or closest point to the right) from the X coordinate (i.e. the frame number)
-Point Keyframe::GetClosestPoint(Point p) {
+Point Keyframe::GetClosestPoint(Point p) const {
 	return GetClosestPoint(p, false);
 }
 
 // Get previous point (if any)
-Point Keyframe::GetPreviousPoint(Point p) {
+Point Keyframe::GetPreviousPoint(Point p) const {
 
 	// Lookup the index of this point
 	try {
@@ -207,17 +246,11 @@ Point Keyframe::GetPreviousPoint(Point p) {
 }
 
 // Get max point (by Y coordinate)
-Point Keyframe::GetMaxPoint() {
+Point Keyframe::GetMaxPoint() const {
 	Point maxPoint(-1, -1);
 
-	// loop through points, and find the largest Y value
-	for (int64_t x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
-
-		// Is point larger than max point
+	for (Point const & existing_point: Points) {
 		if (existing_point.co.Y >= maxPoint.co.Y) {
-			// New max point found
 			maxPoint = existing_point;
 		}
 	}
@@ -226,128 +259,74 @@ Point Keyframe::GetMaxPoint() {
 }
 
 // Get the value at a specific index
-double Keyframe::GetValue(int64_t index)
-{
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
+double Keyframe::GetValue(int64_t index) const {
+	if (Points.empty()) {
+		return 0;
+	}
+	std::vector<Point>::const_iterator candidate =
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
 
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return Values[index].Y;
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return Values[0].Y;
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return Values[Values.size() - 1].Y;
-	else
-		// return a blank coordinate (0,0)
-		return 0.0;
+	if (candidate == end(Points)) {
+		// index is behind last point
+		return Points.back().co.Y;
+	}
+	if (candidate == begin(Points)) {
+		// index is at or before first point
+		return Points.front().co.Y;
+	}
+	if (candidate->co.X == index) {
+		// index is directly on a point
+		return candidate->co.Y;
+	}
+	std::vector<Point>::const_iterator predecessor = candidate - 1;
+	return InterpolateBetween(*predecessor, *candidate, index, 0.01);
 }
 
 // Get the rounded INT value at a specific index
-int Keyframe::GetInt(int64_t index)
-{
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return int(round(Values[index].Y));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return int(round(Values[0].Y));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return int(round(Values[Values.size() - 1].Y));
-	else
-		// return a blank coordinate (0,0)
-		return 0;
+int Keyframe::GetInt(int64_t index) const {
+	return int(round(GetValue(index)));
 }
 
 // Get the rounded INT value at a specific index
-int64_t Keyframe::GetLong(int64_t index)
-{
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 0 && index < Values.size())
-		// Return value
-		return long(round(Values[index].Y));
-	else if (index < 0 && Values.size() > 0)
-		// Return the minimum value
-		return long(round(Values[0].Y));
-	else if (index >= Values.size() && Values.size() > 0)
-		// return the maximum value
-		return long(round(Values[Values.size() - 1].Y));
-	else
-		// return a blank coordinate (0,0)
-		return 0;
+int64_t Keyframe::GetLong(int64_t index) const {
+	return long(round(GetValue(index)));
 }
 
 // Get the direction of the curve at a specific index (increasing or decreasing)
-bool Keyframe::IsIncreasing(int index)
+bool Keyframe::IsIncreasing(int index) const
 {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 1 && (index + 1) < Values.size()) {
-		int64_t current_value = GetLong(index);
-		int64_t previous_value = 0;
-		int64_t next_value = 0;
-		int64_t previous_repeats = 0;
-		int64_t next_repeats = 0;
-
-		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
-			previous_value = long(round((*backwards_it).Y));
-			if (previous_value == current_value) {
-				// Found same value
-				previous_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
-			next_value = long(round((*forwards_it).Y));
-			if (next_value == current_value) {
-				// Found same value
-				next_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		if (current_value >= next_value) {
-			// Decreasing
+	if (index < 1 || (index + 1) >= GetLength()) {
+		return true;
+	}
+	std::vector<Point>::const_iterator candidate =
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
+	if (candidate == end(Points)) {
+		return false; // After the last point, thus constant.
+	}
+	if ((candidate->co.X == index) || (candidate == begin(Points))) {
+		++candidate;
+	}
+	int64_t const value = GetLong(index);
+	do {
+		if (value < round(candidate->co.Y)) {
+			return true;
+		} else if (value > round(candidate->co.Y)) {
 			return false;
 		}
-	}
-	// return default true (since most curves increase)
-	return true;
+		++candidate;
+	} while (candidate != end(Points));
+	return false;
 }
 
 // Generate JSON string of this object
-string Keyframe::Json() {
+std::string Keyframe::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::JsonValue for this object
-Json::Value Keyframe::JsonValue() {
+Json::Value Keyframe::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -365,21 +344,21 @@ Json::Value Keyframe::JsonValue() {
 }
 
 // Load JSON string into this object
-void Keyframe::SetJson(string value) {
+void Keyframe::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
 
-	string errors;
+	std::string errors;
 	bool success = reader->parse( value.c_str(),
                  value.c_str() + value.size(), &root, &errors );
 	delete reader;
 
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
@@ -389,16 +368,12 @@ void Keyframe::SetJson(string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
 // Load Json::JsonValue into this object
 void Keyframe::SetJsonValue(Json::Value root) {
-
-	// mark as dirty
-	needs_update = true;
-
 	// Clear existing points
 	Points.clear();
 
@@ -421,107 +396,118 @@ void Keyframe::SetJsonValue(Json::Value root) {
 
 // Get the fraction that represents how many times this value is repeated in the curve
 // This is depreciated and will be removed soon.
-Fraction Keyframe::GetRepeatFraction(int64_t index)
-{
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 1 && (index + 1) < Values.size()) {
-		int64_t current_value = GetLong(index);
-		int64_t previous_value = 0;
-		int64_t next_value = 0;
-		int64_t previous_repeats = 0;
-		int64_t next_repeats = 0;
-
-		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
-			previous_value = long(round((*backwards_it).Y));
-			if (previous_value == current_value) {
-				// Found same value
-				previous_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
-			next_value = long(round((*forwards_it).Y));
-			if (next_value == current_value) {
-				// Found same value
-				next_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		int64_t total_repeats = previous_repeats + next_repeats;
-		return Fraction(previous_repeats, total_repeats);
-	}
-	else
-		// return a blank coordinate
+Fraction Keyframe::GetRepeatFraction(int64_t index) const {
+	// Frame numbers (index) outside of the "defined" range of this
+	// keyframe result in a 1/1 default value.
+	if (index < 1 || (index + 1) >= GetLength()) {
 		return Fraction(1,1);
+	}
+	assert(Points.size() > 1); // Due to ! ((index + 1) >= GetLength) there are at least two points!
+
+	// First, get the value at the given frame and the closest point
+	// to the right.
+	int64_t const current_value = GetLong(index);
+	std::vector<Point>::const_iterator const candidate =
+		std::lower_bound(begin(Points), end(Points), static_cast<double>(index), IsPointBeforeX);
+	assert(candidate != end(Points)); // Due to the (index + 1) >= GetLength check above!
+
+	// Calculate how many of the next values are going to be the same:
+	int64_t next_repeats = 0;
+	std::vector<Point>::const_iterator i = candidate;
+	// If the index (frame number) is the X coordinate of the closest
+	// point, then look at the segment to the right; the "current"
+	// segement is not interesting because we're already at the last
+	// value of it.
+	if (i->co.X == index) {
+		++i;
+	}
+	// Skip over "constant" (when rounded) segments.
+	bool all_constant = true;
+	for (; i != end(Points); ++i) {
+		if (current_value != round(i->co.Y)) {
+			all_constant = false;
+			break;
+		}
+	}
+	if (! all_constant) {
+		// Found a point which defines a segment which will give a
+		// different value than the current value.  This means we
+		// moved at least one segment to the right, thus we cannot be
+		// at the first point.
+		assert(i != begin(Points));
+		Point const left = *(i - 1);
+		Point const right = *i;
+		int64_t change_at;
+		if (current_value < round(i->co.Y)) {
+			change_at = SearchBetweenPoints(left, right, current_value, std::less_equal<double>{});
+		} else {
+			assert(current_value > round(i->co.Y));
+			change_at = SearchBetweenPoints(left, right, current_value, std::greater_equal<double>{});
+		}
+		next_repeats = change_at - index;
+	} else {
+		// All values to the right are the same!
+		next_repeats = Points.back().co.X - index;
+	}
+
+	// Now look to the left, to the previous values.
+	all_constant = true;
+	i = candidate;
+	if (i != begin(Points)) {
+		// The binary search below assumes i to be the left point;
+		// candidate is the right point of the current segment
+		// though. So change this if possible. If this branch is NOT
+		// taken, then we're at/before the first point and all is
+		// constant!
+		--i;
+	}
+	int64_t previous_repeats = 0;
+	// Skip over constant (when rounded) segments!
+	for (; i != begin(Points); --i) {
+		if (current_value != round(i->co.Y)) {
+			all_constant = false;
+			break;
+		}
+	}
+	// Special case when skipped until the first point, but the first
+	// point is actually different.  Will not happen if index is
+	// before the first point!
+	if (current_value != round(i->co.Y)) {
+		assert(i != candidate);
+		all_constant = false;
+	}
+	if (! all_constant) {
+		// There are at least two points, and we're not at the end,
+		// thus the following is safe!
+		Point const left = *i;
+		Point const right = *(i + 1);
+		int64_t change_at;
+		if (current_value > round(left.co.Y)) {
+			change_at = SearchBetweenPoints(left, right, current_value, std::less<double>{});
+		} else {
+			assert(current_value < round(left.co.Y));
+			change_at = SearchBetweenPoints(left, right, current_value, std::greater<double>{});
+		}
+		previous_repeats = index - change_at;
+	} else {
+		// Every previous value is the same (rounded) as the current
+		// value.
+		previous_repeats = index;
+	}
+	int64_t total_repeats = previous_repeats + next_repeats;
+	return Fraction(previous_repeats, total_repeats);
 }
 
 // Get the change in Y value (from the previous Y value)
-double Keyframe::GetDelta(int64_t index)
-{
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// Is index a valid point?
-	if (index >= 1 && (index + 1) < Values.size()) {
-		int64_t current_value = GetLong(index);
-		int64_t previous_value = 0;
-		int64_t next_value = 0;
-		int64_t previous_repeats = 0;
-		int64_t next_repeats = 0;
-
-		// Loop backwards and look for the next unique value
-		for (vector<Coordinate>::iterator backwards_it = Values.begin() + index; backwards_it != Values.begin(); backwards_it--) {
-			previous_value = long(round((*backwards_it).Y));
-			if (previous_value == current_value) {
-				// Found same value
-				previous_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Loop forwards and look for the next unique value
-		for (vector<Coordinate>::iterator forwards_it = Values.begin() + (index + 1); forwards_it != Values.end(); forwards_it++) {
-			next_value = long(round((*forwards_it).Y));
-			if (next_value == current_value) {
-				// Found same value
-				next_repeats++;
-			} else {
-				// Found non repeating value, no more repeats found
-				break;
-			}
-		}
-
-		// Check for matching previous value (special case for 1st element)
-		if (current_value == previous_value)
-			previous_value = 0;
-
-		if (previous_repeats == 1)
-			return current_value - previous_value;
-		else
-			return 0.0;
-	}
-	else
-		// return a blank coordinate
-		return 0.0;
+double Keyframe::GetDelta(int64_t index) const {
+	if (index < 1) return 0;
+	if (index == 1 && ! Points.empty()) return Points[0].co.Y;
+	if (index >= GetLength()) return 0;
+	return GetLong(index) - GetLong(index - 1);
 }
 
 // Get a point at a specific index
-Point& Keyframe::GetPoint(int64_t index) {
+Point const & Keyframe::GetPoint(int64_t index) const {
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 		return Points[index];
@@ -531,27 +517,20 @@ Point& Keyframe::GetPoint(int64_t index) {
 }
 
 // Get the number of values (i.e. coordinates on the X axis)
-int64_t Keyframe::GetLength() {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
-	// return the size of the Values vector
-	return Values.size();
+int64_t Keyframe::GetLength() const {
+	if (Points.empty()) return 0;
+	if (Points.size() == 1) return 1;
+	return round(Points.back().co.X) + 1;
 }
 
 // Get the number of points (i.e. # of points)
-int64_t Keyframe::GetCount() {
+int64_t Keyframe::GetCount() const {
 
-	// return the size of the Values vector
 	return Points.size();
 }
 
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) {
-	// mark as dirty
-	needs_update = true;
-
 	// loop through points, and find a matching coordinate
 	for (int64_t x = 0; x < Points.size(); x++) {
 		// Get each point
@@ -571,9 +550,6 @@ void Keyframe::RemovePoint(Point p) {
 
 // Remove a point by index
 void Keyframe::RemovePoint(int64_t index) {
-	// mark as dirty
-	needs_update = true;
-
 	// Is index a valid point?
 	if (index >= 0 && index < Points.size())
 	{
@@ -586,335 +562,54 @@ void Keyframe::RemovePoint(int64_t index) {
 }
 
 void Keyframe::UpdatePoint(int64_t index, Point p) {
-	// mark as dirty
-	needs_update = true;
-
 	// Remove matching point
 	RemovePoint(index);
 
 	// Add new point
 	AddPoint(p);
-
-	// Reorder points
-	ReorderPoints();
 }
 
-void Keyframe::PrintPoints() {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
+void Keyframe::PrintPoints() const {
 	cout << fixed << setprecision(4);
-	for (vector<Point>::iterator it = Points.begin(); it != Points.end(); it++) {
+	for (std::vector<Point>::const_iterator it = Points.begin(); it != Points.end(); it++) {
 		Point p = *it;
 		cout << p.co.X << "\t" << p.co.Y << endl;
 	}
 }
 
-void Keyframe::PrintValues() {
-	// Check if it needs to be processed
-	if (needs_update)
-		Process();
-
+void Keyframe::PrintValues() const {
 	cout << fixed << setprecision(4);
-	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)" << endl;
+	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
 
-	for (vector<Coordinate>::iterator it = Values.begin() + 1; it != Values.end(); it++) {
-		Coordinate c = *it;
-		cout << long(round(c.X)) << "\t" << c.Y << "\t" << IsIncreasing(c.X) << "\t" << GetRepeatFraction(c.X).num << "\t" << GetRepeatFraction(c.X).den << "\t" << GetDelta(c.X) << endl;
+	for (uint64_t i = 1; i < GetLength(); ++i) {
+		cout << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
+		cout << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
 	}
 }
 
-void Keyframe::Process() {
-
-	#pragma omp critical (keyframe_process)
-	{
-		// only process if needed
-		if (needs_update && Points.size() == 0) {
-			// Clear all values
-			Values.clear();
-		}
-		else if (needs_update && Points.size() > 0)
-		{
-			// Clear all values
-			Values.clear();
-
-			// fill in all values between 1 and 1st point's co.X
-			Point p1 = Points[0];
-			if (Points.size() > 1)
-				// Fill in previous X values (before 1st point)
-				for (int64_t x = 0; x < p1.co.X; x++)
-					Values.push_back(Coordinate(Values.size(), p1.co.Y));
-			else
-				// Add a single value (since we only have 1 point)
-				Values.push_back(Coordinate(Values.size(), p1.co.Y));
-
-			// Loop through each pair of points (1 less than the max points).  Each
-			// pair of points is used to process a segment of the keyframe.
-			Point p2(0, 0);
-			for (int64_t x = 0; x < Points.size() - 1; x++) {
-				p1 = Points[x];
-				p2 = Points[x + 1];
-
-				// process segment p1,p2
-				ProcessSegment(x, p1, p2);
-			}
-		}
-
-		// reset flag
-		needs_update = false;
-	}
-}
-
-void Keyframe::ProcessSegment(int Segment, Point p1, Point p2) {
-	// Determine the number of values for this segment
-	int64_t number_of_values = round(p2.co.X) - round(p1.co.X);
-
-	// Exit function if no values
-	if (number_of_values == 0)
-		return;
-
-	// Based on the interpolation mode, fill the "values" vector with the coordinates
-	// for this segment
-	switch (p2.interpolation) {
-
-	// Calculate the "values" for this segment in with a LINEAR equation, effectively
-	// creating a straight line with coordinates.
-	case LINEAR: {
-		// Get the difference in value
-		double current_value = p1.co.Y;
-		double value_difference = p2.co.Y - p1.co.Y;
-		double value_increment = 0.0f;
-
-		// Get the increment value, but take into account the
-		// first segment has 1 extra value
-		value_increment = value_difference / (double) (number_of_values);
-
-		if (Segment == 0)
-			// Add an extra value to the first segment
-			number_of_values++;
-		else
-			// If not 1st segment, skip the first value
-			current_value += value_increment;
-
-		// Add each increment to the values vector
-		for (int64_t x = 0; x < number_of_values; x++) {
-			// add value as a coordinate to the "values" vector
-			Values.push_back(Coordinate(Values.size(), current_value));
-
-			// increment value
-			current_value += value_increment;
-		}
-
-		break;
-	}
-
-		// Calculate the "values" for this segment using a quadratic Bezier curve.  This creates a
-		// smooth curve.
-	case BEZIER: {
-
-		// Always increase the number of points by 1 (need all possible points
-		// to correctly calculate the curve).
-		number_of_values++;
-		number_of_values *= 4;	// We need a higher resolution curve (4X)
-
-		// Diff between points
-		double X_diff = p2.co.X - p1.co.X;
-		double Y_diff = p2.co.Y - p1.co.Y;
-
-		vector<Coordinate> segment_coordinates;
-		segment_coordinates.push_back(p1.co);
-		segment_coordinates.push_back(Coordinate(p1.co.X + (p1.handle_right.X * X_diff), p1.co.Y + (p1.handle_right.Y * Y_diff)));
-		segment_coordinates.push_back(Coordinate(p1.co.X + (p2.handle_left.X * X_diff), p1.co.Y + (p2.handle_left.Y * Y_diff)));
-		segment_coordinates.push_back(p2.co);
-
-		vector<Coordinate> raw_coordinates;
-		int64_t npts = segment_coordinates.size();
-		int64_t icount, jcount;
-		double step, t;
-		double last_x = -1; // small number init, to track the last used x
-
-		// Calculate points on curve
-		icount = 0;
-		t = 0;
-
-		step = (double) 1.0 / (number_of_values - 1);
-
-		for (int64_t i1 = 0; i1 < number_of_values; i1++) {
-			if ((1.0 - t) < 5e-6)
-				t = 1.0;
-
-			jcount = 0;
-
-			double new_x = 0.0f;
-			double new_y = 0.0f;
-
-			for (int64_t i = 0; i < npts; i++) {
-				Coordinate co = segment_coordinates[i];
-				double basis = Bernstein(npts - 1, i, t);
-				new_x += basis * co.X;
-				new_y += basis * co.Y;
-			}
-
-			// Add new value to the vector
-			Coordinate current_value(new_x, new_y);
-
-			// Add all values for 1st segment
-			raw_coordinates.push_back(current_value);
-
-			// increment counters
-			icount += 2;
-			t += step;
-		}
-
-		// Loop through the raw coordinates, and map them correctly to frame numbers.  For example,
-		// we can't have duplicate X values, since X represents our frame  numbers.
-		int64_t current_frame = p1.co.X;
-		double current_value = p1.co.Y;
-		for (int64_t i = 0; i < raw_coordinates.size(); i++)
-		{
-			// Get the raw coordinate
-			Coordinate raw = raw_coordinates[i];
-
-			if (current_frame == round(raw.X))
-				// get value of raw coordinate
-				current_value = raw.Y;
-			else
-			{
-				// Missing X values (use last known Y values)
-				int64_t number_of_missing = round(raw.X) - current_frame;
-				for (int64_t missing = 0; missing < number_of_missing; missing++)
-				{
-					// Add new value to the vector
-					Coordinate new_coord(current_frame, current_value);
-
-					if (Segment == 0 || (Segment > 0 && current_frame > p1.co.X))
-						// Add to "values" vector
-						Values.push_back(new_coord);
-
-					// Increment frame
-					current_frame++;
-				}
-
-				// increment the current value
-				current_value = raw.Y;
-			}
-		}
-
-		// Add final coordinate
-		Coordinate new_coord(current_frame, current_value);
-		Values.push_back(new_coord);
-
-		break;
-	}
-
-		// Calculate the "values" of this segment by maintaining the value of p1 until the
-		// last point, and then make the value jump to p2.  This effectively just jumps
-		// the value, instead of ramping up or down the value.
-	case CONSTANT: {
-
-		if (Segment == 0)
-			// first segment has 1 extra value
-			number_of_values++;
-
-		// Add each increment to the values vector
-		for (int64_t x = 0; x < number_of_values; x++) {
-			if (x < (number_of_values - 1)) {
-				// Not the last value of this segment
-				// add coordinate to "values"
-				Values.push_back(Coordinate(Values.size(), p1.co.Y));
-			} else {
-				// This is the last value of this segment
-				// add coordinate to "values"
-				Values.push_back(Coordinate(Values.size(), p2.co.Y));
-			}
-		}
-		break;
-	}
-
-	}
-}
-
-// Create lookup table for fast factorial calculation
-void Keyframe::CreateFactorialTable() {
-	// Only 4 lookups are needed, because we only support 4 coordinates per curve
-	FactorialLookup[0] = 1.0;
-	FactorialLookup[1] = 1.0;
-	FactorialLookup[2] = 2.0;
-	FactorialLookup[3] = 6.0;
-}
-
-// Get a factorial for a coordinate
-double Keyframe::Factorial(int64_t n) {
-	assert(n >= 0 && n <= 3);
-	return FactorialLookup[n]; /* returns the value n! as a SUMORealing point number */
-}
-
-// Calculate the factorial function for Bernstein basis
-double Keyframe::Ni(int64_t n, int64_t i) {
-	double ni;
-	double a1 = Factorial(n);
-	double a2 = Factorial(i);
-	double a3 = Factorial(n - i);
-	ni = a1 / (a2 * a3);
-	return ni;
-}
-
-// Calculate Bernstein basis
-double Keyframe::Bernstein(int64_t n, int64_t i, double t) {
-	double basis;
-	double ti; /* t^i */
-	double tni; /* (1 - t)^i */
-
-	/* Prevent problems with pow */
-	if (t == 0.0 && i == 0)
-		ti = 1.0;
-	else
-		ti = pow(t, i);
-
-	if (n == i && t == 1.0)
-		tni = 1.0;
-	else
-		tni = pow((1 - t), (n - i));
-
-	// Bernstein basis
-	basis = Ni(n, i) * ti * tni;
-	return basis;
-}
 
 // Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 // 1.0 = same size, 1.05 = 5% increase, etc...
 void Keyframe::ScalePoints(double scale)
 {
-	// Loop through each point (skipping the 1st point)
-	for (int64_t point_index = 0; point_index < Points.size(); point_index++) {
-		// Skip the 1st point
-		if (point_index == 0)
-			continue;
+	// TODO: What if scale is small so that two points land on the
+	// same X coordinate?
+	// TODO: What if scale < 0?
 
+	// Loop through each point (skipping the 1st point)
+	for (int64_t point_index = 1; point_index < Points.size(); point_index++) {
 		// Scale X value
 		Points[point_index].co.X = round(Points[point_index].co.X * scale);
-
-		// Mark for re-processing
-		needs_update = true;
 	}
 }
 
 // Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
-void Keyframe::FlipPoints()
-{
-	// Loop through each point
-	vector<Point> FlippedPoints;
-	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < Points.size(); point_index++, reverse_index--) {
+void Keyframe::FlipPoints() {
+	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
 		// Flip the points
-		Point p = Points[point_index];
-		p.co.Y = Points[reverse_index].co.Y;
-		FlippedPoints.push_back(p);
+		using std::swap;
+		swap(Points[point_index].co.Y, Points[reverse_index].co.Y);
+		// TODO: check that this has the desired effect even with
+		// regards to handles!
 	}
-
-	// Swap vectors
-	Points.swap(FlippedPoints);
-
-	// Mark for re-processing
-	needs_update = true;
 }

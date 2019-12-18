@@ -6,8 +6,8 @@
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -29,6 +29,9 @@
 
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
+
+/* Don't generate multiple wrappers for functions with default args */
+%feature("compactdefaultargs", "1");
 
 /* Enable inline documentation */
 %feature("autodoc", "1");
@@ -53,7 +56,6 @@
 #endif
 %shared_ptr(juce::AudioSampleBuffer)
 %shared_ptr(openshot::Frame)
-%shared_ptr(Frame)
 
 %{
 #include "OpenShotVersion.h"
@@ -83,8 +85,10 @@
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
+#include "../../../include/QtHtmlReader.h"
 #include "../../../include/QtImageReader.h"
 #include "../../../include/QtPlayer.h"
+#include "../../../include/QtTextReader.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Settings.h"
@@ -120,6 +124,47 @@
 	}
 }
 
+/* Instantiate the required template specializations */
+%template() std::map<std::string, int>;
+
+/* Make openshot.Fraction more Pythonic */
+%extend openshot::Fraction {
+%{
+	#include <sstream>
+	#include <map>
+%}
+	double __float__() {
+		return $self->ToDouble();
+	}
+	int __int__() {
+		return $self->ToInt();
+	}
+	std::map<std::string, int> GetMap() {
+		std::map<std::string, int> map1;
+		map1.insert({"num", $self->num});
+		map1.insert({"den", $self->den});
+		return map1;
+	}
+	std::string __repr__() {
+		std::ostringstream result;
+		result << $self->num << ":" << $self->den;
+		return result.str();
+  }
+}
+
+%extend openshot::OpenShotVersion {
+        // Give the struct a string representation
+	const std::string __str__() {
+		return std::string(OPENSHOT_VERSION_FULL);
+	}
+	// And a repr for interactive use
+	const std::string __repr__() {
+		std::ostringstream result;
+		result << "OpenShotVersion('" << OPENSHOT_VERSION_FULL << "')";
+		return result.str();
+	}
+}
+
 %include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
@@ -151,8 +196,10 @@
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
+%include "../../../include/QtHtmlReader.h"
 %include "../../../include/QtImageReader.h"
 %include "../../../include/QtPlayer.h"
+%include "../../../include/QtTextReader.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Settings.h"
@@ -184,13 +231,11 @@
 
 
 /* Wrap std templates (list, vector, etc...) */
-namespace std {
- %template(ClipList) list<Clip *>;
- %template(EffectBaseList) list<EffectBase *>;
- %template(CoordinateVector) vector<Coordinate>;
- %template(PointsVector) vector<Point>;
- %template(FieldVector) vector<Field>;
- %template(MappedFrameVector) vector<MappedFrame>;
- %template(MappedMetadata) map<string, string>;
- %template(AudioDeviceInfoVector) vector<AudioDeviceInfo>;
-}
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MappedMetadata) std::map<std::string, std::string>;
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

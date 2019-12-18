@@ -26,9 +26,6 @@
 
 include(CTest)
 
-# Pick up our include directories from the parent context
-include_directories(${OPENSHOT_INCLUDE_DIRS})
-
 SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
 
 ################ WINDOWS ##################
@@ -79,83 +76,12 @@ IF (ImageMagick_FOUND)
 
 ENDIF (ImageMagick_FOUND)
 
-################### FFMPEG #####################
-# Find FFmpeg libraries (used for video encoding / decoding)
-FIND_PACKAGE(FFmpeg REQUIRED)
-
-# Include FFmpeg headers (needed for compile)
-IF (AVCODEC_FOUND)
-	include_directories(${AVCODEC_INCLUDE_DIRS})
-ENDIF (AVCODEC_FOUND)
-IF (AVDEVICE_FOUND)
-	include_directories(${AVDEVICE_INCLUDE_DIRS})
-ENDIF (AVDEVICE_FOUND)
-IF (AVFORMAT_FOUND)
-	include_directories(${AVFORMAT_INCLUDE_DIRS})
-ENDIF (AVFORMAT_FOUND)
-IF (AVFILTER_FOUND)
-	include_directories(${AVFILTER_INCLUDE_DIRS})
-ENDIF (AVFILTER_FOUND)
-IF (AVUTIL_FOUND)
-	include_directories(${AVUTIL_INCLUDE_DIRS})
-ENDIF (AVUTIL_FOUND)
-IF (POSTPROC_FOUND)
-	include_directories(${POSTPROC_INCLUDE_DIRS})
-ENDIF (POSTPROC_FOUND)
-IF (SWSCALE_FOUND)
-	include_directories(${SWSCALE_INCLUDE_DIRS})
-ENDIF (SWSCALE_FOUND)
-IF (SWRESAMPLE_FOUND)
-	include_directories(${SWRESAMPLE_INCLUDE_DIRS})
-ENDIF (SWRESAMPLE_FOUND)
-IF (AVRESAMPLE_FOUND)
-	include_directories(${AVRESAMPLE_INCLUDE_DIRS})
-ENDIF (AVRESAMPLE_FOUND)
-
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
-
-################# QT5 ###################
-# Find QT5 libraries
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5Multimedia REQUIRED)
-find_package(Qt5MultimediaWidgets REQUIRED)
-
-# Include Qt headers (needed for compile)
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-include_directories(${Qt5Core_INCLUDE_DIRS})
-include_directories(${Qt5Gui_INCLUDE_DIRS})
-include_directories(${Qt5Multimedia_INCLUDE_DIRS})
-include_directories(${Qt5MultimediaWidgets_INCLUDE_DIRS})
-
-add_definitions(${Qt5Widgets_DEFINITIONS})
-add_definitions(${Qt5Core_DEFINITIONS})
-add_definitions(${Qt5Gui_DEFINITIONS})
-add_definitions(${Qt5Multimedia_DEFINITIONS})
-add_definitions(${Qt5MultimediaWidgets_DEFINITIONS})
-
-SET(QT_LIBRARIES ${Qt5Widgets_LIBRARIES}
-				 ${Qt5Core_LIBRARIES}
-				 ${Qt5Gui_LIBRARIES}
-				 ${Qt5Multimedia_LIBRARIES}
-				 ${Qt5MultimediaWidgets_LIBRARIES})
-
-# Set compiler flags for Qt
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Core_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Gui_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Multimedia_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5MultimediaWidgets_EXECUTABLE_COMPILE_FLAGS} ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb ")
-
-# Manually moc Qt files
-qt5_wrap_cpp(MOC_FILES ${QT_HEADER_FILES})
 
 
 ################# BLACKMAGIC DECKLINK ###################
@@ -169,20 +95,6 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-################### OPENMP #####################
-# Check for OpenMP (used for multi-core processing)
-FIND_PACKAGE(OpenMP)
-
-if (OPENMP_FOUND)
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ")
-endif(OPENMP_FOUND)
-
-################### ZEROMQ #####################
-# Find ZeroMQ library (used for socket communication & logging)
-FIND_PACKAGE(ZMQ REQUIRED)
-
-# Include ZeroMQ headers (needed for compile)
-include_directories(${ZMQ_INCLUDE_DIRS})
 
 ################### RESVG #####################
 # Find resvg library (used for rendering svg files)
@@ -193,50 +105,43 @@ if (RESVG_FOUND)
 	include_directories(${RESVG_INCLUDE_DIRS})
 endif(RESVG_FOUND)
 
-################### JSONCPP #####################
-# Include jsoncpp headers (needed for JSON parsing)
-if (USE_SYSTEM_JSONCPP)
-	find_package(JsonCpp REQUIRED)
-	include_directories(${JSONCPP_INCLUDE_DIRS})
-else()
-	include_directories("../thirdparty/jsoncpp")
-endif(USE_SYSTEM_JSONCPP)
 
-IF (NOT DISABLE_TESTS)
-	# Each testname is expected to correspond to a file ${testname}_Tests.cpp
-	# in the tests/ directory
-	SET ( OPENSHOT_TESTS
-		   Cache
-		   Clip
-		   Color
-		   Coordinate
-		   ReaderBase
-		   ImageWriter
-		   FFmpegReader
-		   FFmpegWriter
-		   Fraction
-		   FrameMapper
-		   KeyFrame
-		   Point
-		   Settings
-		   Timeline )
+###############  SET TEST SOURCE FILES  #################
+# Each testname is expected to correspond to a file ${testname}_Tests.cpp
+# in the tests/ directory
+set(OPENSHOT_TESTS
+	Cache
+	Clip
+	Color
+	Coordinate
+	ReaderBase
+	ImageWriter
+	FFmpegReader
+	FFmpegWriter
+	Fraction
+	FrameMapper
+	KeyFrame
+	Point
+	Settings
+	Timeline )
 
-	foreach(testname IN LISTS OPENSHOT_TESTS)
-		# Create unit test executable (openshot-${testname}-test)
-		add_executable(openshot-${testname}-test
-			tests.cpp
-			"${testname}_Tests.cpp" )
+foreach(testname IN LISTS OPENSHOT_TESTS)
+	# Create unit test executable (openshot-${testname}-test)
+	add_executable(openshot-${testname}-test
+		tests.cpp
+		"${testname}_Tests.cpp" )
 
-		# Link libraries to the new executable
-		target_link_libraries(openshot-${testname}-test
-			openshot
-			${UNITTEST++_LIBRARY} )
+	# Link libraries to the new executable
+	target_link_libraries(openshot-${testname}-test
+		openshot
+		${UNITTEST++_LIBRARY} )
 
-		add_test(NAME ${testname} COMMAND openshot-${testname}-test)
-		list(APPEND TEST_TARGETS COMMAND openshot-${testname}-test)
-	endforeach()
+	add_test(NAME ${testname} COMMAND openshot-${testname}-test)
+	list(APPEND TEST_TARGETS COMMAND openshot-${testname}-test)
+endforeach()
 
-	# Legacy: Add a custom os_test target that depends on all of the
-	# other test executables
-	add_custom_target(os_test ${TEST_TARGETS})
-ENDIF (NOT DISABLE_TESTS)
+##### RUNNING TESTS (make os_test / make test) #####
+# Hook up the 'make os_test' target to the test executables
+add_custom_target(os_test ${TEST_TARGETS}
+	DEPENDS openshot
+	DESCRIPTION "Run tests with 'make test' or 'make os_test'")

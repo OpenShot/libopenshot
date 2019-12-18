@@ -43,8 +43,6 @@
 #include "Exceptions.h"
 #include "Fraction.h"
 
-using namespace std;
-
 namespace openshot
 {
 	/**
@@ -56,7 +54,7 @@ namespace openshot
 	class DummyReader : public ReaderBase
 	{
 	private:
-		std::shared_ptr<Frame> image_frame;
+		std::shared_ptr<openshot::Frame> image_frame;
 		bool is_open;
 
 	public:
@@ -65,7 +63,7 @@ namespace openshot
 		DummyReader();
 
 		/// Constructor for DummyReader.
-		DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration);
+		DummyReader(openshot::Fraction fps, int width, int height, int sample_rate, int channels, float duration);
 
 		virtual ~DummyReader();
 
@@ -80,17 +78,17 @@ namespace openshot
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "DummyReader"; };
+		std::string Name() { return "DummyReader"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 

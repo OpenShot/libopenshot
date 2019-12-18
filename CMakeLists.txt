@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.1...3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.2...3.14 FATAL_ERROR)
 
 message("\
 -----------------------------------------------------------------
@@ -56,7 +56,7 @@ STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
-Generating build files for OpenShot
+Generating build files for OpenShot with CMake ${CMAKE_VERSION}
   Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
@@ -69,18 +69,20 @@ include(CTest)
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
 include(GNUInstallDirs)
 
+# Collect and display summary of options/dependencies
+include(FeatureSummary)
+
+################ OPTIONS ##################
+# Optional build settings for libopenshot
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
-
-############### Set up include paths #################
-list(APPEND OPENSHOT_INCLUDE_DIRS
-    include
-    include/effects
-    include/Qt
-    ${CMAKE_CURRENT_BINARY_DIR}/include )
 
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
@@ -91,27 +93,40 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
-############## FIND ALL QT RELATED HEADERS ##############
-set(QT_HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include/Qt)
-FILE(GLOB QT_HEADER_FILES "${QT_HEADER_DIR}/*.h")
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-############## PROCESS SUB-DIRECTORIES ##############
+############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
-
-if (NOT DISABLE_TESTS)
-	enable_testing()
-	add_subdirectory(tests)
-endif()
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
 include(cmake/Modules/UseDoxygen.cmake)
 
-# Install docs, if the user builds them with `make doc`
-install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+# Doxygen was found
+if (TARGET doc)
+	message(STATUS "Doxygen found, documentation target enabled")
+	message("\nTo compile documentation in doc/html, run: 'make doc'")
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-        DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-        MESSAGE_NEVER # Don't spew about file copies
-        OPTIONAL )    # No error if the docs aren't found
+  # Install docs, if the user builds them with `make doc`
+  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+  install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+          MESSAGE_NEVER # Don't spew about file copies
+          OPTIONAL )    # No error if the docs aren't found
+endif()
+
+############# PROCESS tests/ DIRECTORY ##############
+if(NOT DISABLE_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+    INCLUDE_QUIET_PACKAGES
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")

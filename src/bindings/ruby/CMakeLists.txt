@@ -24,9 +24,6 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-# Pick up our include directories from the parent context
-include_directories(${OPENSHOT_INCLUDE_DIRS})
-
 ############### RUBY BINDINGS ################
 FIND_PACKAGE(SWIG 3.0 REQUIRED)
 INCLUDE(${SWIG_USE_FILE})
@@ -50,12 +47,18 @@ IF (RUBY_FOUND)
 	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
-	SET(CMAKE_SWIG_FLAGS "")
 	### Suppress a ton of warnings in the generated SWIG C++ code
 	set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
 -Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
 	separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
 	set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+
+	### Take include dirs from target, automatically if possible
+	if (CMAKE_VERSION VERSION_GREATER 3.13)
+		set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
+	else ()
+		set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+	endif ()
 
 	### Add the SWIG interface file (which defines all the SWIG methods)
 	if (CMAKE_VERSION VERSION_LESS 3.8.0)
