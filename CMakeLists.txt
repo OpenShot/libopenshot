@@ -36,7 +36,7 @@ you of any missing files or other issues.
 For more information, please visit <http://www.openshot.org/>.
 -----------------------------------------------------------------")
 
-################ ADD CMAKE MODULES ##################
+################ LOCAL CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
@@ -76,7 +76,9 @@ include(FeatureSummary)
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(DISABLE_TESTS "Don't build unit tests" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
 
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
@@ -96,6 +98,22 @@ ENDIF(WIN32)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+############## Code Coverage #########################
+if (DISABLE_TESTS AND ENABLE_COVERAGE)
+  message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
+  set(DISABLE_TESTS OFF CACHE BOOL "Don't build unit tests" FORCE)
+endif()
+
+if (ENABLE_COVERAGE)
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug")
+    message(STATUS "Coverage enabled, setting missing CMAKE_BUILD_TYPE to Debug")
+  endif()
+  include(CodeCoverage)
+  append_coverage_compiler_flags()
+endif()
+add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
@@ -120,9 +138,18 @@ if (TARGET doc)
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############
-if(NOT DISABLE_TESTS)
+if(NOT DISABLE_TESTS OR ENABLE_COVERAGE)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+############## COVERAGE REPORTING #################
+if (ENABLE_COVERAGE)
+  setup_target_for_coverage_lcov(
+    NAME coverage
+    EXECUTABLE ctest
+    DEPENDENCIES test)
+    message("Generate coverage report with 'make coverage'")
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############
