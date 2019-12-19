@@ -33,49 +33,38 @@ set(CMAKE_AUTOMOC True)
 ################ WINDOWS ##################
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
-IF (WIN32)
+if (WIN32)
 	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-ENDIF(WIN32)
-IF (APPLE)
-	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
-	SET_PROPERTY(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	ADD_DEFINITIONS(-DNDEBUG)
-	SET(EXTENSION "mm")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cmath")
+endif()
 
-	SET(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
-	SET(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
-ENDIF(APPLE)
+if (APPLE)
+	add_definitions(-DNDEBUG)
+endif()
 
 ################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-IF (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-ELSE (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-IF (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-ELSE (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-ENDIF (MAGICKCORE_HDRI_ENABLE)
-IF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-
 # Find the ImageMagick++ library
-FIND_PACKAGE(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-IF (ImageMagick_FOUND)
+find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+if (ImageMagick_FOUND)
 	# Include ImageMagick++ headers (needed for compile)
 	include_directories(${ImageMagick_INCLUDE_DIRS})
 
 	# define a global var (used in the C++)
 	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	SET(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+	SET(CMAKE_SWIG_FLAGS ${CMAKE_SWIG_FLAGS} -DUSE_IMAGEMAGICK)
 
-ENDIF (ImageMagick_FOUND)
+  # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+  if (MAGICKCORE_QUANTUM_DEPTH)
+  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+  else()
+  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
+  endif()
+  if (MAGICKCORE_HDRI_ENABLE)
+  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+  else()
+  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
+  endif()
+endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -95,7 +84,7 @@ IF (ENABLE_BLACKMAGIC)
 
 		# define a global var (used in the C++)
 		add_definitions( -DUSE_BLACKMAGIC=1 )
-		SET(CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
+		SET(CMAKE_SWIG_FLAGS ${CMAKE_SWIG_FLAGS} -DUSE_BLACKMAGIC)
 
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
@@ -111,7 +100,7 @@ if (RESVG_FOUND)
 
    # define a global var (used in the C++)
    add_definitions( -DUSE_RESVG=1 )
-   SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+   SET(CMAKE_SWIG_FLAGS ${CMAKE_SWIG_FLAGS} -DUSE_RESVG)
 endif(RESVG_FOUND)
 
 ###############  PROFILING  #################

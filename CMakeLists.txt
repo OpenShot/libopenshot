@@ -61,13 +61,13 @@ Generating build files for OpenShot with CMake ${CMAKE_VERSION}
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
 
-# CTest testing framework
-include(CTest)
-
 # Define install paths according to system conventions
 # XXX: This must be AFTER THE PROJECT() COMMAND w/ languages enabled,
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
 include(GNUInstallDirs)
+
+# CTest testing framework
+include(CTest)
 
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
@@ -91,10 +91,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-IF (WIN32)
-	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
-ENDIF(WIN32)
-
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -108,7 +104,7 @@ endif()
 if (ENABLE_COVERAGE)
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
-    message(STATUS "Coverage enabled, setting missing CMAKE_BUILD_TYPE to Debug")
+    message(STATUS "Coverage enabled, set missing CMAKE_BUILD_TYPE to Debug")
   endif()
   include(CodeCoverage)
   append_coverage_compiler_flags()
@@ -141,15 +137,16 @@ endif()
 if(NOT DISABLE_TESTS OR ENABLE_COVERAGE)
   enable_testing()
   add_subdirectory(tests)
+  set(TESTS_ENABLED TRUE)
 endif()
+add_feature_info("Unit tests" TESTS_ENABLED "run a series of unit tests on library functions")
 
 ############## COVERAGE REPORTING #################
-if (ENABLE_COVERAGE)
-  setup_target_for_coverage_lcov(
-    NAME coverage
-    EXECUTABLE ctest
-    DEPENDENCIES test)
-    message("Generate coverage report with 'make coverage'")
+if (ENABLE_COVERAGE AND COVERAGE_TARGETS)
+  add_custom_target(coverage
+    COMMAND ${CMAKE_MAKE_PROGRAM} os_test
+    COMMENT "Generate coverage reports with 'make coverage'")
+  add_dependencies(coverage ${COVERAGE_TARGETS})
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############
