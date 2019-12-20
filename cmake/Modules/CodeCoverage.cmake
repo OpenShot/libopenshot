@@ -56,6 +56,9 @@
 # - Remove Python detection, since version mismatches will break gcovr
 # - Minor cleanup (lowercase function names, update examples...)
 #
+# 2019-12-19, FeRD (Frank Dana)
+# - Rename Lcov outputs, make filtered file canonical, fix cleanup for targets
+#
 # USAGE:
 #
 # 1. Copy this file into your cmake modules path.
@@ -81,7 +84,7 @@
 #          NAME coverage
 #          EXECUTABLE testrunner
 #          EXCLUDE "${PROJECT_SOURCE_DIR}/src/dir1/*" "/path/to/my/src/dir2/*")
-# 
+#
 # 4.a NOTE: With CMake 3.4+, COVERAGE_EXCLUDES or EXCLUDE can also be set
 #     relative to the BASE_DIRECTORY (default: PROJECT_SOURCE_DIR)
 #     Example:
@@ -220,16 +223,22 @@ function(setup_target_for_coverage_lcov)
         COMMAND ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
 
         # Capturing lcov counters and generating report
-        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --directory . -b ${BASEDIR} --capture --output-file ${Coverage_NAME}.info
+        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --directory . -b ${BASEDIR} --capture --output-file ${Coverage_NAME}.capture
         # add baseline counters
-        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -a ${Coverage_NAME}.base -a ${Coverage_NAME}.info --output-file ${Coverage_NAME}.total
-        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --remove ${Coverage_NAME}.total ${LCOV_EXCLUDES} --output-file ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -a ${Coverage_NAME}.base -a ${Coverage_NAME}.capture --output-file ${Coverage_NAME}.total
+        # filter collected data to final coverage report
+        COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --remove ${Coverage_NAME}.total ${LCOV_EXCLUDES} --output-file ${Coverage_NAME}.info
 
         # Generate HTML output
-        COMMAND ${GENHTML_PATH} ${GENHTML_EXTRA_ARGS} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
+        COMMAND ${GENHTML_PATH} ${GENHTML_EXTRA_ARGS} ${Coverage_GENHTML_ARGS} -o ${Coverage_NAME} ${Coverage_NAME}.info
 
-        COMMAND ${CMAKE_COMMAND} -E remove ${Coverage_NAME}.base ${Coverage_NAME}.total ${PROJECT_BINARY_DIR}/${Coverage_NAME}.info.cleaned
-        BYPRODUCTS ${Coverage_NAME}.info
+        # Set output files as GENERATED (will be removed on 'make clean')
+        BYPRODUCTS
+            ${Coverage_NAME}.base
+            ${Coverage_NAME}.capture
+            ${Coverage_NAME}.total
+            ${Coverage_NAME}.info
+            ${Coverage_NAME}  # report directory
 
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
@@ -247,11 +256,6 @@ function(setup_target_for_coverage_lcov)
         COMMAND ;
         COMMENT "Open ./${Coverage_NAME}/index.html in your browser to view the coverage report."
     )
-
-    # Clean up output on 'make clean'
-    set_property(DIRECTORY APPEND PROPERTY
-        ADDITIONAL_MAKE_CLEAN_FILES
-        ${Coverage_NAME})
 
 endfunction() # setup_target_for_coverage_lcov
 
@@ -314,6 +318,7 @@ function(setup_target_for_coverage_gcovr_xml)
             -r ${BASEDIR} ${GCOVR_EXCLUDE_ARGS}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}.xml
+        BYPRODUCTS ${Coverage_NAME}.xml
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
         COMMENT "Running gcovr to produce Cobertura code coverage report."
@@ -324,12 +329,6 @@ function(setup_target_for_coverage_gcovr_xml)
         COMMAND ;
         COMMENT "Cobertura code coverage report saved in ${Coverage_NAME}.xml."
     )
-
-    # Clean up output on 'make clean'
-    set_property(DIRECTORY APPEND PROPERTY
-        ADDITIONAL_MAKE_CLEAN_FILES
-        ${Coverage_NAME})
-
 endfunction() # setup_target_for_coverage_gcovr_xml
 
 # Defines a target for running and collection code coverage information
@@ -394,6 +393,7 @@ function(setup_target_for_coverage_gcovr_html)
             -r ${BASEDIR} ${GCOVR_EXCLUDE_ARGS}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}/index.html
+        BYPRODUCTS ${PROJECT_BINARY_DIR}/${Coverage_NAME}  # report directory
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
         COMMENT "Running gcovr to produce HTML code coverage report."
@@ -404,11 +404,6 @@ function(setup_target_for_coverage_gcovr_html)
         COMMAND ;
         COMMENT "Open ./${Coverage_NAME}/index.html in your browser to view the coverage report."
     )
-
-    # Clean up output on 'make clean'
-    set_property(DIRECTORY APPEND PROPERTY
-        ADDITIONAL_MAKE_CLEAN_FILES
-        ${Coverage_NAME})
 
 endfunction() # setup_target_for_coverage_gcovr_html
 
