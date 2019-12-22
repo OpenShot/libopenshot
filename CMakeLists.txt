@@ -143,6 +143,7 @@ endif()
 if (ENABLE_COVERAGE)
   setup_target_for_coverage_lcov(
     NAME coverage
+    LCOV_ARGS "--no-external"
     EXECUTABLE openshot-test
     DEPENDENCIES openshot-test)
     message("Generate coverage report with 'make coverage'")
