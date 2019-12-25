@@ -423,7 +423,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
-					case AV_CODEC_ID_H265 :
+					case AV_CODEC_ID_HEVC :
 						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
@@ -482,7 +482,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
-					case AV_CODEC_ID_H265 :
+					case AV_CODEC_ID_HEVC :
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
@@ -1162,7 +1162,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 			case AV_CODEC_ID_AV1 :
 #endif
 			case AV_CODEC_ID_VP9 :
-			case AV_CODEC_ID_H265 :
+			case AV_CODEC_ID_HEVC :
 #endif
 			case AV_CODEC_ID_VP8 :
 			case AV_CODEC_ID_H264 :
@@ -1200,7 +1200,8 @@ AVStream *FFmpegWriter::add_video_stream() {
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
-#if LIBAVFORMAT_VERSION_MAJOR >= 56
+// AVCodecContext->framerate was added in FFmpeg 2.2
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 26, 0)
 	c->framerate = av_inv_q(c->time_base);
 #endif
 	st->avg_frame_rate = av_inv_q(c->time_base);
