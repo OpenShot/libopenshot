@@ -379,8 +379,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	}
 
-	// Skip out if only an audio frame
-	if (!source_clip->Waveform() && !source_clip->Reader()->info.has_video)
+	// Skip out if video was disabled or only an audio frame (no visualisation in use)
+	if (source_clip->has_video.GetInt(clip_frame_number) == 0 ||
+	    (!source_clip->Waveform() && !source_clip->Reader()->info.has_video))
 		// Skip the rest of the image processing for performance reasons
 		return;
 
