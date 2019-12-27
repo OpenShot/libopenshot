@@ -1417,7 +1417,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				// unless "qp" was set for CQP, switch to VBR RC mode
 				av_opt_set(video_codec->priv_data, "rc_mode", "VBR", 0);
 
-				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR, 
+				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR,
 				// one has to specify both bit_rate and maxrate, otherwise a small low quality file is generated on Intel iGPU).
 				video_codec->rc_max_rate = video_codec->bit_rate;
 			}
@@ -1569,9 +1569,6 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			total_frame_samples *= (float(info.sample_rate) / sample_rate_in_frame); // adjust for different byte sizes
 			total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
 
-			// Set remaining samples
-			remaining_frame_samples = total_frame_samples;
-
 			// Create output frame (and allocate arrays)
 			AVFrame *audio_converted = AV_ALLOCATE_FRAME();
 			AV_RESET_FRAME(audio_converted);
@@ -1603,6 +1600,9 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 									 audio_frame->data,               // input data pointers
 									 audio_frame->linesize[0],        // input plane size, in bytes (0 if unknown)
 									 audio_frame->nb_samples);        // number of input samples to convert
+
+			// Set remaining samples
+			remaining_frame_samples = nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
 			// Create a new array (to hold all resampled S16 audio samples)
 			all_resampled_samples = (int16_t *) av_malloc(
