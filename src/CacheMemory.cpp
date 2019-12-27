@@ -39,7 +39,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Constructor that sets the max bytes to cache
 CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
@@ -47,7 +47,7 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Default destructor
 CacheMemory::~CacheMemory()

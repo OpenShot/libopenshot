@@ -333,9 +333,7 @@ Json::Value Keyframe::JsonValue() const {
 	root["Points"] = Json::Value(Json::arrayValue);
 
 	// loop through points, and find a matching coordinate
-	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
+	for (auto existing_point : Points) {
 		root["Points"].append(existing_point.JsonValue());
 	}
 
@@ -379,10 +377,7 @@ void Keyframe::SetJsonValue(Json::Value root) {
 
 	if (!root["Points"].isNull())
 		// loop through points
-		for (int64_t x = 0; x < root["Points"].size(); x++) {
-			// Get each point
-			Json::Value existing_point = root["Points"][(Json::UInt) x];
-
+		for (const auto existing_point : root["Points"]) {
 			// Create Point
 			Point p;
 

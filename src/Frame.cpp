@@ -43,7 +43,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), 
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int64_t number, int width, int height, std::string color)
@@ -56,7 +56,7 @@ Frame::Frame(int64_t number, int width, int height, std::string color)
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int64_t number, int samples, int channels) :
@@ -69,7 +69,7 @@ Frame::Frame(int64_t number, int samples, int channels) :
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
@@ -82,7 +82,7 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 
 // Copy constructor
