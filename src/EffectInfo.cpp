@@ -88,7 +88,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	return NULL;
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value EffectInfo::JsonValue() {
 
 	// Create root json object

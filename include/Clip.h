@@ -192,18 +192,18 @@ namespace openshot {
 		openshot::ReaderBase* Reader();
 
 		/// Override End() method
-		float End(); ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
+		float End() const; ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
-		std::string Json(); ///< Generate JSON string of this object
-		void SetJson(std::string value); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		std::string Json() const override; ///< Generate JSON string of this object
+		void SetJson(const std::string value); ///< Load JSON string into this object
+		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		std::string PropertiesJSON(int64_t requested_frame);
+		std::string PropertiesJSON(int64_t requested_frame) const override;
 
 		/// @brief Remove an effect from the clip
 		/// @param effect Remove an effect from the clip.

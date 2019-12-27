@@ -977,14 +977,14 @@ void Timeline::SetCache(CacheBase* new_cache) {
 }
 
 // Generate JSON string of this object
-std::string Timeline::Json() {
+std::string Timeline::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Timeline::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Timeline::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -998,7 +998,7 @@ Json::Value Timeline::JsonValue() {
 	root["clips"] = Json::Value(Json::arrayValue);
 
 	// Find Clips at this time
-	std::list<Clip*>::iterator clip_itr;
+	std::list<Clip*>::const_iterator clip_itr;
 	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
 	{
 		// Get clip object from the iterator
@@ -1010,7 +1010,7 @@ Json::Value Timeline::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	std::list<EffectBase*>::iterator effect_itr;
+	std::list<EffectBase*>::const_iterator effect_itr;
 	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
 	{
 		// Get clip object from the iterator
@@ -1023,27 +1023,15 @@ Json::Value Timeline::JsonValue() {
 }
 
 // Load JSON string into this object
-void Timeline::SetJson(std::string value) {
+void Timeline::SetJson(const std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -1054,8 +1042,8 @@ void Timeline::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Timeline::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Timeline::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	bool was_open = is_open;
@@ -1128,21 +1116,9 @@ void Timeline::ApplyJsonDiff(std::string value) {
     const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success || !root.isArray())
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid).");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Process the JSON change array, loop through each item
 		for (int x = 0; x < root.size(); x++) {
 			// Get each change

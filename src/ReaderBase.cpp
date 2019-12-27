@@ -113,8 +113,8 @@ void ReaderBase::DisplayInfo() {
 		std::cout << "--> " << it->first << ": " << it->second << std::endl;
 }
 
-// Generate Json::JsonValue for this object
-Json::Value ReaderBase::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ReaderBase::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -160,7 +160,7 @@ Json::Value ReaderBase::JsonValue() {
 
 	// Append metadata map
 	root["metadata"] = Json::Value(Json::objectValue);
-	std::map<std::string, std::string>::iterator it;
+	std::map<std::string, std::string>::const_iterator it;
 	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
 		root["metadata"][it->first] = it->second;
 
@@ -168,8 +168,8 @@ Json::Value ReaderBase::JsonValue() {
 	return root;
 }
 
-// Load Json::JsonValue into this object
-void ReaderBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ReaderBase::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["has_video"].isNull())
@@ -244,7 +244,7 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 			info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 	}
 	if (!root["metadata"].isNull() && root["metadata"].isObject()) {
-		for( Json::Value::iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
+		for( Json::Value::const_iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
 			std::string key = itr.key().asString();
 			info.metadata[key] = root["metadata"][key].asString();
 		}

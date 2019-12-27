@@ -74,14 +74,14 @@ int EffectBase::constrain(int color_value)
 }
 
 // Generate JSON string of this object
-std::string EffectBase::Json() {
+std::string EffectBase::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value EffectBase::JsonValue() {
+// Generate Json::Value for this object
+Json::Value EffectBase::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
@@ -98,24 +98,12 @@ Json::Value EffectBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void EffectBase::SetJson(std::string value) {
+void EffectBase::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -126,8 +114,8 @@ void EffectBase::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void EffectBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void EffectBase::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ClipBase::SetJsonValue(root);
@@ -137,8 +125,8 @@ void EffectBase::SetJsonValue(Json::Value root) {
 		Order(root["order"].asInt());
 }
 
-// Generate Json::JsonValue for this object
-Json::Value EffectBase::JsonInfo() {
+// Generate Json::Value for this object
+Json::Value EffectBase::JsonInfo() const {
 
 	// Create root json object
 	Json::Value root;

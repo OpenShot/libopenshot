@@ -164,6 +164,7 @@ set(OPENSHOT_SOURCES
   Fraction.cpp
   Frame.cpp
   FrameMapper.cpp
+	Json.cpp
   KeyFrame.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp

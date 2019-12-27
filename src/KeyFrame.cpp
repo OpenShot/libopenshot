@@ -325,17 +325,15 @@ std::string Keyframe::Json() const {
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value Keyframe::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
 	root["Points"] = Json::Value(Json::arrayValue);
 
-	// loop through points, and find a matching coordinate
-	for (int x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
+	// loop through points
+	for (const auto existing_point : Points) {
 		root["Points"].append(existing_point.JsonValue());
 	}
 
@@ -344,24 +342,12 @@ Json::Value Keyframe::JsonValue() const {
 }
 
 // Load JSON string into this object
-void Keyframe::SetJson(std::string value) {
+void Keyframe::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -372,17 +358,14 @@ void Keyframe::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Keyframe::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Keyframe::SetJsonValue(const Json::Value root) {
 	// Clear existing points
 	Points.clear();
 
 	if (!root["Points"].isNull())
 		// loop through points
-		for (int64_t x = 0; x < root["Points"].size(); x++) {
-			// Get each point
-			Json::Value existing_point = root["Points"][(Json::UInt) x];
-
+		for (const auto existing_point : root["Points"]) {
 			// Create Point
 			Point p;
 

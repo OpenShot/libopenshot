@@ -49,9 +49,9 @@ TEST(ReaderBase_Derived_Class)
 		std::shared_ptr<Frame> GetFrame(int64_t number) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
-		string Json() { return NULL; };
+		string Json() const { return NULL; };
 		void SetJson(string value) { };
-		Json::Value JsonValue() { return (int) NULL; };
+		Json::Value JsonValue() const { return (int) NULL; };
 		void SetJsonValue(Json::Value root) { };
 		bool IsOpen() { return true; };
 		string Name() { return "TestReader"; };
