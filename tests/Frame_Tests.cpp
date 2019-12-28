@@ -46,7 +46,7 @@ TEST(Default_Constructor)
 	// Create a "blank" default Frame
 	std::shared_ptr<Frame> f1(new Frame());
 
-	REQUIRE CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
+	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
 
 	// Check basic default parameters
 	CHECK_EQUAL(1, f1->GetHeight());
@@ -61,7 +61,7 @@ TEST(Default_Constructor)
 	// Calling GetImage() paints a blank frame, by default
 	std::shared_ptr<QImage> i1 = f1->GetImage();
 
-	REQUIRE CHECK(i1 != nullptr);
+	CHECK(i1 != nullptr);
 
 	CHECK_EQUAL(true,f1->has_image_data);
 	CHECK_EQUAL(false,f1->has_audio_data);
@@ -79,7 +79,7 @@ TEST(Data_Access)
 	// Get first frame
 	std::shared_ptr<Frame> f1 = c1.GetFrame(1);
 
-	REQUIRE CHECK(f1 != nullptr);
+	CHECK(f1 != nullptr);
 
 	CHECK_EQUAL(1, f1->number);
 	CHECK_EQUAL(1280, f1->GetWidth());
@@ -97,8 +97,8 @@ TEST(AddImage_QImage)
 	path << TEST_MEDIA_PATH << "front.png";
 	std::shared_ptr<QImage> i1(new QImage(QString::fromStdString(path.str()))) ;
 
-	REQUIRE CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
-	REQUIRE CHECK_EQUAL(false, i1->isNull());
+	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
+	CHECK_EQUAL(false, i1->isNull());
 
 	f1->AddImage(i1);
 
@@ -119,7 +119,7 @@ TEST(Copy_Constructor)
 	path << TEST_MEDIA_PATH << "front.png";
 	std::shared_ptr<QImage> i1( new QImage(QString::fromStdString(path.str())) );
 
-	REQUIRE CHECK_EQUAL(false, i1->isNull());
+	CHECK_EQUAL(false, i1->isNull());
 
 	// Add image to f1, then copy f1 to f2
 	f1.AddImage(i1);
