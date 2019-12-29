@@ -73,9 +73,14 @@ include(FeatureSummary)
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
-option(DISABLE_TESTS "Don't build unit tests" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
-option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
+option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
+option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
+
+# Legacy commandline override
+if (DISABLE_TESTS)
+  set(ENABLE_TESTS OFF CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
+endif()
 
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
@@ -124,27 +129,32 @@ add_subdirectory(src)
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
-include(cmake/Modules/UseDoxygen.cmake)
+set(DOCS_ENABLED FALSE) # Only set true if Doxygen is found and configured
+if (ENABLE_DOCS)
+  include(cmake/Modules/UseDoxygen.cmake)
 
-# Doxygen was found
-if (TARGET doc)
-	message(STATUS "Doxygen found, documentation target enabled")
-	message("\nTo compile documentation in doc/html, run: 'make doc'")
+  # Doxygen was found
+  if (TARGET doc)
+  	message(STATUS "Doxygen found, documentation target enabled")
+  	set(DOCS_ENABLED TRUE)
 
-  # Install docs, if the user builds them with `make doc`
-  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-  install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+    # Install docs, if the user builds them with `make doc`
+    install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+    install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-          MESSAGE_NEVER # Don't spew about file copies
-          OPTIONAL )    # No error if the docs aren't found
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+            DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+            MESSAGE_NEVER # Don't spew about file copies
+            OPTIONAL )    # No error if the docs aren't found
+  endif()
 endif()
+add_feature_info("Documentation" DOCS_ENABLED "Build API documentation with 'make doc'")
 
 ############# PROCESS tests/ DIRECTORY ##############
-if(NOT DISABLE_TESTS)
+if(ENABLE_TESTS)
   add_subdirectory(tests)
 endif()
+add_feature_info("Unit tests" ENABLE_TESTS "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE)

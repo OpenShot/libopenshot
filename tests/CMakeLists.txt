@@ -125,7 +125,6 @@ target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable
 ADD_CUSTOM_TARGET(os_test COMMAND openshot-test)
-list(APPEND OS_TEST_CMDS "'make os_test'")
 
 # Also hook up 'make test', if possible
 # This requires CMake 3.11+, where the CMP0037 policy
@@ -137,8 +136,8 @@ endif()
 if (CMAKE_VERSION VERSION_GREATER 3.11)
 	message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
 	add_custom_target(test COMMAND openshot-test)
-	list(APPEND OS_TEST_CMDS " or " "'make test'")
+	set(TEST_TARGET_NAME "test")
+else()
+  set(TEST_TARGET_NAME "os_test")
 endif()
-
-string(CONCAT t ${OS_TEST_CMDS})
-message("\nTo run unit tests, use: ${t}")
+add_feature_info("Testrunner" ENABLE_TESTS "Run unit tests with 'make ${TEST_TARGET_NAME}'")
