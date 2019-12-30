@@ -33,13 +33,12 @@ addons:
 
 matrix:
 
-  # The FFmpeg4 PPA is currently down as a protest
-  allow_failures:
-  - env: BUILD_VERSION=ffmpeg4
-
   include:
     - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
-      env: BUILD_VERSION=ffmpeg2
+      env:
+        - BUILD_VERSION=ffmpeg2
+        - CMAKE_EXTRA_ARGS=""
+        - MAKE_TARGET="os_test"
       os: linux
       dist: xenial
       addons:
@@ -51,7 +50,10 @@ matrix:
           - *ff_common
 
     - name: "FFmpeg 3 GCC (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg3
+      env:
+        - BUILD_VERSION=ffmpeg3
+        - CMAKE_EXTRA_ARGS=""
+        - MAKE_TARGET="test"
       os: linux
       dist: bionic
       addons:
@@ -64,7 +66,10 @@ matrix:
           - qt5-default
 
     - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg4
+      env:
+        - BUILD_VERSION=ffmpeg4
+        - CMAKE_EXTRA_ARGS=""
+        - MAKE_TARGET="test"
       os: linux
       dist: bionic
       addons:
@@ -87,7 +92,10 @@ matrix:
           - libswresample3
 
     - name: "FFmpeg 3 Clang (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg3
+      env:
+        - BUILD_VERSION=clang_ffmpeg3
+        - CMAKE_EXTRA_ARGS=""
+        - MAKE_TARGET="test"
       os: linux
       dist: bionic
       compiler: clang
@@ -101,9 +109,29 @@ matrix:
           - qt5-default
           - libomp-dev
 
+
+    - name: "Coverage (Ubuntu 18.04 Bionic)"
+      env:
+        - BUILD_VERSION=coverage
+        - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
+        - MAKE_TARGET="coverage"
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+          packages:
+          - *ff_common
+          - qt5-default
+          - libomp-dev
+          - lcov
+          - binutils-common # For c++filt
+
 script:
   - mkdir -p build; cd build;
-  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ../
+  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
-  - make os_test
+  - make ${MAKE_TARGET}
   - make install DESTDIR="$BUILD_VERSION"
