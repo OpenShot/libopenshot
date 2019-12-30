@@ -18,6 +18,8 @@ addons:
     - qtmultimedia5-dev
     - doxygen
     - graphviz
+    - curl
+    - jq
     packages: &ff_common  # Common set of FFmpeg packages
     - *p_common
     - libfdk-aac-dev
@@ -38,7 +40,7 @@ matrix:
       env:
         - BUILD_VERSION=ffmpeg2
         - CMAKE_EXTRA_ARGS=""
-        - MAKE_TARGET="os_test"
+        - TEST_TARGET="os_test"
       os: linux
       dist: xenial
       addons:
@@ -53,7 +55,7 @@ matrix:
       env:
         - BUILD_VERSION=ffmpeg3
         - CMAKE_EXTRA_ARGS=""
-        - MAKE_TARGET="test"
+        - TEST_TARGET=test
       os: linux
       dist: bionic
       addons:
@@ -69,7 +71,7 @@ matrix:
       env:
         - BUILD_VERSION=ffmpeg4
         - CMAKE_EXTRA_ARGS=""
-        - MAKE_TARGET="test"
+        - TEST_TARGET=test
       os: linux
       dist: bionic
       addons:
@@ -95,7 +97,7 @@ matrix:
       env:
         - BUILD_VERSION=clang_ffmpeg3
         - CMAKE_EXTRA_ARGS=""
-        - MAKE_TARGET="test"
+        - TEST_TARGET=test
       os: linux
       dist: bionic
       compiler: clang
@@ -112,9 +114,9 @@ matrix:
 
     - name: "Coverage (Ubuntu 18.04 Bionic)"
       env:
-        - BUILD_VERSION=coverage
+        - BUILD_VERSION=coverage_ffmpeg3
         - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
-        - MAKE_TARGET="coverage"
+        - TEST_TARGET=coverage
       os: linux
       dist: bionic
       addons:
@@ -125,13 +127,20 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
-          - libomp-dev
           - lcov
           - binutils-common # For c++filt
+
+before_script:
+  - CODACY_VERSION="$(curl -Ls https://api.bintray.com/packages/codacy/Binaries/codacy-coverage-reporter/versions/_latest | jq -r .name)"
+  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then curl -Ls -o codacy-coverage-reporter "https://dl.bintray.com/codacy/Binaries/${CODACY_VERSION}/codacy-coverage-reporter-linux"; chmod +x codacy-coverage-reporter; fi
 
 script:
   - mkdir -p build; cd build;
   - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
-  - make ${MAKE_TARGET}
+  - make ${TEST_TARGET}
   - make install DESTDIR="$BUILD_VERSION"
+  - cd ..
+
+after_success:
+  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then ./codacy-coverage-reporter report -l CPP -r build/coverage.info; fi
