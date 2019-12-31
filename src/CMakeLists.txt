@@ -27,12 +27,6 @@
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
 
-################ OPTIONS ##################
-# Optional build settings for libopenshot
-option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
-option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
-option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
-
 # Automatically process Qt classes with meta-object compiler
 set(CMAKE_AUTOMOC True)
 
@@ -425,12 +419,6 @@ ENDIF (BLACKMAGIC_FOUND)
 
 ############### INCLUDE SWIG BINDINGS ################
 add_subdirectory(bindings)
-
-########### PRINT FEATURE SUMMARY ##############
-feature_summary(WHAT ALL
-    INCLUDE_QUIET_PACKAGES
-    FATAL_ON_MISSING_REQUIRED_PACKAGES
-    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
 
 ############### INSTALL HEADERS & LIBRARY ################
 set(LIB_INSTALL_DIR lib${LIB_SUFFIX}) # determine correct lib folder

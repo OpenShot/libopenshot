@@ -66,6 +66,17 @@ Generating build files for OpenShot with CMake ${CMAKE_VERSION}
 #      in order to properly configure CMAKE_INSTALL_LIBDIR path
 include(GNUInstallDirs)
 
+# Collect and display summary of options/dependencies
+include(FeatureSummary)
+
+################ OPTIONS ##################
+# Optional build settings for libopenshot
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+option(DISABLE_TESTS "Don't build unit tests" OFF)
+option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
+option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
+
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
@@ -84,6 +95,22 @@ ENDIF(WIN32)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+############## Code Coverage #########################
+if (DISABLE_TESTS AND ENABLE_COVERAGE)
+  message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
+  set(DISABLE_TESTS OFF CACHE BOOL "Don't build unit tests" FORCE)
+endif()
+
+if (ENABLE_COVERAGE)
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug")
+    message(STATUS "Coverage enabled, setting build type to Debug")
+  endif()
+  include(CodeCoverage)
+  APPEND_COVERAGE_COMPILER_FLAGS()
+endif()
+add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
@@ -111,3 +138,19 @@ endif()
 if(NOT DISABLE_TESTS)
   add_subdirectory(tests)
 endif()
+
+############## COVERAGE REPORTING #################
+if (ENABLE_COVERAGE)
+  setup_target_for_coverage_lcov(
+    NAME coverage
+    LCOV_ARGS "--no-external"
+    EXECUTABLE openshot-test
+    DEPENDENCIES openshot-test)
+    message("Generate coverage report with 'make coverage'")
+endif()
+
+########### PRINT FEATURE SUMMARY ##############
+feature_summary(WHAT ALL
+    INCLUDE_QUIET_PACKAGES
+    FATAL_ON_MISSING_REQUIRED_PACKAGES
+    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
