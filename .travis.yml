@@ -19,7 +19,6 @@ addons:
     - doxygen
     - graphviz
     - curl
-    - jq
     packages: &ff_common  # Common set of FFmpeg packages
     - *p_common
     - libfdk-aac-dev
@@ -111,7 +110,6 @@ matrix:
           - qt5-default
           - libomp-dev
 
-
     - name: "Coverage (Ubuntu 18.04 Bionic)"
       env:
         - BUILD_VERSION=coverage_ffmpeg3
@@ -130,10 +128,6 @@ matrix:
           - lcov
           - binutils-common # For c++filt
 
-before_script:
-  - CODACY_VERSION="$(curl -Ls https://api.bintray.com/packages/codacy/Binaries/codacy-coverage-reporter/versions/_latest | jq -r .name)"
-  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then curl -Ls -o codacy-coverage-reporter "https://dl.bintray.com/codacy/Binaries/${CODACY_VERSION}/codacy-coverage-reporter-linux"; chmod +x codacy-coverage-reporter; fi
-
 script:
   - mkdir -p build; cd build;
   - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
@@ -143,4 +137,4 @@ script:
   - cd ..
 
 after_success:
-  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then ./codacy-coverage-reporter report -l CPP -r build/coverage.info; fi
+  - if [ "x$TEST_TARGET" = "xcoverage" ]; then bash <(curl -s https://codecov.io/bash) -f build/coverage.info || echo "Codecov did not collect coverage reports"; fi
