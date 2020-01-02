@@ -1483,7 +1483,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 		ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
-		int16_t *all_queued_samples = (int16_t *) av_malloc((sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE)));
+		unsigned int all_queued_samples_size = sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		int16_t *all_queued_samples = (int16_t *) av_malloc(all_queued_samples_size);
 		int16_t *all_resampled_samples = NULL;
 		int16_t *final_samples_planar = NULL;
 		int16_t *final_samples = NULL;
@@ -1543,8 +1544,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 			// Fill input frame with sample data
-			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples,
-									 audio_encoder_buffer_size, 0);
+			int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
+			if (error_code < 0) {
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
+			}
 
 			// Do not convert audio to planar format (yet). We need to keep everything interleaved at this point.
 			switch (audio_codec->sample_fmt) {
