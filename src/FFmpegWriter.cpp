@@ -615,7 +615,7 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "cache_size", cache_size, "is_writing", is_writing);
 
 	// Write the frames once it reaches the correct cache size
-	if (spooled_video_frames.size() == cache_size || spooled_audio_frames.size() == cache_size) {
+	if ((int)spooled_video_frames.size() == cache_size || (int)spooled_audio_frames.size() == cache_size) {
 		// Is writer currently writing?
 		if (!is_writing)
 			// Write frames to video file
@@ -1083,7 +1083,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 
 	// Set a valid number of channels (or throw error)
-	int channel_layout = info.channel_layout;
+	const uint64_t channel_layout = info.channel_layout;
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)

@@ -108,9 +108,8 @@ void ReaderBase::DisplayInfo() {
 	std::cout << "----------------------------" << std::endl;
 
 	// Iterate through metadata
-	std::map<std::string, std::string>::iterator it;
-	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
-		std::cout << "--> " << it->first << ": " << it->second << std::endl;
+	for (auto it : info.metadata)
+		std::cout << "--> " << it.first << ": " << it.second << std::endl;
 }
 
 // Generate Json::JsonValue for this object
@@ -160,9 +159,8 @@ Json::Value ReaderBase::JsonValue() {
 
 	// Append metadata map
 	root["metadata"] = Json::Value(Json::objectValue);
-	std::map<std::string, std::string>::iterator it;
-	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
-		root["metadata"][it->first] = it->second;
+	for (auto it : info.metadata)
+		root["metadata"][it.first] = it.second;
 
 	// return JsonValue
 	return root;

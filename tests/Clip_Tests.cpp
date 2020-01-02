@@ -241,7 +241,7 @@ TEST(Clip_Effects)
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
-	CHECK_EQUAL(1, c10.Effects().size());
+	CHECK_EQUAL(1, (int)c10.Effects().size());
 
 
 	// Add a 2nd negate effect
@@ -262,5 +262,5 @@ TEST(Clip_Effects)
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
-	CHECK_EQUAL(2, c10.Effects().size());
+	CHECK_EQUAL(2, (int)c10.Effects().size());
 }
