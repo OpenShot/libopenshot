@@ -109,7 +109,7 @@ void Frame::DeepCopy(const Frame& other)
 	width = other.width;
 	height = other.height;
 	channel_layout = other.channel_layout;
-	has_audio_data = other.has_image_data;
+	has_audio_data = other.has_audio_data;
 	has_image_data = other.has_image_data;
 	sample_rate = other.sample_rate;
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);

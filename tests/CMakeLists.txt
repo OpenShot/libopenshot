@@ -115,6 +115,7 @@ SET ( OPENSHOT_TEST_FILES
 	   FFmpegReader_Tests.cpp
 	   FFmpegWriter_Tests.cpp
 	   Fraction_Tests.cpp
+     Frame_Tests.cpp
 	   FrameMapper_Tests.cpp
 	   KeyFrame_Tests.cpp
 	   Point_Tests.cpp
