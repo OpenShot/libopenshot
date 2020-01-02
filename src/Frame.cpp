@@ -114,6 +114,7 @@ void Frame::DeepCopy(const Frame& other)
 	sample_rate = other.sample_rate;
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	color = other.color;
+	max_audio_sample = other.max_audio_sample;
 
 	if (other.image)
 		image = std::shared_ptr<QImage>(new QImage(*(other.image)));
