@@ -31,6 +31,11 @@
 #ifndef OPENSHOT_CLIPBASE_H
 #define OPENSHOT_CLIPBASE_H
 
+/// Do not include the juce unittest headers, because it collides with unittest++
+#ifndef __JUCE_UNITTEST_JUCEHEADER__
+	#define __JUCE_UNITTEST_JUCEHEADER__
+#endif
+
 #include <memory>
 #include <sstream>
 #include "Exceptions.h"

@@ -31,6 +31,11 @@
 #ifndef OPENSHOT_CLIP_H
 #define OPENSHOT_CLIP_H
 
+/// Do not include the juce unittest headers, because it collides with unittest++
+#ifndef __JUCE_UNITTEST_JUCEHEADER__
+	#define __JUCE_UNITTEST_JUCEHEADER__
+#endif
+
 #include <memory>
 #include <string>
 #include <QtGui/QImage>

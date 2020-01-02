@@ -31,6 +31,16 @@
 #ifndef OPENSHOT_RESAMPLER_H
 #define OPENSHOT_RESAMPLER_H
 
+/// Do not include the juce unittest headers, because it collides with unittest++
+#ifndef __JUCE_UNITTEST_JUCEHEADER__
+	#define __JUCE_UNITTEST_JUCEHEADER__
+#endif
+
+#ifndef _NDEBUG
+	// Define NO debug for JUCE on mac os
+	#define _NDEBUG
+#endif
+
 #include "AudioBufferSource.h"
 #include "Exceptions.h"
 #include "JuceHeader.h"
