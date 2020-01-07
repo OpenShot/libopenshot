@@ -79,7 +79,7 @@ ENDIF (ImageMagick_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
+FIND_PACKAGE(OpenShotAudio 0.1.9 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
