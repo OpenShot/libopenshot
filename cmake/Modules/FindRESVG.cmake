@@ -42,8 +42,8 @@ Copyright (c) 2020, FeRD (Frank Dana) <ferdnyc@gmail.com>
 include(FindPackageHandleStandardArgs)
 
 # CMake 3.4+ only: Convert relative paths to absolute
-if(CMAKE_VERSION VERSION_GREATER 3.4)
-  get_filename_component(RESVGDIR ${RESVGDIR} ABSOLUTE
+if(DEFINED RESVGDIR AND CMAKE_VERSION VERSION_GREATER 3.4)
+  get_filename_component(RESVGDIR "${RESVGDIR}" ABSOLUTE
     BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
