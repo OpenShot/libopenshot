@@ -94,13 +94,17 @@ find_package_handle_standard_args(RESVG
 # Export target
 if(RESVG_FOUND AND NOT TARGET RESVG::resvg)
   message(STATUS "Creating IMPORTED target RESVG::resvg")
-  add_library(RESVG::resvg UNKNOWN IMPORTED)
+  add_library(RESVG::resvg SHARED IMPORTED)
 
   set_target_properties(RESVG::resvg PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${RESVG_INCLUDE_DIRS}")
 
   set_property(TARGET RESVG::resvg APPEND PROPERTY
     INTERFACE_COMPILE_DEFINITIONS "${RESVG_DEFINITIONS}")
+
+  # libresvg.so doesn't have a SONAME
+  set_property(TARGET RESVG::resvg APPEND PROPERTY
+    IMPORTED_NO_SONAME TRUE)
 
   set_property(TARGET RESVG::resvg APPEND PROPERTY
     IMPORTED_LOCATION "${RESVG_LIBRARIES}")
