@@ -71,7 +71,7 @@ void QtImageReader::Open()
 	if (!is_open)
 	{
 		bool success = true;
-		image = std::shared_ptr<QImage>(new QImage());
+		bool loaded = false;
 
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
@@ -80,38 +80,32 @@ void QtImageReader::Open()
 		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
 
 			ResvgRenderer renderer(path);
-			if (!renderer.isValid()) {
-				// Attempt to open file (old method using Qt5 limited SVG parsing)
-				success = image->load(path);
-				if (success) {
-					image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
-				}
-			} else {
+			if (renderer.isValid()) {
 
-				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_RGBA8888));
+				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied));
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
 				renderer.render(&p);
 				p.end();
+				loaded = true;
 			}
-
-		} else {
-			// Attempt to open file (old method)
-			success = image->load(path);
-			if (success)
-				image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 		}
-#else
-		// Attempt to open file using Qt's build in image processing capabilities
-		success = image->load(path);
-		if (success)
-			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
 
-		if (!success)
+		if (!loaded) {
+			// Attempt to open file using Qt's build in image processing capabilities
+			image = std::shared_ptr<QImage>(new QImage());
+			success = image->load(path);
+		}
+
+		if (!success) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
+		}
+
+		// Convert to proper format
+		image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Update image properties
 		info.has_audio = false;
