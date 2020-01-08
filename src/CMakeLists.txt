@@ -100,20 +100,6 @@ IF (ENABLE_BLACKMAGIC)
 	ENDIF (BLACKMAGIC_FOUND)
 ENDIF (ENABLE_BLACKMAGIC)
 
-
-################### RESVG #####################
-# Find resvg library (used for rendering svg files)
-FIND_PACKAGE(RESVG)
-
-# Include resvg headers (optional SVG library)
-if (RESVG_FOUND)
-   include_directories(${RESVG_INCLUDE_DIRS})
-
-   # define a global var (used in the C++)
-   add_definitions( -DUSE_RESVG=1 )
-   SET(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
-endif(RESVG_FOUND)
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -357,6 +343,27 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
+################### RESVG #####################
+# Migrate some legacy variable names
+if(DEFINED RESVGDIR AND NOT DEFINED RESVG_ROOT)
+  set(RESVG_ROOT ${RESVGDIR})
+endif()
+if(DEFINED ENV{RESVGDIR} AND NOT DEFINED RESVG_ROOT)
+  set(RESVG_ROOT $ENV{RESVGDIR})
+endif()
+
+# Find resvg library (used for rendering svg files)
+FIND_PACKAGE(RESVG)
+
+# Include resvg headers (optional SVG library)
+if (TARGET RESVG::resvg)
+  #include_directories(${RESVG_INCLUDE_DIRS})
+  target_link_libraries(openshot PUBLIC RESVG::resvg)
+
+  # define a global var (used in the C++)
+  add_definitions( -DUSE_RESVG=1 )
+  set(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+endif()
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
@@ -366,10 +373,6 @@ target_link_libraries(openshot PUBLIC
 
 if(ImageMagick_FOUND)
   target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
-endif()
-
-if(RESVG_FOUND)
-  target_link_libraries(openshot PUBLIC ${RESVG_LIBRARIES})
 endif()
 
 if(BLACKMAGIC_FOUND)
