@@ -94,16 +94,6 @@ IF (ENABLE_BLACKMAGIC)
 ENDIF (ENABLE_BLACKMAGIC)
 
 
-################### RESVG #####################
-# Find resvg library (used for rendering svg files)
-FIND_PACKAGE(RESVG)
-
-# Include resvg headers (optional SVG library)
-if (RESVG_FOUND)
-	include_directories(${RESVG_INCLUDE_DIRS})
-endif(RESVG_FOUND)
-
-
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES
 	   Cache_Tests.cpp
