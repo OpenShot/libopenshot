@@ -360,8 +360,7 @@ if (TARGET RESVG::resvg)
   #include_directories(${RESVG_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC RESVG::resvg)
 
-  # define a global var (used in the C++)
-  add_definitions( -DUSE_RESVG=1 )
+  target_compile_definitions(openshot PUBLIC "-DUSE_RESVG=1")
   set(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
 endif()
 
