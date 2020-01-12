@@ -94,9 +94,23 @@ find_package_handle_standard_args(RESVG
 # Export target
 if(RESVG_FOUND AND NOT TARGET RESVG::resvg)
   message(STATUS "Creating IMPORTED target RESVG::resvg")
-  add_library(RESVG::resvg UNKNOWN IMPORTED)
+  if (WIN32)
+    # Windows mis-links SHARED library targets
+    add_library(RESVG::resvg UNKNOWN IMPORTED)
+    message(STATUS "  UNKNOWN IMPORTED target for Win32")
+  else()
+    # Linux needs SHARED to link because libresvg has no SONAME
+    add_library(RESVG::resvg SHARED IMPORTED)
+    set_property(TARGET RESVG::resvg APPEND PROPERTY
+      IMPORTED_NO_SONAME TRUE)
+    message(STATUS "  SHARED IMPORTED target with IMPORTED_NO_SONAME")
+  endif()
 
-  set_target_properties(RESVG::resvg PROPERTIES
+  message(STATUS "  INCLUDE_DIRECTORIES: ${RESVG_INCLUDE_DIRS}")
+  message(STATUS "  COMPILE_DEFINITIONS: ${RESVG_DEFINITIONS}")
+  message(STATUS "  IMPORTED_LOCATION: ${RESVG_LIBRARIES}")
+
+  set_property(TARGET RESVG::resvg APPEND PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES "${RESVG_INCLUDE_DIRS}")
 
   set_property(TARGET RESVG::resvg APPEND PROPERTY
