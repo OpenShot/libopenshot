@@ -76,7 +76,7 @@ ENDIF (ImageMagick_FOUND)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-FIND_PACKAGE(OpenShotAudio 0.1.8 REQUIRED)
+FIND_PACKAGE(OpenShotAudio 0.1.9 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
@@ -94,16 +94,6 @@ IF (ENABLE_BLACKMAGIC)
 ENDIF (ENABLE_BLACKMAGIC)
 
 
-################### RESVG #####################
-# Find resvg library (used for rendering svg files)
-FIND_PACKAGE(RESVG)
-
-# Include resvg headers (optional SVG library)
-if (RESVG_FOUND)
-	include_directories(${RESVG_INCLUDE_DIRS})
-endif(RESVG_FOUND)
-
-
 ###############  SET TEST SOURCE FILES  #################
 SET ( OPENSHOT_TEST_FILES
 	   Cache_Tests.cpp
@@ -115,6 +105,7 @@ SET ( OPENSHOT_TEST_FILES
 	   FFmpegReader_Tests.cpp
 	   FFmpegWriter_Tests.cpp
 	   Fraction_Tests.cpp
+     Frame_Tests.cpp
 	   FrameMapper_Tests.cpp
 	   KeyFrame_Tests.cpp
 	   Point_Tests.cpp

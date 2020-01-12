@@ -33,6 +33,7 @@ addons:
     - libswresample-dev
 
 matrix:
+
   include:
     - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
       env:
@@ -64,6 +65,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
 
     - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
       env:
@@ -81,6 +83,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
           - libavcodec58
           - libavformat58
           - libavdevice58
@@ -129,7 +132,7 @@ matrix:
 
 script:
   - mkdir -p build; cd build;
-  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ../
+  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
   - make ${TEST_TARGET}
   - make install DESTDIR="$BUILD_VERSION"

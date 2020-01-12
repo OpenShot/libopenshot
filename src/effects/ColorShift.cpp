@@ -53,7 +53,7 @@ void ColorShift::init_effect_details()
 	InitEffectInfo();
 
 	/// Set the effect info
-	info.class_name = "Color Shift";
+	info.class_name = "ColorShift";
 	info.name = "Color Shift";
 	info.description = "Shift the colors of an image up, down, left, and right (with infinite wrapping).";
 	info.has_audio = false;
