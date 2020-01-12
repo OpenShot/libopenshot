@@ -79,7 +79,16 @@ option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
-  set(ENABLE_TESTS OFF CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
+  if(ENABLE_COVERAGE)
+    message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
+    set(ENABLE_TESTS ON)
+  else()
+    set(ENABLE_TESTS OFF)
+  endif()
+endif()
+
+if(DEFINED ENABLE_TESTS)
+  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
 endif()
 
 ########## Configure Version.h header ##############
@@ -120,7 +129,7 @@ if (ENABLE_COVERAGE)
     message(STATUS "Coverage enabled, setting build type to Debug")
   endif()
   include(CodeCoverage)
-  APPEND_COVERAGE_COMPILER_FLAGS()
+  append_coverage_compiler_flags()
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
@@ -152,9 +161,10 @@ add_feature_info("Documentation" DOCS_ENABLED "Build API documentation with 'mak
 
 ############# PROCESS tests/ DIRECTORY ##############
 if(ENABLE_TESTS)
+  set(TESTS_ENABLED TRUE) # May be overridden by tests/CMakeLists.txt
   add_subdirectory(tests)
 endif()
-add_feature_info("Unit tests" ENABLE_TESTS "Compile unit tests for library functions")
+add_feature_info("Unit tests" TESTS_ENABLED "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE)
