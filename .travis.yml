@@ -66,6 +66,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
 
     - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
       env:
@@ -83,6 +84,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
           - libavcodec58
           - libavformat58
           - libavdevice58
