@@ -782,11 +782,8 @@ Json::Value Clip::JsonValue() const {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	std::list<EffectBase*>::const_iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (auto existing_effect : effects)
 	{
-		// Get clip object from the iterator
-		EffectBase *existing_effect = (*effect_itr);
 		root["effects"].append(existing_effect->JsonValue());
 	}
 
@@ -893,10 +890,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 		effects.clear();
 
 		// loop through effects
-		for (int x = 0; x < root["effects"].size(); x++) {
-			// Get each effect
-			Json::Value existing_effect = root["effects"][x];
-
+		for (const auto existing_effect : root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
 
@@ -1013,12 +1007,8 @@ void Clip::RemoveEffect(EffectBase* effect)
 std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
-	std::list<EffectBase*>::iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (auto effect : effects)
 	{
-		// Get clip object from the iterator
-		EffectBase *effect = (*effect_itr);
-
 		// Apply the effect to this frame
 		frame = effect->GetFrame(frame, frame->number);
 

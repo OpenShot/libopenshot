@@ -615,7 +615,7 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "cache_size", cache_size, "is_writing", is_writing);
 
 	// Write the frames once it reaches the correct cache size
-	if (spooled_video_frames.size() == cache_size || spooled_audio_frames.size() == cache_size) {
+	if ((int)spooled_video_frames.size() == cache_size || (int)spooled_audio_frames.size() == cache_size) {
 		// Is writer currently writing?
 		if (!is_writing)
 			// Write frames to video file
@@ -1083,7 +1083,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 
 	// Set a valid number of channels (or throw error)
-	int channel_layout = info.channel_layout;
+	const uint64_t channel_layout = info.channel_layout;
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)
@@ -1418,7 +1418,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				// unless "qp" was set for CQP, switch to VBR RC mode
 				av_opt_set(video_codec->priv_data, "rc_mode", "VBR", 0);
 
-				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR, 
+				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR,
 				// one has to specify both bit_rate and maxrate, otherwise a small low quality file is generated on Intel iGPU).
 				video_codec->rc_max_rate = video_codec->bit_rate;
 			}
@@ -1483,7 +1483,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 		ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
-		int16_t *all_queued_samples = (int16_t *) av_malloc((sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE)));
+		unsigned int all_queued_samples_size = sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		int16_t *all_queued_samples = (int16_t *) av_malloc(all_queued_samples_size);
 		int16_t *all_resampled_samples = NULL;
 		int16_t *final_samples_planar = NULL;
 		int16_t *final_samples = NULL;
@@ -1543,8 +1544,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 			// Fill input frame with sample data
-			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples,
-									 audio_encoder_buffer_size, 0);
+			int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
+			if (error_code < 0) {
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
+			}
 
 			// Do not convert audio to planar format (yet). We need to keep everything interleaved at this point.
 			switch (audio_codec->sample_fmt) {
@@ -1564,14 +1567,15 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 					output_sample_fmt = AV_SAMPLE_FMT_U8;
 					break;
 				}
+				default: {
+					// This is only here to silence unused-enum warnings
+					break;
+				}
 			}
 
 			// Update total samples & input frame size (due to bigger or smaller data types)
 			total_frame_samples *= (float(info.sample_rate) / sample_rate_in_frame); // adjust for different byte sizes
 			total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
-
-			// Set remaining samples
-			remaining_frame_samples = total_frame_samples;
 
 			// Create output frame (and allocate arrays)
 			AVFrame *audio_converted = AV_ALLOCATE_FRAME();
@@ -1604,6 +1608,9 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 									 audio_frame->data,               // input data pointers
 									 audio_frame->linesize[0],        // input plane size, in bytes (0 if unknown)
 									 audio_frame->nb_samples);        // number of input samples to convert
+
+			// Set remaining samples
+			remaining_frame_samples = nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
 			// Create a new array (to hold all resampled S16 audio samples)
 			all_resampled_samples = (int16_t *) av_malloc(

@@ -169,7 +169,7 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 // Get the index of a point by matching a coordinate
 int64_t Keyframe::FindIndex(Point p) const {
 	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
+	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
 		// Get each point
 		Point existing_point = Points[x];
 
@@ -492,7 +492,7 @@ double Keyframe::GetDelta(int64_t index) const {
 // Get a point at a specific index
 Point const & Keyframe::GetPoint(int64_t index) const {
 	// Is index a valid point?
-	if (index >= 0 && index < Points.size())
+	if (index >= 0 && index < (int64_t)Points.size())
 		return Points[index];
 	else
 		// Invalid index
@@ -515,7 +515,7 @@ int64_t Keyframe::GetCount() const {
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) {
 	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
+	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
 		// Get each point
 		Point existing_point = Points[x];
 
@@ -534,7 +534,7 @@ void Keyframe::RemovePoint(Point p) {
 // Remove a point by index
 void Keyframe::RemovePoint(int64_t index) {
 	// Is index a valid point?
-	if (index >= 0 && index < Points.size())
+	if (index >= 0 && index < (int64_t)Points.size())
 	{
 		// Remove a specific point by index
 		Points.erase(Points.begin() + index);
@@ -564,7 +564,7 @@ void Keyframe::PrintValues() const {
 	cout << fixed << setprecision(4);
 	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
 
-	for (uint64_t i = 1; i < GetLength(); ++i) {
+	for (int64_t i = 1; i < GetLength(); ++i) {
 		cout << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
 		cout << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
 	}
@@ -580,7 +580,7 @@ void Keyframe::ScalePoints(double scale)
 	// TODO: What if scale < 0?
 
 	// Loop through each point (skipping the 1st point)
-	for (int64_t point_index = 1; point_index < Points.size(); point_index++) {
+	for (std::vector<Point>::size_type point_index = 1; point_index < Points.size(); point_index++) {
 		// Scale X value
 		Points[point_index].co.X = round(Points[point_index].co.X * scale);
 	}
@@ -588,7 +588,7 @@ void Keyframe::ScalePoints(double scale)
 
 // Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
 void Keyframe::FlipPoints() {
-	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
+	for (std::vector<Point>::size_type point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
 		// Flip the points
 		using std::swap;
 		swap(Points[point_index].co.Y, Points[reverse_index].co.Y);

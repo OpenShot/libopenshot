@@ -37,13 +37,13 @@ using namespace openshot;
 CacheBase::CacheBase() : max_bytes(0) {
 	// Init the critical section
 	cacheCriticalSection = new CriticalSection();
-};
+}
 
 // Constructor that sets the max frames to cache
 CacheBase::CacheBase(int64_t max_bytes) : max_bytes(max_bytes) {
 	// Init the critical section
 	cacheCriticalSection = new CriticalSection();
-};
+}
 
 // Set maximum bytes to a different amount based on a ReaderInfo struct
 void CacheBase::SetMaxBytesFromInfo(int64_t number_of_frames, int width, int height, int sample_rate, int channels)

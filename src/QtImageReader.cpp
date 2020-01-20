@@ -71,7 +71,7 @@ void QtImageReader::Open()
 	if (!is_open)
 	{
 		bool success = true;
-		image = std::shared_ptr<QImage>(new QImage());
+		bool loaded = false;
 
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
@@ -80,38 +80,32 @@ void QtImageReader::Open()
 		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
 
 			ResvgRenderer renderer(path);
-			if (!renderer.isValid()) {
-				// Attempt to open file (old method using Qt5 limited SVG parsing)
-				success = image->load(path);
-				if (success) {
-					image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
-				}
-			} else {
+			if (renderer.isValid()) {
 
-				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_RGBA8888));
+				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied));
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
 				renderer.render(&p);
 				p.end();
+				loaded = true;
 			}
-
-		} else {
-			// Attempt to open file (old method)
-			success = image->load(path);
-			if (success)
-				image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 		}
-#else
-		// Attempt to open file using Qt's build in image processing capabilities
-		success = image->load(path);
-		if (success)
-			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
 
-		if (!success)
+		if (!loaded) {
+			// Attempt to open file using Qt's build in image processing capabilities
+			image = std::shared_ptr<QImage>(new QImage());
+			success = image->load(path);
+		}
+
+		if (!success) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
+		}
+
+		// Convert to proper format
+		image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Update image properties
 		info.has_audio = false;
@@ -224,11 +218,14 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 
 	// Scale image smaller (or use a previous scaled image)
 	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
+
+		bool rendered = false;
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
 		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+
 			ResvgRenderer renderer(path);
 			if (renderer.isValid()) {
 				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
@@ -236,30 +233,25 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				svg_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
 				// Create empty QImage
-				cached_image = std::shared_ptr<QImage>(new QImage(QSize(svg_size.width(), svg_size.height()), QImage::Format_RGBA8888));
+				cached_image = std::shared_ptr<QImage>(new QImage(QSize(svg_size.width(), svg_size.height()), QImage::Format_ARGB32_Premultiplied));
 				cached_image->fill(Qt::transparent);
 
 				// Render SVG into QImage
 				QPainter p(cached_image.get());
 				renderer.render(&p);
 				p.end();
-			} else {
-				// Resize current rasterized SVG (since we failed to parse original SVG file with resvg)
-				cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-				cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
+				rendered = true;
 			}
-		} else {
+		}
+#endif
+
+		if (!rendered) {
 			// We need to resize the original image to a smaller image (for performance reasons)
 			// Only do this once, to prevent tons of unneeded scaling operations
 			cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-			cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
 		}
-#else
-		// We need to resize the original image to a smaller image (for performance reasons)
-		// Only do this once, to prevent tons of unneeded scaling operations
-		cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+
 		cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
-#endif
 
 		// Set max size (to later determine if max_size is changed)
 		max_size.setWidth(max_width);

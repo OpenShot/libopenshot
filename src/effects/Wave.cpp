@@ -95,7 +95,7 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value)); // Waveform algorithm on y-axis
 		float waveVal = (waveformVal + shift_x_value) * noiseAmp; // Shifts pixels on the x-axis
 
-		int source_X = round(pixel + waveVal) * 4;
+		long unsigned int source_X = round(pixel + waveVal) * 4;
 		if (source_X < 0)
 			source_X = 0;
 		if (source_X > frame_image->width() * frame_image->height() * 4 * sizeof(char))

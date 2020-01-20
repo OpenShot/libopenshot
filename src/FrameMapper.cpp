@@ -235,7 +235,7 @@ void FrameMapper::Init()
 	int64_t start_samples_frame = 1;
 	int start_samples_position = 0;
 
-	for (int64_t field = 1; field <= fields.size(); field++)
+	for (std::vector<Field>::size_type field = 1; field <= fields.size(); field++)
 	{
 		// Get the current field
 		Field f = fields[field - 1];
@@ -337,7 +337,7 @@ MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 		// frame too small, return error
 		throw OutOfBoundsFrame("An invalid frame was requested.", TargetFrameNumber, frames.size());
 
-	else if (TargetFrameNumber > frames.size())
+	else if (TargetFrameNumber > (int64_t)frames.size())
 		// frame too large, set to end frame
 		TargetFrameNumber = frames.size();
 

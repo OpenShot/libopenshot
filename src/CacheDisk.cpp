@@ -47,7 +47,7 @@ CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, 
 
 	// Init path directory
 	InitPath(cache_path);
-};
+}
 
 // Constructor that sets the max bytes to cache
 CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, float scale, int64_t max_bytes) : CacheBase(max_bytes) {
@@ -62,7 +62,7 @@ CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, 
 
 	// Init path directory
 	InitPath(cache_path);
-};
+}
 
 // Initialize cache directory
 void CacheDisk::InitPath(std::string cache_path) {
@@ -103,13 +103,11 @@ void CacheDisk::CalculateRanges() {
 		// Increment range version
 		range_version++;
 
-		std::vector<int64_t>::iterator itr_ordered;
 		int64_t starting_frame = *ordered_frame_numbers.begin();
-		int64_t ending_frame = *ordered_frame_numbers.begin();
+		int64_t ending_frame = starting_frame;
 
 		// Loop through all known frames (in sequential order)
-		for (itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered) {
-			int64_t frame_number = *itr_ordered;
+		for (const auto frame_number : ordered_frame_numbers) {
 			if (frame_number - ending_frame > 1) {
 				// End of range detected
 				Json::Value range;

@@ -50,7 +50,6 @@ namespace openshot
 	struct EffectInfoStruct
 	{
 		std::string class_name; ///< The class name of the effect
-		std::string short_name; ///< A short name of the effect, commonly used for icon names, etc...
 		std::string name; ///< The name of the effect
 		std::string description; ///< The description of this effect and what it does
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
