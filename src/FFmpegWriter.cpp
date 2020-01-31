@@ -277,6 +277,14 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	info.has_video = has_video;
 }
 
+// Set video export options (overloaded function)
+void FFmpegWriter::SetVideoOptions(std::string codec, Fraction fps, int width, int height, int bit_rate) {
+	// Call full signature with some default parameters
+	FFmpegWriter::SetVideoOptions(true, codec, fps, width, height,
+	                              openshot::Fraction(1, 1), false, true, bit_rate);
+}
+
+
 // Set audio export options
 void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate) {
 	// Set audio options
@@ -311,6 +319,14 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 	// Enable / Disable audio
 	info.has_audio = has_audio;
 }
+
+
+// Set audio export options (overloaded function)
+void FFmpegWriter::SetAudioOptions(std::string codec, int sample_rate, int bit_rate) {
+	// Call full signature with some default parameters
+	FFmpegWriter::SetAudioOptions(true, codec, sample_rate, 2, openshot::LAYOUT_STEREO, bit_rate);
+}
+
 
 // Set custom options (some codecs accept additional params)
 void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string value) {

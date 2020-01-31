@@ -287,6 +287,15 @@ namespace openshot {
 		/// @param bit_rate The audio bit rate used during encoding
 		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, openshot::ChannelLayout channel_layout, int bit_rate);
 
+		/// @brief Set audio export options.
+		///
+		/// Enables the stream and configures a default 2-channel stereo layout.
+		///
+		/// @param codec The codec used to encode the audio for this file
+		/// @param sample_rate The number of audio samples needed in this file
+		/// @param bit_rate The audio bit rate used during encoding
+		void SetAudioOptions(std::string codec, int sample_rate, int bit_rate);
+
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
 		void SetCacheSize(int new_size) { cache_size = new_size; };
@@ -303,8 +312,20 @@ namespace openshot {
 		/// @param bit_rate The video bit rate used during encoding
 		void SetVideoOptions(bool has_video, std::string codec, openshot::Fraction fps, int width, int height, openshot::Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
+		/// @brief Set video export options.
+		///
+		/// Enables the stream and configures non-interlaced video with a 1:1 pixel aspect ratio.
+		///
+		/// @param codec The codec used to encode the images in this video
+		/// @param fps The number of frames per second
+		/// @param width The width in pixels of this video
+		/// @param height The height in pixels of this video
+		/// @param bit_rate The video bit rate used during encoding
+		void SetVideoOptions(std::string codec, openshot::Fraction fps, int width, int height, int bit_rate);
+
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
+		///
 		/// @param stream The stream (openshot::StreamType) this option should apply to
 		/// @param name The name of the option you want to set (i.e. qmin, qmax, etc...)
 		/// @param value The new value of this option
