@@ -29,12 +29,13 @@
  */
 
 #include "../include/ZmqLogger.h"
+#include <thread>
+#include <chrono>
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"
 #endif
 
-using namespace std;
 using namespace openshot;
 
 
@@ -64,17 +65,16 @@ ZmqLogger *ZmqLogger::Instance()
 			// This can only happen 1 time or it will crash
 			ResvgRenderer::initLog();
 		#endif
-
 	}
 
 	return m_pInstance;
 }
 
 // Set the connection for this logger
-void ZmqLogger::Connection(string new_connection)
+void ZmqLogger::Connection(std::string new_connection)
 {
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
 	// Does anything need to happen?
 	if (new_connection == connection)
@@ -102,27 +102,27 @@ void ZmqLogger::Connection(string new_connection)
 		publisher->bind(connection.c_str());
 
 	} catch (zmq::error_t &e) {
-		cout << "ZmqLogger::Connection - Error binding to " << connection << ". Switching to an available port." << endl;
+		std::cout << "ZmqLogger::Connection - Error binding to " << connection << ". Switching to an available port." << std::endl;
 		connection = "tcp://*:*";
 		publisher->bind(connection.c_str());
 	}
 
 	// Sleeping to allow connection to wake up (0.25 seconds)
-	usleep(250000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
-void ZmqLogger::Log(string message)
+void ZmqLogger::Log(std::string message)
 {
 	if (!enabled)
 		// Don't do anything
 		return;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
-	memcpy (reply.data(), message.c_str(), message.length());
+	std::memcpy (reply.data(), message.c_str(), message.length());
 	publisher->send(reply);
 
 	// Write to log file (if opened, and force it to write to disk in case of a crash)
@@ -131,14 +131,14 @@ void ZmqLogger::Log(string message)
 }
 
 // Log message to a file (if path set)
-void ZmqLogger::LogToFile(string message)
+void ZmqLogger::LogToFile(std::string message)
 {
 	// Write to log file (if opened, and force it to write to disk in case of a crash)
 	if (log_file.is_open())
 		log_file << message << std::flush;
 }
 
-void ZmqLogger::Path(string new_path)
+void ZmqLogger::Path(std::string new_path)
 {
 	// Update path
 	file_path = new_path;
@@ -148,14 +148,14 @@ void ZmqLogger::Path(string new_path)
 		log_file.close();
 
 	// Open file (write + append)
-	log_file.open (file_path.c_str(), ios::out | ios::app);
+	log_file.open (file_path.c_str(), std::ios::out | std::ios::app);
 
 	// Get current time and log first message
-	time_t now = time(0);
-	tm* localtm = localtime(&now);
-	log_file << "------------------------------------------" << endl;
-	log_file << "libopenshot logging: " << asctime(localtm);
-	log_file << "------------------------------------------" << endl;
+	std::time_t now = std::time(0);
+	std::tm* localtm = std::localtime(&now);
+	log_file << "------------------------------------------" << std::endl;
+	log_file << "libopenshot logging: " << std::asctime(localtm);
+	log_file << "------------------------------------------" << std::endl;
 }
 
 void ZmqLogger::Close()
@@ -176,27 +176,28 @@ void ZmqLogger::Close()
 }
 
 // Append debug information
-void ZmqLogger::AppendDebugMethod(string method_name,
-				  string arg1_name, float arg1_value,
-				  string arg2_name, float arg2_value,
-				  string arg3_name, float arg3_value,
-				  string arg4_name, float arg4_value,
-				  string arg5_name, float arg5_value,
-				  string arg6_name, float arg6_value)
+void ZmqLogger::AppendDebugMethod(std::string method_name,
+	std::string arg1_name, float arg1_value,
+	std::string arg2_name, float arg2_value,
+	std::string arg3_name, float arg3_value,
+	std::string arg4_name, float arg4_value,
+	std::string arg5_name, float arg5_value,
+	std::string arg6_name, float arg6_value)
 {
-	if (!enabled)
+	if (!enabled && !openshot::Settings::Instance()->DEBUG_TO_STDERR)
 		// Don't do anything
 		return;
 
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+		const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
-		stringstream message;
-		message << fixed << setprecision(4);
+		std::stringstream message;
+		message << std::fixed << std::setprecision(4);
+
+		// Construct message
 		message << method_name << " (";
 
-		// Add attributes to method JSON
 		if (arg1_name.length() > 0)
 			message << arg1_name << "=" << arg1_value;
 
@@ -215,10 +216,16 @@ void ZmqLogger::AppendDebugMethod(string method_name,
 		if (arg6_name.length() > 0)
 			message << ", " << arg6_name << "=" << arg6_value;
 
-		// Output to standard output
-		message << ")" << endl;
+		message << ")" << std::endl;
 
-		// Send message through ZMQ
-		Log(message.str());
+		if (openshot::Settings::Instance()->DEBUG_TO_STDERR) {
+			// Print message to stderr
+			std::clog << message.str();
+		}
+
+		if (enabled) {
+			// Send message through ZMQ
+			Log(message.str());
+		}
 	}
 }

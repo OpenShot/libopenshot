@@ -124,6 +124,9 @@ namespace openshot {
 		/// The audio device name to use during playback
 		std::string PLAYBACK_AUDIO_DEVICE_NAME = "";
 
+		/// Whether to dump ZeroMQ debug messages to stderr
+		bool DEBUG_TO_STDERR = false;
+
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static Settings * Instance();
 	};
