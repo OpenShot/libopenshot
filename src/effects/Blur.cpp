@@ -74,131 +74,109 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	float sigma_value = sigma.GetValue(frame_number);
 	int iteration_value = iterations.GetInt(frame_number);
 
+	int w = frame_image->width();
+	int h = frame_image->height();
 
-	// Declare arrays for each color channel
-	unsigned char *red = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *green = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blue = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *alpha = new unsigned char[frame_image->width() * frame_image->height()]();
-	// Create empty target RGBA arrays (for the results of our blur)
-	unsigned char *blur_red = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_green = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_blue = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_alpha = new unsigned char[frame_image->width() * frame_image->height()]();
+	// Declare 2-column arrays for each color channel
+	typedef struct {
+		unsigned char *red;
+		unsigned char *green;
+		unsigned char *blue;
+		unsigned char *alpha;
+	} channels;
+	
+	channels arrays_in {
+		new unsigned char[w * h](),
+		new unsigned char[w * h](),
+		new unsigned char[w * h](),
+		new unsigned char[w * h]()
+	};
+	channels arrays_out {
+		new unsigned char[w * h](),
+		new unsigned char[w * h](),
+		new unsigned char[w * h](),
+		new unsigned char[w * h]()
+	};
 
 	// Loop through pixels and split RGBA channels into separate arrays
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+
+	#pragma omp parallel for
+	for (int pixel = 0; pixel < w * h; ++pixel)
 	{
 		// Get the RGBA values from each pixel
-		unsigned char R = pixels[byte_index];
-		unsigned char G = pixels[byte_index + 1];
-		unsigned char B = pixels[byte_index + 2];
-		unsigned char A = pixels[byte_index + 3];
-
-		// Split channels into their own arrays
-		red[pixel] = R;
-		green[pixel] = G;
-		blue[pixel] = B;
-		alpha[pixel] = A;
+		arrays_in.red[pixel] = arrays_out.red[pixel] = pixels[pixel * 4];
+		arrays_in.green[pixel] = arrays_out.green[pixel] = pixels[pixel * 4 + 1];
+		arrays_in.blue[pixel] = arrays_out.blue[pixel] = pixels[pixel * 4 + 2];
+		arrays_in.alpha[pixel] = arrays_out.alpha[pixel] = pixels[pixel * 4 + 3];
 	}
 
-	// Init target RGBA arrays
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_red[i] = red[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_green[i] = green[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_blue[i] = blue[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_alpha[i] = alpha[i];
+	// Initialize target struct pointers for boxBlur operations
+	channels *array_a = &arrays_in;
+	channels *array_b = &arrays_out;
 
 	// Loop through each iteration
-	for (int iteration = 0; iteration < iteration_value; iteration++)
+	for (int iteration = 0; iteration < iteration_value; ++iteration)
 	{
 		// HORIZONTAL BLUR (if any)
 		if (horizontal_radius_value > 0.0) {
-			// Init boxes for computing blur
-			int *bxs = initBoxes(sigma_value, horizontal_radius_value);
-
 			// Apply horizontal blur to target RGBA channels
-			boxBlurH(red, blur_red, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(green, blur_green, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(blue, blur_blue, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(alpha, blur_alpha, frame_image->width(), frame_image->height(), horizontal_radius_value);
-
-			// Remove boxes
-			delete[] bxs;
-
-			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
+			#pragma omp parallel
+			{
+				boxBlurH(array_a->red, array_b->red, w, h, horizontal_radius_value);
+				boxBlurH(array_a->green, array_b->green, w, h, horizontal_radius_value);
+				boxBlurH(array_a->blue, array_b->blue, w, h, horizontal_radius_value);
+				boxBlurH(array_a->alpha, array_b->alpha, w, h, horizontal_radius_value);
+			}
+			
+			// Swap input and output arrays
+			channels *temp = array_a;
+			array_a = array_b;
+			array_b = temp;
 		}
 
 		// VERTICAL BLUR (if any)
 		if (vertical_radius_value > 0.0) {
-			// Init boxes for computing blur
-			int *bxs = initBoxes(sigma_value, vertical_radius_value);
-
 			// Apply vertical blur to target RGBA channels
-			boxBlurT(red, blur_red, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(green, blur_green, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(blue, blur_blue, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(alpha, blur_alpha, frame_image->width(), frame_image->height(), vertical_radius_value);
+			#pragma omp parallel
+			{
+				boxBlurT(array_a->red, array_b->red, w, h, vertical_radius_value);
+				boxBlurT(array_a->green, array_b->green, w, h, vertical_radius_value);
+				boxBlurT(array_a->blue, array_b->blue, w, h, vertical_radius_value);
+				boxBlurT(array_a->alpha, array_b->alpha, w, h, vertical_radius_value);
+			}
 
-			// Remove boxes
-			delete[] bxs;
-
-			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
+			// Swap input and output arrays
+			channels *temp = array_a;
+			array_a = array_b;
+			array_b = temp;
 		}
 	}
 
 	// Copy RGBA channels back to original image
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+	#pragma omp parallel for
+	for (int pixel = 0; pixel < w * h; ++pixel)
 	{
-		// Get the RGB values from the pixel
-		unsigned char R = blur_red[pixel];
-		unsigned char G = blur_green[pixel];
-		unsigned char B = blur_blue[pixel];
-		unsigned char A = blur_alpha[pixel];
-
-		// Split channels into their own arrays
-		pixels[byte_index] = R;
-		pixels[byte_index + 1] = G;
-		pixels[byte_index + 2] = B;
-		pixels[byte_index + 3] = A;
+		// Combine channels
+		pixels[pixel * 4] = array_b->red[pixel];
+		pixels[pixel * 4 + 1] = array_b->green[pixel];
+		pixels[pixel * 4 + 2] = array_b->blue[pixel];
+		pixels[pixel * 4 + 3] = array_b->alpha[pixel];
 	}
 
 	// Delete channel arrays
-	delete[] red;
-	delete[] green;
-	delete[] blue;
-	delete[] alpha;
-	delete[] blur_red;
-	delete[] blur_green;
-	delete[] blur_blue;
-	delete[] blur_alpha;
+	delete[] arrays_in.red;
+	delete[] arrays_in.green;
+	delete[] arrays_in.blue;
+	delete[] arrays_in.alpha;
+
+	delete[] arrays_out.red;
+	delete[] arrays_out.green;
+	delete[] arrays_out.blue;
+	delete[] arrays_out.alpha;
 
 	// return the modified frame
 	return frame;
-}
-
-// Credit: http://blog.ivank.net/fastest-gaussian-blur.html (MIT License)
-int* Blur::initBoxes(float sigma, int n)  // standard deviation, number of boxes
-{
-	float wIdeal = sqrt((12.0 * sigma * sigma / n) + 1.0);  // Ideal averaging filter width
-	int wl = floor(wIdeal);
-	if (wl % 2 == 0) wl--;
-	int wu = wl + 2;
-
-	float mIdeal = (12.0 * sigma * sigma - n * wl * wl - 4 * n * wl - 3 * n) / (-4.0 * wl - 4);
-	int m = round(mIdeal);
-
-	int *sizes = new int[n]();
-	for (int i = 0; i < n; i++) sizes[i] = i < m ? wl : wu;
-	return sizes;
 }
 
 // Credit: http://blog.ivank.net/fastest-gaussian-blur.html (MIT License)
