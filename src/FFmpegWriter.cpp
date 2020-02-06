@@ -86,7 +86,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 FFmpegWriter::FFmpegWriter(std::string path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
+		initial_audio_input_frame_size(0), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
 		write_header(false), write_trailer(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
@@ -100,6 +100,34 @@ FFmpegWriter::FFmpegWriter(std::string path) :
 
 	// auto detect format
 	auto_detect_format();
+}
+
+FFmpegWriter::~FFmpegWriter() {
+	if (is_open) {
+		Close();
+	}
+
+	for (auto pair : av_frames) {
+		AVFrame *frame = pair.second;
+		AV_FREE_FRAME(&frame);
+	}
+
+	spooled_audio_frames.clear();
+	spooled_video_frames.clear();
+	queued_audio_frames.clear();
+	queued_video_frames.clear();
+	processed_frames.clear();
+	deallocate_frames.clear();
+	av_frames.clear();
+
+	if (video_codec) {
+		AV_FREE_CONTEXT(video_codec);
+		video_codec = NULL;
+	}
+	if (audio_codec) {
+		AV_FREE_CONTEXT(audio_codec);
+		audio_codec = NULL;
+	}
 }
 
 // Open the writer
@@ -2122,6 +2150,7 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 		scale_mode = SWS_BICUBIC;
 	}
 
+	SwsContext *img_convert_ctx;
 	// Init software rescalers vector (many of them, one for each thread)
 	for (int x = 0; x < num_of_rescalers; x++) {
 		// Init the software scaler from FFMpeg

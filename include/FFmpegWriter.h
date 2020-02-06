@@ -158,7 +158,6 @@ namespace openshot {
 		AVStream *audio_st, *video_st;
 		AVCodecContext *video_codec;
 		AVCodecContext *audio_codec;
-		SwsContext *img_convert_ctx;
 		double audio_pts, video_pts;
 		int16_t *samples;
 		uint8_t *audio_outbuf;
@@ -247,6 +246,8 @@ namespace openshot {
 		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.
 		/// @param path The file path of the video file you want to open and read
 		FFmpegWriter(std::string path);
+
+		~FFmpegWriter();
 
 		/// Close the writer
 		void Close();
