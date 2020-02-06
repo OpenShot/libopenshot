@@ -77,43 +77,9 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	int w = frame_image->width();
 	int h = frame_image->height();
 
-	// Declare 2-column arrays for each color channel
-	typedef struct {
-		unsigned char *red;
-		unsigned char *green;
-		unsigned char *blue;
-		unsigned char *alpha;
-	} channels;
-	
-	channels arrays_in {
-		new unsigned char[w * h](),
-		new unsigned char[w * h](),
-		new unsigned char[w * h](),
-		new unsigned char[w * h]()
-	};
-	channels arrays_out {
-		new unsigned char[w * h](),
-		new unsigned char[w * h](),
-		new unsigned char[w * h](),
-		new unsigned char[w * h]()
-	};
-
-	// Loop through pixels and split RGBA channels into separate arrays
-	unsigned char *pixels = (unsigned char *) frame_image->bits();
-
-	#pragma omp parallel for
-	for (int pixel = 0; pixel < w * h; ++pixel)
-	{
-		// Get the RGBA values from each pixel
-		arrays_in.red[pixel] = arrays_out.red[pixel] = pixels[pixel * 4];
-		arrays_in.green[pixel] = arrays_out.green[pixel] = pixels[pixel * 4 + 1];
-		arrays_in.blue[pixel] = arrays_out.blue[pixel] = pixels[pixel * 4 + 2];
-		arrays_in.alpha[pixel] = arrays_out.alpha[pixel] = pixels[pixel * 4 + 3];
-	}
-
-	// Initialize target struct pointers for boxBlur operations
-	channels *array_a = &arrays_in;
-	channels *array_b = &arrays_out;
+	// Grab two copies of the image pixel data
+	QImage image_copy = frame_image->copy();
+	std::shared_ptr<QImage> frame_image_2 = std::make_shared<QImage>(image_copy);
 
 	// Loop through each iteration
 	for (int iteration = 0; iteration < iteration_value; ++iteration)
@@ -121,110 +87,83 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		// HORIZONTAL BLUR (if any)
 		if (horizontal_radius_value > 0.0) {
 			// Apply horizontal blur to target RGBA channels
-			#pragma omp parallel
-			{
-				boxBlurH(array_a->red, array_b->red, w, h, horizontal_radius_value);
-				boxBlurH(array_a->green, array_b->green, w, h, horizontal_radius_value);
-				boxBlurH(array_a->blue, array_b->blue, w, h, horizontal_radius_value);
-				boxBlurH(array_a->alpha, array_b->alpha, w, h, horizontal_radius_value);
-			}
-			
-			// Swap input and output arrays
-			channels *temp = array_a;
-			array_a = array_b;
-			array_b = temp;
+			boxBlurH(frame_image->bits(), frame_image_2->bits(), w, h, horizontal_radius_value);
+
+			// Swap output image back to input
+			frame_image.swap(frame_image_2);
 		}
 
 		// VERTICAL BLUR (if any)
 		if (vertical_radius_value > 0.0) {
 			// Apply vertical blur to target RGBA channels
-			#pragma omp parallel
-			{
-				boxBlurT(array_a->red, array_b->red, w, h, vertical_radius_value);
-				boxBlurT(array_a->green, array_b->green, w, h, vertical_radius_value);
-				boxBlurT(array_a->blue, array_b->blue, w, h, vertical_radius_value);
-				boxBlurT(array_a->alpha, array_b->alpha, w, h, vertical_radius_value);
-			}
+			boxBlurT(frame_image->bits(), frame_image_2->bits(), w, h, vertical_radius_value);
 
-			// Swap input and output arrays
-			channels *temp = array_a;
-			array_a = array_b;
-			array_b = temp;
+			// Swap output image back to input
+			frame_image.swap(frame_image_2);
 		}
 	}
-
-	// Copy RGBA channels back to original image
-	#pragma omp parallel for
-	for (int pixel = 0; pixel < w * h; ++pixel)
-	{
-		// Combine channels
-		pixels[pixel * 4] = array_b->red[pixel];
-		pixels[pixel * 4 + 1] = array_b->green[pixel];
-		pixels[pixel * 4 + 2] = array_b->blue[pixel];
-		pixels[pixel * 4 + 3] = array_b->alpha[pixel];
-	}
-
-	// Delete channel arrays
-	delete[] arrays_in.red;
-	delete[] arrays_in.green;
-	delete[] arrays_in.blue;
-	delete[] arrays_in.alpha;
-
-	delete[] arrays_out.red;
-	delete[] arrays_out.green;
-	delete[] arrays_out.blue;
-	delete[] arrays_out.alpha;
 
 	// return the modified frame
 	return frame;
 }
 
 // Credit: http://blog.ivank.net/fastest-gaussian-blur.html (MIT License)
+// Modified to process all four channels in a pixel array
 void Blur::boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r) {
 	float iarr = 1.0 / (r + r + 1);
-	for (int i = 0; i < h; i++) {
-		int ti = i * w, li = ti, ri = ti + r;
-		int fv = scl[ti], lv = scl[ti + w - 1], val = (r + 1) * fv;
-		for (int j = 0; j < r; j++) val += scl[ti + j];
-		for (int j = 0; j <= r; j++) {
-			val += scl[ri++] - fv;
-			tcl[ti++] = round(val * iarr);
-		}
-		for (int j = r + 1; j < w - r; j++) {
-			val += scl[ri++] - scl[li++];
-			tcl[ti++] = round(val * iarr);
-		}
-		for (int j = w - r; j < w; j++) {
-			val += lv - scl[li++];
-			tcl[ti++] = round(val * iarr);
+
+	#pragma omp parallel for shared (scl, tcl)
+	for (int i = 0; i < h; ++i) {
+		for (int ch = 0; ch < 4; ++ch) {
+			int ti = i * w, li = ti, ri = ti + r;
+			int fv = scl[ti * 4 + ch], lv = scl[(ti + w - 1) * 4 + ch], val = (r + 1) * fv;
+			for (int j = 0; j < r; ++j) {
+				val += scl[(ti + j) * 4 + ch];
+			}
+			for (int j = 0; j <= r; ++j) {
+				val += scl[ri++ * 4 + ch] - fv;
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
+			for (int j = r + 1; j < w - r; ++j) {
+				val += scl[ri++ * 4 + ch] - scl[li++ * 4 + ch];
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
+			for (int j = w - r; j < w; ++j) {
+				val += lv - scl[li++ * 4 + ch];
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
 		}
 	}
 }
 
 void Blur::boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r) {
 	float iarr = 1.0 / (r + r + 1);
+
+	#pragma omp parallel for shared (scl, tcl)
 	for (int i = 0; i < w; i++) {
-		int ti = i, li = ti, ri = ti + r * w;
-		int fv = scl[ti], lv = scl[ti + w * (h - 1)], val = (r + 1) * fv;
-		for (int j = 0; j < r; j++) val += scl[ti + j * w];
-		for (int j = 0; j <= r; j++) {
-			val += scl[ri] - fv;
-			tcl[ti] = round(val * iarr);
-			ri += w;
-			ti += w;
-		}
-		for (int j = r + 1; j < h - r; j++) {
-			val += scl[ri] - scl[li];
-			tcl[ti] = round(val * iarr);
-			li += w;
-			ri += w;
-			ti += w;
-		}
-		for (int j = h - r; j < h; j++) {
-			val += lv - scl[li];
-			tcl[ti] = round(val * iarr);
-			li += w;
-			ti += w;
+		for (int ch = 0; ch < 4; ++ch) {
+			int ti = i, li = ti, ri = ti + r * w;
+			int fv = scl[ti * 4 + ch], lv = scl[(ti + w * (h - 1)) * 4 + ch], val = (r + 1) * fv;
+			for (int j = 0; j < r; j++) val += scl[(ti + j * w) * 4 + ch];
+			for (int j = 0; j <= r; j++) {
+				val += scl[ri * 4 + ch] - fv;
+				tcl[ti * 4 + ch] = round(val * iarr);
+				ri += w;
+				ti += w;
+			}
+			for (int j = r + 1; j < h - r; j++) {
+				val += scl[ri * 4 + ch] - scl[li * 4 + ch];
+				tcl[ti * 4 + ch] = round(val * iarr);
+				li += w;
+				ri += w;
+				ti += w;
+			}
+			for (int j = h - r; j < h; j++) {
+				val += lv - scl[li * 4 + ch];
+				tcl[ti * 4 + ch] = round(val * iarr);
+				li += w;
+				ti += w;
+			}
 		}
 	}
 }
