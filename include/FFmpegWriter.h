@@ -241,6 +241,7 @@ namespace openshot {
 		/// write all queued frames
 		void write_queued_frames();
 
+		void free_resources();
 	public:
 
 		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.

@@ -103,31 +103,7 @@ FFmpegWriter::FFmpegWriter(std::string path) :
 }
 
 FFmpegWriter::~FFmpegWriter() {
-	if (is_open) {
-		Close();
-	}
-
-	for (auto pair : av_frames) {
-		AVFrame *frame = pair.second;
-		AV_FREE_FRAME(&frame);
-	}
-
-	spooled_audio_frames.clear();
-	spooled_video_frames.clear();
-	queued_audio_frames.clear();
-	queued_video_frames.clear();
-	processed_frames.clear();
-	deallocate_frames.clear();
-	av_frames.clear();
-
-	if (video_codec) {
-		AV_FREE_CONTEXT(video_codec);
-		video_codec = NULL;
-	}
-	if (audio_codec) {
-		AV_FREE_CONTEXT(audio_codec);
-		audio_codec = NULL;
-	}
+    free_resources();
 }
 
 // Open the writer
@@ -300,6 +276,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	info.display_ratio.den = size.den;
 
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::SetVideoOptions (" + codec + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
+		AV_FREE_CONTEXT(video_codec);
 
 	// Enable / Disable video
 	info.has_video = has_video;
@@ -1020,17 +997,16 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 	}
 }
 
-// Close the writer
-void FFmpegWriter::Close() {
-	// Write trailer (if needed)
-	if (!write_trailer)
-		WriteTrailer();
-
+void FFmpegWriter::free_resources() {
 	// Close each codec
-	if (video_st)
+	if (video_st) {
 		close_video(oc, video_st);
-	if (audio_st)
+		video_st = NULL;
+	}
+	if (audio_st) {
 		close_audio(oc, audio_st);
+		audio_st = NULL;
+	}
 
 	// Deallocate image scalers
 	if (image_rescalers.size() > 0)
@@ -1041,13 +1017,56 @@ void FFmpegWriter::Close() {
 		avio_close(oc->pb);
 	}
 
+    // be sure to free any allocated AVFrames
+	for (auto pair : av_frames) {
+		AVFrame *frame = pair.second;
+		AV_FREE_FRAME(&frame);
+	}
+
+	spooled_audio_frames.clear();
+	spooled_video_frames.clear();
+	queued_audio_frames.clear();
+	queued_video_frames.clear();
+	processed_frames.clear();
+	deallocate_frames.clear();
+	av_frames.clear();
+
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	if (video_codec) {
+		AV_FREE_CONTEXT(video_codec);
+		video_codec = NULL;
+	}
+	if (audio_codec) {
+		AV_FREE_CONTEXT(audio_codec);
+		audio_codec = NULL;
+	}
+
+#elif (LIBAVFORMAT_VERSION_MAJOR <= 55)
+	if (video_codec) {
+		AV_FREE_CONTEXT(video_codec);
+		video_codec = NULL;
+	}
+	if (audio_codec) {
+		AV_FREE_CONTEXT(audio_codec);
+		audio_codec = NULL;
+	}
+#endif
+
+	if (oc) {
+		avformat_free_context(oc);
+		oc = NULL;
+	}
+}
+
+// Close the writer
+void FFmpegWriter::Close() {
+	// Write trailer (if needed)
+	if (!write_trailer)
+		WriteTrailer();
+
 	// Reset frame counters
 	write_video_count = 0;
 	write_audio_count = 0;
-
-	// Free the context which frees the streams too
-	avformat_free_context(oc);
-	oc = NULL;
 
 	// Close writer
 	is_open = false;
