@@ -3,9 +3,12 @@
  * @brief Header file for AudioBufferSource class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,18 +31,8 @@
 #ifndef OPENSHOT_AUDIOBUFFERSOURCE_H
 #define OPENSHOT_AUDIOBUFFERSOURCE_H
 
-/// Do not include the juce unittest headers, because it collides with unittest++
-#define __JUCE_UNITTEST_JUCEHEADER__
-
-#ifndef _NDEBUG
-	/// Define NO debug for JUCE on mac os
-	#define _NDEBUG
-#endif
-
 #include <iomanip>
-#include "JuceLibraryCode/JuceHeader.h"
-
-using namespace std;
+#include "JuceHeader.h"
 
 /// This namespace is the default namespace for all code in the openshot library
 namespace openshot
@@ -51,25 +44,25 @@ namespace openshot
 	 * The <a href="http://www.juce.com/">JUCE</a> library cannot play audio directly from an AudioSampleBuffer, so this class exposes
 	 * an AudioSampleBuffer as a AudioSource, so that JUCE can play the audio.
 	 */
-	class AudioBufferSource : public PositionableAudioSource
+	class AudioBufferSource : public juce::PositionableAudioSource
 	{
 	private:
 		int position;
 		int start;
 		bool repeat;
-		AudioSampleBuffer *buffer;
+		juce::AudioSampleBuffer *buffer;
 
 	public:
 		/// @brief Default constructor
 		/// @param audio_buffer This buffer contains the samples you want to play through JUCE.
-		AudioBufferSource(AudioSampleBuffer *audio_buffer);
+		AudioBufferSource(juce::AudioSampleBuffer *audio_buffer);
 
 		/// Destructor
 		~AudioBufferSource();
 
 		/// @brief Get the next block of audio samples
 		/// @param info This struct informs us of which samples are needed next.
-		void getNextAudioBlock (const AudioSourceChannelInfo& info);
+		void getNextAudioBlock (const juce::AudioSourceChannelInfo& info);
 
 		/// Prepare to play this audio source
 		void prepareToPlay(int, double);
@@ -79,13 +72,13 @@ namespace openshot
 
 		/// @brief Set the next read position of this source
 		/// @param newPosition The sample # to start reading from
-		void setNextReadPosition (int64 newPosition);
+		void setNextReadPosition (juce::int64 newPosition);
 
 		/// Get the next read position of this source
-		int64 getNextReadPosition() const;
+		juce::int64 getNextReadPosition() const;
 
 		/// Get the total length (in samples) of this audio source
-		int64 getTotalLength() const;
+		juce::int64 getTotalLength() const;
 
 		/// Determines if this audio source should repeat when it reaches the end
 		bool isLooping() const;
@@ -95,7 +88,7 @@ namespace openshot
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
-		void setBuffer (AudioSampleBuffer *audio_buffer);
+		void setBuffer (juce::AudioSampleBuffer *audio_buffer);
 	};
 
 }

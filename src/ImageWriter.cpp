@@ -3,9 +3,12 @@
  * @brief Source file for ImageWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -28,11 +31,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+//Require ImageMagick support
+#ifdef USE_IMAGEMAGICK
+
 #include "../include/ImageWriter.h"
 
 using namespace openshot;
 
-ImageWriter::ImageWriter(string path) :
+ImageWriter::ImageWriter(std::string path) :
 		path(path), cache_size(8), is_writing(false), write_video_count(0), image_quality(75), number_of_loops(1),
 		combine_frames(true), is_open(false)
 {
@@ -42,7 +48,7 @@ ImageWriter::ImageWriter(string path) :
 }
 
 // Set video export options
-void ImageWriter::SetVideoOptions(string format, Fraction fps, int width, int height,
+void ImageWriter::SetVideoOptions(std::string format, Fraction fps, int width, int height,
 		int quality, int loops, bool combine)
 {
 	// Set frames per second (if provided)
@@ -97,7 +103,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	std::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
 	frame_image->magick( info.vcodec );
 	frame_image->backgroundColor(Magick::Color("none"));
-	frame_image->matte(true);
+	MAGICK_IMAGE_ALPHA(frame_image, true);
 	frame_image->quality(image_quality);
 	frame_image->animationDelay(info.video_timebase.ToFloat() * 100);
 	frame_image->animationIterations(number_of_loops);
@@ -122,7 +128,7 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length);
 
 	// Loop through each frame (and encoded it)
 	for (int64_t number = start; number <= length; number++)
@@ -150,6 +156,7 @@ void ImageWriter::Close()
 	// Close writer
 	is_open = false;
 
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close", "", -1, "", -1, "", -1, "", -1, "", -1, "", -1);
+	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close");
 }
 
+#endif //USE_IMAGEMAGICK

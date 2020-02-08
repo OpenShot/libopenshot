@@ -3,9 +3,12 @@
  * @brief Header file for ZeroMQ-based Logger class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,7 +32,6 @@
 #define OPENSHOT_LOGGER_H
 
 
-#include "JuceLibraryCode/JuceHeader.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -40,9 +42,8 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
+#include "JuceHeader.h"
 
-
-using namespace std;
 
 namespace openshot {
 
@@ -54,12 +55,12 @@ namespace openshot {
 	 */
 	class ZmqLogger {
 	private:
-		CriticalSection loggerCriticalSection;
-		string connection;
+		juce::CriticalSection loggerCriticalSection;
+		std::string connection;
 
 		// Logfile related vars
-		string file_path;
-		ofstream log_file;
+		std::string file_path;
+		std::ofstream log_file;
 		bool enabled;
 
 		/// ZMQ Context
@@ -93,30 +94,31 @@ namespace openshot {
 		static ZmqLogger * Instance();
 
 		/// Append debug information
-		void AppendDebugMethod(string method_name, string arg1_name, float arg1_value,
-							   string arg2_name, float arg2_value,
-							   string arg3_name, float arg3_value,
-							   string arg4_name, float arg4_value,
-							   string arg5_name, float arg5_value,
-							   string arg6_name, float arg6_value);
+		void AppendDebugMethod(std::string method_name,
+					std::string arg1_name="", float arg1_value=-1.0,
+					std::string arg2_name="", float arg2_value=-1.0,
+					std::string arg3_name="", float arg3_value=-1.0,
+					std::string arg4_name="", float arg4_value=-1.0,
+					std::string arg5_name="", float arg5_value=-1.0,
+					std::string arg6_name="", float arg6_value=-1.0);
 
 		/// Close logger (sockets and/or files)
 		void Close();
 
 		/// Set or change connection info for logger (i.e. tcp://*:5556)
-		void Connection(string new_connection);
+		void Connection(std::string new_connection);
 
 		/// Enable/Disable logging
 		void Enable(bool is_enabled) { enabled = is_enabled;};
 
 		/// Set or change the file path (optional)
-		void Path(string new_path);
+		void Path(std::string new_path);
 
 		/// Log message to all subscribers of this logger (if any)
-		void Log(string message);
+		void Log(std::string message);
 
 		/// Log message to a file (if path set)
-		void LogToFile(string message);
+		void LogToFile(std::string message);
 	};
 
 }

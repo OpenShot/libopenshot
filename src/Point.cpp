@@ -3,9 +3,12 @@
  * @brief Source file for Point class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -30,7 +33,7 @@
 using namespace std;
 using namespace openshot;
 
-// Default constructor (defaults to 0,0)
+// Default constructor (defaults to 1,0)
 Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 {
 	// set new coorinate
@@ -40,7 +43,7 @@ Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 	Initialize_Handles();
 }
 
-// Constructor which creates a single coordinate at X=0
+// Constructor which creates a single coordinate at X=1
 Point::Point(float y) :
 	interpolation(CONSTANT), handle_type(AUTO) {
 	// set new coorinate
@@ -105,7 +108,7 @@ void Point::Initialize_RightHandle(float x, float y) {
 }
 
 // Generate JSON string of this object
-string Point::Json() {
+std::string Point::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -129,25 +132,31 @@ Json::Value Point::JsonValue() {
 }
 
 // Load JSON string into this object
-void Point::SetJson(string value) {
+void Point::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

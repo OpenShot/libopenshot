@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::Cache
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,10 +29,11 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 #include "../include/Json.h"
 
-using namespace std;
 using namespace openshot;
 
 TEST(Cache_Default_Constructor)
@@ -391,31 +395,31 @@ TEST(CacheDisk_JSON)
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
 	c.Add(f3);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
 	c.Add(f1);
-	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(2, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
 	c.Add(f2);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
 	c.Add(f5);
-	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(2, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
 	c.Add(f4);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
 
 	// Delete cache directory
@@ -431,31 +435,31 @@ TEST(CacheMemory_JSON)
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f3(new Frame(3, 1280, 720, "Blue", 500, 2));
 	c.Add(f3);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("1", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f1(new Frame(1, 1280, 720, "Blue", 500, 2));
 	c.Add(f1);
-	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(2, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("2", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f2(new Frame(2, 1280, 720, "Blue", 500, 2));
 	c.Add(f2);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("3", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f5(new Frame(5, 1280, 720, "Blue", 500, 2));
 	c.Add(f5);
-	CHECK_EQUAL(2, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(2, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("4", c.JsonValue()["version"].asString());
 
 	// Add some frames (out of order)
 	std::shared_ptr<Frame> f4(new Frame(4, 1280, 720, "Blue", 500, 2));
 	c.Add(f4);
-	CHECK_EQUAL(1, c.JsonValue()["ranges"].size());
+	CHECK_EQUAL(1, (int)c.JsonValue()["ranges"].size());
 	CHECK_EQUAL("5", c.JsonValue()["version"].asString());
 
 }

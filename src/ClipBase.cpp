@@ -3,9 +3,12 @@
  * @brief Source file for EffectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -62,7 +65,7 @@ void ClipBase::SetJsonValue(Json::Value root) {
 }
 
 // Generate JSON for a property
-Json::Value ClipBase::add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) {
+Json::Value ClipBase::add_property_json(std::string name, float value, std::string type, std::string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) {
 
 	// Requested Point
 	Point requested_point(requested_frame, requested_frame);
@@ -98,7 +101,7 @@ Json::Value ClipBase::add_property_json(string name, float value, string type, s
 	return prop;
 }
 
-Json::Value ClipBase::add_property_choice_json(string name, int value, int selected_value) {
+Json::Value ClipBase::add_property_choice_json(std::string name, int value, int selected_value) {
 
 	// Create choice
 	Json::Value new_choice = Json::Value(Json::objectValue);

@@ -4,10 +4,10 @@
 #
 # @section LICENSE
 #
-# Copyright (c) 2008-2014 OpenShot Studios, LLC
+# Copyright (c) 2008-2019 OpenShot Studios, LLC
 # <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to 
-# delivering high quality video editing and animation solutions to the 
+# OpenShot Library (libopenshot), an open-source project dedicated to
+# delivering high quality video editing and animation solutions to the
 # world. For more information visit <http://www.openshot.org/>.
 #
 # OpenShot Library (libopenshot) is free software: you can redistribute it
@@ -26,6 +26,12 @@
 
 
 %module openshot
+
+/* Suppress warnings about ignored operator= */
+%warnfilter(362);
+
+/* Don't generate multiple wrappers for functions with default args */
+%feature("compactdefaultargs", "1");
 
 /* Enable inline documentation */
 %feature("autodoc", "1");
@@ -53,11 +59,17 @@ namespace std {
 #endif
 %template(SPtrAudioBuffer) std::shared_ptr<juce::AudioSampleBuffer>;
 %template(SPtrOpenFrame) std::shared_ptr<openshot::Frame>;
-%template(SPtrFrame) std::shared_ptr<Frame>;
-
 
 %{
-#include "../../../include/Version.h"
+/* Ruby and FFmpeg define competing RSHIFT macros,
+ * so we move Ruby's out of the way for now. We'll
+ * restore it after dealing with FFmpeg's
+ */
+#ifdef RSHIFT
+  #define RB_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+#include "OpenShotVersion.h"
 #include "../../../include/ReaderBase.h"
 #include "../../../include/WriterBase.h"
 #include "../../../include/CacheBase.h"
@@ -84,14 +96,26 @@ namespace std {
 #include "../../../include/PlayerBase.h"
 #include "../../../include/Point.h"
 #include "../../../include/Profiles.h"
+#include "../../../include/QtHtmlReader.h"
 #include "../../../include/QtImageReader.h"
 #include "../../../include/QtPlayer.h"
+#include "../../../include/QtTextReader.h"
 #include "../../../include/KeyFrame.h"
 #include "../../../include/RendererBase.h"
 #include "../../../include/Settings.h"
 #include "../../../include/Timeline.h"
 #include "../../../include/ZmqLogger.h"
+#include "../../../include/AudioDeviceInfo.h"
 
+/* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
+#ifdef RSHIFT
+  #define FF_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+/* And restore Ruby's RSHIFT, if we captured it */
+#ifdef RB_RSHIFT
+  #define RSHIFT(a, b) RB_RSHIFT(a, b)
+#endif
 %}
 
 #ifdef USE_BLACKMAGIC
@@ -109,7 +133,7 @@ namespace std {
 	%}
 #endif
 
-%include "../../../include/Version.h"
+%include "OpenShotVersion.h"
 %include "../../../include/ReaderBase.h"
 %include "../../../include/WriterBase.h"
 %include "../../../include/CacheBase.h"
@@ -132,21 +156,45 @@ namespace std {
 %include "../../../include/EffectInfo.h"
 %include "../../../include/Enums.h"
 %include "../../../include/Exceptions.h"
+
+/* Ruby and FFmpeg define competing RSHIFT macros,
+ * so we move Ruby's out of the way for now. We'll
+ * restore it after dealing with FFmpeg's
+ */
+#ifdef RSHIFT
+  #define RB_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+
 %include "../../../include/FFmpegReader.h"
 %include "../../../include/FFmpegWriter.h"
+
+/* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
+#ifdef RSHIFT
+  #define FF_RSHIFT(a, b) RSHIFT(a, b)
+  #undef RSHIFT
+#endif
+/* And restore Ruby's RSHIFT, if we captured it */
+#ifdef RB_RSHIFT
+  #define RSHIFT(a, b) RB_RSHIFT(a, b)
+#endif
+
 %include "../../../include/Fraction.h"
 %include "../../../include/Frame.h"
 %include "../../../include/FrameMapper.h"
 %include "../../../include/PlayerBase.h"
 %include "../../../include/Point.h"
 %include "../../../include/Profiles.h"
+%include "../../../include/QtHtmlReader.h"
 %include "../../../include/QtImageReader.h"
 %include "../../../include/QtPlayer.h"
+%include "../../../include/QtTextReader.h"
 %include "../../../include/KeyFrame.h"
 %include "../../../include/RendererBase.h"
 %include "../../../include/Settings.h"
 %include "../../../include/Timeline.h"
 %include "../../../include/ZmqLogger.h"
+%include "../../../include/AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "../../../include/ImageReader.h"
@@ -173,12 +221,11 @@ namespace std {
 
 
 /* Wrap std templates (list, vector, etc...) */
-namespace std {
- %template(ClipList) list<Clip *>;
- %template(EffectBaseList) list<EffectBase *>;
- %template(CoordinateVector) vector<Coordinate>;
- %template(PointsVector) vector<Point>;
- %template(FieldVector) vector<Field>;
- %template(MappedFrameVector) vector<MappedFrame>;
- %template(MappedMetadata) map<string, string>;
-}
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MappedMetadata) std::map<std::string, std::string>;
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

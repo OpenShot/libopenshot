@@ -3,9 +3,12 @@
  * @brief Unit tests for openshot::FFmpegReader
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,8 +29,9 @@
  */
 
 #include "UnitTest++.h"
+// Prevent name clashes with juce::UnitTest
+#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
-#include "../include/Tests.h"
 
 using namespace std;
 using namespace openshot;
@@ -95,10 +99,14 @@ TEST(FFmpegReader_Check_Video_File)
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(21, (int)pixels[pixel_index]);
-	CHECK_EQUAL(191, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_CLOSE(21, (int)pixels[pixel_index], 5);
+	CHECK_CLOSE(191, (int)pixels[pixel_index + 1], 5);
+	CHECK_CLOSE(0, (int)pixels[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+
+	// Check pixel function
+	CHECK_EQUAL(true, f->CheckPixel(10, 112, 21, 191, 0, 255, 5));
+	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Get frame 1
 	f = r.GetFrame(2);
@@ -108,10 +116,14 @@ TEST(FFmpegReader_Check_Video_File)
 	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(0, (int)pixels[pixel_index]);
-	CHECK_EQUAL(96, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(188, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK_CLOSE(0, (int)pixels[pixel_index], 5);
+	CHECK_CLOSE(96, (int)pixels[pixel_index + 1], 5);
+	CHECK_CLOSE(188, (int)pixels[pixel_index + 2], 5);
+	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+
+	// Check pixel function
+	CHECK_EQUAL(true, f->CheckPixel(10, 112, 0, 96, 188, 255, 5));
+	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Close reader
 	r.Close();
@@ -209,4 +221,3 @@ TEST(FFmpegReader_Multiple_Open_and_Close)
 	// Close reader
 	r.Close();
 }
-

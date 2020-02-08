@@ -3,9 +3,12 @@
  * @brief Source file for DecklinkWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -231,7 +234,7 @@ void DecklinkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw WriterClosed("The DecklinkWriter is closed.  Call Open() before calling this method.", "");
+		throw WriterClosed("The DecklinkWriter is closed.  Call Open() before calling this method.");
 
 	delegate->WriteFrame(frame);
 }

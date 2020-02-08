@@ -3,9 +3,12 @@
  * @brief Source file for Demo QtPlayer application
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -36,7 +39,7 @@ PlayerDemo::PlayerDemo(QWidget *parent)
     , vbox(new QVBoxLayout(this))
     , menu(new QMenuBar(this))
     , video(new VideoRenderWidget(this))
-    , player(new QtPlayer(video->GetRenderer()))
+    , player(new openshot::QtPlayer(video->GetRenderer()))
 {
     setWindowTitle("OpenShot Player");
 
@@ -95,7 +98,7 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 	}
 	else if (event->key() == Qt::Key_J) {
-		cout << "BACKWARD" << player->Speed() - 1 << endl;
+		std::cout << "BACKWARD" << player->Speed() - 1 << std::endl;
 		if (player->Speed() - 1 != 0)
 			player->Speed(player->Speed() - 1);
 		else
@@ -105,7 +108,7 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 			player->Play();
 	}
 	else if (event->key() == Qt::Key_L) {
-		cout << "FORWARD" << player->Speed() + 1 << endl;
+		std::cout << "FORWARD" << player->Speed() + 1 << std::endl;
 		if (player->Speed() + 1 != 0)
 			player->Speed(player->Speed() + 1);
 		else
@@ -116,19 +119,19 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 	}
 	else if (event->key() == Qt::Key_Left) {
-		cout << "FRAME STEP -1" << endl;
+		std::cout << "FRAME STEP -1" << std::endl;
 		if (player->Speed() != 0)
 			player->Speed(0);
 		player->Seek(player->Position() - 1);
 	}
 	else if (event->key() == Qt::Key_Right) {
-		cout << "FRAME STEP +1" << endl;
+		std::cout << "FRAME STEP +1" << std::endl;
 		if (player->Speed() != 0)
 			player->Speed(0);
 		player->Seek(player->Position() + 1);
 	}
 	else if (event->key() == Qt::Key_Escape) {
-		cout << "QUIT PLAYER" << endl;
+		std::cout << "QUIT PLAYER" << std::endl;
 		QWidget *pWin = QApplication::activeWindow();
 		pWin->hide();
 

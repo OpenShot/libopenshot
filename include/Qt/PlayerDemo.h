@@ -3,9 +3,12 @@
  * @brief Header file for demo application for QtPlayer class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -43,8 +46,6 @@ namespace openshot
     class QtPlayer;
 }
 
-using openshot::QtPlayer;
-
 class PlayerDemo : public QWidget
 {
     Q_OBJECT
@@ -54,7 +55,7 @@ public:
     ~PlayerDemo();
 
 protected:
-    void keyPressEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *event) Q_DECL_OVERRIDE;
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
@@ -64,7 +65,7 @@ private:
     QVBoxLayout *vbox;
     QMenuBar *menu;
     VideoRenderWidget *video;
-    QtPlayer *player;
+    openshot::QtPlayer *player;
 };
 
 #endif // OPENSHOT_PLAYER_H

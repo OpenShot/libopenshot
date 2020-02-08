@@ -3,9 +3,12 @@
  * @brief Header file for Color class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -42,33 +45,33 @@ namespace openshot {
 	class Color{
 
 	public:
-		Keyframe red; ///<Curve representing the red value (0 - 255)
-		Keyframe green; ///<Curve representing the green value (0 - 255)
-		Keyframe blue; ///<Curve representing the red value (0 - 255)
-		Keyframe alpha; ///<Curve representing the alpha value (0 - 255)
+		openshot::Keyframe red; ///<Curve representing the red value (0 - 255)
+		openshot::Keyframe green; ///<Curve representing the green value (0 - 255)
+		openshot::Keyframe blue; ///<Curve representing the red value (0 - 255)
+		openshot::Keyframe alpha; ///<Curve representing the alpha value (0 - 255)
 
 		/// Default constructor
 		Color() {};
 
 		/// Constructor which takes a HEX color code
-		Color(string color_hex);
+		Color(std::string color_hex);
 
 		/// Constructor which takes R,G,B,A
 		Color(unsigned char Red, unsigned char Green, unsigned char Blue, unsigned char Alpha);
 
 		/// Constructor which takes 4 existing Keyframe curves
-		Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha);
+		Color(openshot::Keyframe Red, openshot::Keyframe Green, openshot::Keyframe Blue, openshot::Keyframe Alpha);
 
 		/// Get the HEX value of a color at a specific frame
-		string GetColorHex(int64_t frame_number);
+		std::string GetColorHex(int64_t frame_number);
 
 		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
 		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
+		std::string Json(); ///< Generate JSON string of this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJson(string value); ///< Load JSON string into this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 	};
 

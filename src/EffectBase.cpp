@@ -3,9 +3,12 @@
  * @brief Source file for EffectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -29,7 +32,7 @@
 
 using namespace openshot;
 
-// Initialize the values of the FileInfo struct
+// Initialize the values of the EffectInfo struct
 void EffectBase::InitEffectInfo()
 {
 	// Init clip settings
@@ -47,15 +50,15 @@ void EffectBase::InitEffectInfo()
 
 // Display file information
 void EffectBase::DisplayInfo() {
-	cout << fixed << setprecision(2) << boolalpha;
-	cout << "----------------------------" << endl;
-	cout << "----- Effect Information -----" << endl;
-	cout << "----------------------------" << endl;
-	cout << "--> Name: " << info.name << endl;
-	cout << "--> Description: " << info.description << endl;
-	cout << "--> Has Video: " << info.has_video << endl;
-	cout << "--> Has Audio: " << info.has_audio << endl;
-	cout << "----------------------------" << endl;
+	std::cout << std::fixed << std::setprecision(2) << std::boolalpha;
+	std::cout << "----------------------------" << std::endl;
+	std::cout << "----- Effect Information -----" << std::endl;
+	std::cout << "----------------------------" << std::endl;
+	std::cout << "--> Name: " << info.name << std::endl;
+	std::cout << "--> Description: " << info.description << std::endl;
+	std::cout << "--> Has Video: " << info.has_video << std::endl;
+	std::cout << "--> Has Audio: " << info.has_audio << std::endl;
+	std::cout << "----------------------------" << std::endl;
 }
 
 // Constrain a color value from 0 to 255
@@ -71,7 +74,7 @@ int EffectBase::constrain(int color_value)
 }
 
 // Generate JSON string of this object
-string EffectBase::Json() {
+std::string EffectBase::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -84,7 +87,6 @@ Json::Value EffectBase::JsonValue() {
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
 	root["name"] = info.name;
 	root["class_name"] = info.class_name;
-	root["short_name"] = info.short_name;
 	root["description"] = info.description;
 	root["has_video"] = info.has_video;
 	root["has_audio"] = info.has_audio;
@@ -95,25 +97,31 @@ Json::Value EffectBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void EffectBase::SetJson(string value) {
+void EffectBase::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+                 value.c_str() + value.size(), &root, &errors );
+	delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
@@ -135,7 +143,6 @@ Json::Value EffectBase::JsonInfo() {
 	Json::Value root;
 	root["name"] = info.name;
 	root["class_name"] = info.class_name;
-	root["short_name"] = info.short_name;
 	root["description"] = info.description;
 	root["has_video"] = info.has_video;
 	root["has_audio"] = info.has_audio;

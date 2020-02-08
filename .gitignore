@@ -1,5 +1,4 @@
-build/
-build/*
+/build*
 *.DS_Store
 .pydevproject
 .settings
@@ -7,3 +6,4 @@ build/*
 .project
 .cproject
 /.metadata/
+*~

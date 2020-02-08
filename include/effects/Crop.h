@@ -3,9 +3,12 @@
  * @brief Header file for Crop effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -38,8 +41,6 @@
 #include "../KeyFrame.h"
 
 
-using namespace std;
-
 namespace openshot
 {
 
@@ -69,7 +70,6 @@ namespace openshot
 
 		/// Default constructor, which takes 4 curves. These curves animate the crop over time.
 		///
-		/// @param color The curve to adjust the color of bars
 		/// @param left The curve to adjust the left bar size (between 0 and 1)
 		/// @param top The curve to adjust the top bar size (between 0 and 1)
 		/// @param right The curve to adjust the right bar size (between 0 and 1)
@@ -80,7 +80,7 @@ namespace openshot
 		/// modified openshot::Frame object
 		///
 		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from it's keyframes (starting at 1).
+		/// tells the effect which settings to use from its keyframes (starting at 1).
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the effect applied to it
@@ -88,14 +88,14 @@ namespace openshot
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number);
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		string PropertiesJSON(int64_t requested_frame);
+		std::string PropertiesJSON(int64_t requested_frame);
 	};
 
 }

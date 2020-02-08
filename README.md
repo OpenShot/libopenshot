@@ -34,6 +34,13 @@ are also available in the /docs/ source folder.
    * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
    * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
 
+## Hardware Acceleration
+
+OpenShot now supports experimental hardware acceleration, both for encoding and
+decoding videos. When enabled, this can either speed up those operations or slow
+them down, depending on the power and features supported by your graphics card.
+Please see [doc/HW-ACCELL.md](doc/HW-ACCEL.md) for more information.
+
 ## Documentation
 
 Beautiful HTML documentation can be generated using Doxygen.

@@ -3,9 +3,12 @@
  * @brief Header file for AudioResampler class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,19 +31,9 @@
 #ifndef OPENSHOT_RESAMPLER_H
 #define OPENSHOT_RESAMPLER_H
 
-/// Do not include the juce unittest headers, because it collides with unittest++
-#ifndef __JUCE_UNITTEST_JUCEHEADER__
-	#define __JUCE_UNITTEST_JUCEHEADER__
-#endif
-
-#ifndef _NDEBUG
-	// Define NO debug for JUCE on mac os
-	#define _NDEBUG
-#endif
-
-#include "JuceLibraryCode/JuceHeader.h"
 #include "AudioBufferSource.h"
 #include "Exceptions.h"
+#include "JuceHeader.h"
 
 namespace openshot {
 
@@ -52,11 +45,11 @@ namespace openshot {
 	 */
 	class AudioResampler {
 	private:
-		AudioSampleBuffer *buffer;
-		AudioSampleBuffer *resampled_buffer;
-		AudioBufferSource *buffer_source;
-		ResamplingAudioSource *resample_source;
-		AudioSourceChannelInfo resample_callback_buffer;
+		juce::AudioSampleBuffer *buffer;
+		juce::AudioSampleBuffer *resampled_buffer;
+		openshot::AudioBufferSource *buffer_source;
+		juce::ResamplingAudioSource *resample_source;
+		juce::AudioSourceChannelInfo resample_callback_buffer;
 
 		int num_of_samples;
 		int new_num_of_samples;
@@ -75,15 +68,15 @@ namespace openshot {
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param sample_rate The original sample rate of the buffered samples
 		/// @param new_sample_rate The requested sample rate you need
-		void SetBuffer(AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
+		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
 
 		/// @brief Sets the audio buffer and key settings
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param ratio The multiplier that needs to be applied to the sample rate (this is how resampling happens)
-		void SetBuffer(AudioSampleBuffer *new_buffer, double ratio);
+		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double ratio);
 
 		/// Get the resampled audio buffer
-		AudioSampleBuffer* GetResampledBuffer();
+		juce::AudioSampleBuffer* GetResampledBuffer();
 	};
 
 }

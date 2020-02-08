@@ -1,11 +1,15 @@
 /**
  * @file
- * @brief Header file for UnitTests
+ * @brief Source file for GetVersion function
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -25,11 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_UNITTESTS_H
-#define OPENSHOT_UNITTESTS_H
+#include "OpenShotVersion.h"
 
-    #ifndef TEST_MEDIA_PATH
-        #define TEST_MEDIA_PATH "../../src/examples/"
-    #endif
-
-#endif
+namespace openshot {
+    OpenShotVersion GetVersion() {
+        return openshot::Version;
+    }
+}

@@ -3,9 +3,12 @@
  * @brief Source file for EffectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -50,7 +53,7 @@ Color::Color(Keyframe Red, Keyframe Green, Keyframe Blue, Keyframe Alpha)
 }
 
 // Constructor which takes a HEX color code
-Color::Color(string color_hex)
+Color::Color(std::string color_hex)
 {
 	// Create a QColor from hex
 	QColor color(QString::fromStdString(color_hex));
@@ -61,7 +64,7 @@ Color::Color(string color_hex)
 }
 
 // Get the HEX value of a color at a specific frame
-string Color::GetColorHex(int64_t frame_number) {
+std::string Color::GetColorHex(int64_t frame_number) {
 
 	int r = red.GetInt(frame_number);
 	int g = green.GetInt(frame_number);
@@ -82,7 +85,7 @@ long Color::GetDistance(long R1, long G1, long B1, long R2, long G2, long B2)
 }
 
 // Generate JSON string of this object
-string Color::Json() {
+std::string Color::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
@@ -103,25 +106,31 @@ Json::Value Color::JsonValue() {
 }
 
 // Load JSON string into this object
-void Color::SetJson(string value) {
+void Color::SetJson(std::string value) {
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
-	Json::Reader reader;
-	bool success = reader.parse( value, root );
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(),
+	                 value.c_str() + value.size(), &root, &errors );
+	 delete reader;
+
 	if (!success)
 		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
+		throw InvalidJSON("JSON could not be parsed (or is invalid)");
 
 	try
 	{
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

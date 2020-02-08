@@ -3,9 +3,12 @@
  * @brief Header file for FFmpegWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2013 OpenShot Studios, LLC, Fabrice Bellard
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
  * (http://www.openshotstudios.com). This file is part of
  * OpenShot Library (http://www.openshot.org), an open-source project
  * dedicated to delivering high quality video editing and animation solutions
@@ -54,16 +57,12 @@
 #include "Settings.h"
 
 
-using namespace std;
-
-namespace openshot
-{
+namespace openshot {
 
 	/// This enumeration designates the type of stream when encoding (video or audio)
-	enum StreamType
-	{
-		VIDEO_STREAM,	///< A video stream (used to determine which type of stream)
-		AUDIO_STREAM	///< An audio stream (used to determine which type of stream)
+	enum StreamType {
+		VIDEO_STREAM,    ///< A video stream (used to determine which type of stream)
+		AUDIO_STREAM     ///< An audio stream (used to determine which type of stream)
 	};
 
 	/**
@@ -83,7 +82,7 @@ namespace openshot
 	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
 	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
 	 *
 	 * // Open the writer
@@ -110,7 +109,7 @@ namespace openshot
 	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
 	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
 	 *
 	 * // Prepare Streams (Optional method that must be called before any SetOption calls)
@@ -141,10 +140,9 @@ namespace openshot
 	 * r.Close();
 	 * @endcode
 	 */
-	class FFmpegWriter : public WriterBase
-	{
+	class FFmpegWriter : public WriterBase {
 	private:
-		string path;
+		std::string path;
 		int cache_size;
 		bool is_writing;
 		bool is_open;
@@ -155,56 +153,56 @@ namespace openshot
 		bool write_header;
 		bool write_trailer;
 
-	    AVOutputFormat *fmt;
-	    AVFormatContext *oc;
-	    AVStream *audio_st, *video_st;
-	    AVCodecContext *video_codec;
-	    AVCodecContext *audio_codec;
-	    SwsContext *img_convert_ctx;
-	    double audio_pts, video_pts;
-	    int16_t *samples;
-	    uint8_t *audio_outbuf;
-	    uint8_t *audio_encoder_buffer;
+		AVOutputFormat *fmt;
+		AVFormatContext *oc;
+		AVStream *audio_st, *video_st;
+		AVCodecContext *video_codec;
+		AVCodecContext *audio_codec;
+		SwsContext *img_convert_ctx;
+		double audio_pts, video_pts;
+		int16_t *samples;
+		uint8_t *audio_outbuf;
+		uint8_t *audio_encoder_buffer;
 
-	    int num_of_rescalers;
+		int num_of_rescalers;
 		int rescaler_position;
-		vector<SwsContext*> image_rescalers;
+		std::vector<SwsContext *> image_rescalers;
 
-	    int audio_outbuf_size;
-	    int audio_input_frame_size;
-	    int initial_audio_input_frame_size;
-	    int audio_input_position;
-	    int audio_encoder_buffer_size;
-	    SWRCONTEXT *avr;
-	    SWRCONTEXT *avr_planar;
+		int audio_outbuf_size;
+		int audio_input_frame_size;
+		int initial_audio_input_frame_size;
+		int audio_input_position;
+		int audio_encoder_buffer_size;
+		SWRCONTEXT *avr;
+		SWRCONTEXT *avr_planar;
 
-	    /* Resample options */
-	    int original_sample_rate;
-	    int original_channels;
+		/* Resample options */
+		int original_sample_rate;
+		int original_channels;
 
-	    std::shared_ptr<Frame> last_frame;
-	    deque<std::shared_ptr<Frame> > spooled_audio_frames;
-	    deque<std::shared_ptr<Frame> > spooled_video_frames;
+		std::shared_ptr<openshot::Frame> last_frame;
+		std::deque<std::shared_ptr<openshot::Frame> > spooled_audio_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > spooled_video_frames;
 
-	    deque<std::shared_ptr<Frame> > queued_audio_frames;
-	    deque<std::shared_ptr<Frame> > queued_video_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > queued_audio_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > queued_video_frames;
 
-	    deque<std::shared_ptr<Frame> > processed_frames;
-	    deque<std::shared_ptr<Frame> > deallocate_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > processed_frames;
+		std::deque<std::shared_ptr<openshot::Frame> > deallocate_frames;
 
-	    map<std::shared_ptr<Frame>, AVFrame*> av_frames;
+		std::map<std::shared_ptr<openshot::Frame>, AVFrame *> av_frames;
 
-	    /// Add an AVFrame to the cache
-	    void add_avframe(std::shared_ptr<Frame> frame, AVFrame* av_frame);
+		/// Add an AVFrame to the cache
+		void add_avframe(std::shared_ptr<openshot::Frame> frame, AVFrame *av_frame);
 
 		/// Add an audio output stream
-		AVStream* add_audio_stream();
+		AVStream *add_audio_stream();
 
 		/// Add a video output stream
-		AVStream* add_video_stream();
+		AVStream *add_video_stream();
 
 		/// Allocate an AVFrame object
-		AVFrame* allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);
+		AVFrame *allocate_avframe(PixelFormat pix_fmt, int width, int height, int *buffer_size, uint8_t *new_buffer);
 
 		/// Auto detect format (from path)
 		void auto_detect_format();
@@ -233,13 +231,13 @@ namespace openshot
 		void open_video(AVFormatContext *oc, AVStream *st);
 
 		/// process video frame
-		void process_video_packet(std::shared_ptr<Frame> frame);
+		void process_video_packet(std::shared_ptr<openshot::Frame> frame);
 
 		/// write all queued frames' audio to the video file
-		void write_audio_packets(bool final);
+		void write_audio_packets(bool is_final);
 
 		/// write video frame
-		bool write_video_packet(std::shared_ptr<Frame> frame, AVFrame* frame_final);
+		bool write_video_packet(std::shared_ptr<openshot::Frame> frame, AVFrame *frame_final);
 
 		/// write all queued frames
 		void write_queued_frames();
@@ -248,7 +246,7 @@ namespace openshot
 
 		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.
 		/// @param path The file path of the video file you want to open and read
-		FFmpegWriter(string path);
+		FFmpegWriter(std::string path);
 
 		/// Close the writer
 		void Close();
@@ -260,7 +258,7 @@ namespace openshot
 		bool IsOpen() { return is_open; };
 
 		/// Determine if codec name is valid
-		static bool IsValidCodec(string codec_name);
+		static bool IsValidCodec(std::string codec_name);
 
 		/// Open writer
 		void Open();
@@ -287,7 +285,7 @@ namespace openshot
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
-		void SetAudioOptions(bool has_audio, string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate);
+		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, openshot::ChannelLayout channel_layout, int bit_rate);
 
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
@@ -303,14 +301,14 @@ namespace openshot
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(bool has_video, string codec, Fraction fps, int width, int height,Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+		void SetVideoOptions(bool has_video, std::string codec, openshot::Fraction fps, int width, int height, openshot::Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
 		/// @param stream The stream (openshot::StreamType) this option should apply to
 		/// @param name The name of the option you want to set (i.e. qmin, qmax, etc...)
 		/// @param value The new value of this option
-		void SetOption(StreamType stream, string name, string value);
+		void SetOption(openshot::StreamType stream, std::string name, std::string value);
 
 		/// @brief Write the file header (after the options are set). This method is called automatically
 		/// by the Open() method if this method has not yet been called.
@@ -318,13 +316,13 @@ namespace openshot
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
-		void WriteFrame(std::shared_ptr<Frame> frame);
+		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
-		void WriteFrame(ReaderBase* reader, int64_t start, int64_t length);
+		void WriteFrame(openshot::ReaderBase *reader, int64_t start, int64_t length);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
 		/// by the Close() method if this method has not yet been called.

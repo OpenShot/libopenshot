@@ -3,9 +3,12 @@
  * @brief Header file for Timeline class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -30,6 +33,7 @@
 
 #include <list>
 #include <memory>
+#include <set>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include "CacheBase.h"
@@ -49,9 +53,6 @@
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 #include "Settings.h"
-
-using namespace std;
-using namespace openshot;
 
 namespace openshot {
 
@@ -100,6 +101,7 @@ namespace openshot {
 	 *            Fraction(25,1), // framerate
 	 *            44100, // sample rate
 	 *            2 // channels
+	 *            ChannelLayout::LAYOUT_STEREO,
 	 *            );
 	 *
 	 * // Create some clips
@@ -147,11 +149,13 @@ namespace openshot {
 	private:
 		bool is_open; ///<Is Timeline Open?
 		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips
-		list<Clip*> clips; ///<List of clips on this timeline
-		list<Clip*> closing_clips; ///<List of clips that need to be closed
-		map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
-		list<EffectBase*> effects; ///<List of clips on this timeline
+		std::list<Clip*> clips; ///<List of clips on this timeline
+		std::list<Clip*> closing_clips; ///<List of clips that need to be closed
+		std::map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
+		std::list<EffectBase*> effects; ///<List of clips on this timeline
 		CacheBase *final_cache; ///<Final cache of timeline frames
+		std::set<FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
+		bool managed_cache; ///< Does this timeline instance manage the cache object
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
@@ -174,7 +178,7 @@ namespace openshot {
 		/// @param requested_frame The frame number that is requested.
 		/// @param number_of_frames The number of frames to check
 		/// @param include Include or Exclude intersecting clips
-		vector<Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
+		std::vector<Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
 
 		/// Get or generate a blank frame
 		std::shared_ptr<Frame> GetOrCreateFrame(Clip* clip, int64_t number);
@@ -205,6 +209,8 @@ namespace openshot {
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
+        virtual ~Timeline();
+
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
 		void AddClip(Clip* clip);
@@ -226,18 +232,19 @@ namespace openshot {
         void ClearAllCache();
 
 		/// Return a list of clips on the timeline
-		list<Clip*> Clips() { return clips; };
+		std::list<Clip*> Clips() { return clips; };
 
 		/// Close the timeline reader (and any resources it was consuming)
 		void Close();
 
 		/// Return the list of effects on the timeline
-		list<EffectBase*> Effects() { return effects; };
+		std::list<EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
 		CacheBase* GetCache() { return final_cache; };
 
-		/// Get the cache object used by this reader
+		/// Set the cache object used by this reader. You must now manage the lifecycle
+		/// of this cache object though (Timeline will not delete it for you).
 		void SetCache(CacheBase* new_cache);
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
@@ -258,11 +265,11 @@ namespace openshot {
 		bool IsOpen() { return is_open; };
 
 		/// Return the type name of the class
-		string Name() { return "Timeline"; };
+		std::string Name() { return "Timeline"; };
 
 		/// Get and Set JSON methods
-		string Json(); ///< Generate JSON string of this object
-		void SetJson(string value); ///< Load JSON string into this object
+		std::string Json(); ///< Generate JSON string of this object
+		void SetJson(std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
 		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
 
@@ -274,7 +281,7 @@ namespace openshot {
 		/// This is primarily designed to keep the timeline (and its child objects... such as clips and effects) in sync
 		/// with another application... such as OpenShot Video Editor (http://www.openshot.org).
 		/// @param value A JSON string containing a key, value, and type of change.
-		void ApplyJsonDiff(string value);
+		void ApplyJsonDiff(std::string value);
 
 		/// Open the reader (and start consuming resources)
 		void Open();

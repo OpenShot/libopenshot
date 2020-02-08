@@ -3,9 +3,12 @@
  * @brief Source file for VideoCacheThread class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
- * @section LICENSE
+ * @ref License
+ */
+
+/* LICENSE
  *
- * Copyright (c) 2008-2014 OpenShot Studios, LLC
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -26,13 +29,14 @@
  */
 
 #include "../../include/Qt/VideoCacheThread.h"
+#include <algorithm>
 
 namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false), position(1)
-	, reader(NULL), max_frames(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
+	, reader(NULL), max_frames(std::min(OPEN_MP_NUM_PROCESSORS * 8, 64)), current_display_frame(1)
     {
     }
 
@@ -90,7 +94,7 @@ namespace openshot
 			try
 			{
 				if (reader) {
-					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame), "", -1, "", -1);
+					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
 
 					// Force the frame to be generated
 					reader->GetFrame(position);
