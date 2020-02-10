@@ -47,6 +47,10 @@
 		#include <libavformat/avformat.h>
 	#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
 		#include <libavutil/hwcontext.h> //PM
+		// FFmpeg 3.2's AVHWDeviceType enum doesn't include _NONE
+		#ifndef AV_HWDEVICE_TYPE_NONE
+			#define AV_HWDEVICE_TYPE_NONE AV_HWDEVICE_TYPE_VAAPI
+		#endif
 	#endif
 		#include <libswscale/swscale.h>
 		// Change this to the first version swrescale works
