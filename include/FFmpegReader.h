@@ -98,7 +98,7 @@ namespace openshot {
 		AVFormatContext *pFormatCtx;
 		int i, videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
-#if (LIBAVFORMAT_VERSION_MAJOR >= 57)
+#if HAVE_HW_ACCEL
 		AVBufferRef *hw_device_ctx = NULL; //PM
 #endif
 		AVStream *pStream, *aStream;
@@ -147,12 +147,11 @@ namespace openshot {
 		int64_t current_video_frame;    // can't reliably use PTS of video to determine this
 
 		int hw_de_supported = 0;    // Is set by FFmpegReader
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
-#endif
-
 		int IsHardwareDecodeSupported(int codecid);
+#endif
 
 		/// Check for the correct frames per second value by scanning the 1st few seconds of video packets.
 		void CheckFPS();
