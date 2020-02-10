@@ -119,7 +119,7 @@ namespace openshot
 		TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color);
 
 		/// Draw a box under rendered text using the specified color.
-		/// @param text_background_color The background color behind the text
+		/// @param color The background color behind the text
 		void SetTextBackgroundColor(std::string color);
 
 		/// Close Reader
