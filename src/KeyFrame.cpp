@@ -71,7 +71,7 @@ namespace {
 			}
 			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
 			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
-			if (abs(target - x) < allowed_error) {
+			if (fabs(target - x) < allowed_error) {
 				return y;
 			}
 			if (x > target) {
