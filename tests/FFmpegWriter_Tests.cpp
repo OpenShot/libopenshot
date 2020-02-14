@@ -97,7 +97,7 @@ TEST(Options_Overloads)
 
 	// Set options
 	w.SetAudioOptions("aac", 48000, 192000);
-	w.SetVideoOptions("libx264", Fraction(30,1), 1280, 720, 5000000);
+	w.SetVideoOptions("libx264", 1280, 720, Fraction(30,1), 5000000);
 
 	// Open writer
 	w.Open();

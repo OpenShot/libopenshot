@@ -278,7 +278,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 }
 
 // Set video export options (overloaded function)
-void FFmpegWriter::SetVideoOptions(std::string codec, Fraction fps, int width, int height, int bit_rate) {
+void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fraction fps, int bit_rate) {
 	// Call full signature with some default parameters
 	FFmpegWriter::SetVideoOptions(true, codec, fps, width, height,
 	                              openshot::Fraction(1, 1), false, true, bit_rate);
@@ -324,7 +324,8 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 // Set audio export options (overloaded function)
 void FFmpegWriter::SetAudioOptions(std::string codec, int sample_rate, int bit_rate) {
 	// Call full signature with some default parameters
-	FFmpegWriter::SetAudioOptions(true, codec, sample_rate, 2, openshot::LAYOUT_STEREO, bit_rate);
+	FFmpegWriter::SetAudioOptions(true, codec, sample_rate, 2,
+	                              openshot::LAYOUT_STEREO, bit_rate);
 }
 
 

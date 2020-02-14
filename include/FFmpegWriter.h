@@ -285,6 +285,8 @@ namespace openshot {
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
 		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, openshot::ChannelLayout channel_layout, int bit_rate);
 
 		/// @brief Set audio export options.
@@ -294,6 +296,8 @@ namespace openshot {
 		/// @param codec The codec used to encode the audio for this file
 		/// @param sample_rate The number of audio samples needed in this file
 		/// @param bit_rate The audio bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
 		void SetAudioOptions(std::string codec, int sample_rate, int bit_rate);
 
 		/// @brief Set the cache size
@@ -310,6 +314,8 @@ namespace openshot {
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
 		void SetVideoOptions(bool has_video, std::string codec, openshot::Fraction fps, int width, int height, openshot::Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
 
 		/// @brief Set video export options.
@@ -317,11 +323,14 @@ namespace openshot {
 		/// Enables the stream and configures non-interlaced video with a 1:1 pixel aspect ratio.
 		///
 		/// @param codec The codec used to encode the images in this video
-		/// @param fps The number of frames per second
 		/// @param width The width in pixels of this video
 		/// @param height The height in pixels of this video
+		/// @param fps The number of frames per second
 		/// @param bit_rate The video bit rate used during encoding
-		void SetVideoOptions(std::string codec, openshot::Fraction fps, int width, int height, int bit_rate);
+		///
+		/// \note This is an overloaded function.
+		/// \warning Observe the argument order, which is consistent with the openshot::Timeline constructor, but differs from the other signature.
+		void SetVideoOptions(std::string codec, int width, int height,  openshot::Fraction fps, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
@@ -337,12 +346,16 @@ namespace openshot {
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
+		///
+		/// \note This is an overloaded function.
 		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
+		///
+		/// \note This is an overloaded function.
 		void WriteFrame(openshot::ReaderBase *reader, int64_t start, int64_t length);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically
