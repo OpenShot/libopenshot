@@ -255,7 +255,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	}
 	if (bit_rate >= 1000)            // bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
-	if ((bit_rate >= 0) && (bit_rate < 64))    // bit_rate is the bitrate in crf
+	if ((bit_rate >= 0) && (bit_rate < 256))    // bit_rate is the bitrate in crf
 		info.video_bit_rate = bit_rate;
 
 	info.interlaced_frame = interlaced;
@@ -341,7 +341,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
 				   name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
-				   name == "rc_buffer_size" || name == "crf" || name == "cqp")) {
+				   name == "rc_buffer_size" || name == "crf" || name == "cqp" || name == "qp")) {
 		// Check for specific named options
 		if (name == "g")
 			// Set gop_size
@@ -462,6 +462,18 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+							//av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
+							av_opt_set_int(c->priv_data, "preset", 6, 0);
+							av_opt_set_int(c->priv_data, "forced-idr",1,0);
+						}
+						if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+							//av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
+							av_opt_set_int(c->priv_data, "speed", 7, 0);
+							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
+							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
+							//av_opt_set(c->priv_data, "tile-row", "", 0);
+						}
 						break;
 #endif
 					case AV_CODEC_ID_VP8 :
@@ -503,6 +515,36 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						c->bit_rate = (int) (mbs);
 				}
 			}
+#endif
+		} else if (name == "qp") {
+			// encode quality and special settings like lossless
+			// This might be better in an extra methods as more options
+			// and way to set quality are possible
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+				switch (c->codec_id) {
+					case AV_CODEC_ID_AV1 :
+						c->bit_rate = 0;
+						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
+						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
+							av_opt_set_int(c->priv_data, "preset", 6, 0);
+							av_opt_set_int(c->priv_data, "forced-idr",1,0);
+						}
+						if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
+							av_opt_set_int(c->priv_data, "speed", 7, 0);
+							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
+							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
+							//av_opt_set(c->priv_data, "tile-row", "", 0);
+						}
+						 if (strstr(info.vcodec.c_str(), "aom") != NULL) {
+							// Hack to set tiles; libaom doesn have qp only crf
+							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
+							av_opt_set_int(c->priv_data, "tile-columns", 2, 0);		// log2 of number of columns
+						}
+						break;
+				}
 #endif
 		} else {
 			// Set AVOption
