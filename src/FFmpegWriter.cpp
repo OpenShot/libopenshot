@@ -492,7 +492,14 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						}
 						break;
 					case AV_CODEC_ID_HEVC :
-						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+						if (strstr(info.vcodec.c_str(), "svt_hevc") != NULL) {
+							av_opt_set_int(c->priv_data, "preset", 7, 0);
+							av_opt_set_int(c->priv_data, "forced-idr",1,0);
+							av_opt_set_int(c->priv_data, "qp",std::min(std::stoi(value), 51),0);
+						}
+						else {
+							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+						}
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 							av_opt_set_int(c->priv_data, "lossless", 1, 0);
@@ -544,6 +551,13 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						}
 						else {
 							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+						}
+					case AV_CODEC_ID_HEVC :
+						c->bit_rate = 0;
+						if (strstr(info.vcodec.c_str(), "svt_hevc") != NULL) {
+							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),51), 0);
+							av_opt_set_int(c->priv_data, "preset", 7, 0);
+							av_opt_set_int(c->priv_data, "forced-idr",1,0);
 						}
 						break;
 				}
