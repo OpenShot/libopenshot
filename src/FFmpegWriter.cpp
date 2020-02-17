@@ -463,16 +463,13 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						c->bit_rate = 0;
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
-							//av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
 							av_opt_set_int(c->priv_data, "preset", 6, 0);
 							av_opt_set_int(c->priv_data, "forced-idr",1,0);
 						}
 						if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
-							//av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
 							av_opt_set_int(c->priv_data, "speed", 7, 0);
 							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
 							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
-							//av_opt_set(c->priv_data, "tile-row", "", 0);
 						}
 						break;
 #endif
@@ -524,24 +521,29 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 				switch (c->codec_id) {
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
 						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
 							av_opt_set_int(c->priv_data, "preset", 6, 0);
 							av_opt_set_int(c->priv_data, "forced-idr",1,0);
 						}
-						if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+							// Set number of tiles to a fixed value
+							// TODO Let user choose number of tiles 
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
 							av_opt_set_int(c->priv_data, "speed", 7, 0);
-							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
-							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
-							//av_opt_set(c->priv_data, "tile-row", "", 0);
+							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);		// number of rows
+							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);		// number of columns
 						}
-						 if (strstr(info.vcodec.c_str(), "aom") != NULL) {
-							// Hack to set tiles; libaom doesn have qp only crf
+						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
+							// Set number of tiles to a fixed value
+							// TODO Let user choose number of tiles 
+							// libaom doesn't have qp only crf
 							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
 							av_opt_set_int(c->priv_data, "tile-columns", 2, 0);		// log2 of number of columns
+						}
+						else {
+							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 						}
 						break;
 				}
