@@ -83,6 +83,15 @@ TEST(AudioOnly_Constructor)
 	// CHECK_EQUAL(true, f.has_audio_data); // TODO: This would be expected?
 }
 
+TEST(SetFrameNumber)
+{
+	Frame f;
+	f.SetFrameNumber(42);
+	CHECK_EQUAL(42, f.number);
+	f.SetFrameNumber(21);
+	CHECK_EQUAL(21, f.number);
+}
+
 TEST(GetImage)
 {
 	Frame f1;
