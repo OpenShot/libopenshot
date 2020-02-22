@@ -55,8 +55,13 @@ TEST(Default_Constructor)
 	// Should be false until we load or create contents
 	CHECK_EQUAL(false, f1.has_image_data);
 	CHECK_EQUAL(false, f1.has_audio_data);
+}
 
-	// Calling GetImage() paints a blank frame, by default
+TEST(GetImage)
+{
+	Frame f1;
+	// Calling GetImage() paints a blank frame, by default.
+	// It also adds image data to the frame!
 	std::shared_ptr<QImage> i1 = f1.GetImage();
 
 	CHECK(i1 != nullptr);
