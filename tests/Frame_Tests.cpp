@@ -30,6 +30,11 @@
  */
 
 #include "UnitTest++.h"
+// Work around older versions of UnitTest++ without REQUIRE
+#ifndef REQUIRE
+  #define REQUIRE
+#endif
+
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
