@@ -72,6 +72,17 @@ TEST(ImageOnly_Constructor)
 	// CHECK(f.CheckPixel(0, 0, 0xFA, 0xFB, 0xFC, 0, 0));
 }
 
+TEST(AudioOnly_Constructor)
+{
+	Frame f(42, 100, 1);
+	CHECK_EQUAL(1, f.GetHeight());
+	CHECK_EQUAL(1, f.GetWidth());
+	CHECK_EQUAL(44100, f.SampleRate());
+	CHECK_EQUAL(1, f.GetAudioChannelsCount());
+
+	// CHECK_EQUAL(true, f.has_audio_data); // TODO: This would be expected?
+}
+
 TEST(GetImage)
 {
 	Frame f1;
