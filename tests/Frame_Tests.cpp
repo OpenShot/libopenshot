@@ -92,6 +92,14 @@ TEST(SetFrameNumber)
 	CHECK_EQUAL(21, f.number);
 }
 
+TEST(SampleRate_Change)
+{
+	Frame f;
+	f.SampleRate(44800);
+	CHECK_EQUAL(44800, f.SampleRate());
+	// TODO: Test how this affects audio data?
+}
+
 TEST(GetImage)
 {
 	Frame f1;
