@@ -44,26 +44,25 @@ SUITE(Frame_Tests)
 TEST(Default_Constructor)
 {
 	// Create a "blank" default Frame
-	std::shared_ptr<Frame> f1(new Frame());
-	REQUIRE CHECK(f1 != nullptr);
+	Frame f1;
 
 	// Check basic default parameters
-	CHECK_EQUAL(1, f1->GetHeight());
-	CHECK_EQUAL(1, f1->GetWidth());
-	CHECK_EQUAL(44100, f1->SampleRate());
-	CHECK_EQUAL(2, f1->GetAudioChannelsCount());
+	CHECK_EQUAL(1, f1.GetHeight());
+	CHECK_EQUAL(1, f1.GetWidth());
+	CHECK_EQUAL(44100, f1.SampleRate());
+	CHECK_EQUAL(2, f1.GetAudioChannelsCount());
 
 	// Should be false until we load or create contents
-	CHECK_EQUAL(false, f1->has_image_data);
-	CHECK_EQUAL(false, f1->has_audio_data);
+	CHECK_EQUAL(false, f1.has_image_data);
+	CHECK_EQUAL(false, f1.has_audio_data);
 
 	// Calling GetImage() paints a blank frame, by default
-	std::shared_ptr<QImage> i1 = f1->GetImage();
+	std::shared_ptr<QImage> i1 = f1.GetImage();
 
 	CHECK(i1 != nullptr);
 
-	CHECK_EQUAL(true,f1->has_image_data);
-	CHECK_EQUAL(false,f1->has_audio_data);
+	CHECK_EQUAL(true,f1.has_image_data);
+	CHECK_EQUAL(false,f1.has_audio_data);
 }
 
 
@@ -88,8 +87,7 @@ TEST(Data_Access)
 TEST(AddImage_QImage)
 {
 	// Create a "blank" default Frame
-	std::shared_ptr<Frame> f1(new Frame());
-	REQUIRE CHECK(f1 != nullptr);
+	Frame f1;
 
 	// Load an image
 	std::stringstream path;
@@ -98,12 +96,12 @@ TEST(AddImage_QImage)
 
 	CHECK_EQUAL(false, i1->isNull());
 
-	f1->AddImage(i1);
+	f1.AddImage(i1);
 
 	// Check loaded image parameters
-	CHECK_EQUAL(i1->height(), f1->GetHeight());
-	CHECK_EQUAL(i1->width(), f1->GetWidth());
-	CHECK_EQUAL(true, f1->has_image_data);
+	CHECK_EQUAL(i1->height(), f1.GetHeight());
+	CHECK_EQUAL(i1->width(), f1.GetWidth());
+	CHECK_EQUAL(true, f1.has_image_data);
 }
 
 
