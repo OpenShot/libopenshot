@@ -27,8 +27,6 @@
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
 
-# Automatically process Qt classes with meta-object compiler
-set(CMAKE_AUTOMOC True)
 
 ################ WINDOWS ##################
 # Set some compiler options for Windows
@@ -190,9 +188,8 @@ set(QT_PLAYER_SOURCES
   Qt/VideoRenderer.cpp
   Qt/VideoRenderWidget.cpp)
 
-
-# Get list of headers
-file(GLOB_RECURSE headers ${CMAKE_SOURCE_DIR}/include/*.h)
+# Get list of MOC'able headers
+file(GLOB_RECURSE OPENSHOT_QT_HEADERS ${CMAKE_SOURCE_DIR}/include/Qt/*.h)
 
 # Disable RPATH
 SET(CMAKE_MACOSX_RPATH 0)
@@ -201,19 +198,20 @@ SET(CMAKE_MACOSX_RPATH 0)
 # Create shared openshot library
 add_library(openshot SHARED)
 
-target_sources(openshot
-  PRIVATE
-    ${OPENSHOT_SOURCES} ${EFFECTS_SOURCES} ${QT_PLAYER_SOURCES}
-  PUBLIC
-    ${headers})
+target_sources(openshot PRIVATE
+  ${OPENSHOT_SOURCES}
+  ${EFFECTS_SOURCES}
+  ${QT_PLAYER_SOURCES}
+  ${OPENSHOT_QT_HEADERS}
+  )
 
 # Set SONAME and other library properties
-set_target_properties(openshot
-		PROPERTIES
-		VERSION ${PROJECT_VERSION}
-		SOVERSION ${PROJECT_SO_VERSION}
-		INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-		)
+set_target_properties(openshot PROPERTIES
+  AUTOMOC ON
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_SO_VERSION}
+  INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+  )
 
 # Add optional ImageMagic-dependent sources
 if(ImageMagick_FOUND)
