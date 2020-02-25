@@ -59,6 +59,13 @@
 # 2019-12-19, FeRD (Frank Dana)
 # - Rename Lcov outputs, make filtered file canonical, fix cleanup for targets
 #
+# 2020-01-19, Bob Apthorpe
+# - Added gfortran support
+#
+# 2020-02-17, FeRD (Frank Dana)
+# - Make all add_custom_target()s VERBATIM to auto-escape wildcard characters
+#   in EXCLUDEs, and remove manual escaping from gcovr targets
+#
 # USAGE:
 #
 # 1. Copy this file into your cmake modules path.
@@ -122,12 +129,22 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang")
         message(FATAL_ERROR "Clang version must be 3.0.0 or greater! Aborting...")
     endif()
 elseif(NOT CMAKE_COMPILER_IS_GNUCXX)
-    message(FATAL_ERROR "Compiler is not GNU gcc! Aborting...")
+    if("${CMAKE_Fortran_COMPILER_ID}" MATCHES "[Ff]lang")
+        # Do nothing; exit conditional without error if true
+    elseif("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
+        # Do nothing; exit conditional without error if true
+    else()
+        message(FATAL_ERROR "Compiler is not GNU gcc! Aborting...")
+    endif()
 endif()
 
 set(COVERAGE_COMPILER_FLAGS "-g -fprofile-arcs -ftest-coverage"
     CACHE INTERNAL "")
 
+set(CMAKE_Fortran_FLAGS_COVERAGE
+    ${COVERAGE_COMPILER_FLAGS}
+    CACHE STRING "Flags used by the Fortran compiler during coverage builds."
+    FORCE )
 set(CMAKE_CXX_FLAGS_COVERAGE
     ${COVERAGE_COMPILER_FLAGS}
     CACHE STRING "Flags used by the C++ compiler during coverage builds."
@@ -145,6 +162,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE
     CACHE STRING "Flags used by the shared libraries linker during coverage builds."
     FORCE )
 mark_as_advanced(
+    CMAKE_Fortran_FLAGS_COVERAGE
     CMAKE_CXX_FLAGS_COVERAGE
     CMAKE_C_FLAGS_COVERAGE
     CMAKE_EXE_LINKER_FLAGS_COVERAGE
@@ -154,7 +172,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(WARNING "Code coverage results with an optimised (non-Debug) build may be misleading")
 endif() # NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
 
-if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     link_libraries(gcov)
 endif()
 
@@ -242,6 +260,7 @@ function(setup_target_for_coverage_lcov)
 
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
+        VERBATIM # Protect arguments to commands
         COMMENT "Resetting code coverage counters to zero.\nProcessing code coverage counters and generating report."
     )
 
@@ -304,9 +323,8 @@ function(setup_target_for_coverage_gcovr_xml)
     # Combine excludes to several -e arguments
     set(GCOVR_EXCLUDE_ARGS "")
     foreach(EXCLUDE ${GCOVR_EXCLUDES})
-        string(REPLACE "*" "\\*" EXCLUDE_REPLACED ${EXCLUDE})
         list(APPEND GCOVR_EXCLUDE_ARGS "-e")
-        list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE_REPLACED}")
+        list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
     add_custom_target(${Coverage_NAME}
@@ -321,6 +339,7 @@ function(setup_target_for_coverage_gcovr_xml)
         BYPRODUCTS ${Coverage_NAME}.xml
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
+        VERBATIM # Protect arguments to commands
         COMMENT "Running gcovr to produce Cobertura code coverage report."
     )
 
@@ -376,9 +395,8 @@ function(setup_target_for_coverage_gcovr_html)
     # Combine excludes to several -e arguments
     set(GCOVR_EXCLUDE_ARGS "")
     foreach(EXCLUDE ${GCOVR_EXCLUDES})
-        string(REPLACE "*" "\\*" EXCLUDE_REPLACED ${EXCLUDE})
         list(APPEND GCOVR_EXCLUDE_ARGS "-e")
-        list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE_REPLACED}")
+        list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
     add_custom_target(${Coverage_NAME}
@@ -393,9 +411,11 @@ function(setup_target_for_coverage_gcovr_html)
             -r ${BASEDIR} ${GCOVR_EXCLUDE_ARGS}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}/index.html
+
         BYPRODUCTS ${PROJECT_BINARY_DIR}/${Coverage_NAME}  # report directory
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
         DEPENDS ${Coverage_DEPENDENCIES}
+        VERBATIM # Protect arguments to commands
         COMMENT "Running gcovr to produce HTML code coverage report."
     )
 
@@ -410,5 +430,6 @@ endfunction() # setup_target_for_coverage_gcovr_html
 function(append_coverage_compiler_flags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${COVERAGE_COMPILER_FLAGS}" PARENT_SCOPE)
     message(STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
 endfunction() # append_coverage_compiler_flags
