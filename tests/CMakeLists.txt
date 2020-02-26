@@ -46,7 +46,11 @@ if (NOT UnitTest++_FOUND)
 endif()
 
 # Include UnitTest++ headers (needed for compile)
-include_directories(${UNITTEST++_INCLUDE_DIR})
+include_directories(${UnitTest++_INCLUDE_DIRS})
+
+set_package_properties(UnitTest++ PROPERTIES
+  TYPE RECOMMENDED
+  PURPOSE "Unit testing framework")
 
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
@@ -125,7 +129,7 @@ add_executable(openshot-test
   ${OPENSHOT_TEST_FILES} )
 
 # Link libraries to the new executable
-target_link_libraries(openshot-test openshot ${UNITTEST++_LIBRARY})
+target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable
