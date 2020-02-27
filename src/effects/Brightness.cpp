@@ -72,35 +72,24 @@ std::shared_ptr<Frame> Brightness::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 	// Loop through pixels
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+	int pixel_count = frame_image->width() * frame_image->height();
+
+	#pragma omp parallel for
+	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Get the RGB values from the pixel
-		int R = pixels[byte_index];
-		int G = pixels[byte_index + 1];
-		int B = pixels[byte_index + 2];
-		int A = pixels[byte_index + 3];
-
-		// Adjust the contrast
+		// Compute contrast adjustment factor
 		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
-		R = constrain((factor * (R - 128)) + 128);
-		G = constrain((factor * (G - 128)) + 128);
-		B = constrain((factor * (B - 128)) + 128);
 
-		// Adjust the brightness
-		R += (255 * brightness_value);
-		G += (255 * brightness_value);
-		B += (255 * brightness_value);
+		// Get RGB pixels from image and apply constrained contrast adjustment
+		int R = constrain((factor * (pixels[pixel * 4] - 128)) + 128);
+		int G = constrain((factor * (pixels[pixel * 4 + 1] - 128)) + 128);
+		int B = constrain((factor * (pixels[pixel * 4 + 2] - 128)) + 128);
+		// (Don't modify Alpha value)
 
-		// Constrain the value from 0 to 255
-		R = constrain(R);
-		G = constrain(G);
-		B = constrain(B);
-
-		// Set all pixels to new value
-		pixels[byte_index] = R;
-		pixels[byte_index + 1] = G;
-		pixels[byte_index + 2] = B;
-		pixels[byte_index + 3] = A; // leave the alpha value alone
+		// Adjust brightness and write constrained values back to image
+		pixels[pixel * 4] = constrain(R + (255 * brightness_value));
+		pixels[pixel * 4 + 1] = constrain(G + (255 * brightness_value));
+		pixels[pixel * 4 + 2] = constrain(B + (255 * brightness_value));
 	}
 
 	// return the modified frame
