@@ -67,7 +67,6 @@ namespace openshot
 		void init_effect_details();
 
 		/// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
-		int* initBoxes(float sigma, int n);
 		void boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
 		void boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
 
