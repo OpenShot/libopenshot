@@ -68,12 +68,10 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Get pixels for frame image
+	// Get original pixels for frame image, and also make a copy for editing
+	const unsigned char *original_pixels = (unsigned char *) frame_image->constBits();
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-
-	// Make temp copy of pixels before we start changing them
-	unsigned char *temp_image = new unsigned char[frame_image->width() * frame_image->height() * 4]();
-	memcpy(temp_image, pixels, sizeof(char) * frame_image->width() * frame_image->height() * 4);
+	int pixel_count = frame_image->width() * frame_image->height();
 
 	// Get current keyframe values
 	double time = frame_number;//abs(((frame_number + 255) % 510) - 255);
@@ -84,29 +82,27 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	double speed_y_value = speed_y.GetValue(frame_number);
 
 	// Loop through pixels
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+	#pragma omp parallel for
+	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Calculate X and Y pixel coordinates
+		// Calculate pixel Y value
 		int Y = pixel / frame_image->width();
 
 		// Calculate wave pixel offsets
-		float noiseVal = (100 + Y * 0.001) * multiplier_value; // Time and time multiplier (to make the wave move)
-		float noiseAmp = noiseVal * amplitude_value; // Apply amplitude / height of the wave
-		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value)); // Waveform algorithm on y-axis
-		float waveVal = (waveformVal + shift_x_value) * noiseAmp; // Shifts pixels on the x-axis
+		float noiseVal = (100 + Y * 0.001) * multiplier_value;  // Time and time multiplier (to make the wave move)
+		float noiseAmp = noiseVal * amplitude_value;  // Apply amplitude / height of the wave
+		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value));  // Waveform algorithm on y-axis
+		float waveVal = (waveformVal + shift_x_value) * noiseAmp;  // Shifts pixels on the x-axis
 
-		long unsigned int source_X = round(pixel + waveVal) * 4;
-		if (source_X < 0)
-			source_X = 0;
-		if (source_X > frame_image->width() * frame_image->height() * 4 * sizeof(char))
-			source_X = (frame_image->width() * frame_image->height() * 4 * sizeof(char)) - (sizeof(char) * 4);
+		long unsigned int source_px = round(pixel + waveVal);
+		if (source_px < 0)
+			source_px = 0;
+		if (source_px >= pixel_count)
+			source_px = pixel_count - 1;
 
 		// Calculate source array location, and target array location, and copy the 4 color values
-		memcpy(&pixels[byte_index], &temp_image[source_X], sizeof(char) * 4);
+		memcpy(&pixels[pixel * 4], &original_pixels[source_px * 4], sizeof(char) * 4);
 	}
-
-	// Delete arrays
-	delete[] temp_image;
 
 	// return the modified frame
 	return frame;
