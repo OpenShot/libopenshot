@@ -270,7 +270,7 @@ void Clip::Close()
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
-float Clip::End()
+float Clip::End() const
 {
 	// if a time curve is present, use its length
 	if (time.GetCount() > 1)
@@ -645,14 +645,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 }
 
 // Generate JSON string of this object
-std::string Clip::Json() {
+std::string Clip::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Get all properties for a specific frame
-std::string Clip::PropertiesJSON(int64_t requested_frame) {
+std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -739,8 +739,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) {
 	return root.toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Clip::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Clip::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
@@ -795,24 +795,12 @@ Json::Value Clip::JsonValue() {
 }
 
 // Load JSON string into this object
-void Clip::SetJson(std::string value) {
+void Clip::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -823,8 +811,8 @@ void Clip::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Clip::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Clip::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ClipBase::SetJsonValue(root);

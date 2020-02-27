@@ -1,7 +1,7 @@
 /**
  * @file
- * @brief Header file for JSON class
- * @author Jonathan Thomas <jonathan@openshot.org>
+ * @brief Helper functions for Json parsing
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  *
  * @ref License
  */
@@ -28,15 +28,23 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_JSON_H
-#define OPENSHOT_JSON_H
+#include "../include/Json.h"
 
-#include <string>
-#include "json/json.h"
-#include "Exceptions.h"
+const Json::Value openshot::stringToJson(const std::string value) {
 
-namespace openshot {
-    const Json::Value stringToJson(const std::string value);
+	// Parse JSON string into JSON objects
+	Json::Value root;
+	Json::CharReaderBuilder rbuilder;
+	Json::CharReader* reader(rbuilder.newCharReader());
+
+	std::string errors;
+	bool success = reader->parse( value.c_str(), value.c_str() + value.size(),
+	                              &root, &errors );
+	delete reader;
+
+	if (!success)
+		// Raise exception
+		throw openshot::InvalidJSON("JSON could not be parsed (or is invalid)");
+
+	return root;
 }
-
-#endif

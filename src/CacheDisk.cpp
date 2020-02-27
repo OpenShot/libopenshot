@@ -114,12 +114,8 @@ void CacheDisk::CalculateRanges() {
 
 				// Add JSON object with start/end attributes
 				// Use strings, since int64_ts are supported in JSON
-				std::stringstream start_str;
-				start_str << starting_frame;
-				std::stringstream end_str;
-				end_str << ending_frame;
-				range["start"] = start_str.str();
-				range["end"] = end_str.str();
+				range["start"] = std::to_string(starting_frame);
+				range["end"] = std::to_string(ending_frame);
 				ranges.append(range);
 
 				// Set new starting range
@@ -135,12 +131,8 @@ void CacheDisk::CalculateRanges() {
 
 		// Add JSON object with start/end attributes
 		// Use strings, since int64_ts are supported in JSON
-		std::stringstream start_str;
-		start_str << starting_frame;
-		std::stringstream end_str;
-		end_str << ending_frame;
-		range["start"] = start_str.str();
-		range["end"] = end_str.str();
+		range["start"] = std::to_string(starting_frame);
+		range["end"] = std::to_string(ending_frame);
 		ranges.append(range);
 
 		// Cache range JSON as string
@@ -469,7 +461,7 @@ std::string CacheDisk::Json() {
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value CacheDisk::JsonValue() {
 
 	// Process range data (if anything has changed)
@@ -486,41 +478,23 @@ Json::Value CacheDisk::JsonValue() {
 	root["version"] = range_version_str.str();
 
 	// Parse and append range data (if any)
-	Json::Value ranges;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( json_ranges.c_str(),
-	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
-	delete reader;
-
-	if (success)
+	// Parse and append range data (if any)
+	try {
+		const Json::Value ranges = openshot::stringToJson(json_ranges);
 		root["ranges"] = ranges;
+	} catch (...) { }
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void CacheDisk::SetJson(std::string value) {
+void CacheDisk::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-	               value.c_str() + value.size(), &root, &errors );
- 	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -531,8 +505,8 @@ void CacheDisk::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void CacheDisk::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void CacheDisk::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();
