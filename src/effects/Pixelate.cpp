@@ -75,34 +75,20 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 	double bottom_value = bottom.GetValue(frame_number);
 
 	if (pixelization_value > 0.0) {
-		// Resize frame image smaller (based on pixelization value)
-		std::shared_ptr<QImage> smaller_frame_image = std::shared_ptr<QImage>(new QImage(frame_image->scaledToWidth(std::max(frame_image->width() * pixelization_value, 2.0), Qt::SmoothTransformation)));
+		int w = frame_image->width();
+		int h = frame_image->height();
 
-		// Resize image back to original size (with no smoothing to create pixelated image)
-		std::shared_ptr<QImage> pixelated_image = std::shared_ptr<QImage>(new QImage(smaller_frame_image->scaledToWidth(frame_image->width(), Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888)));
+		// Define area we're working on in terms of a QRect with QMargins applied
+		QRect area(QPoint(0,0), frame_image->size());
+		area = area.marginsRemoved({int(left_value * w), int(top_value * h), int(right_value * w), int(bottom_value * h)});
 
-		// Get pixel array pointer
-		unsigned char *pixels = (unsigned char *) frame_image->bits();
-		unsigned char *pixelated_pixels = (unsigned char *) pixelated_image->bits();
+		// Copy and scale pixels in area to be pixelated
+		auto frame_scaled = frame_image->copy(area).scaledToWidth(area.width() * pixelization_value, Qt::SmoothTransformation);
 
-		// Get pixels sizes of all margins
-		int top_bar_height = top_value * frame_image->height();
-		int bottom_bar_height = bottom_value * frame_image->height();
-		int left_bar_width = left_value * frame_image->width();
-		int right_bar_width = right_value * frame_image->width();
-
-		// Loop through rows
-		for (int row = 0; row < frame_image->height(); row++) {
-
-			// Copy pixelated pixels into original frame image (where needed)
-			if ((row >= top_bar_height) && (row <= frame_image->height() - bottom_bar_height)) {
-				memcpy(&pixels[(row * frame_image->width() + left_bar_width) * 4], &pixelated_pixels[(row * frame_image->width() + left_bar_width) * 4], sizeof(char) * (frame_image->width() - left_bar_width - right_bar_width) * 4);
-			}
-		}
-
-		// Cleanup temp images
-		smaller_frame_image.reset();
-		pixelated_image.reset();
+		// Draw pixelated image back over original
+		QPainter painter(frame_image.get());
+		painter.drawImage(area, frame_scaled);
+		painter.end();
 	}
 
 	// return the modified frame
