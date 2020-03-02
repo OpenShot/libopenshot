@@ -842,6 +842,9 @@ void FFmpegWriter::flush_encoders() {
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
 	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
+#else
+	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
+		return;
 #endif
 
 	int error_code = 0;
@@ -1991,10 +1994,14 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final) {
 #if (LIBAVFORMAT_VERSION_MAJOR >= 58)
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags", oc->oformat->flags);
+
+	if (video_st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO &&
+        video_st->codecpar->codec_id == AV_CODEC_ID_RAWVIDEO) {
 #else
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE);
 
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
+#endif
 		// Raw video case.
 		AVPacket pkt;
 		av_init_packet(&pkt);
@@ -2019,7 +2026,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		AV_FREE_PACKET(&pkt);
 
 	} else
-#endif
 	{
 
 		AVPacket pkt;
