@@ -56,10 +56,10 @@ namespace openshot {
 		std::string previous_properties; ///< This string contains the previous JSON properties
 
 		/// Generate JSON for a property
-		Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame);
+		Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
 
 		/// Generate JSON choice for a property (dropdown properties)
-		Json::Value add_property_choice_json(std::string name, int value, int selected_value);
+		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
 
 	public:
 
@@ -73,12 +73,12 @@ namespace openshot {
 		bool operator>= ( ClipBase& a) { return (Position() >= a.Position()); }
 
 		/// Get basic properties
-		std::string Id() { return id; } ///< Get the Id of this clip object
-		float Position() { return position; } ///< Get position on timeline (in seconds)
-		int Layer() { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
-		float Start() { return start; } ///< Get start position (in seconds) of clip (trim start of video)
-		float End() { return end; } ///< Get end position (in seconds) of clip (trim end of video)
-		float Duration() { return end - start; } ///< Get the length of this clip (in seconds)
+		std::string Id() const { return id; } ///< Get the Id of this clip object
+		float Position() const { return position; } ///< Get position on timeline (in seconds)
+		int Layer() const { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
+		float Start() const { return start; } ///< Get start position (in seconds) of clip (trim start of video)
+		float End() const { return end; } ///< Get end position (in seconds) of clip (trim end of video)
+		float Duration() const { return end - start; } ///< Get the length of this clip (in seconds)
 
 		/// Set basic properties
 		void Id(std::string value) { id = value; } ///> Set the Id of this clip object
@@ -88,14 +88,14 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
 		/// Get and Set JSON methods
-		virtual std::string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
-		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+		virtual std::string Json() const = 0; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		virtual std::string PropertiesJSON(int64_t requested_frame) = 0;
+		virtual std::string PropertiesJSON(int64_t requested_frame) const = 0;
 
 		virtual ~ClipBase() = default;
 	};

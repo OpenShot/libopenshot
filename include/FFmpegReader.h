@@ -76,11 +76,11 @@ namespace openshot {
 	 *
 	 * @code
 	 * // Create a reader for a video
-	 * FFmpegReader r("MyAwesomeVideo.webm");
+	 * openshot::FFmpegReader r("MyAwesomeVideo.webm");
 	 * r.Open(); // Open the reader
 	 *
 	 * // Get frame number 1 from the video
-	 * std::shared_ptr<Frame> f = r.GetFrame(1);
+	 * std::shared_ptr<openshot::Frame> f = r.GetFrame(1);
 	 *
 	 * // Now that we have an openshot::Frame object, lets have some fun!
 	 * f->Display(); // Display the frame on the screen
@@ -264,10 +264,10 @@ namespace openshot {
 		std::string Name() { return "FFmpegReader"; };
 
 		/// Get and Set JSON methods
-		std::string Json(); ///< Generate JSON string of this object
-		void SetJson(std::string value); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		std::string Json() const override; ///< Generate JSON string of this object
+		void SetJson(const std::string value); ///< Load JSON string into this object
+		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
 		/// Open File - which is called by the constructor automatically
 		void Open();

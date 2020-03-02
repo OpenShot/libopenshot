@@ -69,44 +69,36 @@ std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_
 	if (!frame_image)
 		return frame;
 
+	int pixel_count = frame_image->width() * frame_image->height();
+
 	// Get keyframe values for this frame
 	float saturation_value = saturation.GetValue(frame_number);
 
 	// Constants used for color saturation formula
-	double pR = .299;
-	double pG = .587;
-	double pB = .114;
+	const double pR = .299;
+	const double pG = .587;
+	const double pB = .114;
 
 	// Loop through pixels
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+
+	#pragma omp parallel for shared (pixels)
+	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
 		// Get the RGB values from the pixel
-		int R = pixels[byte_index];
-		int G = pixels[byte_index + 1];
-		int B = pixels[byte_index + 2];
-		int A = pixels[byte_index + 3];
+		int R = pixels[pixel * 4];
+		int G = pixels[pixel * 4 + 1];
+		int B = pixels[pixel * 4 + 2];
 
 		// Calculate the saturation multiplier
 		double p = sqrt( (R * R * pR) +
-						 (G * G * pG) +
-						 (B * B * pB) );
+		                 (G * G * pG) +
+		                 (B * B * pB) );
 
-		// Adjust the saturation
-		R = p + (R - p) * saturation_value;
-		G = p + (G - p) * saturation_value;
-		B = p + (B - p) * saturation_value;
-
-		// Constrain the value from 0 to 255
-		R = constrain(R);
-		G = constrain(G);
-		B = constrain(B);
-
-		// Set all pixels to new value
-		pixels[byte_index] = R;
-		pixels[byte_index + 1] = G;
-		pixels[byte_index + 2] = B;
-		pixels[byte_index + 3] = A; // leave the alpha value alone
+		// Apply adjusted and constrained saturation
+		pixels[pixel * 4]     = constrain(p + (R - p) * saturation_value);
+		pixels[pixel * 4 + 1] = constrain(p + (G - p) * saturation_value);
+		pixels[pixel * 4 + 2] = constrain(p + (B - p) * saturation_value);
 	}
 
 	// return the modified frame
@@ -114,14 +106,14 @@ std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_
 }
 
 // Generate JSON string of this object
-std::string Saturation::Json() {
+std::string Saturation::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Saturation::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Saturation::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -133,24 +125,12 @@ Json::Value Saturation::JsonValue() {
 }
 
 // Load JSON string into this object
-void Saturation::SetJson(std::string value) {
+void Saturation::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -161,8 +141,8 @@ void Saturation::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Saturation::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Saturation::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -173,7 +153,7 @@ void Saturation::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Saturation::PropertiesJSON(int64_t requested_frame) {
+std::string Saturation::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

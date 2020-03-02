@@ -85,7 +85,7 @@ endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.1.9 REQUIRED)
+find_package(OpenShotAudio 0.2.0 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
