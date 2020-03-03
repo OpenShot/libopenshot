@@ -19,7 +19,6 @@ addons:
     - doxygen
     - graphviz
     - curl
-    - jq
     packages: &ff_common  # Common set of FFmpeg packages
     - *p_common
     - libfdk-aac-dev
@@ -34,28 +33,13 @@ addons:
     - libswresample-dev
 
 matrix:
-
   include:
-    - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
-      env:
-        - BUILD_VERSION=ffmpeg2
-        - CMAKE_EXTRA_ARGS=""
-        - TEST_TARGET="os_test"
-      os: linux
-      dist: xenial
-      addons:
-        apt:
-          sources:
-          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
-          packages:
-          - *ff_common
 
-    - name: "FFmpeg 3 GCC (Ubuntu 18.04 Bionic)"
+    - name: "Coverage (Ubuntu 18.04 Bionic)"
       env:
-        - BUILD_VERSION=ffmpeg3
-        - CMAKE_EXTRA_ARGS=""
-        - TEST_TARGET=test
+        - BUILD_VERSION=coverage_ffmpeg34
+        - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
+        - TEST_TARGET=coverage
       os: linux
       dist: bionic
       addons:
@@ -66,6 +50,8 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - lcov
+          - binutils-common # For c++filt
 
     - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
       env:
@@ -83,6 +69,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
           - libavcodec58
           - libavformat58
           - libavdevice58
@@ -93,9 +80,26 @@ matrix:
           - libavresample4
           - libswresample3
 
-    - name: "FFmpeg 3 Clang (Ubuntu 18.04 Bionic)"
+    - name: "FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
       env:
-        - BUILD_VERSION=clang_ffmpeg3
+        - BUILD_VERSION=ffmpeg34
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET=test
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+          packages:
+          - *ff_common
+          - qt5-default
+          - libjsoncpp-dev
+
+    - name: "FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)"
+      env:
+        - BUILD_VERSION=clang_ffmpeg34
         - CMAKE_EXTRA_ARGS=""
         - TEST_TARGET=test
       os: linux
@@ -111,28 +115,45 @@ matrix:
           - qt5-default
           - libomp-dev
 
-
-    - name: "Coverage (Ubuntu 18.04 Bionic)"
+    - name: "FFmpeg 3.2 GCC (Ubuntu 16.04 Xenial)"
       env:
-        - BUILD_VERSION=coverage_ffmpeg3
-        - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
-        - TEST_TARGET=coverage
+        - BUILD_VERSION=ffmpeg32
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET="os_test"
       os: linux
-      dist: bionic
+      dist: xenial
       addons:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+          - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
+          - sourceline: 'ppa:jon-hedgerows/ffmpeg-backports'
           packages:
           - *ff_common
-          - qt5-default
-          - lcov
-          - binutils-common # For c++filt
+          - libavcodec57
+          - libavdevice57
+          - libavfilter6
+          - libavformat57
+          - libavresample3
+          - libavutil55
+          - libpostproc54
+          - libswresample2
+          - libswscale4
 
-before_script:
-  - CODACY_VERSION="$(curl -Ls https://api.bintray.com/packages/codacy/Binaries/codacy-coverage-reporter/versions/_latest | jq -r .name)"
-  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then curl -Ls -o codacy-coverage-reporter "https://dl.bintray.com/codacy/Binaries/${CODACY_VERSION}/codacy-coverage-reporter-linux"; chmod +x codacy-coverage-reporter; fi
+    - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
+      env:
+        - BUILD_VERSION=ffmpeg2
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET="os_test"
+      os: linux
+      dist: xenial
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
+          packages:
+          - *ff_common
 
 script:
   - mkdir -p build; cd build;
@@ -143,4 +164,4 @@ script:
   - cd ..
 
 after_success:
-  - if [ "x${TEST_TARGET}" = "xcoverage" ]; then ./codacy-coverage-reporter report -l CPP -r build/coverage.info; fi
+  - if [ "x$TEST_TARGET" = "xcoverage" ]; then bash <(curl -s https://codecov.io/bash) -f build/coverage.info || echo "Codecov did not collect coverage reports"; fi
