@@ -581,7 +581,7 @@ void Frame::Save(std::string path, float scale, std::string format, int quality)
 	std::shared_ptr<QImage> previewImage = GetImage();
 
 	// scale image if needed
-	if (abs(scale) > 1.001 || abs(scale) < 0.999)
+	if (fabs(scale) > 1.001 || fabs(scale) < 0.999)
 	{
 		int new_width = width;
 		int new_height = height;
