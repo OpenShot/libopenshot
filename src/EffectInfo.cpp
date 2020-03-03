@@ -56,7 +56,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
 
-	else if (effect_type == "Color Shift")
+	else if (effect_type == "ColorShift")
 		return new ColorShift();
 
 	else if (effect_type == "Crop")
