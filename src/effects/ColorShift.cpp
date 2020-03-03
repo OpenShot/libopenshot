@@ -75,25 +75,24 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 	// Get the current shift amount, and clamp to range (-1 to 1 range)
 	// Red Keyframes
 	float red_x_shift = red_x.GetValue(frame_number);
-	int red_x_shift_limit = round(frame_image_width * fmod(abs(red_x_shift), 1.0));
+	int red_x_shift_limit = round(frame_image_width * fmod(fabs(red_x_shift), 1.0));
 	float red_y_shift = red_y.GetValue(frame_number);
-	int red_y_shift_limit = round(frame_image_height * fmod(abs(red_y_shift), 1.0));
+	int red_y_shift_limit = round(frame_image_height * fmod(fabs(red_y_shift), 1.0));
 	// Green Keyframes
 	float green_x_shift = green_x.GetValue(frame_number);
-	int green_x_shift_limit = round(frame_image_width * fmod(abs(green_x_shift), 1.0));
+	int green_x_shift_limit = round(frame_image_width * fmod(fabs(green_x_shift), 1.0));
 	float green_y_shift = green_y.GetValue(frame_number);
-	int green_y_shift_limit = round(frame_image_height * fmod(abs(green_y_shift), 1.0));
+	int green_y_shift_limit = round(frame_image_height * fmod(fabs(green_y_shift), 1.0));
 	// Blue Keyframes
 	float blue_x_shift = blue_x.GetValue(frame_number);
-	int blue_x_shift_limit = round(frame_image_width * fmod(abs(blue_x_shift), 1.0));
+	int blue_x_shift_limit = round(frame_image_width * fmod(fabs(blue_x_shift), 1.0));
 	float blue_y_shift = blue_y.GetValue(frame_number);
-	int blue_y_shift_limit = round(frame_image_height * fmod(abs(blue_y_shift), 1.0));
+	int blue_y_shift_limit = round(frame_image_height * fmod(fabs(blue_y_shift), 1.0));
 	// Alpha Keyframes
 	float alpha_x_shift = alpha_x.GetValue(frame_number);
-	int alpha_x_shift_limit = round(frame_image_width * fmod(abs(alpha_x_shift), 1.0));
+	int alpha_x_shift_limit = round(frame_image_width * fmod(fabs(alpha_x_shift), 1.0));
 	float alpha_y_shift = alpha_y.GetValue(frame_number);
-	int alpha_y_shift_limit = round(frame_image_height * fmod(abs(alpha_y_shift), 1.0));
-
+	int alpha_y_shift_limit = round(frame_image_height * fmod(fabs(alpha_y_shift), 1.0));
 
 	// Make temp copy of pixels
 	unsigned char *temp_image = new unsigned char[frame_image_width * frame_image_height * 4]();
@@ -129,7 +128,6 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 			green_starting_row_index = starting_row_index;
 			blue_starting_row_index = starting_row_index;
 			alpha_starting_row_index = starting_row_index;
-
 
 			red_pixel_offset = 0;
 			green_pixel_offset = 0;
