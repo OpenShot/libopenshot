@@ -255,10 +255,14 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 		info.pixel_ratio.num = pixel_ratio.num;
 		info.pixel_ratio.den = pixel_ratio.den;
 	}
-	if (bit_rate >= 1000)            // bit_rate is the bitrate in b/s
+	if (bit_rate >= 1000) {
+		// bit_rate is the bitrate in b/s
 		info.video_bit_rate = bit_rate;
-	if ((bit_rate >= 0) && (bit_rate < 64))    // bit_rate is the bitrate in crf
+	}
+	if ((bit_rate >= 0) && (bit_rate < 64)) {
+		// bit_rate is the bitrate in crf
 		info.video_bit_rate = bit_rate;
+	}
 
 	info.interlaced_frame = interlaced;
 	info.top_field_first = top_field_first;
@@ -282,8 +286,10 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 // Set video export options (overloaded function)
 void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fraction fps, int bit_rate) {
 	// Call full signature with some default parameters
-	FFmpegWriter::SetVideoOptions(true, codec, fps, width, height,
-	                              openshot::Fraction(1, 1), false, true, bit_rate);
+	FFmpegWriter::SetVideoOptions(
+		true, codec, fps, width, height,
+		openshot::Fraction(1, 1), false, true, bit_rate
+	);
 }
 
 
@@ -326,8 +332,10 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 // Set audio export options (overloaded function)
 void FFmpegWriter::SetAudioOptions(std::string codec, int sample_rate, int bit_rate) {
 	// Call full signature with some default parameters
-	FFmpegWriter::SetAudioOptions(true, codec, sample_rate, 2,
-	                              openshot::LAYOUT_STEREO, bit_rate);
+	FFmpegWriter::SetAudioOptions(
+		true, codec, sample_rate, 2,
+		openshot::LAYOUT_STEREO, bit_rate
+	);
 }
 
 
@@ -418,6 +426,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			{
 				switch (c->codec_id) {
 		#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+				// FFmpeg 4.0+
 				case AV_CODEC_ID_AV1 :
 					c->bit_rate = 0;
 					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
@@ -475,6 +484,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			{
 				switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
+				// FFmpeg 4.0+
 				case AV_CODEC_ID_AV1 :
 					c->bit_rate = 0;
 					av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
@@ -1570,20 +1580,25 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			int nb_samples = 0;
 
 			// Convert audio samples
-			nb_samples = SWR_CONVERT(avr,    // audio resample context
-									 audio_converted->data,           // output data pointers
-									 audio_converted->linesize[0],    // output plane size, in bytes. (0 if unknown)
-									 audio_converted->nb_samples,     // maximum number of samples that the output buffer can hold
-									 audio_frame->data,               // input data pointers
-									 audio_frame->linesize[0],        // input plane size, in bytes (0 if unknown)
-									 audio_frame->nb_samples);        // number of input samples to convert
+			nb_samples = SWR_CONVERT(
+				avr,    // audio resample context
+				audio_converted->data,           // output data pointers
+				audio_converted->linesize[0],    // output plane size, in bytes. (0 if unknown)
+				audio_converted->nb_samples,     // maximum number of samples that the output buffer can hold
+				audio_frame->data,               // input data pointers
+				audio_frame->linesize[0],        // input plane size, in bytes (0 if unknown)
+				audio_frame->nb_samples        // number of input samples to convert
+			);
 
 			// Set remaining samples
 			remaining_frame_samples = nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
 			// Create a new array (to hold all resampled S16 audio samples)
 			all_resampled_samples = (int16_t *) av_malloc(
-					sizeof(int16_t) * nb_samples * info.channels * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+				sizeof(int16_t) * nb_samples * info.channels
+				* (av_get_bytes_per_sample(output_sample_fmt) /
+				   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
+			);
 
 			// Copy audio samples over original samples
 			memcpy(all_resampled_samples, audio_converted->data[0], nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
@@ -1613,8 +1628,14 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			// Copy frame samples into the packet samples array
 			if (!is_final)
 				//TODO: Make this more sane
-				memcpy(samples + (audio_input_position * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))),
-					   all_resampled_samples + samples_position, diff * av_get_bytes_per_sample(output_sample_fmt));
+				memcpy(
+					samples + (audio_input_position
+						* (av_get_bytes_per_sample(output_sample_fmt) /
+						   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
+					),
+					all_resampled_samples + samples_position,
+					diff * av_get_bytes_per_sample(output_sample_fmt)
+				);
 
 			// Increment counters
 			audio_input_position += diff;
@@ -1631,7 +1652,14 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			AVFrame *frame_final = AV_ALLOCATE_FRAME();
 			AV_RESET_FRAME(frame_final);
 			if (av_sample_fmt_is_planar(audio_codec->sample_fmt)) {
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)", "in_sample_fmt", output_sample_fmt, "out_sample_fmt", audio_codec->sample_fmt, "in_sample_rate", info.sample_rate, "out_sample_rate", info.sample_rate, "in_channels", info.channels, "out_channels", info.channels);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)",
+					"in_sample_fmt", output_sample_fmt,
+					"out_sample_fmt", audio_codec->sample_fmt,
+					"in_sample_rate", info.sample_rate,
+					"out_sample_rate", info.sample_rate,
+					"in_channels", info.channels,
+					"out_channels", info.channels
+				);
 
 				// setup resample context
 				if (!avr_planar) {
@@ -1654,31 +1682,38 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 
 				// Create a new array
 				final_samples_planar = (int16_t *) av_malloc(
-						sizeof(int16_t) * audio_frame->nb_samples * info.channels * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+					sizeof(int16_t) * audio_frame->nb_samples * info.channels
+					* (av_get_bytes_per_sample(output_sample_fmt) /
+					   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
+				);
 
 				// Copy audio into buffer for frame
 				memcpy(final_samples_planar, samples, audio_frame->nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
 
 				// Fill input frame with sample data
-				avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt, (uint8_t *) final_samples_planar,
-										 audio_encoder_buffer_size, 0);
+				avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt,
+					(uint8_t *) final_samples_planar, audio_encoder_buffer_size, 0);
 
 				// Create output frame (and allocate arrays)
 				frame_final->nb_samples = audio_input_frame_size;
-				av_samples_alloc(frame_final->data, frame_final->linesize, info.channels, frame_final->nb_samples, audio_codec->sample_fmt, 0);
+				av_samples_alloc(frame_final->data, frame_final->linesize, info.channels,
+					frame_final->nb_samples, audio_codec->sample_fmt, 0);
 
 				// Convert audio samples
-				int nb_samples = SWR_CONVERT(avr_planar,    // audio resample context
-											 frame_final->data,           // output data pointers
-											 frame_final->linesize[0],    // output plane size, in bytes. (0 if unknown)
-											 frame_final->nb_samples,     // maximum number of samples that the output buffer can hold
-											 audio_frame->data,           // input data pointers
-											 audio_frame->linesize[0],    // input plane size, in bytes (0 if unknown)
-											 audio_frame->nb_samples);    // number of input samples to convert
+				int nb_samples = SWR_CONVERT(
+					avr_planar,                  // audio resample context
+					frame_final->data,           // output data pointers
+					frame_final->linesize[0],    // output plane size, in bytes. (0 if unknown)
+					frame_final->nb_samples,     // maximum number of samples that the output buffer can hold
+					audio_frame->data,           // input data pointers
+					audio_frame->linesize[0],    // input plane size, in bytes (0 if unknown)
+					audio_frame->nb_samples      // number of input samples to convert
+				);
 
 				// Copy audio samples over original samples
 				if (nb_samples > 0)
-					memcpy(samples, frame_final->data[0], nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
+					memcpy(samples, frame_final->data[0],
+						nb_samples * av_get_bytes_per_sample(audio_codec->sample_fmt) * info.channels);
 
 				// deallocate AVFrame
 				av_freep(&(audio_frame->data[0]));
@@ -1690,7 +1725,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			} else {
 				// Create a new array
 				final_samples = (int16_t *) av_malloc(
-						sizeof(int16_t) * audio_input_position * (av_get_bytes_per_sample(audio_codec->sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+					sizeof(int16_t) * audio_input_position
+					* (av_get_bytes_per_sample(audio_codec->sample_fmt) /
+					   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
+				);
 
 				// Copy audio into buffer for frame
 				memcpy(final_samples, samples, audio_input_position * av_get_bytes_per_sample(audio_codec->sample_fmt));
@@ -1699,8 +1737,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 				frame_final->nb_samples = audio_input_frame_size;
 
 				// Fill the final_frame AVFrame with audio (non planar)
-				avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt, (uint8_t *) final_samples,
-										 audio_encoder_buffer_size, 0);
+				avcodec_fill_audio_frame(frame_final, audio_codec->channels, audio_codec->sample_fmt,
+					(uint8_t *) final_samples, audio_encoder_buffer_size, 0);
 			}
 
 			// Increment PTS (in samples)
@@ -1872,7 +1910,10 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		} else
 	#endif // HAVE_HW_ACCEL
 		{
-			frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
+			frame_final = allocate_avframe(
+				(AVPixelFormat)(video_st->codecpar->format),
+				info.width, info.height, &bytes_final, NULL
+			);
 		}
 #else
 		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final, NULL);
@@ -1884,7 +1925,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 
 		// Resize & convert pixel format
 		sws_scale(scaler, frame_source->data, frame_source->linesize, 0,
-				  source_image_height, frame_final->data, frame_final->linesize);
+		          source_image_height, frame_final->data, frame_final->linesize);
 
 		// Add resized AVFrame to av_frames map
 #pragma omp critical (av_frames_section)
