@@ -222,10 +222,10 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 			hw_en_on = 0;
 			hw_en_supported = 0;
 		}
-	#else  // is FFmpeg 3 but not linux
+#else  // unknown OS
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
-	#endif //__linux__
-#else // not ffmpeg 3
+#endif //__linux__/_WIN32/__APPLE__
+#else // HAVE_HW_ACCEL
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif // HAVE_HW_ACCEL
 		if (new_codec == NULL)
@@ -410,57 +410,54 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-		#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-			#if HAVE_HW_ACCEL
-				if (hw_en_on) {
-					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
-				} else
-			#endif // HAVE_HW_ACCEL
-				{
+		#if HAVE_HW_ACCEL
+			if (hw_en_on) {
+				av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
+			} else
+		#endif // HAVE_HW_ACCEL
+			{
 				switch (c->codec_id) {
-					#if (LIBAVCODEC_VERSION_MAJOR >= 58)
-					case AV_CODEC_ID_AV1 :
-						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
-						break;
-					#endif
-					case AV_CODEC_ID_VP8 :
-						c->bit_rate = 10000000;
-						av_opt_set_int(c->priv_data, "qp", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
-						break;
-					case AV_CODEC_ID_VP9 :
-						c->bit_rate = 0;        // Must be zero!
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-							av_opt_set_int(c->priv_data, "lossless", 1, 0);
-						}
-						break;
-					case AV_CODEC_ID_H264 :
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-						}
-						break;
-					case AV_CODEC_ID_HEVC :
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-							av_opt_set_int(c->priv_data, "lossless", 1, 0);
-						}
-						break;
-					default:
-						// For all other codecs assume a range of 0-63
-						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
-						c->bit_rate = 0;
+		#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+				case AV_CODEC_ID_AV1 :
+					c->bit_rate = 0;
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
+					break;
+		#endif
+				case AV_CODEC_ID_VP8 :
+					c->bit_rate = 10000000;
+					av_opt_set_int(c->priv_data, "qp", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
+					break;
+				case AV_CODEC_ID_VP9 :
+					c->bit_rate = 0;        // Must be zero!
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						av_opt_set_int(c->priv_data, "lossless", 1, 0);
+					}
+					break;
+				case AV_CODEC_ID_H264 :
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+					}
+					break;
+				case AV_CODEC_ID_HEVC :
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						av_opt_set_int(c->priv_data, "lossless", 1, 0);
+					}
+					break;
+				default:
+					// For all other codecs assume a range of 0-63
+					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 63), 0); // 0-63
+					c->bit_rate = 0;
 				}
 			}
-		#endif
 		} else if (name == "crf") {
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 #if HAVE_HW_ACCEL
 			if (hw_en_on) {
 				double mbs = 15000000.0;
@@ -478,51 +475,50 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			{
 				switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
-					case AV_CODEC_ID_AV1 :
-						c->bit_rate = 0;
-						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
-						break;
+				case AV_CODEC_ID_AV1 :
+					c->bit_rate = 0;
+					av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+					break;
 #endif
-					case AV_CODEC_ID_VP8 :
-						c->bit_rate = 10000000;
-						av_opt_set_int(c->priv_data, "crf", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
-						break;
-					case AV_CODEC_ID_VP9 :
-						c->bit_rate = 0;        // Must be zero!
-						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 63), 0); // 0-63
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-							av_opt_set_int(c->priv_data, "lossless", 1, 0);
+				case AV_CODEC_ID_VP8 :
+					c->bit_rate = 10000000;
+					av_opt_set_int(c->priv_data, "crf", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
+					break;
+				case AV_CODEC_ID_VP9 :
+					c->bit_rate = 0;        // Must be zero!
+					av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 63), 0); // 0-63
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						av_opt_set_int(c->priv_data, "lossless", 1, 0);
+					}
+					break;
+				case AV_CODEC_ID_H264 :
+					av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+					}
+					break;
+				case AV_CODEC_ID_HEVC :
+					av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
+					if (std::stoi(value) == 0) {
+						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+						av_opt_set_int(c->priv_data, "lossless", 1, 0);
+					}
+					break;
+				default:
+					// If this codec doesn't support crf calculate a bitrate
+					// TODO: find better formula
+					double mbs = 15000000.0;
+					if (info.video_bit_rate > 0) {
+						if (info.video_bit_rate > 42) {
+							mbs = 380000.0;
+						} else {
+							mbs *= std::pow(0.912, info.video_bit_rate);
 						}
-						break;
-					case AV_CODEC_ID_H264 :
-						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-						}
-						break;
-					case AV_CODEC_ID_HEVC :
-						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
-						if (std::stoi(value) == 0) {
-							av_opt_set(c->priv_data, "preset", "veryslow", 0);
-							av_opt_set_int(c->priv_data, "lossless", 1, 0);
-						}
-						break;
-					default:
-						// If this codec doesn't support crf calculate a bitrate
-						// TODO: find better formula
-						double mbs = 15000000.0;
-						if (info.video_bit_rate > 0) {
-							if (info.video_bit_rate > 42) {
-								mbs = 380000.0;
-							} else {
-								mbs *= std::pow(0.912, info.video_bit_rate);
-							}
-						}
-						c->bit_rate = (int) (mbs);
+					}
+					c->bit_rate = (int) (mbs);
 				}
 			}
-#endif
 		} else {
 			// Set AVOption
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
@@ -635,15 +631,8 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
 
 	// Write the frames once it reaches the correct cache size
 	if ((int)spooled_video_frames.size() == cache_size || (int)spooled_audio_frames.size() == cache_size) {
-		// Is writer currently writing?
-		if (!is_writing)
-			// Write frames to video file
-			write_queued_frames();
-
-		else {
-			// Write frames to video file
-			write_queued_frames();
-		}
+		// Write frames to video file
+		write_queued_frames();
 	}
 
 	// Keep track of the last frame added
@@ -801,6 +790,7 @@ void FFmpegWriter::flush_encoders() {
 	if (info.has_audio && audio_codec && AV_GET_CODEC_TYPE(audio_st) == AVMEDIA_TYPE_AUDIO && AV_GET_CODEC_ATTRIBUTES(audio_st, audio_codec)->frame_size <= 1)
 		return;
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
+	// FFmpeg < 4.0
 	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
 #endif
@@ -819,9 +809,6 @@ void FFmpegWriter::flush_encoders() {
 			av_init_packet(&pkt);
 			pkt.data = NULL;
 			pkt.size = 0;
-
-			// Pointer for video buffer (if using old FFmpeg version)
-			uint8_t *video_outbuf = NULL;
 
 			/* encode the image */
 			int got_packet = 0;
@@ -853,28 +840,9 @@ void FFmpegWriter::flush_encoders() {
 			}
 #else // IS_FFMPEG_3_2
 
-#if LIBAVFORMAT_VERSION_MAJOR >= 54
 			// Encode video packet (older than FFmpeg 3.2)
 			error_code = avcodec_encode_video2(video_codec, &pkt, NULL, &got_packet);
 
-#else
-			// Encode video packet (even older version of FFmpeg)
-			int video_outbuf_size = 0;
-
-			/* encode the image */
-			int out_size = avcodec_encode_video(video_codec, NULL, video_outbuf_size, NULL);
-
-			/* if zero size, it means the image was buffered */
-			if (out_size > 0) {
-				if(video_codec->coded_frame->key_frame)
-					pkt.flags |= AV_PKT_FLAG_KEY;
-				pkt.data= video_outbuf;
-				pkt.size= out_size;
-
-				// got data back (so encode this frame)
-				got_packet = 1;
-			}
-#endif // LIBAVFORMAT_VERSION_MAJOR >= 54
 #endif // IS_FFMPEG_3_2
 
 			if (error_code < 0) {
@@ -903,9 +871,6 @@ void FFmpegWriter::flush_encoders() {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
 			}
 
-			// Deallocate memory (if needed)
-			if (video_outbuf)
-				av_freep(&video_outbuf);
 		}
 
 	// FLUSH AUDIO ENCODER
@@ -913,12 +878,8 @@ void FFmpegWriter::flush_encoders() {
 		for (;;) {
 
 			// Increment PTS (in samples and scaled to the codec's timebase)
-#if LIBAVFORMAT_VERSION_MAJOR >= 54
 			// for some reason, it requires me to multiply channels X 2
 			write_audio_count += av_rescale_q(audio_input_position / (audio_codec->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)), (AVRational){1, info.sample_rate}, audio_codec->time_base);
-#else
-			write_audio_count += av_rescale_q(audio_input_position / audio_codec->channels, (AVRational){1, info.sample_rate}, audio_codec->time_base);
-#endif
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -1073,11 +1034,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	AV_FORMAT_NEW_STREAM(oc, audio_codec, codec, st)
 
 	c->codec_id = codec->id;
-#if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
-#else
-	c->codec_type = CODEC_TYPE_AUDIO;
-#endif
 
 	// Set the sample parameters
 	c->bit_rate = info.audio_bit_rate;
@@ -1131,6 +1088,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 #if (LIBAVCODEC_VERSION_MAJOR >= 57)
+		// FFmpeg 3.0+
 		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 #else
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -1156,11 +1114,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	AV_FORMAT_NEW_STREAM(oc, video_codec, codec, st)
 
 	c->codec_id = codec->id;
-#if LIBAVFORMAT_VERSION_MAJOR >= 53
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
-#else
-	c->codec_type = CODEC_TYPE_VIDEO;
-#endif
 
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000) {
@@ -1174,13 +1128,12 @@ AVStream *FFmpegWriter::add_video_stream() {
 	} else {
 		// Check if codec supports crf
 		switch (c->codec_id) {
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
+			// FFmpeg 4.0+
 			case AV_CODEC_ID_AV1 :
 #endif
 			case AV_CODEC_ID_VP9 :
 			case AV_CODEC_ID_HEVC :
-#endif
 			case AV_CODEC_ID_VP8 :
 			case AV_CODEC_ID_H264 :
 				if (info.video_bit_rate < 40) {
@@ -1217,7 +1170,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
-// AVCodecContext->framerate was added in FFmpeg 2.2
+// AVCodecContext->framerate was added in FFmpeg 2.6
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 26, 0)
 	c->framerate = av_inv_q(c->time_base);
 #endif
@@ -1238,6 +1191,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	// some formats want stream headers to be separate
 	if (oc->oformat->flags & AVFMT_GLOBALHEADER)
 #if (LIBAVCODEC_VERSION_MAJOR >= 57)
+		// FFmpeg 3.0+
 		c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 #else
 		c->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -1259,6 +1213,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 			c->pix_fmt = PIX_FMT_RGB24;
 
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
+			// FFmpeg < 4.0
 			if (strcmp(fmt->name, "gif") != 0)
 				// If not GIF format, skip the encoding process
 				// Set raw picture flag (so we don't encode this video)
@@ -1272,6 +1227,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
+	// FFmpeg < 4.0
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (std::string)fmt->name + " : " + (std::string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags, "AVFMT_RAWPICTURE", AVFMT_RAWPICTURE);
 #else
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::add_video_stream (" + (std::string)fmt->name + " : " + (std::string)av_get_pix_fmt_name(c->pix_fmt) + ")", "c->codec_id", c->codec_id, "c->bit_rate", c->bit_rate, "c->pix_fmt", c->pix_fmt, "oc->oformat->flags", oc->oformat->flags);
@@ -1373,9 +1329,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
 				// Maybe 127 is better because the first card would be 1?!
 				adapter_ptr = adapter;
-#elif defined(_WIN32)
-				adapter_ptr = NULL;
-#elif defined(__APPLE__)
+#elif defined(_WIN32) || defined(__APPLE__)
 				adapter_ptr = NULL;
 #endif
 			}
@@ -1385,9 +1339,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 // Check if it is there and writable
 #if defined(__linux__)
 		if( adapter_ptr != NULL && access( adapter_ptr, W_OK ) == 0 ) {
-#elif defined(_WIN32)
-		if( adapter_ptr != NULL ) {
-#elif defined(__APPLE__)
+#elif defined(_WIN32) || defined(__APPLE__)
 		if( adapter_ptr != NULL ) {
 #endif
 				ZmqLogger::Instance()->AppendDebugMethod("Encode Device present using device", "adapter", adapter_num);
@@ -1948,6 +1900,7 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 // write video frame
 bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *frame_final) {
 #if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	// FFmpeg 4.0+
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags", oc->oformat->flags);
 #else
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet", "frame->number", frame->number, "oc->oformat->flags & AVFMT_RAWPICTURE", oc->oformat->flags & AVFMT_RAWPICTURE);
@@ -1977,7 +1930,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		AV_FREE_PACKET(&pkt);
 
 	} else
-#endif
+#endif // LIBAVFORMAT_VERSION_MAJOR >= 58
 	{
 
 		AVPacket pkt;
@@ -1985,9 +1938,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		pkt.data = NULL;
 		pkt.size = 0;
 		pkt.pts = pkt.dts = AV_NOPTS_VALUE;
-
-		// Pointer for video buffer (if using old FFmpeg version)
-		uint8_t *video_outbuf = NULL;
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
 		write_video_count += av_rescale_q(1, (AVRational) {info.fps.den, info.fps.num}, video_codec->time_base);
@@ -2049,7 +1999,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			}
 		}
 #else
-#if LIBAVFORMAT_VERSION_MAJOR >= 54
 		// Write video packet (older than FFmpeg 3.2)
 		error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 		if (error_code != 0) {
@@ -2058,25 +2007,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		if (got_packet_ptr == 0) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame gotpacket error)");
 		}
-#else
-		// Write video packet (even older versions of FFmpeg)
-		int video_outbuf_size = 200000;
-		video_outbuf = (uint8_t*) av_malloc(200000);
-
-		/* encode the image */
-		int out_size = avcodec_encode_video(video_codec, video_outbuf, video_outbuf_size, frame_final);
-
-		/* if zero size, it means the image was buffered */
-		if (out_size > 0) {
-			if(video_codec->coded_frame->key_frame)
-				pkt.flags |= AV_PKT_FLAG_KEY;
-			pkt.data= video_outbuf;
-			pkt.size= out_size;
-
-			// got data back (so encode this frame)
-			got_packet_ptr = 1;
-		}
-#endif // LIBAVFORMAT_VERSION_MAJOR >= 54
 #endif // IS_FFMPEG_3_2
 
 		/* if zero size, it means the image was buffered */
@@ -2102,10 +2032,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 				return false;
 			}
 		}
-
-		// Deallocate memory (if needed)
-		if (video_outbuf)
-			delete[] video_outbuf;
 
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
