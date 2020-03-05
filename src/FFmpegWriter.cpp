@@ -33,6 +33,8 @@
 
 #include "../include/FFmpegWriter.h"
 
+#include <iostream>
+
 using namespace openshot;
 
 #if HAVE_HW_ACCEL
@@ -59,7 +61,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 	int err = 0;
 
 	if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
-		fprintf(stderr, "Failed to create HW frame context.\n");
+		std::clog << "Failed to create HW frame context.\n";
 		return -1;
 	}
 	frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
@@ -69,8 +71,8 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 	frames_ctx->height    = height;
 	frames_ctx->initial_pool_size = 20;
 	if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
-		fprintf(stderr, "Failed to initialize HW frame context."
-			"Error code: %s\n",av_err2str(err));
+		std::clog << "Failed to initialize HW frame context. " <<
+			"Error code: " << av_err2str(err) << "\n";
 		av_buffer_unref(&hw_frames_ref);
 		return err;
 	}
@@ -1365,7 +1367,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		int adapter_num;
 		// Use the hw device given in the environment variable HW_EN_DEVICE_SET or the default if not set
 		adapter_num = openshot::Settings::Instance()->HW_EN_DEVICE_SET;
-		fprintf(stderr, "\n\nEncodiing Device Nr: %d\n", adapter_num);
+		std::clog << "Encoding Device Nr: " << adapter_num << "\n";
 		if (adapter_num < 3 && adapter_num >=0) {
 #if defined(__linux__)
 				snprintf(adapter,sizeof(adapter),"/dev/dri/renderD%d", adapter_num+128);
@@ -1392,11 +1394,11 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 		}
 		else {
 				adapter_ptr = NULL;  // use default
-				ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present using default");
+				ZmqLogger::Instance()->AppendDebugMethod("Encode Device not present, using default");
 			}
 		if (av_hwdevice_ctx_create(&hw_device_ctx, hw_en_av_device_type,
 			adapter_ptr, NULL, 0) < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video : Codec name: ", info.vcodec.c_str(), -1, " ERROR creating\n", -1);
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::open_video ERROR creating hwdevice, Codec name:", info.vcodec.c_str(), -1);
 				throw InvalidCodec("Could not create hwdevice", path);
 		}
 	}
@@ -1817,10 +1819,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 				pkt.flags |= AV_PKT_FLAG_KEY;
 
 				/* write the compressed frame in the media file */
-				int error_code = av_interleaved_write_frame(oc, &pkt);
-				if (error_code < 0) {
-					ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
-				}
+				error_code = av_interleaved_write_frame(oc, &pkt);
 			}
 
 			if (error_code < 0) {
@@ -1998,17 +1997,17 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 #if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (!(hw_frame = av_frame_alloc())) {
-				fprintf(stderr, "Error code: av_hwframe_alloc\n");
+				std::clog << "Error code: av_hwframe_alloc\n";
 			}
 			if (av_hwframe_get_buffer(video_codec->hw_frames_ctx, hw_frame, 0) < 0) {
-				fprintf(stderr, "Error code: av_hwframe_get_buffer\n");
+				std::clog << "Error code: av_hwframe_get_buffer\n";
 			}
 			if (!hw_frame->hw_frames_ctx) {
-				fprintf(stderr, "Error hw_frames_ctx.\n");
+				std::clog << "Error hw_frames_ctx.\n";
 			}
 			hw_frame->format = AV_PIX_FMT_NV12;
 			if ( av_hwframe_transfer_data(hw_frame, frame_final, 0) < 0) {
-				fprintf(stderr, "Error while transferring frame data to surface.\n");
+				std::clog << "Error while transferring frame data to surface.\n";
 			}
 			av_frame_copy_props(hw_frame, frame_final);
 		}
@@ -2031,13 +2030,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 		error_code = ret;
 		if (ret < 0 ) {
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent)");
-			if (ret == AVERROR(EAGAIN) ) {
-				std::cerr << "Frame EAGAIN" << "\n";
-			}
-			if (ret == AVERROR_EOF ) {
-				std::cerr << "Frame AVERROR_EOF" << "\n";
-			}
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame not sent) ERROR [" + (std::string) av_err2str(ret) + "]", "ret", ret);
 			avcodec_send_frame(video_codec, NULL);
 		}
 		else {
@@ -2060,10 +2053,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Write video packet (older than FFmpeg 3.2)
 		error_code = avcodec_encode_video2(video_codec, &pkt, frame_final, &got_packet_ptr);
 		if (error_code != 0) {
-			std::cerr << "Frame AVERROR_EOF" << "\n";
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
 		}
 		if (got_packet_ptr == 0) {
-			std::cerr << "Frame gotpacket error" << "\n";
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet (Frame gotpacket error)");
 		}
 #else
 		// Write video packet (even older versions of FFmpeg)
@@ -2103,9 +2096,9 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			pkt.stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
-			int error_code = av_interleaved_write_frame(oc, &pkt);
-			if (error_code < 0) {
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
+			int result = av_interleaved_write_frame(oc, &pkt);
+			if (result < 0) {
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + (std::string) av_err2str(result) + "]", "result", result);
 				return false;
 			}
 		}
@@ -2148,12 +2141,14 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 		// Init the software scaler from FFMpeg
 #if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
+				info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
 		} else
 #endif // HAVE_HW_ACCEL
 		{
-			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), scale_mode,
-											 NULL, NULL, NULL);
+			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
+				info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec),
+				scale_mode, NULL, NULL, NULL);
 		}
 
 		// Add rescaler to vector

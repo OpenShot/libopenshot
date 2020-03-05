@@ -47,8 +47,6 @@
 
 #include <cmath>
 #include <ctime>
-#include <iostream>
-#include <stdio.h>
 #include <unistd.h>
 #include "CacheMemory.h"
 #include "Exceptions.h"
