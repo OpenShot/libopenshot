@@ -37,6 +37,7 @@ using namespace std;
 using namespace openshot;
 
 SUITE(FFMpegWriter) {
+
 TEST(Webm)
 {
 	// Reader
@@ -45,7 +46,7 @@ TEST(Webm)
 	FFmpegReader r(path.str());
 	r.Open();
 
-	/* WRITER ---------------- */
+	// Writer
 	FFmpegWriter w("output1.webm");
 
 	// Set options
@@ -65,7 +66,7 @@ TEST(Webm)
 	FFmpegReader r1("output1.webm");
 	r1.Open();
 
-	// Verify various settings on new MP4
+	// Verify various settings on new video
 	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
 	CHECK_EQUAL(24, r1.info.fps.num);
 	CHECK_EQUAL(1, r1.info.fps.den);
@@ -84,6 +85,28 @@ TEST(Webm)
 	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
 }
 
+TEST(Destructor)
+{
+	FFmpegWriter *w = new FFmpegWriter("output2.webm");
+
+	// Set video options (no audio)
+	w->SetVideoOptions(true, "libvpx", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 30000000);
+
+	// Dummy reader (30 FPS, 1280x720, 48kHz, 2-channel, 10.0 second duration)
+	DummyReader r(Fraction(30,1), 1280, 720, 48000, 2, 10.0);
+	r.Open();
+
+	// Open writer and write frames
+	w->Open();
+	w->WriteFrame(&r, 1, 25);
+
+	// Close and destroy writer
+	w->Close();
+	delete w;
+
+	CHECK(w == nullptr);
+}
+
 TEST(Options_Overloads)
 {
 	// Reader
@@ -92,7 +115,7 @@ TEST(Options_Overloads)
 	FFmpegReader r(path.str());
 	r.Open();
 
-	/* WRITER ---------------- */
+	// Writer
 	FFmpegWriter w("output1.mp4");
 
 	// Set options
@@ -123,6 +146,53 @@ TEST(Options_Overloads)
 	CHECK_EQUAL(1, r1.info.pixel_ratio.den);
 	CHECK_EQUAL(false, r1.info.interlaced_frame);
 	CHECK_EQUAL(true, r1.info.top_field_first);
+}
+
+TEST(Close_and_reopen)
+{
+	// Create a Reader source, to get some frames
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	// A Writer to dump the frames into
+	FFmpegWriter w("output2.mp4");
+
+	// Set options
+	w.SetAudioOptions("aac", 44100, 188000);
+	w.SetVideoOptions("libxvid", 720, 480, Fraction(30000, 1001), 5000000);
+
+	// Open writer
+	w.Open();
+
+	// Whoops, changed our mind
+	w.Close();
+
+	// Set different options
+	w.SetAudioOptions("aac", 48000, 192000);
+	w.SetVideoOptions("libx264", 1280, 720, Fraction(30, 1), 8000000);
+
+	// Reopen writer
+	w.Open();
+
+	// Write some frames
+	w.WriteFrame(&r, 45, 90);
+
+	// Close writer & reader
+	w.Close();
+	r.Close();
+
+	// Read back newly-written video
+	FFmpegReader r1("output2.mp4");
+	r1.Open();
+
+	// Verify new video's properties match the second Set___Options() calls
+	CHECK_EQUAL(48000, r1.GetFrame(1)->SampleRate());
+	CHECK_EQUAL(30, r1.info.fps.num);
+	CHECK_EQUAL(1, r1.info.fps.den);
+	CHECK_EQUAL(1280, r1.info.width);
+	CHECK_EQUAL(720, r1.info.height);
 }
 
 } // SUITE()
