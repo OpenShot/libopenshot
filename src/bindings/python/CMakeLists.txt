@@ -71,36 +71,44 @@ if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
 
 	### Set output name of target
 	set_target_properties(${SWIG_MODULE_pyopenshot_REAL_NAME} PROPERTIES
-	                      PREFIX "_" OUTPUT_NAME "openshot")
+    PREFIX "_" OUTPUT_NAME "openshot")
 
 	### Link the new python wrapper library with libopenshot
-	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME}
-                        PUBLIC ${PYTHON_LIBRARIES} openshot)
+	target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME} PUBLIC
+    ${PYTHON_LIBRARIES} openshot)
 
-	### Check if the following Debian-friendly python module path exists
-	SET(PYTHON_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
-	if (NOT EXISTS ${PYTHON_MODULE_PATH})
+  ######### INSTALL PATH ########
+  if (NOT DEFINED PYTHON_MODULE_PATH AND DEFINED $ENV{PYTHON_MODULE_PATH})
+    set(PYTHON_MODULE_PATH $ENV{PYTHON_MODULE_PATH})
+  endif()
 
-		### Calculate the python module path (using distutils)
-		execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+  if (NOT DEFINED PYTHON_MODULE_PATH)
+    if (WIN32 OR APPLE)
+      set (PYTHON_MODULE_PATH "python")
+    endif()
+
+    if (UNIX AND NOT APPLE)
+	    ### Check if the following Debian-friendly python module path exists
+	    set(PYTHON_MODULE_PATH "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
+	    if (NOT EXISTS "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
+
+        ### Calculate the python module path (using distutils)
+		    execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
-print( get_python_lib( plat_specific=True, prefix='${CMAKE_INSTALL_PREFIX}' ) )"
-			OUTPUT_VARIABLE _ABS_PYTHON_MODULE_PATH
-			OUTPUT_STRIP_TRAILING_WHITESPACE )
+print( get_python_lib( plat_specific=True, prefix='' ) )"
+          OUTPUT_VARIABLE PYTHON_MODULE_PATH
+          OUTPUT_STRIP_TRAILING_WHITESPACE )
+      endif()
+    endif()
+  endif()
 
-		GET_FILENAME_COMPONENT(_ABS_PYTHON_MODULE_PATH
-				"${_ABS_PYTHON_MODULE_PATH}" ABSOLUTE)
-		FILE(RELATIVE_PATH _REL_PYTHON_MODULE_PATH
-				${CMAKE_INSTALL_PREFIX} ${_ABS_PYTHON_MODULE_PATH})
-		SET(PYTHON_MODULE_PATH ${_ABS_PYTHON_MODULE_PATH})
-	endif()
-	message("PYTHON_MODULE_PATH: ${PYTHON_MODULE_PATH}")
+  message(STATUS "PYTHON_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
 
 	############### INSTALL HEADERS & LIBRARY ################
 	### Install Python bindings
-	INSTALL(TARGETS ${SWIG_MODULE_pyopenshot_REAL_NAME}
-	        LIBRARY DESTINATION ${PYTHON_MODULE_PATH} )
-	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py
-	        DESTINATION ${PYTHON_MODULE_PATH} )
+	install(TARGETS ${SWIG_MODULE_pyopenshot_REAL_NAME}
+    DESTINATION ${PYTHON_MODULE_PATH} )
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py
+    DESTINATION ${PYTHON_MODULE_PATH} )
 
 endif ()
