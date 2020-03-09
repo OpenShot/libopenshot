@@ -157,10 +157,10 @@ matrix:
 
 script:
   - mkdir -p build; cd build;
-  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
+  - cmake -DCMAKE_INSTALL_PREFIX:PATH="$TRAVIS_OS_NAME-x64" -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
   - make ${TEST_TARGET}
-  - make install DESTDIR="$BUILD_VERSION"
+  - make install
   - cd ..
 
 after_success:
