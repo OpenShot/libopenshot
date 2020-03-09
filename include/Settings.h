@@ -124,6 +124,10 @@ namespace openshot {
 		/// The audio device name to use during playback
 		std::string PLAYBACK_AUDIO_DEVICE_NAME = "";
 
+		/// The current install path of OpenShot (needs to be set when using Timeline(path), since certain
+		/// paths depend on the location of OpenShot transitions and files)
+		std::string PATH_OPENSHOT_INSTALL = "";
+
 		/// Create or get an instance of this logger singleton (invoke the class with this method)
 		static Settings * Instance();
 	};

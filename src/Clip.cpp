@@ -38,6 +38,7 @@
 #include "../include/QtImageReader.h"
 #include "../include/ChunkReader.h"
 #include "../include/DummyReader.h"
+#include "../include/Timeline.h"
 
 using namespace openshot;
 
@@ -159,7 +160,7 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 	// Get file extension (and convert to lower case)
 	std::string ext = get_file_extension(path);
-	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
 	if (ext=="avi" || ext=="mov" || ext=="mkv" ||  ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" ||
@@ -172,6 +173,16 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 		} catch(...) { }
 	}
+	if (ext=="osp")
+	{
+		try
+		{
+			// Open common video format
+			reader = new Timeline(path, true);
+
+		} catch(...) { }
+	}
+
 
 	// If no video found, try each reader
 	if (!reader)
@@ -319,12 +330,10 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
-		#pragma omp critical (Clip_GetFrame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
 		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		#pragma omp critical (Clip_GetFrame)
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -789,6 +798,8 @@ Json::Value Clip::JsonValue() const {
 
 	if (reader)
 		root["reader"] = reader->JsonValue();
+	else
+		root["reader"] = Json::Value(Json::objectValue);
 
 	// return JsonValue
 	return root;
@@ -964,6 +975,12 @@ void Clip::SetJsonValue(const Json::Value root) {
 				// Create new reader
 				reader = new DummyReader();
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "Timeline") {
+
+				// Create new reader (always load from file again)
+				// This prevents FrameMappers from being loaded on accident
+				reader = new Timeline(root["reader"]["path"].asString(), true);
 			}
 
 			// mark as managed reader and set parent
