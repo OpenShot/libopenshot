@@ -117,7 +117,7 @@ Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
 	QDir asset_folder(filePath.dir().filePath(asset_name));
 	if (!asset_folder.exists()) {
 		// Create directory if needed
-		asset_folder.makeAbsolute();
+		asset_folder.mkpath(".");
 	}
 
 	// Load UTF-8 project file into QString
@@ -125,20 +125,46 @@ Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
 	projectFile.open(QFile::ReadOnly);
 	QString projectContents = QString::fromUtf8(projectFile.readAll());
 
-	// Convert all relative paths into absolute paths (does not support relative paths with ../)
-	// In otherwords, assets and files must be located in a child/sub-folder (and not from outside this folder)
+	// Convert all relative paths into absolute paths (if requested)
 	if (convert_absolute_paths) {
-		// Convert all paths into absolute (if requested)
-		QRegularExpression pathRegex(QStringLiteral("\"(image|path)\":.*?\"(?:\\./)?(?!@assets|@transitions+)(.*?)\""));
-		projectContents.replace(pathRegex, "\"\\1\": \"" + filePath.absoluteDir().absoluteFilePath("\\2") + "\"");
 
-		// Convert all transitions paths into absolute (if requested)
-		QRegularExpression transRegex(QStringLiteral("\"(image|path)\":.*?\"@transitions/*(.*?)\""));
-		projectContents.replace(transRegex, "\"\\1\": \"" + openshotTransPath.absoluteFilePath("\\2") + "\"");
+		// Find all "image" or "path" references in JSON (using regex). Must loop through match results
+		// due to our path matching needs, which are not possible with the QString::replace() function.
+		QRegularExpression allPathsRegex(QStringLiteral("\"(image|path)\":.*?\"(.*?)\""));
+		std::vector<QRegularExpressionMatch> matchedPositions;
+		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(projectContents);
+		while (i.hasNext()) {
+			QRegularExpressionMatch match = i.next();
+			if (match.hasMatch()) {
+				// Push all match objects into a vector (so we can reverse them later)
+				matchedPositions.push_back(match);
+			}
+		}
 
-		// Convert all assets paths into absolute
-		QRegularExpression assetRegex(QStringLiteral("\"(image|path)\":.*?\"@assets/*(.*?)\""));
-		projectContents.replace(assetRegex, "\"\\1\": \"" + asset_folder.absoluteFilePath("\\2") + "\"");
+		// Reverse the matches (bottom of file to top, so our replacements don't break our match positions)
+		std::vector<QRegularExpressionMatch>::reverse_iterator itr;
+		for (itr = matchedPositions.rbegin(); itr != matchedPositions.rend(); itr++) {
+			QRegularExpressionMatch match = *itr;
+			QString relativeKey = match.captured(1); // image or path
+			QString relativePath = match.captured(2); // relative file path
+			QString absolutePath = "";
+
+			// Find absolute path of all path, image (including special replacements of @assets and @transitions)
+			if (relativePath.startsWith("@assets")) {
+				absolutePath = QFileInfo(asset_folder.absoluteFilePath(relativePath.replace("@assets", "."))).canonicalFilePath();
+			} else if (relativePath.startsWith("@transitions")) {
+				absolutePath = QFileInfo(openshotTransPath.absoluteFilePath(relativePath.replace("@transitions", "."))).canonicalFilePath();
+			} else {
+				absolutePath = QFileInfo(filePath.absoluteDir().absoluteFilePath(relativePath)).canonicalFilePath();
+			}
+
+			// Replace path in JSON content, if an absolute path was successfully found
+			if (!absolutePath.isEmpty()) {
+				projectContents.replace(match.capturedStart(0), match.capturedLength(0), "\"" + relativeKey + "\": \"" + absolutePath + "\"");
+			}
+		}
+		// Clear matches
+		matchedPositions.clear();
 	}
 
 	// Set JSON of project
