@@ -36,6 +36,7 @@
 #include <set>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
+#include <QtCore/QRegularExpression>
 #include "CacheBase.h"
 #include "CacheDisk.h"
 #include "CacheMemory.h"
@@ -156,6 +157,7 @@ namespace openshot {
 		CacheBase *final_cache; ///<Final cache of timeline frames
 		std::set<FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
+		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
@@ -208,6 +210,11 @@ namespace openshot {
 		/// @param channels The number of audio channels of the timeline
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
+
+		/// @brief Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+		/// @param projectPath The path of the UTF-8 *.osp project file (JSON contents). Contents will be loaded automatically.
+		/// @param convert_absolute_paths Should all paths be converted to absolute paths (based on the folder of the path provided)
+		Timeline(std::string projectPath, bool convert_absolute_paths);
 
         virtual ~Timeline();
 
