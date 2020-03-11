@@ -35,7 +35,7 @@ addons:
 matrix:
   include:
 
-    - name: "Coverage (Ubuntu 18.04 Bionic)"
+    - name: "Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
       env:
         - BUILD_VERSION=coverage_ffmpeg34
         - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
@@ -50,6 +50,7 @@ matrix:
           packages:
           - *ff_common
           - qt5-default
+          - libjsoncpp-dev
           - lcov
           - binutils-common # For c++filt
 
@@ -79,23 +80,6 @@ matrix:
           - libpostproc55
           - libavresample4
           - libswresample3
-
-    - name: "FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
-      env:
-        - BUILD_VERSION=ffmpeg34
-        - CMAKE_EXTRA_ARGS=""
-        - TEST_TARGET=test
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          sources:
-          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
-          packages:
-          - *ff_common
-          - qt5-default
-          - libjsoncpp-dev
 
     - name: "FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)"
       env:
