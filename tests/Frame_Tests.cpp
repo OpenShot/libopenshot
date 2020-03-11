@@ -46,6 +46,35 @@ using namespace openshot;
 SUITE(Frame_Tests)
 {
 
+class FrameFixture
+{
+protected:
+    Clip* testClip;
+public:
+    Frame* testFrame;
+
+    FrameFixture() {
+        // Open our test video clip
+        std::stringstream path;
+        path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+        testClip = new Clip(path.str());
+        testClip->Open();
+    }
+
+    ~FrameFixture() {
+        testClip->Close();
+        delete testClip;
+        if (testFrame != nullptr) {
+            delete testFrame;
+        }
+    }
+
+    void LoadFrame() {
+        // Extract and return frame 125.
+        testFrame = testClip->GetFrame(125).get();
+    }
+};
+
 TEST(Default_Constructor)
 {
 	// Create a "blank" default Frame
@@ -195,5 +224,21 @@ TEST(Copy_Constructor)
 	CHECK_EQUAL(f1.GetBytes(), f2.GetBytes());
 	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
 }
+
+#ifdef USE_IMAGEMAGICK
+
+TEST_FIXTURE(FrameFixture, GetMagickImage) {
+    LoadFrame();
+    Frame f = *testFrame;
+
+    REQUIRE CHECK_EQUAL(125, f.number);
+
+    auto magick = f.GetMagickImage();
+
+    CHECK_EQUAL(f.GetWidth(), magick->columns());
+    CHECK_EQUAL(f.GetHeight(), magick->rows());
+}
+
+#endif // USE_IMAGEMAGICK
 
 } // SUITE(Frame_Tests)
