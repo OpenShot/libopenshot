@@ -73,10 +73,10 @@ namespace openshot
 	 * There are many ways to create an instance of an openshot::Frame:
 	 * @code
 	 *
-	 * // Most basic: a blank frame (1x1 blank image, 44.2kHz audio silence)
+	 * // Most basic: a blank frame (1x1 blank image, 44.1kHz audio silence)
 	 * Frame();
 	 *
-	 * // Image only settings (44.2kHz audio silence)
+	 * // Image only settings (44.1kHz audio silence)
 	 * Frame(1, // Frame number
 	 *       720, // Width of image
 	 *       480, // Height of image
@@ -131,10 +131,10 @@ namespace openshot
 		bool has_image_data; ///< This frame has been loaded with pixel data
 
 
-		/// Constructor - blank frame (1x1 blank image, 44.2kHz audio silence)
+		/// Constructor - blank frame (1x1 blank image, 44.1kHz audio silence)
 		Frame();
 
-		/// Constructor - image only (44.2kHz audio silence)
+		/// Constructor - image only (44.1kHz audio silence)
 		Frame(int64_t number, int width, int height, std::string color);
 
 		/// Constructor - audio only (1x1 blank image)
