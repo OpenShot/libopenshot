@@ -56,7 +56,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
 
-	else if (effect_type == "Color Shift")
+	else if (effect_type == "ColorShift")
 		return new ColorShift();
 
 	else if (effect_type == "Crop")
@@ -88,7 +88,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	return NULL;
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value EffectInfo::JsonValue() {
 
 	// Create root json object

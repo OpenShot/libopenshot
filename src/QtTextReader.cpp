@@ -197,14 +197,14 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-std::string QtTextReader::Json() {
+std::string QtTextReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value QtTextReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value QtTextReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -225,24 +225,12 @@ Json::Value QtTextReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtTextReader::SetJson(std::string value) {
+void QtTextReader::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -253,8 +241,8 @@ void QtTextReader::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void QtTextReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void QtTextReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

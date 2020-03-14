@@ -29,13 +29,14 @@
  */
 
 #include "../../include/Qt/VideoCacheThread.h"
+#include <algorithm>
 
 namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false), position(1)
-	, reader(NULL), max_frames(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
+	, reader(NULL), max_frames(std::min(OPEN_MP_NUM_PROCESSORS * 8, 64)), current_display_frame(1)
     {
     }
 

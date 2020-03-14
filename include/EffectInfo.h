@@ -51,7 +51,7 @@ namespace openshot
 
 		/// JSON methods
 		static std::string Json(); ///< Generate JSON string of this object
-		static Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
+		static Json::Value JsonValue(); ///< Generate Json::Value for this object
 
 	};
 

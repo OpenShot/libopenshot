@@ -51,7 +51,7 @@ AudioReaderSource::~AudioReaderSource()
 	// Clear and delete the buffer
 	delete buffer;
 	buffer = NULL;
-};
+}
 
 // Get more samples from the reader
 void AudioReaderSource::GetMoreSamplesFromReader()
