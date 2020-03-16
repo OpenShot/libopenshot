@@ -1627,9 +1627,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 			else
 				partial_frame = true;
 
-			// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
-			// some louder samples from maxing out at 1.0 (not sure why this happens)
-			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
+			// Add samples for current channel to the frame.
+			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
