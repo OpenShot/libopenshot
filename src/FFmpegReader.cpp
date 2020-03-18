@@ -1419,8 +1419,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int packet_samples = 0;
 	int data_size = 0;
 
-	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE;
 #pragma omp critical (ProcessAudioPacket)
 	{
 #if IS_FFMPEG_3_2
@@ -1458,7 +1456,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	if (frame_finished) {
 
 		// determine how many samples were decoded
-		int planar = av_sample_fmt_is_planar((AVSampleFormat) AV_GET_CODEC_PIXEL_FORMAT(aStream, aCodecCtx));
 		int plane_size = -1;
 		data_size = av_samples_get_buffer_size(&plane_size,
 											   AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
@@ -1547,7 +1544,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "in_channels", info.channels, 0);
 	av_opt_set_int(avr, "out_channels", info.channels, 0);
-	int r = SWR_INIT(avr);
+	SWR_INIT(avr);
 
 	// Convert audio samples
 	nb_samples = SWR_CONVERT(avr,    // audio resample context
