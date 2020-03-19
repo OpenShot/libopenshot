@@ -113,10 +113,6 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_BINARY_DIR}/include)
-
 ############## Code Coverage #########################
 if (DISABLE_TESTS AND ENABLE_COVERAGE)
   message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
