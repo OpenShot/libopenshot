@@ -31,6 +31,9 @@
 
 #include "../../include/Qt/PlayerPrivate.h"
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono milliseconds, high_resolution_clock
+
 namespace openshot
 {
     // Constructor
@@ -66,21 +69,28 @@ namespace openshot
 			videoPlayback->startThread(4);
 		}
 
+        using std::chrono::duration_cast;
+
+        // Types for storing time durations in whole and fractional milliseconds
+        using ms = std::chrono::milliseconds;
+        using double_ms = std::chrono::duration<double, ms::period>;
+
+        // Calculate on-screen time for a single frame in milliseconds
+        const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+
 		while (!threadShouldExit()) {
-
-			// Calculate the milliseconds a single frame should stay on the screen
-			double frame_time = (1000.0 / reader->info.fps.ToDouble());
-
 			// Get the start time (to track how long a frame takes to render)
-			const Time t1 = Time::getCurrentTime();
+			const auto time1 = std::chrono::high_resolution_clock::now();
 
 			// Get the current video frame (if it's different)
 			frame = getFrame();
 
 			// Experimental Pausing Code (if frame has not changed)
-			if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length)) {
+			if ((speed == 0 && video_position == last_video_position)
+                || (video_position > reader->info.video_length)
+            ) {
 				speed = 0;
-				sleep(frame_time);
+				std::this_thread::sleep_for(frame_duration);
 				continue;
 			}
 
@@ -103,36 +113,40 @@ namespace openshot
 				video_frame_diff = video_position - audio_position;
 			}
 
-			// Get the end time (to track how long a frame takes to render)
-			const Time t2 = Time::getCurrentTime();
+            // Get the end time (to track how long a frame takes to render)
+            const auto time2 = std::chrono::high_resolution_clock::now();
 
-			// Determine how many milliseconds it took to render the frame
-			int64_t render_time = t2.toMilliseconds() - t1.toMilliseconds();
+            // Determine how many milliseconds it took to render the frame
+            const auto render_time = double_ms(time2 - time1);
 
-			// Calculate the amount of time to sleep (by subtracting the render time)
-			int sleep_time = int(frame_time - render_time);
+            // Calculate the amount of time to sleep (by subtracting the render time)
+            auto sleep_time = duration_cast<ms>(frame_duration - render_time);
 
 			// Debug
-			ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time", render_time, "sleep_time", sleep_time);
+			ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
 
-			// Adjust drift (if more than a few frames off between audio and video)
-			if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video)
-				// Since the audio and video threads are running independently, they will quickly get out of sync.
-				// To fix this, we calculate how far ahead or behind the video frame is, and adjust the amount of time
-				// the frame is displayed on the screen (i.e. the sleep time). If a frame is ahead of the audio,
-				// we sleep for longer. If a frame is behind the audio, we sleep less (or not at all), in order for
-				// the video to catch up.
-				sleep_time += (video_frame_diff * (1000.0 / reader->info.fps.ToDouble()));
-
+            // Adjust drift (if more than a few frames off between audio and video)
+            if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video) {
+                // Since the audio and video threads are running independently,
+                // they will quickly get out of sync. To fix this, we calculate
+                // how far ahead or behind the video frame is, and adjust the amount
+                // of time the frame is displayed on the screen (i.e. the sleep time).
+                // If a frame is ahead of the audio, we sleep for longer.
+                // If a frame is behind the audio, we sleep less (or not at all),
+                // in order for the video to catch up.
+                sleep_time += duration_cast<ms>(video_frame_diff * frame_duration);
+            }
 
 			else if (video_frame_diff < -10 && reader->info.has_audio && reader->info.has_video) {
 				// Skip frame(s) to catch up to the audio (if more than 10 frames behind)
-				video_position += abs(video_frame_diff) / 2; // Seek forward 1/2 the difference
-				sleep_time = 0; // Don't sleep now... immediately go to next position
+				video_position += std::fabs(video_frame_diff) / 2; // Seek forward 1/2 the difference
+				sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
 			}
 
-			// Sleep (leaving the video frame on the screen for the correct amount of time)
-			if (sleep_time > 0) usleep(sleep_time * 1000);
+            // Sleep (leaving the video frame on the screen for the correct amount of time)
+            if (sleep_time > sleep_time.zero()) {
+                std::this_thread::sleep_for(sleep_time);
+            }
 
 		}
     }

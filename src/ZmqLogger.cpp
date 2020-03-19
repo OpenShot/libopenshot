@@ -36,6 +36,12 @@
 
 using namespace std;
 using namespace openshot;
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::duration::microseconds
 
 
 // Global reference to logger
@@ -108,7 +114,7 @@ void ZmqLogger::Connection(string new_connection)
 	}
 
 	// Sleeping to allow connection to wake up (0.25 seconds)
-	usleep(250000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
 void ZmqLogger::Log(string message)
@@ -150,12 +156,18 @@ void ZmqLogger::Path(string new_path)
 	// Open file (write + append)
 	log_file.open (file_path.c_str(), ios::out | ios::app);
 
-	// Get current time and log first message
-	time_t now = time(0);
-	tm* localtm = localtime(&now);
-	log_file << "------------------------------------------" << endl;
-	log_file << "libopenshot logging: " << asctime(localtm);
-	log_file << "------------------------------------------" << endl;
+	// Draw a line of 50 dashes
+	log_file.fill('-');
+	log_file << std::setw(50) << '\n';
+
+	// Get current time and write session header
+	log_file << "libopenshot logging: ";
+	std::time_t t = std::time(nullptr);
+	log_file << std::put_time(std::localtime(&t), "%c %Z") << '\n';
+
+	// Another line, and reset the fill character to space
+	log_file << std::setw(50) << '\n';
+	log_file.fill(' ');
 }
 
 void ZmqLogger::Close()
