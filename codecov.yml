@@ -9,7 +9,8 @@ coverage:
 ignore:
   - "/src/examples"
   - "/src/Qt/demo"
-  - "/thirdparty"
+  - "/thirdparty/jsoncpp/*.cpp"
+  - "/thirdparty/jsoncpp/json/*.h"
   - "/doc"
   - "/cmake"
   - "/*.md"
