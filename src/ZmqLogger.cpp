@@ -121,13 +121,17 @@ void ZmqLogger::Log(string message)
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
 	// Send message over socket (ZeroMQ)
-	zmq::message_t reply (message.length());
-	memcpy (reply.data(), message.c_str(), message.length());
-	publisher->send(reply);
+	zmq::message_t reply(message);
 
-	// Write to log file (if opened, and force it to write to disk in case of a crash)
-	if (log_file.is_open())
-		log_file << message << std::flush;
+	#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4, 3, 1)
+		// Set flags for immediate delivery (new API)
+		publisher->send(reply, zmq::send_flags::dontwait);
+	#else
+		publisher->send(reply);
+	#endif
+
+	// Also log to file, if open
+	LogToFile(message);
 }
 
 // Log message to a file (if path set)
