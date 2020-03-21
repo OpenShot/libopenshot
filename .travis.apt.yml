@@ -1,0 +1,57 @@
+language: cpp
+compiler: gcc
+
+# This section uses a rather esoteric (and tricky!) feature of YAML,
+# &aliases and *anchors, to build package lists out of sublists without
+# repeating their contents. Basically, '&name' creates an alias for the
+# given data, which can then be referenced using the anchor '*name'.
+addons:
+  apt:
+    packages: &p_common  # Packages common to all Ubuntu builds
+    - cmake
+    - swig
+    - libopenshot-audio-dev
+    - libmagick++-dev
+    - libunittest++-dev
+    - libzmq3-dev
+    - qtbase5-dev
+    - qtmultimedia5-dev
+    - doxygen
+    - graphviz
+    - curl
+    packages: &ff_common  # Common set of FFmpeg packages
+    - *p_common
+    - libfdk-aac-dev
+    - libavcodec-dev
+    - libavformat-dev
+    - libavdevice-dev
+    - libavutil-dev
+    - libavfilter-dev
+    - libswscale-dev
+    - libpostproc-dev
+    - libavresample-dev
+    - libswresample-dev
+    sources: &src_ffmpeg34
+    - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+    packages: &pkg_ffmpeg34
+    - *ff_common
+    - qt5-default
+    - libjsoncpp-dev
+    sources: &src_ffmpeg4
+    - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
+    - sourceline: 'ppa:jonathonf/ffmpeg-4'
+    packages: &pkg_ffmpeg4
+    - *ff_common
+    - qt5-default
+    - libjsoncpp-dev
+    - libavcodec58
+    - libavformat58
+    - libavdevice58
+    - libavutil56
+    - libavfilter7
+    - libswscale5
+    - libpostproc55
+    - libavresample4
+    - libswresample3
