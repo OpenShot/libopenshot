@@ -33,14 +33,16 @@
 using namespace openshot;
 
 // Blank constructor for DummyReader, with default settings.
-DummyReader::DummyReader() {
+DummyReader::DummyReader() : is_open(false) {
 
 	// Call actual constructor with default values
 	DummyReader(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
 }
 
 // Constructor for DummyReader.  Pass a framerate and samplerate.
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
+DummyReader::DummyReader(Fraction fps, int width, int height,
+    int sample_rate, int channels, float duration)
+    : is_open(false) {
 
 	// Set key info settings
 	info.has_audio = false;
