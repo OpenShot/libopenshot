@@ -138,7 +138,6 @@ namespace openshot
 	 */
 	class FrameMapper : public ReaderBase {
 	private:
-		bool is_open;
 		bool field_toggle;		// Internal odd / even toggle (used when building the mapping)
 		Fraction original;		// The original frame rate
 		Fraction target;		// The target frame rate
