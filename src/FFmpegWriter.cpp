@@ -1067,6 +1067,11 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	if (codec == NULL)
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
+	// Free any previous memory allocations
+	if (audio_codec_ctx != NULL) {
+		AV_FREE_CONTEXT(audio_codec_ctx);
+	}
+
 	// Create a new audio stream
 	AV_FORMAT_NEW_STREAM(oc, audio_codec_ctx, codec, st)
 
