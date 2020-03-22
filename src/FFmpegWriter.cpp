@@ -811,7 +811,7 @@ void FFmpegWriter::flush_encoders() {
 		for (;;) {
 
 			// Increment PTS (in frames and scaled to the codec's timebase)
-			write_video_count += av_rescale_q(1, (AVRational) {info.fps.den, info.fps.num}, video_codec_ctx->time_base);
+			write_video_count += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -915,7 +915,7 @@ void FFmpegWriter::flush_encoders() {
 			// for some reason, it requires me to multiply channels X 2
 			write_audio_count += av_rescale_q(audio_input_position / (audio_codec_ctx->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)), av_make_q(1, info.sample_rate), audio_codec_ctx->time_base);
 #else
-			write_audio_count += av_rescale_q(audio_input_position / audio_codec_ctx->channels, (AVRational){1, info.sample_rate}, audio_codec_ctx->time_base);
+			write_audio_count += av_rescale_q(audio_input_position / audio_codec_ctx->channels, av_make_q(1, info.sample_rate), audio_codec_ctx->time_base);
 #endif
 
 			AVPacket pkt;
@@ -1964,7 +1964,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		pkt.size = sizeof(AVPicture);
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
-		write_video_count += av_rescale_q(1, (AVRational) {info.fps.den, info.fps.num}, video_codec_ctx->time_base);
+		write_video_count += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 		pkt.pts = write_video_count;
 
 		/* write the compressed frame in the media file */
@@ -1991,7 +1991,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		uint8_t *video_outbuf = NULL;
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
-		write_video_count += av_rescale_q(1, (AVRational) {info.fps.den, info.fps.num}, video_codec_ctx->time_base);
+		write_video_count += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
