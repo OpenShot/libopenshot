@@ -34,7 +34,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true), managed_cache(true)
+		is_open(false), auto_map_clips(true), managed_cache(true), path("")
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -64,8 +64,137 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.display_ratio = openshot::Fraction(width, height);
 	info.display_ratio.Reduce();
 	info.pixel_ratio = openshot::Fraction(1, 1);
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
 
     // Init max image size
+	SetMaxSize(info.width, info.height);
+
+	// Init cache
+	final_cache = new CacheMemory();
+	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+}
+
+// Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
+		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
+
+	// Create CrashHandler and Attach (incase of errors)
+	CrashHandler::Instance();
+
+	// Init final cache as NULL (will be created after loading json)
+	final_cache = NULL;
+
+	// Init viewport size (curve based, because it can be animated)
+	viewport_scale = Keyframe(100.0);
+	viewport_x = Keyframe(0.0);
+	viewport_y = Keyframe(0.0);
+
+	// Init background color
+	color.red = Keyframe(0.0);
+	color.green = Keyframe(0.0);
+	color.blue = Keyframe(0.0);
+
+	// Check if path exists
+	QFileInfo filePath(QString::fromStdString(path));
+	if (!filePath.exists()) {
+		throw InvalidFile("File could not be opened.", path);
+	}
+
+	// Check OpenShot Install Path exists
+	Settings *s = Settings::Instance();
+	QDir openshotPath(QString::fromStdString(s->PATH_OPENSHOT_INSTALL));
+	if (!openshotPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL could not be found.", s->PATH_OPENSHOT_INSTALL);
+	}
+	QDir openshotTransPath(openshotPath.filePath("transitions"));
+	if (!openshotTransPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL/transitions could not be found.", openshotTransPath.path().toStdString());
+	}
+
+	// Determine asset path
+	QString asset_name = filePath.baseName().left(30) + "_assets";
+	QDir asset_folder(filePath.dir().filePath(asset_name));
+	if (!asset_folder.exists()) {
+		// Create directory if needed
+		asset_folder.mkpath(".");
+	}
+
+	// Load UTF-8 project file into QString
+	QFile projectFile(QString::fromStdString(path));
+	projectFile.open(QFile::ReadOnly);
+	QString projectContents = QString::fromUtf8(projectFile.readAll());
+
+	// Convert all relative paths into absolute paths (if requested)
+	if (convert_absolute_paths) {
+
+		// Find all "image" or "path" references in JSON (using regex). Must loop through match results
+		// due to our path matching needs, which are not possible with the QString::replace() function.
+		QRegularExpression allPathsRegex(QStringLiteral("\"(image|path)\":.*?\"(.*?)\""));
+		std::vector<QRegularExpressionMatch> matchedPositions;
+		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(projectContents);
+		while (i.hasNext()) {
+			QRegularExpressionMatch match = i.next();
+			if (match.hasMatch()) {
+				// Push all match objects into a vector (so we can reverse them later)
+				matchedPositions.push_back(match);
+			}
+		}
+
+		// Reverse the matches (bottom of file to top, so our replacements don't break our match positions)
+		std::vector<QRegularExpressionMatch>::reverse_iterator itr;
+		for (itr = matchedPositions.rbegin(); itr != matchedPositions.rend(); itr++) {
+			QRegularExpressionMatch match = *itr;
+			QString relativeKey = match.captured(1); // image or path
+			QString relativePath = match.captured(2); // relative file path
+			QString absolutePath = "";
+
+			// Find absolute path of all path, image (including special replacements of @assets and @transitions)
+			if (relativePath.startsWith("@assets")) {
+				absolutePath = QFileInfo(asset_folder.absoluteFilePath(relativePath.replace("@assets", "."))).canonicalFilePath();
+			} else if (relativePath.startsWith("@transitions")) {
+				absolutePath = QFileInfo(openshotTransPath.absoluteFilePath(relativePath.replace("@transitions", "."))).canonicalFilePath();
+			} else {
+				absolutePath = QFileInfo(filePath.absoluteDir().absoluteFilePath(relativePath)).canonicalFilePath();
+			}
+
+			// Replace path in JSON content, if an absolute path was successfully found
+			if (!absolutePath.isEmpty()) {
+				projectContents.replace(match.capturedStart(0), match.capturedLength(0), "\"" + relativeKey + "\": \"" + absolutePath + "\"");
+			}
+		}
+		// Clear matches
+		matchedPositions.clear();
+	}
+
+	// Set JSON of project
+	SetJson(projectContents.toStdString());
+
+	// Calculate valid duration and set has_audio and has_video
+	// based on content inside this Timeline's clips.
+	float calculated_duration = 0.0;
+	for (auto clip : clips)
+	{
+		float clip_last_frame = clip->Position() + clip->Duration();
+		if (clip_last_frame > calculated_duration)
+			calculated_duration = clip_last_frame;
+		if (clip->Reader() && clip->Reader()->info.has_audio)
+			info.has_audio = true;
+		if (clip->Reader() && clip->Reader()->info.has_video)
+			info.has_video = true;
+
+	}
+	info.video_length = calculated_duration * info.fps.ToFloat();
+	info.duration = calculated_duration;
+
+	// Init FileInfo settings
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
+	info.video_timebase = info.fps.Reciprocal();
+	info.has_video = true;
+	info.has_audio = true;
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -706,7 +835,8 @@ void Timeline::Close()
 	is_open = false;
 
 	// Clear cache
-	final_cache->Clear();
+	if (final_cache)
+		final_cache->Clear();
 }
 
 // Open the reader (and start consuming resources)
@@ -968,14 +1098,14 @@ void Timeline::SetCache(CacheBase* new_cache) {
 }
 
 // Generate JSON string of this object
-std::string Timeline::Json() {
+std::string Timeline::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Timeline::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Timeline::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -984,12 +1114,13 @@ Json::Value Timeline::JsonValue() {
 	root["viewport_x"] = viewport_x.JsonValue();
 	root["viewport_y"] = viewport_y.JsonValue();
 	root["color"] = color.JsonValue();
+	root["path"] = path;
 
 	// Add array of clips
 	root["clips"] = Json::Value(Json::arrayValue);
 
 	// Find Clips at this time
-	for (auto existing_clip : clips)
+	for (const auto existing_clip : clips)
 	{
 		root["clips"].append(existing_clip->JsonValue());
 	}
@@ -998,7 +1129,7 @@ Json::Value Timeline::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	for (auto existing_effect: effects)
+	for (const auto existing_effect: effects)
 	{
 		root["effects"].append(existing_effect->JsonValue());
 	}
@@ -1008,27 +1139,15 @@ Json::Value Timeline::JsonValue() {
 }
 
 // Load JSON string into this object
-void Timeline::SetJson(std::string value) {
+void Timeline::SetJson(const std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -1039,8 +1158,8 @@ void Timeline::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Timeline::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Timeline::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	bool was_open = is_open;
@@ -1048,6 +1167,10 @@ void Timeline::SetJsonValue(Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
+
+	// Set data from Json (if key is found)
+	if (!root["path"].isNull())
+		path = root["path"].asString();
 
 	if (!root["clips"].isNull()) {
 		// Clear existing clips
@@ -1107,21 +1230,9 @@ void Timeline::ApplyJsonDiff(std::string value) {
     const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success || !root.isArray())
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid).");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Process the JSON change array, loop through each item
 		for (const Json::Value change : root) {
 			std::string change_key = change["key"][(uint)0].asString();

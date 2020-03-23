@@ -40,8 +40,8 @@ For more information, please visit <http://www.openshot.org/>.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
-set(PROJECT_VERSION_FULL "0.2.4-dev1")
-set(PROJECT_SO_VERSION 18)
+set(PROJECT_VERSION_FULL "0.2.5-dev2")
+set(PROJECT_SO_VERSION 19)
 
 # Remove the dash and anything following, to get the #.#.# version for project()
 STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
@@ -73,15 +73,36 @@ include(FeatureSummary)
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
-option(DISABLE_TESTS "Don't build unit tests" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
-option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
+option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
+option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
+
+# Legacy commandline override
+if (DISABLE_TESTS)
+  if(ENABLE_COVERAGE)
+    message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
+    set(ENABLE_TESTS ON)
+  else()
+    set(ENABLE_TESTS OFF)
+  endif()
+endif()
+
+if(DEFINED ENABLE_TESTS)
+  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
+endif()
 
 ########## Configure Version.h header ##############
 configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
 # We'll want that installed later
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
+
+#### Work around a GCC < 9 bug with handling of _Pragma() in macros
+#### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
+if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
+    (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
+endif()
 
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
@@ -91,10 +112,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
-
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 ############## Code Coverage #########################
 if (DISABLE_TESTS AND ENABLE_COVERAGE)
@@ -108,7 +125,7 @@ if (ENABLE_COVERAGE)
     message(STATUS "Coverage enabled, setting build type to Debug")
   endif()
   include(CodeCoverage)
-  APPEND_COVERAGE_COMPILER_FLAGS()
+  append_coverage_compiler_flags()
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
@@ -117,27 +134,33 @@ add_subdirectory(src)
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
-include(cmake/Modules/UseDoxygen.cmake)
+set(DOCS_ENABLED FALSE) # Only set true if Doxygen is found and configured
+if (ENABLE_DOCS)
+  include(cmake/Modules/UseDoxygen.cmake)
 
-# Doxygen was found
-if (TARGET doc)
-	message(STATUS "Doxygen found, documentation target enabled")
-	message("\nTo compile documentation in doc/html, run: 'make doc'")
+  # Doxygen was found
+  if (TARGET doc)
+  	message(STATUS "Doxygen found, documentation target enabled")
+  	set(DOCS_ENABLED TRUE)
 
-  # Install docs, if the user builds them with `make doc`
-  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-  install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+    # Install docs, if the user builds them with `make doc`
+    install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+    install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-          MESSAGE_NEVER # Don't spew about file copies
-          OPTIONAL )    # No error if the docs aren't found
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+            DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+            MESSAGE_NEVER # Don't spew about file copies
+            OPTIONAL )    # No error if the docs aren't found
+  endif()
 endif()
+add_feature_info("Documentation" DOCS_ENABLED "Build API documentation with 'make doc'")
 
 ############# PROCESS tests/ DIRECTORY ##############
-if(NOT DISABLE_TESTS)
+if(ENABLE_TESTS)
+  set(TESTS_ENABLED TRUE) # May be overridden by tests/CMakeLists.txt
   add_subdirectory(tests)
 endif()
+add_feature_info("Unit tests" TESTS_ENABLED "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE)

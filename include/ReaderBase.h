@@ -140,10 +140,10 @@ namespace openshot
 		virtual std::string Name() = 0;
 
 		/// Get and Set JSON methods
-		virtual std::string Json() = 0; ///< Generate JSON string of this object
-		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() = 0; ///< Generate Json::JsonValue for this object
-		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::JsonValue into this object
+		virtual std::string Json() const = 0; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
 
 		/// Open the reader (and start consuming resources, such as images or video files)
 		virtual void Open() = 0;

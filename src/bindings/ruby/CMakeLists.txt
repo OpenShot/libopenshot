@@ -25,8 +25,8 @@
 ################################################################################
 
 ############### RUBY BINDINGS ################
-FIND_PACKAGE(SWIG 3.0 REQUIRED)
-INCLUDE(${SWIG_USE_FILE})
+find_package(SWIG 3.0 REQUIRED)
+include(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
 if (POLICY CMP0078)
@@ -36,56 +36,77 @@ if (POLICY CMP0086)
 	cmake_policy(SET CMP0086 OLD)
 endif()
 
-FIND_PACKAGE(Ruby)
-IF (RUBY_FOUND)
+find_package(Ruby)
+if (NOT RUBY_FOUND)
+  return()
+endif()
 
-	### Include the Ruby header files
-	INCLUDE_DIRECTORIES(${RUBY_INCLUDE_DIRS})
-	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+### Include the Ruby header files
+include_directories(${RUBY_INCLUDE_DIRS})
 
-	### Enable C++ in SWIG
-	set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
-	set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
+if (CMAKE_VERSION VERSION_LESS 3.12)
+  ### Include Ruby header files and project headers
+  include_directories(
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_BINARY_DIR}/include")
+endif()
 
-	### Suppress a ton of warnings in the generated SWIG C++ code
-	set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
--Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
-	separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
-	set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+### Enable C++ in SWIG
+set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
+set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
-	### Take include dirs from target, automatically if possible
-	if (CMAKE_VERSION VERSION_GREATER 3.13)
-		set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
-	else ()
-		set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
-	endif ()
+### Suppress a ton of warnings in the generated SWIG C++ code
+set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \
+  -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
+  -Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
+separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
+set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
 
-	### Add the SWIG interface file (which defines all the SWIG methods)
-	if (CMAKE_VERSION VERSION_LESS 3.8.0)
-		swig_add_module(rbopenshot ruby openshot.i)
-	else()
-		swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
-	endif()
+### Take include dirs from target, automatically if possible
+if (CMAKE_VERSION VERSION_GREATER 3.13)
+	set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
+else ()
+	set_property(SOURCE openshot.i PROPERTY
+    INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+endif ()
 
-	### Set name of target (with no prefix, since Ruby does not like that)
-	SET_TARGET_PROPERTIES(${SWIG_MODULE_rbopenshot_REAL_NAME} PROPERTIES
-	                      PREFIX "" OUTPUT_NAME "openshot")
+### Add the SWIG interface file (which defines all the SWIG methods)
+if (CMAKE_VERSION VERSION_LESS 3.8.0)
+	swig_add_module(rbopenshot ruby openshot.i)
+else()
+	swig_add_library(rbopenshot LANGUAGE ruby SOURCES openshot.i)
+endif()
 
-	### Link the new Ruby wrapper library with libopenshot
-	target_link_libraries(${SWIG_MODULE_rbopenshot_REAL_NAME}
-	                      ${RUBY_LIBRARY} openshot)
+### Link the new Ruby wrapper library with libopenshot
+target_link_libraries(${SWIG_MODULE_rbopenshot_REAL_NAME} PUBLIC
+    ${RUBY_LIBRARY} openshot)
 
-	### FIND THE RUBY INTERPRETER (AND THE LOAD_PATH FOLDER)
-	EXECUTE_PROCESS(COMMAND ${RUBY_EXECUTABLE}
-	                -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir']"
-	                OUTPUT_VARIABLE RUBY_VENDOR_ARCH_DIR)
-	MESSAGE(STATUS "Ruby executable: ${RUBY_EXECUTABLE}")
-	MESSAGE(STATUS "Ruby vendor arch dir: ${RUBY_VENDOR_ARCH_DIR}")
-	MESSAGE(STATUS "Ruby include path: ${RUBY_INCLUDE_PATH}")
+######### INSTALL PATH ########
+if (NOT DEFINED RUBY_MODULE_PATH AND DEFINED $ENV{RUBY_MODULE_PATH})
+  set(RUBY_MODULE_PATH $ENV{RUBY_MODULE_PATH})
+endif()
 
-	############### INSTALL HEADERS & LIBRARY ################
-	# Install Ruby bindings
-	install(TARGETS ${SWIG_MODULE_rbopenshot_REAL_NAME}
-	        LIBRARY DESTINATION ${RUBY_VENDOR_ARCH_DIR} )
+if (NOT DEFINED RUBY_MODULE_PATH)
+  if (WIN32 OR APPLE)
+    set (RUBY_MODULE_PATH "ruby")
+  endif()
 
-ENDIF (RUBY_FOUND)
+  if (UNIX AND NOT APPLE)
+    ### FIND THE RUBY INTERPRETER (AND THE LOAD_PATH FOLDER)
+    execute_process(COMMAND ${RUBY_EXECUTABLE} -r rbconfig
+      -e "dir = RbConfig::CONFIG['vendorarchdir']"
+      -e "dir.start_with?(RbConfig::CONFIG['prefix']) && dir.sub!(RbConfig::CONFIG['prefix']+'/', '')"
+      -e "p dir"
+      OUTPUT_VARIABLE RUBY_MODULE_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE )
+    # Ruby quotes its output strings
+    string(REPLACE "\"" "" RUBY_MODULE_PATH "${RUBY_MODULE_PATH}")
+  endif()
+endif()
+
+message(STATUS "RUBY_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${RUBY_MODULE_PATH}")
+
+############### INSTALL HEADERS & LIBRARY ################
+# Install Ruby bindings
+install(TARGETS ${SWIG_MODULE_rbopenshot_REAL_NAME}
+  DESTINATION ${RUBY_MODULE_PATH} )

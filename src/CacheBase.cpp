@@ -53,7 +53,7 @@ void CacheBase::SetMaxBytesFromInfo(int64_t number_of_frames, int width, int hei
 	SetMaxBytes(bytes);
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value CacheBase::JsonValue() {
 
 	// Create root json object
@@ -66,8 +66,8 @@ Json::Value CacheBase::JsonValue() {
 	return root;
 }
 
-// Load Json::JsonValue into this object
-void CacheBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void CacheBase::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["max_bytes"].isNull())

@@ -111,9 +111,9 @@ namespace openshot {
 
 		/// Get and Set JSON methods
 		std::string Json(); ///< Generate JSON string of this object
-		void SetJson(std::string value); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		void SetJson(const std::string value); ///< Load JSON string into this object
+		Json::Value JsonValue(); ///< Generate Json::Value for this object
+		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 	};
 
 }

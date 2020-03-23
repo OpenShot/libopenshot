@@ -38,6 +38,7 @@
 #include "../include/QtImageReader.h"
 #include "../include/ChunkReader.h"
 #include "../include/DummyReader.h"
+#include "../include/Timeline.h"
 
 using namespace openshot;
 
@@ -159,7 +160,7 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 	// Get file extension (and convert to lower case)
 	std::string ext = get_file_extension(path);
-	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
 	if (ext=="avi" || ext=="mov" || ext=="mkv" ||  ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" ||
@@ -172,6 +173,16 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 		} catch(...) { }
 	}
+	if (ext=="osp")
+	{
+		try
+		{
+			// Open common video format
+			reader = new Timeline(path, true);
+
+		} catch(...) { }
+	}
+
 
 	// If no video found, try each reader
 	if (!reader)
@@ -270,7 +281,7 @@ void Clip::Close()
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
-float Clip::End()
+float Clip::End() const
 {
 	// if a time curve is present, use its length
 	if (time.GetCount() > 1)
@@ -319,12 +330,10 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
-		#pragma omp critical (Clip_GetFrame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
 		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		#pragma omp critical (Clip_GetFrame)
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -645,14 +654,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 }
 
 // Generate JSON string of this object
-std::string Clip::Json() {
+std::string Clip::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Get all properties for a specific frame
-std::string Clip::PropertiesJSON(int64_t requested_frame) {
+std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -739,8 +748,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) {
 	return root.toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Clip::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Clip::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
@@ -789,30 +798,20 @@ Json::Value Clip::JsonValue() {
 
 	if (reader)
 		root["reader"] = reader->JsonValue();
+	else
+		root["reader"] = Json::Value(Json::objectValue);
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void Clip::SetJson(std::string value) {
+void Clip::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -823,8 +822,8 @@ void Clip::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Clip::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Clip::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ClipBase::SetJsonValue(root);
@@ -976,6 +975,12 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new DummyReader();
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "Timeline") {
+
+				// Create new reader (always load from file again)
+				// This prevents FrameMappers from being loaded on accident
+				reader = new Timeline(root["reader"]["path"].asString(), true);
 			}
 
 			// mark as managed reader and set parent
