@@ -120,14 +120,20 @@ void ZmqLogger::Log(string message)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
+#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4, 3, 1)
 	// Send message over socket (ZeroMQ)
+	zmq::message_t reply(message);
+
+	// Set flags for immediate delivery (new API)
+	publisher->send(reply, zmq::send_flags::dontwait);
+#else
 	zmq::message_t reply (message.length());
 	memcpy (reply.data(), message.c_str(), message.length());
 	publisher->send(reply);
+#endif
 
-	// Write to log file (if opened, and force it to write to disk in case of a crash)
-	if (log_file.is_open())
-		log_file << message << std::flush;
+	// Also log to file, if open
+	LogToFile(message);
 }
 
 // Log message to a file (if path set)
