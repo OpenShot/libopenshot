@@ -25,8 +25,8 @@
 ################################################################################
 
 ############### RUBY BINDINGS ################
-FIND_PACKAGE(SWIG 3.0 REQUIRED)
-INCLUDE(${SWIG_USE_FILE})
+find_package(SWIG 3.0 REQUIRED)
+include(${SWIG_USE_FILE})
 
 ### Enable some legacy SWIG behaviors, in newer CMAKEs
 if (POLICY CMP0078)
@@ -42,8 +42,8 @@ if (NOT RUBY_FOUND)
 endif()
 
 ### Include the Ruby header files
-INCLUDE_DIRECTORIES(${RUBY_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${RUBY_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 ### Enable C++ in SWIG
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
@@ -105,5 +105,5 @@ message(STATUS "RUBY_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${RUBY_MODULE_PATH}")
 ############### INSTALL HEADERS & LIBRARY ################
 # Install Ruby bindings
 install(TARGETS ${SWIG_MODULE_rbopenshot_REAL_NAME}
-        DESTINATION ${RUBY_MODULE_PATH} )
+  DESTINATION ${RUBY_MODULE_PATH} )
 
