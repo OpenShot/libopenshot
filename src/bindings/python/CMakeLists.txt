@@ -37,78 +37,88 @@ if (POLICY CMP0086)
   cmake_policy(SET CMP0086 OLD)
 endif()
 
-FIND_PACKAGE(PythonInterp 3)
-FIND_PACKAGE(PythonLibs 3)
-if (PYTHONLIBS_FOUND AND PYTHONINTERP_FOUND)
+find_package(PythonInterp 3)
+find_package(PythonLibs 3)
 
-  ### Include Python header files
-  include_directories(${PYTHON_INCLUDE_PATH})
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+if (NOT PYTHONLIBS_FOUND OR NOT PYTHONINTERP_FOUND)
+  return()
+endif()
 
-  ### Enable C++ support in SWIG
-  set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
-  set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
+### Include Python header files
+include_directories(${PYTHON_INCLUDE_PATH})
 
-  ### Suppress a ton of warnings in the generated SWIG C++ code
-  set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
--Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
-  separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
-  set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+if (CMAKE_VERSION VERSION_LESS 3.12)
+  ### Include project headers
+  include_directories(
+    "${PROJECT_SOURCE_DIR}/include"
+    "${PROJECT_BINARY_DIR}/include")
+endif()
 
-  ### Take include dirs from target, automatically if possible
-  if (CMAKE_VERSION VERSION_GREATER 3.13)
-    set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
-  else ()
-    set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
-  endif ()
+### Enable C++ support in SWIG
+set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
+set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
-  ### Add the SWIG interface file (which defines all the SWIG methods)
-  if (CMAKE_VERSION VERSION_LESS 3.8.0)
-    swig_add_module(pyopenshot python openshot.i)
-  else()
-    swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
+### Suppress a ton of warnings in the generated SWIG C++ code
+set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \
+  -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
+  -Wno-unused-parameter -Wno-catch-value -Wno-sign-compare -Wno-ignored-qualifiers")
+separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
+set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
+
+### Take include dirs from target, automatically if possible
+if (CMAKE_VERSION VERSION_GREATER 3.13)
+  set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
+elseif (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(SOURCE openshot.i PROPERTY
+    INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+endif ()
+
+### Add the SWIG interface file (which defines all the SWIG methods)
+if (CMAKE_VERSION VERSION_LESS 3.8.0)
+  swig_add_module(pyopenshot python openshot.i)
+else()
+  swig_add_library(pyopenshot LANGUAGE python SOURCES openshot.i)
+endif()
+
+### Set output name of target
+set_target_properties(${SWIG_MODULE_pyopenshot_REAL_NAME} PROPERTIES
+  PREFIX "_" OUTPUT_NAME "openshot")
+
+### Link the new python wrapper library with libopenshot
+target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME} PUBLIC
+  ${PYTHON_LIBRARIES} openshot)
+
+######### INSTALL PATH ########
+if (NOT DEFINED PYTHON_MODULE_PATH AND DEFINED $ENV{PYTHON_MODULE_PATH})
+  set(PYTHON_MODULE_PATH $ENV{PYTHON_MODULE_PATH})
+endif()
+
+if (NOT DEFINED PYTHON_MODULE_PATH)
+  if (WIN32 OR APPLE)
+    set (PYTHON_MODULE_PATH "python")
   endif()
 
-  ### Set output name of target
-  set_target_properties(${SWIG_MODULE_pyopenshot_REAL_NAME} PROPERTIES
-    PREFIX "_" OUTPUT_NAME "openshot")
+  if (UNIX AND NOT APPLE)
+    ### Check if the following Debian-friendly python module path exists
+    set(PYTHON_MODULE_PATH
+      "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
 
-  ### Link the new python wrapper library with libopenshot
-  target_link_libraries(${SWIG_MODULE_pyopenshot_REAL_NAME} PUBLIC
-    ${PYTHON_LIBRARIES} openshot)
-
-  ######### INSTALL PATH ########
-  if (NOT DEFINED PYTHON_MODULE_PATH AND DEFINED $ENV{PYTHON_MODULE_PATH})
-    set(PYTHON_MODULE_PATH $ENV{PYTHON_MODULE_PATH})
-  endif()
-
-  if (NOT DEFINED PYTHON_MODULE_PATH)
-    if (WIN32 OR APPLE)
-      set (PYTHON_MODULE_PATH "python")
-    endif()
-
-    if (UNIX AND NOT APPLE)
-      ### Check if the following Debian-friendly python module path exists
-      set(PYTHON_MODULE_PATH "lib/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/dist-packages")
-      if (NOT EXISTS "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
-
-        ### Calculate the python module path (using distutils)
-        execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
+    if (NOT EXISTS "${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
+      ### Calculate the python module path (using distutils)
+      execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "\
 from distutils.sysconfig import get_python_lib; \
 print( get_python_lib( plat_specific=True, prefix='' ) )"
-          OUTPUT_VARIABLE PYTHON_MODULE_PATH
-          OUTPUT_STRIP_TRAILING_WHITESPACE )
-      endif()
+        OUTPUT_VARIABLE PYTHON_MODULE_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE )
     endif()
   endif()
+endif()
 
-  message(STATUS "PYTHON_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
+message(STATUS "PYTHON_MODULE_PATH: ${CMAKE_INSTALL_PREFIX}/${PYTHON_MODULE_PATH}")
 
-  ############### INSTALL HEADERS & LIBRARY ################
-  ### Install Python bindings
-  install(TARGETS ${SWIG_MODULE_pyopenshot_REAL_NAME}
-    DESTINATION ${PYTHON_MODULE_PATH} )
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py
-    DESTINATION ${PYTHON_MODULE_PATH} )
-
-endif ()
+############### INSTALL HEADERS & LIBRARY ################
+### Install Python bindings
+install(TARGETS ${SWIG_MODULE_pyopenshot_REAL_NAME}
+  DESTINATION ${PYTHON_MODULE_PATH} )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openshot.py
+  DESTINATION ${PYTHON_MODULE_PATH} )
