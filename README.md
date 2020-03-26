@@ -72,7 +72,7 @@ https://github.com/OpenShot/libopenshot/issues
 
 ### License
 
-Copyright (c) 2008-2019 OpenShot Studios, LLC.
+Copyright (c) 2008-2020 OpenShot Studios, LLC.
 
 OpenShot Library (libopenshot) is free software: you can redistribute it
 and/or modify it under the terms of the GNU Lesser General Public License
