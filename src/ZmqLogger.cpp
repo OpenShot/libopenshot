@@ -120,7 +120,7 @@ void ZmqLogger::Log(string message)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
-#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4, 3, 1)
+#if ZMQ_VERSION > ZMQ_MAKE_VERSION(4, 3, 1)
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply(message);
 
