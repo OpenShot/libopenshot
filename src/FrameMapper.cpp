@@ -785,10 +785,23 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Create a new array (to hold all S16 audio samples for the current queued frames)
  	int16_t* frame_samples = (int16_t*) av_malloc(sizeof(int16_t)*total_frame_samples);
 
-	// Translate audio sample values back to 16 bit integers
-	for (int s = 0; s < total_frame_samples; s++)
-		// Translate sample value and copy into buffer
-		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
+	// Translate audio sample values back to 16 bit integers with saturation
+	float valF;
+	int16_t conv;
+	const int16_t max16 = 32767;
+	const int16_t min16 = -32768;
+	for (int s = 0; s < total_frame_samples; s++) {
+		valF = frame_samples_float[s] * (1 << 15);
+		if (valF > max16)
+			conv = max16;
+		else if (valF < min16)
+			conv = min16;
+		else
+			conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
+
+		// Copy into buffer
+		frame_samples[s] = conv;
+	}
 
 
 	// Deallocate float array
