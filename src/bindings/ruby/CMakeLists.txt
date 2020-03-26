@@ -41,6 +41,23 @@ if (NOT RUBY_FOUND)
   return()
 endif()
 
+### Ruby 2.7.0 made API changes that are incompatible with versions of
+### SWIG prior to 4.0.3
+option(SILENCE_RUBY_VERSION_WARNING
+  "Don't warn about possible SWIG incompatibilities with Ruby 2.7.0+" OFF)
+
+if (${RUBY_VERSION} VERSION_GREATER 2.6.9 AND ${SWIG_VERSION} VERSION_LESS 4.0.3)
+  if (NOT ${SILENCE_RUBY_VERSION_WARNING})
+    message(WARNING "
+Ruby 2.7.0+ detected, building the libopenshot Ruby API bindings \
+requires a pre-release version of SWIG 4.0.3 with this commit: \
+https://github.com/swig/swig/commit/5542cc228ad10bdc5c91107afb77c808c43bf2a4")
+    message(STATUS "
+To disable this warning, add -DSILENCE_RUBY_VERSION_WARNING:BOOL=1 to the cmake \
+command line, or enable the option in the CMake GUI.")
+  endif()
+endif()
+
 ### Include the Ruby header files
 include_directories(${RUBY_INCLUDE_DIRS})
 
