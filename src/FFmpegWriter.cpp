@@ -1525,11 +1525,23 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			// Calculate total samples
 			total_frame_samples = samples_in_frame * channels_in_frame;
 
-			// Translate audio sample values back to 16 bit integers
-			for (int s = 0; s < total_frame_samples; s++, frame_position++)
-				// Translate sample value and copy into buffer
-				all_queued_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
+			// Translate audio sample values back to 16 bit integers with saturation
+			float valF;
+			int16_t conv;
+			const int16_t max16 = 32767;
+			const int16_t min16 = -32768;
+			for (int s = 0; s < total_frame_samples; s++, frame_position++) {
+				valF = frame_samples_float[s] * (1 << 15);
+				if (valF > max16)
+					conv = max16;
+				else if (valF < min16)
+					conv = min16;
+				else
+					conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
 
+				// Copy into buffer
+				all_queued_samples[frame_position] = conv;
+			}
 
 			// Deallocate float array
 			delete[] frame_samples_float;

@@ -76,8 +76,8 @@ TEST(FFmpegReader_Check_Audio_File)
 	CHECK_CLOSE(0.0f, samples[50], 0.00001);
 	CHECK_CLOSE(0.0f, samples[100], 0.00001);
 	CHECK_CLOSE(0.0f, samples[200], 0.00001);
-	CHECK_CLOSE(0.160781f, samples[230], 0.00001);
-	CHECK_CLOSE(-0.06125f, samples[300], 0.00001);
+	CHECK_CLOSE(0.16406f, samples[230], 0.00001);
+	CHECK_CLOSE(-0.06250f, samples[300], 0.00001);
 
 	// Close reader
 	r.Close();
