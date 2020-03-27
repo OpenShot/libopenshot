@@ -1,5 +1,7 @@
 language: cpp
 compiler: gcc
+os: linux
+dist: xenial
 
 # This section uses a rather esoteric (and tricky!) feature of YAML,
 # &aliases and *anchors, to build package lists out of sublists without
@@ -32,7 +34,7 @@ addons:
     - libavresample-dev
     - libswresample-dev
 
-matrix:
+jobs:
   include:
 
     - name: "Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
