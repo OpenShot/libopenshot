@@ -706,9 +706,16 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.vcodec = pCodecCtx->codec->name;
 	info.video_bit_rate = (pFormatCtx->bit_rate / 8);
 
-	// set frames per second (fps)
-	info.fps.num = pStream->avg_frame_rate.num;
-	info.fps.den = pStream->avg_frame_rate.den;
+	// Frame rate from the container and codec
+	AVRational framerate = av_guess_frame_rate(pFormatCtx, pStream, NULL);
+	info.fps.num = framerate.num;
+	info.fps.den = framerate.den;
+
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo", "info.fps.num", info.fps.num, "info.fps.den", info.fps.den);
+
+	// TODO: remove excessive debug info in the next releases
+	// The debug info below is just for comparison and troubleshooting on users side during the transition period
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo (pStream->avg_frame_rate)", "num", pStream->avg_frame_rate.num, "den", pStream->avg_frame_rate.den);
 
 	if (pStream->sample_aspect_ratio.num != 0) {
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;

@@ -36,13 +36,16 @@
 using namespace std;
 using namespace openshot;
 
-TEST(FFmpegReader_Invalid_Path)
+SUITE(FFmpegReader)
+{
+
+TEST(Invalid_Path)
 {
 	// Check invalid path
 	CHECK_THROW(FFmpegReader(""), InvalidFile);
 }
 
-TEST(FFmpegReader_GetFrame_Before_Opening)
+TEST(GetFrame_Before_Opening)
 {
 	// Create a reader
 	stringstream path;
@@ -53,7 +56,7 @@ TEST(FFmpegReader_GetFrame_Before_Opening)
 	CHECK_THROW(r.GetFrame(1), ReaderClosed);
 }
 
-TEST(FFmpegReader_Check_Audio_File)
+TEST(Check_Audio_File)
 {
 	// Create a reader
 	stringstream path;
@@ -83,7 +86,7 @@ TEST(FFmpegReader_Check_Audio_File)
 	r.Close();
 }
 
-TEST(FFmpegReader_Check_Video_File)
+TEST(Check_Video_File)
 {
 	// Create a reader
 	stringstream path;
@@ -129,7 +132,7 @@ TEST(FFmpegReader_Check_Video_File)
 	r.Close();
 }
 
-TEST(FFmpegReader_Seek)
+TEST(Seek)
 {
 	// Create a reader
 	stringstream path;
@@ -186,7 +189,23 @@ TEST(FFmpegReader_Seek)
 
 }
 
-TEST(FFmpegReader_Multiple_Open_and_Close)
+TEST(Frame_Rate)
+{
+	// Create a reader
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	// Verify detected frame rate
+	openshot::Fraction rate = r.info.fps;
+	CHECK_EQUAL(24, rate.num);
+	CHECK_EQUAL(1, rate.den);
+
+	r.Close();
+}
+
+TEST(Multiple_Open_and_Close)
 {
 	// Create a reader
 	stringstream path;
@@ -221,3 +240,6 @@ TEST(FFmpegReader_Multiple_Open_and_Close)
 	// Close reader
 	r.Close();
 }
+
+} // SUITE(FFmpegReader)
+
