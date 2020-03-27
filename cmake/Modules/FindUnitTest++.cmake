@@ -1,43 +1,59 @@
-# Locate UNITTEST
+# Locate UnitTest++
 # This module defines
-# UNITTEST++_LIBRARY
-# UNITTEST++_FOUND, if false, do not try to link to gdal 
-# UNITTEST++_INCLUDE_DIR, where to find the headers
+# UnitTest++_FOUND, if successful
+# UnitTest++_LIBRARIES, the library path
+# UnitTest++_INCLUDE_DIRS, where to find the headers
 
-FIND_PATH(UNITTEST++_INCLUDE_DIR UnitTest++.h
-    ${UNITTEST_DIR}/include/unittest++
-    $ENV{UNITTEST_DIR}/include/unittest++
-	$ENV{UNITTEST_DIR}/src
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+  pkg_check_modules(PC_UnitTest QUIET UnitTest++)
+  set(UnitTest++_VERSION ${PC_UnitTest_VERSION})
+endif()
+
+
+FIND_PATH(UnitTest++_INCLUDE_DIRS UnitTest++.h
+  DOC
+    "Location of UnitTest++ header files"
+  PATH_SUFFIXES
+    unittest++
+    UnitTest++  # Fedora, Arch
+    unittest-cpp  # openSUSE
+  HINTS
+    ${PC_UnitTest++_INCLUDEDIR}
+    ${PC_UnitTest++_INCLUDE_DIRS}
+  PATHS
+    ${UnitTest++_ROOT}
+    ${UNITTEST_DIR}
+    $ENV{UNITTEST_DIR}/src
     $ENV{UNITTEST_DIR}
     ~/Library/Frameworks
     /Library/Frameworks
-    /usr/local/include
-    /usr/include
-    /usr/include/unittest++
-    /usr/include/UnitTest++ # Fedora
-    /usr/include/unittest-cpp # openSUSE
-    /usr/local/include/UnitTest++/ # Arch
-    /sw/include # Fink
-    /opt/local/include # DarwinPorts
-    /opt/local/include/UnitTest++
-    /opt/csw/include # Blastwave
-    /opt/include
+    /usr/local
+    /sw  # Fink
+    /opt
+    /opt/local  # DarwinPorts
+    /opt/csw  # Blastwave
     [HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session\ Manager\\Environment]/include
-    /usr/freeware/include
+    /usr/freeware
 )
 
-FIND_LIBRARY(UNITTEST++_LIBRARY 
-    NAMES unittest++ UnitTest++
-    PATHS
-    ${UNITTEST_DIR}/lib
-    $ENV{UNITTEST_DIR}/lib
-	$ENV{UNITTEST_DIR}/build
+FIND_LIBRARY(UnitTest++_LIBRARIES 
+  NAMES unittest++ UnitTest++
+  DOC
+    "Location of UnitTest++ shared library"
+  HINTS
+    ${PC_UnitTest++_LIBDIR}
+    ${PC_UnitTest++_LIBRARY_DIRS}
+  PATHS
+    ${UnitTest++_ROOT}
+    ${UnitTest++_ROOT}/lib
+    ${UNITTEST_DIR}
     $ENV{UNITTEST_DIR}
+    $ENV{UNITTEST_DIR}/lib
+    $ENV{UNITTEST_DIR}/build
     ~/Library/Frameworks
     /Library/Frameworks
     /usr/local/lib
-    /usr/lib
-    /usr/lib64/ # Fedora
     /sw/lib
     /opt/local/lib
     /opt/csw/lib
@@ -46,13 +62,24 @@ FIND_LIBRARY(UNITTEST++_LIBRARY
     /usr/freeware/lib64
 )
 
-SET(UNITTEST++_FOUND "NO")
-IF(UNITTEST++_LIBRARY AND UNITTEST++_INCLUDE_DIR)
-    SET(UNITTEST++_FOUND "YES")
-ENDIF(UNITTEST++_LIBRARY AND UNITTEST++_INCLUDE_DIR)
+if(UnitTest++_LIBRARIES AND UnitTest++_INCLUDE_DIRS)
+  set(UnitTest++_FOUND TRUE)
+endif()
 
 include(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set UNITTEST++_FOUND to TRUE
-# if all listed variables are TRUE
-find_package_handle_standard_args(UNITTEST++  DEFAULT_MSG
-                                  UNITTEST++_LIBRARY UNITTEST++_INCLUDE_DIR)
+find_package_handle_standard_args(UnitTest++
+  REQUIRED_VARS
+    UnitTest++_LIBRARIES
+    UnitTest++_INCLUDE_DIRS
+  VERSION_VAR
+    UnitTest++_VERSION
+)
+
+# Excessive backwards-compatibility paranoia
+set(UnitTest++_LIBRARY "${UnitTest++_LIBRARIES}" PARENT_SCOPE)
+set(UnitTest++_INCLUDE_DIR "${UnitTest++_INCLUDE_DIRS}" PARENT_SCOPE)
+# Even more excessive backwards-compatibility paranoia
+set(UNITTEST++_FOUND "${UnitTest++_FOUND}" PARENT_SCOPE)
+set(UNITTEST++_LIBRARY "${UnitTest++_LIBRARIES}" PARENT_SCOPE)
+set(UNITTEST++_INCLUDE_DIR "${UnitTest++_INCLUDE_DIRS}" PARENT_SCOPE)
+

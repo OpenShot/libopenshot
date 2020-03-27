@@ -35,7 +35,7 @@
 
 using namespace openshot;
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 #pragma message "You are compiling with experimental hardware encode"
 #else
 #pragma message "You are compiling only with software encode"
@@ -44,7 +44,7 @@ using namespace openshot;
 // Multiplexer parameters temporary storage
 AVDictionary *mux_dict = NULL;
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 int hw_en_on = 1;					// Is set in UI
 int hw_en_supported = 0;	// Is set by FFmpegWriter
 AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
@@ -81,7 +81,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 	av_buffer_unref(&hw_frames_ref);
 	return err;
 }
-#endif
+#endif // HAVE_HW_ACCEL
 
 FFmpegWriter::FFmpegWriter(std::string path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
@@ -171,7 +171,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	if (codec.length() > 0) {
 		AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 #if defined(__linux__)
 		if (strstr(codec.c_str(), "_vaapi") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -225,7 +225,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	#endif //__linux__
 #else // not ffmpeg 3
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
-#endif //IS_FFMPEG_3_2
+#endif // HAVE_HW_ACCEL
 		if (new_codec == NULL)
 			throw InvalidCodec("A valid video codec could not be found for this file.", path);
 		else {
@@ -277,6 +277,14 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	info.has_video = has_video;
 }
 
+// Set video export options (overloaded function)
+void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fraction fps, int bit_rate) {
+	// Call full signature with some default parameters
+	FFmpegWriter::SetVideoOptions(true, codec, fps, width, height,
+	                              openshot::Fraction(1, 1), false, true, bit_rate);
+}
+
+
 // Set audio export options
 void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate) {
 	// Set audio options
@@ -311,6 +319,15 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 	// Enable / Disable audio
 	info.has_audio = has_audio;
 }
+
+
+// Set audio export options (overloaded function)
+void FFmpegWriter::SetAudioOptions(std::string codec, int sample_rate, int bit_rate) {
+	// Call full signature with some default parameters
+	FFmpegWriter::SetAudioOptions(true, codec, sample_rate, 2,
+	                              openshot::LAYOUT_STEREO, bit_rate);
+}
+
 
 // Set custom options (some codecs accept additional params)
 void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string value) {
@@ -392,11 +409,11 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
 		#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-			#if IS_FFMPEG_3_2
+			#if HAVE_HW_ACCEL
 				if (hw_en_on) {
 					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 				} else
-			#endif
+			#endif // HAVE_HW_ACCEL
 				{
 				switch (c->codec_id) {
 					#if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -423,7 +440,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
-					case AV_CODEC_ID_H265 :
+					case AV_CODEC_ID_HEVC :
 						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
@@ -442,7 +459,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 			if (hw_en_on) {
 				double mbs = 15000000.0;
 				if (info.video_bit_rate > 0) {
@@ -455,7 +472,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 				}
 				c->bit_rate = (int)(mbs);
 			} else
-#endif
+#endif // HAVE_HW_ACCEL
 			{
 				switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -482,7 +499,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
 						}
 						break;
-					case AV_CODEC_ID_H265 :
+					case AV_CODEC_ID_HEVC :
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
@@ -615,7 +632,7 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::WriteFrame", "frame->number", frame->number, "spooled_video_frames.size()", spooled_video_frames.size(), "spooled_audio_frames.size()", spooled_audio_frames.size(), "cache_size", cache_size, "is_writing", is_writing);
 
 	// Write the frames once it reaches the correct cache size
-	if (spooled_video_frames.size() == cache_size || spooled_audio_frames.size() == cache_size) {
+	if ((int)spooled_video_frames.size() == cache_size || (int)spooled_audio_frames.size() == cache_size) {
 		// Is writer currently writing?
 		if (!is_writing)
 			// Write frames to video file
@@ -955,16 +972,14 @@ void FFmpegWriter::flush_encoders() {
 // Close the video codec
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
-#if IS_FFMPEG_3_2
-	//  #if defined(__linux__)
-		if (hw_en_on && hw_en_supported) {
-			if (hw_device_ctx) {
-				av_buffer_unref(&hw_device_ctx);
-				hw_device_ctx = NULL;
-			}
+#if HAVE_HW_ACCEL
+	if (hw_en_on && hw_en_supported) {
+		if (hw_device_ctx) {
+			av_buffer_unref(&hw_device_ctx);
+			hw_device_ctx = NULL;
 		}
-	//  #endif
-#endif
+	}
+#endif // HAVE_HW_ACCEL
 }
 
 // Close the audio codec
@@ -1083,7 +1098,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 
 	// Set a valid number of channels (or throw error)
-	int channel_layout = info.channel_layout;
+	const uint64_t channel_layout = info.channel_layout;
 	if (codec->channel_layouts) {
 		int i;
 		for (i = 0; codec->channel_layouts[i] != 0; i++)
@@ -1162,7 +1177,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 			case AV_CODEC_ID_AV1 :
 #endif
 			case AV_CODEC_ID_VP9 :
-			case AV_CODEC_ID_H265 :
+			case AV_CODEC_ID_HEVC :
 #endif
 			case AV_CODEC_ID_VP8 :
 			case AV_CODEC_ID_H264 :
@@ -1200,7 +1215,8 @@ AVStream *FFmpegWriter::add_video_stream() {
 	 identically 1. */
 	c->time_base.num = info.video_timebase.num;
 	c->time_base.den = info.video_timebase.den;
-#if LIBAVFORMAT_VERSION_MAJOR >= 56
+// AVCodecContext->framerate was added in FFmpeg 2.2
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 26, 0)
 	c->framerate = av_inv_q(c->time_base);
 #endif
 	st->avg_frame_rate = av_inv_q(c->time_base);
@@ -1341,7 +1357,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	// Set number of threads equal to number of processors (not to exceed 16)
 	video_codec->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		//char *dev_hw = NULL;
 		char adapter[256];
@@ -1384,7 +1400,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				throw InvalidCodec("Could not create hwdevice", path);
 		}
 	}
-#endif
+#endif // HAVE_HW_ACCEL
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
@@ -1401,7 +1417,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	AVDictionary *opts = NULL;
 	av_dict_set(&opts, "strict", "experimental", 0);
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		video_codec->pix_fmt   = hw_en_av_pix_fmt;
 
@@ -1417,7 +1433,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				// unless "qp" was set for CQP, switch to VBR RC mode
 				av_opt_set(video_codec->priv_data, "rc_mode", "VBR", 0);
 
-				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR, 
+				// In the current state (ffmpeg-4.2-4 libva-mesa-driver-19.1.5-1) to use VBR,
 				// one has to specify both bit_rate and maxrate, otherwise a small low quality file is generated on Intel iGPU).
 				video_codec->rc_max_rate = video_codec->bit_rate;
 			}
@@ -1450,7 +1466,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 					"width", info.width, "height", info.height, av_err2str(err), -1);
 		}
 	}
-#endif
+#endif // HAVE_HW_ACCEL
 
 	/* open the codec */
 	if (avcodec_open2(video_codec, codec, &opts) < 0)
@@ -1482,7 +1498,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 		ChannelLayout channel_layout_in_frame = LAYOUT_MONO; // default channel layout
 
 		// Create a new array (to hold all S16 audio samples, for the current queued frames
-		int16_t *all_queued_samples = (int16_t *) av_malloc((sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE)));
+		unsigned int all_queued_samples_size = sizeof(int16_t) * (queued_audio_frames.size() * AVCODEC_MAX_AUDIO_FRAME_SIZE);
+		int16_t *all_queued_samples = (int16_t *) av_malloc(all_queued_samples_size);
 		int16_t *all_resampled_samples = NULL;
 		int16_t *final_samples_planar = NULL;
 		int16_t *final_samples = NULL;
@@ -1542,8 +1559,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
 			// Fill input frame with sample data
-			avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples,
-									 audio_encoder_buffer_size, 0);
+			int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) all_queued_samples, all_queued_samples_size, 0);
+			if (error_code < 0) {
+				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
+			}
 
 			// Do not convert audio to planar format (yet). We need to keep everything interleaved at this point.
 			switch (audio_codec->sample_fmt) {
@@ -1563,14 +1582,15 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 					output_sample_fmt = AV_SAMPLE_FMT_U8;
 					break;
 				}
+				default: {
+					// This is only here to silence unused-enum warnings
+					break;
+				}
 			}
 
 			// Update total samples & input frame size (due to bigger or smaller data types)
 			total_frame_samples *= (float(info.sample_rate) / sample_rate_in_frame); // adjust for different byte sizes
 			total_frame_samples *= (float(info.channels) / channels_in_frame); // adjust for different # of channels
-
-			// Set remaining samples
-			remaining_frame_samples = total_frame_samples;
 
 			// Create output frame (and allocate arrays)
 			AVFrame *audio_converted = AV_ALLOCATE_FRAME();
@@ -1603,6 +1623,9 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 									 audio_frame->data,               // input data pointers
 									 audio_frame->linesize[0],        // input plane size, in bytes (0 if unknown)
 									 audio_frame->nb_samples);        // number of input samples to convert
+
+			// Set remaining samples
+			remaining_frame_samples = nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
 			// Create a new array (to hold all resampled S16 audio samples)
 			all_resampled_samples = (int16_t *) av_malloc(
@@ -1892,14 +1915,17 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
 		frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t *) pixels);
 #if IS_FFMPEG_3_2
 		AVFrame *frame_final;
+	#if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
-		} else {
+		} else
+	#endif // HAVE_HW_ACCEL
+		{
 			frame_final = allocate_avframe((AVPixelFormat)(video_st->codecpar->format), info.width, info.height, &bytes_final, NULL);
 		}
 #else
 		AVFrame *frame_final = allocate_avframe(video_codec->pix_fmt, info.width, info.height, &bytes_final, NULL);
-#endif
+#endif // IS_FFMPEG_3_2
 
 		// Fill with data
 		AV_COPY_PICTURE_DATA(frame_source, (uint8_t *) pixels, PIX_FMT_RGBA, source_image_width, source_image_height);
@@ -1969,7 +1995,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (!(hw_frame = av_frame_alloc())) {
 				fprintf(stderr, "Error code: av_hwframe_alloc\n");
@@ -1986,7 +2012,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			}
 			av_frame_copy_props(hw_frame, frame_final);
 		}
-#endif
+#endif // HAVE_HW_ACCEL
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = 0;
@@ -1995,9 +2021,12 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		int frameFinished = 0;
 		int ret;
 
+	#if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			ret = avcodec_send_frame(video_codec, hw_frame); //hw_frame!!!
-		} else {
+		} else
+	#endif // HAVE_HW_ACCEL
+		{
 			ret = avcodec_send_frame(video_codec, frame_final);
 		}
 		error_code = ret;
@@ -2054,8 +2083,8 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			// got data back (so encode this frame)
 			got_packet_ptr = 1;
 		}
-#endif
-#endif
+#endif // LIBAVFORMAT_VERSION_MAJOR >= 54
+#endif // IS_FFMPEG_3_2
 
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
@@ -2087,14 +2116,14 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (hw_frame) {
 				av_frame_free(&hw_frame);
 				hw_frame = NULL;
 			}
 		}
-#endif
+#endif // HAVE_HW_ACCEL
 	}
 
 	// Success
@@ -2117,11 +2146,11 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 	// Init software rescalers vector (many of them, one for each thread)
 	for (int x = 0; x < num_of_rescalers; x++) {
 		// Init the software scaler from FFMpeg
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
 		} else
-#endif
+#endif // HAVE_HW_ACCEL
 		{
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA, info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), scale_mode,
 											 NULL, NULL, NULL);

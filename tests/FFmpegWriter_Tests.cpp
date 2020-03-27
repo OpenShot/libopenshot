@@ -36,7 +36,8 @@
 using namespace std;
 using namespace openshot;
 
-TEST(FFmpegWriter_Test_Webm)
+SUITE(FFMpegWriter) {
+TEST(Webm)
 {
 	// Reader
 	stringstream path;
@@ -82,3 +83,46 @@ TEST(FFmpegWriter_Test_Webm)
 	CHECK_CLOSE(23, (int)pixels[pixel_index + 2], 5);
 	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
 }
+
+TEST(Options_Overloads)
+{
+	// Reader
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	/* WRITER ---------------- */
+	FFmpegWriter w("output1.mp4");
+
+	// Set options
+	w.SetAudioOptions("aac", 48000, 192000);
+	w.SetVideoOptions("libx264", 1280, 720, Fraction(30,1), 5000000);
+
+	// Open writer
+	w.Open();
+
+	// Write some frames
+	w.WriteFrame(&r, 24, 50);
+
+	// Close writer & reader
+	w.Close();
+	r.Close();
+
+	FFmpegReader r1("output1.mp4");
+	r1.Open();
+
+	// Verify implied settings
+	CHECK_EQUAL(true, r1.info.has_audio);
+	CHECK_EQUAL(true, r1.info.has_video);
+
+	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
+	CHECK_EQUAL(LAYOUT_STEREO, r1.info.channel_layout);
+
+	CHECK_EQUAL(1, r1.info.pixel_ratio.num);
+	CHECK_EQUAL(1, r1.info.pixel_ratio.den);
+	CHECK_EQUAL(false, r1.info.interlaced_frame);
+	CHECK_EQUAL(true, r1.info.top_field_first);
+}
+
+} // SUITE()

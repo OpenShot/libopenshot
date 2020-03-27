@@ -43,7 +43,7 @@ AudioBufferSource::~AudioBufferSource()
 {
 	// forget the AudioSampleBuffer. It still exists; we just don't know about it.
 	buffer = NULL;
-};
+}
 
 // Get the next block of audio samples
 void AudioBufferSource::getNextAudioBlock (const juce::AudioSourceChannelInfo& info)
