@@ -36,11 +36,7 @@ using namespace openshot;
 // @brief Constructor for Profile.
 // @param path 	The folder path / location of a profile file
 Profile::Profile(std::string path) {
-
-	bool read_file = false;
-
-	try
-	{
+	try {
 		// Initialize info values
 		info.description = "";
 		info.height = 0;
@@ -54,21 +50,32 @@ Profile::Profile(std::string path) {
 		info.display_ratio.den = 0;
 		info.interlaced_frame = false;
 
+        // Open the file for reading
 		QFile inputFile(path.c_str());
-		if (inputFile.open(QIODevice::ReadOnly))
+		if (!inputFile.open(QIODevice::ReadOnly)) {
+            throw std::runtime_error("Failed to open the file for reading");
+        }
+        
+        // Iterate over each line in the file
+		QTextStream in(&inputFile);
+		while (!in.atEnd())
 		{
-			QTextStream in(&inputFile);
-			while (!in.atEnd())
-			{
-				QString line = in.readLine();
+			QString line = in.readLine();
 
-				if (line.length() <= 0)
-					continue;
+            // Trim any extra whitespace from the line
+            line = line.trimmed();
+
+            // If this line is not empty, or a comment
+            if (line.length() > 0 && line.at(0) != QChar('#')) {
+                // If the line does not contain an '=' character, it's invalid
+                if (line.contains(QChar('=')) == false) {
+                    throw std::runtime_error("Invalid line encountered");
+                }
 
 				// Split current line
 				QStringList parts = line.split( "=" );
-				std::string setting = parts[0].toStdString();
-				std::string value = parts[1].toStdString();
+				std::string setting = parts[0].trimmed().toStdString();
+				std::string value = parts[1].trimmed().toStdString();
 				int value_int = 0;
 
 				// update struct (based on line number)
@@ -113,23 +120,23 @@ Profile::Profile(std::string path) {
 				else if (setting == "colorspace") {
 					std::stringstream(value) >> value_int;
 					info.pixel_format = value_int;
+                }    
+                else {
+                    // Any other setting makes the file invalid
+                    std::ostringstream oss;
+                    oss << "Unrecognized setting \"" << setting << "\" encountered";
+                    throw std::runtime_error(oss.str());
 				}
 			}
-            read_file = true;
+
 			inputFile.close();
 		}
-
 	}
-	catch (const std::exception& e)
-	{
-		// Error parsing profile file
-		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
+    
+    // If a runtime error was thrown, pass it along as an InvalidFile exception
+	catch (const std::exception& e) {
+        throw InvalidFile(e.what(), path);
 	}
-
-	// Throw error if file was not read
-	if (!read_file)
-		// Error parsing profile file
-		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
 }
 
 // Generate JSON string of this object
