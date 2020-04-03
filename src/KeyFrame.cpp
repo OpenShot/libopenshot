@@ -87,17 +87,15 @@ namespace {
 
 	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
 		assert(left.co.X < target);
-		assert(target <= right.co.X);
-        
-        double returnValue = 0.00;
-        
+		assert(target <= right.co.X);        
 		switch (right.interpolation) {
-		case CONSTANT: returnValue = left.co.Y;
-		case LINEAR: returnValue = InterpolateLinearCurve(left, right, target);
-		case BEZIER: returnValue = InterpolateBezierCurve(left, right, target, allowed_error);
+		case CONSTANT: return left.co.Y;
+		case LINEAR: return InterpolateLinearCurve(left, right, target);
+		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
 		}
         
-        return returnValue;
+        // Control should never reach this point
+        return 0.0;
 	}
 
 
