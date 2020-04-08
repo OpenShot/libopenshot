@@ -358,7 +358,9 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 	// Was option found?
 	if (option || (name == "g" || name == "qmin" || name == "qmax" || name == "max_b_frames" || name == "mb_decision" ||
 				   name == "level" || name == "profile" || name == "slices" || name == "rc_min_rate" || name == "rc_max_rate" ||
-				   name == "rc_buffer_size" || name == "crf" || name == "cqp" || name == "qp")) {
+				   name == "rc_buffer_size" || name == "crf" || name == "cqp" || name == "qp" || name == "color_range" ||
+				   name == "color_primaries" || name == "color_trc" || name == "colorspace" ||
+				   name == "chroma_sample_location")) {
 		// Check for specific named options
 		if (name == "g")
 			// Set gop_size
@@ -579,6 +581,95 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						break;
 				}
 #endif
+		}
+		// Color range, primiries, transfer characteristics, colorspace
+		// and chroma sample location export settings. This also sets
+		// file container flags for color details if supported.
+		//
+		// The option may be set as keyword like:
+		//   SetOption(openshot.VIDEO_STREAM, "colorspace", "bt709")
+		//
+		// or integer number (n) of the required enumeration like:
+		//   SetOption(openshot.VIDEO_STREAM, "colorspace", str(int(n)))
+		//
+		// the first one for convenience, the later - for future use.
+		//
+		// To preserve current OpenShot behavior and for compatibility
+		// with old hardware and software, DO NOT set colorspace
+		// details if BT.601 standard is in use for the export. The
+		// defaults will apply of ITU-R BT601-6 625 (ITU-R BT1358 625,
+		// ITU-R BT1700 625 PAL & SECAM, IEC 61966-2-4 xvYCC601) and
+		// file container flags wouldn't be set (mainly used for old SD
+		// quality videos displayed by old HW).
+#if LIBAVFORMAT_VERSION_MAJOR >= 53
+		else if (c->codec_type == AVMEDIA_TYPE_VIDEO) {
+#else
+		else if (c->codec_type == CODEC_TYPE_VIDEO) {
+#endif
+			if (name == "color_range") {
+				// Look for keywords first
+				if ((value == "mpeg") || (value == "limited") || (value == "tv") || (value == "partial") || (value == "auto"))
+					value = std::to_string(AVCOL_RANGE_MPEG);
+				else if ((value == "jpeg") || (value == "full") || (value == "pc"))
+					value = std::to_string(AVCOL_RANGE_JPEG);
+				// Apply the value in range [0, AVCOL_RANGE_NB - 1]
+				c->color_range = static_cast<AVColorRange>(std::max(std::min(std::stoi(value), AVCOL_RANGE_NB - 1), 0));
+			} else if (name == "color_primaries") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto"))
+					value = std::to_string(AVCOL_PRI_BT709);
+				else if (value == "bt470m")
+					value = std::to_string(AVCOL_PRI_BT470M);
+				else if (value == "bt470bg")
+					value = std::to_string(AVCOL_PRI_BT470BG);
+				else if (value == "smpte170m")
+					value = std::to_string(AVCOL_PRI_SMPTE170M);
+				else if (value == "smpte240m")
+					value = std::to_string(AVCOL_PRI_SMPTE240M);
+				else if (value == "film")
+					value = std::to_string(AVCOL_PRI_FILM);
+				// Apply the value in range [0, AVCOL_PRI_NB - 1]
+				c->color_primaries = static_cast<AVColorPrimaries>(std::max(std::min(std::stoi(value), AVCOL_PRI_NB - 1), 0));
+			} else if (name == "color_trc") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto"))
+					value = std::to_string(AVCOL_TRC_BT709);
+				else if (value == "gamma22")
+					value = std::to_string(AVCOL_TRC_GAMMA22);
+				// All PAL users uses BT.709 trc in Europe instead of next 2.8 gamma. More info in Charles Poynton's books.
+				else if (value == "gamma28")
+					value = std::to_string(AVCOL_TRC_GAMMA28);
+				else if (value == "smpte240m")
+					value = std::to_string(AVCOL_TRC_SMPTE240M);
+				// Apply the value in range [0, AVCOL_TRC_NB - 1]
+				c->color_trc = static_cast<AVColorTransferCharacteristic>(std::max(std::min(std::stoi(value), AVCOL_TRC_NB - 1), 0));
+			} else if (name == "colorspace") {
+				// Look for keywords first
+				if ((value == "bt709") || (value == "auto"))
+					value = std::to_string(AVCOL_SPC_BT709);
+				else if (value == "rgb")
+					value = std::to_string(AVCOL_SPC_RGB);
+				else if (value == "fcc")
+					value = std::to_string(AVCOL_SPC_FCC);
+				else if (value == "bt470bg")
+					value = std::to_string(AVCOL_SPC_BT470BG);
+				else if (value == "smpte170m")
+					value = std::to_string(AVCOL_SPC_SMPTE170M);
+				else if (value == "smpte240m")
+					value = std::to_string(AVCOL_SPC_SMPTE240M);
+				// Apply the value in range [0, AVCOL_SPC_NB - 1]
+				c->colorspace = static_cast<AVColorSpace>(std::max(std::min(std::stoi(value), AVCOL_SPC_NB - 1), 0));
+			} else if (name == "chroma_sample_location") {
+				// Look for keywords first
+				if ((value == "mpeg2") || (value == "h264") || (value == "left") || (value == "auto"))
+					value = std::to_string(AVCHROMA_LOC_LEFT);
+				else if ((value == "jpeg") || (value == "mpeg1") || (value == "h263") || (value == "center"))
+					value = std::to_string(AVCHROMA_LOC_CENTER);
+				else if ((value == "dv") || (value == "601") || (value == "topleft"))
+					value = std::to_string(AVCHROMA_LOC_TOPLEFT);
+				// Apply the value in range [0, AVCHROMA_LOC_NB - 1]
+				c->chroma_sample_location = static_cast<AVChromaLocation>(std::max(std::min(std::stoi(value), AVCHROMA_LOC_NB - 1), 0));
+			}
 		} else {
 			// Set AVOption
 			AV_OPTION_SET(st, c->priv_data, name.c_str(), value.c_str(), c);
