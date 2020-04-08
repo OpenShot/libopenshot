@@ -1233,6 +1233,10 @@ bool FFmpegReader::CheckSeek(bool is_video) {
 	return is_seeking;
 }
 
+#define FIXED_1_0 (1 << 16)
+// Scaling video Color Range: PC, jpeg, Full
+#define Full_Range 1
+
 // Process a video packet
 void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Calculate current frame #
@@ -1356,10 +1360,76 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 		int scale_mode = SWS_FAST_BILINEAR;
 		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-			scale_mode = SWS_BICUBIC;
+			if (info.width < width and info.height < height) {
+				// Best for decreasing sizes. When reducing, the luma info is more important,
+				// despite chroma may still be enlarged (4:2:0 to 4:4:4) for zoom factors more than x0.5
+				scale_mode = SWS_AREA;
+			} else {
+				// Default for FFmpeg's bicubic is B=0 (param0), C=0.6 (param1), suitable for enlarging.
+				// B=0 the cardinal cubics (no bluring if size unchanged).
+				// Here, it always be used to convert chroma planes (2/1) even if zoom is x1.0
+				scale_mode = SWS_BICUBIC;
+			}
+
+			// For proper upscaling of chroma planes from 4:2:0 to RGB (no "stairs" artifacts)
+			scale_mode |= SWS_ACCURATE_RND;
+			scale_mode |= SWS_FULL_CHR_H_INT;
 		}
-		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+
+		int chrH = 0; // Logarithm of horizontal subsampling factor between luma and chroma planes for pixel format
+		int chrV = 0; // Logarithm of vertical subsampling factor between luma and chroma planes for pixel format
+		const AVPixFmtDescriptor *frmt_desc = NULL; // Pixel format description
+
+		frmt_desc = av_pix_fmt_desc_get(pix_fmt);
+		if (frmt_desc) {
+			chrH = frmt_desc->log2_chroma_w;
+			chrV = frmt_desc->log2_chroma_h;
+		}
+
+		SwsContext *img_convert_ctx = NULL;
+
+		// Chroma location should be set before sws_init_context()!
+		SwsContext *sws_ctx;
+		sws_ctx = sws_alloc_context();
+		if (sws_ctx) {
+			av_opt_set_int(sws_ctx, "sws_flags", scale_mode, 0);
+			av_opt_set_int(sws_ctx, "srcw", info.width, 0);
+			av_opt_set_int(sws_ctx, "srch", info.height, 0);
+			av_opt_set_int(sws_ctx, "dstw", width, 0);
+			av_opt_set_int(sws_ctx, "dsth", height, 0);
+			av_opt_set_pixel_fmt(sws_ctx, "src_format", pix_fmt, 0);
+			av_opt_set_pixel_fmt(sws_ctx, "dst_format", PIX_FMT_RGBA, 0);
+
+			// Assuming non-4:4:4 import
+			if (chrH != 0 or chrV != 0) {
+				// Specify chroma samples location on luma grid for imported image (4x4 grid or 0..256 x 0..256)
+				// Only if known was specified for the codec or leave untouched
+				int xpos;
+				int ypos;
+				if (avcodec_enum_to_chroma_pos(&xpos, &ypos, pCodecCtx->chroma_sample_location) != AVERROR(EINVAL)) {
+					av_opt_set_int(sws_ctx, "src_h_chr_pos", xpos, 0);
+					av_opt_set_int(sws_ctx, "src_v_chr_pos", ypos, 0);
+				}
+			}
+
+			if (sws_init_context(sws_ctx, NULL, NULL) < 0) {
+				sws_freeContext(sws_ctx);
+				//img_convert_ctx = NULL;
+			} else {
+				// Success!
+				img_convert_ctx = sws_ctx;
+			}
+		}
+
+		// Scaling uses own numeration for color ranges
+		// Assuming that source has Partial color range
+		int source_color_range = 0;
+		if (pCodecCtx->color_range == AVCOL_RANGE_JPEG)
+			source_color_range = Full_Range;
+
+		// Set decoding color details before scaling
+		sws_setColorspaceDetails(img_convert_ctx, sws_getCoefficients(pCodecCtx->colorspace), source_color_range,
+				sws_getCoefficients(SWS_CS_ITU709), Full_Range, 0, FIXED_1_0, FIXED_1_0);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
