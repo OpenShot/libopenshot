@@ -1397,9 +1397,15 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			av_opt_set_int(sws_ctx, "srch", info.height, 0);
 			av_opt_set_int(sws_ctx, "dstw", width, 0);
 			av_opt_set_int(sws_ctx, "dsth", height, 0);
+
+#if LIBSWSCALE_VERSION_MAJOR >= 4 && LIBSWSCALE_VERSION_MINOR >= 6
+			//FFMPEG 3.3+
 			av_opt_set_pixel_fmt(sws_ctx, "src_format", pix_fmt, 0);
 			av_opt_set_pixel_fmt(sws_ctx, "dst_format", PIX_FMT_RGBA, 0);
-
+#else
+			av_opt_set_int(sws_ctx, "src_format", (int) pix_fmt, 0);
+			av_opt_set_int(sws_ctx, "dst_format", (int) PIX_FMT_RGBA, 0);
+#endif
 			// Assuming non-4:4:4 import
 			if (chrH != 0 or chrV != 0) {
 				// Specify chroma samples location on luma grid for imported image (4x4 grid or 0..256 x 0..256)

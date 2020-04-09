@@ -2364,6 +2364,9 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 			av_opt_set_int(sws_ctx, "srch", source_height, 0);
 			av_opt_set_int(sws_ctx, "dstw", info.width, 0);
 			av_opt_set_int(sws_ctx, "dsth", info.height, 0);
+
+#if LIBSWSCALE_VERSION_MAJOR >= 4 && LIBSWSCALE_VERSION_MINOR >= 6
+			//FFMPEG 3.3+
 			av_opt_set_pixel_fmt(sws_ctx, "src_format", PIX_FMT_RGBA, 0);
 #if HAVE_HW_ACCEL
 			if (hw_en_on && hw_en_supported) {
@@ -2373,6 +2376,18 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 			{
 				av_opt_set_pixel_fmt(sws_ctx, "dst_format", AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), 0);
 			}
+#else
+			//FFMPEG < 3.3
+			av_opt_set_int(sws_ctx, "src_format", (int) PIX_FMT_RGBA, 0);
+#if HAVE_HW_ACCEL
+			if (hw_en_on && hw_en_supported) {
+				av_opt_set_int(sws_ctx, "dst_format", (int) AV_PIX_FMT_NV12, 0);
+			} else
+#endif // HAVE_HW_ACCEL
+			{
+				av_opt_set_int(sws_ctx, "dst_format", (int) AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec), 0);
+			}
+#endif
 
 			// Assuming non-4:4:4 export
 			if (chrH != 0 or chrV != 0) {
