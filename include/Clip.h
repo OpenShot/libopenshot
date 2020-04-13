@@ -140,11 +140,11 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
-		openshot::GravityType gravity; ///< The gravity of a clip determines where it snaps to its parent
-		openshot::ScaleType scale; ///< The scale determines how a clip should be resized to fit its parent
-		openshot::AnchorType anchor; ///< The anchor determines what parent a clip should snap to
-    openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
-		openshot::VolumeMixType mixing; ///< What strategy should be followed when mixing audio with other clips
+		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
+		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
+		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
+		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
+		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
 
 		/// Default Constructor
 		Clip();
@@ -208,15 +208,19 @@ namespace openshot {
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
-		// Scale and Location curves
+		// Scale, Location, and Alpha curves
 		openshot::Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)
 		openshot::Keyframe scale_y; ///< Curve representing the vertical scaling in percent (0 to 1)
 		openshot::Keyframe location_x; ///< Curve representing the relative X position in percent based on the gravity (-1 to 1)
 		openshot::Keyframe location_y; ///< Curve representing the relative Y position in percent based on the gravity (-1 to 1)
-
-		// Alpha and Rotation curves
 		openshot::Keyframe alpha; ///< Curve representing the alpha (1 to 0)
+
+		// Rotation and Shear curves (origin point (x,y) is adjustable for both rotation and shear)
 		openshot::Keyframe rotation; ///< Curve representing the rotation (0 to 360)
+		openshot::Keyframe shear_x; ///< Curve representing X shear angle in degrees (-45.0=left, 45.0=right)
+		openshot::Keyframe shear_y; ///< Curve representing Y shear angle in degrees (-45.0=down, 45.0=up)
+		openshot::Keyframe origin_x; ///< Curve representing X origin point (0.0=0% (left), 1.0=100% (right))
+		openshot::Keyframe origin_y; ///< Curve representing Y origin point (0.0=0% (top), 1.0=100% (bottom))
 
 		// Time and Volume curves
 		openshot::Keyframe time; ///< Curve representing the frames over time to play (used for speed and direction of video)
@@ -232,9 +236,7 @@ namespace openshot {
 		openshot::Keyframe crop_x; ///< Curve representing X offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
 		openshot::Keyframe crop_y; ///< Curve representing Y offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
 
-		// Shear and perspective curves
-		openshot::Keyframe shear_x; ///< Curve representing X shear angle in degrees (-45.0=left, 45.0=right)
-		openshot::Keyframe shear_y; ///< Curve representing Y shear angle in degrees (-45.0=down, 45.0=up)
+		// Perspective curves
 		openshot::Keyframe perspective_c1_x; ///< Curves representing X for coordinate 1
 		openshot::Keyframe perspective_c1_y; ///< Curves representing Y for coordinate 1
 		openshot::Keyframe perspective_c2_x; ///< Curves representing X for coordinate 2

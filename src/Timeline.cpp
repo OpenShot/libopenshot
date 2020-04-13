@@ -677,6 +677,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	y += (Settings::Instance()->MAX_HEIGHT * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
+	float origin_x = source_clip->origin_x.GetValue(clip_frame_number);
+	float origin_y = source_clip->origin_y.GetValue(clip_frame_number);
 
 	bool transformed = false;
 	QTransform transform;
@@ -684,21 +686,22 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
-	if (!isEqual(r, 0)) {
-		// ROTATE CLIP
-		float origin_x = x + (scaled_source_width / 2.0);
-		float origin_y = y + (scaled_source_height / 2.0);
-		transform.translate(origin_x, origin_y);
-		transform.rotate(r);
-		transform.translate(-origin_x,-origin_y);
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.translate(x, y);
 		transformed = true;
 	}
 
-    if (!isEqual(x, 0) || !isEqual(y, 0)) {
-        // TRANSLATE/MOVE CLIP
-        transform.translate(x, y);
-        transformed = true;
-    }
+	if (!isEqual(r, 0) || !isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
+		// ROTATE CLIP (around origin_x, origin_y)
+		float origin_x_value = (scaled_source_width * origin_x);
+		float origin_y_value = (scaled_source_height * origin_y);
+		transform.translate(origin_x_value, origin_y_value);
+		transform.rotate(r);
+		transform.shear(shear_x, shear_y);
+		transform.translate(-origin_x_value,-origin_y_value);
+		transformed = true;
+	}
 
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
@@ -708,12 +711,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		transform.scale(source_width_scale, source_height_scale);
 		transformed = true;
 	}
-
-    if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
-        // SHEAR HEIGHT/WIDTH
-        transform.shear(shear_x, shear_y);
-        transformed = true;
-    }
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed);
