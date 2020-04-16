@@ -38,13 +38,7 @@ if (WIN32)
 endif()
 
 if (APPLE)
-	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
-	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	add_definitions(-DNDEBUG)
 	set(EXTENSION "mm")
-
-	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
-	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
 endif()
 
 ################ IMAGE MAGICK ##################
