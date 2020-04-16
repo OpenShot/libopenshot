@@ -246,31 +246,31 @@ namespace openshot {
 		virtual ~FFmpegReader();
 
 		/// Close File
-		void Close();
+		void Close() override;
 
 		/// Get the cache object used by this reader
-		CacheMemory *GetCache() { return &final_cache; };
+		CacheMemory *GetCache() override { return &final_cache; };
 
 		/// Get a shared pointer to a openshot::Frame object for a specific frame number of this reader.
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame	The frame number that is requested.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame) override;
 
 		/// Determine if reader is open or closed
-		bool IsOpen() { return is_open; };
+		bool IsOpen() override { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "FFmpegReader"; };
+		std::string Name() override { return "FFmpegReader"; };
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value); ///< Load JSON string into this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Open File - which is called by the constructor automatically
-		void Open();
+		void Open() override;
 	};
 
 }
