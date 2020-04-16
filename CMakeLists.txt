@@ -129,6 +129,16 @@ if (ENABLE_COVERAGE)
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
+# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
+# -DNDEBUG is set by cmake for all release configs, so add
+# -DDEBUG for debug builds. We'll do this for all OSes, even
+# though only MacOS requires it.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+# Make sure we've picked some build type, default to debug
+if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
 
