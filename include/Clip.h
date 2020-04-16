@@ -192,9 +192,9 @@ namespace openshot {
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value); ///< Load JSON string into this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
