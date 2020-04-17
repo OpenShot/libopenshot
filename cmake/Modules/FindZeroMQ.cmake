@@ -39,3 +39,14 @@ find_package_handle_standard_args(ZeroMQ
     ZeroMQ_INCLUDE_DIRS
   VERSION_VAR
     ZeroMQ_VERSION)
+
+# Package metadata for FeatureSummary
+set_property(GLOBAL PROPERTY
+  _CMAKE_ZeroMQ_DESCRIPTION
+   "Universal messaging library"
+)
+set_property(GLOBAL PROPERTY
+  _CMAKE_ZeroMQ_URL
+  https://github.com/zeromq/libzmq
+)
+

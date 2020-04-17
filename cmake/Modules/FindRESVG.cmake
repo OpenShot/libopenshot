@@ -113,3 +113,14 @@ if(RESVG_FOUND AND NOT TARGET RESVG::resvg)
   set_property(TARGET RESVG::resvg APPEND PROPERTY
     IMPORTED_LOCATION "${RESVG_LIBRARIES}")
 endif()
+
+
+# Package metadata for FeatureSummary
+set_property(GLOBAL PROPERTY
+  _CMAKE_RESVG_DESCRIPTION
+   "Rust-based SVG implementation"
+)
+set_property(GLOBAL PROPERTY
+  _CMAKE_RESVG_URL
+  https://github.com/RazrFalcon/resvg
+)

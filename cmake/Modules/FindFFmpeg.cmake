@@ -40,7 +40,7 @@ This module defines the following variables:
   FFMPEG_DEFINITIONS   - Compiler switches required for using the required ffmpeg components.
 
 For each component, ``<component>_FOUND`` will be set if the component is available.
- 
+
 For each ``<component>_FOUND``,  the following variables will be defined:
 
 ::
@@ -229,6 +229,16 @@ endforeach ()
 
 # Give a nice error message if some of the required vars are missing.
 find_package_handle_standard_args(FFmpeg DEFAULT_MSG ${_FFmpeg_REQUIRED_VARS})
+
+# Package metadata for FeatureSummary
+set_property(GLOBAL PROPERTY
+  _CMAKE_FFmpeg_DESCRIPTION
+   "A/V media processing and manipulation library"
+)
+set_property(GLOBAL PROPERTY
+  _CMAKE_FFmpeg_URL
+  https://ffmpeg.org/
+)
 
 # Export targets for each found component
 foreach (_component ${FFmpeg_ALL_COMPONENTS})

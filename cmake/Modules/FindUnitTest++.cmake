@@ -37,7 +37,7 @@ FIND_PATH(UnitTest++_INCLUDE_DIRS UnitTest++.h
     /usr/freeware
 )
 
-FIND_LIBRARY(UnitTest++_LIBRARIES 
+FIND_LIBRARY(UnitTest++_LIBRARIES
   NAMES unittest++ UnitTest++
   DOC
     "Location of UnitTest++ shared library"
@@ -73,6 +73,16 @@ find_package_handle_standard_args(UnitTest++
     UnitTest++_INCLUDE_DIRS
   VERSION_VAR
     UnitTest++_VERSION
+)
+
+# Package metadata for FeatureSummary
+set_property(GLOBAL PROPERTY
+  _CMAKE_UnitTest++_DESCRIPTION
+   "Simple C++ unit testing framework"
+)
+set_property(GLOBAL PROPERTY
+  _CMAKE_UnitTest++_URL
+  https://github.com/unittest-cpp/unittest-cpp
 )
 
 # Excessive backwards-compatibility paranoia

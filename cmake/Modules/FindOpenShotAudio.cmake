@@ -113,4 +113,13 @@ find_package_handle_standard_args(OpenShotAudio
     LIBOPENSHOT_AUDIO_INCLUDE_DIRS
   VERSION_VAR
     LIBOPENSHOT_AUDIO_VERSION_STRING
+
+# Package metadata for FeatureSummary
+set_property(GLOBAL PROPERTY
+  _CMAKE_OpenShotAudio_DESCRIPTION
+   "OpenShot audio library based on JUCE"
+)
+set_property(GLOBAL PROPERTY
+  _CMAKE_OpenShotAudio_URL
+  https://github.com/OpenShot/libopenshot-audio
 )

@@ -50,7 +50,7 @@ include_directories(${UnitTest++_INCLUDE_DIRS})
 
 set_package_properties(UnitTest++ PROPERTIES
   TYPE RECOMMENDED
-  PURPOSE "Unit testing framework")
+  PURPOSE "Needed to run unit tests after build")
 
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)

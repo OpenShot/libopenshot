@@ -129,4 +129,14 @@ find_package_handle_standard_args(jsoncpp
   VERSION_VAR
     jsoncpp_VERSION
 )
+
 mark_as_advanced (jsoncpp_INCLUDE_DIR jsoncpp_LIBRARY)
+
+# Package metadata for FeatureSummary
+include(FeatureSummary)
+set_package_properties(jsoncpp PROPERTIES
+  URL https://github.com/open-source-parsers/jsoncpp/
+  DESCRIPTION "JSON de/serialization and parsing in C++"
+  PURPOSE "Read and write JSON-format serializations of library data structures"
+)
+
