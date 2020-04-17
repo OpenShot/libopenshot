@@ -1,0 +1,99 @@
+version: '{branch}-{build}'
+pull_requests:
+  do_not_increment_build_number: true
+
+platform:
+  - x64
+  - x86
+
+image:
+  - Visual Studio 2017
+  - macos
+
+# Remove the impossible build
+# (ends up being a redundant 64-bit run)
+matrix:
+  exclude:
+    - platform: x86
+      image: macos
+
+for:
+# Windows (both)
+-
+  matrix:
+    except:
+      - image: macos
+  init:
+  - cmd: IF %PLATFORM% == x64 (set PLAT_BITS=64) ELSE (set PLAT_BITS=32)
+  - cmd: IF %PLATFORM% == x64 (set PLAT_ARCH=x86_64) ELSE (set PLAT_ARCH=i686)
+  - cmd: set PATH=C:\msys64\mingw%PLAT_BITS%\bin;c:\msys64\mingw%PLAT_BITS%\lib;%PATH%
+  - cmd: IF %PLATFORM% == x86 set CMAKE_EXTRA_ARGS="-DENABLE_RUBY=0"
+
+  install:
+  - cmd: c:\msys64\usr\bin\bash -lc "pacman --needed --noconfirm -S
+        mingw-w64-%PLAT_ARCH%-toolchain base-devel"
+  - cmd: c:\msys64\usr\bin\bash -lc "pacman --needed --noconfirm -S
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-cmake
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-doxygen
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-ffmpeg
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-imagemagick
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-zeromq
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-swig
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-python3-pyqt5
+        mingw%PLAT_BITS%/mingw-w64-%PLAT_ARCH%-python3-pip"
+  - cmd: pip3 install httplib2
+
+  before_build:
+  - cmd: set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
+  - cmd: appveyor\build-libopenshot-audio.bat
+  - cmd: IF NOT EXIST install-%PLAT_ARCH%\bin mkdir install-%PLAT_ARCH%\bin
+  - cmd: IF EXIST install-%PLAT_ARCH%\lib\libopenshot-audio.dll copy install-%PLAT_ARCH%\lib\libopenshot-audio.dll install-%PLAT_ARCH%\bin\
+
+  build_script:
+  - cmd: mkdir build-%PLAT_ARCH%
+  - cmd: cd build-%PLAT_ARCH%
+  - cmd: cmake -DCMAKE_INSTALL_PREFIX:PATH=install-%PLAT_ARCH% -DOpenShotAudio_ROOT=%APPVEYOR_BUILD_FOLDER%\install-%PLAT_ARCH% -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-Wall -Wpedantic" %CMAKE_EXTRA_ARGS% -G "MinGW Makefiles"  ..
+  - cmd: cmake --build . -- VERBOSE=1
+  #XXX: TESTS DISABLED, FAILING
+  #- cmd: cmake --build . --target test
+  - cmd: cmake --build . --target doc -- VERBOSE=1
+  - cmd: cmake --build . --target install
+
+# macOS
+-
+  matrix:
+    only:
+      - image: macos
+  init:
+  - sh: export PLAT_ARCH="macos-x64"
+  - sh: export CMAKE_EXTRA_ARGS="-DENABLE_RUBY=0"
+  - sh: export Qt5_DIR=/usr/local/opt/qt5/lib/cmake/Qt5
+  install:
+  - sh: brew install
+        gcc@9 libomp swig unittest-cpp rust qt
+        imagemagick libvpx x264 x265
+        fdk-aac fdk-aac-encoder ffmpeg zeromq
+  before_build:
+  - sh: mkdir build-${PLAT_ARCH}
+  - sh: eval $(brew --env|grep -i cmake)
+  - sh: git clone https://github.com/OpenShot/libopenshot-audio;
+        mkdir libopenshot-audio/build-${PLAT_ARCH}; pushd libopenshot-audio/build-${PLAT_ARCH};
+        cmake -DCMAKE_INSTALL_PREFIX=${APPVEYOR_BUILD_FOLDER}/install-${PLAT_ARCH}/ ..;
+        cmake --build . -- VERBOSE=1;
+        cmake --build . --target install;
+        popd;
+  - sh: git clone https://github.com/zeromq/cppzmq;
+        cd cppzmq;
+        cmake $(brew diy --name cppzmq --version $(sh ./version.sh)) -DENABLE_DRAFTS=0 .;
+        cmake --build . -- VERBOSE=1;
+        cmake --build . --target install;
+        brew link --verbose cppzmq;
+        cd ..
+  build_script:
+  - sh: mkdir -p build-${PLAT_ARCH}; cd build-${PLAT_ARCH};
+  - sh: cmake -DCMAKE_INSTALL_PREFIX:PATH=install-${PLAT_ARCH} -DOpenShotAudio_ROOT=${APPVEYOR_BUILD_FOLDER}/install-${PLAT_ARCH} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG="-Wall -Wpedantic" ${CMAKE_EXTRA_ARGS} ../
+  - sh: cmake --build . -- VERBOSE=1
+  - sh: cmake --build . --target test
+  - sh: cmake --build . --target install
+
+test: off

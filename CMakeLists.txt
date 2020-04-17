@@ -43,8 +43,18 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 set(PROJECT_VERSION_FULL "0.2.5-dev2")
 set(PROJECT_SO_VERSION 19)
 
+### METADATA
+set(PROJECT_AUTHOR "Jonathan Thomas and contributors")
+set(PROJECT_AUTHOR_EMAIL "jonathan@openshot.org")
+set(PROJECT_MAINTAINER "Jonathan Thomas")
+set(PROJECT_MAINTAINER_EMAIL "jonathan@openshot.org")
+set(PROJECT_URL "https://github.com/OpenShot/libopenshot/")
+set(PROJECT_DESCRIPTION [=[
+OpenShot Library (libopenshot) is a free, open-source project that enables high-quality video editing.
+]=])
+
 # Remove the dash and anything following, to get the #.#.# version for project()
-STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
+string(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 
 ################### SETUP PROJECT ###################
 # This will define the following variables
@@ -53,7 +63,7 @@ STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
 # PROJECT_VERSION_MAJOR, libopenshot_VERSION_MAJOR
 # PROJECT_VERSION_MINOR, libopenshot_VERSION_MINOR
 # PROJECT_VERSION_PATCH, libopenshot_VERSION_PATCH
-PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
+project(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
 Generating build files for OpenShot with CMake ${CMAKE_VERSION}
@@ -101,17 +111,13 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
 if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
     (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
 endif()
 
 #### Enable C++11 (for std::shared_ptr support)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-IF (WIN32)
-	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
-ENDIF(WIN32)
 
 ############## Code Coverage #########################
 if (DISABLE_TESTS AND ENABLE_COVERAGE)
@@ -187,3 +193,23 @@ feature_summary(WHAT ALL
     INCLUDE_QUIET_PACKAGES
     FATAL_ON_MISSING_REQUIRED_PACKAGES
     DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
+
+###
+### CPack packaging metadata
+###
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_FULL})
+set(CPACK_PACKAGE_HOMEPAGE_URL ${PROJECT_URL})
+if(MINGW)
+	set(CPACK_GENERATOR "NuGet")
+  set(CPACK_PACKAGE_DIRECTORY ${CMAKE_INSTALL_PREFIX})
+endif()
+if(UNIX AND NOT APPLE)
+	set(CPACK_GENERATOR "DEB")
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER ${PROJECT_MAINTAINER}) #required
+endif()
+#if(UNIX AND APPLE)
+#	set(CPACK_GENERATOR "DragNDrop")
+#endif()
+
+include(CPack)
