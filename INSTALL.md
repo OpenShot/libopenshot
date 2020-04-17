@@ -14,22 +14,7 @@ following sections, and follow the instructions. And keep in mind, that your com
 than the one used when writing these instructions. Your file paths and versions of applications might be
 slightly different, so keep an eye out for subtle file path differences in the commands you type.
 
-## Build Tools
-
-CMake is the backbone of our build system.
-It is a cross-platform build system, which checks for dependencies,
-locates header files and libraries, and generates a build system in various formats.
-We use CMake's Makefile generators to compile libopenshot and libopenshot-audio.
-
-CMake uses an out-of-source build concept.
-This means that the build system, all temporary files, and all generated products are kept separate from the source code.
-This includes Makefiles, object files, and even the final binaries.
-While it is possible to build in-tree, we highly recommend you use a `/build/` sub-folder to compile each library.
-This prevents the build process from cluttering up the source
-code.
-These instructions have only been tested with the GNU compiler suite (including MSYS2/MinGW for Windows), and the Clang compiler (including AppleClang on MacOS).
-
-### Dependencies
+## Dependencies
 
 The following libraries are required to build libopenshot.
 Instructions on how to install these dependencies vary for each operating system.
@@ -80,43 +65,6 @@ Libraries and Executables have been labeled in the list below to help distinguis
   * https://github.com/unittest-cpp/ **(Library)**
   * This library is used to execute unit tests for libopenshot.  It contains many macros used to keep our unit testing code very clean and simple.
 
-
-### CMake Flags (Optional)
-There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled. Some of these flags might be required when compiling on certain OSes, just depending on how your build environment is setup.
-
-To add a build flag, follow this general syntax:
-
-```sh
-$ cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ..
-```
-
-Following are some of the flags you might need to set when generating your build system.
-
-##### Optional behavior:
-* `-DENABLE_TESTS=0` (default: `ON`)
-* `-DENABLE_COVERAGE=1` (default: `OFF`)
-* `-DENABLE_DOCS=0` (default: `ON` if doxygen found)
-
-##### Compiler configuration:
-* `-DCMAKE_BUILD_TYPE=Debug` (default: `Release`)
-* `-DCMAKE_CXX_FLAGS="-Wall -Wextra"` (default: auto for build type)
-* `-DCMAKE_CXX_COMPILER=/path/to/g++`
-* `-DCMAKE_C_COMPILER=/path/to/gcc` (used by CMake for OS probes)
-
-##### Dependency configuration:
-* `-DCMAKE_PREFIX_PATH=/extra/path/to/search/for/libraries/`
-* `-DUSE_SYSTEM_JSONCPP=0` (default: auto if discovered)
-* `-DImageMagick_FOUND=0` (default: auto if discovered)
-
-##### To compile bindings for a specific Python installation:
-* `-DPYTHON_INCLUDE_DIR=/location/of/python/includes/`
-* `-DPYTHON_LIBRARY=/location/of/libpython*.so`
-* `-DPYTHON_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/` (MacOS only)
-
-##### Only used when building with ImageMagick enabled:
-* `-DMAGICKCORE_HDRI_ENABLE=1` (default `0`)
-* `-DMAGICKCORE_QUANTUM_DEPTH=8` (default `16`)
-
 ## Obtaining Source Code
 
 The first step in installing libopenshot is to obtain the most recent source code. The source code is available on [GitHub](https://github.com/OpenShot/libopenshot). Use the following command to obtain the latest libopenshot source code.
@@ -156,6 +104,57 @@ We use UnitTest++ macros to keep the test code simple and manageable.
 #### `thirdparty/`
 This folder contains code not written by the OpenShot team.
 For example, `jsoncpp`, an open-source JSON parser.
+
+## Build Tools
+
+CMake is the backbone of our build system.
+It is a cross-platform build system, which checks for dependencies,
+locates header files and libraries, and generates a build system in various formats.
+We use CMake's Makefile generators to compile libopenshot and libopenshot-audio.
+
+CMake uses an out-of-source build concept.
+This means that the build system, all temporary files, and all generated products are kept separate from the source code.
+This includes Makefiles, object files, and even the final binaries.
+While it is possible to build in-tree, we highly recommend you use a `/build/` sub-folder to compile each library.
+This prevents the build process from cluttering up the source
+code.
+These instructions have only been tested with the GNU compiler suite (including MSYS2/MinGW for Windows), and the Clang compiler (including AppleClang on MacOS).
+
+## CMake Flags (Optional)
+There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled. Some of these flags might be required when compiling on certain OSes, just depending on how your build environment is setup.
+
+To add a build flag, follow this general syntax:
+
+```sh
+$ cmake -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ..
+```
+
+Following are some of the flags you might need to set when generating your build system.
+
+##### Optional behavior:
+* `-DENABLE_TESTS=0` (default: `ON`)
+* `-DENABLE_COVERAGE=1` (default: `OFF`)
+* `-DENABLE_DOCS=0` (default: `ON` if doxygen found)
+
+##### Compiler configuration:
+* `-DCMAKE_BUILD_TYPE=Release`, `-DCMAKE_BUILD_TYPE=Debug` (default: `Debug` if unset)
+* `-DCMAKE_CXX_FLAGS="-Wall -Wextra"` (default: CMake builtin defaults for build type)
+* `-DCMAKE_CXX_COMPILER=/path/to/g++`, `-DCMAKE_CXX_COMPILER=/path/to/clang++`
+* `-DCMAKE_C_COMPILER=/path/to/gcc`, `-DCMAKE_CXX_COMPILER=/path/to/clang` (used by CMake for OS probes)
+
+##### Dependency configuration:
+* `-DCMAKE_PREFIX_PATH=/extra/path/to/search/for/libraries/`
+* `-DUSE_SYSTEM_JSONCPP=0` (default: auto if discovered)
+* `-DImageMagick_FOUND=0` (default: auto if discovered)
+
+##### To compile bindings for a specific Python installation:
+* `-DPYTHON_INCLUDE_DIR=/location/of/python/includes/`
+* `-DPYTHON_LIBRARY=/location/of/libpython*.so`
+* `-DPYTHON_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/` (MacOS only)
+
+##### Only used when building with ImageMagick enabled:
+* `-DMAGICKCORE_HDRI_ENABLE=1` (default `0`)
+* `-DMAGICKCORE_QUANTUM_DEPTH=8` (default `16`)
 
 ## Linux Build Instructions (libopenshot-audio)
 To compile libopenshot-audio, we need to go through a few additional steps to manually build and install it. Launch a terminal and enter:
