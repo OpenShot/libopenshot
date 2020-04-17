@@ -29,36 +29,6 @@ include(FeatureSummary)
 
 include(GNUInstallDirs)
 
-
-################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-IF (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-ELSE (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-IF (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-ELSE (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-ENDIF (MAGICKCORE_HDRI_ENABLE)
-IF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if (ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
-
-endif()
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 if (ENABLE_BLACKMAGIC)
@@ -100,7 +70,8 @@ if(ENABLE_IWYU)
 endif()
 add_feature_info("IWYU (include-what-you-use)" ENABLE_IWYU "Scan all source files with 'iwyu'")
 
-# Main library sources
+
+#### Main library sources
 set(OPENSHOT_SOURCES
   AudioBufferSource.cpp
   AudioReaderSource.cpp
@@ -320,6 +291,33 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
+################ IMAGE MAGICK ##################
+# Find the ImageMagick++ library
+find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+
+if(ImageMagick_FOUND)
+	# Include ImageMagick++ headers (needed for compile)
+  target_include_directories(openshot PUBLIC ${ImageMagick_INCLUDE_DIRS})
+
+	# Link with ImageMagick library
+	target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
+
+	# define a global var (used in the C++)
+  target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
+
+  # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+  if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+    set(MAGICKCORE_QUANTUM_DEPTH 16)
+  endif()
+  if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+    set(MAGICKCORE_HDRI_ENABLE 0)
+  endif()
+  target_compile_definitions(openshot PUBLIC MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+	target_compile_definitions(openshot PUBLIC MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+
+  list(APPEND CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+endif()
+
 ################### RESVG #####################
 # Migrate some legacy variable names
 if(DEFINED RESVGDIR AND NOT DEFINED RESVG_ROOT)
@@ -342,11 +340,8 @@ endif()
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
-target_link_libraries(openshot PUBLIC
-  ${PROFILER})
-
-if(ImageMagick_FOUND)
-  target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
+if(DEFINED PROFILER)
+  target_link_libraries(openshot PUBLIC ${PROFILER})
 endif()
 
 if(BLACKMAGIC_FOUND)

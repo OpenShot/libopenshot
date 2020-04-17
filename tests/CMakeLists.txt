@@ -44,36 +44,6 @@ set_package_properties(UnitTest++ PROPERTIES
   TYPE RECOMMENDED
   PURPOSE "Needed to run unit tests after build")
 
-################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-if(MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-else()
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-endif()
-
-if(MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-else()
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-endif()
-
-if(OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-else()
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-endif()
-
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if(ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
-endif()
 
 ################# BLACKMAGIC DECKLINK ###################
 if(ENABLE_BLACKMAGIC)
@@ -114,6 +84,29 @@ add_executable(openshot-test
 
 # Link libraries to the new executable
 target_link_libraries(openshot-test PUBLIC openshot ${UnitTest++_LIBRARIES})
+
+################ IMAGE MAGICK ##################
+# Find the ImageMagick++ library
+find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+
+if(ImageMagick_FOUND)
+	# Include ImageMagick++ headers (needed for compile)
+  target_include_directories(openshot-test PUBLIC ${ImageMagick_INCLUDE_DIRS})
+
+	# define a global var (used in the C++)
+  target_compile_definitions(openshot-test PUBLIC USE_IMAGEMAGICK=1)
+
+  # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+  if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+    set(MAGICKCORE_QUANTUM_DEPTH 16)
+  endif()
+  if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+    set(MAGICKCORE_HDRI_ENABLE 0)
+  endif()
+  target_compile_definitions(openshot-test PUBLIC MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+	target_compile_definitions(openshot-test PUBLIC MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+endif()
+
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable
