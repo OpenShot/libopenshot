@@ -71,7 +71,7 @@ if (ENABLE_BLACKMAGIC)
 
 		# define a global var (used in the C++)
 		add_definitions( -DUSE_BLACKMAGIC=1 )
-		set(CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
+    list(APPEND CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
   endif()
 
 endif()
@@ -338,7 +338,7 @@ if (TARGET RESVG::resvg)
   target_link_libraries(openshot PUBLIC RESVG::resvg)
 
   target_compile_definitions(openshot PUBLIC "-DUSE_RESVG=1")
-  set(CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+  list(APPEND CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
 endif()
 
 ###############  LINK LIBRARY  #################
