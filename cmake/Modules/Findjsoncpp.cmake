@@ -41,10 +41,10 @@ if (jsoncpp_FOUND AND NOT TARGET jsoncpp_lib)
   add_library(jsoncpp_lib UNKNOWN IMPORTED)
 
   set_property(TARGET jsoncpp_lib PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES ${JSONCPP_INCLUDE_DIR})
+    INTERFACE_INCLUDE_DIRECTORIES ${jsoncpp_INCLUDE_DIR})
 
   set_property(TARGET jsoncpp_lib PROPERTY
-    IMPORTED_LOCATION ${JSONCPP_LIBRARY})
+    IMPORTED_LOCATION ${jsoncpp_LIBRARY})
 endif()
 
 # debug library on windows
@@ -63,14 +63,15 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Add Debug location to IMPORTED target
   if(TARGET jsoncpp_lib)
     set_property(TARGET jsoncpp_lib APPEND PROPERTY
-      IMPORTED_LOCATION_Debug ${JSONCPP_LIBRARY_DEBUG})
+      IMPORTED_LOCATION_Debug ${jsoncpp_LIBRARY_DEBUG})
   endif()
 endif()
 
-# find JSONCPP_INCLUDE_PREFIX
+# find jsoncpp_INCLUDE_PREFIX
 find_path(
   jsoncpp_INCLUDE_PREFIX
   NAMES json.h
+  HINTS ${jsoncpp_INCLUDE_DIR}
   PATH_SUFFIXES jsoncpp/json json
 )
 
@@ -119,7 +120,7 @@ set(JSONCPP_INCLUDE_PREFIX ${jsoncpp_INCLUDE_PREFIX})
 set(JSONCPP_VERSION ${jsoncpp_VERSION})
 set(JSONCPP_FOUND ${jsoncpp_FOUND})
 
-# handle the QUIETLY and REQUIRED arguments and set JSONCPP_FOUND to TRUE
+# handle the QUIETLY and REQUIRED arguments and set jsoncpp_FOUND to TRUE
 # if all listed variables are TRUE, hide their existence from configuration view
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(jsoncpp
