@@ -334,7 +334,6 @@ FIND_PACKAGE(RESVG)
 
 # Include resvg headers (optional SVG library)
 if (TARGET RESVG::resvg)
-  #include_directories(${RESVG_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC RESVG::resvg)
 
   target_compile_definitions(openshot PUBLIC "-DUSE_RESVG=1")

@@ -47,11 +47,15 @@ if(DEFINED RESVGDIR AND CMAKE_VERSION VERSION_GREATER 3.4)
     BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
+if(DEFINED RESVGDIR AND NOT DEFINED RESVG_ROOT)
+  set(RESVG_ROOT "${RESVGDIR}")
+endif()
+
 find_path(RESVG_INCLUDE_DIRS
   ResvgQt.h
   PATHS
-    ${RESVGDIR}
-    ${RESVGDIR}/include
+    ${RESVG_ROOT}
+    ${RESVG_ROOT}/include
     $ENV{RESVGDIR}
     $ENV{RESVGDIR}/include
     /usr/include
@@ -65,8 +69,8 @@ find_path(RESVG_INCLUDE_DIRS
 find_library(RESVG_LIBRARIES
   NAMES resvg
   PATHS
-    ${RESVGDIR}
-    ${RESVGDIR}/lib
+    ${RESVG_ROOT}
+    ${RESVG_ROOT}/lib
     $ENV{RESVGDIR}
     $ENV{RESVGDIR}/lib
     /usr/lib
