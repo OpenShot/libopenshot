@@ -29,23 +29,6 @@ include(FeatureSummary)
 
 include(GNUInstallDirs)
 
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if (WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
-
-if (APPLE)
-	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
-	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	add_definitions(-DNDEBUG)
-	set(EXTENSION "mm")
-
-	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
-	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
-endif()
 
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
@@ -76,14 +59,6 @@ if (ImageMagick_FOUND)
 	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 
 endif()
-
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
-
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
-
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries
 if (ENABLE_BLACKMAGIC)
@@ -244,6 +219,11 @@ target_include_directories(openshot
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
 
+################# LIBOPENSHOT-AUDIO ###################
+# Find JUCE-based openshot Audio libraries
+find_package(OpenShotAudio 0.2.0 REQUIRED)
+
+target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -364,7 +344,6 @@ endif()
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
 target_link_libraries(openshot PUBLIC
-	${LIBOPENSHOT_AUDIO_LIBRARIES}
   ${PROFILER})
 
 if(ImageMagick_FOUND)
@@ -394,17 +373,17 @@ target_compile_definitions(openshot-example PRIVATE
 	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
 # Link test executable to the new library
-target_link_libraries(openshot-example openshot)
+target_link_libraries(openshot-example PUBLIC openshot)
 
 add_executable(openshot-html-test examples/ExampleHtml.cpp)
-target_link_libraries(openshot-html-test openshot Qt5::Gui)
+target_link_libraries(openshot-html-test PUBLIC openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable
 add_executable(openshot-player Qt/demo/main.cpp)
 
 # Link test executable to the new library
-target_link_libraries(openshot-player openshot)
+target_link_libraries(openshot-player PUBLIC openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 if (BLACKMAGIC_FOUND)
@@ -413,7 +392,7 @@ if (BLACKMAGIC_FOUND)
 			examples/ExampleBlackmagic.cpp)
 
 	# Link test executable to the new library
-	target_link_libraries(openshot-blackmagic openshot)
+	target_link_libraries(openshot-blackmagic PUBLIC openshot)
 endif()
 
 ############### INCLUDE SWIG BINDINGS ################

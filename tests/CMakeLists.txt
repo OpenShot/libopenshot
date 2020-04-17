@@ -28,14 +28,6 @@
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/src/examples/" TEST_MEDIA_PATH)
 add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if(WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
-
 ################### UNITTEST++ #####################
 # Find UnitTest++ libraries (used for unit testing)
 find_package(UnitTest++)
@@ -83,14 +75,6 @@ if(ImageMagick_FOUND)
 	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 endif()
 
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
-
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
-
-
 ################# BLACKMAGIC DECKLINK ###################
 if(ENABLE_BLACKMAGIC)
 	# Find BlackMagic DeckLinkAPI libraries
@@ -129,7 +113,7 @@ add_executable(openshot-test
   ${OPENSHOT_TEST_FILES} )
 
 # Link libraries to the new executable
-target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
+target_link_libraries(openshot-test PUBLIC openshot ${UnitTest++_LIBRARIES})
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable
