@@ -33,7 +33,7 @@
 
 #include <iomanip>
 #include "ReaderBase.h"
-#include "JuceHeader.h"
+#include <JuceHeader.h>
 
 /// This namespace is the default namespace for all code in the openshot library
 namespace openshot

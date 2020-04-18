@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../../include/Qt/PlayerDemo.h"
+#include "Qt/PlayerDemo.h"
 
 int main(int argc, char *argv[])
 {

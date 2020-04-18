@@ -29,7 +29,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoPlaybackThread.h"
+#include "VideoPlaybackThread.h"
 
 namespace openshot
 {

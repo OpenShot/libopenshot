@@ -30,7 +30,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtTextReader.h"
+#include "QtTextReader.h"
 #include <QImage>
 #include <QPainter>
 

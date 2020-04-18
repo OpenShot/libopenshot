@@ -42,7 +42,7 @@
 #include <time.h>
 #include <zmq.hpp>
 #include <unistd.h>
-#include "JuceHeader.h"
+#include <JuceHeader.h>
 
 
 namespace openshot {

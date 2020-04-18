@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DecklinkWriter.h"
+#include "DecklinkWriter.h"
 
 using namespace openshot;
 

@@ -35,9 +35,9 @@
 #include "../ReaderBase.h"
 #include "../RendererBase.h"
 #include "../AudioReaderSource.h"
-#include "../Qt/AudioPlaybackThread.h"
-#include "../Qt/VideoPlaybackThread.h"
-#include "../Qt/VideoCacheThread.h"
+#include "AudioPlaybackThread.h"
+#include "VideoPlaybackThread.h"
+#include "VideoCacheThread.h"
 
 namespace openshot
 {

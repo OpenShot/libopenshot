@@ -31,7 +31,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FFmpegReader.h"
+#include "FFmpegReader.h"
 
 #define ENABLE_VAAPI 0
 

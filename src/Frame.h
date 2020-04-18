@@ -51,7 +51,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
-#include "JuceHeader.h"
+#include <JuceHeader.h>
 #ifdef USE_IMAGEMAGICK
 	#include "MagickUtilities.h"
 #endif

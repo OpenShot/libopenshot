@@ -44,7 +44,7 @@
 #include "Fraction.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
-#include "JuceHeader.h"
+#include <JuceHeader.h>
 
 namespace openshot {
 

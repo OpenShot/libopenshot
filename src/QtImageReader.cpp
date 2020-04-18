@@ -28,10 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtImageReader.h"
-#include "../include/Settings.h"
-#include "../include/Clip.h"
-#include "../include/CacheMemory.h"
+#include "QtImageReader.h"
+#include "Settings.h"
+#include "Clip.h"
+#include "CacheMemory.h"
 #include <QtCore/QString>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>

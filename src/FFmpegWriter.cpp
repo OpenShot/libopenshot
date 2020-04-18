@@ -31,7 +31,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FFmpegWriter.h"
+#include "FFmpegWriter.h"
 
 using namespace openshot;
 

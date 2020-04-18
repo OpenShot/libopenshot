@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheDisk.h"
+#include "CacheDisk.h"
 
 using namespace std;
 using namespace openshot;

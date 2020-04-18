@@ -29,8 +29,8 @@
  */
 
 #include "stdio.h"
-#include "../../include/QtPlayer.h"
-#include "../../include/Qt/PlayerDemo.h"
+#include "../QtPlayer.h"
+#include "PlayerDemo.h"
 #include <QMessageBox>
 #include <QFileDialog>
 

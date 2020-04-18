@@ -33,7 +33,7 @@
 #include <map>
 #include <queue>
 #include <memory>
-#include "../../include/OpenShot.h"
+#include "OpenShot.h"
 #include <omp.h>
 #include <time.h>
 

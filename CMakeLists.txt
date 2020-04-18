@@ -140,7 +140,13 @@ if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 ############## PROCESS src/ DIRECTORIES ##############
+### Set up include paths
+find_package(OpenShotAudio 0.2.0 REQUIRED)
+include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
+
 add_subdirectory(src)
+add_subdirectory(examples)
+add_subdirectory(bindings)
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
