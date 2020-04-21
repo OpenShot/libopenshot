@@ -32,12 +32,12 @@
 #define OPENSHOT_AUDIODEVICEINFO_H
 
 
-/**
- * @brief This struct hold information about Audio Devices
- *
- * The type and name of the audio device.
- */
 namespace openshot {
+	/**
+ 	* @brief This struct hold information about Audio Devices
+	*
+	* The type and name of the audio device.
+	*/
 	struct AudioDeviceInfo
 	{
 		std::string name;

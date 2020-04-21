@@ -66,10 +66,10 @@ namespace openshot
 	{
 	private:
 		QString path;
-		std::shared_ptr<QImage> image;			///> Original image (full quality)
-		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
-		bool is_open;	///> Is Reader opened
-		QSize max_size;	///> Current max_size as calculated with Clip properties
+		std::shared_ptr<QImage> image;		///< Original image (full quality)
+		std::shared_ptr<QImage> cached_image;	///< Scaled for performance
+		bool is_open;	///< Is Reader opened
+		QSize max_size;	///< Current max_size as calculated with Clip properties
 
 	public:
 

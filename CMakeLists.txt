@@ -40,8 +40,19 @@ For more information, please visit <http://www.openshot.org/>.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
-set(PROJECT_VERSION_FULL "0.2.5-dev2")
-set(PROJECT_SO_VERSION 19)
+set(PROJECT_VERSION_FULL "0.2.5-dev2" CACHE STRING "Extended version string" FORCE)
+set(PROJECT_SO_VERSION 19 CACHE STRING "library API version" FORCE)
+
+### METADATA
+set(PROJECT_AUTHOR "Jonathan Thomas and contributors")
+set(PROJECT_AUTHOR_EMAIL "jonathan@openshot.org")
+set(PROJECT_MAINTAINER "Jonathan Thomas")
+set(PROJECT_MAINTAINER_EMAIL "jonathan@openshot.org")
+set(PROJECT_URL "https://github.com/OpenShot/libopenshot/")
+set(PROJECT_SUMMARY "C++ audio-video processing library that enables high-quality video editing.")
+set(PROJECT_DESCRIPTION [=[
+OpenShot Library (libopenshot) is a free, open-source project that enables high-quality video editing.
+]=])
 
 # Remove the dash and anything following, to get the #.#.# version for project()
 STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
@@ -57,7 +68,7 @@ PROJECT(libopenshot LANGUAGES C CXX VERSION ${VERSION_NUM})
 
 message("
 Generating build files for OpenShot with CMake ${CMAKE_VERSION}
-  Building ${PROJECT_NAME} (version ${PROJECT_VERSION})
+  Building ${PROJECT_NAME} version ${PROJECT_VERSION_FULL}
   SO/API/ABI Version: ${PROJECT_SO_VERSION}
 ")
 
@@ -180,6 +191,7 @@ if (ENABLE_COVERAGE)
     EXECUTABLE openshot-test
     DEPENDENCIES openshot-test)
     message("Generate coverage report with 'make coverage'")
+  add_feature_info("Coverage unit" ENABLE_COVERAGE "generate report with 'make coverage'")
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############

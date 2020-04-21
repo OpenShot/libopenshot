@@ -44,14 +44,14 @@ PROJECT_NUMBER         = "@PROJECT_VERSION@"
 # for a project that appears at the top of each page and should give viewer a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          =
+PROJECT_BRIEF          =  "@PROJECT_SUMMARY@"
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55
 # pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
 # the logo to the output directory.
 
-PROJECT_LOGO           =
+PROJECT_LOGO           = "@PROJECT_SOURCE_DIR@/doc/images/openshot-qt.png"
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
@@ -160,7 +160,8 @@ FULL_PATH_NAMES        = YES
 # will be relative from the directory where doxygen is started.
 # This tag requires that the tag FULL_PATH_NAMES is set to YES.
 
-STRIP_FROM_PATH        = "@PROJECT_SOURCE_DIR@/src"
+STRIP_FROM_PATH        = "@PROJECT_SOURCE_DIR@/src" \
+                         "@PROJECT_BINARY_DIR@/src"
 
 # The STRIP_FROM_INC_PATH tag can be used to strip a user-defined part of the
 # path mentioned in the documentation of a class, which tells the reader which
@@ -170,7 +171,7 @@ STRIP_FROM_PATH        = "@PROJECT_SOURCE_DIR@/src"
 # using the -I flag.
 
 STRIP_FROM_INC_PATH    = "@PROJECT_SOURCE_DIR@/src" \
-			 "@PROJECT_BINARY_DIR@/include"
+                         "@PROJECT_BINARY_DIR@/src"
 
 # If the SHORT_NAMES tag is set to YES, doxygen will generate much shorter (but
 # less readable) file names. This can be useful is your file systems doesn't
@@ -341,7 +342,7 @@ AUTOLINK_SUPPORT       = YES
 # diagrams that involve STL classes more complete and accurate.
 # The default value is: NO.
 
-BUILTIN_STL_SUPPORT    = YES
+BUILTIN_STL_SUPPORT    = NO
 
 # If you use Microsoft's C++/CLI language, you should set this option to YES to
 # enable parsing support.
@@ -863,7 +864,8 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       =
+EXCLUDE_PATTERNS       = "*/moc_*.cpp" \
+                         "*/*_automoc.cpp"
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the

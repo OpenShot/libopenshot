@@ -81,7 +81,7 @@ namespace openshot {
 		float Duration() const { return end - start; } ///< Get the length of this clip (in seconds)
 
 		/// Set basic properties
-		void Id(std::string value) { id = value; } ///> Set the Id of this clip object
+		void Id(std::string value) { id = value; } ///< Set the Id of this clip object
 		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
