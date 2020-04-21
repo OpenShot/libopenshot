@@ -29,12 +29,22 @@ include(FeatureSummary)
 
 include(GNUInstallDirs)
 
-################ WINDOWS ##################
+###
+### Configure Version header
+###
+configure_file(OpenShotVersion.h.in OpenShotVersion.h @ONLY)
+# We'll want that installed later
+install(FILES OpenShotVersion.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
+
+###
+### Platform-specific configs
+###
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
 if (WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
+  add_definitions( -DIGNORE_JUCE_HYPOT=1 )
+  set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
 endif()
 
 if (APPLE)
@@ -108,17 +118,17 @@ if(CMAKE_VERSION VERSION_LESS 3.3)
 endif()
 
 if(ENABLE_IWYU)
-	find_program(IWYU_PATH NAMES "iwyu"
-		DOC "include-what-you-use source code scanner executable")
-	if(IWYU_PATH)
-		if(IWYU_OPTS)
-			separate_arguments(IWYU_OPTS)
-			list(APPEND _iwyu_opts "-Xiwyu" ${IWYU_OPTS})
-		endif()
-		set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH} ${_iwyu_opts})
-	else()
-		set(ENABLE_IWYU FALSE)
-	endif()
+  find_program(IWYU_PATH NAMES "iwyu"
+    DOC "include-what-you-use source code scanner executable")
+  if(IWYU_PATH)
+    if(IWYU_OPTS)
+      separate_arguments(IWYU_OPTS)
+      list(APPEND _iwyu_opts "-Xiwyu" ${IWYU_OPTS})
+    endif()
+    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH} ${_iwyu_opts})
+  else()
+    set(ENABLE_IWYU FALSE)
+  endif()
 endif()
 add_feature_info("IWYU (include-what-you-use)" ENABLE_IWYU "Scan all source files with 'iwyu'")
 
@@ -148,7 +158,7 @@ set(OPENSHOT_SOURCES
   Fraction.cpp
   Frame.cpp
   FrameMapper.cpp
-	Json.cpp
+  Json.cpp
   KeyFrame.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp
@@ -212,7 +222,7 @@ set_target_properties(openshot PROPERTIES
 
 # Add optional ImageMagic-dependent sources
 if(ImageMagick_FOUND)
-	target_sources(openshot PRIVATE
+  target_sources(openshot PRIVATE
     ImageReader.cpp
     ImageWriter.cpp
     TextReader.cpp)
@@ -230,26 +240,26 @@ endif()
 # Location of our includes, both internally and when installed
 target_include_directories(openshot
   PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
 
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
-	message(STATUS "Looking for system JsonCpp")
-	find_package(JsonCpp)
-	if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
-		# Create the expected target, for older installs that don't
-		add_library(jsoncpp_lib INTERFACE)
-		target_include_directories(jsoncpp_lib INTERFACE
-			${JSONCPP_INCLUDE_DIRS})
-		target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
-	endif ()
+  message(STATUS "Looking for system JsonCpp")
+  find_package(JsonCpp)
+  if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
+    # Create the expected target, for older installs that don't
+    add_library(jsoncpp_lib INTERFACE)
+    target_include_directories(jsoncpp_lib INTERFACE
+      ${JSONCPP_INCLUDE_DIRS})
+    target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
+  endif ()
 endif ()
 
 if (NOT JSONCPP_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
@@ -293,7 +303,7 @@ find_package(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale
 
 foreach(ff_comp avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
   if(TARGET FFmpeg::${ff_comp})
-		target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
+    target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
   endif()
 endforeach()
 
@@ -331,7 +341,7 @@ find_package(cppzmq QUIET) # Creates cppzmq target
 
 # Link ZeroMQ library
 if (TARGET libzmq)
-	target_link_libraries(openshot PUBLIC libzmq)
+  target_link_libraries(openshot PUBLIC libzmq)
 endif()
 # Include cppzmq headers, if not bundled into libzmq
 if (TARGET cppzmq)
@@ -362,7 +372,7 @@ endif()
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
 target_link_libraries(openshot PUBLIC
-	${LIBOPENSHOT_AUDIO_LIBRARIES}
+  ${LIBOPENSHOT_AUDIO_LIBRARIES}
   ${PROFILER})
 
 if(ImageMagick_FOUND)
@@ -374,8 +384,8 @@ if(BLACKMAGIC_FOUND)
 endif()
 
 if(WIN32)
-	# Required for exception handling on Windows
-	target_link_libraries(openshot PUBLIC "imagehlp" "dbghelp" )
+  # Required for exception handling on Windows
+  target_link_libraries(openshot PUBLIC "imagehlp" "dbghelp" )
 endif()
 
 ############### INSTALL HEADERS & LIBRARY ################
@@ -395,13 +405,13 @@ install(
 
 ############### CPACK PACKAGING ##############
 if(MINGW)
-	set(CPACK_GENERATOR "NSIS")
+  set(CPACK_GENERATOR "NSIS")
 endif()
 if(UNIX AND NOT APPLE)
-	set(CPACK_GENERATOR "DEB")
+  set(CPACK_GENERATOR "DEB")
 endif()
 #if(UNIX AND APPLE)
-#	set(CPACK_GENERATOR "DragNDrop")
+#  set(CPACK_GENERATOR "DragNDrop")
 #endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 

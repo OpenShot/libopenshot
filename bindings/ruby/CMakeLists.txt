@@ -65,7 +65,7 @@ if (CMAKE_VERSION VERSION_LESS 3.12)
   ### Include the project headers
   include_directories(
     "${PROJECT_SOURCE_DIR}/src"
-    "${PROJECT_BINARY_DIR}/include")
+    "${PROJECT_BINARY_DIR}/src")
 endif()
 
 ### Enable C++ in SWIG

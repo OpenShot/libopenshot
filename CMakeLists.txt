@@ -91,12 +91,6 @@ if(DEFINED ENABLE_TESTS)
   set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
 endif()
 
-########## Configure Version.h header ##############
-configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
-# We'll want that installed later
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
-
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
 if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
