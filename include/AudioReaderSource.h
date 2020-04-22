@@ -54,7 +54,6 @@ namespace openshot
 		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
-		int64_t original_frame_number; /// The current frame to read from
 		int64_t frame_number; /// The current frame number
 		std::shared_ptr<Frame> frame; /// The current frame object that is being read
 		int64_t frame_position; /// The position of the current frame's buffer
