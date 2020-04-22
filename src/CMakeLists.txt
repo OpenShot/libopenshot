@@ -34,7 +34,7 @@ include(GNUInstallDirs)
 ###
 configure_file(OpenShotVersion.h.in OpenShotVersion.h @ONLY)
 # We'll want that installed later
-install(FILES OpenShotVersion.h
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
 ###
@@ -48,43 +48,36 @@ if (WIN32)
 endif()
 
 if (APPLE)
-	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
-	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	add_definitions(-DNDEBUG)
-	set(EXTENSION "mm")
+  # If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
+  set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
+  add_definitions(-DNDEBUG)
+  set(EXTENSION "mm")
 
-	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
-	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
+  set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
+  set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
 endif()
 
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-IF (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-ELSE (MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-IF (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-ELSE (MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-ENDIF (MAGICKCORE_HDRI_ENABLE)
-IF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-ELSE (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-ENDIF (OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+  set(MAGICKCORE_QUANTUM_DEPTH 16)
+endif()
+if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+  set(MAGICKCORE_HDRI_ENABLE 0)
+endif()
 
 # Find the ImageMagick++ library
 find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
 if (ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
+  # Include ImageMagick++ headers (needed for compile)
+  include_directories(${ImageMagick_INCLUDE_DIRS})
 
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+  # define a global var (used in the C++)
+  add_definitions( -DUSE_IMAGEMAGICK=1 )
+  list(APPEND CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 
+  add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
+  add_definitions(-DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
 endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
@@ -95,15 +88,15 @@ find_package(OpenShotAudio 0.2.0 REQUIRED)
 # Find BlackMagic DeckLinkAPI libraries
 if (ENABLE_BLACKMAGIC)
 
-	find_package(BlackMagic)
+  find_package(BlackMagic)
 
-	if (BLACKMAGIC_FOUND)
-		# Include Blackmagic headers (needed for compile)
-		include_directories(${BLACKMAGIC_INCLUDE_DIR})
+  if (BLACKMAGIC_FOUND)
+    # Include Blackmagic headers (needed for compile)
+    include_directories(${BLACKMAGIC_INCLUDE_DIR})
 
-		# define a global var (used in the C++)
-		add_definitions( -DUSE_BLACKMAGIC=1 )
-		set(CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
+    # define a global var (used in the C++)
+    add_definitions( -DUSE_BLACKMAGIC=1 )
+    list(APPEND CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
   endif()
 
 endif()
