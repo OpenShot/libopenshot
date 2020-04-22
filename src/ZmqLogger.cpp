@@ -77,7 +77,7 @@ ZmqLogger *ZmqLogger::Instance()
 }
 
 // Set the connection for this logger
-void ZmqLogger::Connection(string new_connection)
+void ZmqLogger::Connection(std::string new_connection)
 {
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
@@ -108,7 +108,7 @@ void ZmqLogger::Connection(string new_connection)
 		publisher->bind(connection.c_str());
 
 	} catch (zmq::error_t &e) {
-		cout << "ZmqLogger::Connection - Error binding to " << connection << ". Switching to an available port." << endl;
+		std::cout << "ZmqLogger::Connection - Error binding to " << connection << ". Switching to an available port." << std::endl;
 		connection = "tcp://*:*";
 		publisher->bind(connection.c_str());
 	}
@@ -117,7 +117,7 @@ void ZmqLogger::Connection(string new_connection)
 	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
-void ZmqLogger::Log(string message)
+void ZmqLogger::Log(std::string message)
 {
 	if (!enabled)
 		// Don't do anything
@@ -128,23 +128,28 @@ void ZmqLogger::Log(string message)
 
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
-	memcpy (reply.data(), message.c_str(), message.length());
-	publisher->send(reply);
+	std::memcpy (reply.data(), message.c_str(), message.length());
 
-	// Write to log file (if opened, and force it to write to disk in case of a crash)
-	if (log_file.is_open())
-		log_file << message << std::flush;
+#if ZMQ_VERSION > ZMQ_MAKE_VERSION(4, 3, 1)
+	// Set flags for immediate delivery (new API)
+	publisher->send(reply, zmq::send_flags::dontwait);
+#else
+	publisher->send(reply);
+#endif
+
+	// Also log to file, if open
+	LogToFile(message);
 }
 
 // Log message to a file (if path set)
-void ZmqLogger::LogToFile(string message)
+void ZmqLogger::LogToFile(std::string message)
 {
 	// Write to log file (if opened, and force it to write to disk in case of a crash)
 	if (log_file.is_open())
 		log_file << message << std::flush;
 }
 
-void ZmqLogger::Path(string new_path)
+void ZmqLogger::Path(std::string new_path)
 {
 	// Update path
 	file_path = new_path;
@@ -154,20 +159,14 @@ void ZmqLogger::Path(string new_path)
 		log_file.close();
 
 	// Open file (write + append)
-	log_file.open (file_path.c_str(), ios::out | ios::app);
+	log_file.open (file_path.c_str(), std::ios::out | std::ios::app);
 
-	// Draw a line of 50 dashes
-	log_file.fill('-');
-	log_file << std::setw(50) << '\n';
-
-	// Get current time and write session header
-	log_file << "libopenshot logging: ";
-	std::time_t t = std::time(nullptr);
-	log_file << std::put_time(std::localtime(&t), "%c %Z") << '\n';
-
-	// Another line, and reset the fill character to space
-	log_file << std::setw(50) << '\n';
-	log_file.fill(' ');
+	// Get current time and log first message
+	std::time_t now = std::time(0);
+	std::tm* localtm = std::localtime(&now);
+	log_file << "------------------------------------------" << std::endl;
+	log_file << "libopenshot logging: " << std::asctime(localtm);
+	log_file << "------------------------------------------" << std::endl;
 }
 
 void ZmqLogger::Close()
@@ -188,13 +187,13 @@ void ZmqLogger::Close()
 }
 
 // Append debug information
-void ZmqLogger::AppendDebugMethod(string method_name,
-				  string arg1_name, float arg1_value,
-				  string arg2_name, float arg2_value,
-				  string arg3_name, float arg3_value,
-				  string arg4_name, float arg4_value,
-				  string arg5_name, float arg5_value,
-				  string arg6_name, float arg6_value)
+void ZmqLogger::AppendDebugMethod(std::string method_name,
+				  std::string arg1_name, float arg1_value,
+				  std::string arg2_name, float arg2_value,
+				  std::string arg3_name, float arg3_value,
+				  std::string arg4_name, float arg4_value,
+				  std::string arg5_name, float arg5_value,
+				  std::string arg6_name, float arg6_value)
 {
 	if (!enabled)
 		// Don't do anything
@@ -204,8 +203,8 @@ void ZmqLogger::AppendDebugMethod(string method_name,
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
 
-		stringstream message;
-		message << fixed << setprecision(4);
+		std::stringstream message;
+		message << std::fixed << std::setprecision(4);
 		message << method_name << " (";
 
 		// Add attributes to method JSON

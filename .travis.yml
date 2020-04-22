@@ -1,5 +1,7 @@
 language: cpp
 compiler: gcc
+os: linux
+dist: xenial
 
 # This section uses a rather esoteric (and tricky!) feature of YAML,
 # &aliases and *anchors, to build package lists out of sublists without
@@ -9,18 +11,12 @@ addons:
   apt:
     packages: &p_common  # Packages common to all Ubuntu builds
     - cmake
-    - swig
     - libopenshot-audio-dev
     - libmagick++-dev
     - libunittest++-dev
     - libzmq3-dev
     - qtbase5-dev
     - qtmultimedia5-dev
-    - doxygen
-    - graphviz
-    - curl
-    packages: &ff_common  # Common set of FFmpeg packages
-    - *p_common
     - libfdk-aac-dev
     - libavcodec-dev
     - libavformat-dev
@@ -29,10 +25,13 @@ addons:
     - libavfilter-dev
     - libswscale-dev
     - libpostproc-dev
-    - libavresample-dev
     - libswresample-dev
+    - swig
+    - doxygen
+    - graphviz
+    - curl
 
-matrix:
+jobs:
   include:
 
     - name: "Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
@@ -48,8 +47,9 @@ matrix:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           packages:
-          - *ff_common
+          - *p_common
           - qt5-default
+          - libavresample-dev
           - libjsoncpp-dev
           - lcov
           - binutils-common # For c++filt
@@ -68,7 +68,7 @@ matrix:
           - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           - sourceline: 'ppa:jonathonf/ffmpeg-4'
           packages:
-          - *ff_common
+          - *p_common
           - qt5-default
           - libjsoncpp-dev
           - libavcodec58
@@ -78,7 +78,6 @@ matrix:
           - libavfilter7
           - libswscale5
           - libpostproc55
-          - libavresample4
           - libswresample3
 
     - name: "FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)"
@@ -95,8 +94,9 @@ matrix:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           packages:
-          - *ff_common
+          - *p_common
           - qt5-default
+          - libavresample-dev
           - libomp-dev
 
     - name: "FFmpeg 3.2 GCC (Ubuntu 16.04 Xenial)"
@@ -113,7 +113,8 @@ matrix:
           - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           - sourceline: 'ppa:jon-hedgerows/ffmpeg-backports'
           packages:
-          - *ff_common
+          - *p_common
+          - libavresample-dev
           - libavcodec57
           - libavdevice57
           - libavfilter6
@@ -137,14 +138,15 @@ matrix:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           packages:
-          - *ff_common
+          - *p_common
+          - libavresample-dev
 
 script:
   - mkdir -p build; cd build;
-  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
+  - cmake -DCMAKE_INSTALL_PREFIX:PATH="$TRAVIS_OS_NAME-x64" -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
   - make ${TEST_TARGET}
-  - make install DESTDIR="$BUILD_VERSION"
+  - make install
   - cd ..
 
 after_success:

@@ -84,7 +84,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 #endif // HAVE_HW_ACCEL
 
 FFmpegWriter::FFmpegWriter(std::string path) :
-		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), audio_pts(0), video_pts(0), samples(NULL),
+		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec(NULL), audio_codec(NULL), is_writing(false), write_video_count(0), write_audio_count(0),
@@ -1525,11 +1525,23 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			// Calculate total samples
 			total_frame_samples = samples_in_frame * channels_in_frame;
 
-			// Translate audio sample values back to 16 bit integers
-			for (int s = 0; s < total_frame_samples; s++, frame_position++)
-				// Translate sample value and copy into buffer
-				all_queued_samples[frame_position] = int(frame_samples_float[s] * (1 << 15));
+			// Translate audio sample values back to 16 bit integers with saturation
+			float valF;
+			int16_t conv;
+			const int16_t max16 = 32767;
+			const int16_t min16 = -32768;
+			for (int s = 0; s < total_frame_samples; s++, frame_position++) {
+				valF = frame_samples_float[s] * (1 << 15);
+				if (valF > max16)
+					conv = max16;
+				else if (valF < min16)
+					conv = min16;
+				else
+					conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
 
+				// Copy into buffer
+				all_queued_samples[frame_position] = conv;
+			}
 
 			// Deallocate float array
 			delete[] frame_samples_float;
@@ -2018,7 +2030,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		int error_code = 0;
 #if IS_FFMPEG_3_2
 		// Write video packet (latest version of FFmpeg)
-		int frameFinished = 0;
 		int ret;
 
 	#if HAVE_HW_ACCEL

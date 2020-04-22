@@ -111,7 +111,12 @@ void QtImageReader::Open()
 		info.has_audio = false;
 		info.has_video = true;
 		info.has_single_image = true;
-		info.file_size = image->byteCount();
+		#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+			// byteCount() is deprecated from Qt 5.10
+			info.file_size = image->sizeInBytes();
+		#else
+			info.file_size = image->byteCount();
+		#endif
 		info.vcodec = "QImage";
 		info.width = image->width();
 		info.height = image->height();
