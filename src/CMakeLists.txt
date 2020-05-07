@@ -289,6 +289,10 @@ foreach(_qt_comp IN LISTS _qt_components)
   endif()
 endforeach()
 
+# Keep track of Qt version, to embed in our version header
+set(QT_VERSION_STR ${Qt5Core_VERSION_STRING} CACHE STRING "Qt version linked with" FORCE)
+mark_as_advanced(QT_VERSION_STR)
+
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)

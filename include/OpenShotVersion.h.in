@@ -42,6 +42,9 @@
 
 #define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 
+// Useful dependency versioning
+#define QT_VERSION_STR "@QT_VERSION_STR@"
+
 #include <sstream>
 
 namespace openshot
