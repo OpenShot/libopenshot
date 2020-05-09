@@ -48,7 +48,6 @@ namespace openshot
 	{
 	private:
 		int position;
-		int start;
 		bool repeat;
 		juce::AudioSampleBuffer *buffer;
 

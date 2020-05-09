@@ -244,34 +244,29 @@ target_include_directories(openshot
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
 if (USE_SYSTEM_JSONCPP)
-  message(STATUS "Looking for system JsonCpp")
-  find_package(JsonCpp)
-  if (JSONCPP_FOUND AND NOT TARGET jsoncpp_lib)
-    # Create the expected target, for older installs that don't
-    add_library(jsoncpp_lib INTERFACE)
-    target_include_directories(jsoncpp_lib INTERFACE
-      ${JSONCPP_INCLUDE_DIRS})
-    target_link_libraries(jsoncpp_lib INTERFACE ${JSONCPP_LIBRARY})
-  endif ()
+	message(STATUS "Looking for system jsoncpp")
+  # Either an installed config or our find module will
+  # create the IMPORTED target jsoncpp_lib if successful
+  find_package(jsoncpp)
 endif ()
 
-if (NOT JSONCPP_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
-  message(STATUS "Using embedded JsonCpp (not found or USE_SYSTEM_JSONCPP disabled)")
+if (NOT jsoncpp_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
+  message(STATUS "Using embedded jsoncpp (not found or USE_SYSTEM_JSONCPP disabled)")
   if (NOT TARGET jsoncpp_lib)
     add_library(jsoncpp_lib INTERFACE)
     target_include_directories(jsoncpp_lib INTERFACE
       "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
     target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
     # Because this satisfies the requirement, an installed JsonCpp is optional
-    set_package_properties(JsonCpp PROPERTIES TYPE OPTIONAL)
+    set_package_properties(jsoncpp PROPERTIES TYPE OPTIONAL)
   endif ()
-  add_feature_info("JsonCpp (embedded)" TRUE "JsonCpp will be compiled from the bundled sources")
+  add_feature_info("jsoncpp (embedded)" TRUE "jsoncpp will be compiled from the bundled sources")
 endif ()
 
-if (JSONCPP_FOUND)
+if (jsoncpp_FOUND)
   # JsonCpp is actually required, even though we probe for it optionally
   # (This tells feature_summary() to bail if it's not found, later)
-  set_package_properties(JsonCpp PROPERTIES TYPE REQUIRED)
+  set_package_properties(jsoncpp PROPERTIES TYPE REQUIRED)
 endif ()
 
 # If we found any usable JsonCpp, use it. Otherwise, bail.

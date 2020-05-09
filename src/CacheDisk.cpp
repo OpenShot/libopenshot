@@ -228,7 +228,7 @@ std::shared_ptr<Frame> CacheDisk::GetFrame(int64_t frame_number)
 
 			// Load image file
 			std::shared_ptr<QImage> image = std::shared_ptr<QImage>(new QImage());
-			bool success = image->load(QString::fromStdString(frame_path.toStdString()));
+			image->load(frame_path);
 
 			// Set pixel formatimage->
 			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));

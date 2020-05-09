@@ -524,9 +524,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Loop through pixels
 		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
 		{
-			// Get the alpha values from the pixel
-			int A = pixels[byte_index + 3];
-
 			// Apply alpha to pixel
 			pixels[byte_index + 3] *= alpha;
 		}

@@ -103,7 +103,6 @@ namespace openshot {
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
-		juce::AudioSampleBuffer *audio_cache;
 
 		// File Reader object
 		openshot::ReaderBase* reader;

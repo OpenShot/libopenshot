@@ -132,14 +132,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(new_reader), allocated_reader(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -153,7 +153,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(
 }
 
 // Constructor with filepath
-Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -422,7 +422,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 		int delta = int(round(time.GetDelta(frame_number)));
 
 		// Init audio vars
-		int sample_rate = reader->info.sample_rate;
 		int channels = reader->info.channels;
 		int number_of_samples = GetOrCreateFrame(new_frame_number)->GetAudioSamplesCount();
 
@@ -433,7 +432,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *resampled_buffer = NULL;
-				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
 				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
@@ -454,9 +452,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample the data (since it's the 1st slice)
 				resampled_buffer = resampler->GetResampledBuffer();
-
-				// Get the length of the resampled buffer (if one exists)
-				resampled_buffer_size = resampled_buffer->getNumSamples();
 
 				// Just take the samples we need for the requested frame
 				int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
@@ -567,7 +562,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
-				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
