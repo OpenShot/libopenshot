@@ -42,8 +42,13 @@
 
 #define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 
-// Useful dependency versioning
-#define QT_VERSION_STR "@QT_VERSION_STR@"
+// Useful dependency versioning / feature availability
+#cmakedefine QT_VERSION_STR "@QT_VERSION_STR@"
+#cmakedefine AVCODEC_VERSION_STR "@AVCODEC_VERSION_STR@"
+#cmakedefine AVFORMAT_VERSION_STR "@AVFORMAT_VERSION_STR@"
+#cmakedefine AVUTIL_VERSION_STR "@AVUTIL_VERSION_STR@"
+#cmakedefine01 HAVE_IMAGEMAGICK
+#cmakedefine01 HAVE_RESVG
 
 #include <sstream>
 
