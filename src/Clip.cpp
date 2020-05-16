@@ -150,6 +150,10 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 
 	// Update duration
 	End(reader->info.duration);
+
+	if (new_reader) {
+		new_reader->SetClip(this);
+	}
 }
 
 // Constructor with filepath
