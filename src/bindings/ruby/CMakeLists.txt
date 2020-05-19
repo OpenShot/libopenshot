@@ -72,6 +72,9 @@ endif()
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
+### Unbreak std::isfinite()
+add_compile_definitions(HAVE_ISFINITE=1)
+
 ### Suppress a ton of warnings in the generated SWIG C++ code
 set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \
   -Wno-deprecated-copy -Wno-class-memaccess -Wno-cast-function-type \
