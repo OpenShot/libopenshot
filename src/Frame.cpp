@@ -829,7 +829,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		if (ret) {
 			return;
 		}
-		
+
 		// Get the frame's image
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		#pragma omp critical (AddImage)
@@ -979,7 +979,8 @@ void Frame::Play()
 		return;
 
 	juce::AudioDeviceManager deviceManager;
-	String error = deviceManager.initialise (0, /* number of input channels */
+	juce::String error = deviceManager.initialise (
+	        0, /* number of input channels */
 	        2, /* number of output channels */
 	        0, /* no XML settings.. */
 	        true  /* select default device on failure */);
@@ -1001,7 +1002,7 @@ void Frame::Play()
 	// Start thread
 	my_thread.startThread();
 
-	AudioTransportSource transport1;
+	juce::AudioTransportSource transport1;
 	transport1.setSource (my_source.get(),
 			5000, // tells it to buffer this many samples ahead
 			&my_thread,
