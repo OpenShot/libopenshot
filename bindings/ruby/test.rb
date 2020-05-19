@@ -9,5 +9,5 @@ r.Open()
 f = r.GetFrame(1)
 
 # Display the frame
-r.Display()
+f.Display()
 
