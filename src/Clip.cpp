@@ -148,8 +148,11 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	Open();
 	Close();
 
-	// Update duration
-	End(reader->info.duration);
+	// Update duration and set parent
+	if (reader) {
+		End(reader->info.duration);
+		reader->SetClip(this);
+	}
 }
 
 // Constructor with filepath
@@ -202,9 +205,10 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		}
 	}
 
-	// Update duration
+	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
+		reader->SetClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
