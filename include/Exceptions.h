@@ -38,16 +38,16 @@ namespace openshot {
 	/**
 	 * @brief Base exception class with a custom message variable.
 	 *
-	 * A custom error message field has been added to the std::exception base class.  All
-	 * OpenShot exception classes inherit from this class.
+	 * A std::exception-derived exception class with custom message.
+	 * All OpenShot exception classes inherit from this class.
 	 */
-	class BaseException : public std::exception //: public exception
+	class ExceptionBase : public std::exception //: public exception
 	{
 	protected:
 		std::string m_message;
 	public:
-		BaseException(std::string message) : m_message(message) { }
-		virtual ~BaseException() noexcept {}
+		ExceptionBase(std::string message) : m_message(message) { }
+		virtual ~ExceptionBase() noexcept {}
 		virtual const char* what() const noexcept {
 			// return custom message
 			return m_message.c_str();
@@ -55,7 +55,7 @@ namespace openshot {
 	};
 
 	/// Exception when a required chunk is missing
-	class ChunkNotFound : public BaseException
+	class ChunkNotFound : public ExceptionBase
 	{
 	public:
 		int64_t frame_number;
@@ -70,13 +70,13 @@ namespace openshot {
 		 * @param chunk_frame The chunk frame
 		 */
 		ChunkNotFound(std::string message, int64_t frame_number, int64_t chunk_number, int64_t chunk_frame)
-			: BaseException(message), frame_number(frame_number), chunk_number(chunk_number), chunk_frame(chunk_frame) { }
+			: ExceptionBase(message), frame_number(frame_number), chunk_number(chunk_number), chunk_frame(chunk_frame) { }
 		virtual ~ChunkNotFound() noexcept {}
 	};
 
 
 	/// Exception when accessing a blackmagic decklink card
-	class DecklinkError : public BaseException
+	class DecklinkError : public ExceptionBase
 	{
 	public:
 		/**
@@ -85,12 +85,12 @@ namespace openshot {
 		 * @param message A message to accompany the exception
 		 */
 		DecklinkError(std::string message)
-			: BaseException(message) { }
+			: ExceptionBase(message) { }
 		virtual ~DecklinkError() noexcept {}
 	};
 
 	/// Exception when decoding audio packet
-	class ErrorDecodingAudio : public BaseException
+	class ErrorDecodingAudio : public ExceptionBase
 	{
 	public:
 		int64_t frame_number;
@@ -101,12 +101,12 @@ namespace openshot {
 		 * @param frame_number The frame number being processed
 		 */
 		ErrorDecodingAudio(std::string message, int64_t frame_number)
-			: BaseException(message), frame_number(frame_number) { }
+			: ExceptionBase(message), frame_number(frame_number) { }
 		virtual ~ErrorDecodingAudio() noexcept {}
 	};
 
 	/// Exception when encoding audio packet
-	class ErrorEncodingAudio : public BaseException
+	class ErrorEncodingAudio : public ExceptionBase
 	{
 	public:
 		int64_t frame_number;
@@ -117,12 +117,12 @@ namespace openshot {
 		 * @param frame_number The frame number being processed
 		 */
 		ErrorEncodingAudio(std::string message, int64_t frame_number)
-			: BaseException(message), frame_number(frame_number) { }
+			: ExceptionBase(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingAudio() noexcept {}
 	};
 
 	/// Exception when encoding audio packet
-	class ErrorEncodingVideo : public BaseException
+	class ErrorEncodingVideo : public ExceptionBase
 	{
 	public:
 		int64_t frame_number;
@@ -133,12 +133,12 @@ namespace openshot {
 		 * @param frame_number The frame number being processed
 		 */
 		ErrorEncodingVideo(std::string message, int64_t frame_number)
-			: BaseException(message), frame_number(frame_number) { }
+			: ExceptionBase(message), frame_number(frame_number) { }
 		virtual ~ErrorEncodingVideo() noexcept {}
 	};
 
 	/// Exception when an invalid # of audio channels are detected
-	class InvalidChannels : public BaseException
+	class InvalidChannels : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -149,12 +149,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidChannels(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidChannels() noexcept {}
 	};
 
 	/// Exception when no valid codec is found for a file
-	class InvalidCodec : public BaseException
+	class InvalidCodec : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -165,12 +165,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidCodec(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidCodec() noexcept {}
 	};
 
 	/// Exception for files that can not be found or opened
-	class InvalidFile : public BaseException
+	class InvalidFile : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -181,12 +181,12 @@ namespace openshot {
 		 * @param file_path The input file being processed
 		 */
 		InvalidFile(std::string message, std::string file_path)
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidFile() noexcept {}
 	};
 
 	/// Exception when no valid format is found for a file
-	class InvalidFormat : public BaseException
+	class InvalidFormat : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -197,12 +197,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidFormat(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidFormat() noexcept {}
 	};
 
 	/// Exception for invalid JSON
-	class InvalidJSON : public BaseException
+	class InvalidJSON : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -213,12 +213,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidJSON(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidJSON() noexcept {}
 	};
 
 	/// Exception when invalid encoding options are used
-	class InvalidOptions : public BaseException
+	class InvalidOptions : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -229,12 +229,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidOptions(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidOptions() noexcept {}
 	};
 
 	/// Exception when invalid sample rate is detected during encoding
-	class InvalidSampleRate : public BaseException
+	class InvalidSampleRate : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -245,12 +245,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		InvalidSampleRate(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~InvalidSampleRate() noexcept {}
 	};
 
 	/// Exception for missing JSON Change key
-	class InvalidJSONKey : public BaseException
+	class InvalidJSONKey : public ExceptionBase
 	{
 	public:
 		std::string json;
@@ -261,12 +261,12 @@ namespace openshot {
 		 * @param json The json data being processed
 		 */
 		InvalidJSONKey(std::string message, std::string json)
-			: BaseException(message), json(json) { }
+			: ExceptionBase(message), json(json) { }
 		virtual ~InvalidJSONKey() noexcept {}
 	};
 
 	/// Exception when no streams are found in the file
-	class NoStreamsFound : public BaseException
+	class NoStreamsFound : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -277,12 +277,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		NoStreamsFound(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~NoStreamsFound() noexcept {}
 	};
 
 	/// Exception for frames that are out of bounds.
-	class OutOfBoundsFrame : public BaseException
+	class OutOfBoundsFrame : public ExceptionBase
 	{
 	public:
 		int64_t FrameRequested;
@@ -295,12 +295,12 @@ namespace openshot {
 		 * @param max_frames The maximum available frame number
 		 */
 		OutOfBoundsFrame(std::string message, int64_t frame_requested, int64_t max_frames)
-			: BaseException(message), FrameRequested(frame_requested), MaxFrames(max_frames) { }
+			: ExceptionBase(message), FrameRequested(frame_requested), MaxFrames(max_frames) { }
 		virtual ~OutOfBoundsFrame() noexcept {}
 	};
 
 	/// Exception for an out of bounds key-frame point.
-	class OutOfBoundsPoint : public BaseException
+	class OutOfBoundsPoint : public ExceptionBase
 	{
 	public:
 		int PointRequested;
@@ -313,12 +313,12 @@ namespace openshot {
 		 * @param max_points The maximum available point value
 		 */
 		OutOfBoundsPoint(std::string message, int point_requested, int max_points)
-			: BaseException(message), PointRequested(point_requested), MaxPoints(max_points) { }
+			: ExceptionBase(message), PointRequested(point_requested), MaxPoints(max_points) { }
 		virtual ~OutOfBoundsPoint() noexcept {}
 	};
 
 	/// Exception when memory could not be allocated
-	class OutOfMemory : public BaseException
+	class OutOfMemory : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -329,12 +329,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		OutOfMemory(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~OutOfMemory() noexcept {}
 	};
 
 	/// Exception when a reader is closed, and a frame is requested
-	class ReaderClosed : public BaseException
+	class ReaderClosed : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -345,12 +345,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		ReaderClosed(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~ReaderClosed() noexcept {}
 	};
 
 	/// Exception when resample fails
-	class ResampleError : public BaseException
+	class ResampleError : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -361,12 +361,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		ResampleError(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~ResampleError() noexcept {}
 	};
 
 	/// Exception when too many seek attempts happen
-	class TooManySeeks : public BaseException
+	class TooManySeeks : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -377,12 +377,12 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		TooManySeeks(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~TooManySeeks() noexcept {}
 	};
 
 	/// Exception when a writer is closed, and a frame is requested
-	class WriterClosed : public BaseException
+	class WriterClosed : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -393,7 +393,7 @@ namespace openshot {
 		 * @param file_path (optional) The output file being written
 		 */
 		WriterClosed(std::string message, std::string file_path="")
-			: BaseException(message), file_path(file_path) { }
+			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~WriterClosed() noexcept {}
 	};
 }

@@ -21,7 +21,6 @@ addons:
     - libavfilter-dev
     - libswscale-dev
     - libpostproc-dev
-    - libavresample-dev
     - libswresample-dev
     - libmagick++-dev
     - libunittest++-dev
@@ -48,6 +47,7 @@ jobs:
           packages:
           - *p_common
           - qt5-default
+          - libavresample-dev
           - libjsoncpp-dev
           - lcov
           - binutils-common # For c++filt
@@ -77,7 +77,6 @@ jobs:
           - libavfilter7
           - libswscale5
           - libpostproc55
-          - libavresample4
           - libswresample3
 
     - name: FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)
@@ -96,6 +95,7 @@ jobs:
           packages:
           - *p_common
           - qt5-default
+          - libavresample-dev
           - libomp-dev
 
     - name: FFmpeg 3.2 GCC (Ubuntu 16.04 Xenial)
@@ -113,6 +113,7 @@ jobs:
           - sourceline: 'ppa:jon-hedgerows/ffmpeg-backports'
           packages:
           - *p_common
+          - libavresample-dev
           - libavcodec57
           - libavdevice57
           - libavfilter6
@@ -137,6 +138,7 @@ jobs:
           - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           packages:
           - *p_common
+          - libavresample-dev
     - name: macOS Latest
       env:
       - BUILD_VERSION=ffmpeg4
