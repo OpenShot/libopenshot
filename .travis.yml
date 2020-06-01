@@ -57,19 +57,17 @@ jobs:
           - lcov
           - binutils-common # For c++filt
 
-    - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
+    - name: "FFmpeg 4 GCC (Ubuntu 20.04 Focal)"
       env:
         - BUILD_VERSION=ffmpeg4
         - CMAKE_EXTRA_ARGS=""
         - TEST_TARGET=test
       os: linux
-      dist: bionic
+      dist: focal
       addons:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
-          - sourceline: 'ppa:jonathonf/ffmpeg-4'
           packages:
           - *p_common
           - qt5-default
