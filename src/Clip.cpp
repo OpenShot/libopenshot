@@ -89,6 +89,8 @@ void Clip::init_settings()
 	// Init shear and perspective curves
 	shear_x = Keyframe(0.0);
 	shear_y = Keyframe(0.0);
+	origin_x = Keyframe(0.5);
+	origin_y = Keyframe(0.5);
 	perspective_c1_x = Keyframe(-1.0);
 	perspective_c1_y = Keyframe(-1.0);
 	perspective_c2_x = Keyframe(-1.0);
@@ -148,8 +150,11 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	Open();
 	Close();
 
-	// Update duration
-	End(reader->info.duration);
+	// Update duration and set parent
+	if (reader) {
+		End(reader->info.duration);
+		reader->SetClip(this);
+	}
 }
 
 // Constructor with filepath
@@ -202,9 +207,10 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		}
 	}
 
-	// Update duration
+	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
+		reader->SetClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
@@ -712,6 +718,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
 	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
+	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", &time, 0.0, 30 * 60 * 60 * 48, false, requested_frame);
 	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", &channel_filter, -1, 10, false, requested_frame);
@@ -768,6 +776,8 @@ Json::Value Clip::JsonValue() const {
 	root["crop_y"] = crop_y.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
 	root["shear_y"] = shear_y.JsonValue();
+	root["origin_x"] = origin_x.JsonValue();
+	root["origin_y"] = origin_y.JsonValue();
 	root["channel_filter"] = channel_filter.JsonValue();
 	root["channel_mapping"] = channel_mapping.JsonValue();
 	root["has_audio"] = has_audio.JsonValue();
@@ -865,6 +875,10 @@ void Clip::SetJsonValue(const Json::Value root) {
 		shear_x.SetJsonValue(root["shear_x"]);
 	if (!root["shear_y"].isNull())
 		shear_y.SetJsonValue(root["shear_y"]);
+	if (!root["origin_x"].isNull())
+		origin_x.SetJsonValue(root["origin_x"]);
+	if (!root["origin_y"].isNull())
+		origin_y.SetJsonValue(root["origin_y"]);
 	if (!root["channel_filter"].isNull())
 		channel_filter.SetJsonValue(root["channel_filter"]);
 	if (!root["channel_mapping"].isNull())
