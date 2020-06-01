@@ -49,7 +49,6 @@ jobs:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           packages:
           - *p_common
           - qt5-default
@@ -96,7 +95,6 @@ jobs:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           packages:
           - *p_common
           - qt5-default
@@ -114,7 +112,6 @@ jobs:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           - sourceline: 'ppa:jon-hedgerows/ffmpeg-backports'
           packages:
           - *p_common
