@@ -1222,6 +1222,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 	st->avg_frame_rate = av_inv_q(c->time_base);
 	st->time_base.num = info.video_timebase.num;
 	st->time_base.den = info.video_timebase.den;
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	st->codec->time_base.num = info.video_timebase.num;
+	st->codec->time_base.den = info.video_timebase.den;
+	#pragma GCC diagnostic pop
+#endif
 
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
 	c->max_b_frames = 10;
