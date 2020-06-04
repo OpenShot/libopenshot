@@ -479,15 +479,6 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
-						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
-							av_opt_set_int(c->priv_data, "preset", 6, 0);
-							av_opt_set_int(c->priv_data, "forced-idr",1,0);
-						}
-						if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
-							av_opt_set_int(c->priv_data, "speed", 7, 0);
-							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
-							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
-						}
 						break;
 #endif
 					case AV_CODEC_ID_VP8 :
@@ -547,24 +538,17 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						c->bit_rate = 0;
 						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
-							av_opt_set_int(c->priv_data, "preset", 6, 0);
-							av_opt_set_int(c->priv_data, "forced-idr",1,0);
 						}
 						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
 							// Set number of tiles to a fixed value
 							// TODO Let user choose number of tiles 
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
-							av_opt_set_int(c->priv_data, "speed", 7, 0);
-							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);		// number of rows
-							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);		// number of columns
 						}
 						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
 							// Set number of tiles to a fixed value
 							// TODO Let user choose number of tiles 
 							// libaom doesn't have qp only crf
 							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
-							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
-							av_opt_set_int(c->priv_data, "tile-columns", 2, 0);		// log2 of number of columns
 						}
 						else {
 							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
@@ -1222,7 +1206,11 @@ AVStream *FFmpegWriter::add_video_stream() {
 #endif
 
 	/* Init video encoder options */
-	if (info.video_bit_rate >= 1000) {
+	if (info.video_bit_rate >= 1000 
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+		&& c->codec_id != AV_CODEC_ID_AV1
+#endif		
+		) {
 		c->bit_rate = info.video_bit_rate;
 		if (info.video_bit_rate >= 1500000) {
 			c->qmin = 2;
@@ -1231,11 +1219,48 @@ AVStream *FFmpegWriter::add_video_stream() {
 		// Here should be the setting for low fixed bitrate
 		// Defaults are used because mpeg2 otherwise had problems
 	} else {
-		// Check if codec supports crf
+		// Check if codec supports crf or qp
 		switch (c->codec_id) {
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 39, 101)
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 			case AV_CODEC_ID_AV1 :
+						// TODO:
+						// set crf or qp according to bitrate as bitrate is not supported by
+						// these encoders (yet)
+						if (info.video_bit_rate >= 1000) {
+							c->bit_rate = 0;
+							if (strstr(info.vcodec.c_str(), "aom") != NULL) {
+								int calculated_quality = 35;
+								if (info.video_bit_rate < 500000) calculated_quality = 50;
+								if (info.video_bit_rate > 5000000) calculated_quality = 10;
+								av_opt_set_int(c->priv_data, "crf", calculated_quality, 0);
+								info.video_bit_rate = calculated_quality;
+							} else {
+								int calculated_quality = 50;
+								if (info.video_bit_rate < 500000) calculated_quality = 60;
+								if (info.video_bit_rate > 5000000) calculated_quality = 15;
+								av_opt_set_int(c->priv_data, "qp", calculated_quality, 0);
+								info.video_bit_rate = calculated_quality;
+							} // medium
+						}
+						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+							av_opt_set_int(c->priv_data, "preset", 6, 0);
+							av_opt_set_int(c->priv_data, "forced-idr",1,0);
+						}
+						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+							av_opt_set_int(c->priv_data, "speed", 7, 0);
+							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);
+							av_opt_set_int(c->priv_data, "tile-columns", 4, 0);
+						}
+						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
+							// Set number of tiles to a fixed value
+							// TODO Let user choose number of tiles 
+							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
+							av_opt_set_int(c->priv_data, "tile-columns", 2, 0);		// log2 of number of columns
+							av_opt_set_int(c->priv_data, "row-mt", 1, 0);			// use multiple cores
+							av_opt_set_int(c->priv_data, "cpu-used", 3, 0);			// default is 1, usable is 4
+						}
+						//break;
 #endif
 			case AV_CODEC_ID_VP9 :
 			case AV_CODEC_ID_HEVC :
