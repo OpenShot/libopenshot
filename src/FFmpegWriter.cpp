@@ -976,6 +976,7 @@ void FFmpegWriter::flush_encoders() {
 
 			/* encode the image */
 			int error_code = 0;
+			int got_packet = 0;
 #if IS_FFMPEG_3_2
 			error_code = avcodec_send_frame(audio_codec, NULL);
 #else
