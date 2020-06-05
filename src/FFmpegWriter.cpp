@@ -83,7 +83,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 }
 #endif // HAVE_HW_ACCEL
 
-FFmpegWriter::FFmpegWriter(const std::string path) :
+FFmpegWriter::FFmpegWriter(std::string path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),

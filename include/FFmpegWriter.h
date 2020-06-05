@@ -253,7 +253,7 @@ namespace openshot {
 
 		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.
 		/// @param path The file path of the video file you want to open and read
-		FFmpegWriter(const std::string path);
+		FFmpegWriter(std::string path);
 
 		/// Close the writer
 		void Close();
