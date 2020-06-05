@@ -985,6 +985,9 @@ void FFmpegWriter::flush_encoders() {
 			if (error_code < 0) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
 			}
+			if (!got_packet) {
+				break;
+			}
 
 			// Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
 			// but it fixes lots of PTS related issues when I do this.
