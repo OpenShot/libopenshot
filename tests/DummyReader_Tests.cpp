@@ -37,9 +37,24 @@
 using namespace std;
 using namespace openshot;
 
+TEST (DummyReader_Basic_Constructor) {
+	// Create a default fraction (should be 1/1)
+	openshot::DummyReader r;
+	r.Open(); // Open the reader
+
+	// Check values
+			CHECK_EQUAL(1280, r.info.width);
+			CHECK_EQUAL(768, r.info.height);
+			CHECK_EQUAL(24, r.info.fps.num);
+			CHECK_EQUAL(1, r.info.fps.den);
+			CHECK_EQUAL(44100, r.info.sample_rate);
+			CHECK_EQUAL(2, r.info.channels);
+			CHECK_EQUAL(30.0, r.info.duration);
+}
+
 TEST (DummyReader_Constructor) {
 	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 60.0);
 	r.Open(); // Open the reader
 
 	// Check values
@@ -49,7 +64,7 @@ TEST (DummyReader_Constructor) {
 	CHECK_EQUAL(1, r.info.fps.den);
 	CHECK_EQUAL(44100, r.info.sample_rate);
 	CHECK_EQUAL(2, r.info.channels);
-	CHECK_EQUAL(30.0, r.info.duration);
+	CHECK_EQUAL(60.0, r.info.duration);
 }
 
 TEST (DummyReader_Blank_Frame) {
@@ -57,7 +72,7 @@ TEST (DummyReader_Blank_Frame) {
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
 	r.Open(); // Open the reader
 
-	// Get a blank frame (because we have not added any frames using WriteFrame() yet)
+	// Get a blank frame (because we have not passed a Cache object (full of Frame objects) to the constructor
 	// Check values
 	CHECK_EQUAL(1, r.GetFrame(1)->number);
 	CHECK_EQUAL(1, r.GetFrame(1)->GetPixels(700)[700] == 0); // black pixel
@@ -65,9 +80,9 @@ TEST (DummyReader_Blank_Frame) {
 }
 
 TEST (DummyReader_Fake_Frame) {
-	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
-	r.Open(); // Open the reader
+
+	// Create cache object to hold test frames
+	CacheMemory cache;
 
 	// Let's create some test frames
 	for (int64_t frame_number = 1; frame_number <= 30; frame_number++) {
@@ -87,9 +102,13 @@ TEST (DummyReader_Fake_Frame) {
 		f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
 		f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
 
-		// Write test frame to dummy reader
-		r.WriteFrame(f);
+		// Add test frame to dummy reader
+		cache.Add(f);
 	}
+
+	// Create a default fraction (should be 1/1)
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
+	r.Open(); // Open the reader
 
 	// Verify our artificial audio sample data is correct
 	CHECK_EQUAL(1, r.GetFrame(1)->number);
@@ -99,23 +118,32 @@ TEST (DummyReader_Fake_Frame) {
 	CHECK_EQUAL(2, r.GetFrame(2)->GetAudioSamples(0)[0]);
 	CHECK_CLOSE(2.00068033, r.GetFrame(2)->GetAudioSamples(0)[1], 0.00001);
 	CHECK_CLOSE(2.00136054, r.GetFrame(2)->GetAudioSamples(0)[2], 0.00001);
+
+	// Clean up
+	cache.Clear();
+	r.Close();
 }
 
 TEST (DummyReader_Invalid_Fake_Frame) {
-	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
-	r.Open();
-
 	// Create fake frames (with specific frame #, samples, and channels)
 	std::shared_ptr<openshot::Frame> f1(new openshot::Frame(1, 1470, 2));
 	std::shared_ptr<openshot::Frame> f2(new openshot::Frame(2, 1470, 2));
 
-	// Write test frames to dummy reader
-	r.WriteFrame(f1);
-	r.WriteFrame(f2);
+	// Add test frames to cache object
+	CacheMemory cache;
+	cache.Add(f1);
+	cache.Add(f2);
+
+	// Create a default fraction (should be 1/1)
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
+	r.Open();
 
 	// Verify exception
 	CHECK_EQUAL(1, r.GetFrame(1)->number);
 	CHECK_EQUAL(2, r.GetFrame(2)->number);
 	CHECK_THROW(r.GetFrame(3)->number, InvalidFile);
+
+	// Clean up
+	cache.Clear();
+	r.Close();
 }
