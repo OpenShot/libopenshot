@@ -100,3 +100,22 @@ TEST (DummyReader_Fake_Frame) {
 	CHECK_CLOSE(2.00068033, r.GetFrame(2)->GetAudioSamples(0)[1], 0.00001);
 	CHECK_CLOSE(2.00136054, r.GetFrame(2)->GetAudioSamples(0)[2], 0.00001);
 }
+
+TEST (DummyReader_Invalid_Fake_Frame) {
+	// Create a default fraction (should be 1/1)
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
+	r.Open();
+
+	// Create fake frames (with specific frame #, samples, and channels)
+	std::shared_ptr<openshot::Frame> f1(new openshot::Frame(1, 1470, 2));
+	std::shared_ptr<openshot::Frame> f2(new openshot::Frame(2, 1470, 2));
+
+	// Write test frames to dummy reader
+	r.WriteFrame(f1);
+	r.WriteFrame(f2);
+
+	// Verify exception
+	CHECK_EQUAL(1, r.GetFrame(1)->number);
+	CHECK_EQUAL(2, r.GetFrame(2)->number);
+	CHECK_THROW(r.GetFrame(3)->number, InvalidFile);
+}
