@@ -46,14 +46,58 @@
 namespace openshot
 {
 	/**
-	 * @brief This class is used as a simple, dummy reader, which always returns a blank frame.
+	 * @brief This class is used as a simple, dummy reader, which can be very useful when writing
+	 * unit tests. It can return a single blank frame or it can return custom frame objects
+	 * which were added using the WriteFrame() method.
 	 *
 	 * A dummy reader can be created with any framerate or samplerate. This is useful in unit
 	 * tests that need to test different framerates or samplerates.
+	 *
+	 * @code
+	 * // Create a reader (Fraction fps, int width, int height, int sample_rate, int channels, float duration)
+	 * openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
+	 * r.Open(); // Open the reader
+	 *
+	 * // Get a frame (which will be blank, since we haven't added any frames yet)
+	 * std::shared_ptr<openshot::Frame> f = r.GetFrame(1);
+	 *
+	 * // Now let's create some test frames
+	 * for (int64_t frame_number = 1; frame_number <= 30; frame_number++)
+	 * {
+	 *   // Create blank frame (with specific frame #, samples, and channels)
+	 *   // Sample count should be 44100 / 30 fps = 1470 samples per frame
+	 *   int sample_count = 1470;
+	 *   std::shared_ptr<openshot::Frame> f(new openshot::Frame(frame_number, sample_count, 2));
+	 *
+	 *   // Create test samples with incrementing value
+	 *   float *audio_buffer = new float[sample_count];
+	 *   for (int64_t sample_number = 0; sample_number < sample_count; sample_number++)
+	 *   {
+	 *     // Generate an incrementing audio sample value (just as an example)
+	 *     audio_buffer[sample_number] = float(frame_number) + (float(sample_number) / float(sample_count));
+	 *   }
+	 *
+	 *   // Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
+	 *   //                                    int numSamples, float gainToApplyToSource = 1.0f)
+	 *   f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
+	 *   f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
+	 *
+	 *   // Write test frame to dummy reader
+	 *   r.WriteFrame(f);
+	 * }
+	 *
+	 * // Now let's verify our DummyReader works
+	 * std::shared_ptr<openshot::Frame> f = r.GetFrame(1);
+	 * // r.GetFrame(1)->GetAudioSamples(0)[1] should equal 1.00068033 based on our above calculations
+	 *
+	 * // Close the reader
+	 * r.Close();
+	 * @endcode
 	 */
 	class DummyReader : public ReaderBase
 	{
 	private:
+		CacheMemory dummy_cache;
 		std::shared_ptr<openshot::Frame> image_frame;
 		bool is_open;
 
@@ -94,6 +138,10 @@ namespace openshot
 
 		/// Open File - which is called by the constructor automatically
 		void Open() override;
+
+		/// @brief Add a frame to the dummy reader. This is useful when constructing unit tests that require custom frames.
+		/// @param frame The openshot::Frame object to write to this image
+		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 	};
 
 }

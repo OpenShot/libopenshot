@@ -99,24 +99,49 @@ void DummyReader::Close()
 	{
 		// Mark as "closed"
 		is_open = false;
+
+		// Clear cache
+		dummy_cache.Clear();
 	}
 }
 
-// Get an openshot::Frame object for a specific frame number of this reader.
+// Add Frame objects to DummyReader
+void DummyReader::WriteFrame(std::shared_ptr<openshot::Frame> frame)
+{
+	if (frame) {
+		dummy_cache.Add(frame);
+	}
+}
+
+// Get an openshot::Frame object for a specific frame number of this reader. It is either a blank frame
+// or a custom frame added with the WriteFrame() method.
 std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The ImageReader is closed.  Call Open() before calling this method.", "dummy");
 
-	if (image_frame)
-	{
+	if (dummy_cache.Count() == 0 && image_frame) {
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 		// Always return same frame (regardless of which frame number was requested)
 		image_frame->number = requested_frame;
 		return image_frame;
+
+	} else if (dummy_cache.Count() > 0) {
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		// Get a frame from the dummy cache
+		std::shared_ptr<openshot::Frame> f = dummy_cache.GetFrame(requested_frame);
+		if (f) {
+			// return frame from cache (if found)
+			return f;
+		} else {
+			// No cached frame found
+			throw InvalidFile("Requested frame not found. You can only access Frame numbers added with WriteFrame().", "dummy");
+		}
 	}
 	else
 		// no frame loaded
