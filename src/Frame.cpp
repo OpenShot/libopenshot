@@ -480,6 +480,11 @@ const unsigned char* Frame::GetPixels()
 // Get pixel data (for only a single scan-line)
 const unsigned char* Frame::GetPixels(int row)
 {
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, color);
+
 	// Return array of pixel packets
 	return image->constScanLine(row);
 }
