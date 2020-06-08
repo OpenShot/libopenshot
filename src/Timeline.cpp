@@ -82,7 +82,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
-Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
+Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
 
 	// Create CrashHandler and Attach (incase of errors)

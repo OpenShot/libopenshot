@@ -202,19 +202,23 @@ namespace openshot {
 
 	public:
 
-		/// @brief Default Constructor for the timeline (which sets the canvas width and height and FPS)
-		/// @param width The width of the timeline (and thus, the generated openshot::Frame objects)
-		/// @param height The height of the timeline (and thus, the generated openshot::Frame objects)
-		/// @param fps The frames rate of the timeline
-		/// @param sample_rate The sample rate of the timeline's audio
-		/// @param channels The number of audio channels of the timeline
+		/// @brief Default Constructor for the timeline (which configures the default frame properties)
+		/// @param width The image width of generated openshot::Frame objects
+		/// @param height The image height of generated openshot::Frame objects
+		/// @param fps The frame rate of the generated video
+		/// @param sample_rate The audio sample rate
+		/// @param channels The number of audio channels
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
-		/// @brief Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+		/// @brief Project-file constructor for the timeline
+		///
+		/// Loads a JSON structure from a file path, and
+		/// initializes the timeline described within.
+		///
 		/// @param projectPath The path of the UTF-8 *.osp project file (JSON contents). Contents will be loaded automatically.
-		/// @param convert_absolute_paths Should all paths be converted to absolute paths (based on the folder of the path provided)
-		Timeline(std::string projectPath, bool convert_absolute_paths);
+		/// @param convert_absolute_paths Should all paths be converted to absolute paths (relative to the location of projectPath)
+		Timeline(const std::string& projectPath, bool convert_absolute_paths);
 
         virtual ~Timeline();
 
