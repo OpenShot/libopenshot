@@ -552,7 +552,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						}
 						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
 							// Set number of tiles to a fixed value
-							// TODO Let user choose number of tiles 
+							// TODO Let user choose number of tiles
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
 							av_opt_set_int(c->priv_data, "speed", 7, 0);
 							av_opt_set_int(c->priv_data, "tile-rows", 2, 0);		// number of rows
@@ -560,7 +560,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						}
 						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
 							// Set number of tiles to a fixed value
-							// TODO Let user choose number of tiles 
+							// TODO Let user choose number of tiles
 							// libaom doesn't have qp only crf
 							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
@@ -691,15 +691,8 @@ void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
 
 	// Write the frames once it reaches the correct cache size
 	if ((int)spooled_video_frames.size() == cache_size || (int)spooled_audio_frames.size() == cache_size) {
-		// Is writer currently writing?
-		if (!is_writing)
-			// Write frames to video file
-			write_queued_frames();
-
-		else {
-			// Write frames to video file
-			write_queued_frames();
-		}
+		// Write frames to video file
+		write_queued_frames();
 	}
 
 	// Keep track of the last frame added
