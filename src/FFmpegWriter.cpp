@@ -95,6 +95,12 @@ FFmpegWriter::FFmpegWriter(const std::string& path) :
 	info.has_audio = false;
 	info.has_video = false;
 
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
 
@@ -713,11 +719,6 @@ void FFmpegWriter::write_queued_frames() {
 	// Empty spool
 	spooled_video_frames.clear();
 	spooled_audio_frames.clear();
-
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
 
 	// Create blank exception
 	bool has_error_encoding_video = false;

@@ -91,6 +91,11 @@ FFmpegReader::FFmpegReader(const std::string& path, bool inspect_reader)
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
 		  packet(NULL) {
 
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -876,11 +881,6 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 	int packets_processed = 0;
 	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
 	int max_packets = 4096;
-
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);

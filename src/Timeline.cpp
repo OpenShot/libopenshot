@@ -67,7 +67,13 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.acodec = "openshot::timeline";
 	info.vcodec = "openshot::timeline";
 
-    // Init max image size
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -193,6 +199,12 @@ Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
 	info.video_timebase = info.fps.Reciprocal();
 	info.has_video = true;
 	info.has_audio = true;
+
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Init max image size
 	SetMaxSize(info.width, info.height);
@@ -891,10 +903,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		std::vector<Clip*> nearby_clips;
 		#pragma omp critical (T_GetFrame)
 		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
-
-		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-		// Allow nested OpenMP sections
-		omp_set_nested(true);
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
