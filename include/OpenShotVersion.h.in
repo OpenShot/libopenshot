@@ -49,6 +49,7 @@
 #cmakedefine AVUTIL_VERSION_STR "@AVUTIL_VERSION_STR@"
 #cmakedefine01 HAVE_IMAGEMAGICK
 #cmakedefine01 HAVE_RESVG
+#cmakedefine01 APPIMAGE_BUILD
 
 #include <sstream>
 

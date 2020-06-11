@@ -80,7 +80,6 @@ if(ImageMagick_FOUND)
 
 	# define a global var (used in the C++)
 	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
