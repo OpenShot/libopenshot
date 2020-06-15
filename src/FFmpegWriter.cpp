@@ -478,6 +478,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
+						// AV1 only supports "crf" quality values
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
 						break;
 #endif
