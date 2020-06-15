@@ -1254,7 +1254,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 						}
 						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
 							// Set number of tiles to a fixed value
-							// TODO Let user choose number of tiles 
+							// TODO: Allow user to chose their own number of tiles
 							av_opt_set_int(c->priv_data, "tile-rows", 1, 0);		// log2 of number of rows
 							av_opt_set_int(c->priv_data, "tile-columns", 2, 0);		// log2 of number of columns
 							av_opt_set_int(c->priv_data, "row-mt", 1, 0);			// use multiple cores
