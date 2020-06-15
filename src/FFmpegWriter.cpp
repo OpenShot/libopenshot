@@ -1226,7 +1226,6 @@ AVStream *FFmpegWriter::add_video_stream() {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
 			case AV_CODEC_ID_AV1 :
 						// TODO: Set `crf` or `qp` according to bitrate, as bitrate is not supported by these encoders yet.
-						// set crf or qp according to bitrate as bitrate is not supported by
 						// these encoders (yet)
 						if (info.video_bit_rate >= 1000) {
 							c->bit_rate = 0;
