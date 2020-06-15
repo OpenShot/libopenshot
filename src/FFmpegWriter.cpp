@@ -864,9 +864,6 @@ void FFmpegWriter::flush_encoders() {
 		return;
 #endif
 
-	int error_code = 0;
-	int stop_encoding = 1;
-
 	// FLUSH VIDEO ENCODER
 	if (info.has_video)
 		for (;;) {
@@ -940,12 +937,8 @@ void FFmpegWriter::flush_encoders() {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
 			}
 			if (!got_packet) {
-				stop_encoding = 1;
 				break;
 			}
-
-			// Override PTS (in frames and scaled to the codec's timebase)
-			//pkt.pts = write_video_count;
 
 			// set the timestamp
 			if (pkt.pts != AV_NOPTS_VALUE)
@@ -961,10 +954,6 @@ void FFmpegWriter::flush_encoders() {
 			if (error_code < 0) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
 			}
-
-			// Deallocate memory (if needed)
-			if (video_outbuf)
-				av_freep(&video_outbuf);
 		}
 
 	// FLUSH AUDIO ENCODER
@@ -986,10 +975,10 @@ void FFmpegWriter::flush_encoders() {
 			pkt.pts = pkt.dts = write_audio_count;
 
 			/* encode the image */
+			int error_code = 0;
 			int got_packet = 0;
 #if IS_FFMPEG_3_2
-			avcodec_send_frame(audio_codec, NULL);
-			got_packet = 0;
+			error_code = avcodec_send_frame(audio_codec, NULL);
 #else
 			error_code = avcodec_encode_audio2(audio_codec, &pkt, NULL, &got_packet);
 #endif
@@ -997,7 +986,6 @@ void FFmpegWriter::flush_encoders() {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
 			}
 			if (!got_packet) {
-				stop_encoding = 1;
 				break;
 			}
 
@@ -1583,29 +1571,27 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			channels_in_frame = frame->GetAudioChannelsCount();
 			channel_layout_in_frame = frame->ChannelsLayout();
 
-
 			// Get audio sample array
 			float *frame_samples_float = NULL;
 			// Get samples interleaved together (c1 c2 c1 c2 c1 c2)
 			frame_samples_float = frame->GetInterleavedAudioSamples(sample_rate_in_frame, NULL, &samples_in_frame);
 
-
 			// Calculate total samples
 			total_frame_samples = samples_in_frame * channels_in_frame;
 
 			// Translate audio sample values back to 16 bit integers with saturation
-			float valF;
-			int16_t conv;
 			const int16_t max16 = 32767;
 			const int16_t min16 = -32768;
 			for (int s = 0; s < total_frame_samples; s++, frame_position++) {
-				valF = frame_samples_float[s] * (1 << 15);
-				if (valF > max16)
+				float valF = frame_samples_float[s] * (1 << 15);
+				int16_t conv;
+				if (valF > max16) {
 					conv = max16;
-				else if (valF < min16)
+				} else if (valF < min16) {
 					conv = min16;
-				else
+				} else {
 					conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
+				}
 
 				// Copy into buffer
 				all_queued_samples[frame_position] = conv;
@@ -1731,10 +1717,11 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 
 			// Determine how many samples we need
 			int diff = 0;
-			if (remaining_frame_samples >= remaining_packet_samples)
+			if (remaining_frame_samples >= remaining_packet_samples) {
 				diff = remaining_packet_samples;
-			else if (remaining_frame_samples < remaining_packet_samples)
+			} else {
 				diff = remaining_frame_samples;
+			}
 
 			// Copy frame samples into the packet samples array
 			if (!is_final)
@@ -1746,7 +1733,6 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 			audio_input_position += diff;
 			samples_position += diff * (av_get_bytes_per_sample(output_sample_fmt) / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16));
 			remaining_frame_samples -= diff;
-			remaining_packet_samples -= diff;
 
 			// Do we have enough samples to proceed?
 			if (audio_input_position < (audio_input_frame_size * info.channels) && !is_final)
