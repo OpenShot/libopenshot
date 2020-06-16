@@ -340,6 +340,12 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 		st = video_st;
 		// Get codec context
 		c = AV_GET_CODEC_PAR_CONTEXT(st, video_codec);
+		// Was a codec / stream found?
+		if (c) {
+			if (info.interlaced_frame) {
+				c->field_order = info.top_field_first ? AV_FIELD_TT : AV_FIELD_BB;
+			}
+		}
 	} else if (info.has_audio && stream == AUDIO_STREAM && audio_st) {
 		st = audio_st;
 		// Get codec context
