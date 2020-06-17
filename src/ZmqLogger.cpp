@@ -120,15 +120,14 @@ void ZmqLogger::Log(std::string message)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
-#if ZMQ_VERSION >= ZMQ_MAKE_VERSION(4, 3, 1)
 	// Send message over socket (ZeroMQ)
-	zmq::message_t reply(message);
+	zmq::message_t reply (message.length());
+	std::memcpy (reply.data(), message.c_str(), message.length());
 
+#if ZMQ_VERSION > ZMQ_MAKE_VERSION(4, 3, 1)
 	// Set flags for immediate delivery (new API)
 	publisher->send(reply, zmq::send_flags::dontwait);
 #else
-	zmq::message_t reply (message.length());
-	std::memcpy (reply.data(), message.c_str(), message.length());
 	publisher->send(reply);
 #endif
 
@@ -183,12 +182,12 @@ void ZmqLogger::Close()
 
 // Append debug information
 void ZmqLogger::AppendDebugMethod(std::string method_name,
-	std::string arg1_name, float arg1_value,
-	std::string arg2_name, float arg2_value,
-	std::string arg3_name, float arg3_value,
-	std::string arg4_name, float arg4_value,
-	std::string arg5_name, float arg5_value,
-	std::string arg6_name, float arg6_value)
+				  std::string arg1_name, float arg1_value,
+				  std::string arg2_name, float arg2_value,
+				  std::string arg3_name, float arg3_value,
+				  std::string arg4_name, float arg4_value,
+				  std::string arg5_name, float arg5_value,
+				  std::string arg6_name, float arg6_value)
 {
 	if (!enabled && !openshot::Settings::Instance()->DEBUG_TO_STDERR)
 		// Don't do anything

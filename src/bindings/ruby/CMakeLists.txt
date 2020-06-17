@@ -41,6 +41,25 @@ if (NOT RUBY_FOUND)
   return()
 endif()
 
+### Ruby 2.7.0 made API changes that are incompatible with versions of
+### SWIG prior to 4.0.3
+option(SILENCE_RUBY_VERSION_WARNING
+  "Don't warn about possible SWIG incompatibilities with Ruby 2.7.0+" OFF)
+
+if (${RUBY_VERSION} VERSION_GREATER 2.6.9 AND ${SWIG_VERSION} VERSION_LESS 4.0.3)
+  if (NOT ${SILENCE_RUBY_VERSION_WARNING})
+    message(WARNING "\
+Ruby 2.7.0+ detected, building the libopenshot Ruby API bindings \
+requires either SWIG 4.0.3 or an older version patched with this commit: \
+https://github.com/swig/swig/commit/5542cc228ad10bdc5c91107afb77c808c43bf2a4 \
+(Recent Fedora and Ubuntu distro packages of SWIG 4.0.1 have already been \
+patched.)")
+    message(STATUS "To disable the previous warning, add \
+-DSILENCE_RUBY_VERSION_WARNING:BOOL=1 to the cmake command line, \
+or enable the option in the CMake GUI.")
+  endif()
+endif()
+
 ### Include the Ruby header files
 include_directories(${RUBY_INCLUDE_DIRS})
 
@@ -54,6 +73,9 @@ endif()
 ### Enable C++ in SWIG
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
+
+### Unbreak std::isfinite()
+add_definitions(-DHAVE_ISFINITE=1)
 
 ### Suppress a ton of warnings in the generated SWIG C++ code
 set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \

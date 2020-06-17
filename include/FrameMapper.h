@@ -176,13 +176,13 @@ namespace openshot
 		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
 
 		/// Close the openshot::FrameMapper and internal reader
-		void Close();
+		void Close() override;
 
 		/// Get a frame based on the target frame rate and the new frame number of a frame
 		MappedFrame GetMappedFrame(int64_t TargetFrameNumber);
 
 		/// Get the cache object used by this reader
-		CacheMemory* GetCache() { return &final_cache; };
+		CacheMemory* GetCache() override { return &final_cache; };
 
 		/// @brief This method is required for all derived classes of ReaderBase, and return the
 		/// openshot::Frame object, which contains the image and audio information for that
@@ -190,22 +190,22 @@ namespace openshot
 		///
 		/// @returns The requested frame of video
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
 
 		/// Determine if reader is open or closed
-		bool IsOpen();
+		bool IsOpen() override;
 
 		/// Return the type name of the class
-		std::string Name() { return "FrameMapper"; };
+		std::string Name() override { return "FrameMapper"; };
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value); ///< Load JSON string into this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Open the internal reader
-		void Open();
+		void Open() override;
 
 		/// Print all of the original frames and which new frames they map to
 		void PrintMapping();
