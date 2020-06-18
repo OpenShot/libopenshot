@@ -32,7 +32,11 @@
 
 #ifdef USE_IMAGEMAGICK
 
+// Exclude a warning message with IM6 headers
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
     #include "Magick++.h"
+#pragma GCC diagnostic pop
 
     // Determine ImageMagick version, as IM7 isn't fully
     // backwards compatible
