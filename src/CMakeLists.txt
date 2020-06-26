@@ -77,6 +77,11 @@ if (ImageMagick_FOUND)
 
 endif()
 
+################ OPENCV ##################
+
+find_package( OpenCV 4 REQUIRED )
+
+
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 find_package(OpenShotAudio 0.2.0 REQUIRED)
@@ -163,7 +168,8 @@ set(OPENSHOT_SOURCES
   QtPlayer.cpp
   QtTextReader.cpp
   Settings.cpp
-  Timeline.cpp)
+  Timeline.cpp
+  CVTracker.cpp)
 
 # Video effects
 set(EFFECTS_SOURCES
@@ -365,7 +371,8 @@ endif()
 # Link remaining dependency libraries
 target_link_libraries(openshot PUBLIC
 	${LIBOPENSHOT_AUDIO_LIBRARIES}
-  ${PROFILER})
+  ${PROFILER}
+  ${OpenCV_LIBS})
 
 if(ImageMagick_FOUND)
   target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
@@ -384,6 +391,10 @@ endif()
 ############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
+# Create test Opencv executable
+add_executable( openshotCV-example examples/Example_opencv.cpp )
+
+
 
 # Define path to test input files
 SET(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
@@ -393,8 +404,13 @@ endif()
 target_compile_definitions(openshot-example PRIVATE
 	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
+target_compile_definitions(openshotCV-example PRIVATE
+	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
+
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
+
+target_link_libraries( openshotCV-example ${OpenCV_LIBS} openshot)
 
 add_executable(openshot-html-test examples/ExampleHtml.cpp)
 target_link_libraries(openshot-html-test openshot Qt5::Gui)
