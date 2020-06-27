@@ -42,16 +42,6 @@ using namespace openshot;
 using namespace cv;
 
 
-cv::Mat qimage2mat( std::shared_ptr<QImage>& qimage) {
-
-    cv::Mat mat = cv::Mat(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->bits(), qimage->bytesPerLine());
-    cv::Mat mat2 = cv::Mat(mat.rows, mat.cols, CV_8UC3 );
-    int from_to[] = { 0,0,  1,1,  2,2 };
-    cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );
-    return mat2.clone();
-};
-
-
 int main(int argc, char* argv[]) {
 
     openshot::Settings *s = openshot::Settings::Instance();
@@ -95,17 +85,13 @@ int main(int argc, char* argv[]) {
         //int frame_number = (rand() % 750) + 1;
         int frame_number = frame;
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-
-        std::shared_ptr<QImage> qimage = f->GetImage();
-        // qimage->convertToFormat(QImage::Format_RGB888);
         
         // convert to opencv image
-        cv::Mat cvimage = qimage2mat(qimage);
+        cv::Mat cvimage = f->GetImageCV();
         cvtColor(cvimage, cvimage, CV_RGB2BGR);
 
 
         if(!trackerInit){
-            // Rect2d bbox(287, 23, 86, 320);
             Rect2d bbox = selectROI("Display Image", cvimage);
 
             kcfTracker.initTracker(bbox, cvimage);
@@ -113,18 +99,9 @@ int main(int argc, char* argv[]) {
         }
         else{
             trackerInit = kcfTracker.trackFrame(cvimage);
-
-        }
-
-
-        // opencv code
-        if ( !cvimage.data )
-        {
-            std::cout << "No image data \n";
         }
         
         cv::imshow("Display Image", cvimage);
-
         cv::waitKey(30);
 
 

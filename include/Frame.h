@@ -26,10 +26,17 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+ */  
 
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
+
+
+#define int64 opencv_broken_int
+#define uint64 opencv_broken_uint
+#include <opencv2/imgproc/imgproc.hpp>
+#undef uint64
+#undef int64
 
 #include <iomanip>
 #include <sstream>
@@ -107,6 +114,7 @@ namespace openshot
 	{
 	private:
 		std::shared_ptr<QImage> image;
+		cv::Mat imagecv;
 		std::shared_ptr<QImage> wave_image;
 		std::shared_ptr<juce::AudioSampleBuffer> audio;
 		std::shared_ptr<QApplication> previewApp;
@@ -157,7 +165,7 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
-
+ 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);
 
@@ -226,6 +234,9 @@ namespace openshot
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
 
+		/// Get pointer to OpenCV Mat image object
+		cv::Mat GetImageCV();
+
 #ifdef USE_IMAGEMAGICK
 		/// Get pointer to ImageMagick image object
 		std::shared_ptr<Magick::Image> GetMagickImage();
@@ -286,6 +297,9 @@ namespace openshot
 
 		/// Play audio samples for this frame
 		void Play();
+		
+		/// Convert Qimage to Mat
+		cv::Mat Qimage2mat( std::shared_ptr<QImage>& qimage);
 	};
 
 }
