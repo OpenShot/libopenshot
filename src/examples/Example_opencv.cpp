@@ -32,8 +32,9 @@
 #include <iostream>
 #include <memory>
 #include <opencv2/opencv.hpp>
+// #include <google/protobuf/util/time_util.h>
 #include "../../include/CVTracker.h"
-
+// #include "treackerdata.pb.h"
 
 #include "../../include/OpenShot.h"
 #include "../../include/CrashHandler.h"
@@ -94,19 +95,26 @@ int main(int argc, char* argv[]) {
         if(!trackerInit){
             Rect2d bbox = selectROI("Display Image", cvimage);
 
-            kcfTracker.initTracker(bbox, cvimage);
+            kcfTracker.initTracker(bbox, cvimage, frame_number);
             trackerInit = true;
         }
         else{
-            trackerInit = kcfTracker.trackFrame(cvimage);
+            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
         }
         
         cv::imshow("Display Image", cvimage);
-        cv::waitKey(30);
-
+        // Press  ESC on keyboard to exit
+        char c=(char)waitKey(25);
+        if(c==27)
+            break;
 
         w9.WriteFrame(f);
     }
+
+
+    // Save tracked data to file
+    std::cout << "Saving tracker data!" << std::endl;
+    kcfTracker.SaveTrackedData("kcf_tracker.data");
 
     // Close writer & reader
     w9.Close();

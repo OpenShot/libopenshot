@@ -1,0 +1,29 @@
+
+// [START declaration]
+syntax = "proto3";
+package libopenshottracker;
+
+import "google/protobuf/timestamp.proto";
+// [END declaration]
+
+// [START messages]
+message Frame {
+  int32 id = 1;  // Frame ID.
+  float rotation = 2;
+
+  message Box {
+    int32 x1 = 1;
+    int32 y1 = 2;
+    int32 x2 = 3;
+    int32 y2 = 4;
+  }
+
+  Box bounding_box = 3;
+}
+
+message Tracker {
+  repeated Frame frame = 1;
+  
+  google.protobuf.Timestamp last_updated = 2;
+}
+// [END messages]
