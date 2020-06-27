@@ -925,6 +925,31 @@ std::shared_ptr<QImage> Frame::GetImage()
 	return image;
 }
 
+// Convert Qimage to Mat
+cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
+
+    cv::Mat mat = cv::Mat(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->bits(), qimage->bytesPerLine());
+    cv::Mat mat2 = cv::Mat(mat.rows, mat.cols, CV_8UC3 );
+    int from_to[] = { 0,0,  1,1,  2,2 };
+    cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );
+    return mat2;
+};
+
+// Get pointer to OpenCV image object
+cv::Mat Frame::GetImageCV()
+{
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, color);
+	
+	if (imagecv.empty())
+		// Convert Qimage to Mat
+		imagecv = Qimage2mat(image);
+
+	return imagecv;
+}
+
 #ifdef USE_IMAGEMAGICK
 // Get pointer to ImageMagick image object
 std::shared_ptr<Magick::Image> Frame::GetMagickImage()
