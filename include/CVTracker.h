@@ -19,6 +19,8 @@ struct FrameData{
   int y2 = -1;
 
   // constructor
+  FrameData()
+  {}
   FrameData( int _frame_id)
   {frame_id = _frame_id;}
 
@@ -38,7 +40,7 @@ class CVTracker {
     // List of tracker types in OpenCV
     std::string trackerTypes[8] = {"BOOSTING", "MIL", "KCF", "TLD","MEDIANFLOW", "GOTURN", "MOSSE", "CSRT"};
 
-    std::vector<FrameData> trackedData;             
+    std::map<int, FrameData> trackedDataById;             
     std::string trackerType;
     Ptr<Tracker> tracker;  
     Rect2d bbox;    
@@ -54,4 +56,7 @@ class CVTracker {
 
     // Load protobuf file
     bool LoadTrackedData(std::string inputFilePath);
+
+    // Get tracked data for a given frame
+    FrameData GetTrackedData(int frameId);
 };

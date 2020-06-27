@@ -47,7 +47,7 @@ bool CVTracker::initTracker(Rect2d initial_bbox, Mat &frame, int frameId){
     tracker->init(frame, bbox);
 
     // Add new frame data
-    trackedData.push_back(FrameData(frameId, 0, bbox.x, bbox.y, bbox.x+bbox.width, bbox.y+bbox.height));
+    trackedDataById[frameId] = FrameData(frameId, 0, bbox.x, bbox.y, bbox.x+bbox.width, bbox.y+bbox.height);
 
     return true;
 }
@@ -58,21 +58,13 @@ bool CVTracker::trackFrame(Mat &frame, int frameId){
 
     if (ok)
     {
-        // Tracking success : Draw the tracked object
-        rectangle(frame, bbox, Scalar( 255, 0, 0 ), 2, 1 );
-        
         // Add new frame data
-        trackedData.push_back(FrameData(frameId, 0, bbox.x, bbox.y, bbox.x+bbox.width, bbox.y+bbox.height));
-
+        trackedDataById[frameId] = FrameData(frameId, 0, bbox.x, bbox.y, bbox.x+bbox.width, bbox.y+bbox.height);
     }
     else
     {
-        // Tracking failure detected.
-        putText(frame, "Tracking failure detected", Point(100,80), FONT_HERSHEY_SIMPLEX, 0.75, Scalar(0,0,255),2);
-        
         // Add new frame data
-        trackedData.push_back(FrameData(frameId));
-
+        trackedDataById[frameId] = FrameData(frameId);
     }
 
     return ok;
@@ -83,9 +75,9 @@ bool CVTracker::SaveTrackedData(std::string outputFilePath){
     libopenshottracker::Tracker trackerMessage;
 
     // Add all frames data
-    for(int i=0; i < trackedData.size(); i++){
+    for(std::map<int,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
         
-        FrameData fData = trackedData[i];
+        FrameData fData = it->second;
         libopenshottracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
     }
@@ -138,8 +130,7 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
     }
 
     // Make sure the trackedData is empty
-    trackedData.clear();
-    trackedData.reserve(trackerMessage.frame_size());
+    trackedDataById.clear();
 
     // Iterate over all frames of the saved message
     for (int i = 0; i < trackerMessage.frame_size(); i++) {
@@ -154,7 +145,7 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
         int x2 = box.x2();
         int y2 = box.y2();
 
-        trackedData[i] = FrameData(id, rotation, x1, y1, x2, y2);
+        trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
     }
 
     if (trackerMessage.has_last_updated()) {
@@ -165,4 +156,16 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
     google::protobuf::ShutdownProtobufLibrary();
 
     return true;
+}
+
+FrameData CVTracker::GetTrackedData(int frameId){
+
+    if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
+        
+        return FrameData();
+    } else {
+        
+        return trackedDataById[frameId];
+    }
+
 }

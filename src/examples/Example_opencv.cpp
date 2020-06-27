@@ -43,7 +43,93 @@ using namespace openshot;
 using namespace cv;
 
 
+
+void trackVideo(openshot::FFmpegReader &r9){
+    // Opencv display window
+    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
+    // Create Tracker
+    CVTracker kcfTracker;
+    bool trackerInit = false;
+
+    for (long int frame = 1100; frame <= 1500; frame++)
+    {
+        int frame_number = frame;
+        std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
+        
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+        cvtColor(cvimage, cvimage, CV_RGB2BGR);
+
+        if(!trackerInit){
+            Rect2d bbox = selectROI("Display Image", cvimage);
+
+            kcfTracker.initTracker(bbox, cvimage, frame_number);
+            rectangle(cvimage, bbox, Scalar( 255, 0, 0 ), 2, 1 );
+
+            trackerInit = true;
+        }
+        else{
+            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
+            
+            // Draw box on image
+            FrameData fd = kcfTracker.GetTrackedData(frame_number);
+            // std::cout<< "fd: "<< fd.x1<< " "<< fd.y1 <<" "<<fd.x2<< " "<<fd.y2<<"\n";
+            Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+            rectangle(cvimage, box, Scalar( 255, 0, 0 ), 2, 1 );
+        }
+        
+        cv::imshow("Display Image", cvimage);
+        // Press  ESC on keyboard to exit
+        char c=(char)waitKey(25);
+        if(c==27)
+            break;
+
+    }
+
+    // Save tracked data to file
+    std::cout << "Saving tracker data!" << std::endl;
+    kcfTracker.SaveTrackedData("kcf_tracker.data");
+}
+
+void displayTrackedData(openshot::FFmpegReader &r9){
+    // Opencv display window
+    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
+    
+    // Create Tracker
+    CVTracker kcfTracker;
+    // Load saved data
+    if(!kcfTracker.LoadTrackedData("kcf_tracker.data")){
+        std::cout<<"Was not possible to load the tracked data\n";
+        return;
+    }
+
+    for (long int frame = 1100; frame <= 1500; frame++)
+    {
+        int frame_number = frame;
+        std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
+        
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+        cvtColor(cvimage, cvimage, CV_RGB2BGR);
+
+        FrameData fd = kcfTracker.GetTrackedData(frame_number);
+        Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+        rectangle(cvimage, box, Scalar( 255, 0, 0 ), 2, 1 );
+    
+        cv::imshow("Display Image", cvimage);
+        // Press  ESC on keyboard to exit
+        char c=(char)waitKey(25);
+        if(c==27)
+            break;
+    }
+
+}
+
+
+
 int main(int argc, char* argv[]) {
+
+    bool LOAD_TRACKED_DATA = true;
 
     openshot::Settings *s = openshot::Settings::Instance();
     s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU
@@ -56,68 +142,11 @@ int main(int argc, char* argv[]) {
     r9.Open();
     r9.DisplayInfo();
 
-    /* WRITER ---------------- */
-    openshot::FFmpegWriter w9("metadata.mp4");
-
-    // Set options
-    w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
-    w9.SetVideoOptions(true, "libx264", r9.info.fps, 1024, 576, openshot::Fraction(1,1), false, false, 3000000);
-
-    w9.info.metadata["title"] = "testtest";
-	w9.info.metadata["artist"] = "aaa";
-	w9.info.metadata["album"] = "bbb";
-	w9.info.metadata["year"] = "2015";
-	w9.info.metadata["description"] = "ddd";
-	w9.info.metadata["comment"] = "eee";
-	w9.info.metadata["comment"] = "comment";
-    w9.info.metadata["copyright"] = "copyright OpenShot!";
-
-    // Open writer
-    w9.Open();
-    // opencv display window
-    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
-
-    CVTracker kcfTracker;
-    bool trackerInit = false;
-
-
-    for (long int frame = 1100; frame <= 1500; frame++)
-    {
-        //int frame_number = (rand() % 750) + 1;
-        int frame_number = frame;
-        std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        
-        // convert to opencv image
-        cv::Mat cvimage = f->GetImageCV();
-        cvtColor(cvimage, cvimage, CV_RGB2BGR);
-
-
-        if(!trackerInit){
-            Rect2d bbox = selectROI("Display Image", cvimage);
-
-            kcfTracker.initTracker(bbox, cvimage, frame_number);
-            trackerInit = true;
-        }
-        else{
-            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
-        }
-        
-        cv::imshow("Display Image", cvimage);
-        // Press  ESC on keyboard to exit
-        char c=(char)waitKey(25);
-        if(c==27)
-            break;
-
-        w9.WriteFrame(f);
-    }
-
-
-    // Save tracked data to file
-    std::cout << "Saving tracker data!" << std::endl;
-    kcfTracker.SaveTrackedData("kcf_tracker.data");
-
-    // Close writer & reader
-    w9.Close();
+    if(!LOAD_TRACKED_DATA)
+        trackVideo(r9);
+    else
+        displayTrackedData(r9);
+     
 
     // Close timeline
     r9.Close();
