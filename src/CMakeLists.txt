@@ -81,6 +81,10 @@ endif()
 
 find_package( OpenCV 4 REQUIRED )
 
+################ PROTOBUF ##################
+
+find_package(Protobuf REQUIRED)
+include_directories(${PROTOBUF_INCLUDE_DIR})
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
@@ -171,6 +175,11 @@ set(OPENSHOT_SOURCES
   Timeline.cpp
   CVTracker.cpp)
 
+# Compiled Protobuf messages
+set(PROTOBUF_MESSAGES
+  trackerdata.pb.cc)
+
+
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -213,6 +222,7 @@ target_sources(openshot PRIVATE
   ${EFFECTS_SOURCES}
   ${QT_PLAYER_SOURCES}
   ${OPENSHOT_QT_HEADERS}
+  ${PROTOBUF_MESSAGES}
   )
 
 # Set SONAME and other library properties
@@ -372,7 +382,8 @@ endif()
 target_link_libraries(openshot PUBLIC
 	${LIBOPENSHOT_AUDIO_LIBRARIES}
   ${PROFILER}
-  ${OpenCV_LIBS})
+  ${OpenCV_LIBS}
+  ${PROTOBUF_LIBRARY})
 
 if(ImageMagick_FOUND)
   target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
