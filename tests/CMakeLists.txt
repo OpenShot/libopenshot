@@ -120,7 +120,8 @@ set(OPENSHOT_TEST_FILES
   KeyFrame_Tests.cpp
   Point_Tests.cpp
   Settings_Tests.cpp
-  Timeline_Tests.cpp )
+  Timeline_Tests.cpp
+  CVTracker_Tests.cpp)
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)

@@ -40,7 +40,7 @@ Ptr<Tracker> CVTracker::select_tracker(std::string trackerType){
 bool CVTracker::initTracker(Rect2d initial_bbox, Mat &frame, int frameId){
 
     bbox = initial_bbox; 
-    rectangle(frame, bbox, Scalar( 255, 0, 0 ), 2, 1 ); 
+    // rectangle(frame, bbox, Scalar( 255, 0, 0 ), 2, 1 ); 
     // Create new tracker object
     tracker = select_tracker(trackerType);
 

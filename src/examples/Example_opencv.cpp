@@ -31,7 +31,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <opencv2/opencv.hpp>
 // #include <google/protobuf/util/time_util.h>
 #include "../../include/CVTracker.h"
 // #include "treackerdata.pb.h"
@@ -129,7 +128,7 @@ void displayTrackedData(openshot::FFmpegReader &r9){
 
 int main(int argc, char* argv[]) {
 
-    bool LOAD_TRACKED_DATA = true;
+    bool LOAD_TRACKED_DATA = false;
 
     openshot::Settings *s = openshot::Settings::Instance();
     s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU

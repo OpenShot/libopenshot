@@ -1,7 +1,13 @@
 #include <google/protobuf/util/time_util.h>
+
+#define int64 opencv_broken_int
+#define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/core.hpp>
+#undef uint64
+#undef int64
+
 #include <fstream>
 
 #include "trackerdata.pb.h"
