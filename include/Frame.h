@@ -113,8 +113,8 @@ namespace openshot
 	class Frame
 	{
 	private:
-		std::shared_ptr<QImage> image;
-		cv::Mat imagecv;
+		std::shared_ptr<QImage> image; ///< RGBA Format
+		cv::Mat imagecv; ///< OpenCV image. It will be always on BGR format
 		std::shared_ptr<QImage> wave_image;
 		std::shared_ptr<juce::AudioSampleBuffer> audio;
 		std::shared_ptr<QApplication> previewApp;
@@ -237,6 +237,9 @@ namespace openshot
 		/// Get pointer to OpenCV Mat image object
 		cv::Mat GetImageCV();
 
+		// Set pointer to OpenCV image object
+		void SetImageCV(cv::Mat _image);
+
 #ifdef USE_IMAGEMAGICK
 		/// Get pointer to ImageMagick image object
 		std::shared_ptr<Magick::Image> GetMagickImage();
@@ -300,6 +303,7 @@ namespace openshot
 		
 		/// Convert Qimage to Mat
 		cv::Mat Qimage2mat( std::shared_ptr<QImage>& qimage);
+		std::shared_ptr<QImage> Mat2Qimage(cv::Mat img);
 	};
 
 }

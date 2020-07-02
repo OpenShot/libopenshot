@@ -12,7 +12,7 @@
 
 #include "trackerdata.pb.h"
 
-using namespace cv;
+// using namespace cv;
 using namespace std;
 using google::protobuf::util::TimeUtil;
 
@@ -48,13 +48,13 @@ class CVTracker {
 
     std::map<int, FrameData> trackedDataById;             
     std::string trackerType;
-    Ptr<Tracker> tracker;  
-    Rect2d bbox;    
+    cv::Ptr<cv::Tracker> tracker;  
+    cv::Rect2d bbox;    
 
     CVTracker();
-    Ptr<Tracker> select_tracker(std::string trackerType);
-    bool initTracker(Rect2d bbox, Mat &frame, int frameId);
-    bool trackFrame(Mat &frame, int frameId);
+    cv::Ptr<cv::Tracker> select_tracker(std::string trackerType);
+    bool initTracker(cv::Rect2d bbox, cv::Mat &frame, int frameId);
+    bool trackFrame(cv::Mat &frame, int frameId);
 
     // Save protobuf file
     bool SaveTrackedData(std::string outputFilePath);

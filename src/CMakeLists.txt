@@ -173,7 +173,8 @@ set(OPENSHOT_SOURCES
   QtTextReader.cpp
   Settings.cpp
   Timeline.cpp
-  CVTracker.cpp)
+  CVTracker.cpp
+  CVStabilization.cpp)
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES

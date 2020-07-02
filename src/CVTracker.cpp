@@ -7,37 +7,37 @@ CVTracker::CVTracker(){
     tracker = select_tracker(trackerType);
 }
 
-Ptr<Tracker> CVTracker::select_tracker(std::string trackerType){
-    Ptr<Tracker> t;
+cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
+    cv::Ptr<cv::Tracker> t;
     #if (CV_MINOR_VERSION < 3)
     {
-        t = Tracker::create(trackerType);
+        t = cv::Tracker::create(trackerType);
     }
     #else
     {
         if (trackerType == "BOOSTING")
-            t = TrackerBoosting::create();
+            t = cv::TrackerBoosting::create();
         if (trackerType == "MIL")
-            t = TrackerMIL::create();
+            t = cv::TrackerMIL::create();
         if (trackerType == "KCF")
-            t = TrackerKCF::create();
+            t = cv::TrackerKCF::create();
         if (trackerType == "TLD")
-            t = TrackerTLD::create();
+            t = cv::TrackerTLD::create();
         if (trackerType == "MEDIANFLOW")
-            t = TrackerMedianFlow::create();
+            t = cv::TrackerMedianFlow::create();
         if (trackerType == "GOTURN")
-            t = TrackerGOTURN::create();
+            t = cv::TrackerGOTURN::create();
         if (trackerType == "MOSSE")
-            t = TrackerMOSSE::create();
+            t = cv::TrackerMOSSE::create();
         if (trackerType == "CSRT")
-            t = TrackerCSRT::create();
+            t = cv::TrackerCSRT::create();
     }
     #endif
 
     return t;
 }
 
-bool CVTracker::initTracker(Rect2d initial_bbox, Mat &frame, int frameId){
+bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId){
 
     bbox = initial_bbox; 
     // rectangle(frame, bbox, Scalar( 255, 0, 0 ), 2, 1 ); 
@@ -52,7 +52,7 @@ bool CVTracker::initTracker(Rect2d initial_bbox, Mat &frame, int frameId){
     return true;
 }
 
-bool CVTracker::trackFrame(Mat &frame, int frameId){
+bool CVTracker::trackFrame(cv::Mat &frame, int frameId){
     // Update the tracking result
     bool ok = tracker->update(frame, bbox);
 

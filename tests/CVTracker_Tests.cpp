@@ -33,7 +33,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
-#include "../include/CVTracker.h"
+// #include "../include/CVTracker.h"
 
 #include <QImage>
 
@@ -62,7 +62,6 @@ TEST(Track_Video)
         
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
-        cvtColor(cvimage, cvimage, CV_RGB2BGR);
 
 		if(!trackerInit){
             cv::Rect2d bbox(82, 194, 47, 42);
@@ -104,7 +103,6 @@ TEST(SaveLoad_Protobuf)
         
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
-        cvtColor(cvimage, cvimage, CV_RGB2BGR);
 
 		if(!trackerInit){
             cv::Rect2d bbox(82, 194, 47, 42);
@@ -125,7 +123,7 @@ TEST(SaveLoad_Protobuf)
     CVTracker kcfTracker1;
 	kcfTracker1.LoadTrackedData("kcf_tracker.data");
 	FrameData fd = kcfTracker.GetTrackedData(97);
-    Rect2d loadedBox(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+    cv::Rect2d loadedBox(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
 
 	CHECK_EQUAL(loadedBox.x, lastTrackedBox.x);
 	CHECK_EQUAL(loadedBox.y, lastTrackedBox.y);

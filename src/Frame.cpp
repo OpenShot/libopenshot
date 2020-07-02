@@ -932,6 +932,7 @@ cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
     cv::Mat mat2 = cv::Mat(mat.rows, mat.cols, CV_8UC3 );
     int from_to[] = { 0,0,  1,1,  2,2 };
     cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );
+	cv::cvtColor(mat2, mat2, cv::COLOR_RGB2BGR);
     return mat2;
 };
 
@@ -949,6 +950,24 @@ cv::Mat Frame::GetImageCV()
 
 	return imagecv;
 }
+
+std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
+	// cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+	std::shared_ptr<QImage> imgIn = std::shared_ptr<QImage>(new QImage((uchar*) img.data, img.cols, img.rows, img.step, QImage::Format_RGB888));
+	// Always convert to RGBA8888 (if different)
+	if (imgIn->format() != QImage::Format_RGBA8888)
+		*image = imgIn->convertToFormat(QImage::Format_RGBA8888);
+	
+	return imgIn;
+}
+
+// Set pointer to OpenCV image object
+void Frame::SetImageCV(cv::Mat _image)
+{
+	imagecv = _image;
+	image = Mat2Qimage(_image);
+}
+
 
 #ifdef USE_IMAGEMAGICK
 // Get pointer to ImageMagick image object

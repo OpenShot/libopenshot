@@ -31,6 +31,13 @@
 #ifndef OPENSHOT_CLIP_H
 #define OPENSHOT_CLIP_H
 
+#define int64 opencv_broken_int
+#define uint64 opencv_broken_uint
+#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#undef uint64
+#undef int64
+
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
@@ -46,6 +53,23 @@
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
+
+// TODO: move to stabilization effect
+struct TransformParam
+{
+	TransformParam() {}
+	TransformParam(double _dx, double _dy, double _da) {
+		dx = _dx;
+		dy = _dy;
+		da = _da;
+	}
+
+	double dx;
+	double dy;
+	double da; // angle
+};
+
+
 namespace openshot {
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
@@ -58,6 +82,7 @@ namespace openshot {
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() == rhs->Position() && lhs->Order() > rhs->Order() ) return true;
 			return false;
 	}};
+
 
 	/**
 	 * @brief This class represents a clip (used to arrange readers on the timeline)
@@ -144,6 +169,13 @@ namespace openshot {
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
+
+
+		/// TODO: [OS-17] move it to stabilize effect
+		std::vector <TransformParam> new_prev_to_cur_transform;
+		bool hasStabilization = false;
+		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
+
 
 		/// Default Constructor
 		Clip();

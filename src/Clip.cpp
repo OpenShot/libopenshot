@@ -360,12 +360,37 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
 
+		if(hasStabilization){
+			apply_stabilization(frame, requested_frame);
+		}
+
 		// Return processed 'frame'
 		return frame;
 	}
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+void Clip::apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number){
+	cv::Mat T(2,3,CV_64F);
+
+	// Grab Mat image
+	cv::Mat cur = f->GetImageCV();
+
+	T.at<double>(0,0) = cos(new_prev_to_cur_transform[frame_number].da);
+	T.at<double>(0,1) = -sin(new_prev_to_cur_transform[frame_number].da);
+	T.at<double>(1,0) = sin(new_prev_to_cur_transform[frame_number].da);
+	T.at<double>(1,1) = cos(new_prev_to_cur_transform[frame_number].da);
+
+	T.at<double>(0,2) = new_prev_to_cur_transform[frame_number].dx;
+	T.at<double>(1,2) = new_prev_to_cur_transform[frame_number].dy;
+
+	cv::Mat cur2;
+
+	cv::warpAffine(cur, cur2, T, cur.size());
+
+	f->SetImageCV(cur2);
 }
 
 // Get file extension

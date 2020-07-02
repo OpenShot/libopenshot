@@ -32,38 +32,36 @@
 #include <iostream>
 #include <memory>
 // #include <google/protobuf/util/time_util.h>
-#include "../../include/CVTracker.h"
+// #include "../../include/CVTracker.h"
+// #include "../../include/CVStabilization.h"
 // #include "treackerdata.pb.h"
 
 #include "../../include/OpenShot.h"
 #include "../../include/CrashHandler.h"
 
 using namespace openshot;
-using namespace cv;
+// using namespace cv;
 
-
-
-void trackVideo(openshot::FFmpegReader &r9){
+void trackVideo(openshot::Clip &r9){
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
     // Create Tracker
     CVTracker kcfTracker;
     bool trackerInit = false;
 
-    for (long int frame = 1100; frame <= 1500; frame++)
+    for (long int frame = 1200; frame <= 1600; frame++)
     {
         int frame_number = frame;
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
         
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
-        cvtColor(cvimage, cvimage, CV_RGB2BGR);
 
         if(!trackerInit){
-            Rect2d bbox = selectROI("Display Image", cvimage);
+            cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
 
             kcfTracker.initTracker(bbox, cvimage, frame_number);
-            rectangle(cvimage, bbox, Scalar( 255, 0, 0 ), 2, 1 );
+            cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
 
             trackerInit = true;
         }
@@ -73,13 +71,13 @@ void trackVideo(openshot::FFmpegReader &r9){
             // Draw box on image
             FrameData fd = kcfTracker.GetTrackedData(frame_number);
             // std::cout<< "fd: "<< fd.x1<< " "<< fd.y1 <<" "<<fd.x2<< " "<<fd.y2<<"\n";
-            Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-            rectangle(cvimage, box, Scalar( 255, 0, 0 ), 2, 1 );
+            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+            cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
         
         cv::imshow("Display Image", cvimage);
         // Press  ESC on keyboard to exit
-        char c=(char)waitKey(25);
+        char c=(char)cv::waitKey(25);
         if(c==27)
             break;
 
@@ -90,7 +88,7 @@ void trackVideo(openshot::FFmpegReader &r9){
     kcfTracker.SaveTrackedData("kcf_tracker.data");
 }
 
-void displayTrackedData(openshot::FFmpegReader &r9){
+void displayTrackedData(openshot::Clip &r9){
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
     
@@ -102,22 +100,21 @@ void displayTrackedData(openshot::FFmpegReader &r9){
         return;
     }
 
-    for (long int frame = 1100; frame <= 1500; frame++)
+    for (long int frame = 1200; frame <= 1600; frame++)
     {
         int frame_number = frame;
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
         
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
-        cvtColor(cvimage, cvimage, CV_RGB2BGR);
 
         FrameData fd = kcfTracker.GetTrackedData(frame_number);
-        Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-        rectangle(cvimage, box, Scalar( 255, 0, 0 ), 2, 1 );
+        cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+        cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
     
         cv::imshow("Display Image", cvimage);
         // Press  ESC on keyboard to exit
-        char c=(char)waitKey(25);
+        char c=(char)cv::waitKey(25);
         if(c==27)
             break;
     }
@@ -125,26 +122,53 @@ void displayTrackedData(openshot::FFmpegReader &r9){
 }
 
 
+void displayStabilization(openshot::Clip &r9){
+    // Opencv display window
+    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
+    
+    int videoLenght = r9.Reader()->info.video_length;
+
+    for (long int frame = 0; frame < videoLenght; frame++)
+    {
+        int frame_number = frame;
+        std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
+        
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+
+        cv::imshow("Display Image1", cvimage);
+        // Press  ESC on keyboard to exit
+        char c=(char)cv::waitKey(25);
+        if(c==27)
+            break;
+    }
+
+}
 
 int main(int argc, char* argv[]) {
 
+    bool TRACK_DATA = false;
     bool LOAD_TRACKED_DATA = false;
+    bool SMOOTH_VIDEO = true;
 
-    openshot::Settings *s = openshot::Settings::Instance();
-    s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU
-    s->HW_DE_DEVICE_SET = 0;
 
     std::string input_filepath = TEST_MEDIA_PATH;
-    input_filepath += "Boneyard Memories.mp4";
+    input_filepath += "test.avi";
 
-    openshot::FFmpegReader r9(input_filepath);
+    openshot::Clip r9(input_filepath);
     r9.Open();
-    r9.DisplayInfo();
 
-    if(!LOAD_TRACKED_DATA)
+    if(TRACK_DATA)
         trackVideo(r9);
-    else
+    if(LOAD_TRACKED_DATA)
         displayTrackedData(r9);
+    if(SMOOTH_VIDEO){
+        CVStabilization stabilization;
+        stabilization.ProcessVideo(r9);
+        displayStabilization(r9);
+    }
+
+
      
 
     // Close timeline
