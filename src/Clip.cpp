@@ -386,11 +386,17 @@ void Clip::apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame
 	T.at<double>(0,2) = new_prev_to_cur_transform[frame_number].dx;
 	T.at<double>(1,2) = new_prev_to_cur_transform[frame_number].dy;
 
-	cv::Mat cur2;
+	cv::Mat frame_stabilized;
 
-	cv::warpAffine(cur, cur2, T, cur.size());
+	cv::warpAffine(cur, frame_stabilized, T, cur.size());
 
-	f->SetImageCV(cur2);
+	// Scale up the image to remove black borders
+	cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
+  	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+
+	f->SetImageCV(frame_stabilized);
+
+	
 }
 
 // Get file extension

@@ -136,7 +136,7 @@ void displayStabilization(openshot::Clip &r9){
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
 
-        cv::imshow("Display Image1", cvimage);
+        cv::imshow("Display Image", cvimage);
         // Press  ESC on keyboard to exit
         char c=(char)cv::waitKey(25);
         if(c==27)

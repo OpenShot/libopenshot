@@ -1,5 +1,9 @@
 #include "../include/CVStabilization.h"
 
+CVStabilization::CVStabilization(){
+
+}
+
 void CVStabilization::ProcessVideo(openshot::Clip &video){
     // Make sure Clip is opened
     video.Open();
@@ -29,7 +33,7 @@ void CVStabilization::ProcessVideo(openshot::Clip &video){
 
     vector <TransformParam> new_prev_to_cur_transform = GenNewCamPosition(smoothed_trajectory);
 
-    ApplyNewTrajectoryToVideo(video, new_prev_to_cur_transform);
+    ApplyNewTrajectoryToClip(video, new_prev_to_cur_transform);
 }
 
 // Track current frame features and find the relative transformation
@@ -160,7 +164,7 @@ vector <TransformParam> CVStabilization::GenNewCamPosition(vector <CamTrajectory
     return new_prev_to_cur_transform;
 }
 
-// Send smoothed camera transformation to be applyed on clip
+// Send smoothed camera transformation to be applyed on clip 
 void CVStabilization::ApplyNewTrajectoryToClip(openshot::Clip &video, vector <TransformParam> &new_prev_to_cur_transform){
     
     video.new_prev_to_cur_transform = new_prev_to_cur_transform;
