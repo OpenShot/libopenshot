@@ -31,12 +31,14 @@
 #ifndef OPENSHOT_CLIP_H
 #define OPENSHOT_CLIP_H
 
-#define int64 opencv_broken_int
-#define uint64 opencv_broken_uint
-#include <opencv2/opencv.hpp>
-#include <opencv2/core.hpp>
-#undef uint64
-#undef int64
+#ifdef USE_OPENCV
+	#define int64 opencv_broken_int
+	#define uint64 opencv_broken_uint
+	#include <opencv2/opencv.hpp>
+	#include <opencv2/core.hpp>
+	#undef uint64
+	#undef int64	
+#endif
 
 #include <memory>
 #include <string>
@@ -52,6 +54,8 @@
 #include "KeyFrame.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
+
+
 
 
 // TODO: move to stabilization effect
@@ -171,10 +175,11 @@ namespace openshot {
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
 
 
-		/// TODO: [OS-17] move it to stabilize effect
+		#ifdef USE_OPENCV
 		std::vector <TransformParam> new_prev_to_cur_transform;
 		bool hasStabilization = false;
 		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
+		#endif
 
 
 		/// Default Constructor

@@ -31,12 +31,14 @@
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
 
+#ifdef USE_OPENCV
+	#define int64 opencv_broken_int
+	#define uint64 opencv_broken_uint
+	#include <opencv2/imgproc/imgproc.hpp>
+	#undef uint64
+	#undef int64
+#endif
 
-#define int64 opencv_broken_int
-#define uint64 opencv_broken_uint
-#include <opencv2/imgproc/imgproc.hpp>
-#undef uint64
-#undef int64
 
 #include <iomanip>
 #include <sstream>
@@ -114,7 +116,6 @@ namespace openshot
 	{
 	private:
 		std::shared_ptr<QImage> image; ///< RGBA Format
-		cv::Mat imagecv; ///< OpenCV image. It will be always on BGR format
 		std::shared_ptr<QImage> wave_image;
 		std::shared_ptr<juce::AudioSampleBuffer> audio;
 		std::shared_ptr<QApplication> previewApp;
@@ -129,6 +130,10 @@ namespace openshot
 		int sample_rate;
 		std::string color;
 		int64_t max_audio_sample; ///< The max audio sample count added to this frame
+
+#ifdef USE_OPENCV
+		cv::Mat imagecv; ///< OpenCV image. It will be always on BGR format
+#endif
 
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
@@ -234,12 +239,6 @@ namespace openshot
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
 
-		/// Get pointer to OpenCV Mat image object
-		cv::Mat GetImageCV();
-
-		// Set pointer to OpenCV image object
-		void SetImageCV(cv::Mat _image);
-
 #ifdef USE_IMAGEMAGICK
 		/// Get pointer to ImageMagick image object
 		std::shared_ptr<Magick::Image> GetMagickImage();
@@ -300,10 +299,18 @@ namespace openshot
 
 		/// Play audio samples for this frame
 		void Play();
-		
+
+#ifdef USE_OPENCV
 		/// Convert Qimage to Mat
 		cv::Mat Qimage2mat( std::shared_ptr<QImage>& qimage);
 		std::shared_ptr<QImage> Mat2Qimage(cv::Mat img);
+
+		/// Get pointer to OpenCV Mat image object
+		cv::Mat GetImageCV();
+
+		/// Set pointer to OpenCV image object
+		void SetImageCV(cv::Mat _image);
+#endif
 	};
 
 }

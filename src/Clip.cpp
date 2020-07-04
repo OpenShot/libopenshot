@@ -360,9 +360,11 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
 
+#ifdef USE_OPENCV
 		if(hasStabilization){
 			apply_stabilization(frame, requested_frame);
 		}
+#endif
 
 		// Return processed 'frame'
 		return frame;
@@ -372,6 +374,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
+#ifdef USE_OPENCV
 void Clip::apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number){
 	cv::Mat T(2,3,CV_64F);
 
@@ -395,9 +398,8 @@ void Clip::apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame
   	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
 
 	f->SetImageCV(frame_stabilized);
-
-	
 }
+#endif
 
 // Get file extension
 std::string Clip::get_file_extension(std::string path)

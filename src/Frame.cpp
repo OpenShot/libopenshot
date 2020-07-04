@@ -925,6 +925,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 	return image;
 }
 
+#ifdef USE_OPENCV
 // Convert Qimage to Mat
 cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
 
@@ -967,7 +968,7 @@ void Frame::SetImageCV(cv::Mat _image)
 	imagecv = _image;
 	image = Mat2Qimage(_image);
 }
-
+#endif
 
 #ifdef USE_IMAGEMAGICK
 // Get pointer to ImageMagick image object

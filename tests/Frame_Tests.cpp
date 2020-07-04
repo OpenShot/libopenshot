@@ -147,6 +147,7 @@ TEST(Copy_Constructor)
 	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
 }
 
+#ifdef USE_OPENCV
 TEST(Convert_Image)
 {
 	// Create a video clip
@@ -168,5 +169,6 @@ TEST(Convert_Image)
 	CHECK_EQUAL(f1->GetHeight(), cvimage.rows);
 	CHECK_EQUAL(3, cvimage.channels());
 }
+#endif
 
 } // SUITE(Frame_Tests)

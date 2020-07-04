@@ -140,7 +140,9 @@
 #include "QtTextReader.h"
 #include "Timeline.h"
 #include "Settings.h"
-#include "CVStabilization.h"
-#include "CVTracker.h"
+#ifdef USE_OPENCV
+	#include "CVStabilization.h"
+	#include "CVTracker.h"
+#endif
 
 #endif
