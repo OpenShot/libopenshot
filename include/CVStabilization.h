@@ -1,3 +1,36 @@
+/**
+ * @file
+ * @brief Header file for CVStabilization class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef OPENSHOT_STABILIZATION_H
+#define OPENSHOT_STABILIZATION_H
+
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
@@ -5,23 +38,22 @@
 #undef uint64
 #undef int64
 #include <cmath>
-#include "Clip.h"
 
 using namespace std;
 
-// struct TransformParam
-// {
-//     TransformParam() {}
-//     TransformParam(double _dx, double _dy, double _da) {
-//         dx = _dx;
-//         dy = _dy;
-//         da = _da;
-//     }
+struct TransformParam
+{
+    TransformParam() {}
+    TransformParam(double _dx, double _dy, double _da) {
+        dx = _dx;
+        dy = _dy;
+        da = _da;
+    }
 
-//     double dx;
-//     double dy;
-//     double da; // angle
-// };
+    double dx;
+    double dy;
+    double da; // angle
+};
 
 struct CamTrajectory
 {
@@ -44,13 +76,14 @@ class CVStabilization {
     cv::Mat prev, prev_grey;
 
     public:
-    const int SMOOTHING_RADIUS = 30; // In frames. The larger the more stable the video, but less reactive to sudden panning
-    const int HORIZONTAL_BORDER_CROP = 20; // In pixels. Crops the border to reduce the black borders from stabilisation being too noticeable.
+    const int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
     std::vector <TransformParam> prev_to_cur_transform; // previous to current
 
     CVStabilization();
 
-    void ProcessVideo(openshot::Clip &video);
+    CVStabilization(int _smoothingWindow);
+
+    // void ProcessVideo(openshot::Clip &video);
 
     // Track current frame features and find the relative transformation
     void TrackFrameFeatures(cv::Mat frame, int frameNum);
@@ -62,6 +95,8 @@ class CVStabilization {
     std::vector<TransformParam> GenNewCamPosition(std::vector <CamTrajectory> &smoothed_trajectory);
     
     // Send smoothed camera transformation to be applyed on clip
-    void ApplyNewTrajectoryToClip(openshot::Clip &video, std::vector <TransformParam> &new_prev_to_cur_transform);
+    // void ApplyNewTrajectoryToClip(openshot::Clip &video, std::vector <TransformParam> &new_prev_to_cur_transform);
 
 };
+
+#endif

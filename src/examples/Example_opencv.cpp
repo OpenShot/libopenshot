@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
         displayTrackedData(r9);
     if(SMOOTH_VIDEO){
         CVStabilization stabilization;
-        stabilization.ProcessVideo(r9);
+        r9.stabilize_video();
         displayStabilization(r9);
     }
 

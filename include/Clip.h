@@ -38,6 +38,8 @@
 	#include <opencv2/core.hpp>
 	#undef uint64
 	#undef int64	
+
+	#include "CVStabilization.h"
 #endif
 
 #include <memory>
@@ -56,25 +58,8 @@
 #include "JuceHeader.h"
 
 
-
-
-// TODO: move to stabilization effect
-struct TransformParam
-{
-	TransformParam() {}
-	TransformParam(double _dx, double _dy, double _da) {
-		dx = _dx;
-		dy = _dy;
-		da = _da;
-	}
-
-	double dx;
-	double dy;
-	double da; // angle
-};
-
-
 namespace openshot {
+
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -140,6 +125,14 @@ namespace openshot {
 		/// (reader member variable itself may have been replaced)
 		openshot::ReaderBase* allocated_reader;
 
+		#ifdef USE_OPENCV
+		/// Smoothed transformation for all the clip frames
+		std::vector <TransformParam> new_prev_to_cur_transform;
+		/// apply the smoothed transformation warp when retrieving a frame
+		bool hasStabilization = false;
+		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
+		#endif
+
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
 
@@ -167,20 +160,14 @@ namespace openshot {
 		/// Reverse an audio buffer
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
+
+
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
-
-
-		#ifdef USE_OPENCV
-		std::vector <TransformParam> new_prev_to_cur_transform;
-		bool hasStabilization = false;
-		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
-		#endif
-
 
 		/// Default Constructor
 		Clip();
@@ -243,6 +230,9 @@ namespace openshot {
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
+
+		/// Stabilize the clip using opencv and opticalflow
+		void stabilize_video();
 
 		// Scale, Location, and Alpha curves
 		openshot::Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)

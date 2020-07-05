@@ -1,43 +1,48 @@
 #include "../include/CVStabilization.h"
 
-CVStabilization::CVStabilization(){
 
-}
+CVStabilization::CVStabilization():smoothingWindow(30) {}
 
-void CVStabilization::ProcessVideo(openshot::Clip &video){
-    // Make sure Clip is opened
-    video.Open();
-    // Get total number of frames
-    int videoLenght = video.Reader()->info.video_length;
+CVStabilization::CVStabilization(int _smoothingWindow): smoothingWindow(_smoothingWindow){}
 
-    // Get first Opencv image
-    std::shared_ptr<openshot::Frame> f = video.GetFrame(0);
-    cv::Mat prev = f->GetImageCV();
-    // OpticalFlow works with grayscale images
-    cv::cvtColor(prev, prev_grey, cv::COLOR_BGR2GRAY);
+// void CVStabilization::ProcessVideo(openshot::Clip &video){
+//     // Make sure Clip is opened
+//     video.Open();
+//     // Get total number of frames
+//     int videoLenght = video.Reader()->info.video_length;
 
-    // Extract and track opticalflow features for each frame
-    for (long int frame_number = 1; frame_number <= videoLenght; frame_number++)
-    {
-        std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
+//     // Get first Opencv image
+//     std::shared_ptr<openshot::Frame> f = video.GetFrame(0);
+//     cv::Mat prev = f->GetImageCV();
+//     // OpticalFlow works with grayscale images
+//     cv::cvtColor(prev, prev_grey, cv::COLOR_BGR2GRAY);
+
+//     // Extract and track opticalflow features for each frame
+//     for (long int frame_number = 1; frame_number <= videoLenght; frame_number++)
+//     {
+//         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
-        // Grab Mat image
-        cv::Mat cvimage = f->GetImageCV();
-        cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
-        TrackFrameFeatures(cvimage, frame_number);
-    }
+//         // Grab Mat image
+//         cv::Mat cvimage = f->GetImageCV();
+//         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
+//         TrackFrameFeatures(cvimage, frame_number);
+//     }
 
-    vector <CamTrajectory> trajectory = ComputeFramesTrajectory();
+//     vector <CamTrajectory> trajectory = ComputeFramesTrajectory();
 
-    vector <CamTrajectory> smoothed_trajectory = SmoothTrajectory(trajectory);
+//     vector <CamTrajectory> smoothed_trajectory = SmoothTrajectory(trajectory);
 
-    vector <TransformParam> new_prev_to_cur_transform = GenNewCamPosition(smoothed_trajectory);
+//     vector <TransformParam> new_prev_to_cur_transform = GenNewCamPosition(smoothed_trajectory);
 
-    ApplyNewTrajectoryToClip(video, new_prev_to_cur_transform);
-}
+//     ApplyNewTrajectoryToClip(video, new_prev_to_cur_transform);
+// }
 
 // Track current frame features and find the relative transformation
 void CVStabilization::TrackFrameFeatures(cv::Mat frame, int frameNum){
+    if(prev_grey.empty()){
+        prev_grey = frame;
+        return;
+    }
 
     // OpticalFlow features vector
     vector <cv::Point2f> prev_corner, cur_corner;
@@ -113,7 +118,7 @@ vector <CamTrajectory> CVStabilization::SmoothTrajectory(vector <CamTrajectory> 
         double sum_a = 0;
         int count = 0;
 
-        for(int j=-SMOOTHING_RADIUS; j <= SMOOTHING_RADIUS; j++) {
+        for(int j=-smoothingWindow; j <= smoothingWindow; j++) {
             if(i+j >= 0 && i+j < trajectory.size()) {
                 sum_x += trajectory[i+j].x;
                 sum_y += trajectory[i+j].y;
@@ -164,9 +169,9 @@ vector <TransformParam> CVStabilization::GenNewCamPosition(vector <CamTrajectory
     return new_prev_to_cur_transform;
 }
 
-// Send smoothed camera transformation to be applyed on clip 
-void CVStabilization::ApplyNewTrajectoryToClip(openshot::Clip &video, vector <TransformParam> &new_prev_to_cur_transform){
+// // Send smoothed camera transformation to be applyed on clip 
+// void CVStabilization::ApplyNewTrajectoryToClip(openshot::Clip &video, vector <TransformParam> &new_prev_to_cur_transform){
     
-    video.new_prev_to_cur_transform = new_prev_to_cur_transform;
-    video.hasStabilization = true;
-}
+//     video.new_prev_to_cur_transform = new_prev_to_cur_transform;
+//     video.hasStabilization = true;
+// }

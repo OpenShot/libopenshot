@@ -1075,3 +1075,45 @@ std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 	// Return modified frame
 	return frame;
 }
+
+#ifdef USE_OPENCV
+void Clip::stabilize_video(){
+	// create CVStabilization object
+	CVStabilization stabilizer; 
+
+    // Make sure Clip is opened
+    Open();
+    // Get total number of frames
+    int videoLenght = Reader()->info.video_length;
+
+    // Get first Opencv image
+    // std::shared_ptr<openshot::Frame> f = GetFrame(0);
+    // cv::Mat prev = f->GetImageCV();
+    // // OpticalFlow works with grayscale images
+    // cv::cvtColor(prev, prev_grey, cv::COLOR_BGR2GRAY);
+
+    // Extract and track opticalflow features for each frame
+    for (long int frame_number = 0; frame_number <= videoLenght; frame_number++)
+    {
+        std::shared_ptr<openshot::Frame> f = GetFrame(frame_number);
+        
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+        cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
+        stabilizer.TrackFrameFeatures(cvimage, frame_number);
+    }
+
+    vector <CamTrajectory> trajectory = stabilizer.ComputeFramesTrajectory();
+
+    vector <CamTrajectory> smoothed_trajectory = stabilizer.SmoothTrajectory(trajectory);
+
+	// Get the smoothed trajectory
+    new_prev_to_cur_transform = stabilizer.GenNewCamPosition(smoothed_trajectory);
+	// Will apply the smoothed transformation warp when retrieving a frame
+	hasStabilization = true;
+}
+#else
+void Clip::stabilize_video(){
+	throw "Please compile libopenshot with OpenCV to use this feature";
+}
+#endif
