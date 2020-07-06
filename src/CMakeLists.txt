@@ -45,6 +45,9 @@ if (APPLE)
 	set(EXTENSION "mm")
 	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
 	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
+
+	# Prevent compiling with __cxx11
+	add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
 
 ################ IMAGE MAGICK ##################
