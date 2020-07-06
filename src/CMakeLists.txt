@@ -303,7 +303,7 @@ endforeach()
 # Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-find_package(Threads REQUIRED)
+find_package(Threads)
 target_link_libraries(openshot PUBLIC Threads::Threads)
 
 ################### OPENMP #####################
