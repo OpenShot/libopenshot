@@ -706,9 +706,16 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.vcodec = pCodecCtx->codec->name;
 	info.video_bit_rate = (pFormatCtx->bit_rate / 8);
 
-	// set frames per second (fps)
-	info.fps.num = pStream->avg_frame_rate.num;
-	info.fps.den = pStream->avg_frame_rate.den;
+	// Frame rate from the container and codec
+	AVRational framerate = av_guess_frame_rate(pFormatCtx, pStream, NULL);
+	info.fps.num = framerate.num;
+	info.fps.den = framerate.den;
+
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo", "info.fps.num", info.fps.num, "info.fps.den", info.fps.den);
+
+	// TODO: remove excessive debug info in the next releases
+	// The debug info below is just for comparison and troubleshooting on users side during the transition period
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo (pStream->avg_frame_rate)", "num", pStream->avg_frame_rate.num, "den", pStream->avg_frame_rate.den);
 
 	if (pStream->sample_aspect_ratio.num != 0) {
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
@@ -1419,8 +1426,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int packet_samples = 0;
 	int data_size = 0;
 
-	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE;
 #pragma omp critical (ProcessAudioPacket)
 	{
 #if IS_FFMPEG_3_2
@@ -1458,7 +1463,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	if (frame_finished) {
 
 		// determine how many samples were decoded
-		int planar = av_sample_fmt_is_planar((AVSampleFormat) AV_GET_CODEC_PIXEL_FORMAT(aStream, aCodecCtx));
 		int plane_size = -1;
 		data_size = av_samples_get_buffer_size(&plane_size,
 											   AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
@@ -1547,7 +1551,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "in_channels", info.channels, 0);
 	av_opt_set_int(avr, "out_channels", info.channels, 0);
-	int r = SWR_INIT(avr);
+	SWR_INIT(avr);
 
 	// Convert audio samples
 	nb_samples = SWR_CONVERT(avr,    // audio resample context
@@ -1627,9 +1631,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 			else
 				partial_frame = true;
 
-			// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
-			// some louder samples from maxing out at 1.0 (not sure why this happens)
-			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
+			// Add samples for current channel to the frame.
+			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);

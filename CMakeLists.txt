@@ -113,10 +113,6 @@ IF (WIN32)
 	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
 ENDIF(WIN32)
 
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_BINARY_DIR}/include)
-
 ############## Code Coverage #########################
 if (DISABLE_TESTS AND ENABLE_COVERAGE)
   message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
@@ -132,6 +128,16 @@ if (ENABLE_COVERAGE)
   append_coverage_compiler_flags()
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
+
+# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
+# -DNDEBUG is set by cmake for all release configs, so add
+# -DDEBUG for debug builds. We'll do this for all OSes, even
+# though only MacOS requires it.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+# Make sure we've picked some build type, default to debug
+if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Debug")
+endif()
 
 ############## PROCESS src/ DIRECTORIES ##############
 add_subdirectory(src)
