@@ -84,9 +84,6 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-
-        using std::chrono::duration_cast;
-
         // Types for storing time durations in whole and fractional milliseconds
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
