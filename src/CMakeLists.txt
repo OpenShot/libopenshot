@@ -42,9 +42,11 @@ if (APPLE)
 	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
 	add_definitions(-DNDEBUG)
 	set(EXTENSION "mm")
-
 	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
 	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
+
+	# Prevent compiling with __cxx11
+	add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
 
 ################ IMAGE MAGICK ##################
@@ -303,8 +305,6 @@ endforeach()
 # Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-find_package(Threads REQUIRED)
-target_link_libraries(openshot PUBLIC Threads::Threads)
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
@@ -317,7 +317,6 @@ if(NOT TARGET OpenMP::OpenMP_CXX)
     add_library(OpenMP_TARGET INTERFACE)
     add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
     target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
-    target_link_libraries(OpenMP_TARGET INTERFACE Threads::Threads)
     target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
 endif()
 
