@@ -845,7 +845,7 @@ void FFmpegWriter::flush_encoders() {
 	if (info.has_video && video_codec_ctx && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && (oc->oformat->flags & AVFMT_RAWPICTURE) && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
 #else
-	if (info.has_video && video_codec && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
+	if (info.has_video && video_codec_ctx && AV_GET_CODEC_TYPE(video_st) == AVMEDIA_TYPE_VIDEO && AV_FIND_DECODER_CODEC_ID(video_st) == AV_CODEC_ID_RAWVIDEO)
 		return;
 #endif
 
