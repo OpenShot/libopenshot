@@ -29,6 +29,11 @@ include(FeatureSummary)
 
 include(GNUInstallDirs)
 
+# Enable IN_LIST in older CMake
+if (POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)
+endif()
+
 ################ WINDOWS ##################
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
