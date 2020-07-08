@@ -1,3 +1,6 @@
+#ifndef OPENSHOT_CVTRACKER_H
+#define OPENSHOT_CVTRACKER_H
+
 #include <google/protobuf/util/time_util.h>
 
 #define int64 opencv_broken_int
@@ -9,12 +12,18 @@
 #undef int64
 
 #include <fstream>
-
+#include "Clip.h"
+#include "KeyFrame.h"
+#include "Frame.h"
 #include "trackerdata.pb.h"
 
 // using namespace cv;
 using namespace std;
 using google::protobuf::util::TimeUtil;
+
+// namespace openshot{
+//   class Clip;
+// }
 
 struct FrameData{
   int frame_id = -1;
@@ -23,6 +32,11 @@ struct FrameData{
   int y1 = -1;
   int x2 = -1;
   int y2 = -1;
+
+  // Keyframe kf_x1;
+  // Keyframe kf_y1;
+  // Keyframe kf_x2;
+  // Keyframe kf_y2;
 
   // constructor
   FrameData()
@@ -38,6 +52,11 @@ struct FrameData{
       y1 = _y1;
       x2 = _x2;
       y2 = _y2;
+      
+      // kf_x1.AddPoint(_frame_id, _x1);
+      // kf_y1.AddPoint(_frame_id, _y1);
+      // kf_x2.AddPoint(_frame_id, _x2);
+      // kf_y2.AddPoint(_frame_id, _y2);
   }
 };
 
@@ -53,6 +72,8 @@ class CVTracker {
 
     CVTracker();
     cv::Ptr<cv::Tracker> select_tracker(std::string trackerType);
+
+    void trackClip(openshot::Clip& video);
     bool initTracker(cv::Rect2d bbox, cv::Mat &frame, int frameId);
     bool trackFrame(cv::Mat &frame, int frameId);
 
@@ -66,3 +87,7 @@ class CVTracker {
     // Get tracked data for a given frame
     FrameData GetTrackedData(int frameId);
 };
+
+
+
+#endif

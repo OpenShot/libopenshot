@@ -46,10 +46,54 @@ void trackVideo(openshot::Clip &r9){
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
     // Create Tracker
-    CVTracker kcfTracker;
-    bool trackerInit = false;
 
-    for (long int frame = 1200; frame <= 1600; frame++)
+    ClipProcessingJobs clipProcessing("Track", r9);
+
+    // CVTracker kcfTracker;
+
+    // kcfTracker.trackClip(r9);
+    // bool trackerInit = false;
+    // int videoLenght = r9.Reader()->info.video_length;
+    // for (long int frame = 0; frame < videoLenght; frame++)
+    // {
+    //     int frame_number = frame;
+    //     std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
+        
+    //     // Grab Mat image
+    //     cv::Mat cvimage = f->GetImageCV();
+
+    //     if(!trackerInit){
+    //         cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
+
+    //         kcfTracker.initTracker(bbox, cvimage, frame_number);
+    //         cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
+
+    //         trackerInit = true;
+    //     }
+    //     else{
+    //         trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
+            
+    //         // Draw box on image
+    //         FrameData fd = kcfTracker.GetTrackedData(frame_number);
+    //         // std::cout<< "fd: "<< fd.x1<< " "<< fd.y1 <<" "<<fd.x2<< " "<<fd.y2<<"\n";
+    //         cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+    //         cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+    //     }
+        
+    //     cv::imshow("Display Image", cvimage);
+    //     // Press  ESC on keyboard to exit
+    //     char c=(char)cv::waitKey(1);
+    //     if(c==27)
+    //         break;
+
+    // }
+
+    // // Save tracked data to file
+    // std::cout << "Saving tracker data!" << std::endl;
+    // kcfTracker.SaveTrackedData("kcf_tracker.data");
+
+    int videoLenght = r9.Reader()->info.video_length;
+    for (long int frame = 0; frame < videoLenght; frame++)
     {
         int frame_number = frame;
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
@@ -57,35 +101,12 @@ void trackVideo(openshot::Clip &r9){
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
 
-        if(!trackerInit){
-            cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
-
-            kcfTracker.initTracker(bbox, cvimage, frame_number);
-            cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
-
-            trackerInit = true;
-        }
-        else{
-            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
-            
-            // Draw box on image
-            FrameData fd = kcfTracker.GetTrackedData(frame_number);
-            // std::cout<< "fd: "<< fd.x1<< " "<< fd.y1 <<" "<<fd.x2<< " "<<fd.y2<<"\n";
-            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-            cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
-        }
-        
-        cv::imshow("Display Image", cvimage);
+        cv::imshow("Display Tracked result", cvimage);
         // Press  ESC on keyboard to exit
         char c=(char)cv::waitKey(25);
         if(c==27)
             break;
-
     }
-
-    // Save tracked data to file
-    std::cout << "Saving tracker data!" << std::endl;
-    kcfTracker.SaveTrackedData("kcf_tracker.data");
 }
 
 void displayTrackedData(openshot::Clip &r9){
@@ -153,7 +174,7 @@ int main(int argc, char* argv[]) {
 
 
     std::string input_filepath = TEST_MEDIA_PATH;
-    input_filepath += "test.avi";
+    input_filepath = "/media/brenno/Data/projects/openshot/libopenshot/src/examples/test.avi";
 
     openshot::Clip r9(input_filepath);
     r9.Open();
@@ -163,9 +184,10 @@ int main(int argc, char* argv[]) {
     if(LOAD_TRACKED_DATA)
         displayTrackedData(r9);
     if(SMOOTH_VIDEO){
-        CVStabilization stabilization;
-        r9.stabilize_video();
-        displayStabilization(r9);
+        ClipProcessingJobs clipProcessing("Stabilize", r9);
+        // CVStabilization stabilization;
+        // r9.stabilize_video();
+        // displayStabilization(r9);
     }
 
 

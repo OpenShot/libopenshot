@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the EffectInfo class
+ * @brief Header for the ClipProcessingJobs class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,38 +28,37 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_EFFECT_INFO_H
-#define OPENSHOT_EFFECT_INFO_H
 
-#include "Effects.h"
+#ifdef USE_OPENCV
+	#define int64 opencv_broken_int
+	#define uint64 opencv_broken_uint
+	#include <opencv2/opencv.hpp>
+	#include <opencv2/core.hpp>
+	#undef uint64
+	#undef int64	
 
-
-
-namespace openshot
-{
-	class Clip;
-	/**
-	 * @brief This class returns a listing of all effects supported by libopenshot
-	 *
-	 * Use this class to return a listing of all supported effects, and their
-	 * descriptions.
-	 */
-	class EffectInfo
-	{
-	public:
-		// Create an instance of an effect (factory style)
-		EffectBase* CreateEffect(std::string effect_type);
-		
-		// Create an instance of an video effect (require processing the whole clip)
-		EffectBase* CreateEffect(std::string effect_type, Clip* video_clip);
-
-
-		/// JSON methods
-		static std::string Json(); ///< Generate JSON string of this object
-		static Json::Value JsonValue(); ///< Generate Json::Value for this object
-
-	};
-
-}
-
+	#include "CVStabilization.h"
+    #include "CVTracker.h"
 #endif
+
+#include "Clip.h"
+#include "effects/Tracker.h"
+
+using namespace openshot;
+
+class ClipProcessingJobs{
+
+	private:
+
+		void trackVideo(Clip& videoClip);
+		void stabilizeVideo(Clip& video);
+
+
+
+	public:
+		ClipProcessingJobs(std::string processingType, Clip& videoClip);		
+
+
+
+
+};

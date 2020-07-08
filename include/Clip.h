@@ -59,7 +59,7 @@
 
 
 namespace openshot {
-
+	class EffectInfo;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -125,14 +125,6 @@ namespace openshot {
 		/// (reader member variable itself may have been replaced)
 		openshot::ReaderBase* allocated_reader;
 
-		#ifdef USE_OPENCV
-		/// Smoothed transformation for all the clip frames
-		std::vector <TransformParam> new_prev_to_cur_transform;
-		/// apply the smoothed transformation warp when retrieving a frame
-		bool hasStabilization = false;
-		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
-		#endif
-
 		/// Adjust frame number minimum value
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
 
@@ -168,6 +160,14 @@ namespace openshot {
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
+
+		#ifdef USE_OPENCV
+		/// Smoothed transformation for all the clip frames
+		std::vector <TransformParam> new_prev_to_cur_transform;
+		/// apply the smoothed transformation warp when retrieving a frame
+		bool hasStabilization = false;
+		void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
+		#endif
 
 		/// Default Constructor
 		Clip();

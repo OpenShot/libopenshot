@@ -29,6 +29,7 @@
  */
 
 #include "../include/EffectInfo.h"
+// #include "../include/Clip.h"
 
 
 using namespace openshot;

@@ -190,7 +190,8 @@ set(OPENSHOT_SOURCES
 # OpenCV related classes
 set(OPENSHOT_CV_SOURCES
   CVTracker.cpp
-  CVStabilization.cpp)
+  CVStabilization.cpp
+  ClipProcessingJobs.cpp)
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
@@ -211,7 +212,8 @@ set(EFFECTS_SOURCES
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
-  effects/Wave.cpp)
+  effects/Wave.cpp
+  effects/Tracker.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES

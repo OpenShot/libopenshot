@@ -37,6 +37,52 @@ cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
     return t;
 }
 
+void CVTracker::trackClip(openshot::Clip& video){
+    // Opencv display window
+    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
+    // Create Tracker
+
+    bool trackerInit = false;
+    int videoLenght = video.Reader()->info.video_length;
+    for (long int frame = 0; frame < videoLenght; frame++)
+    {
+        std::cout<<"frame: "<<frame<<"\n";
+        int frame_number = frame;
+        std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
+        
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+
+        if(!trackerInit){
+            cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
+
+            initTracker(bbox, cvimage, frame_number);
+            cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
+
+            trackerInit = true;
+        }
+        else{
+            trackerInit = trackFrame(cvimage, frame_number);
+            
+            // Draw box on image
+            FrameData fd = GetTrackedData(frame_number);
+
+            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+            cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+        }
+        
+        cv::imshow("Display Image", cvimage);
+        // Press  ESC on keyboard to exit
+        char c=(char)cv::waitKey(1);
+        if(c==27)
+            break;
+
+    }
+
+    
+}
+
+
 bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId){
 
     bbox = initial_bbox; 
