@@ -31,6 +31,8 @@
 #ifndef OPENSHOT_STABILIZATION_H
 #define OPENSHOT_STABILIZATION_H
 
+#include <google/protobuf/util/time_util.h>
+
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
@@ -38,8 +40,11 @@
 #undef uint64
 #undef int64
 #include <cmath>
+#include "stabilizedata.pb.h"
+#include "Clip.h"
 
 using namespace std;
+using google::protobuf::util::TimeUtil;
 
 struct TransformParam
 {
@@ -78,12 +83,15 @@ class CVStabilization {
     public:
     const int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
     std::vector <TransformParam> prev_to_cur_transform; // previous to current
+    std::vector <CamTrajectory> trajectoryData; // Save camera trajectory data
+    std::vector <TransformParam> transformationData; // Save transormation data
+
 
     CVStabilization();
 
     CVStabilization(int _smoothingWindow);
 
-    // void ProcessVideo(openshot::Clip &video);
+    void ProcessClip(openshot::Clip &video);
 
     // Track current frame features and find the relative transformation
     void TrackFrameFeatures(cv::Mat frame, int frameNum);
@@ -94,8 +102,12 @@ class CVStabilization {
     // Generate new transformations parameters for each frame to follow the smoothed trajectory
     std::vector<TransformParam> GenNewCamPosition(std::vector <CamTrajectory> &smoothed_trajectory);
     
-    // Send smoothed camera transformation to be applyed on clip
-    // void ApplyNewTrajectoryToClip(openshot::Clip &video, std::vector <TransformParam> &new_prev_to_cur_transform);
+    // Save protobuf file
+    bool SaveStabilizedData(std::string outputFilePath);
+    void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, long int frame_number);
+    
+    // Load protobuf file
+    bool LoadStabilizedData(std::string inputFilePath);
 
 };
 

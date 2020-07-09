@@ -43,6 +43,7 @@
 
 #include "Clip.h"
 #include "effects/Tracker.h"
+#include "effects/Stabilizer.h"
 
 using namespace openshot;
 

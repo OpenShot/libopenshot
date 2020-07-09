@@ -7,6 +7,7 @@ CVTracker::CVTracker(){
     tracker = select_tracker(trackerType);
 }
 
+// Set desirable tracker method
 cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
     cv::Ptr<cv::Tracker> t;
     #if (CV_MINOR_VERSION < 3)
@@ -44,19 +45,26 @@ void CVTracker::trackClip(openshot::Clip& video){
 
     bool trackerInit = false;
     int videoLenght = video.Reader()->info.video_length;
+
+    // Loop through video
     for (long int frame = 0; frame < videoLenght; frame++)
     {
         std::cout<<"frame: "<<frame<<"\n";
         int frame_number = frame;
+        // Get current frame
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
 
+        // Pass the first frame to initialize the tracker
         if(!trackerInit){
+            // Select the object to be tracked
             cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
-
+            
+            // Initialize the tracker
             initTracker(bbox, cvimage, frame_number);
+            // Draw in the frame the box containing the object
             cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
 
             trackerInit = true;
@@ -159,7 +167,6 @@ void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, Fram
     box->set_y1(fData.y1);
     box->set_x2(fData.x2);
     box->set_y2(fData.y2);
-
 }
 
 bool CVTracker::LoadTrackedData(std::string inputFilePath){
@@ -204,8 +211,10 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
     return true;
 }
 
+// Get tracker info for the desired frame 
 FrameData CVTracker::GetTrackedData(int frameId){
 
+    // Check if the tracker info for the requested frame exists
     if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
         
         return FrameData();

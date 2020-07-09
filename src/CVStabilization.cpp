@@ -5,37 +5,27 @@ CVStabilization::CVStabilization():smoothingWindow(30) {}
 
 CVStabilization::CVStabilization(int _smoothingWindow): smoothingWindow(_smoothingWindow){}
 
-// void CVStabilization::ProcessVideo(openshot::Clip &video){
-//     // Make sure Clip is opened
-//     video.Open();
-//     // Get total number of frames
-//     int videoLenght = video.Reader()->info.video_length;
+void CVStabilization::ProcessClip(openshot::Clip &video){
+    // Get total number of frames
+    int videoLenght = video.Reader()->info.video_length;
 
-//     // Get first Opencv image
-//     std::shared_ptr<openshot::Frame> f = video.GetFrame(0);
-//     cv::Mat prev = f->GetImageCV();
-//     // OpticalFlow works with grayscale images
-//     cv::cvtColor(prev, prev_grey, cv::COLOR_BGR2GRAY);
-
-//     // Extract and track opticalflow features for each frame
-//     for (long int frame_number = 1; frame_number <= videoLenght; frame_number++)
-//     {
-//         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
+    // Extract and track opticalflow features for each frame
+    for (long int frame_number = 0; frame_number <= videoLenght; frame_number++)
+    {
+        std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
-//         // Grab Mat image
-//         cv::Mat cvimage = f->GetImageCV();
-//         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
-//         TrackFrameFeatures(cvimage, frame_number);
-//     }
+        // Grab Mat image
+        cv::Mat cvimage = f->GetImageCV();
+        cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
+        TrackFrameFeatures(cvimage, frame_number);
+    }
 
-//     vector <CamTrajectory> trajectory = ComputeFramesTrajectory();
+    vector <CamTrajectory> trajectory = ComputeFramesTrajectory();
 
-//     vector <CamTrajectory> smoothed_trajectory = SmoothTrajectory(trajectory);
+    trajectoryData = SmoothTrajectory(trajectory);
 
-//     vector <TransformParam> new_prev_to_cur_transform = GenNewCamPosition(smoothed_trajectory);
-
-//     ApplyNewTrajectoryToClip(video, new_prev_to_cur_transform);
-// }
+    transformationData = GenNewCamPosition(trajectoryData);
+}
 
 // Track current frame features and find the relative transformation
 void CVStabilization::TrackFrameFeatures(cv::Mat frame, int frameNum){
@@ -169,9 +159,90 @@ vector <TransformParam> CVStabilization::GenNewCamPosition(vector <CamTrajectory
     return new_prev_to_cur_transform;
 }
 
-// // Send smoothed camera transformation to be applyed on clip 
-// void CVStabilization::ApplyNewTrajectoryToClip(openshot::Clip &video, vector <TransformParam> &new_prev_to_cur_transform){
-    
-//     video.new_prev_to_cur_transform = new_prev_to_cur_transform;
-//     video.hasStabilization = true;
-// }
+// Save protobuf file
+bool CVStabilization::SaveStabilizedData(std::string outputFilePath){
+    // Create tracker message
+    libopenshotstabilize::Stabilization stabilizationMessage;
+
+    // Add all frames data
+    std::vector<CamTrajectory>::iterator trajData = trajectoryData.begin();
+    std::vector<TransformParam>::iterator transData = transformationData.begin();
+
+    for(long int frame_count = 0; trajData != trajectoryData.end(); ++trajData, ++transData){
+        AddFrameDataToProto(stabilizationMessage.add_frame(), *trajData, *transData, frame_count);
+    }
+    // Add timestamp
+    *stabilizationMessage.mutable_last_updated() = TimeUtil::SecondsToTimestamp(time(NULL));
+
+    // Write the new message to disk.
+    std::fstream output(outputFilePath, ios::out | ios::trunc | ios::binary);
+    if (!stabilizationMessage.SerializeToOstream(&output)) {
+        cerr << "Failed to write protobuf message." << endl;
+        return false;
+    }
+
+    // Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
+
+    return true;
+}
+
+void CVStabilization::AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, long int frame_number){
+
+    // Save frame number 
+    pbFrameData->set_id(frame_number);
+
+    // Save camera trajectory data
+    pbFrameData->set_a(trajData.a);
+    pbFrameData->set_x(trajData.x);
+    pbFrameData->set_y(trajData.y);
+
+    // Save transformation data
+    pbFrameData->set_da(transData.da);
+    pbFrameData->set_dx(transData.dx);
+    pbFrameData->set_dy(transData.dy);
+}
+
+// Load protobuf file
+bool CVStabilization::LoadStabilizedData(std::string inputFilePath){
+    libopenshotstabilize::Stabilization stabilizationMessage;
+
+    // Read the existing tracker message.
+    fstream input(inputFilePath, ios::in | ios::binary);
+    if (!stabilizationMessage.ParseFromIstream(&input)) {
+        cerr << "Failed to parse protobuf message." << endl;
+        return false;
+    }
+
+    // Make sure the data vectors are empty
+    transformationData.clear();
+    trajectoryData.clear();
+
+    // Iterate over all frames of the saved message
+    for (int i = 0; i < stabilizationMessage.frame_size(); i++) {
+        const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
+
+        int id = pbFrameData.id();
+
+        float x = pbFrameData.x();
+        float y = pbFrameData.y();
+        float a = pbFrameData.a();
+
+        trajectoryData.push_back(CamTrajectory(x,y,a));
+
+        float dx = pbFrameData.dx();
+        float dy = pbFrameData.dy();
+        float da = pbFrameData.da();
+
+        transformationData.push_back(TransformParam(dx,dy,da));
+    }
+
+    if (stabilizationMessage.has_last_updated()) {
+        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
+    }
+
+    // Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
+
+    return true;
+}

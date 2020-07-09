@@ -153,10 +153,8 @@ void displayStabilization(openshot::Clip &r9){
     {
         int frame_number = frame;
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        
         // Grab Mat image
         cv::Mat cvimage = f->GetImageCV();
-
         cv::imshow("Display Image", cvimage);
         // Press  ESC on keyboard to exit
         char c=(char)cv::waitKey(25);
@@ -187,7 +185,7 @@ int main(int argc, char* argv[]) {
         ClipProcessingJobs clipProcessing("Stabilize", r9);
         // CVStabilization stabilization;
         // r9.stabilize_video();
-        // displayStabilization(r9);
+        displayStabilization(r9);
     }
 
 

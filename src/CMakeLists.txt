@@ -195,7 +195,8 @@ set(OPENSHOT_CV_SOURCES
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
-  trackerdata.pb.cc)
+  trackerdata.pb.cc
+  stabilizedata.pb.cc)
 
 # Video effects
 set(EFFECTS_SOURCES
@@ -213,7 +214,8 @@ set(EFFECTS_SOURCES
   effects/Saturation.cpp
   effects/Shift.cpp
   effects/Wave.cpp
-  effects/Tracker.cpp)
+  effects/Tracker.cpp
+  effects/Stabilizer.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES

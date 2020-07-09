@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Tracker effect class
+ * @brief Source file for Stabilizer effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,92 +28,103 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Tracker.h"
+#include "../../include/effects/Stabilizer.h"
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Tracker::Tracker(std::string clipTrackerDataPath)
+Stabilizer::Stabilizer(std::string clipStabilizedDataPath)
 {   
     // Init effect properties
 	init_effect_details();
 
-    // Tries to load the tracker data from protobuf
-    LoadTrackedData(clipTrackerDataPath);
+    // Tries to load the stabilization data from protobuf
+    LoadStabilizedData(clipStabilizedDataPath);
 }
 
 // Default constructor
-Tracker::Tracker(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
+Stabilizer::Stabilizer(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
 		color(color), left(left), top(top), right(right), bottom(bottom)
 {
 	// Init effect properties
 	init_effect_details();
-
 }
 
 // Init effect settings
-void Tracker::init_effect_details()
+void Stabilizer::init_effect_details()
 {
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
-	info.class_name = "Tracker";
-	info.name = "Tracker";
-	info.description = "Track the selected bounding box through the video.";
+	info.class_name = "Stabilizer";
+	info.name = "Stabilizer";
+	info.description = "Stabilize video clip to remove undesired shaking and jitter.";
 	info.has_audio = false;
 	info.has_video = true;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-    // Get the frame's image
-	cv::Mat frame_image = frame->GetImageCV();
-    // Draw box on image
-    FrameData fd = trackedDataById[frame_number];
-    cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-    cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
-	frame->SetImageCV(frame_image);
+	cv::Mat T(2,3,CV_64F);
+	// Grab Mat image
+	cv::Mat cur = frame->GetImageCV();
+	T.at<double>(0,0) = cos(transformationData[frame_number].da);
+	T.at<double>(0,1) = -sin(transformationData[frame_number].da);
+	T.at<double>(1,0) = sin(transformationData[frame_number].da);
+	T.at<double>(1,1) = cos(transformationData[frame_number].da);
 
+	T.at<double>(0,2) = transformationData[frame_number].dx;
+	T.at<double>(1,2) = transformationData[frame_number].dy;
+	cv::Mat frame_stabilized;
+
+	cv::warpAffine(cur, frame_stabilized, T, cur.size());
+	// Scale up the image to remove black borders
+	cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
+  	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+	frame->SetImageCV(frame_stabilized);
+	
 	return frame;
 }
 
-bool Tracker::LoadTrackedData(std::string inputFilePath){
+// Load protobuf file
+bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
+    libopenshotstabilize::Stabilization stabilizationMessage;
 
-    libopenshottracker::Tracker trackerMessage;
-
-    {
-        // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
-        if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
-            return false;
-        }
+    // Read the existing tracker message.
+    fstream input(inputFilePath, ios::in | ios::binary);
+    if (!stabilizationMessage.ParseFromIstream(&input)) {
+        cerr << "Failed to parse protobuf message." << endl;
+        return false;
     }
 
-    // Make sure the trackedData is empty
-    trackedDataById.clear();
+    // Make sure the data vectors are empty
+    transformationData.clear();
+    trajectoryData.clear();
 
     // Iterate over all frames of the saved message
-    for (int i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
+    for (int i = 0; i < stabilizationMessage.frame_size(); i++) {
+        const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
 
         int id = pbFrameData.id();
-        float rotation = pbFrameData.rotation();
 
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
-        int x1 = box.x1();
-        int y1 = box.y1();
-        int x2 = box.x2();
-        int y2 = box.y2();
+        float x = pbFrameData.x();
+        float y = pbFrameData.y();
+        float a = pbFrameData.a();
 
-        trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
+        trajectoryData.push_back(CamTrajectory(x,y,a));
+
+        float dx = pbFrameData.dx();
+        float dy = pbFrameData.dy();
+        float da = pbFrameData.da();
+
+        transformationData.push_back(TransformParam(dx,dy,da));
     }
 
-    if (trackerMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
+    if (stabilizationMessage.has_last_updated()) {
+        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
     }
 
     // Delete all global objects allocated by libprotobuf.
@@ -122,30 +133,17 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     return true;
 }
 
-FrameData Tracker::GetTrackedData(int frameId){
-
-	// Check if the tracker info for the requested frame exists
-    if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
-        return FrameData();
-    } else {
-        return trackedDataById[frameId];
-    }
-
-}
-
-
-
 
 
 // Generate JSON string of this object
-std::string Tracker::Json() const {
+std::string Stabilizer::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
-Json::Value Tracker::JsonValue() const {
+Json::Value Stabilizer::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -161,7 +159,7 @@ Json::Value Tracker::JsonValue() const {
 }
 
 // Load JSON string into this object
-void Tracker::SetJson(const std::string value) {
+void Stabilizer::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
 	try
@@ -178,7 +176,7 @@ void Tracker::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Tracker::SetJsonValue(const Json::Value root) {
+void Stabilizer::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -197,7 +195,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
+std::string Stabilizer::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
