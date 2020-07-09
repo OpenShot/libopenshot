@@ -1210,8 +1210,10 @@ AVStream *FFmpegWriter::add_video_stream() {
 		) {
 		c->bit_rate = info.video_bit_rate;
 		if (info.video_bit_rate >= 1500000) {
-			c->qmin = 2;
-			c->qmax = 30;
+			if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO)  {
+				c->qmin = 2;
+				c->qmax = 30;
+			}
 		}
 		// Here should be the setting for low fixed bitrate
 		// Defaults are used because mpeg2 otherwise had problems

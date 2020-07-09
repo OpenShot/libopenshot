@@ -53,6 +53,12 @@ namespace openshot
 	 * A dummy reader can be created with any framerate or samplerate. This is useful in unit
 	 * tests that need to test different framerates or samplerates.
 	 *
+	 * @note Timeline does buffering by requesting more frames than it
+	 * strictly needs. Thus if you use this DummyReader with a custom
+	 * cache in a Timeline, make sure it has enough
+	 * frames. Specifically you need some frames after the last frame
+	 * you plan to access through the Timeline.
+	 *
 	 * @code
 	 * 	// Create cache object to store fake Frame objects
 	 * 	CacheMemory cache;
