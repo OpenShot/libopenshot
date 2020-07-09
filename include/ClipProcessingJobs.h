@@ -47,14 +47,15 @@
 
 using namespace openshot;
 
+// Constructor responsible to choose processing type and apply to clip
 class ClipProcessingJobs{
 
 	private:
 
+		// Apply object tracking to clip 
 		void trackVideo(Clip& videoClip);
+		// Apply stabilization to clip
 		void stabilizeVideo(Clip& video);
-
-
 
 	public:
 		ClipProcessingJobs(std::string processingType, Clip& videoClip);		

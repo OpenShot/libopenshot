@@ -74,39 +74,45 @@ struct CamTrajectory
     double a; // angle
 };
 
-class CVStabilization {       
+class CVStabilization {      
+
     private:
+    
     cv::Mat last_T;
     cv::Mat cur, cur_grey;
     cv::Mat prev, prev_grey;
-
-    public:
-    const int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
-    std::vector <TransformParam> prev_to_cur_transform; // previous to current
-    std::vector <CamTrajectory> trajectoryData; // Save camera trajectory data
-    std::vector <TransformParam> transformationData; // Save transormation data
-
-
-    CVStabilization();
-
-    CVStabilization(int _smoothingWindow);
-
-    void ProcessClip(openshot::Clip &video);
+    std::vector <TransformParam> prev_to_cur_transform; // Previous to current 
 
     // Track current frame features and find the relative transformation
     void TrackFrameFeatures(cv::Mat frame, int frameNum);
     
     std::vector<CamTrajectory> ComputeFramesTrajectory();
-    std::vector<CamTrajectory> SmoothTrajectory(std::vector <CamTrajectory> &trajectory);
+    std::map<size_t,CamTrajectory> SmoothTrajectory(std::vector <CamTrajectory> &trajectory);
 
     // Generate new transformations parameters for each frame to follow the smoothed trajectory
-    std::vector<TransformParam> GenNewCamPosition(std::vector <CamTrajectory> &smoothed_trajectory);
+    std::map<size_t,TransformParam> GenNewCamPosition(std::map <size_t,CamTrajectory> &smoothed_trajectory);
+
+    public:
+
+    const int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
+    std::map <size_t,CamTrajectory> trajectoryData; // Save camera trajectory data
+    std::map <size_t,TransformParam> transformationData; // Save transormation data
+
+    // Set default smoothing window value to compute stabilization 
+    CVStabilization();
+
+    // Set desirable smoothing window value to compute stabilization
+    CVStabilization(int _smoothingWindow);
+
+    // Process clip and store necessary stabilization data
+    void ProcessClip(openshot::Clip &video);
     
-    // Save protobuf file
+    /// Protobuf Save and Load methods
+    // Save stabilization data to protobuf file
     bool SaveStabilizedData(std::string outputFilePath);
-    void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, long int frame_number);
-    
-    // Load protobuf file
+    // Add frame stabilization data into protobuf message
+    void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
+    // Load protobuf data file
     bool LoadStabilizedData(std::string inputFilePath);
 
 };

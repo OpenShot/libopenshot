@@ -31,83 +31,16 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-// #include <google/protobuf/util/time_util.h>
-// #include "../../include/CVTracker.h"
-// #include "../../include/CVStabilization.h"
-// #include "treackerdata.pb.h"
+#include <google/protobuf/util/time_util.h>
+#include "../../include/CVTracker.h"
+#include "../../include/CVStabilization.h"
+#include "../../include/trackerdata.pb.h"
 
 #include "../../include/OpenShot.h"
 #include "../../include/CrashHandler.h"
 
 using namespace openshot;
 // using namespace cv;
-
-void trackVideo(openshot::Clip &r9){
-    // Opencv display window
-    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
-    // Create Tracker
-
-    ClipProcessingJobs clipProcessing("Track", r9);
-
-    // CVTracker kcfTracker;
-
-    // kcfTracker.trackClip(r9);
-    // bool trackerInit = false;
-    // int videoLenght = r9.Reader()->info.video_length;
-    // for (long int frame = 0; frame < videoLenght; frame++)
-    // {
-    //     int frame_number = frame;
-    //     std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        
-    //     // Grab Mat image
-    //     cv::Mat cvimage = f->GetImageCV();
-
-    //     if(!trackerInit){
-    //         cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
-
-    //         kcfTracker.initTracker(bbox, cvimage, frame_number);
-    //         cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
-
-    //         trackerInit = true;
-    //     }
-    //     else{
-    //         trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
-            
-    //         // Draw box on image
-    //         FrameData fd = kcfTracker.GetTrackedData(frame_number);
-    //         // std::cout<< "fd: "<< fd.x1<< " "<< fd.y1 <<" "<<fd.x2<< " "<<fd.y2<<"\n";
-    //         cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-    //         cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
-    //     }
-        
-    //     cv::imshow("Display Image", cvimage);
-    //     // Press  ESC on keyboard to exit
-    //     char c=(char)cv::waitKey(1);
-    //     if(c==27)
-    //         break;
-
-    // }
-
-    // // Save tracked data to file
-    // std::cout << "Saving tracker data!" << std::endl;
-    // kcfTracker.SaveTrackedData("kcf_tracker.data");
-
-    int videoLenght = r9.Reader()->info.video_length;
-    for (long int frame = 0; frame < videoLenght; frame++)
-    {
-        int frame_number = frame;
-        std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        
-        // Grab Mat image
-        cv::Mat cvimage = f->GetImageCV();
-
-        cv::imshow("Display Tracked result", cvimage);
-        // Press  ESC on keyboard to exit
-        char c=(char)cv::waitKey(25);
-        if(c==27)
-            break;
-    }
-}
 
 void displayTrackedData(openshot::Clip &r9){
     // Opencv display window
@@ -143,7 +76,7 @@ void displayTrackedData(openshot::Clip &r9){
 }
 
 
-void displayStabilization(openshot::Clip &r9){
+void displayClip(openshot::Clip &r9){
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
     
@@ -169,27 +102,26 @@ int main(int argc, char* argv[]) {
     bool TRACK_DATA = false;
     bool LOAD_TRACKED_DATA = false;
     bool SMOOTH_VIDEO = true;
+    bool LOAD_SMOOTH_DATA = false;
 
 
     std::string input_filepath = TEST_MEDIA_PATH;
-    input_filepath = "/media/brenno/Data/projects/openshot/libopenshot/src/examples/test.avi";
+    input_filepath = "../../src/examples/test.avi";
 
     openshot::Clip r9(input_filepath);
     r9.Open();
 
     if(TRACK_DATA)
-        trackVideo(r9);
-    if(LOAD_TRACKED_DATA)
-        displayTrackedData(r9);
-    if(SMOOTH_VIDEO){
-        ClipProcessingJobs clipProcessing("Stabilize", r9);
-        // CVStabilization stabilization;
-        // r9.stabilize_video();
-        displayStabilization(r9);
+        ClipProcessingJobs clipProcessing("Track", r9);
+    if(LOAD_TRACKED_DATA){
+        /***/
     }
-
-
-     
+    if(SMOOTH_VIDEO)
+        ClipProcessingJobs clipProcessing("Stabilize", r9);
+    if(LOAD_SMOOTH_DATA){
+        /***/
+    }
+    displayClip(r9);
 
     // Close timeline
     r9.Close();

@@ -43,8 +43,7 @@ Tracker::Tracker(std::string clipTrackerDataPath)
 }
 
 // Default constructor
-Tracker::Tracker(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
-		color(color), left(left), top(top), right(right), bottom(bottom)
+Tracker::Tracker()
 {
 	// Init effect properties
 	init_effect_details();
@@ -71,17 +70,21 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 {
     // Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
+
     // Draw box on image
     FrameData fd = trackedDataById[frame_number];
     cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
     cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+
+	// Set image with drawn box to frame
 	frame->SetImageCV(frame_image);
 
 	return frame;
 }
 
+// Load protobuf data file
 bool Tracker::LoadTrackedData(std::string inputFilePath){
-
+    // Create tracker message
     libopenshottracker::Tracker trackerMessage;
 
     {
@@ -100,18 +103,22 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     for (int i = 0; i < trackerMessage.frame_size(); i++) {
         const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
 
+        // Load frame and rotation data
         int id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
+        // Load bounding box data
         const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
         int x1 = box.x1();
         int y1 = box.y1();
         int x2 = box.x2();
         int y2 = box.y2();
 
+        // Assign data to tracker map
         trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
     }
 
+    // Show the time stamp from the last update in tracker data file 
     if (trackerMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
     }
@@ -122,6 +129,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     return true;
 }
 
+// Get tracker info for the desired frame 
 FrameData Tracker::GetTrackedData(int frameId){
 
 	// Check if the tracker info for the requested frame exists
@@ -132,10 +140,6 @@ FrameData Tracker::GetTrackedData(int frameId){
     }
 
 }
-
-
-
-
 
 // Generate JSON string of this object
 std::string Tracker::Json() const {
@@ -150,11 +154,6 @@ Json::Value Tracker::JsonValue() const {
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
-	root["color"] = color.JsonValue();
-	root["left"] = left.JsonValue();
-	root["top"] = top.JsonValue();
-	root["right"] = right.JsonValue();
-	root["bottom"] = bottom.JsonValue();
 
 	// return JsonValue
 	return root;
@@ -182,18 +181,6 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
-
-	// Set data from Json (if key is found)
-	if (!root["color"].isNull())
-		color.SetJsonValue(root["color"]);
-	if (!root["left"].isNull())
-		left.SetJsonValue(root["left"]);
-	if (!root["top"].isNull())
-		top.SetJsonValue(root["top"]);
-	if (!root["right"].isNull())
-		right.SetJsonValue(root["right"]);
-	if (!root["bottom"].isNull())
-		bottom.SetJsonValue(root["bottom"]);
 }
 
 // Get all properties for a specific frame
@@ -207,16 +194,6 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
-
-	// Keyframes
-	root["color"] = add_property_json("Bar Color", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
-	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
-	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", &color.blue, 0, 255, false, requested_frame);
-	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
-	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
-	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 0.5, false, requested_frame);
-	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
-	root["bottom"] = add_property_json("Bottom Size", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 0.5, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

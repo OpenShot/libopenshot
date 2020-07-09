@@ -47,49 +47,10 @@
 namespace openshot
 {
 
-//     struct FrameData{
-//   int frame_id = -1;
-//   float rotation = 0;
-//   int x1 = -1;
-//   int y1 = -1;
-//   int x2 = -1;
-//   int y2 = -1;
-
-//   // Keyframe kf_x1;
-//   // Keyframe kf_y1;
-//   // Keyframe kf_x2;
-//   // Keyframe kf_y2;
-
-//   // constructor
-//   FrameData()
-//   {}
-//   FrameData( int _frame_id)
-//   {frame_id = _frame_id;}
-
-//   FrameData( int _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
-//   {
-//       frame_id = _frame_id;
-//       rotation = _rotation;
-//       x1 = _x1;
-//       y1 = _y1;
-//       x2 = _x2;
-//       y2 = _y2;
-      
-//       // kf_x1.AddPoint(_frame_id, _x1);
-//       // kf_y1.AddPoint(_frame_id, _y1);
-//       // kf_x2.AddPoint(_frame_id, _x2);
-//       // kf_y2.AddPoint(_frame_id, _y2);
-//   }
-// };
-
-
-    //TODO: fix this
 	/**
-	 * @brief This class draws black bars around your video (from any side), and can be animated with
-	 * openshot::Keyframe curves over time.
+	 * @brief This class track a given object through the clip and, when called, draws a box surrounding it.
 	 *
-	 * Adding bars around your video can be done for cinematic reasons, and creates a fun way to frame
-	 * in the focal point of a scene. The bars can be any color, and each side can be animated independently.
+	 * Tracking is useful to better visualize and follow the movement of an object through video.
 	 */
 	class Tracker : public EffectBase
 	{
@@ -99,25 +60,14 @@ namespace openshot
 
 
 	public:
-		Color color;		///< Color of bars
-		Keyframe left;		///< Size of left bar
-		Keyframe top;		///< Size of top bar
-		Keyframe right;		///< Size of right bar
-		Keyframe bottom;	///< Size of bottom bar
 
-        std::map<int, FrameData> trackedDataById; 
+        std::map<int, FrameData> trackedDataById; // Save object tracking box data
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
 
-		/// Default constructor, which takes 4 curves and a color. These curves animated the bars over time.
-		///
-		/// @param color The curve to adjust the color of bars
-		/// @param left The curve to adjust the left bar size (between 0 and 1)
-		/// @param top The curve to adjust the top bar size (between 0 and 1)
-		/// @param right The curve to adjust the right bar size (between 0 and 1)
-		/// @param bottom The curve to adjust the bottom bar size (between 0 and 1)
-		Tracker(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
+		/// Default constructor
+		Tracker();
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -130,8 +80,10 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
 
+		// Load protobuf data file
         bool LoadTrackedData(std::string inputFilePath);
         
+		// Get tracker info for the desired frame 
         FrameData GetTrackedData(int frameId);
 
 		/// Get and Set JSON methods

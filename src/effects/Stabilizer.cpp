@@ -43,8 +43,7 @@ Stabilizer::Stabilizer(std::string clipStabilizedDataPath)
 }
 
 // Default constructor
-Stabilizer::Stabilizer(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
-		color(color), left(left), top(top), right(right), bottom(bottom)
+Stabilizer::Stabilizer()
 {
 	// Init effect properties
 	init_effect_details();
@@ -68,9 +67,12 @@ void Stabilizer::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
+	// Create empty rotation matrix
 	cv::Mat T(2,3,CV_64F);
-	// Grab Mat image
+	// Grab OpenCV Mat image
 	cv::Mat cur = frame->GetImageCV();
+
+	// Set rotation matrix values
 	T.at<double>(0,0) = cos(transformationData[frame_number].da);
 	T.at<double>(0,1) = -sin(transformationData[frame_number].da);
 	T.at<double>(1,0) = sin(transformationData[frame_number].da);
@@ -78,19 +80,24 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 	T.at<double>(0,2) = transformationData[frame_number].dx;
 	T.at<double>(1,2) = transformationData[frame_number].dy;
-	cv::Mat frame_stabilized;
 
+	// Apply rotation matrix to image
+	cv::Mat frame_stabilized;
 	cv::warpAffine(cur, frame_stabilized, T, cur.size());
+
 	// Scale up the image to remove black borders
 	cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
-  	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+
+	// Set stabilized image to frame
 	frame->SetImageCV(frame_stabilized);
 	
 	return frame;
 }
 
-// Load protobuf file
+// Load protobuf data file
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
+    // Create stabilization message
     libopenshotstabilize::Stabilization stabilizationMessage;
 
     // Read the existing tracker message.
@@ -100,29 +107,36 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         return false;
     }
 
-    // Make sure the data vectors are empty
+    // Make sure the data maps are empty
     transformationData.clear();
     trajectoryData.clear();
 
-    // Iterate over all frames of the saved message
-    for (int i = 0; i < stabilizationMessage.frame_size(); i++) {
+    // Iterate over all frames of the saved message and assign to the data maps 
+    for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
+		// Create stabilization message
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
-
+    
+        // Load frame number  
         int id = pbFrameData.id();
 
+        // Load camera trajectory data
         float x = pbFrameData.x();
         float y = pbFrameData.y();
         float a = pbFrameData.a();
 
-        trajectoryData.push_back(CamTrajectory(x,y,a));
+        // Assign data to trajectory map
+        trajectoryData[i] = CamTrajectory(x,y,a);
 
+        // Load transformation data
         float dx = pbFrameData.dx();
         float dy = pbFrameData.dy();
         float da = pbFrameData.da();
 
-        transformationData.push_back(TransformParam(dx,dy,da));
+        // Assing data to transformation map
+        transformationData[i] = TransformParam(dx,dy,da);
     }
 
+    // Show the time stamp from the last update in stabilization data file  
     if (stabilizationMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
     }
@@ -148,11 +162,6 @@ Json::Value Stabilizer::JsonValue() const {
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
-	root["color"] = color.JsonValue();
-	root["left"] = left.JsonValue();
-	root["top"] = top.JsonValue();
-	root["right"] = right.JsonValue();
-	root["bottom"] = bottom.JsonValue();
 
 	// return JsonValue
 	return root;
@@ -180,18 +189,6 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
-
-	// Set data from Json (if key is found)
-	if (!root["color"].isNull())
-		color.SetJsonValue(root["color"]);
-	if (!root["left"].isNull())
-		left.SetJsonValue(root["left"]);
-	if (!root["top"].isNull())
-		top.SetJsonValue(root["top"]);
-	if (!root["right"].isNull())
-		right.SetJsonValue(root["right"]);
-	if (!root["bottom"].isNull())
-		bottom.SetJsonValue(root["bottom"]);
 }
 
 // Get all properties for a specific frame
@@ -205,16 +202,6 @@ std::string Stabilizer::PropertiesJSON(int64_t requested_frame) const {
 	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
-
-	// Keyframes
-	root["color"] = add_property_json("Bar Color", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
-	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
-	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", &color.blue, 0, 255, false, requested_frame);
-	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
-	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
-	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 0.5, false, requested_frame);
-	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
-	root["bottom"] = add_property_json("Bottom Size", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 0.5, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

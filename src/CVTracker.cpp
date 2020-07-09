@@ -1,43 +1,67 @@
+/**
+ * @file
+ * @brief Track an object selected by the user
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../include/CVTracker.h"
 
-CVTracker::CVTracker(){
-
-    // Create KCF tracker
-    trackerType = trackerTypes[2];
-    tracker = select_tracker(trackerType);
+/// Class constructors
+// Expects a tracker type, if none is passed, set default as KCF
+CVTracker::CVTracker(std::string trackerType) : trackerType(trackerType){   
+}
+CVTracker::CVTracker() : trackerType("KCF"){
 }
 
 // Set desirable tracker method
 cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
     cv::Ptr<cv::Tracker> t;
-    #if (CV_MINOR_VERSION < 3)
-    {
-        t = cv::Tracker::create(trackerType);
-    }
-    #else
-    {
-        if (trackerType == "BOOSTING")
-            t = cv::TrackerBoosting::create();
-        if (trackerType == "MIL")
-            t = cv::TrackerMIL::create();
-        if (trackerType == "KCF")
-            t = cv::TrackerKCF::create();
-        if (trackerType == "TLD")
-            t = cv::TrackerTLD::create();
-        if (trackerType == "MEDIANFLOW")
-            t = cv::TrackerMedianFlow::create();
-        if (trackerType == "GOTURN")
-            t = cv::TrackerGOTURN::create();
-        if (trackerType == "MOSSE")
-            t = cv::TrackerMOSSE::create();
-        if (trackerType == "CSRT")
-            t = cv::TrackerCSRT::create();
-    }
-    #endif
+
+    if (trackerType == "BOOSTING")
+        t = cv::TrackerBoosting::create();
+    if (trackerType == "MIL")
+        t = cv::TrackerMIL::create();
+    if (trackerType == "KCF")
+        t = cv::TrackerKCF::create();
+    if (trackerType == "TLD")
+        t = cv::TrackerTLD::create();
+    if (trackerType == "MEDIANFLOW")
+        t = cv::TrackerMedianFlow::create();
+    if (trackerType == "GOTURN")
+        t = cv::TrackerGOTURN::create();
+    if (trackerType == "MOSSE")
+        t = cv::TrackerMOSSE::create();
+    if (trackerType == "CSRT")
+        t = cv::TrackerCSRT::create();
 
     return t;
 }
 
+// Track object in the hole clip
 void CVTracker::trackClip(openshot::Clip& video){
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
@@ -54,7 +78,7 @@ void CVTracker::trackClip(openshot::Clip& video){
         // Get current frame
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
-        // Grab Mat image
+        // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
 
         // Pass the first frame to initialize the tracker
@@ -70,6 +94,7 @@ void CVTracker::trackClip(openshot::Clip& video){
             trackerInit = true;
         }
         else{
+            // Update the object tracker according to frame 
             trackerInit = trackFrame(cvimage, frame_number);
             
             // Draw box on image
@@ -79,25 +104,24 @@ void CVTracker::trackClip(openshot::Clip& video){
             cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
         
+        // Show tracking process
         cv::imshow("Display Image", cvimage);
-        // Press  ESC on keyboard to exit
+        // Press ESC on keyboard to exit
         char c=(char)cv::waitKey(1);
         if(c==27)
             break;
 
     }
-
-    
 }
 
-
+// Initialize the tracker
 bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId){
-
+    // Set initial bounding box coords
     bbox = initial_bbox; 
-    // rectangle(frame, bbox, Scalar( 255, 0, 0 ), 2, 1 ); 
     // Create new tracker object
     tracker = select_tracker(trackerType);
 
+    // Initialize tracker
     tracker->init(frame, bbox);
 
     // Add new frame data
@@ -106,10 +130,13 @@ bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId
     return true;
 }
 
+// Update the object tracker according to frame 
 bool CVTracker::trackFrame(cv::Mat &frame, int frameId){
     // Update the tracking result
     bool ok = tracker->update(frame, bbox);
 
+    // Add frame number and box coords if tracker finds the object
+    // Otherwise add only frame number
     if (ok)
     {
         // Add new frame data
@@ -128,9 +155,8 @@ bool CVTracker::SaveTrackedData(std::string outputFilePath){
     // Create tracker message
     libopenshottracker::Tracker trackerMessage;
 
-    // Add all frames data
+    // Iterate over all frames data and save in protobuf message
     for(std::map<int,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
-        
         FrameData fData = it->second;
         libopenshottracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
@@ -158,19 +184,21 @@ bool CVTracker::SaveTrackedData(std::string outputFilePath){
 // Add frame tracked data into protobuf message.
 void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData) {
 
-  pbFrameData->set_id(fData.frame_id);
-  pbFrameData->set_rotation(fData.frame_id);
-  pbFrameData->set_rotation(fData.frame_id);
+    // Save frame number and rotation
+    pbFrameData->set_id(fData.frame_id);
+    pbFrameData->set_rotation(0);
 
-  libopenshottracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
+    libopenshottracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
+    // Save bounding box data
     box->set_x1(fData.x1);
     box->set_y1(fData.y1);
     box->set_x2(fData.x2);
     box->set_y2(fData.y2);
 }
 
+// Load protobuf data file
 bool CVTracker::LoadTrackedData(std::string inputFilePath){
-
+    // Create tracker message
     libopenshottracker::Tracker trackerMessage;
 
     {
@@ -189,18 +217,22 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
     for (int i = 0; i < trackerMessage.frame_size(); i++) {
         const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
 
+        // Load frame and rotation data
         int id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
+        // Load bounding box data
         const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
         int x1 = box.x1();
         int y1 = box.y1();
         int x2 = box.x2();
         int y2 = box.y2();
 
+        // Assign data to tracker map
         trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
     }
 
+    // Show the time stamp from the last update in tracker data file 
     if (trackerMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
     }
