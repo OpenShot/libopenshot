@@ -344,6 +344,8 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 		if (c) {
 			if (info.interlaced_frame) {
 				c->field_order = info.top_field_first ? AV_FIELD_TT : AV_FIELD_BB;
+				// We only use these two version and ignore AV_FIELD_TB and AV_FIELD_BT
+				// Otherwise we would need to change the whole export window
 			}
 		}
 	} else if (info.has_audio && stream == AUDIO_STREAM && audio_st) {
