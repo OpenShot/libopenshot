@@ -46,16 +46,70 @@
 namespace openshot
 {
 	/**
-	 * @brief This class is used as a simple, dummy reader, which always returns a blank frame.
+	 * @brief This class is used as a simple, dummy reader, which can be very useful when writing
+	 * unit tests. It can return a single blank frame or it can return custom frame objects
+	 * which were passed into the constructor with a Cache object.
 	 *
 	 * A dummy reader can be created with any framerate or samplerate. This is useful in unit
 	 * tests that need to test different framerates or samplerates.
+	 *
+	 * @note Timeline does buffering by requesting more frames than it
+	 * strictly needs. Thus if you use this DummyReader with a custom
+	 * cache in a Timeline, make sure it has enough
+	 * frames. Specifically you need some frames after the last frame
+	 * you plan to access through the Timeline.
+	 *
+	 * @code
+	 * 	// Create cache object to store fake Frame objects
+	 * 	CacheMemory cache;
+	 *
+	 * // Now let's create some test frames
+	 * for (int64_t frame_number = 1; frame_number <= 30; frame_number++)
+	 * {
+	 *   // Create blank frame (with specific frame #, samples, and channels)
+	 *   // Sample count should be 44100 / 30 fps = 1470 samples per frame
+	 *   int sample_count = 1470;
+	 *   std::shared_ptr<openshot::Frame> f(new openshot::Frame(frame_number, sample_count, 2));
+	 *
+	 *   // Create test samples with incrementing value
+	 *   float *audio_buffer = new float[sample_count];
+	 *   for (int64_t sample_number = 0; sample_number < sample_count; sample_number++)
+	 *   {
+	 *     // Generate an incrementing audio sample value (just as an example)
+	 *     audio_buffer[sample_number] = float(frame_number) + (float(sample_number) / float(sample_count));
+	 *   }
+	 *
+	 *   // Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
+	 *   //                                    int numSamples, float gainToApplyToSource = 1.0f)
+	 *   f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
+	 *   f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
+	 *
+	 *   // Add test frame to cache
+	 *   cache.Add(f);
+	 * }
+	 *
+	 * // Create a reader (Fraction fps, int width, int height, int sample_rate, int channels, float duration, CacheBase* cache)
+	 * openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
+	 * r.Open(); // Open the reader
+	 *
+	 * // Now let's verify our DummyReader works
+	 * std::shared_ptr<openshot::Frame> f = r.GetFrame(1);
+	 * // r.GetFrame(1)->GetAudioSamples(0)[1] should equal 1.00068033 based on our above calculations
+	 *
+	 * // Clean up
+	 * r.Close();
+	 * cache.Clear()
+	 * @endcode
 	 */
 	class DummyReader : public ReaderBase
 	{
 	private:
+		CacheBase* dummy_cache;
 		std::shared_ptr<openshot::Frame> image_frame;
 		bool is_open;
+
+		/// Initialize variables used by constructor
+		void init(Fraction fps, int width, int height, int sample_rate, int channels, float duration);
 
 	public:
 
@@ -64,6 +118,9 @@ namespace openshot
 
 		/// Constructor for DummyReader.
 		DummyReader(openshot::Fraction fps, int width, int height, int sample_rate, int channels, float duration);
+
+		/// Constructor for DummyReader which takes a frame cache object.
+		DummyReader(openshot::Fraction fps, int width, int height, int sample_rate, int channels, float duration, CacheBase* cache);
 
 		virtual ~DummyReader();
 

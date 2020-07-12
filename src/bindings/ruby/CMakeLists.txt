@@ -48,13 +48,15 @@ option(SILENCE_RUBY_VERSION_WARNING
 
 if (${RUBY_VERSION} VERSION_GREATER 2.6.9 AND ${SWIG_VERSION} VERSION_LESS 4.0.3)
   if (NOT ${SILENCE_RUBY_VERSION_WARNING})
-    message(WARNING "
+    message(WARNING "\
 Ruby 2.7.0+ detected, building the libopenshot Ruby API bindings \
-requires a pre-release version of SWIG 4.0.3 with this commit: \
-https://github.com/swig/swig/commit/5542cc228ad10bdc5c91107afb77c808c43bf2a4")
-    message(STATUS "
-To disable this warning, add -DSILENCE_RUBY_VERSION_WARNING:BOOL=1 to the cmake \
-command line, or enable the option in the CMake GUI.")
+requires either SWIG 4.0.3 or an older version patched with this commit: \
+https://github.com/swig/swig/commit/5542cc228ad10bdc5c91107afb77c808c43bf2a4 \
+(Recent Fedora and Ubuntu distro packages of SWIG 4.0.1 have already been \
+patched.)")
+    message(STATUS "To disable the previous warning, add \
+-DSILENCE_RUBY_VERSION_WARNING:BOOL=1 to the cmake command line, \
+or enable the option in the CMake GUI.")
   endif()
 endif()
 
