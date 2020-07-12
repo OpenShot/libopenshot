@@ -355,22 +355,25 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
-################### RESVG #####################
+###
+### Resvg SVG renderer (compiled Rust library)
+###
+
 # Migrate some legacy variable names
-if(DEFINED RESVGDIR AND NOT DEFINED RESVG_ROOT)
-  set(RESVG_ROOT ${RESVGDIR})
+if(DEFINED RESVGDIR AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT ${RESVGDIR})
 endif()
-if(DEFINED ENV{RESVGDIR} AND NOT DEFINED RESVG_ROOT)
-  set(RESVG_ROOT $ENV{RESVGDIR})
+if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT $ENV{RESVGDIR})
 endif()
 
 # Find resvg library (used for rendering svg files)
-find_package(RESVG)
+find_package(Resvg)
 
 # Include resvg headers (optional SVG library)
-if (TARGET RESVG::resvg)
+if (TARGET Resvg::resvg)
   #include_directories(${RESVG_INCLUDE_DIRS})
-  target_link_libraries(openshot PUBLIC RESVG::resvg)
+  target_link_libraries(openshot PUBLIC Resvg::resvg)
 
   target_compile_definitions(openshot PUBLIC "-DUSE_RESVG=1")
   list(APPEND CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
