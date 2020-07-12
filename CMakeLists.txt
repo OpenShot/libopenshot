@@ -39,6 +39,27 @@ For more information, please visit <http://www.openshot.org/>.
 ################ ADD CMAKE MODULES ##################
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
+### Note: A file cmake/UserDefaults.cmake in the project repository
+### will by default be read to pre-set options for each build. The
+### contents are processed before the initial project() command.
+###
+### It is safe to use this file to store your local build settings.
+### It is listed in the project .gitignore and cannot be committed.
+###
+### To temporarily override the automatic loading of UserDefaults.cmake
+### in the current build, set IGNORE_DEFAULTS on the cmake command line:
+###
+###   cmake -DIGNORE_DEFAULTS:BOOL=TRUE -B build -S .
+
+### Load user/project defaults if supported, unless overridden
+option(IGNORE_DEFAULTS OFF "Don't import local settings from UserDefaults.cmake (CMake 3.15+ only)")
+if (CMAKE_VERSION VERSION_GREATER 3.15 AND NOT IGNORE_DEFAULTS)
+  set(_defaults_file "${CMAKE_SOURCE_DIR}/cmake/UserDefaults.cmake")
+  if (EXISTS ${_defaults_file})
+    set(CMAKE_PROJECT_INCLUDE_BEFORE "${_defaults_file}")
+  endif()
+endif()
+
 ################ PROJECT VERSION ####################
 set(PROJECT_VERSION_FULL "0.2.5-dev2")
 set(PROJECT_SO_VERSION 19)
