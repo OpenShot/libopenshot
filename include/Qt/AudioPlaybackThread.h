@@ -75,7 +75,7 @@ namespace openshot
 		static AudioDeviceManagerSingleton * Instance();
 
 		/// Public device manager property
-		AudioDeviceManager audioDeviceManager;
+		juce::AudioDeviceManager audioDeviceManager;
 
 		/// Close audio device
 		void CloseAudioDevice();
@@ -86,9 +86,9 @@ namespace openshot
      */
     class AudioPlaybackThread : juce::Thread
     {
-		AudioSourcePlayer player;
-		AudioTransportSource transport;
-		MixerAudioSource mixer;
+		juce::AudioSourcePlayer player;
+		juce::AudioTransportSource transport;
+		juce::MixerAudioSource mixer;
 		AudioReaderSource *source;
 		double sampleRate;
 		int numChannels;

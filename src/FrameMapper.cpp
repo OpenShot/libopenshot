@@ -61,9 +61,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 // Destructor
 FrameMapper::~FrameMapper() {
-	if (is_open)
-		// Auto Close if not already
-		Close();
+
+	// Auto Close if not already
+	Close();
 
 	reader = NULL;
 }

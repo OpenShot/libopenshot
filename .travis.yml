@@ -21,7 +21,6 @@ addons:
     - libavfilter-dev
     - libswscale-dev
     - libpostproc-dev
-    - libavresample-dev
     - libswresample-dev
     - libmagick++-dev
     - libunittest++-dev
@@ -31,9 +30,13 @@ addons:
     - curl
 
 jobs:
-  include:
 
-    - name: Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)
+# The FFmpeg 3.2 backport PPA has gone missing
+  allow_failures:
+    - name: "FFmpeg 3.2 GCC (Ubuntu 16.04 Xenial)"
+
+  include:
+    - name: "Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
       env:
         - BUILD_VERSION=coverage_ffmpeg34
         - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
@@ -44,28 +47,25 @@ jobs:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
           packages:
           - *p_common
           - qt5-default
+          - libavresample-dev
           - libjsoncpp-dev
           - lcov
           - binutils-common # For c++filt
 
-    - name: FFmpeg 4 GCC (Ubuntu 18.04 Bionic)
+    - name: "FFmpeg 4 GCC (Ubuntu 20.04 Focal)"
       env:
         - BUILD_VERSION=ffmpeg4
         - CMAKE_EXTRA_ARGS=""
         - TEST_TARGET=test
       os: linux
-      dist: bionic
-      compiler: gcc
+      dist: focal
       addons:
         apt:
           sources:
-          - sourceline: ppa:openshot.developers/libopenshot-daily
-          - sourceline: ppa:beineri/opt-qt-5.12.3-bionic
-          - sourceline: ppa:jonathonf/ffmpeg-4
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           packages:
           - *p_common
           - qt5-default
@@ -77,7 +77,6 @@ jobs:
           - libavfilter7
           - libswscale5
           - libpostproc55
-          - libavresample4
           - libswresample3
 
     - name: FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)
@@ -91,11 +90,11 @@ jobs:
       addons:
         apt:
           sources:
-          - sourceline: ppa:openshot.developers/libopenshot-daily
-          - sourceline: ppa:beineri/opt-qt-5.12.3-bionic
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           packages:
           - *p_common
           - qt5-default
+          - libavresample-dev
           - libomp-dev
 
     - name: FFmpeg 3.2 GCC (Ubuntu 16.04 Xenial)
@@ -109,10 +108,10 @@ jobs:
         apt:
           sources:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           - sourceline: 'ppa:jon-hedgerows/ffmpeg-backports'
           packages:
           - *p_common
+          - libavresample-dev
           - libavcodec57
           - libavdevice57
           - libavfilter6
@@ -137,6 +136,8 @@ jobs:
           - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           packages:
           - *p_common
+          - libavresample-dev
+    
     - name: macOS Latest
       env:
       - BUILD_VERSION=ffmpeg4
