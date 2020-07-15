@@ -42,8 +42,6 @@
 #endif
 
 #include "Clip.h"
-#include "effects/Tracker.h"
-#include "effects/Stabilizer.h"
 
 using namespace openshot;
 
@@ -51,14 +49,21 @@ using namespace openshot;
 class ClipProcessingJobs{
 
 	private:
-
-		// Apply object tracking to clip 
-		void trackVideo(Clip& videoClip);
-		// Apply stabilization to clip
-		void stabilizeVideo(Clip& video);
+		int processingProgress;
+		bool processingDone = false;
+		bool stopProcessing = false;
 
 	public:
-		ClipProcessingJobs(std::string processingType, Clip& videoClip);		
+		ClipProcessingJobs(std::string processingType, Clip& videoClip);
+
+		int GetProgress();
+
+		void CancelProcessing();	
+
+		// Apply object tracking to clip 
+		std::string trackVideo(Clip& videoClip);
+		// Apply stabilization to clip
+		std::string stabilizeVideo(Clip& videoClip);	
 
 
 

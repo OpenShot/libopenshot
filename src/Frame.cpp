@@ -953,7 +953,7 @@ cv::Mat Frame::GetImageCV()
 }
 
 std::shared_ptr<QImage> Frame::Mat2Qimage(cv::Mat img){
-	// cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+	cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
 	std::shared_ptr<QImage> imgIn = std::shared_ptr<QImage>(new QImage((uchar*) img.data, img.cols, img.rows, img.step, QImage::Format_RGB888));
 	// Always convert to RGBA8888 (if different)
 	if (imgIn->format() != QImage::Format_RGBA8888)

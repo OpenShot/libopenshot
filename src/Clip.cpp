@@ -360,12 +360,6 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
 
-// #ifdef USE_OPENCV
-// 		if(hasStabilization){
-// 			apply_stabilization(frame, requested_frame);
-// 		}
-// #endif
-
 		// Return processed 'frame'
 		return frame;
 	}
@@ -373,33 +367,6 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
-
-// #ifdef USE_OPENCV
-// void Clip::apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number){
-// 	cv::Mat T(2,3,CV_64F);
-
-// 	// Grab Mat image
-// 	cv::Mat cur = f->GetImageCV();
-
-// 	T.at<double>(0,0) = cos(new_prev_to_cur_transform[frame_number].da);
-// 	T.at<double>(0,1) = -sin(new_prev_to_cur_transform[frame_number].da);
-// 	T.at<double>(1,0) = sin(new_prev_to_cur_transform[frame_number].da);
-// 	T.at<double>(1,1) = cos(new_prev_to_cur_transform[frame_number].da);
-
-// 	T.at<double>(0,2) = new_prev_to_cur_transform[frame_number].dx;
-// 	T.at<double>(1,2) = new_prev_to_cur_transform[frame_number].dy;
-
-// 	cv::Mat frame_stabilized;
-
-// 	cv::warpAffine(cur, frame_stabilized, T, cur.size());
-
-// 	// Scale up the image to remove black borders
-// 	cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
-//   	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
-
-// 	f->SetImageCV(frame_stabilized);
-// }
-// #endif
 
 // Get file extension
 std::string Clip::get_file_extension(std::string path)
@@ -945,16 +912,30 @@ void Clip::SetJsonValue(const Json::Value root) {
 		for (const auto existing_effect : root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
-
 			if (!existing_effect["type"].isNull()) {
-				// Create instance of effect
-				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
 
-					// Load Json into Effect
-					e->SetJsonValue(existing_effect);
+				std::vector<std::string> pEffects{"Stabilizer", "Tracker"};
+				std::string effectName = existing_effect["type"].asString();
 
-					// Add Effect to Timeline
-					AddEffect(e);
+				if(std::find(pEffects.begin(), pEffects.end(), effectName) == pEffects.end()){
+					// Create instance of effect
+					if ( (e = EffectInfo().CreateEffect(effectName))) {
+						
+						// Load Json into Effect
+						e->SetJsonValue(existing_effect);
+
+						// Add Effect to Timeline
+						AddEffect(e);
+					}
+				}
+				else{
+					if ( (e = EffectInfo().CreateEffect(effectName, existing_effect["protobuf_data_path"].asString()))) {
+						// Load Json into Effect
+						e->SetJsonValue(existing_effect);
+
+						// Add Effect to Timeline
+						AddEffect(e);
+					}
 				}
 			}
 		}
@@ -1075,45 +1056,3 @@ std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 	// Return modified frame
 	return frame;
 }
-
-// #ifdef USE_OPENCV
-// void Clip::stabilize_video(){
-// 	// create CVStabilization object
-// 	CVStabilization stabilizer; 
-
-//     // Make sure Clip is opened
-//     Open();
-//     // Get total number of frames
-//     int videoLenght = Reader()->info.video_length;
-
-//     // Get first Opencv image
-//     // std::shared_ptr<openshot::Frame> f = GetFrame(0);
-//     // cv::Mat prev = f->GetImageCV();
-//     // // OpticalFlow works with grayscale images
-//     // cv::cvtColor(prev, prev_grey, cv::COLOR_BGR2GRAY);
-
-//     // Extract and track opticalflow features for each frame
-//     for (long int frame_number = 0; frame_number <= videoLenght; frame_number++)
-//     {
-//         std::shared_ptr<openshot::Frame> f = GetFrame(frame_number);
-        
-//         // Grab Mat image
-//         cv::Mat cvimage = f->GetImageCV();
-//         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
-//         stabilizer.TrackFrameFeatures(cvimage, frame_number);
-//     }
-
-//     vector <CamTrajectory> trajectory = stabilizer.ComputeFramesTrajectory();
-
-//     vector <CamTrajectory> smoothed_trajectory = stabilizer.SmoothTrajectory(trajectory);
-
-// 	// Get the smoothed trajectory
-//     new_prev_to_cur_transform = stabilizer.GenNewCamPosition(smoothed_trajectory);
-// 	// Will apply the smoothed transformation warp when retrieving a frame
-// 	hasStabilization = true;
-// }
-// #else
-// void Clip::stabilize_video(){
-// 	throw "Please compile libopenshot with OpenCV to use this feature";
-// }
-// #endif

@@ -206,6 +206,7 @@
 %include "Timeline.h"
 %include "ZmqLogger.h"
 %include "AudioDeviceInfo.h"
+%include "ClipProcessingJobs.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
@@ -228,6 +229,8 @@
 %include "effects/Saturation.h"
 %include "effects/Shift.h"
 %include "effects/Wave.h"
+%include "effects/Stabilizer.h"
+%include "effects/Tracker.h"
 
 
 /* Wrap std templates (list, vector, etc...) */

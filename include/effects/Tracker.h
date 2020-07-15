@@ -33,15 +33,47 @@
 
 #include "../EffectBase.h"
 
+#include <google/protobuf/util/time_util.h>
+
 #include <cmath>
+#include <fstream>
 #include <stdio.h>
 #include <memory>
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../CVTracker.h"
-#include "../Clip.h"
 #include "../trackerdata.pb.h"
+
+using namespace std;
+using google::protobuf::util::TimeUtil;
+
+
+// Tracking info struct
+struct EffectFrameData{
+  int frame_id = -1;
+  float rotation = 0;
+  int x1 = -1;
+  int y1 = -1;
+  int x2 = -1;
+  int y2 = -1;
+
+  // Constructors
+  EffectFrameData()
+  {}
+
+  EffectFrameData( int _frame_id)
+  {frame_id = _frame_id;}
+
+  EffectFrameData( int _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
+  {
+      frame_id = _frame_id;
+      rotation = _rotation;
+      x1 = _x1;
+      y1 = _y1;
+      x2 = _x2;
+      y2 = _y2;
+  }
+};
 
 
 namespace openshot
@@ -61,7 +93,7 @@ namespace openshot
 
 	public:
 
-        std::map<int, FrameData> trackedDataById; // Save object tracking box data
+        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
@@ -84,7 +116,7 @@ namespace openshot
         bool LoadTrackedData(std::string inputFilePath);
         
 		// Get tracker info for the desired frame 
-        FrameData GetTrackedData(int frameId);
+        EffectFrameData GetTrackedData(int frameId);
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

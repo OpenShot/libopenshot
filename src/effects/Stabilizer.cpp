@@ -33,11 +33,10 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Stabilizer::Stabilizer(std::string clipStabilizedDataPath)
+Stabilizer::Stabilizer(std::string clipStabilizedDataPath):protobuf_data_path(clipStabilizedDataPath)
 {   
     // Init effect properties
 	init_effect_details();
-
     // Tries to load the stabilization data from protobuf
     LoadStabilizedData(clipStabilizedDataPath);
 }
@@ -47,11 +46,13 @@ Stabilizer::Stabilizer()
 {
 	// Init effect properties
 	init_effect_details();
+	// LoadStabilizedData("/home/gustavostahl/LabVisao/VideoEditor/openshot-qt/stabilization.data");
 }
 
 // Init effect settings
 void Stabilizer::init_effect_details()
 {
+
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
@@ -61,42 +62,54 @@ void Stabilizer::init_effect_details()
 	info.description = "Stabilize video clip to remove undesired shaking and jitter.";
 	info.has_audio = false;
 	info.has_video = true;
+
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-	// Create empty rotation matrix
-	cv::Mat T(2,3,CV_64F);
+
 	// Grab OpenCV Mat image
-	cv::Mat cur = frame->GetImageCV();
+	cv::Mat frame_image = frame->GetImageCV();
 
-	// Set rotation matrix values
-	T.at<double>(0,0) = cos(transformationData[frame_number].da);
-	T.at<double>(0,1) = -sin(transformationData[frame_number].da);
-	T.at<double>(1,0) = sin(transformationData[frame_number].da);
-	T.at<double>(1,1) = cos(transformationData[frame_number].da);
+	// If frame is NULL, return itself
+	if(!frame_image.empty()){
 
-	T.at<double>(0,2) = transformationData[frame_number].dx;
-	T.at<double>(1,2) = transformationData[frame_number].dy;
+		// Check if track data exists for the requested frame
+		if(transformationData.find(frame_number) != transformationData.end()){
+			
+			// Create empty rotation matrix
+			cv::Mat T(2,3,CV_64F);
 
-	// Apply rotation matrix to image
-	cv::Mat frame_stabilized;
-	cv::warpAffine(cur, frame_stabilized, T, cur.size());
+			// Set rotation matrix values
+			T.at<double>(0,0) = cos(transformationData[frame_number].da);
+			T.at<double>(0,1) = -sin(transformationData[frame_number].da);
+			T.at<double>(1,0) = sin(transformationData[frame_number].da);
+			T.at<double>(1,1) = cos(transformationData[frame_number].da);
 
-	// Scale up the image to remove black borders
-	cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
-	cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+			T.at<double>(0,2) = transformationData[frame_number].dx;
+			T.at<double>(1,2) = transformationData[frame_number].dy;
 
+			// Apply rotation matrix to image
+			cv::Mat frame_stabilized;
+			cv::warpAffine(frame_image, frame_stabilized, T, frame_image.size());
+
+			// Scale up the image to remove black borders
+			cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
+			cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+			frame_image = frame_stabilized;
+		}
+	}
 	// Set stabilized image to frame
-	frame->SetImageCV(frame_stabilized);
-	
+	// If the input image is NULL or doesn't have tracking data, it's returned as it came
+	frame->SetImageCV(frame_image);
 	return frame;
 }
 
 // Load protobuf data file
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
+
     // Create stabilization message
     libopenshotstabilize::Stabilization stabilizationMessage;
 
@@ -113,6 +126,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
 
     // Iterate over all frames of the saved message and assign to the data maps 
     for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
+
 		// Create stabilization message
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
     
@@ -125,7 +139,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         float a = pbFrameData.a();
 
         // Assign data to trajectory map
-        trajectoryData[i] = CamTrajectory(x,y,a);
+        trajectoryData[i] = EffectCamTrajectory(x,y,a);
 
         // Load transformation data
         float dx = pbFrameData.dx();
@@ -133,7 +147,8 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         float da = pbFrameData.da();
 
         // Assing data to transformation map
-        transformationData[i] = TransformParam(dx,dy,da);
+        transformationData[i] = EffectTransformParam(dx,dy,da);
+		std::cout<<x<<y<<a<<dx<<dy<<da<<std::endl;
     }
 
     // Show the time stamp from the last update in stabilization data file  
@@ -162,6 +177,7 @@ Json::Value Stabilizer::JsonValue() const {
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
+	root["protobuf_data_path"] = protobuf_data_path;
 
 	// return JsonValue
 	return root;
@@ -169,12 +185,13 @@ Json::Value Stabilizer::JsonValue() const {
 
 // Load JSON string into this object
 void Stabilizer::SetJson(const std::string value) {
-
+	std::cout<<value<<std::endl;
 	// Parse JSON string into JSON objects
 	try
 	{
 		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
+
 		SetJsonValue(root);
 	}
 	catch (const std::exception& e)
@@ -189,6 +206,17 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
+
+	// Set data from Json (if key is found)
+	if (!root["Stabilizer"]["protobuf_data_path"].isNull() && protobuf_data_path == ""){
+		protobuf_data_path = (root["Stabilizer"]["protobuf_data_path"].asString());
+		std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAA Abaixo"<<std::endl;
+		std::cout<<protobuf_data_path<<std::endl;
+		if(!LoadStabilizedData(protobuf_data_path)){
+			std::cout<<"Invalid protobuf data path";
+			protobuf_data_path = "";
+		}
+	}
 }
 
 // Get all properties for a specific frame

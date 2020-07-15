@@ -49,10 +49,7 @@ namespace openshot
 	public:
 		// Create an instance of an effect (factory style)
 		EffectBase* CreateEffect(std::string effect_type);
-		
-		// Create an instance of an video effect (require processing the whole clip)
-		EffectBase* CreateEffect(std::string effect_type, Clip* video_clip);
-
+		EffectBase* CreateEffect(std::string effect_type, std::string pb_data_path);
 
 		/// JSON methods
 		static std::string Json(); ///< Generate JSON string of this object

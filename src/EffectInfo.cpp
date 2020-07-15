@@ -29,7 +29,6 @@
  */
 
 #include "../include/EffectInfo.h"
-// #include "../include/Clip.h"
 
 
 using namespace openshot;
@@ -86,7 +85,22 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if (effect_type == "Wave")
 		return new Wave();
+
+	else if(effect_type == "Stabilizer")
+		return new Stabilizer();
+
+	else if(effect_type == "Tracker")
+		return new Tracker();
+
 	return NULL;
+}
+
+EffectBase* EffectInfo::CreateEffect(std::string effect_type, std::string pb_data_path){
+	if(effect_type == "Stabilizer")
+		return new Stabilizer(pb_data_path);
+
+	else if(effect_type == "Tracker")
+		return new Tracker();
 }
 
 // Generate Json::Value for this object
@@ -110,6 +124,8 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+	root.append(Stabilizer().JsonInfo());
+	root.append(Tracker().JsonInfo());
 
 	// return JsonValue
 	return root;

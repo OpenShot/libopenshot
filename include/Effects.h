@@ -43,8 +43,10 @@
 #include "effects/Mask.h"
 #include "effects/Negate.h"
 #include "effects/Pixelate.h"
+#include "effects/Stabilizer.h"
 #include "effects/Saturation.h"
 #include "effects/Shift.h"
+#include "effects/Tracker.h"
 #include "effects/Wave.h"
 
 

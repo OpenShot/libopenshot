@@ -33,15 +33,46 @@
 
 #include "../EffectBase.h"
 
+#include <google/protobuf/util/time_util.h>
+
 #include <cmath>
 #include <stdio.h>
 #include <memory>
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../CVStabilization.h"
-#include "../Clip.h"
 #include "../stabilizedata.pb.h"
+
+using namespace std;
+using google::protobuf::util::TimeUtil;
+
+struct EffectTransformParam
+{
+    EffectTransformParam() {}
+    EffectTransformParam(double _dx, double _dy, double _da) {
+        dx = _dx;
+        dy = _dy;
+        da = _da;
+    }
+
+    double dx;
+    double dy;
+    double da; // angle
+};
+
+struct EffectCamTrajectory
+{
+    EffectCamTrajectory() {}
+    EffectCamTrajectory(double _x, double _y, double _a) {
+        x = _x;
+        y = _y;
+        a = _a;
+    }
+
+    double x;
+    double y;
+    double a; // angle
+};
 
 
 namespace openshot
@@ -58,11 +89,12 @@ namespace openshot
 	private:
 		/// Init effect settings
 		void init_effect_details();
-
+		std::string protobuf_data_path;
 
 	public:
-        std::map <size_t,CamTrajectory> trajectoryData; // Save camera trajectory data
-    	std::map <size_t,TransformParam> transformationData; // Save transormation data 
+	std::string teste;
+        std::map <size_t,EffectCamTrajectory> trajectoryData; // Save camera trajectory data
+    	std::map <size_t,EffectTransformParam> transformationData; // Save transormation data 
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Stabilizer(std::string clipTrackerDataPath);

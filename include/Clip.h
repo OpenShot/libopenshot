@@ -38,8 +38,7 @@
 	#include <opencv2/core.hpp>
 	#undef uint64
 	#undef int64	
-
-	// #include "CVStabilization.h"
+	
 #endif
 
 #include <memory>
@@ -161,14 +160,6 @@ namespace openshot {
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
 
-		// #ifdef USE_OPENCV
-		// /// Smoothed transformation for all the clip frames
-		// std::vector <TransformParam> new_prev_to_cur_transform;
-		// /// apply the smoothed transformation warp when retrieving a frame
-		// bool hasStabilization = false;
-		// void apply_stabilization(std::shared_ptr<openshot::Frame> f, int64_t frame_number);
-		// #endif
-
 		/// Default Constructor
 		Clip();
 
@@ -232,7 +223,7 @@ namespace openshot {
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
 		/// Stabilize the clip using opencv and opticalflow
-		void stabilize_video();
+		//void stabilize_video();
 
 		// Scale, Location, and Alpha curves
 		openshot::Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)

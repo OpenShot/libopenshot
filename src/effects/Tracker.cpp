@@ -71,12 +71,21 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     // Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
 
-    // Draw box on image
-    FrameData fd = trackedDataById[frame_number];
-    cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-    cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+    // Check if frame isn't NULL
+    if(!frame_image.empty()){
+
+        // Check if track data exists for the requested frame
+        if (trackedDataById.find(frame_number) != trackedDataById.end()) {
+
+            // Draw box on image
+            EffectFrameData fd = trackedDataById[frame_number];
+            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+            cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+        }
+    }
 
 	// Set image with drawn box to frame
+    // If the input image is NULL or doesn't have tracking data, it's returned as it came
 	frame->SetImageCV(frame_image);
 
 	return frame;
@@ -115,7 +124,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
         int y2 = box.y2();
 
         // Assign data to tracker map
-        trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
+        trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
     }
 
     // Show the time stamp from the last update in tracker data file 
@@ -130,11 +139,11 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 }
 
 // Get tracker info for the desired frame 
-FrameData Tracker::GetTrackedData(int frameId){
+EffectFrameData Tracker::GetTrackedData(int frameId){
 
 	// Check if the tracker info for the requested frame exists
     if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
-        return FrameData();
+        return EffectFrameData();
     } else {
         return trackedDataById[frameId];
     }
