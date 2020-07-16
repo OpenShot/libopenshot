@@ -7,8 +7,11 @@ Try to find the shared-library build of resvg, the Rust SVG library
 IMPORTED targets
 ^^^^^^^^^^^^^^^^
 
-This module defines :prop_tgt:`IMPORTED` target ``Resvg::resvg`` when
-the library and headers are found.
+This module will define up to two :prop_tgt:`IMPORTED` targets if the
+appropriate libraries and headers are found:
+
+  ``Resvg::resvg``
+  ``Resvg::resvg_static``
 
 Result Variables
 ^^^^^^^^^^^^^^^^
@@ -34,6 +37,7 @@ Control variables
 
 The following variables can be used to provide path hints to the module:
 
+Resvg_ROOT    - (preferred) CMake 3.12+ standard path hint variable
 RESVGDIR      - Set in the calling CMakeLists.txt or on the command line
 ENV{RESVGDIR} - An environment variable in the cmake process context
 
@@ -51,6 +55,7 @@ find_path(Resvg_INCLUDE_DIRS
   ResvgQt.h
   PATHS
     ${Resvg_ROOT}
+    ${Resvg_ROOT}/include
     ${RESVGDIR}
     ${RESVGDIR}/include
     $ENV{RESVGDIR}
@@ -68,6 +73,7 @@ foreach(libname resvg libresvg.a)
     NAMES ${libname}
     PATHS
       ${Resvg_ROOT}
+      ${Resvg_ROOT}/lib
       ${RESVGDIR}
       ${RESVGDIR}/lib
       $ENV{RESVGDIR}
@@ -127,10 +133,10 @@ if(${Resvg_libresvg.a_LIBRARY} AND NOT TARGET Resvg::resvg_static)
   set_property(TARGET Resvg::resvg_static APPEND PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES "${Resvg_INCLUDE_DIRS}")
 
-  set_property(TARGET Resvg::resvg APPEND PROPERTY
+  set_property(TARGET Resvg::resvg_static APPEND PROPERTY
     INTERFACE_COMPILE_DEFINITIONS "${Resvg_DEFINITIONS}")
 
-  set_property(TARGET Resvg::resvg APPEND PROPERTY
+  set_property(TARGET Resvg::resvg_static APPEND PROPERTY
     IMPORTED_LOCATION "${Resvg_libresvg.a_LIBRARY}")
 endif()
 
