@@ -95,14 +95,6 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	return NULL;
 }
 
-EffectBase* EffectInfo::CreateEffect(std::string effect_type, std::string pb_data_path){
-	if(effect_type == "Stabilizer")
-		return new Stabilizer(pb_data_path);
-
-	else if(effect_type == "Tracker")
-		return new Tracker();
-}
-
 // Generate Json::Value for this object
 Json::Value EffectInfo::JsonValue() {
 

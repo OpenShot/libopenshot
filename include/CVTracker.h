@@ -15,6 +15,8 @@
 #include "Clip.h"
 #include "KeyFrame.h"
 #include "Frame.h"
+#include "Json.h"
+#include "ProcessingController.h"
 #include "trackerdata.pb.h"
 
 using namespace std;
@@ -22,7 +24,7 @@ using google::protobuf::util::TimeUtil;
 
 // Tracking info struct
 struct FrameData{
-  int frame_id = -1;
+  size_t frame_id = -1;
   float rotation = 0;
   int x1 = -1;
   int y1 = -1;
@@ -33,10 +35,10 @@ struct FrameData{
   FrameData()
   {}
 
-  FrameData( int _frame_id)
+  FrameData( size_t _frame_id)
   {frame_id = _frame_id;}
 
-  FrameData( int _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
+  FrameData( size_t _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
   {
       frame_id = _frame_id;
       rotation = _rotation;
@@ -47,39 +49,53 @@ struct FrameData{
   }
 };
 
-class CVTracker {       
-  public:
-
-    std::map<int, FrameData> trackedDataById; // Save tracked data       
+class CVTracker { 
+  private:
+    std::map<size_t, FrameData> trackedDataById; // Save tracked data       
     std::string trackerType; // Name of the chosen tracker
-    cv::Ptr<cv::Tracker> tracker; // Pointer of the selected tracker 
+    cv::Ptr<cv::Tracker> tracker; // Pointer of the selected tracker
+
     cv::Rect2d bbox; // Bounding box coords 
 
-    /// Class constructors
-    // Expects a tracker type, if none is passed, set default as KCF
-    CVTracker();
-    CVTracker(std::string trackerType);
+    std::string protobuf_data_path; // Path to protobuf data file
+
+    uint progress; // Pre-processing effect progress
+
+    /// Will handle a Thread saflly comutication between ClipProcessingJobs and the processing effect classes
+    ProcessingController *processingController;
+
+    // Initialize the tracker
+    bool initTracker(cv::Mat &frame, size_t frameId);
+    
+    // Update the object tracker according to frame 
+    bool trackFrame(cv::Mat &frame, size_t frameId);
+
+  public:
+
+    // Constructor
+    CVTracker(std::string processInfoJson, ProcessingController &processingController);
     
     // Set desirable tracker method
-    cv::Ptr<cv::Tracker> select_tracker(std::string trackerType);
+    cv::Ptr<cv::Tracker> selectTracker(std::string trackerType);
 
-    // Track object in the hole clip
-    void trackClip(openshot::Clip& video);
-    // Initialize the tracker
-    bool initTracker(cv::Rect2d bbox, cv::Mat &frame, int frameId);
-    // Update the object tracker according to frame 
-    bool trackFrame(cv::Mat &frame, int frameId);
+    // Track object in the hole clip or in a given interval
+    // If start, end and process_interval are passed as argument, clip will be processed in [start,end) 
+    void trackClip(openshot::Clip& video, size_t start=0, size_t end=0, bool process_interval=false);
 
+    // Get tracked data for a given frame
+    FrameData GetTrackedData(size_t frameId);
+    
     /// Protobuf Save and Load methods
     // Save protobuf file
-    bool SaveTrackedData(std::string outputFilePath);
+    bool SaveTrackedData();
     // Add frame tracked data into protobuf message.
     void AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData);
     // Load protobuf file
-    bool LoadTrackedData(std::string inputFilePath);
+    bool LoadTrackedData();
 
-    // Get tracked data for a given frame
-    FrameData GetTrackedData(int frameId);
+    /// Get and Set JSON methods
+    void SetJson(const std::string value); ///< Load JSON string into this object
+    void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 };
 
 

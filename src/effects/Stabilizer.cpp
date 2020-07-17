@@ -62,6 +62,7 @@ void Stabilizer::init_effect_details()
 	info.description = "Stabilize video clip to remove undesired shaking and jitter.";
 	info.has_audio = false;
 	info.has_video = true;
+	protobuf_data_path = "";
 
 }
 
@@ -148,7 +149,6 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
 
         // Assing data to transformation map
         transformationData[i] = EffectTransformParam(dx,dy,da);
-		std::cout<<x<<y<<a<<dx<<dy<<da<<std::endl;
     }
 
     // Show the time stamp from the last update in stabilization data file  
@@ -185,7 +185,6 @@ Json::Value Stabilizer::JsonValue() const {
 
 // Load JSON string into this object
 void Stabilizer::SetJson(const std::string value) {
-	std::cout<<value<<std::endl;
 	// Parse JSON string into JSON objects
 	try
 	{
@@ -208,10 +207,9 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 	EffectBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
-	if (!root["Stabilizer"]["protobuf_data_path"].isNull() && protobuf_data_path == ""){
-		protobuf_data_path = (root["Stabilizer"]["protobuf_data_path"].asString());
-		std::cout<<"AAAAAAAAAAAAAAAAAAAAAAAAA Abaixo"<<std::endl;
-		std::cout<<protobuf_data_path<<std::endl;
+	if (!root["protobuf_data_path"].isNull()){
+		protobuf_data_path = (root["protobuf_data_path"].asString());
+		
 		if(!LoadStabilizedData(protobuf_data_path)){
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";

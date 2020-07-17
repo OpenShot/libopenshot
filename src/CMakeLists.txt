@@ -191,7 +191,8 @@ set(OPENSHOT_SOURCES
 set(OPENSHOT_CV_SOURCES
   CVTracker.cpp
   CVStabilization.cpp
-  ClipProcessingJobs.cpp)
+  ClipProcessingJobs.cpp
+  CVObjectDetection.cpp)
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
@@ -213,9 +214,9 @@ set(EFFECTS_SOURCES
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
-  effects/Wave.cpp
+  effects/Stabilizer.cpp
   effects/Tracker.cpp
-  effects/Stabilizer.cpp)
+  effects/Wave.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES

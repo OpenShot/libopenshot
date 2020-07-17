@@ -31,25 +31,39 @@
 #include "../include/CVStabilization.h"
 
 // Set default smoothing window value to compute stabilization 
-CVStabilization::CVStabilization():smoothingWindow(30) {}
-
-// Set desirable smoothing window value to compute stabilization
-CVStabilization::CVStabilization(int _smoothingWindow): smoothingWindow(_smoothingWindow){}
+CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
+: smoothingWindow(30), processingController(&processingController){
+    SetJson(processInfoJson);
+}
 
 // Process clip and store necessary stabilization data
-void CVStabilization::ProcessClip(openshot::Clip &video){
-    // Get total number of frames in video
-    int videoLenght = video.Reader()->info.video_length;
+void CVStabilization::stabilizeClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
+    size_t frame_number;
+
+    smoothingWindowSet = true; // Certificate that smoothing window value won't change 
+
+    if(!process_interval || end == 0 || end-start <= 0){
+        // Get total number of frames in video
+        end = video.Reader()->info.video_length;
+    }
 
     // Extract and track opticalflow features for each frame
-    for (long int frame_number = 0; frame_number <= videoLenght; frame_number++)
+    for (frame_number = start; frame_number <= end; frame_number++)
     {
+        // Stop the feature tracker process
+        if(processingController->ShouldStop()){
+            return;
+        }
+
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
         TrackFrameFeatures(cvimage, frame_number);
+
+        // Update progress
+        processingController->SetProgress(uint(100*frame_number/end));
     }
 
     // Calculate trajectory data
@@ -63,7 +77,7 @@ void CVStabilization::ProcessClip(openshot::Clip &video){
 }
 
 // Track current frame features and find the relative transformation
-void CVStabilization::TrackFrameFeatures(cv::Mat frame, int frameNum){
+void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     if(prev_grey.empty()){
         prev_grey = frame;
         return;
@@ -192,10 +206,8 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
 }
 
 
-
-
 // Save stabilization data to protobuf file
-bool CVStabilization::SaveStabilizedData(std::string outputFilePath){
+bool CVStabilization::SaveStabilizedData(){
     // Create stabilization message
     libopenshotstabilize::Stabilization stabilizationMessage;
 
@@ -210,7 +222,7 @@ bool CVStabilization::SaveStabilizedData(std::string outputFilePath){
     *stabilizationMessage.mutable_last_updated() = TimeUtil::SecondsToTimestamp(time(NULL));
 
     // Write the new message to disk.
-    std::fstream output(outputFilePath, ios::out | ios::trunc | ios::binary);
+    std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
     if (!stabilizationMessage.SerializeToOstream(&output)) {
         cerr << "Failed to write protobuf message." << endl;
         return false;
@@ -240,12 +252,12 @@ void CVStabilization::AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameDa
 }
 
 // Load protobuf data file
-bool CVStabilization::LoadStabilizedData(std::string inputFilePath){
+bool CVStabilization::LoadStabilizedData(){
     // Create stabilization message
     libopenshotstabilize::Stabilization stabilizationMessage;
 
     // Read the existing tracker message.
-    fstream input(inputFilePath, ios::in | ios::binary);
+    fstream input(protobuf_data_path, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
         cerr << "Failed to parse protobuf message." << endl;
         return false;
@@ -260,7 +272,7 @@ bool CVStabilization::LoadStabilizedData(std::string inputFilePath){
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
     
         // Load frame number  
-        int id = pbFrameData.id();
+        size_t id = pbFrameData.id();
 
         // Load camera trajectory data
         float x = pbFrameData.x();
@@ -288,4 +300,62 @@ bool CVStabilization::LoadStabilizedData(std::string inputFilePath){
     google::protobuf::ShutdownProtobufLibrary();
 
     return true;
+}
+
+TransformParam CVStabilization::GetTransformParamData(size_t frameId){
+
+    // Check if the stabilizer info for the requested frame exists
+    if ( transformationData.find(frameId) == transformationData.end() ) {
+        
+        return TransformParam();
+    } else {
+        
+        return transformationData[frameId];
+    }
+}
+
+CamTrajectory CVStabilization::GetCamTrajectoryTrackedData(size_t frameId){
+
+    // Check if the stabilizer info for the requested frame exists
+    if ( trajectoryData.find(frameId) == trajectoryData.end() ) {
+        
+        return CamTrajectory();
+    } else {
+        
+        return trajectoryData[frameId];
+    }
+}
+
+// Load JSON string into this object
+void CVStabilization::SetJson(const std::string value) {
+	// Parse JSON string into JSON objects
+	try
+	{
+		const Json::Value root = openshot::stringToJson(value);
+		// Set all values that match
+
+		SetJsonValue(root);
+	}
+	catch (const std::exception& e)
+	{
+		// Error parsing JSON (or missing keys)
+		// throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+        std::cout<<"JSON is invalid (missing keys or invalid data types)"<<std::endl;
+	}
+}
+
+// Load Json::Value into this object
+void CVStabilization::SetJsonValue(const Json::Value root) {
+
+	// Set data from Json (if key is found)
+	if (!root["protobuf_data_path"].isNull()){
+		protobuf_data_path = (root["protobuf_data_path"].asString());
+	}
+}
+
+// Set desirable smoothing window value to compute stabilization
+void CVStabilization::setSmoothingWindow(int _smoothingWindow){
+    if(!smoothingWindowSet)
+        smoothingWindow = _smoothingWindow;
+    smoothingWindowSet = true;
 }

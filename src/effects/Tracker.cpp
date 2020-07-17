@@ -163,6 +163,7 @@ Json::Value Tracker::JsonValue() const {
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
+	root["protobuf_data_path"] = protobuf_data_path;
 
 	// return JsonValue
 	return root;
@@ -190,6 +191,15 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
+	// Set data from Json (if key is found)
+	if (!root["protobuf_data_path"].isNull()){
+		protobuf_data_path = (root["protobuf_data_path"].asString());
+		
+		if(!LoadTrackedData(protobuf_data_path)){
+			std::cout<<"Invalid protobuf data path";
+			protobuf_data_path = "";
+		}
+	}
 }
 
 // Get all properties for a specific frame

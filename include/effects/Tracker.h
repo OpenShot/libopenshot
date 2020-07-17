@@ -89,7 +89,7 @@ namespace openshot
 	private:
 		/// Init effect settings
 		void init_effect_details();
-
+		std::string protobuf_data_path;
 
 	public:
 

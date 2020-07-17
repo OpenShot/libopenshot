@@ -1,57 +1,78 @@
 #include "../include/ClipProcessingJobs.h"
 
 // Constructor responsible to choose processing type and apply to clip
-ClipProcessingJobs::ClipProcessingJobs(std::string processingType, Clip& videoClip){
+ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string processInfoJson) : 
+processingType(processingType), processInfoJson(processInfoJson){
+}
 
-    // if(processingType == "Stabilize"){
-    //     std::cout<<"Stabilize";
-    //     stabilizeVideo(videoClip);
-    // }
-    // if(processingType == "Track"){
-    //     std::cout<<"Track";
-    //     trackVideo(videoClip);
-    // }
+void ClipProcessingJobs::processClip(Clip& clip){
 
+    // Process clip and save processed data
+    if(processingType == "Stabilizer"){
+        t = std::thread(&ClipProcessingJobs::stabilizeClip, this, std::ref(clip), std::ref(this->processingController));
+    }
+    if(processingType == "Tracker"){
+        t = std::thread(&ClipProcessingJobs::trackClip, this, std::ref(clip), std::ref(this->processingController));
+    }
 }
 
 // Apply object tracking to clip 
-std::string ClipProcessingJobs::trackVideo(Clip& videoClip){
-
-    // Opencv display window
-    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
+void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller){
 
     // Create CVTracker object
-    CVTracker tracker;
+    CVTracker tracker(processInfoJson, controller);
     // Start tracking
-    tracker.trackClip(videoClip);
-    
-    // Save tracking data
-    tracker.SaveTrackedData("/media/brenno/Data/projects/openshot/kcf_tracker.data");
+    tracker.trackClip(clip);
 
-    // Return path to protobuf saved data
-    return "/media/brenno/Data/projects/openshot/kcf_tracker.data";
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save stabilization data
+        tracker.SaveTrackedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+
 }
 
 // Apply stabilization to clip
-std::string ClipProcessingJobs::stabilizeVideo(Clip& videoClip){
+void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& controller){
 	// create CVStabilization object
-	CVStabilization stabilizer; 
+	CVStabilization stabilizer(processInfoJson, controller); 
     // Start stabilization process
-    stabilizer.ProcessClip(videoClip);
+    stabilizer.stabilizeClip(clip);
 
-    // Save stabilization data
-    stabilizer.SaveStabilizedData("/media/brenno/Data/projects/openshot/stabilization.data");
-
-    // Return path to protobuf saved data
-    return "/media/brenno/Data/projects/openshot/stabilization.data";
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save stabilization data
+        stabilizer.SaveStabilizedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
 }
-
 
 int ClipProcessingJobs::GetProgress(){
-    return processingProgress;
+
+    return (int)processingController.GetProgress();
 }
 
+bool ClipProcessingJobs::IsDone(){
+
+    if(processingController.GetFinished()){
+        t.join();
+    }
+    return processingController.GetFinished();
+}
 
 void ClipProcessingJobs::CancelProcessing(){
-    stopProcessing = true;
+    processingController.CancelProcessing();
 }

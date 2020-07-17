@@ -30,15 +30,14 @@
 
 #include "../include/CVTracker.h"
 
-/// Class constructors
-// Expects a tracker type, if none is passed, set default as KCF
-CVTracker::CVTracker(std::string trackerType) : trackerType(trackerType){   
-}
-CVTracker::CVTracker() : trackerType("KCF"){
+// Constructor
+CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
+: processingController(&processingController){   
+    SetJson(processInfoJson);
 }
 
 // Set desirable tracker method
-cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
+cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
     cv::Ptr<cv::Tracker> t;
 
     if (trackerType == "BOOSTING")
@@ -61,20 +60,28 @@ cv::Ptr<cv::Tracker> CVTracker::select_tracker(std::string trackerType){
     return t;
 }
 
-// Track object in the hole clip
-void CVTracker::trackClip(openshot::Clip& video){
-    // Opencv display window
-    cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
-    // Create Tracker
+// Track object in the hole clip or in a given interval
+void CVTracker::trackClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
 
     bool trackerInit = false;
-    int videoLenght = video.Reader()->info.video_length;
+    size_t frame;
+
+    if(!process_interval || end == 0 || end-start <= 0){
+        // Get total number of frames in video
+        end = video.Reader()->info.video_length;
+    }
 
     // Loop through video
-    for (long int frame = 0; frame < videoLenght; frame++)
+    for (frame = start; frame < end; frame++)
     {
-        std::cout<<"frame: "<<frame<<"\n";
-        int frame_number = frame;
+
+        // Stop the feature tracker process
+        if(processingController->ShouldStop()){
+            return;
+        }
+
+        std::cout<<"Frame: "<<frame<<"\n";
+        size_t frame_number = frame;
         // Get current frame
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
         
@@ -83,13 +90,9 @@ void CVTracker::trackClip(openshot::Clip& video){
 
         // Pass the first frame to initialize the tracker
         if(!trackerInit){
-            // Select the object to be tracked
-            cv::Rect2d bbox = cv::selectROI("Display Image", cvimage);
             
             // Initialize the tracker
-            initTracker(bbox, cvimage, frame_number);
-            // Draw in the frame the box containing the object
-            cv::rectangle(cvimage, bbox, cv::Scalar( 255, 0, 0 ), 2, 1 );
+            initTracker(cvimage, frame_number);
 
             trackerInit = true;
         }
@@ -100,26 +103,17 @@ void CVTracker::trackClip(openshot::Clip& video){
             // Draw box on image
             FrameData fd = GetTrackedData(frame_number);
 
-            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-            cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
-        
-        // Show tracking process
-        cv::imshow("Display Image", cvimage);
-        // Press ESC on keyboard to exit
-        char c=(char)cv::waitKey(1);
-        if(c==27)
-            break;
-
+        // Update progress
+        processingController->SetProgress(uint(100*frame_number/end));
     }
 }
 
 // Initialize the tracker
-bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId){
-    // Set initial bounding box coords
-    bbox = initial_bbox; 
+bool CVTracker::initTracker(cv::Mat &frame, size_t frameId){
+
     // Create new tracker object
-    tracker = select_tracker(trackerType);
+    tracker = selectTracker(trackerType);
 
     // Initialize tracker
     tracker->init(frame, bbox);
@@ -131,7 +125,7 @@ bool CVTracker::initTracker(cv::Rect2d initial_bbox, cv::Mat &frame, int frameId
 }
 
 // Update the object tracker according to frame 
-bool CVTracker::trackFrame(cv::Mat &frame, int frameId){
+bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
     // Update the tracking result
     bool ok = tracker->update(frame, bbox);
 
@@ -151,12 +145,12 @@ bool CVTracker::trackFrame(cv::Mat &frame, int frameId){
     return ok;
 }
 
-bool CVTracker::SaveTrackedData(std::string outputFilePath){
+bool CVTracker::SaveTrackedData(){
     // Create tracker message
     libopenshottracker::Tracker trackerMessage;
 
     // Iterate over all frames data and save in protobuf message
-    for(std::map<int,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
+    for(std::map<size_t,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
         FrameData fData = it->second;
         libopenshottracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
@@ -167,7 +161,7 @@ bool CVTracker::SaveTrackedData(std::string outputFilePath){
 
     {
         // Write the new message to disk.
-        std::fstream output(outputFilePath, ios::out | ios::trunc | ios::binary);
+        std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
         if (!trackerMessage.SerializeToOstream(&output)) {
         cerr << "Failed to write protobuf message." << endl;
         return false;
@@ -197,13 +191,13 @@ void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, Fram
 }
 
 // Load protobuf data file
-bool CVTracker::LoadTrackedData(std::string inputFilePath){
+bool CVTracker::LoadTrackedData(){
     // Create tracker message
     libopenshottracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
+        fstream input(protobuf_data_path, ios::in | ios::binary);
         if (!trackerMessage.ParseFromIstream(&input)) {
             cerr << "Failed to parse protobuf message." << endl;
             return false;
@@ -214,11 +208,11 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
     trackedDataById.clear();
 
     // Iterate over all frames of the saved message
-    for (int i = 0; i < trackerMessage.frame_size(); i++) {
+    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
         const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data
-        int id = pbFrameData.id();
+        size_t id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
         // Load bounding box data
@@ -244,7 +238,7 @@ bool CVTracker::LoadTrackedData(std::string inputFilePath){
 }
 
 // Get tracker info for the desired frame 
-FrameData CVTracker::GetTrackedData(int frameId){
+FrameData CVTracker::GetTrackedData(size_t frameId){
 
     // Check if the tracker info for the requested frame exists
     if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
@@ -255,4 +249,42 @@ FrameData CVTracker::GetTrackedData(int frameId){
         return trackedDataById[frameId];
     }
 
+}
+
+// Load JSON string into this object
+void CVTracker::SetJson(const std::string value) {
+	// Parse JSON string into JSON objects
+	try
+	{
+		const Json::Value root = openshot::stringToJson(value);
+		// Set all values that match
+
+		SetJsonValue(root);
+	}
+	catch (const std::exception& e)
+	{
+		// Error parsing JSON (or missing keys)
+		// throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+        std::cout<<"JSON is invalid (missing keys or invalid data types)"<<std::endl;
+	}
+}
+
+// Load Json::Value into this object
+void CVTracker::SetJsonValue(const Json::Value root) {
+    
+	// Set data from Json (if key is found)
+	if (!root["protobuf_data_path"].isNull()){
+		protobuf_data_path = (root["protobuf_data_path"].asString());
+	}
+    if (!root["tracker_type"].isNull()){
+		trackerType = (root["tracker_type"].asString());
+	}
+    if (!root["bbox"].isNull()){
+        double x = root["bbox"]["x"].asDouble();
+        double y = root["bbox"]["y"].asDouble();
+        double w = root["bbox"]["w"].asDouble();
+        double h = root["bbox"]["h"].asDouble();
+        cv::Rect2d prev_bbox(x,y,w,h);
+        bbox = prev_bbox;
+	}
 }

@@ -41,31 +41,42 @@
     #include "CVTracker.h"
 #endif
 
+#include <thread>
+#include "ProcessingController.h"
 #include "Clip.h"
 
 using namespace openshot;
 
 // Constructor responsible to choose processing type and apply to clip
 class ClipProcessingJobs{
-
 	private:
-		int processingProgress;
+		std::string processInfoJson;
+		std::string processingType;
+
 		bool processingDone = false;
 		bool stopProcessing = false;
+		uint processingProgress = 0;
 
-	public:
-		ClipProcessingJobs(std::string processingType, Clip& videoClip);
+		std::thread t;
 
-		int GetProgress();
-
-		void CancelProcessing();	
+		/// Will handle a Thread saflly comutication between ClipProcessingJobs and the processing effect classes
+		ProcessingController processingController;
 
 		// Apply object tracking to clip 
-		std::string trackVideo(Clip& videoClip);
+		void trackClip(Clip& clip, ProcessingController& controller);
 		// Apply stabilization to clip
-		std::string stabilizeVideo(Clip& videoClip);	
+		void stabilizeClip(Clip& clip, ProcessingController& controller);
 
 
+	public:
+		// Constructor
+		ClipProcessingJobs(std::string processingType, std::string processInfoJson);
+		// Process clip accordingly to processingType	
+		void processClip(Clip& clip);
 
+		// Thread related variables and methods
+		int GetProgress();
+		bool IsDone();
+		void CancelProcessing();
 
 };

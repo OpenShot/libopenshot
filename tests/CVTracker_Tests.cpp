@@ -33,7 +33,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
-
+#include "../include/ProcessingController.h"
 #include <QImage>
 
 using namespace openshot;
@@ -41,93 +41,88 @@ using namespace openshot;
 SUITE(CVTracker_Tests)
 {
 
-TEST(Track_Video)
-{
-	// Create a video clip
-	std::stringstream path;
-	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
-	openshot::FFmpegReader c1(path.str());
-	c1.Open();
+    // Just for the tracker constructor, it won't be used
+    ProcessingController processingController;
 
-	// Create Tracker
-    CVTracker kcfTracker;
-	bool trackerInit = false;
-	cv::Rect2d lastTrackedBox;
-
-	for (long int frame = 71; frame <= 97; frame++)
+    TEST(Track_Video)
     {
-		int frame_number = frame;
-        std::shared_ptr<openshot::Frame> f = c1.GetFrame(frame_number);
-        
-        // Grab Mat image
-        cv::Mat cvimage = f->GetImageCV();
+        // Create a video clip
+        std::stringstream path;
+        path << TEST_MEDIA_PATH << "test.avi";
 
-		if(!trackerInit){
-            cv::Rect2d bbox(82, 194, 47, 42);
-            kcfTracker.initTracker(bbox, cvimage, frame_number);
-            trackerInit = true;
-        }
-        else{
-            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
-			FrameData fd = kcfTracker.GetTrackedData(frame_number);
-            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-			lastTrackedBox = box;
-		}
-	}
+        // Open clip
+        openshot::Clip c1(path.str());
+        c1.Open();
 
-	CHECK_EQUAL(27, lastTrackedBox.x);
-	CHECK_EQUAL(233, lastTrackedBox.y);
-	CHECK_EQUAL(47, lastTrackedBox.width);
-	CHECK_EQUAL(42, lastTrackedBox.height);
-}
+        // Create tracker
+        CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
+
+        // Track clip for frames 0-20
+        kcfTracker.trackClip(c1, 0, 20+1, true);
+
+        // Get tracked data
+        FrameData fd = kcfTracker.GetTrackedData(20);
+
+        int x = fd.x1;
+        int y = fd.y1;
+        int width = fd.x2-fd.x1;
+        int height = fd.y2-fd.y1;
+
+        // Compare if tracked data is equal to pre-tested ones
+        CHECK_EQUAL(260, x);
+        CHECK_EQUAL(132, y);
+        CHECK_EQUAL(180, width);
+        CHECK_EQUAL(166, height);
+    }
 
 
-TEST(SaveLoad_Protobuf)
-{
-	// Create a video clip
-	std::stringstream path;
-	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
-	Clip c1(path.str());
-	c1.Open();
-
-	// Create Tracker
-    CVTracker kcfTracker;
-	bool trackerInit = false;
-	cv::Rect2d lastTrackedBox;
-
-	for (long int frame = 71; frame <= 97; frame++)
+    TEST(SaveLoad_Protobuf)
     {
-		int frame_number = frame;
-        std::shared_ptr<openshot::Frame> f = c1.GetFrame(frame_number);
-        
-        // Grab Mat image
-        cv::Mat cvimage = f->GetImageCV();
 
-		if(!trackerInit){
-            cv::Rect2d bbox(82, 194, 47, 42);
-            kcfTracker.initTracker(bbox, cvimage, frame_number);
-            trackerInit = true;
-        }
-        else{
-            trackerInit = kcfTracker.trackFrame(cvimage, frame_number);
-			FrameData fd = kcfTracker.GetTrackedData(frame_number);
-            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-			lastTrackedBox = box;
-		}
-	}
+        // Create a video clip
+        std::stringstream path;
+        path << TEST_MEDIA_PATH << "test.avi";
 
-	kcfTracker.SaveTrackedData("kcf_tracker.data");
+        // Open clip
+        openshot::Clip c1(path.str());
+        c1.Open();
 
-	// Create new tracker
-    CVTracker kcfTracker1;
-	kcfTracker1.LoadTrackedData("kcf_tracker.data");
-	FrameData fd = kcfTracker.GetTrackedData(97);
-    cv::Rect2d loadedBox(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+        // Create first tracker
+        CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
 
-	CHECK_EQUAL(loadedBox.x, lastTrackedBox.x);
-	CHECK_EQUAL(loadedBox.y, lastTrackedBox.y);
-	CHECK_EQUAL(loadedBox.width, lastTrackedBox.width);
-	CHECK_EQUAL(loadedBox.height, lastTrackedBox.height);
-}
+        // Track clip for frames 0-20
+        kcfTracker_1.trackClip(c1, 0, 20+1, true);
+
+        // Get tracked data
+        FrameData fd_1 = kcfTracker_1.GetTrackedData(20);
+
+        int x_1 = fd_1.x1;
+        int y_1 = fd_1.y1;
+        int width_1 = fd_1.x2-fd_1.x1;
+        int height_1 = fd_1.y2-fd_1.y1;
+
+        // Save tracked data
+        kcfTracker_1.SaveTrackedData();
+
+        // Create second tracker
+        CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"\", \"bbox\": {\"x\": -1, \"y\": -1, \"w\": -1, \"h\": -1}}", processingController);
+
+        // Load tracked data from first tracker protobuf data
+        kcfTracker_2.LoadTrackedData();
+
+        // Get tracked data
+        FrameData fd_2 = kcfTracker_2.GetTrackedData(20);
+
+        int x_2 = fd_2.x1;
+        int y_2 = fd_2.y1;
+        int width_2 = fd_2.x2-fd_2.x1;
+        int height_2 = fd_2.y2-fd_2.y1;
+
+        // Compare first tracker data with second tracker data
+        CHECK_EQUAL(x_1, x_2);
+        CHECK_EQUAL(y_1, y_2);
+        CHECK_EQUAL(width_1, width_2);
+        CHECK_EQUAL(height_1, height_2);
+    }
 
 } // SUITE(Frame_Tests)

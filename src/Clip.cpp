@@ -914,28 +914,14 @@ void Clip::SetJsonValue(const Json::Value root) {
 			EffectBase *e = NULL;
 			if (!existing_effect["type"].isNull()) {
 
-				std::vector<std::string> pEffects{"Stabilizer", "Tracker"};
-				std::string effectName = existing_effect["type"].asString();
+				// Create instance of effect
+				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
+					
+					// Load Json into Effect
+					e->SetJsonValue(existing_effect);
 
-				if(std::find(pEffects.begin(), pEffects.end(), effectName) == pEffects.end()){
-					// Create instance of effect
-					if ( (e = EffectInfo().CreateEffect(effectName))) {
-						
-						// Load Json into Effect
-						e->SetJsonValue(existing_effect);
-
-						// Add Effect to Timeline
-						AddEffect(e);
-					}
-				}
-				else{
-					if ( (e = EffectInfo().CreateEffect(effectName, existing_effect["protobuf_data_path"].asString()))) {
-						// Load Json into Effect
-						e->SetJsonValue(existing_effect);
-
-						// Add Effect to Timeline
-						AddEffect(e);
-					}
+					// Add Effect to Timeline
+					AddEffect(e);
 				}
 			}
 		}
