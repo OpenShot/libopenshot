@@ -191,8 +191,7 @@ set(OPENSHOT_SOURCES
 set(OPENSHOT_CV_SOURCES
   CVTracker.cpp
   CVStabilization.cpp
-  ClipProcessingJobs.cpp
-  CVObjectDetection.cpp)
+  ClipProcessingJobs.cpp)
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
