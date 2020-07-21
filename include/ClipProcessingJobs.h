@@ -59,7 +59,7 @@ class ClipProcessingJobs{
 
 		std::thread t;
 
-		/// Will handle a Thread saflly comutication between ClipProcessingJobs and the processing effect classes
+		/// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 		ProcessingController processingController;
 
 		// Apply object tracking to clip 

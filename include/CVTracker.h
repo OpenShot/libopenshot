@@ -61,7 +61,7 @@ class CVTracker {
 
     uint progress; // Pre-processing effect progress
 
-    /// Will handle a Thread saflly comutication between ClipProcessingJobs and the processing effect classes
+    /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
     ProcessingController *processingController;
 
     // Initialize the tracker

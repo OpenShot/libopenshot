@@ -79,6 +79,8 @@ struct CamTrajectory
 class CVStabilization {      
 
     private:
+
+    int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
     
     cv::Mat last_T;
     cv::Mat cur, cur_grey;
@@ -86,11 +88,9 @@ class CVStabilization {
     std::vector <TransformParam> prev_to_cur_transform; // Previous to current 
     std::string protobuf_data_path;
 
-    bool smoothingWindowSet = false;
-
     uint progress;
 
-    /// Will handle a Thread saflly comutication between ClipProcessingJobs and the processing effect classes
+    /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 	ProcessingController *processingController;
 
     // Track current frame features and find the relative transformation
@@ -104,15 +104,11 @@ class CVStabilization {
 
     public:
 
-    int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
     std::map <size_t,CamTrajectory> trajectoryData; // Save camera trajectory data
     std::map <size_t,TransformParam> transformationData; // Save transormation data
 
     // Set default smoothing window value to compute stabilization 
     CVStabilization(std::string processInfoJson, ProcessingController &processingController);
-
-    // Set desirable smoothing window value to compute stabilization
-    void setSmoothingWindow(int _smoothingWindow);
 
     // Process clip and store necessary stabilization data
     void stabilizeClip(openshot::Clip& video, size_t start=0, size_t end=0, bool process_interval=false);

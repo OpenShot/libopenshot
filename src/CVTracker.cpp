@@ -64,15 +64,15 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
 void CVTracker::trackClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
 
     bool trackerInit = false;
-    size_t frame;
 
+    size_t frame;
     if(!process_interval || end == 0 || end-start <= 0){
         // Get total number of frames in video
         end = video.Reader()->info.video_length;
     }
 
     // Loop through video
-    for (frame = start; frame < end; frame++)
+    for (frame = start; frame <= end; frame++)
     {
 
         // Stop the feature tracker process

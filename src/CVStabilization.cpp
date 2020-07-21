@@ -32,16 +32,14 @@
 
 // Set default smoothing window value to compute stabilization 
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
-: smoothingWindow(30), processingController(&processingController){
+: processingController(&processingController){
     SetJson(processInfoJson);
 }
 
 // Process clip and store necessary stabilization data
 void CVStabilization::stabilizeClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
+
     size_t frame_number;
-
-    smoothingWindowSet = true; // Certificate that smoothing window value won't change 
-
     if(!process_interval || end == 0 || end-start <= 0){
         // Get total number of frames in video
         end = video.Reader()->info.video_length;
@@ -351,11 +349,7 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
 	}
-}
-
-// Set desirable smoothing window value to compute stabilization
-void CVStabilization::setSmoothingWindow(int _smoothingWindow){
-    if(!smoothingWindowSet)
-        smoothingWindow = _smoothingWindow;
-    smoothingWindowSet = true;
+    if (!root["smoothing_window"].isNull()){
+		smoothingWindow = (root["smoothing_window"].asInt());
+	}
 }

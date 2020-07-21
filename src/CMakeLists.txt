@@ -97,6 +97,29 @@ if (OpenCV_FOUND)
   endif()
   
   include_directories(${PROTOBUF_INCLUDE_DIR})
+
+  set(PROTOBUF_MESSAGES_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/protobuf_messages")
+
+  FILE(GLOB PROTO_MSGS "${PROTOBUF_MESSAGES_FOLDER}/*.proto")
+  foreach(PROTO_MSG ${PROTO_MSGS})
+    execute_process (
+      COMMAND bash -c "${PROTOBUF_PROTOC_EXECUTABLE} -I=${PROTOBUF_MESSAGES_FOLDER} --cpp_out=${PROTOBUF_MESSAGES_FOLDER} ${PROTO_MSG}"
+    )
+  endforeach()
+
+  FILE(GLOB PROTO_CCS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.cc")
+  foreach(PROTO_CC ${PROTO_CCS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_CC} ${CMAKE_CURRENT_SOURCE_DIR})
+    file(REMOVE ${PROTO_CC})
+  endforeach()
+  
+  FILE(GLOB PROTO_HS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.h")
+  foreach(PROTO_H ${PROTO_HS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_H} ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+    file(REMOVE ${PROTO_H})
+  endforeach()
+  
+
 endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
@@ -195,8 +218,9 @@ set(OPENSHOT_CV_SOURCES
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
-  trackerdata.pb.cc
-  stabilizedata.pb.cc)
+    stabilizedata.pb.cc
+    trackerdata.pb.cc
+    )
 
 # Video effects
 set(EFFECTS_SOURCES

@@ -42,7 +42,7 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../trackerdata.pb.h"
+#include "trackerdata.pb.h"
 
 using namespace std;
 using google::protobuf::util::TimeUtil;
