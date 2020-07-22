@@ -63,7 +63,7 @@ void Stabilizer::init_effect_details()
 	info.has_audio = false;
 	info.has_video = true;
 	protobuf_data_path = "";
-
+	zoom = 1.0;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -79,6 +79,8 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 		// Check if track data exists for the requested frame
 		if(transformationData.find(frame_number) != transformationData.end()){
+
+			float zoom_value = zoom.GetValue(frame_number);
 			
 			// Create empty rotation matrix
 			cv::Mat T(2,3,CV_64F);
@@ -97,7 +99,7 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 			cv::warpAffine(frame_image, frame_stabilized, T, frame_image.size());
 
 			// Scale up the image to remove black borders
-			cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
+			cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, zoom_value); 
 			cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
 			frame_image = frame_stabilized;
 		}
@@ -178,6 +180,7 @@ Json::Value Stabilizer::JsonValue() const {
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
+	root["zoom"] = zoom.JsonValue();
 
 	// return JsonValue
 	return root;
@@ -215,6 +218,8 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 			protobuf_data_path = "";
 		}
 	}
+	if(!root["zoom"].isNull())
+		zoom.SetJsonValue(root["zoom"]);
 }
 
 // Get all properties for a specific frame
@@ -228,6 +233,8 @@ std::string Stabilizer::PropertiesJSON(int64_t requested_frame) const {
 	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+
+	root["zoom"] = add_property_json("Zoom", zoom.GetValue(requested_frame), "float", "", &zoom, 0.0, 2.0, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

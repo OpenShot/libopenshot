@@ -71,6 +71,16 @@ void displayClip(openshot::Clip &r9){
     cv::destroyAllWindows();
 }
 
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+The following methods are just for getting JSON info to the pre-processing effects
+
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+*/
+
+
 // Return JSON string for the tracker effect
 string trackerJson(cv::Rect2d r, bool onlyProtoPath){
     // Set the tracker
@@ -106,6 +116,16 @@ string stabilizerJson(bool onlyProtoPath){
     // Return all the parameters for the pre-processing effect
     else
         return "{" + protobuf_data_path + ", " + smoothing_window.str() + "}";
+}
+
+string objectDetectionJson(bool onlyProtoPath){
+
+    // Construct all the composition of the JSON string
+    string protobuf_data_path = "\"protobuf_data_path\": \"example_object_detection.data\"";
+
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
 }
 
 int main(int argc, char* argv[]) {

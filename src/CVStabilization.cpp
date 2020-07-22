@@ -51,7 +51,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
     }
 
     // Extract and track opticalflow features for each frame
-    for (frame_number = start; frame_number < end; frame_number++)
+    for (frame_number = start; frame_number <= end; frame_number++)
     {
         // Stop the feature tracker process
         if(processingController->ShouldStop()){
@@ -67,7 +67,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
         TrackFrameFeatures(cvimage, frame_number);
 
         // Update progress
-        processingController->SetProgress(uint(100*frame_number/end));
+        processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
     }
 
     // Calculate trajectory data

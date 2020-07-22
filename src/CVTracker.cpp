@@ -77,7 +77,7 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
     }
 
     // Loop through video
-    for (frame = start; frame < end; frame++)
+    for (frame = start; frame <= end; frame++)
     {
 
         // Stop the feature tracker process
@@ -110,7 +110,7 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
 
         }
         // Update progress
-        processingController->SetProgress(uint(100*frame_number/end));
+        processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
     }
 }
 

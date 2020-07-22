@@ -90,6 +90,7 @@ namespace openshot
 		/// Init effect settings
 		void init_effect_details();
 		std::string protobuf_data_path;
+		Keyframe zoom;
 
 	public:
 	std::string teste;
