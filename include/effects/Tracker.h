@@ -50,7 +50,7 @@ using google::protobuf::util::TimeUtil;
 
 // Tracking info struct
 struct EffectFrameData{
-  int frame_id = -1;
+  size_t frame_id = -1;
   float rotation = 0;
   int x1 = -1;
   int y1 = -1;

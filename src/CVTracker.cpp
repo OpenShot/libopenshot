@@ -61,18 +61,23 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
 }
 
 // Track object in the hole clip or in a given interval
-void CVTracker::trackClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
+void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
 
+    start = _start; end = _end;
+
+    video.Open();
+    
     bool trackerInit = false;
 
     size_t frame;
     if(!process_interval || end == 0 || end-start <= 0){
         // Get total number of frames in video
-        end = video.Reader()->info.video_length;
+        start = video.Start() * video.Reader()->info.fps.ToInt();
+        end = video.End() * video.Reader()->info.fps.ToInt();
     }
 
     // Loop through video
-    for (frame = start; frame <= end; frame++)
+    for (frame = start; frame < end; frame++)
     {
 
         // Stop the feature tracker process
@@ -264,8 +269,7 @@ void CVTracker::SetJson(const std::string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		// throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-        std::cout<<"JSON is invalid (missing keys or invalid data types)"<<std::endl;
+		throw openshot::InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 

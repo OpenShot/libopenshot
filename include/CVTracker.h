@@ -64,6 +64,9 @@ class CVTracker {
     /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
     ProcessingController *processingController;
 
+    size_t start;
+    size_t end;
+
     // Initialize the tracker
     bool initTracker(cv::Mat &frame, size_t frameId);
     
@@ -80,7 +83,7 @@ class CVTracker {
 
     // Track object in the hole clip or in a given interval
     // If start, end and process_interval are passed as argument, clip will be processed in [start,end) 
-    void trackClip(openshot::Clip& video, size_t start=0, size_t end=0, bool process_interval=false);
+    void trackClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
 
     // Get tracked data for a given frame
     FrameData GetTrackedData(size_t frameId);

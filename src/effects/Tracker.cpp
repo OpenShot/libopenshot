@@ -109,11 +109,11 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     trackedDataById.clear();
 
     // Iterate over all frames of the saved message
-    for (int i = 0; i < trackerMessage.frame_size(); i++) {
+    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
         const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data
-        int id = pbFrameData.id();
+        size_t id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
         // Load bounding box data
