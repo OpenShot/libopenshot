@@ -82,6 +82,9 @@ class CVStabilization {
 
     int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
     
+    size_t start;
+    size_t end;
+    
     cv::Mat last_T;
     cv::Mat cur, cur_grey;
     cv::Mat prev, prev_grey;
@@ -111,7 +114,7 @@ class CVStabilization {
     CVStabilization(std::string processInfoJson, ProcessingController &processingController);
 
     // Process clip and store necessary stabilization data
-    void stabilizeClip(openshot::Clip& video, size_t start=0, size_t end=0, bool process_interval=false);
+    void stabilizeClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
     
     /// Protobuf Save and Load methods
     // Save stabilization data to protobuf file

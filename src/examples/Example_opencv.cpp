@@ -31,153 +31,160 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <google/protobuf/util/time_util.h>
 #include "../../include/CVTracker.h"
 #include "../../include/CVStabilization.h"
-#include "../../include/trackerdata.pb.h"
 
 #include "../../include/OpenShot.h"
 #include "../../include/CrashHandler.h"
 
 using namespace openshot;
-// using namespace cv;
+using namespace std;
 
-// void displayTrackedData(openshot::Clip &r9){
-//     // Opencv display window
-//     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
-    
-//     // Create Tracker
-//     CVTracker kcfTracker;
-//     // Load saved data
-//     if(!kcfTracker.LoadTrackedData("kcf_tracker.data")){
-//         std::cout<<"Was not possible to load the tracked data\n";
-//         return;
-//     }
-
-//     for (long int frame = 1200; frame <= 1600; frame++)
-//     {
-//         int frame_number = frame;
-//         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        
-//         // Grab Mat image
-//         cv::Mat cvimage = f->GetImageCV();
-
-//         FrameData fd = kcfTracker.GetTrackedData(frame_number);
-//         cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
-//         cv::rectangle(cvimage, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
-    
-//         cv::imshow("Display Image", cvimage);
-//         // Press  ESC on keyboard to exit
-//         char c=(char)cv::waitKey(25);
-//         if(c==27)
-//             break;
-//     }
-
-// }
-
-
+// Show the pre-processed clip on the screen
 void displayClip(openshot::Clip &r9){
+
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
     
+    // Get video lenght
     int videoLenght = r9.Reader()->info.video_length;
 
+    // Loop through the clip and show it with the effects, if any
     for (long int frame = 0; frame < videoLenght; frame++)
     {
         int frame_number = frame;
+        // Get the frame
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
-        // Grab Mat image
+        // Grab OpenCV::Mat image
         cv::Mat cvimage = f->GetImageCV();
+        // Convert color scheme from RGB (QImage scheme) to BGR (OpenCV scheme) 
+        cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2BGR);
+        // Display the frame
         cv::imshow("Display Image", cvimage);
-        // Press  ESC on keyboard to exit
+
+        // Press ESC on keyboard to exit
         char c=(char)cv::waitKey(25);
         if(c==27)
             break;
     }
+    // Destroy all remaining windows
+    cv::destroyAllWindows();
+}
 
+// Return JSON string for the tracker effect
+string trackerJson(cv::Rect2d r, bool onlyProtoPath){
+    // Set the tracker
+    string tracker = "KCF";
+
+    // Construct all the composition of the JSON string
+    string trackerType = "\"tracker_type\": \"" + tracker + "\"";
+    string protobuf_data_path = "\"protobuf_data_path\": \"kcf_tracker.data\"";
+    stringstream bboxCoords;
+    bboxCoords << "\"bbox\": {\"x\":"<<r.x<<", \"y\": "<<r.y<<", \"w\": "<<r.width<<", \"h\": "<<r.height<<"}";
+    
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
+    // Return all the parameters for the pre-processing effect
+    else
+        return "{" + protobuf_data_path + ", " + trackerType + ", " + bboxCoords.str() + "}";
+}
+
+// Return JSON string for the stabilizer effect
+string stabilizerJson(bool onlyProtoPath){
+    // Set smoothing window value
+    int smoothingWindow = 30;
+
+    // Construct all the composition of the JSON string
+    string protobuf_data_path = "\"protobuf_data_path\": \"example_stabilizer.data\"";
+    stringstream smoothing_window;
+    smoothing_window << "\"smoothing_window\": "<< smoothingWindow;
+
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
+    // Return all the parameters for the pre-processing effect
+    else
+        return "{" + protobuf_data_path + ", " + smoothing_window.str() + "}";
 }
 
 int main(int argc, char* argv[]) {
 
-    // bool TRACK_DATA = true;
-    // bool LOAD_TRACKED_DATA = false;
-    // bool SMOOTH_VIDEO = false;
-    // bool LOAD_SMOOTH_DATA = false;
-    // bool OBJECT_DETECTION_DATA = false;
-    // bool LOAD_OBJECT_DETECTION = false;
+    // Set pre-processing effects
+    bool TRACK_DATA = false;
+    bool SMOOTH_VIDEO = true;
+    bool OBJECT_DETECTION_DATA = false;
 
-    // std::string input_filepath = TEST_MEDIA_PATH;
-    // input_filepath = "../../src/examples/test.avi";
+    // Get media path
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "test.avi";
 
-    // openshot::Clip r9(input_filepath);
-    // r9.Open();
+    // Thread controller just for the pre-processing constructors, it won't be used
+    ProcessingController processingController;
 
-    // if(TRACK_DATA)
-    //     // ClipProcessingJobs clipProcessing("Track", r9);
-    // if(LOAD_TRACKED_DATA){
-    //     /***/
-    // }
-    // if(SMOOTH_VIDEO)
-    //     // ClipProcessingJobs clipProcessing("Stabilize", r9);
-    // if(LOAD_SMOOTH_DATA){
-    //     /***/
-    // }
-    // if(OBJECT_DETECTION_DATA){
-    //     // CVObjectDetection objectDetection("GPU");
-    //     // objectDetection.ProcessClip(r9);
-    // }
-    // displayClip(r9);
+    // Open clip
+    openshot::Clip r9(path.str());
+    r9.Open();
 
-    // // Close timeline
-    // r9.Close();
+    // Aplly tracking effect on the clip
+    if(TRACK_DATA){
 
-    // // Create a video clip
-    // std::stringstream path;
-    // path << TEST_MEDIA_PATH << "test.avi";
+        // Take the bounding box coordinates
+        cv::Mat roi = r9.GetFrame(0)->GetImageCV();
+        cv::Rect2d r = cv::selectROI(roi);
+        cv::destroyAllWindows();
 
-    // // Open clip
-    // openshot::Clip c1(path.str());
-    // c1.Open();
+        // Create a tracker object by passing a JSON string and a thread controller, this last one won't be used
+        // JSON info: path to save the tracked data, type of tracker and bbox coordinates
+        CVTracker tracker(trackerJson(r, false), processingController);
 
-    // // Create first tracker
-    // CVStabilization stabilizer("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}");
+        // Start the tracking
+        tracker.trackClip(r9);
+        // Save the tracked data
+        tracker.SaveTrackedData();
 
-    // // Track clip for frames 0-20
-    // stabilizer.stabilizeClip(c1, 0, 20+1, true);
+        // Create a tracker effect
+        EffectBase* e = EffectInfo().CreateEffect("Tracker");
 
-    // // Create empty rotation matrix
-    // for(long int frame_number=0; frame_number<=20; frame_number++){
-    //     cv::Mat frame_image = c1.GetFrame(frame_number)->GetImageCV();
-    //     cv::Mat T(2,3,CV_64F);
+        // Pass a JSON string with the saved tracked data
+        // The effect will read and save the tracking in a map::<frame,data_struct>
+        e->SetJson(trackerJson(r, true));
+        // Add the effect to the clip
+        r9.AddEffect(e);
+    }
 
-    //     // Get tracked data
-    //     TransformParam tp = stabilizer.GetTransformParamData(frame_number);
-    //     CamTrajectory ct = stabilizer.GetCamTrajectoryTrackedData(frame_number);
-        
-    //     // Set rotation matrix values
-    //     T.at<double>(0,0) = cos(tp.da);
-    //     T.at<double>(0,1) = -sin(tp.da);
-    //     T.at<double>(1,0) = sin(tp.da);
-    //     T.at<double>(1,1) = cos(tp.da);
+    // Aplly stabilizer effect on the clip
+    if(SMOOTH_VIDEO){
 
-    //     T.at<double>(0,2) = tp.dx;
-    //     T.at<double>(1,2) = tp.dy;
+        // Create a stabilizer object by passing a JSON string and a thread controller, this last one won't be used
+        // JSON info: path to save the stabilized data and smoothing window value
+        CVStabilization stabilizer(stabilizerJson(false), processingController);
 
-    //     // Apply rotation matrix to image
-    //     cv::Mat frame_stabilized;
-    //     cv::warpAffine(frame_image, frame_stabilized, T, frame_image.size());
+        // Start the stabilization
+        stabilizer.stabilizeClip(r9);
+        // Save the stabilization data
+        stabilizer.SaveStabilizedData();
 
-    //     // Scale up the image to remove black borders
-    //     cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, 1.04); 
-    //     cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size());
+        // Create a stabilizer effect
+        EffectBase* e = EffectInfo().CreateEffect("Stabilizer");
 
-    //     std::cout<<tp.dx<<" "<<tp.dy<<" "<<tp.da<<" "<<ct.x<<" "<<ct.y<<" "<<ct.a<<std::endl;
+        // Pass a JSON string with the saved stabilized data
+        // The effect will read and save the stabilization in a map::<frame,data_struct>
+        e->SetJson(stabilizerJson(true));
+        // Add the effect to the clip
+        r9.AddEffect(e);
+    }
 
-    //     cv::imshow("teste", frame_stabilized);
-    //     cv::waitKey(25);
-    // }
-    // cv::destroyAllWindows();
+    if(OBJECT_DETECTION_DATA){
+        // CVObjectDetection objectDetection("GPU");
+        // objectDetection.ProcessClip(r9);
+    }
 
+    // Show the pre-processed clip on the screen
+    displayClip(r9);
+
+    // Close timeline
+    r9.Close();
 
 	std::cout << "Completed successfully!" << std::endl;
 

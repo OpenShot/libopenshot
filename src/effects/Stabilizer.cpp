@@ -132,7 +132,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
     
         // Load frame number  
-        int id = pbFrameData.id();
+        size_t id = pbFrameData.id();
 
         // Load camera trajectory data
         float x = pbFrameData.x();
@@ -148,7 +148,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         float da = pbFrameData.da();
 
         // Assing data to transformation map
-        transformationData[i] = EffectTransformParam(dx,dy,da);
+        transformationData[id] = EffectTransformParam(dx,dy,da);
     }
 
     // Show the time stamp from the last update in stabilization data file  

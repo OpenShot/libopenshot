@@ -37,16 +37,21 @@ CVStabilization::CVStabilization(std::string processInfoJson, ProcessingControll
 }
 
 // Process clip and store necessary stabilization data
-void CVStabilization::stabilizeClip(openshot::Clip& video, size_t start, size_t end, bool process_interval){
+void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
+
+    start = _start; end = _end;
+
+    video.Open();
 
     size_t frame_number;
     if(!process_interval || end == 0 || end-start <= 0){
         // Get total number of frames in video
-        end = video.Reader()->info.video_length;
+        start = video.Start() * video.Reader()->info.fps.ToInt();
+        end = video.End() * video.Reader()->info.fps.ToInt();
     }
 
     // Extract and track opticalflow features for each frame
-    for (frame_number = start; frame_number <= end; frame_number++)
+    for (frame_number = start; frame_number < end; frame_number++)
     {
         // Stop the feature tracker process
         if(processingController->ShouldStop()){
@@ -58,6 +63,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t start, size_t 
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
+
         TrackFrameFeatures(cvimage, frame_number);
 
         // Update progress
@@ -76,6 +82,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t start, size_t 
 
 // Track current frame features and find the relative transformation
 void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
+
     if(prev_grey.empty()){
         prev_grey = frame;
         return;
@@ -91,7 +98,6 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     cv::goodFeaturesToTrack(prev_grey, prev_corner, 200, 0.01, 30);
     // Track features
     cv::calcOpticalFlowPyrLK(prev_grey, frame, prev_corner, cur_corner, status, err);
-
     // Remove untracked features
     for(size_t i=0; i < status.size(); i++) {
         if(status[i]) {
@@ -120,6 +126,7 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
 
     // Show processing info
     cout << "Frame: " << frameNum << " - good optical flow: " << prev_corner2.size() << endl;
+
 }
 
 std::vector<CamTrajectory> CVStabilization::ComputeFramesTrajectory(){
@@ -169,7 +176,7 @@ std::map<size_t,CamTrajectory> CVStabilization::SmoothTrajectory(std::vector <Ca
         double avg_y = sum_y / count;
 
         // Add smoothed trajectory data to map
-        smoothed_trajectory[i] = CamTrajectory(avg_x, avg_y, avg_a);
+        smoothed_trajectory[i + start] = CamTrajectory(avg_x, avg_y, avg_a);
     }
     return smoothed_trajectory;
 }
@@ -189,16 +196,16 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
         a += prev_to_cur_transform[i].da;
 
         // target - current
-        double diff_x = smoothed_trajectory[i].x - x;
-        double diff_y = smoothed_trajectory[i].y - y;
-        double diff_a = smoothed_trajectory[i].a - a;
+        double diff_x = smoothed_trajectory[i + start].x - x;
+        double diff_y = smoothed_trajectory[i + start].y - y;
+        double diff_a = smoothed_trajectory[i + start].a - a;
 
         double dx = prev_to_cur_transform[i].dx + diff_x;
         double dy = prev_to_cur_transform[i].dy + diff_y;
         double da = prev_to_cur_transform[i].da + diff_a;
 
         // Add transformation data to map
-        new_prev_to_cur_transform[i] = TransformParam(dx, dy, da);
+        new_prev_to_cur_transform[i + start] = TransformParam(dx, dy, da);
     }
     return new_prev_to_cur_transform;
 }
@@ -253,7 +260,6 @@ void CVStabilization::AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameDa
 bool CVStabilization::LoadStabilizedData(){
     // Create stabilization message
     libopenshotstabilize::Stabilization stabilizationMessage;
-
     // Read the existing tracker message.
     fstream input(protobuf_data_path, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
@@ -278,7 +284,7 @@ bool CVStabilization::LoadStabilizedData(){
         float a = pbFrameData.a();
 
         // Assign data to trajectory map
-        trajectoryData[i] = CamTrajectory(x,y,a);
+        trajectoryData[id] = CamTrajectory(x,y,a);
 
         // Load transformation data
         float dx = pbFrameData.dx();
@@ -286,7 +292,7 @@ bool CVStabilization::LoadStabilizedData(){
         float da = pbFrameData.da();
 
         // Assing data to transformation map
-        transformationData[i] = TransformParam(dx,dy,da);
+        transformationData[id] = TransformParam(dx,dy,da);
     }
 
     // Show the time stamp from the last update in stabilization data file  
@@ -337,8 +343,7 @@ void CVStabilization::SetJson(const std::string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		// throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-        std::cout<<"JSON is invalid (missing keys or invalid data types)"<<std::endl;
+		throw openshot::InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
