@@ -64,6 +64,7 @@ class CVTracker {
     /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
     ProcessingController *processingController;
 
+    bool json_interval;
     size_t start;
     size_t end;
 

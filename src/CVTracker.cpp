@@ -32,7 +32,7 @@
 
 // Constructor
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
-: processingController(&processingController){   
+: processingController(&processingController), json_interval(false){   
     SetJson(processInfoJson);
 }
 
@@ -63,19 +63,25 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
 // Track object in the hole clip or in a given interval
 void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
 
-    start = _start; end = _end;
-
     video.Open();
-    
-    bool trackerInit = false;
 
-    size_t frame;
-    if(!process_interval || end == 0 || end-start <= 0){
-        // Get total number of frames in video
-        start = video.Start() * video.Reader()->info.fps.ToInt();
+    if(!json_interval){
+        start = _start; end = _end;
+
+        if(!process_interval || end <= 0 || end-start <= 0){
+            // Get total number of frames in video
+            start = video.Start() * video.Reader()->info.fps.ToInt();
+            end = video.End() * video.Reader()->info.fps.ToInt();
+        }
+    }
+    else{
+        start = start + video.Start() * video.Reader()->info.fps.ToInt();
         end = video.End() * video.Reader()->info.fps.ToInt();
     }
 
+    bool trackerInit = false;
+
+    size_t frame;
     // Loop through video
     for (frame = start; frame <= end; frame++)
     {
@@ -291,4 +297,8 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
 	}
+    if (!root["first_frame"].isNull()){
+        start = root["first_frame"].asInt64();
+        json_interval = true;
+    }
 }
