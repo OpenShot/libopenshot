@@ -81,6 +81,9 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
 
     bool trackerInit = false;
 
+    SortTracker sort;
+    RemoveJitter removeJitter(0);
+
     size_t frame;
     // Loop through video
     for (frame = start; frame <= end; frame++)
@@ -109,7 +112,7 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         }
         else{
             // Update the object tracker according to frame 
-            trackerInit = trackFrame(cvimage, frame_number);
+            trackerInit = trackFrame(cvimage, frame_number, sort, removeJitter);
             
             // Draw box on image
             FrameData fd = GetTrackedData(frame_number);
@@ -136,7 +139,7 @@ bool CVTracker::initTracker(cv::Mat &frame, size_t frameId){
 }
 
 // Update the object tracker according to frame 
-bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
+bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId, SortTracker &sort, RemoveJitter &removeJitter){
     // Update the tracking result
     bool ok = tracker->update(frame, bbox);
 
@@ -144,6 +147,15 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
     // Otherwise add only frame number
     if (ok)
     {
+        std::vector<cv::Rect> bboxes = {bbox};
+        
+        sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)));
+
+        for(auto TBox : sort.frameTrackingResult)
+                bbox = TBox.box;
+
+        // removeJitter.update(bbox, bbox);
+
         // Add new frame data
         trackedDataById[frameId] = FrameData(frameId, 0, bbox.x, bbox.y, bbox.x+bbox.width, bbox.y+bbox.height);
     }
@@ -302,3 +314,43 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         json_interval = true;
     }
 }
+
+RemoveJitter::RemoveJitter(int boxesInterval) : boxesInterval(boxesInterval), boxesInVector(0){
+}
+    
+void RemoveJitter::update(cv::Rect2d bbox, cv::Rect2d &out_bbox){
+
+    bboxTracker.push_back(bbox);
+
+    // Just to initialize the vector properly
+    if(boxesInVector < boxesInterval+1){
+        boxesInVector++;
+        out_bbox = bbox;
+    }
+    else{
+        cv::Rect2d old_bbox = bboxTracker.front();
+        cv::Rect2d new_bbox = bboxTracker.back();
+
+        int centerX_1 = old_bbox.x + old_bbox.width/2;
+        int centerY_1 = old_bbox.y + old_bbox.height/2;
+        int centerX_2 = new_bbox.x + new_bbox.width/2;
+        int centerY_2 = new_bbox.y + new_bbox.height/2;
+
+        int dif_centerXs = abs(centerX_1 - centerX_2);
+        int dif_centerYs = abs(centerY_1 - centerY_2);
+
+        cout<<dif_centerXs<<"\n";
+        cout<<dif_centerYs<<"\n\n";
+
+        if(dif_centerXs > 6 || dif_centerYs > 6){
+            out_bbox = new_bbox;
+        }
+        else{
+            cv::Rect2d mean_bbox((old_bbox.x + new_bbox.x)/2, (old_bbox.y + new_bbox.y)/2, (old_bbox.width + new_bbox.width)/2, (old_bbox.height + new_bbox.height)/2);
+            out_bbox = mean_bbox;
+        }
+
+        bboxTracker.erase(bboxTracker.begin());
+    }
+}
+

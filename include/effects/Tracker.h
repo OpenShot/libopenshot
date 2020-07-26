@@ -116,7 +116,7 @@ namespace openshot
         bool LoadTrackedData(std::string inputFilePath);
         
 		// Get tracker info for the desired frame 
-        EffectFrameData GetTrackedData(int frameId);
+        EffectFrameData GetTrackedData(size_t frameId);
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

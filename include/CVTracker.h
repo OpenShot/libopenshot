@@ -19,6 +19,8 @@
 #include "ProcessingController.h"
 #include "trackerdata.pb.h"
 
+#include "../src/sort_filter/sort.hpp"
+
 using namespace std;
 using google::protobuf::util::TimeUtil;
 
@@ -49,6 +51,17 @@ struct FrameData{
   }
 };
 
+class RemoveJitter{
+  private:
+    std::vector<cv::Rect2d> bboxTracker;
+    int boxesInterval;
+    int boxesInVector;
+
+  public:
+    RemoveJitter(int boxesInterval);
+    void update(cv::Rect2d bbox, cv::Rect2d &out_bbox);
+};
+
 class CVTracker { 
   private:
     std::map<size_t, FrameData> trackedDataById; // Save tracked data       
@@ -67,12 +80,13 @@ class CVTracker {
     bool json_interval;
     size_t start;
     size_t end;
+  
 
     // Initialize the tracker
     bool initTracker(cv::Mat &frame, size_t frameId);
     
     // Update the object tracker according to frame 
-    bool trackFrame(cv::Mat &frame, size_t frameId);
+    bool trackFrame(cv::Mat &frame, size_t frameId, SortTracker &sort, RemoveJitter &removeJitter);
 
   public:
 

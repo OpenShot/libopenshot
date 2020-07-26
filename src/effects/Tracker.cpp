@@ -139,7 +139,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 }
 
 // Get tracker info for the desired frame 
-EffectFrameData Tracker::GetTrackedData(int frameId){
+EffectFrameData Tracker::GetTrackedData(size_t frameId){
 
 	// Check if the tracker info for the requested frame exists
     if ( trackedDataById.find(frameId) == trackedDataById.end() ) {

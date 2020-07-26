@@ -58,7 +58,7 @@ SUITE(CVTracker_Tests)
         CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
 
         // Track clip for frames 0-20
-        kcfTracker.trackClip(c1, 0, 20+1, true);
+        kcfTracker.trackClip(c1, 0, 20, true);
 
         // Get tracked data
         FrameData fd = kcfTracker.GetTrackedData(20);
@@ -69,8 +69,8 @@ SUITE(CVTracker_Tests)
         int height = fd.y2-fd.y1;
 
         // Compare if tracked data is equal to pre-tested ones
-        CHECK_EQUAL(260, x);
-        CHECK_EQUAL(132, y);
+        CHECK_EQUAL(259, x);
+        CHECK_EQUAL(131, y);
         CHECK_EQUAL(180, width);
         CHECK_EQUAL(166, height);
     }
@@ -91,7 +91,7 @@ SUITE(CVTracker_Tests)
         CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
 
         // Track clip for frames 0-20
-        kcfTracker_1.trackClip(c1, 0, 20+1, true);
+        kcfTracker_1.trackClip(c1, 0, 20, true);
 
         // Get tracked data
         FrameData fd_1 = kcfTracker_1.GetTrackedData(20);

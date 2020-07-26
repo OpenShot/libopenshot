@@ -231,6 +231,7 @@
 %include "effects/Wave.h"
 %include "effects/Stabilizer.h"
 %include "effects/Tracker.h"
+%include "effects/ObjectDetection.h"
 
 
 /* Wrap std templates (list, vector, etc...) */

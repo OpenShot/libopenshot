@@ -39,6 +39,7 @@
 
 	#include "CVStabilization.h"
     #include "CVTracker.h"
+	#include "CVObjectDetection.h"
 #endif
 
 #include <thread>
@@ -66,6 +67,8 @@ class ClipProcessingJobs{
 		void trackClip(Clip& clip, ProcessingController& controller);
 		// Apply stabilization to clip
 		void stabilizeClip(Clip& clip, ProcessingController& controller);
+		// Apply object detection to clip
+		void detectObjectsClip(Clip& clip, ProcessingController& controller);
 
 
 	public:

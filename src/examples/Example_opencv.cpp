@@ -33,12 +33,27 @@
 #include <memory>
 #include "../../include/CVTracker.h"
 #include "../../include/CVStabilization.h"
+#include "../../include/CVObjectDetection.h"
 
 #include "../../include/OpenShot.h"
 #include "../../include/CrashHandler.h"
 
 using namespace openshot;
 using namespace std;
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+The following methods are just for getting JSON info to the pre-processing effects
+*/
+
+string jsonFormat(string key, string value, string type="string"); // Format variables to the needed JSON format
+string trackerJson(cv::Rect2d r, bool onlyProtoPath); // Set variable values for tracker effect
+string stabilizerJson(bool onlyProtoPath); // Set variable values for stabilizer effect
+string objectDetectionJson(bool onlyProtoPath); // Set variable values for object detector effect
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+*/
 
 // Show the pre-processed clip on the screen
 void displayClip(openshot::Clip &r9){
@@ -57,8 +72,7 @@ void displayClip(openshot::Clip &r9){
         std::shared_ptr<openshot::Frame> f = r9.GetFrame(frame_number);
         // Grab OpenCV::Mat image
         cv::Mat cvimage = f->GetImageCV();
-        // Convert color scheme from RGB (QImage scheme) to BGR (OpenCV scheme) 
-        cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2BGR);
+
         // Display the frame
         cv::imshow("Display Image", cvimage);
 
@@ -71,73 +85,18 @@ void displayClip(openshot::Clip &r9){
     cv::destroyAllWindows();
 }
 
-
-/*
-||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-
-The following methods are just for getting JSON info to the pre-processing effects
-
-||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-*/
-
-
-// Return JSON string for the tracker effect
-string trackerJson(cv::Rect2d r, bool onlyProtoPath){
-    // Set the tracker
-    string tracker = "KCF";
-
-    // Construct all the composition of the JSON string
-    string trackerType = "\"tracker_type\": \"" + tracker + "\"";
-    string protobuf_data_path = "\"protobuf_data_path\": \"kcf_tracker.data\"";
-    stringstream bboxCoords;
-    bboxCoords << "\"bbox\": {\"x\":"<<r.x<<", \"y\": "<<r.y<<", \"w\": "<<r.width<<", \"h\": "<<r.height<<"}";
-    
-    // Return only the the protobuf path in JSON format
-    if(onlyProtoPath)
-        return "{" + protobuf_data_path + "}";
-    // Return all the parameters for the pre-processing effect
-    else
-        return "{" + protobuf_data_path + ", " + trackerType + ", " + bboxCoords.str() + "}";
-}
-
-// Return JSON string for the stabilizer effect
-string stabilizerJson(bool onlyProtoPath){
-    // Set smoothing window value
-    int smoothingWindow = 30;
-
-    // Construct all the composition of the JSON string
-    string protobuf_data_path = "\"protobuf_data_path\": \"example_stabilizer.data\"";
-    stringstream smoothing_window;
-    smoothing_window << "\"smoothing_window\": "<< smoothingWindow;
-
-    // Return only the the protobuf path in JSON format
-    if(onlyProtoPath)
-        return "{" + protobuf_data_path + "}";
-    // Return all the parameters for the pre-processing effect
-    else
-        return "{" + protobuf_data_path + ", " + smoothing_window.str() + "}";
-}
-
-string objectDetectionJson(bool onlyProtoPath){
-
-    // Construct all the composition of the JSON string
-    string protobuf_data_path = "\"protobuf_data_path\": \"example_object_detection.data\"";
-
-    // Return only the the protobuf path in JSON format
-    if(onlyProtoPath)
-        return "{" + protobuf_data_path + "}";
-}
-
 int main(int argc, char* argv[]) {
 
     // Set pre-processing effects
     bool TRACK_DATA = false;
-    bool SMOOTH_VIDEO = true;
-    bool OBJECT_DETECTION_DATA = false;
+    bool SMOOTH_VIDEO = false;
+    bool OBJECT_DETECTION_DATA = true;
 
     // Get media path
     std::stringstream path;
-    path << TEST_MEDIA_PATH << "test.avi";
+    path << TEST_MEDIA_PATH << ((OBJECT_DETECTION_DATA) ? "test_video.mp4" : "test.avi");
+    // test_video.mp4 --> Used for object detector
+    //       test.avi --> Used for tracker and stabilizer
 
     // Thread controller just for the pre-processing constructors, it won't be used
     ProcessingController processingController;
@@ -146,7 +105,7 @@ int main(int argc, char* argv[]) {
     openshot::Clip r9(path.str());
     r9.Open();
 
-    // Aplly tracking effect on the clip
+    // Apply tracking effect on the clip
     if(TRACK_DATA){
 
         // Take the bounding box coordinates
@@ -159,7 +118,7 @@ int main(int argc, char* argv[]) {
         CVTracker tracker(trackerJson(r, false), processingController);
 
         // Start the tracking
-        tracker.trackClip(r9);
+        tracker.trackClip(r9, 0, 100, true);
         // Save the tracked data
         tracker.SaveTrackedData();
 
@@ -173,7 +132,7 @@ int main(int argc, char* argv[]) {
         r9.AddEffect(e);
     }
 
-    // Aplly stabilizer effect on the clip
+    // Apply stabilizer effect on the clip
     if(SMOOTH_VIDEO){
 
         // Create a stabilizer object by passing a JSON string and a thread controller, this last one won't be used
@@ -181,7 +140,7 @@ int main(int argc, char* argv[]) {
         CVStabilization stabilizer(stabilizerJson(false), processingController);
 
         // Start the stabilization
-        stabilizer.stabilizeClip(r9);
+        stabilizer.stabilizeClip(r9, 0, 100, true);
         // Save the stabilization data
         stabilizer.SaveStabilizedData();
 
@@ -195,9 +154,27 @@ int main(int argc, char* argv[]) {
         r9.AddEffect(e);
     }
 
+    // Apply object detection effect on the clip
     if(OBJECT_DETECTION_DATA){
-        // CVObjectDetection objectDetection("GPU");
-        // objectDetection.ProcessClip(r9);
+
+        // Create a object detection object by passing a JSON string and a thread controller, this last one won't be used
+        // JSON info: path to save the detection data, processing devicee, model weights, model configuration and class names
+        CVObjectDetection objectDetection(objectDetectionJson(false), processingController);
+
+        // Start the object detection
+        objectDetection.detectObjectsClip(r9, 0, 100, true);
+        // Save the object detection data
+        objectDetection.SaveTrackedData();
+
+        // Create a object detector effect
+        EffectBase* e = EffectInfo().CreateEffect("Object Detector");
+
+        // Pass a JSON string with the saved detections data
+        // The effect will read and save the detections in a map::<frame,data_struct>
+
+        e->SetJson(objectDetectionJson(true));
+        // Add the effect to the clip
+        r9.AddEffect(e);
     }
 
     // Show the pre-processed clip on the screen
@@ -209,4 +186,112 @@ int main(int argc, char* argv[]) {
 	std::cout << "Completed successfully!" << std::endl;
 
     return 0;
+}
+
+
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+The following methods are just for getting JSON info to the pre-processing effects
+
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+*/
+
+
+
+string jsonFormat(string key, string value, string type){
+    stringstream jsonFormatMessage;
+    jsonFormatMessage << ( "\"" + key + "\": " );
+
+    if(type == "string")
+        jsonFormatMessage << ( "\"" + value + "\"" );
+    if(type == "rstring")
+        jsonFormatMessage <<  value;
+    if(type == "int")
+        jsonFormatMessage << stoi(value);
+    if(type == "float")
+        jsonFormatMessage << (float)stof(value);
+    if(type == "double")
+        jsonFormatMessage << (double)stof(value);
+    if (type == "bool")
+        jsonFormatMessage << ((value == "true" || value == "1") ? "true" : "false");
+
+    return jsonFormatMessage.str();
+}
+
+// Return JSON string for the tracker effect
+string trackerJson(cv::Rect2d r, bool onlyProtoPath){
+
+    // Define path to save tracked data 
+    string protobufDataPath = "kcf_tracker.data";
+    // Set the tracker
+    string tracker = "KCF";
+
+    // Construct all the composition of the JSON string
+    string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
+    string trackerType = jsonFormat("tracker_type", tracker);
+    string bboxCoords = jsonFormat(
+                                    "bbox", 
+                                            "{" + jsonFormat("x", to_string(r.x), "int") + 
+                                            "," + jsonFormat("y", to_string(r.y), "int") + 
+                                            "," + jsonFormat("w", to_string(r.width), "int") +
+                                            "," + jsonFormat("h", to_string(r.height), "int") + 
+                                            "}",
+                                    "rstring");  
+
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
+    // Return all the parameters for the pre-processing effect
+    else
+        return "{" + protobuf_data_path + "," + trackerType + "," + bboxCoords + "}";
+}
+
+// Return JSON string for the stabilizer effect
+string stabilizerJson(bool onlyProtoPath){
+
+    // Define path to save stabilized data 
+    string protobufDataPath = "example_stabilizer.data";
+    // Set smoothing window value
+    string smoothingWindow = "30";
+
+    // Construct all the composition of the JSON string
+    string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
+    string smoothing_window = jsonFormat("smoothing_window", smoothingWindow, "int");
+
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
+    // Return all the parameters for the pre-processing effect
+    else
+        return "{" + protobuf_data_path + "," + smoothing_window + "}";
+}
+
+string objectDetectionJson(bool onlyProtoPath){
+
+    // Define path to save object detection data 
+    string protobufDataPath = "example_object_detection.data";
+    // Define processing device
+    string processingDevice = "GPU";
+    // Set path to model configuration file
+    string modelConfiguration = "yolov3.cfg";
+    // Set path to model weights 
+    string modelWeights = "yolov3.weights";
+    // Set path to class names file
+    string classesFile = "obj.names";
+
+    // Construct all the composition of the JSON string
+    string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
+    string processing_device = jsonFormat("processing_device", processingDevice);
+    string model_configuration = jsonFormat("model_configuration", modelConfiguration);
+    string model_weights = jsonFormat("model_weights", modelWeights);
+    string classes_file = jsonFormat("classes_file", classesFile);
+
+    // Return only the the protobuf path in JSON format
+    if(onlyProtoPath)
+        return "{" + protobuf_data_path + "}";
+    else
+        return "{" + protobuf_data_path + "," + processing_device + "," + model_configuration + ","
+                + model_weights + "," + classes_file + "}";
 }

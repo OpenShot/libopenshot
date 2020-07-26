@@ -42,6 +42,7 @@
 #include "effects/Hue.h"
 #include "effects/Mask.h"
 #include "effects/Negate.h"
+#include "effects/ObjectDetection.h"
 #include "effects/Pixelate.h"
 #include "effects/Stabilizer.h"
 #include "effects/Saturation.h"

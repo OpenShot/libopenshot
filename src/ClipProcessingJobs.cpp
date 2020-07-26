@@ -14,6 +14,9 @@ void ClipProcessingJobs::processClip(Clip& clip){
     if(processingType == "Tracker"){
         t = std::thread(&ClipProcessingJobs::trackClip, this, std::ref(clip), std::ref(this->processingController));
     }
+    if(processingType == "Object Detector"){
+        t = std::thread(&ClipProcessingJobs::detectObjectsClip, this, std::ref(clip), std::ref(this->processingController));
+    }
 }
 
 // Apply object tracking to clip 
@@ -40,8 +43,28 @@ void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller)
 }
 
 // Apply stabilization to clip
-void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& controller){
+void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& controller){
 	// create CVStabilization object
+	CVObjectDetection objDetector(processInfoJson, controller); 
+    // Start stabilization process
+    objDetector.detectObjectsClip(clip);
+
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save stabilization data
+        objDetector.SaveTrackedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+}
+
+void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& controller){
+    // create CVStabilization object
 	CVStabilization stabilizer(processInfoJson, controller); 
     // Start stabilization process
     stabilizer.stabilizeClip(clip);

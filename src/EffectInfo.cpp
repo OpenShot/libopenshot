@@ -91,6 +91,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if(effect_type == "Tracker")
 		return new Tracker();
+		
+	else if(effect_type == "Object Detector")
+		return new ObjectDetection();
 
 	return NULL;
 }
@@ -118,6 +121,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Wave().JsonInfo());
 	root.append(Stabilizer().JsonInfo());
 	root.append(Tracker().JsonInfo());
+	root.append(ObjectDetection().JsonInfo());
 
 	// return JsonValue
 	return root;

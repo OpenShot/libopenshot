@@ -1,0 +1,32 @@
+
+// [START declaration]
+syntax = "proto3";
+package libopenshotobjdetect;
+
+import "google/protobuf/timestamp.proto";
+// [END declaration]
+
+// [START messages]
+message Frame {
+  int32 id = 1;  // Frame ID.
+  
+  message Box{
+      int32 x1 = 1;
+      int32 y1 = 2;
+      int32 x2 = 3;
+      int32 y2 = 4;
+      int32 classId = 5;
+      float confidence = 6;
+  }
+
+  repeated Box bounding_box = 2;
+}
+
+message ObjDetect {
+  repeated Frame frame = 1;
+  
+  google.protobuf.Timestamp last_updated = 2;
+
+  repeated string classNames = 3;
+}
+// [END messages]

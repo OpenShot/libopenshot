@@ -118,7 +118,6 @@ if (OpenCV_FOUND)
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_H} ${CMAKE_CURRENT_SOURCE_DIR}/../include)
     file(REMOVE ${PROTO_H})
   endforeach()
-  
 
 endif()
 
@@ -214,12 +213,17 @@ set(OPENSHOT_SOURCES
 set(OPENSHOT_CV_SOURCES
   CVTracker.cpp
   CVStabilization.cpp
-  ClipProcessingJobs.cpp)
+  ClipProcessingJobs.cpp
+  CVObjectDetection.cpp
+  ./sort_filter/sort.cpp
+  ./sort_filter/Hungarian.cpp
+  ./sort_filter/KalmanTracker.cpp)
 
 # Compiled Protobuf messages
 set(PROTOBUF_MESSAGES
     stabilizedata.pb.cc
     trackerdata.pb.cc
+    objdetectdata.pb.cc
     )
 
 # Video effects
@@ -234,6 +238,7 @@ set(EFFECTS_SOURCES
   effects/Hue.cpp
   effects/Mask.cpp
   effects/Negate.cpp
+  effects/ObjectDetection.cpp
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
