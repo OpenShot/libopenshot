@@ -317,11 +317,6 @@ foreach(ff_comp IN LISTS all_comps)
 
 endforeach()
 
-################### Threads ####################
-# Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
 
