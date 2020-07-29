@@ -52,10 +52,10 @@ using google::protobuf::util::TimeUtil;
 struct EffectFrameData{
   size_t frame_id = -1;
   float rotation = 0;
-  int x1 = -1;
-  int y1 = -1;
-  int x2 = -1;
-  int y2 = -1;
+  float x1 = -1;
+  float y1 = -1;
+  float x2 = -1;
+  float y2 = -1;
 
   // Constructors
   EffectFrameData()
@@ -64,7 +64,7 @@ struct EffectFrameData{
   EffectFrameData( int _frame_id)
   {frame_id = _frame_id;}
 
-  EffectFrameData( int _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
+  EffectFrameData( int _frame_id , float _rotation, float _x1, float _y1, float _x2, float _y2)
   {
       frame_id = _frame_id;
       rotation = _rotation;

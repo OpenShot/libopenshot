@@ -86,8 +86,7 @@ class CVStabilization {
     size_t end;
     
     cv::Mat last_T;
-    cv::Mat cur, cur_grey;
-    cv::Mat prev, prev_grey;
+    cv::Mat prev_grey;
     std::vector <TransformParam> prev_to_cur_transform; // Previous to current 
     std::string protobuf_data_path;
 

@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 
     // Get media path
     std::stringstream path;
-    path << TEST_MEDIA_PATH << ((OBJECT_DETECTION_DATA) ? "test_video.mp4" : "test.avi");
+    path << TEST_MEDIA_PATH << ((OBJECT_DETECTION_DATA) ? "run.mp4" : "test.avi");
     // test_video.mp4 --> Used for object detector
     //       test.avi --> Used for tracker and stabilizer
 

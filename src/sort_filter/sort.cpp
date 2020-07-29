@@ -100,7 +100,6 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 		for (unsigned int j = 0; j < detNum; j++)
 		{
 			// use 1-iou because the hungarian algorithm computes a minimum-cost assignment.
-			// TODO: change norm hardcode to proportion of image diagonal
 			double distance = SortTracker::GetCentroidsDistance(predictedBoxes[i], detections[j].box) / image_diagonal;
 			centroid_dist_matrix[i][j] = distance;
 		}

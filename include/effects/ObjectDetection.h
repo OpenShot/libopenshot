@@ -43,7 +43,7 @@
 
 struct DetectionData{
     DetectionData(){}
-    DetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect> _boxes, size_t _frameId){
+    DetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
         classIds = _classIds;
         confidences = _confidences;
         boxes = _boxes;
@@ -52,7 +52,7 @@ struct DetectionData{
     size_t frameId;
     std::vector<int> classIds;
     std::vector<float> confidences;
-    std::vector<cv::Rect> boxes;
+    std::vector<cv::Rect_<float>> boxes;
 };
 
 namespace openshot

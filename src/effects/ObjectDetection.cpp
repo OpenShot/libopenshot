@@ -29,6 +29,37 @@
  */
 
 #include "../../include/effects/ObjectDetection.h"
+
+/**
+ * @file
+ * @brief Source file for Tracker effect class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "../../include/effects/Tracker.h"
 
 using namespace openshot;
@@ -77,11 +108,18 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 
         // Check if track data exists for the requested frame
         if (detectionsData.find(frame_number) != detectionsData.end()) {
+            float fw = cv_image.size().width;
+            float fh = cv_image.size().height;
 
             DetectionData detections = detectionsData[frame_number];
             for(int i = 0; i<detections.boxes.size(); i++){
+                cv::Rect_<float> bb_nrml = detections.boxes.at(i);
+                cv::Rect2d box((int)(bb_nrml.x*fw),
+                               (int)(bb_nrml.y*fh),
+                               (int)((bb_nrml.width - bb_nrml.x)*fw),
+                               (int)((bb_nrml.height - bb_nrml.y)*fh));
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                         detections.boxes.at(i), cv_image);
+                         box, cv_image);
             }
         }
     }
@@ -148,17 +186,17 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         
         std::vector<int> classIds;
         std::vector<float> confidences;
-        std::vector<cv::Rect> boxes;
+        std::vector<cv::Rect_<float>> boxes;
 
         for(int i = 0; i < pbFrameData.bounding_box_size(); i++){
-            int x1 = box.at(i).x1();
-            int y1 = box.at(i).y1();
-            int x2 = box.at(i).x2();
-            int y2 = box.at(i).y2();
-            int classId = box.at(i).classid();
-            float confidence = box.at(i).confidence();
+            float x1 = box.Get(i).x1();
+            float y1 = box.Get(i).y1();
+            float x2 = box.Get(i).x2();
+            float y2 = box.Get(i).y2();
+            int classId = box.Get(i).classid();
+            float confidence = box.Get(i).confidence();
 
-            cv::Rect2d box(x1, y1, x2-x1, y2-y1);
+            cv::Rect_<float> box(x1, y1, x2-x1, y2-y1);
 
             boxes.push_back(box);
             classIds.push_back(classId);

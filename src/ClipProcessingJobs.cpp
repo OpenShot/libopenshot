@@ -42,11 +42,11 @@ void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller)
 
 }
 
-// Apply stabilization to clip
+// Apply object detection to clip
 void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& controller){
-	// create CVStabilization object
+	// create CVObjectDetection object
 	CVObjectDetection objDetector(processInfoJson, controller); 
-    // Start stabilization process
+    // Start object detection process
     objDetector.detectObjectsClip(clip);
 
     // Thread controller. If effect processing is done, save data
@@ -56,7 +56,7 @@ void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& con
         return;
     }
     else{
-        // Save stabilization data
+        // Save object detection data
         objDetector.SaveTrackedData();
         // tells to UI that the processing finished
         controller.SetFinished(true);

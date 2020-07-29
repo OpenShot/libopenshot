@@ -12,10 +12,10 @@ message Frame {
   float rotation = 2;
 
   message Box {
-    int32 x1 = 1;
-    int32 y1 = 2;
-    int32 x2 = 3;
-    int32 y2 = 4;
+    float x1 = 1;
+    float y1 = 2;
+    float x2 = 3;
+    float y2 = 4;
   }
 
   Box bounding_box = 3;

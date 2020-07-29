@@ -40,7 +40,6 @@
 CVObjectDetection::CVObjectDetection(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), processingDevice("CPU"){
     SetJson(processInfoJson);
-    setProcessingDevice();
 }
 
 void CVObjectDetection::setProcessingDevice(){
@@ -70,7 +69,10 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     nmsThreshold = 0.1;
 
     // Load the network
+    if(classesFile == "" || modelConfiguration == "" || modelWeights == "")
+        return;
     net = cv::dnn::readNetFromDarknet(modelConfiguration, modelWeights);
+    setProcessingDevice();
 
     size_t frame_number;
     if(!process_interval || end == 0 || end-start <= 0){
@@ -164,7 +166,100 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
     std::vector<int> indices;
     cv::dnn::NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
 
-    detectionsData[frameId] = CVDetectionData(classIds, confidences, boxes, frameId);
+    // std::vector<cv::Rect> sortBoxes;
+    // for(auto box : boxes)
+    //     sortBoxes.push_back(box);
+    // sort.update(sortBoxes, frameId, sqrt(pow(frameDims.width,2) + pow(frameDims.height, 2)));
+
+
+    // sortBoxes.clear();
+    // for(auto TBox : sort.frameTrackingResult)
+    //     if(TBox.frame == frameId){
+    //         sortBoxes.push_back(TBox.box);
+    //     }
+    
+    // for(int i = 0; i<boxes.size(); i++){
+    //     bool found = false;
+    //     for(int j = 0; j<sortBoxes.size(); j++){
+    //         if( iou(boxes[i], sortBoxes[j]) ){
+    //             boxes[i] = sortBoxes[j];
+    //             sortBoxes.erase(sortBoxes.begin() + j);
+    //             found = true;
+    //             break;
+    //         }
+    //     }
+    //     if(!found){
+    //         boxes.erase(boxes.begin() + i);
+    //         confidences.erase(confidences.begin() + i);
+    //         classIds.erase(classIds.begin() + i);
+    //     }
+    // }
+    
+
+
+    // std::map<int, std::vector<cv::Rect> > rectAndClasses;
+    // for(int i=0; i<boxes.size(); i++){
+    //     if(rectAndClasses.find(classIds[i]) == rectAndClasses.end()){
+    //         std::vector<cv::Rect> bboxes;
+    //         rectAndClasses[classIds[i]] = bboxes;
+    //     }
+
+    //     rectAndClasses[classIds[i]].push_back(boxes[i]);
+    // }
+
+    // for(std::map<int, std::vector<cv::Rect> >::iterator it = rectAndClasses.begin(); it != rectAndClasses.end(); it++){
+    //     if(sort.find(it->first) == sort.end()){
+    //         SortTracker classTracker;
+    //         sort[it->first] = classTracker;
+    //     }
+    //     sort[it->first].update(it->second, frameId, sqrt(pow(frameDims.width,2) + pow(frameDims.height, 2)));
+    // }
+
+    // classIds.clear(); boxes.clear(); confidences.clear();
+
+    // for(std::map<int, SortTracker>::iterator it = sort.begin(); it != sort.end(); it++){
+    //     for(auto TBox : it->second.frameTrackingResult){
+    //         boxes.push_back(TBox.box);
+    //         classIds.push_back(it->first);
+    //         confidences.push_back(1);
+    //     }
+    // }
+
+    
+    std::vector<cv::Rect_<float>> normalized_boxes;
+    for(auto box : boxes){
+        cv::Rect_<float> normalized_box;
+        normalized_box.x = (box.x)/(float)frameDims.width;
+        normalized_box.y = (box.y)/(float)frameDims.height;
+        normalized_box.width = (box.x+box.width)/(float)frameDims.width;
+        normalized_box.height = (box.y+box.height)/(float)frameDims.height;
+        normalized_boxes.push_back(normalized_box);
+    }
+    
+    detectionsData[frameId] = CVDetectionData(classIds, confidences, normalized_boxes, frameId);
+}
+
+bool CVObjectDetection::iou(cv::Rect pred_box, cv::Rect sort_box){
+    // determine the (x, y)-coordinates of the intersection rectangle
+	int xA = std::max(pred_box.x, sort_box.x);
+	int yA = std::max(pred_box.y, sort_box.y);
+	int xB = std::min(pred_box.x + pred_box.width, sort_box.x + sort_box.width);
+	int yB = std::min(pred_box.y + pred_box.height, sort_box.y + sort_box.height);
+
+	// compute the area of intersection rectangle
+	int interArea = std::max(0, xB - xA + 1) * std::max(0, yB - yA + 1);
+	// compute the area of both the prediction and ground-truth
+	// rectangles
+	int boxAArea = (pred_box.width + 1) * (pred_box.height + 1);
+	int boxBArea = (sort_box.width + 1) * (sort_box.height + 1);
+	// compute the intersection over union by taking the intersection
+	// area and dividing it by the sum of prediction + ground-truth
+	// areas - the interesection area
+	float iou = interArea / (float)(boxAArea + boxBArea - interArea);
+
+    if(iou > 0.75)
+        return true;
+    return false;
 }
 
 // Get the names of the output layers
@@ -183,6 +278,17 @@ std::vector<cv::String> CVObjectDetection::getOutputsNames(const cv::dnn::Net& n
     for (size_t i = 0; i < outLayers.size(); ++i)
         names[i] = layersNames[outLayers[i] - 1];
     return names;
+}
+
+CVDetectionData CVObjectDetection::GetDetectionData(size_t frameId){
+    // Check if the stabilizer info for the requested frame exists
+    if ( detectionsData.find(frameId) == detectionsData.end() ) {
+        
+        return CVDetectionData();
+    } else {
+        
+        return detectionsData[frameId];
+    }
 }
 
 bool CVObjectDetection::SaveTrackedData(){

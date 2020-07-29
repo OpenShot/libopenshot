@@ -82,6 +82,12 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
 
 // Track current frame features and find the relative transformation
 void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
+    std::cout<<"frame "<<frameNum<<"\n";
+    if(cv::countNonZero(frame) < 1){
+        last_T = cv::Mat();
+        prev_grey = cv::Mat();
+        return;
+    }
 
     if(prev_grey.empty()){
         prev_grey = frame;
@@ -93,7 +99,6 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     std::vector <cv::Point2f> prev_corner2, cur_corner2;
     std::vector <uchar> status;
     std::vector <float> err;
-    
     // Extract new image features
     cv::goodFeaturesToTrack(prev_grey, prev_corner, 200, 0.01, 30);
     // Track features
@@ -105,23 +110,37 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
             cur_corner2.push_back(cur_corner[i]);
         }
     }
-    // Translation + rotation only
-    cv::Mat T = estimateRigidTransform(prev_corner2, cur_corner2, false); // false = rigid transform, no scaling/shearing
+    // In case no feature was detected
+    if(prev_corner2.empty() || cur_corner2.empty()){
+        last_T = cv::Mat();
+        prev_grey = cv::Mat();
+        return;
+    }
 
-    // If no transformation is found, just use the last known good transform.
-    if(T.data == NULL) {
-        last_T.copyTo(T);
+    // Translation + rotation only
+    cv::Mat T = estimateAffinePartial2D(prev_corner2, cur_corner2); // false = rigid transform, no scaling/shearing
+
+    double da, dx, dy;
+    if(T.size().width == 0 || T.size().height == 0){
+        
+        dx = 0;
+        dy = 0;
+        da = 0;
+    }
+    else{
+        // If no transformation is found, just use the last known good transform.
+        if(T.data == NULL && !last_T.empty()) 
+            last_T.copyTo(T);
+        // Decompose T
+        dx = T.at<double>(0,2);
+        dy = T.at<double>(1,2);
+        da = atan2(T.at<double>(1,0), T.at<double>(0,0));
     }
 
     T.copyTo(last_T);
-    // Decompose T
-    double dx = T.at<double>(0,2);
-    double dy = T.at<double>(1,2);
-    double da = atan2(T.at<double>(1,0), T.at<double>(0,0));
 
     prev_to_cur_transform.push_back(TransformParam(dx, dy, da));
-
-    cur.copyTo(prev);
+    std::cout<<"10\n";
     frame.copyTo(prev_grey);
 
     // Show processing info

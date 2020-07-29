@@ -68,6 +68,7 @@ void Tracker::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
+
     // Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
 
@@ -77,9 +78,15 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
         // Check if track data exists for the requested frame
         if (trackedDataById.find(frame_number) != trackedDataById.end()) {
 
+			float fw = frame_image.size().width;
+        	float fh = frame_image.size().height;
+
             // Draw box on image
             EffectFrameData fd = trackedDataById[frame_number];
-            cv::Rect2d box(fd.x1, fd.y1, fd.x2-fd.x1, fd.y2-fd.y1);
+            cv::Rect2d box((int)(fd.x1*fw),
+						   (int)(fd.y1*fh),
+						   (int)((fd.x2-fd.x1)*fw),
+						   (int)((fd.y2-fd.y1)*fh));
             cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
     }
@@ -118,10 +125,10 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 
         // Load bounding box data
         const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
-        int x1 = box.x1();
-        int y1 = box.y1();
-        int x2 = box.x2();
-        int y2 = box.y2();
+        float x1 = box.x1();
+        float y1 = box.y1();
+        float x2 = box.x2();
+        float y2 = box.y2();
 
         // Assign data to tracker map
         trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);

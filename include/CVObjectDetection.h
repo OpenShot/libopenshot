@@ -44,11 +44,13 @@
 #include "Clip.h"
 #include "objdetectdata.pb.h"
 
+#include "../src/sort_filter/sort.hpp"
+
 using google::protobuf::util::TimeUtil;
 
 struct CVDetectionData{
     CVDetectionData(){}
-    CVDetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect> _boxes, size_t _frameId){
+    CVDetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
         classIds = _classIds;
         confidences = _confidences;
         boxes = _boxes;
@@ -57,7 +59,7 @@ struct CVDetectionData{
     size_t frameId;
     std::vector<int> classIds;
     std::vector<float> confidences;
-    std::vector<cv::Rect> boxes;
+    std::vector<cv::Rect_<float>> boxes;
 };
 
 class CVObjectDetection{
@@ -74,6 +76,8 @@ class CVObjectDetection{
     std::string processingDevice;
     std::string protobuf_data_path;
 
+    SortTracker sort;
+
     uint progress;
 
     size_t start;
@@ -85,6 +89,8 @@ class CVObjectDetection{
     void setProcessingDevice();
 
     void DetectObjects(const cv::Mat &frame, size_t frame_number);
+
+    bool iou(cv::Rect pred_box, cv::Rect sort_box);
 
     // Remove the bounding boxes with low confidence using non-maxima suppression
     void postprocess(const cv::Size &frameDims, const std::vector<cv::Mat>& out, size_t frame_number);
@@ -99,6 +105,8 @@ class CVObjectDetection{
     CVObjectDetection(std::string processInfoJson, ProcessingController &processingController);
 
     void detectObjectsClip(openshot::Clip &video, size_t start=0, size_t end=0, bool process_interval=false);
+
+    CVDetectionData GetDetectionData(size_t frameId);
 
     /// Protobuf Save and Load methods
     // Save protobuf file

@@ -28,10 +28,10 @@ using google::protobuf::util::TimeUtil;
 struct FrameData{
   size_t frame_id = -1;
   float rotation = 0;
-  int x1 = -1;
-  int y1 = -1;
-  int x2 = -1;
-  int y2 = -1;
+  float x1 = -1;
+  float y1 = -1;
+  float x2 = -1;
+  float y2 = -1;
 
   // Constructors
   FrameData()
@@ -40,7 +40,7 @@ struct FrameData{
   FrameData( size_t _frame_id)
   {frame_id = _frame_id;}
 
-  FrameData( size_t _frame_id , float _rotation, int _x1, int _y1, int _x2, int _y2)
+  FrameData( size_t _frame_id , float _rotation, float _x1, float _y1, float _x2, float _y2)
   {
       frame_id = _frame_id;
       rotation = _rotation;
@@ -51,17 +51,6 @@ struct FrameData{
   }
 };
 
-class RemoveJitter{
-  private:
-    std::vector<cv::Rect2d> bboxTracker;
-    int boxesInterval;
-    int boxesInVector;
-
-  public:
-    RemoveJitter(int boxesInterval);
-    void update(cv::Rect2d bbox, cv::Rect2d &out_bbox);
-};
-
 class CVTracker { 
   private:
     std::map<size_t, FrameData> trackedDataById; // Save tracked data       
@@ -69,6 +58,7 @@ class CVTracker {
     cv::Ptr<cv::Tracker> tracker; // Pointer of the selected tracker
 
     cv::Rect2d bbox; // Bounding box coords 
+    SortTracker sort;
 
     std::string protobuf_data_path; // Path to protobuf data file
 
@@ -86,7 +76,7 @@ class CVTracker {
     bool initTracker(cv::Mat &frame, size_t frameId);
     
     // Update the object tracker according to frame 
-    bool trackFrame(cv::Mat &frame, size_t frameId, SortTracker &sort, RemoveJitter &removeJitter);
+    bool trackFrame(cv::Mat &frame, size_t frameId);
 
   public:
 

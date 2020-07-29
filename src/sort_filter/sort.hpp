@@ -13,10 +13,13 @@
 #ifndef _OPENCV_KCFTRACKER_HPP_
 #define _OPENCV_KCFTRACKER_HPP_
 #endif
+#pragma once
 
 typedef struct TrackingBox
 {
 	int frame = 0;
+	float confidence = 0;
+	int classId = 0;
 	int id = 0;
 	cv::Rect_<float> box = cv::Rect_<float>(0.0, 0.0, 0.0, 0.0);
 } TrackingBox;
