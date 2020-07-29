@@ -174,6 +174,9 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     classNames.clear();
     detectionsData.clear();
 
+    // Seed to generate same random numbers
+    std::srand(1);
+    // Get all classes names and assign a color to them
     for(int i = 0; i < objMessage.classnames_size(); i++){
         classNames.push_back(objMessage.classnames(i));
         classesColor.push_back(cv::Scalar(std::rand()%205 + 50, std::rand()%205 + 50, std::rand()%205 + 50));
