@@ -24,7 +24,7 @@ public:
 		m_id = kf_count;
 		//kf_count++;
 	}
-	KalmanTracker(StateType initRect)
+	KalmanTracker(StateType initRect, float confidence, int classId) : confidence(confidence), classId(classId)
 	{
 		init_kf(initRect);
 		m_time_since_update = 0;
@@ -54,6 +54,8 @@ public:
 	int m_hit_streak;
 	int m_age;
 	int m_id;
+	float confidence;
+	int classId;
 
 private:
 	void init_kf(StateType stateMat);

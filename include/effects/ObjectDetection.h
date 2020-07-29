@@ -36,6 +36,7 @@
 #include <cmath>
 #include <stdio.h>
 #include <memory>
+#include <opencv2/opencv.hpp>
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
@@ -70,6 +71,8 @@ namespace openshot
 		std::string protobuf_data_path;
 		std::map<size_t, DetectionData> detectionsData;
 		std::vector<std::string> classNames;
+		
+		std::vector<cv::Scalar> classesColor;
 
 		/// Init effect settings
 		void init_effect_details();

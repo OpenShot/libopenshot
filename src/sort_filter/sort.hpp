@@ -32,7 +32,7 @@ public:
 	// Initialize tracker
 
 	// Update position based on the new frame
-	void update(std::vector<cv::Rect> detection, int frame_count, double image_diagonal);
+	void update(std::vector<cv::Rect> detection, int frame_count, double image_diagonal, std::vector<float> confidences, std::vector<int> classIds);
 	double GetIOU(cv::Rect_<float> bb_test, cv::Rect_<float> bb_gt);
 	double GetCentroidsDistance(cv::Rect_<float> bb_test, cv::Rect_<float> bb_gt);
 	std::vector<KalmanTracker> trackers;

@@ -35,6 +35,8 @@ CVStabilization::CVStabilization(std::string processInfoJson, ProcessingControll
 : processingController(&processingController){
     SetJson(processInfoJson);
 }
+double mediax=0, mediay=0, mediaa=0, mediastatus=0, maiora = 0, maiorx = 0, maiory = 0;
+int maiorstatus=0;
 
 // Process clip and store necessary stabilization data
 void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
@@ -64,7 +66,8 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
         cv::Mat cvimage = f->GetImageCV();
         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
 
-        TrackFrameFeatures(cvimage, frame_number);
+        if(! TrackFrameFeatures(cvimage, frame_number))
+            prev_to_cur_transform.push_back(TransformParam(0, 0, 0));
 
         // Update progress
         processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
@@ -81,17 +84,17 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
 }
 
 // Track current frame features and find the relative transformation
-void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
+bool CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     std::cout<<"frame "<<frameNum<<"\n";
     if(cv::countNonZero(frame) < 1){
-        last_T = cv::Mat();
-        prev_grey = cv::Mat();
-        return;
+        // last_T = cv::Mat();
+        // prev_grey = cv::Mat();
+        return false;
     }
 
     if(prev_grey.empty()){
         prev_grey = frame;
-        return;
+        return false;
     }
 
     // OpticalFlow features vector
@@ -100,10 +103,14 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     std::vector <uchar> status;
     std::vector <float> err;
     // Extract new image features
-    cv::goodFeaturesToTrack(prev_grey, prev_corner, 200, 0.01, 30);
+    cv::goodFeaturesToTrack(prev_grey, prev_corner, 200, 0.01, 15);
     // Track features
     cv::calcOpticalFlowPyrLK(prev_grey, frame, prev_corner, cur_corner, status, err);
     // Remove untracked features
+    mediastatus+=status.size();
+    if(status.size() > maiorstatus)
+        maiorstatus = status.size();
+
     for(size_t i=0; i < status.size(); i++) {
         if(status[i]) {
             prev_corner2.push_back(prev_corner[i]);
@@ -114,18 +121,15 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
     if(prev_corner2.empty() || cur_corner2.empty()){
         last_T = cv::Mat();
         prev_grey = cv::Mat();
-        return;
+        return false;
     }
 
     // Translation + rotation only
-    cv::Mat T = estimateAffinePartial2D(prev_corner2, cur_corner2); // false = rigid transform, no scaling/shearing
+    cv::Mat T = cv::estimateAffinePartial2D(prev_corner2, cur_corner2); // false = rigid transform, no scaling/shearing
 
     double da, dx, dy;
     if(T.size().width == 0 || T.size().height == 0){
-        
-        dx = 0;
-        dy = 0;
-        da = 0;
+        return false;
     }
     else{
         // If no transformation is found, just use the last known good transform.
@@ -137,10 +141,26 @@ void CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
         da = atan2(T.at<double>(1,0), T.at<double>(0,0));
     }
 
+    if(dx > 100 || dy > 100 || da > 0.1){
+        return false;
+    }
+
+    mediax+=fabs(dx);
+    mediay+=fabs(dy);
+    mediaa+=fabs(da);
+
+    if(fabs(dx) > maiorx)
+        maiorx = dx;
+    if(fabs(dy) > maiory)
+        maiory = dy;
+    if(fabs(da) > maiora)
+        maiora = da;
+
+    std::cout<<dx<<" "<<dy<<" "<<da<<"\n";
+
     T.copyTo(last_T);
 
     prev_to_cur_transform.push_back(TransformParam(dx, dy, da));
-    std::cout<<"10\n";
     frame.copyTo(prev_grey);
 
     // Show processing info

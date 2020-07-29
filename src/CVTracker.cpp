@@ -154,8 +154,10 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
         float fh = frame.size().height;
 
         std::vector<cv::Rect> bboxes = {bbox};
+        std::vector<float> confidence = {1.0};
+        std::vector<int> classId = {1};
         
-        sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)));
+        sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)), confidence, classId);
 
         for(auto TBox : sort.frameTrackingResult)
             bbox = TBox.box;

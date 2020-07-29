@@ -96,7 +96,7 @@ class CVStabilization {
 	ProcessingController *processingController;
 
     // Track current frame features and find the relative transformation
-    void TrackFrameFeatures(cv::Mat frame, size_t frameNum);
+    bool TrackFrameFeatures(cv::Mat frame, size_t frameNum);
     
     std::vector<CamTrajectory> ComputeFramesTrajectory();
     std::map<size_t,CamTrajectory> SmoothTrajectory(std::vector <CamTrajectory> &trajectory);

@@ -133,8 +133,9 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 
 void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame)
 {
+
     //Draw a rectangle displaying the bounding box
-    cv::rectangle(frame, box, cv::Scalar(255, 178, 50), 3);
+    cv::rectangle(frame, box, classesColor[classId], 2);
 
     //Get the label for the class name and its confidence
     std::string label = cv::format("%.2f", conf);
@@ -144,12 +145,15 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
         label = classNames[classId] + ":" + label;
     }
     
-    //Display the label at the box.y of the bounding box
+    //Display the label at the top of the bounding box
     int baseLine;
-    cv::Size labelSize = getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-    box.y = std::max((int)box.y, labelSize.height);
-    cv::rectangle(frame, cv::Point(box.x, box.y - round(1.5*labelSize.height)), cv::Point(box.x + round(1.5*labelSize.width), box.y + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
-    putText(frame, label, cv::Point(box.x, box.y), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0,0,0),1);
+    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+
+    double left = box.x;
+    double top = std::max((int)box.y, labelSize.height);
+    
+    cv::rectangle(frame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), classesColor[classId], cv::FILLED);
+    putText(frame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
 }
 
 // Load protobuf data file
@@ -172,6 +176,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
     for(int i = 0; i < objMessage.classnames_size(); i++){
         classNames.push_back(objMessage.classnames(i));
+        classesColor.push_back(cv::Scalar(std::rand()%205 + 50, std::rand()%205 + 50, std::rand()%205 + 50));
     }
 
     // Iterate over all frames of the saved message

@@ -37,7 +37,7 @@ double SortTracker::GetCentroidsDistance(
 	return distance;
 }
 
-void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double image_diagonal)
+void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double image_diagonal, std::vector<float> confidences, std::vector<int> classIds)
 {
 	vector<TrackingBox> detections;
 	if (trackers.size() == 0) // the first frame met
@@ -49,9 +49,11 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 			TrackingBox tb;
 
 			tb.box = cv::Rect_<float>(detections_cv[i]);
+			tb.classId = classIds[i];
+			tb.confidence = confidences[i];
 			detections.push_back(tb);
 
-			KalmanTracker trk = KalmanTracker(detections[i].box);
+			KalmanTracker trk = KalmanTracker(detections[i].box, detections[i].confidence, detections[i].classId);
 			trackers.push_back(trk);
 		}
 		return;
@@ -62,6 +64,8 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 		{
 			TrackingBox tb;
 			tb.box = cv::Rect_<float>(detections_cv[i]);
+			tb.classId = classIds[i];
+			tb.confidence = confidences[i];
 			detections.push_back(tb);
 		}
 		for (auto it = frameTrackingResult.begin(); it != frameTrackingResult.end(); it++)
@@ -156,12 +160,14 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 		trkIdx = matchedPairs[i].x;
 		detIdx = matchedPairs[i].y;
 		trackers[trkIdx].update(detections[detIdx].box);
+		trackers[trkIdx].classId = detections[detIdx].classId;
+		trackers[trkIdx].confidence = detections[detIdx].confidence;
 	}
 
 	// create and initialise new trackers for unmatched detections
 	for (auto umd : unmatchedDetections)
 	{
-		KalmanTracker tracker = KalmanTracker(detections[umd].box);
+		KalmanTracker tracker = KalmanTracker(detections[umd].box, detections[umd].confidence, detections[umd].classId);
 		trackers.push_back(tracker);
 	}
 
@@ -189,6 +195,8 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 			res.box = trackers[i].get_state();
 			res.id = trackers[i].m_id;
 			res.frame = frame_count;
+			res.classId = trackers[i].classId;
+			res.confidence = trackers[i].confidence;
 			frameTrackingResult.push_back(res);
 		}
 

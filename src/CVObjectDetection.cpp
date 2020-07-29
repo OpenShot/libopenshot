@@ -166,17 +166,21 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
     std::vector<int> indices;
     cv::dnn::NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
 
-    // std::vector<cv::Rect> sortBoxes;
-    // for(auto box : boxes)
-    //     sortBoxes.push_back(box);
-    // sort.update(sortBoxes, frameId, sqrt(pow(frameDims.width,2) + pow(frameDims.height, 2)));
+    std::vector<cv::Rect> sortBoxes;
+    for(auto box : boxes)
+        sortBoxes.push_back(box);
+    sort.update(sortBoxes, frameId, sqrt(pow(frameDims.width,2) + pow(frameDims.height, 2)), confidences, classIds);
 
 
-    // sortBoxes.clear();
-    // for(auto TBox : sort.frameTrackingResult)
-    //     if(TBox.frame == frameId){
-    //         sortBoxes.push_back(TBox.box);
-    //     }
+    sortBoxes.clear(); boxes.clear(); confidences.clear(); classIds.clear();
+    
+    for(auto TBox : sort.frameTrackingResult){
+        if(TBox.frame == frameId){
+            boxes.push_back(TBox.box);
+            confidences.push_back(TBox.confidence);
+            classIds.push_back(TBox.classId);
+        }
+    }
     
     // for(int i = 0; i<boxes.size(); i++){
     //     bool found = false;
