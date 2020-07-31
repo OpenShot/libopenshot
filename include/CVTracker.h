@@ -98,12 +98,13 @@ class CVTracker {
     bool SaveTrackedData();
     // Add frame tracked data into protobuf message.
     void AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData);
-    // Load protobuf file
-    bool LoadTrackedData();
 
     /// Get and Set JSON methods
     void SetJson(const std::string value); ///< Load JSON string into this object
     void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+
+    // Load protobuf file (ONLY FOR MAKE TEST)
+    bool _LoadTrackedData();
 };
 
 

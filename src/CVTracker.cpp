@@ -222,53 +222,6 @@ void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, Fram
     box->set_y2(fData.y2);
 }
 
-// Load protobuf data file
-bool CVTracker::LoadTrackedData(){
-    // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
-
-    {
-        // Read the existing tracker message.
-        fstream input(protobuf_data_path, ios::in | ios::binary);
-        if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
-            return false;
-        }
-    }
-
-    // Make sure the trackedData is empty
-    trackedDataById.clear();
-
-    // Iterate over all frames of the saved message
-    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
-
-        // Load frame and rotation data
-        size_t id = pbFrameData.id();
-        float rotation = pbFrameData.rotation();
-
-        // Load bounding box data
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
-        float x1 = box.x1();
-        float y1 = box.y1();
-        float x2 = box.x2();
-        float y2 = box.y2();
-
-        // Assign data to tracker map
-        trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
-    }
-
-    // Show the time stamp from the last update in tracker data file 
-    if (trackerMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
-    }
-
-    // Delete all global objects allocated by libprotobuf.
-    google::protobuf::ShutdownProtobufLibrary();
-
-    return true;
-}
-
 // Get tracker info for the desired frame 
 FrameData CVTracker::GetTrackedData(size_t frameId){
 
@@ -322,5 +275,62 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         start = root["first_frame"].asInt64();
         json_interval = true;
     }
+}
+
+
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||
+                ONLY FOR MAKE TEST
+||||||||||||||||||||||||||||||||||||||||||||||||||
+*/
+
+
+
+// Load protobuf data file
+bool CVTracker::_LoadTrackedData(){
+    // Create tracker message
+    libopenshottracker::Tracker trackerMessage;
+
+    {
+        // Read the existing tracker message.
+        fstream input(protobuf_data_path, ios::in | ios::binary);
+        if (!trackerMessage.ParseFromIstream(&input)) {
+            cerr << "Failed to parse protobuf message." << endl;
+            return false;
+        }
+    }
+
+    // Make sure the trackedData is empty
+    trackedDataById.clear();
+
+    // Iterate over all frames of the saved message
+    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
+        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
+
+        // Load frame and rotation data
+        size_t id = pbFrameData.id();
+        float rotation = pbFrameData.rotation();
+
+        // Load bounding box data
+        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
+        float x1 = box.x1();
+        float y1 = box.y1();
+        float x2 = box.x2();
+        float y2 = box.y2();
+
+        // Assign data to tracker map
+        trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
+    }
+
+    // Show the time stamp from the last update in tracker data file 
+    if (trackerMessage.has_last_updated()) {
+        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
+    }
+
+    // Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
+
+    return true;
 }
 

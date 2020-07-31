@@ -63,16 +63,16 @@ SUITE(CVTracker_Tests)
         // Get tracked data
         FrameData fd = kcfTracker.GetTrackedData(20);
 
-        int x = fd.x1;
-        int y = fd.y1;
-        int width = fd.x2-fd.x1;
-        int height = fd.y2-fd.y1;
+        float x = fd.x1;
+        float y = fd.y1;
+        float width = fd.x2 - x;
+        float height = fd.y2 - y;
 
         // Compare if tracked data is equal to pre-tested ones
-        CHECK_EQUAL(259, x);
-        CHECK_EQUAL(131, y);
-        CHECK_EQUAL(180, width);
-        CHECK_EQUAL(166, height);
+        CHECK_EQUAL(259, (int)(x * 640));
+        CHECK_EQUAL(131, (int)(y * 360));
+        CHECK_EQUAL(180, (int)(width * 640));
+        CHECK_EQUAL(166, (int)(height * 360));
     }
 
 
@@ -96,10 +96,10 @@ SUITE(CVTracker_Tests)
         // Get tracked data
         FrameData fd_1 = kcfTracker_1.GetTrackedData(20);
 
-        int x_1 = fd_1.x1;
-        int y_1 = fd_1.y1;
-        int width_1 = fd_1.x2-fd_1.x1;
-        int height_1 = fd_1.y2-fd_1.y1;
+        float x_1 = fd_1.x1;
+        float y_1 = fd_1.y1;
+        float width_1 = fd_1.x2 - x_1;
+        float height_1 = fd_1.y2 - y_1;
 
         // Save tracked data
         kcfTracker_1.SaveTrackedData();
@@ -108,21 +108,21 @@ SUITE(CVTracker_Tests)
         CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"\", \"bbox\": {\"x\": -1, \"y\": -1, \"w\": -1, \"h\": -1}}", processingController);
 
         // Load tracked data from first tracker protobuf data
-        kcfTracker_2.LoadTrackedData();
+        kcfTracker_2._LoadTrackedData();
 
         // Get tracked data
         FrameData fd_2 = kcfTracker_2.GetTrackedData(20);
 
-        int x_2 = fd_2.x1;
-        int y_2 = fd_2.y1;
-        int width_2 = fd_2.x2-fd_2.x1;
-        int height_2 = fd_2.y2-fd_2.y1;
+        float x_2 = fd_2.x1;
+        float y_2 = fd_2.y1;
+        float width_2 = fd_2.x2 - x_2;
+        float height_2 = fd_2.y2 - y_2;
 
         // Compare first tracker data with second tracker data
-        CHECK_EQUAL(x_1, x_2);
-        CHECK_EQUAL(y_1, y_2);
-        CHECK_EQUAL(width_1, width_2);
-        CHECK_EQUAL(height_1, height_2);
+        CHECK_EQUAL((int)(x_1 * 640), (int)(x_2 * 640));
+        CHECK_EQUAL((int)(y_1 * 360), (int)(y_2 * 360));
+        CHECK_EQUAL((int)(width_1 * 640), (int)(width_2 * 640));
+        CHECK_EQUAL((int)(height_1 * 360), (int)(height_2 * 360));
     }
 
 } // SUITE(Frame_Tests)

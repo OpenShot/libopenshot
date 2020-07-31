@@ -84,6 +84,7 @@ class CVStabilization {
     
     size_t start;
     size_t end;
+    double avr_dx, avr_dy, avr_da, max_dx, max_dy, max_da;
     
     cv::Mat last_T;
     cv::Mat prev_grey;
@@ -120,8 +121,6 @@ class CVStabilization {
     bool SaveStabilizedData();
     // Add frame stabilization data into protobuf message
     void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
-    // Load protobuf data file
-    bool LoadStabilizedData();
 
     // Return requested struct info for a given frame
     TransformParam GetTransformParamData(size_t frameId);
@@ -131,6 +130,8 @@ class CVStabilization {
     void SetJson(const std::string value); ///< Load JSON string into this object
     void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
+    // Load protobuf data file (ONLY FOR MAKE TEST)
+    bool _LoadStabilizedData();
 };
 
 #endif

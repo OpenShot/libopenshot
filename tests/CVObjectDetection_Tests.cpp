@@ -34,9 +34,16 @@
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 #include "../include/ProcessingController.h"
+#include "../include/Json.h"
 #include <QImage>
 
 using namespace openshot;
+
+std::string effectInfo =(" {\"protobuf_data_path\": \"objdetector.data\", "
+                         "  \"processing_device\": \"GPU\", "
+                         "  \"model_configuration\": \"~/yolo/yolov3.cfg\", "
+                         "  \"model_weights\": \"~/yolo/yolov3.weights\", "
+                         "  \"classes_file\": \"~/yolo/obj.names\"} ");
 
 SUITE(CVObjectDetection_Tests)
 {
@@ -48,24 +55,32 @@ SUITE(CVObjectDetection_Tests)
     {
         // Create a video clip
         std::stringstream path;
-        path << TEST_MEDIA_PATH << "test_video.mp4";
+        path << TEST_MEDIA_PATH << "run.mp4";
 
         // Open clip
         openshot::Clip c1(path.str());
         c1.Open();
 
-        CVObjectDetection objectDetector("\"processing_device\": \"GPU\"", processingController);
+        //TODO remove hardcoded path
+        CVObjectDetection objectDetector(effectInfo, processingController);
 
-        objectDetector.detectObjectsClip(c1, 0, 100, true);
+        objectDetector.detectObjectsClip(c1, 0, 20, true);
 
         CVDetectionData dd = objectDetector.GetDetectionData(20);
 
-        // int x1 = dd.boxes[20].x;
-        // int y1 = dd.boxes[20].y;
-        // int x2 = x1 + dd.boxes[20].width();
-        // int y2 = y2 + dd.boxes[20].height();
-        // float confidence = dd.confidences[20];
-        // int classId = dd.classIds[20];
+        float x1 = dd.boxes.at(20).x;
+        float y1 = dd.boxes.at(20).y;
+        float x2 = x1 + dd.boxes.at(20).width;
+        float y2 = y1 + dd.boxes.at(20).height;
+        float confidence = dd.confidences.at(20);
+        int classId = dd.classIds.at(20);
+
+        CHECK_EQUAL((int) (x1 * 720), 106);
+        CHECK_EQUAL((int) (y1 * 400), 21);
+        CHECK_EQUAL((int) (x2 * 720), 628);
+        CHECK_EQUAL((int) (y2 * 400), 429);
+        CHECK_EQUAL((int) (confidence * 1000), 554);
+        CHECK_EQUAL(classId, 0);
 
     }
 
@@ -75,39 +90,47 @@ SUITE(CVObjectDetection_Tests)
 
         // Create a video clip
         std::stringstream path;
-        path << TEST_MEDIA_PATH << "test_video.mp4";
+        path << TEST_MEDIA_PATH << "run.mp4";
 
         // Open clip
         openshot::Clip c1(path.str());
         c1.Open();
 
-        CVObjectDetection objectDetector_1("{\"protobuf_data_path\": \"object_detector.data\", \"processing_device\": \"GPU\"}", processingController);
+        //TODO remove hardcoded path
+        CVObjectDetection objectDetector_1(effectInfo ,processingController);
 
-        objectDetector_1.detectObjectsClip(c1, 0, 100, true);
+        objectDetector_1.detectObjectsClip(c1, 0, 20, true);
 
         CVDetectionData dd_1 = objectDetector_1.GetDetectionData(20);
 
-        objectDetector_1.SaveTrackedData();
+        float x1_1 = dd_1.boxes.at(20).x;
+        float y1_1 = dd_1.boxes.at(20).y;
+        float x2_1 = x1_1 + dd_1.boxes.at(20).width;
+        float y2_1 = y1_1 + dd_1.boxes.at(20).height;
+        float confidence_1 = dd_1.confidences.at(20);
+        int classId_1 = dd_1.classIds.at(20);
 
-        CVObjectDetection objectDetector_2("{\"protobuf_data_path\": \"object_detector.data\", \"processing_device\": \"\"}", processingController);
+        objectDetector_1.SaveObjDetectedData();
 
-        // objectDetector_2.LoadTrackedData();
+        CVObjectDetection objectDetector_2(effectInfo, processingController);
+
+        objectDetector_2._LoadObjDetectdData();
 
         CVDetectionData dd_2 = objectDetector_2.GetDetectionData(20);
-        
-        // int x1_1 = dd_1.boxes[20].x;
-        // int y1_1 = dd_1.boxes[20].y;
-        // int x2_1 = x1_1 + dd_1.boxes[20].width();
-        // int y2_1 = y2_1 + dd_1.boxes[20].height();
-        // float confidence_1 = dd_1.confidences[20];
-        // int classId_1 = dd_1.classIds[20];
 
-        // int x1_2 = dd_2.boxes[20].x;
-        // int y1_2 = dd_2.boxes[20].y;
-        // int x2_2 = x1_2 + dd_2.boxes[20].width();
-        // int y2_2 = y2_2 + dd_2.boxes[20].height();
-        // float confidence_2 = dd_2.confidences[20];
-        // int classId_2 = dd_2.classIds[20];
+        float x1_2 = dd_2.boxes.at(20).x;
+        float y1_2 = dd_2.boxes.at(20).y;
+        float x2_2 = x1_2 + dd_2.boxes.at(20).width;
+        float y2_2 = y1_2 + dd_2.boxes.at(20).height;
+        float confidence_2 = dd_2.confidences.at(20);
+        int classId_2 = dd_2.classIds.at(20);
+
+        CHECK_EQUAL((int) (x1_1 * 720), (int) (x1_2 * 720));
+        CHECK_EQUAL((int) (y1_1 * 400), (int) (y1_2 * 400));
+        CHECK_EQUAL((int) (x2_1 * 720), (int) (x2_2 * 720));
+        CHECK_EQUAL((int) (y2_1 * 400), (int) (y2_2 * 400));
+        CHECK_EQUAL((int) (confidence_1 * 1000), (int) (confidence_2 * 1000));
+        CHECK_EQUAL(classId_1, classId_2);
 
     }
 

@@ -102,7 +102,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 {
     // Get the frame's image
 	cv::Mat cv_image = frame->GetImageCV();
-
+    std::cout<<"Frame number: "<<frame_number<<"\n\n";
     // Check if frame isn't NULL
     if(!cv_image.empty()){
 
@@ -116,8 +116,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 cv::Rect_<float> bb_nrml = detections.boxes.at(i);
                 cv::Rect2d box((int)(bb_nrml.x*fw),
                                (int)(bb_nrml.y*fh),
-                               (int)((bb_nrml.width - bb_nrml.x)*fw),
-                               (int)((bb_nrml.height - bb_nrml.y)*fh));
+                               (int)(bb_nrml.width*fw),
+                               (int)(bb_nrml.height*fh));
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
                          box, cv_image);
             }
@@ -154,6 +154,8 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
     
     cv::rectangle(frame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), classesColor[classId], cv::FILLED);
     putText(frame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
+    std::cout<<"X1: "<<box.x<<" Y1: "<<box.y<<" X2: "<<box.width + box.x<<" Y2: "<<box.height + box.y<<"\n";
+    std::cout<<"Class: "<<label<<"\n\n";
 }
 
 // Load protobuf data file
@@ -170,7 +172,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         }
     }
 
-    // Make sure the trackedData is empty
+    // Make sure classNames and detectionsData are empty
     classNames.clear();
     detectionsData.clear();
 
@@ -184,41 +186,47 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < objMessage.frame_size(); i++) {
+        // Create protobuf message reader
         const libopenshotobjdetect::Frame& pbFrameData = objMessage.frame(i);
 
-        // Load frame and rotation data
+        // Get frame Id
         size_t id = pbFrameData.id();
 
         // Load bounding box data
-        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &box = pbFrameData.bounding_box();
+        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
         
+        // Construct data vectors related to detections in the current frame
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
 
         for(int i = 0; i < pbFrameData.bounding_box_size(); i++){
-            float x1 = box.Get(i).x1();
-            float y1 = box.Get(i).y1();
-            float x2 = box.Get(i).x2();
-            float y2 = box.Get(i).y2();
-            int classId = box.Get(i).classid();
-            float confidence = box.Get(i).confidence();
+            // Get bounding box coordinates
+            float x = pBox.Get(i).x();
+            float y = pBox.Get(i).y();
+            float w = pBox.Get(i).w();
+            float h = pBox.Get(i).h();
+            // Get class Id (which will be assign to a class name)
+            int classId = pBox.Get(i).classid();
+            // Get prediction confidence
+            float confidence = pBox.Get(i).confidence();
 
-            cv::Rect_<float> box(x1, y1, x2-x1, y2-y1);
+            // Create OpenCV rectangle with the bouding box info
+            cv::Rect_<float> box(x, y, w, h);
 
+            // Push back data into vectors
             boxes.push_back(box);
             classIds.push_back(classId);
             confidences.push_back(confidence);
         }
 
-        // Assign data to tracker map
+        // Assign data to object detector map
         detectionsData[id] = DetectionData(classIds, confidences, boxes, id);
     }
 
-    // Show the time stamp from the last update in tracker data file 
-    if (objMessage.has_last_updated()) {
+    // Show the time stamp from the last update in object detector data file 
+    if (objMessage.has_last_updated()) 
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
-    }
 
     // Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();

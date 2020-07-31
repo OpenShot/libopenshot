@@ -118,7 +118,7 @@ void CVObjectDetection::DetectObjects(const cv::Mat &frame, size_t frameId){
     // Runs the forward pass to get output of the output layers
     std::vector<cv::Mat> outs;
     net.forward(outs, getOutputsNames(net));
-    
+
     // Remove the bounding boxes with low confidence
     postprocess(frame.size(), outs, frameId);
 
@@ -239,8 +239,8 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
         cv::Rect_<float> normalized_box;
         normalized_box.x = (box.x)/(float)frameDims.width;
         normalized_box.y = (box.y)/(float)frameDims.height;
-        normalized_box.width = (box.x+box.width)/(float)frameDims.width;
-        normalized_box.height = (box.y+box.height)/(float)frameDims.height;
+        normalized_box.width = (box.width)/(float)frameDims.width;
+        normalized_box.height = (box.height)/(float)frameDims.height;
         normalized_boxes.push_back(normalized_box);
     }
     
@@ -300,7 +300,7 @@ CVDetectionData CVObjectDetection::GetDetectionData(size_t frameId){
     }
 }
 
-bool CVObjectDetection::SaveTrackedData(){
+bool CVObjectDetection::SaveObjDetectedData(){
     // Create tracker message
     libopenshotobjdetect::ObjDetect objMessage;
 
@@ -346,10 +346,10 @@ void CVObjectDetection::AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrame
         libopenshotobjdetect::Frame_Box* box = pbFrameData->add_bounding_box();
 
         // Save bounding box data
-        box->set_x1(dData.boxes.at(i).x);
-        box->set_y1(dData.boxes.at(i).y);
-        box->set_x2(dData.boxes.at(i).x + dData.boxes.at(i).width);
-        box->set_y2(dData.boxes.at(i).y + dData.boxes.at(i).height);
+        box->set_x(dData.boxes.at(i).x);
+        box->set_y(dData.boxes.at(i).y);
+        box->set_w(dData.boxes.at(i).width);
+        box->set_h(dData.boxes.at(i).height);
         box->set_classid(dData.classIds.at(i));
         box->set_confidence(dData.confidences.at(i));
 
@@ -393,4 +393,78 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
     if (!root["classes_file"].isNull()){
 		classesFile = (root["classes_file"].asString());
 	}
+}
+
+
+
+/*
+||||||||||||||||||||||||||||||||||||||||||||||||||
+                ONLY FOR MAKE TEST
+||||||||||||||||||||||||||||||||||||||||||||||||||
+*/
+
+
+
+// Load protobuf data file
+bool CVObjectDetection::_LoadObjDetectdData(){
+    // Create tracker message
+    libopenshotobjdetect::ObjDetect objMessage; 
+
+    {
+        // Read the existing tracker message.
+        fstream input(protobuf_data_path, ios::in | ios::binary);
+        if (!objMessage.ParseFromIstream(&input)) {
+            cerr << "Failed to parse protobuf message." << endl;
+            return false;
+        }
+    }
+
+    // Make sure classNames and detectionsData are empty
+    classNames.clear(); detectionsData.clear();
+
+    // Get all classes names and assign a color to them
+    for(int i = 0; i < objMessage.classnames_size(); i++){
+        classNames.push_back(objMessage.classnames(i));
+    }
+
+    // Iterate over all frames of the saved message
+    for (size_t i = 0; i < objMessage.frame_size(); i++) {
+        // Create protobuf message reader
+        const libopenshotobjdetect::Frame& pbFrameData = objMessage.frame(i);
+
+        // Get frame Id
+        size_t id = pbFrameData.id();
+
+        // Load bounding box data
+        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
+        
+        // Construct data vectors related to detections in the current frame
+        std::vector<int> classIds; std::vector<float> confidences; std::vector<cv::Rect_<float>> boxes;
+
+        for(int i = 0; i < pbFrameData.bounding_box_size(); i++){
+            // Get bounding box coordinates
+            float x = pBox.Get(i).x(); float y = pBox.Get(i).y();
+            float w = pBox.Get(i).w(); float h = pBox.Get(i).h();
+            // Create OpenCV rectangle with the bouding box info
+            cv::Rect_<float> box(x, y, w, h);
+
+            // Get class Id (which will be assign to a class name) and prediction confidence
+            int classId = pBox.Get(i).classid(); float confidence = pBox.Get(i).confidence();
+
+            // Push back data into vectors
+            boxes.push_back(box); classIds.push_back(classId); confidences.push_back(confidence);
+        }
+
+        // Assign data to object detector map
+        detectionsData[id] = CVDetectionData(classIds, confidences, boxes, id);
+    }
+
+    // Show the time stamp from the last update in object detector data file 
+    if (objMessage.has_last_updated()) 
+        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
+
+    // Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
+
+    return true;
 }

@@ -110,13 +110,14 @@ class CVObjectDetection{
 
     /// Protobuf Save and Load methods
     // Save protobuf file
-    bool SaveTrackedData();
+    bool SaveObjDetectedData();
     // Add frame object detection data into protobuf message.
     void AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData);
-    // Load protobuf file
-    bool LoadTrackedData();
 
     /// Get and Set JSON methods
     void SetJson(const std::string value); ///< Load JSON string into this object
     void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+
+    // Load protobuf file (ONLY FOR MAKE TEST)
+    bool _LoadObjDetectdData();
 };

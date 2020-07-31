@@ -11,10 +11,10 @@ message Frame {
   int32 id = 1;  // Frame ID.
   
   message Box{
-      float x1 = 1;
-      float y1 = 2;
-      float x2 = 3;
-      float y2 = 4;
+      float x = 1;
+      float y = 2;
+      float w = 3;
+      float h = 4;
       int32 classId = 5;
       float confidence = 6;
   }

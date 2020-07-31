@@ -109,7 +109,7 @@ SUITE(CVStabilizer_Tests)
         CVStabilization stabilizer_2("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing_window\": 30}", processingController);
 
         // Load stabilized data from first stabilizer protobuf data
-        stabilizer_2.LoadStabilizedData();
+        stabilizer_2._LoadStabilizedData();
 
         // Get stabilized data
         TransformParam tp_2 = stabilizer_2.GetTransformParamData(20);

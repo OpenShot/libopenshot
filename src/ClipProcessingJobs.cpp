@@ -57,7 +57,7 @@ void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& con
     }
     else{
         // Save object detection data
-        objDetector.SaveTrackedData();
+        objDetector.SaveObjDetectedData();
         // tells to UI that the processing finished
         controller.SetFinished(true);
     }

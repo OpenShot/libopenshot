@@ -88,15 +88,15 @@ void displayClip(openshot::Clip &r9){
 int main(int argc, char* argv[]) {
 
     // Set pre-processing effects
-    bool TRACK_DATA = false;
+    bool TRACK_DATA = true;
     bool SMOOTH_VIDEO = false;
-    bool OBJECT_DETECTION_DATA = true;
+    bool OBJECT_DETECTION_DATA = false;
 
     // Get media path
     std::stringstream path;
     path << TEST_MEDIA_PATH << ((OBJECT_DETECTION_DATA) ? "run.mp4" : "test.avi");
-    // test_video.mp4 --> Used for object detector
-    //       test.avi --> Used for tracker and stabilizer
+    //  run.mp4 --> Used for object detector
+    // test.avi --> Used for tracker and stabilizer
 
     // Thread controller just for the pre-processing constructors, it won't be used
     ProcessingController processingController;
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
         // Start the object detection
         objectDetection.detectObjectsClip(r9, 0, 100, true);
         // Save the object detection data
-        objectDetection.SaveTrackedData();
+        objectDetection.SaveObjDetectedData();
 
         // Create a object detector effect
         EffectBase* e = EffectInfo().CreateEffect("Object Detector");
