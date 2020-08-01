@@ -44,6 +44,8 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
     avr_dx=0; avr_dy=0; avr_da=0; max_dx=0; max_dy=0; max_da=0;
 
     video.Open();
+    // Save original video width and height 
+    cv::Size readerDims(video.Reader()->info.width, video.Reader()->info.height);
 
     size_t frame_number;
     if(!process_interval || end == 0 || end-start <= 0){
@@ -64,6 +66,9 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
         
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
+        // Resize frame to original video width and height if they differ
+        if(cvimage.size().width != readerDims.width || cvimage.size().height != readerDims.height)
+            cv::resize(cvimage, cvimage, cv::Size(readerDims.width, readerDims.height));
         cv::cvtColor(cvimage, cvimage, cv::COLOR_RGB2GRAY);
 
         if(!TrackFrameFeatures(cvimage, frame_number)){
@@ -85,6 +90,17 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
 
     // Calculate and save transformation data
     transformationData = GenNewCamPosition(trajectoryData);
+
+    // Normalize smoothed trajectory data
+    for(auto &dataToNormalize : trajectoryData){
+        dataToNormalize.second.x/=readerDims.width;
+        dataToNormalize.second.y/=readerDims.height;
+    }
+    // Normalize transformation data
+    for(auto &dataToNormalize : transformationData){
+        dataToNormalize.second.dx/=readerDims.width;
+        dataToNormalize.second.dy/=readerDims.height;
+    }
 }
 
 // Track current frame features and find the relative transformation

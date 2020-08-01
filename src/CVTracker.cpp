@@ -50,8 +50,6 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
         t = cv::TrackerTLD::create();
     if (trackerType == "MEDIANFLOW")
         t = cv::TrackerMedianFlow::create();
-    if (trackerType == "GOTURN")
-        t = cv::TrackerGOTURN::create();
     if (trackerType == "MOSSE")
         t = cv::TrackerMOSSE::create();
     if (trackerType == "CSRT")

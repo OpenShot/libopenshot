@@ -86,6 +86,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "Wave")
 		return new Wave();
 
+	#ifdef USE_OPENCV
 	else if(effect_type == "Stabilizer")
 		return new Stabilizer();
 
@@ -94,6 +95,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 		
 	else if(effect_type == "Object Detector")
 		return new ObjectDetection();
+	#endif
 
 	return NULL;
 }
@@ -119,9 +121,12 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+
+	#ifdef USE_OPENCV
 	root.append(Stabilizer().JsonInfo());
 	root.append(Tracker().JsonInfo());
 	root.append(ObjectDetection().JsonInfo());
+	#endif
 
 	// return JsonValue
 	return root;

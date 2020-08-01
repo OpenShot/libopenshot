@@ -106,11 +106,13 @@ endif()
 find_package( OpenCV 4 )
 if (OpenCV_FOUND)
   add_definitions( -DUSE_OPENCV=1 )
+else()
+  message("\nOPENCV NOT FOUND, OPENCV RELATED TESTS ARE DISABLED\n")
 endif()
 
 ################ PROTOBUF ##################
 if (OpenCV_FOUND)
-  find_package(Protobuf)
+  find_package(Protobuf 3)
   
   if (NOT Protobuf_FOUND)
     # Protobuf is required when compiling with opencv

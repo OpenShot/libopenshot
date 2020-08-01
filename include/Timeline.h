@@ -54,7 +54,6 @@
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 #include "Settings.h"
-#include "ClipProcessingJobs.h"
 
 namespace openshot {
 

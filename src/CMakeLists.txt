@@ -82,6 +82,7 @@ endif()
 find_package( OpenCV 4 )
 if (OpenCV_FOUND)
   message("\nCOMPILING WITH OPENCV\n")
+  set(CMAKE_SWIG_FLAGS "-DUSE_OPENCV=1")
   add_definitions( -DUSE_OPENCV=1 )
 else()
   message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
@@ -89,7 +90,7 @@ endif()
 
 ################ PROTOBUF ##################
 if (OpenCV_FOUND)
-  find_package(Protobuf)
+  find_package(Protobuf 3)
   
   if (NOT Protobuf_FOUND)
     # Protobuf is required when compiling with opencv
@@ -215,6 +216,9 @@ set(OPENSHOT_CV_SOURCES
   CVStabilization.cpp
   ClipProcessingJobs.cpp
   CVObjectDetection.cpp
+  effects/Stabilizer.cpp
+  effects/Tracker.cpp
+  effects/ObjectDetection.cpp
   ./sort_filter/sort.cpp
   ./sort_filter/Hungarian.cpp
   ./sort_filter/KalmanTracker.cpp)
@@ -238,12 +242,10 @@ set(EFFECTS_SOURCES
   effects/Hue.cpp
   effects/Mask.cpp
   effects/Negate.cpp
-  effects/ObjectDetection.cpp
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
-  effects/Stabilizer.cpp
-  effects/Tracker.cpp
+
   effects/Wave.cpp)
 
 # Qt video player components

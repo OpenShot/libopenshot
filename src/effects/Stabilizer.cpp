@@ -91,8 +91,8 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 			T.at<double>(1,0) = sin(transformationData[frame_number].da);
 			T.at<double>(1,1) = cos(transformationData[frame_number].da);
 
-			T.at<double>(0,2) = transformationData[frame_number].dx;
-			T.at<double>(1,2) = transformationData[frame_number].dy;
+			T.at<double>(0,2) = transformationData[frame_number].dx * frame_image.size().width;
+			T.at<double>(1,2) = transformationData[frame_number].dy * frame_image.size().height;
 
 			// Apply rotation matrix to image
 			cv::Mat frame_stabilized;
