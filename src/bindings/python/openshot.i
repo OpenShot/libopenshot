@@ -116,6 +116,9 @@
 #ifdef USE_OPENCV
 	%{
 		#include "ClipProcessingJobs.h"
+		#include "effects/Stabilizer.h"
+		#include "effects/Tracker.h"
+		#include "effects/ObjectDetection.h"
 	%}
 #endif
 
@@ -212,6 +215,10 @@
 %include "Timeline.h"
 %include "ZmqLogger.h"
 %include "AudioDeviceInfo.h"
+
+#ifdef USE_OPENCV
+	%include "ClipProcessingJobs.h"
+#endif
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
