@@ -36,6 +36,11 @@ if(WIN32)
 	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
 endif()
 
+if (APPLE)
+	# Prevent compiling with __cxx11
+	add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+endif()
+
 ################### UNITTEST++ #####################
 # Find UnitTest++ libraries (used for unit testing)
 find_package(UnitTest++)
@@ -80,7 +85,6 @@ if(ImageMagick_FOUND)
 
 	# define a global var (used in the C++)
 	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
@@ -109,6 +113,7 @@ set(OPENSHOT_TEST_FILES
   Clip_Tests.cpp
   Color_Tests.cpp
   Coordinate_Tests.cpp
+  DummyReader_Tests.cpp
   ReaderBase_Tests.cpp
   ImageWriter_Tests.cpp
   FFmpegReader_Tests.cpp

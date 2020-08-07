@@ -242,13 +242,13 @@ namespace openshot {
 		std::list<Clip*> Clips() { return clips; };
 
 		/// Close the timeline reader (and any resources it was consuming)
-		void Close();
+		void Close() override;
 
 		/// Return the list of effects on the timeline
 		std::list<EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
-		CacheBase* GetCache() { return final_cache; };
+		CacheBase* GetCache() override { return final_cache; };
 
 		/// Set the cache object used by this reader. You must now manage the lifecycle
 		/// of this cache object though (Timeline will not delete it for you).
@@ -258,7 +258,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
@@ -269,16 +269,16 @@ namespace openshot {
 		Color color; ///<Background color of timeline canvas
 
 		/// Determine if reader is open or closed
-		bool IsOpen() { return is_open; };
+		bool IsOpen() override { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "Timeline"; };
+		std::string Name() override { return "Timeline"; };
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value); ///< Load JSON string into this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Set Max Image Size (used for performance optimization). Convenience function for setting
 		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
@@ -291,7 +291,7 @@ namespace openshot {
 		void ApplyJsonDiff(std::string value);
 
 		/// Open the reader (and start consuming resources)
-		void Open();
+		void Open() override;
 
 		/// @brief Remove an openshot::Clip from the timeline
 		/// @param clip Remove an openshot::Clip from the timeline.

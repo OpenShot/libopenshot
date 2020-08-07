@@ -88,7 +88,6 @@ namespace openshot
 	private:
 		std::string path;
 		int cache_size;
-		bool is_writing;
 		bool is_open;
 		int64_t write_video_count;
 		std::vector<Magick::Image> frames;
