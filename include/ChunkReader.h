@@ -37,10 +37,10 @@
 #include <iostream>
 #include <fstream>
 #include <omp.h>
-#include <QtCore/qdir.h>
-#include <stdio.h>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <QtCore/QDir>
 #include "Json.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"

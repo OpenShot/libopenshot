@@ -35,12 +35,12 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-#include <QtCore/qstring.h>
-#include <QtCore/qstringlist.h>
-#include <QtCore/qfile.h>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include <QtCore/QFile>
 #include <QTextStream>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include "Exceptions.h"
 #include "Fraction.h"
 #include "Json.h"
