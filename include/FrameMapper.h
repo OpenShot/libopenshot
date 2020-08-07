@@ -33,7 +33,7 @@
 
 #include <assert.h>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <memory>
 #include "CacheMemory.h"
