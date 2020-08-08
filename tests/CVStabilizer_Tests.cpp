@@ -64,20 +64,20 @@ SUITE(CVStabilizer_Tests)
         TransformParam tp = stabilizer.GetTransformParamData(20);
         CamTrajectory ct = stabilizer.GetCamTrajectoryTrackedData(20);
 
-        // Compare if stabilized data is equal to pre-tested ones
-        int dx = tp.dx*10000;
-        int dy = tp.dy*10000;
-        int da = tp.da*10000;
-        int x = ct.x*10000;
-        int y = ct.y*10000;
-        int a = ct.a*10000;
-            
-        CHECK_EQUAL((int) (37.5902 * 10000), dx);
-        CHECK_EQUAL((int) (-31.8099 * 10000), dy);
-        CHECK_EQUAL((int) (0.00720559 * 10000), da);
-        CHECK_EQUAL((int) (-0.41082 * 10000), x);
-        CHECK_EQUAL((int) (-0.368437 * 10000), y);
-        CHECK_EQUAL((int) (-0.000501644 * 10000), a);
+        // // Compare if stabilized data is equal to pre-tested ones
+        int dx = tp.dx*1000;
+        int dy = tp.dy*1000;
+        int da = tp.da*1000;
+        int x = ct.x*1000;
+        int y = ct.y*1000;
+        int a = ct.a*1000;
+
+        CHECK_EQUAL((int) (58), dx);
+        CHECK_EQUAL((int) (-88), dy);
+        CHECK_EQUAL((int) (7), da);
+        CHECK_EQUAL((int) (0), x);
+        CHECK_EQUAL((int) (-1), y);
+        CHECK_EQUAL((int) (0), a);
     }
 
 

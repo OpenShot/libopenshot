@@ -144,7 +144,7 @@ set(OPENSHOT_TEST_FILES
 set(OPENSHOT_CV_TEST_FILES
   CVTracker_Tests.cpp
   CVStabilizer_Tests.cpp
-  CVObjectDetection_Tests.cpp
+  # CVObjectDetection_Tests.cpp
   )
 
 
