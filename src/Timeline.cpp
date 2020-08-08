@@ -34,7 +34,7 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true), managed_cache(true)
+		is_open(false), auto_map_clips(true), managed_cache(true), path("")
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -64,8 +64,137 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.display_ratio = openshot::Fraction(width, height);
 	info.display_ratio.Reduce();
 	info.pixel_ratio = openshot::Fraction(1, 1);
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
 
     // Init max image size
+	SetMaxSize(info.width, info.height);
+
+	// Init cache
+	final_cache = new CacheMemory();
+	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+}
+
+// Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
+		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
+
+	// Create CrashHandler and Attach (incase of errors)
+	CrashHandler::Instance();
+
+	// Init final cache as NULL (will be created after loading json)
+	final_cache = NULL;
+
+	// Init viewport size (curve based, because it can be animated)
+	viewport_scale = Keyframe(100.0);
+	viewport_x = Keyframe(0.0);
+	viewport_y = Keyframe(0.0);
+
+	// Init background color
+	color.red = Keyframe(0.0);
+	color.green = Keyframe(0.0);
+	color.blue = Keyframe(0.0);
+
+	// Check if path exists
+	QFileInfo filePath(QString::fromStdString(path));
+	if (!filePath.exists()) {
+		throw InvalidFile("File could not be opened.", path);
+	}
+
+	// Check OpenShot Install Path exists
+	Settings *s = Settings::Instance();
+	QDir openshotPath(QString::fromStdString(s->PATH_OPENSHOT_INSTALL));
+	if (!openshotPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL could not be found.", s->PATH_OPENSHOT_INSTALL);
+	}
+	QDir openshotTransPath(openshotPath.filePath("transitions"));
+	if (!openshotTransPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL/transitions could not be found.", openshotTransPath.path().toStdString());
+	}
+
+	// Determine asset path
+	QString asset_name = filePath.baseName().left(30) + "_assets";
+	QDir asset_folder(filePath.dir().filePath(asset_name));
+	if (!asset_folder.exists()) {
+		// Create directory if needed
+		asset_folder.mkpath(".");
+	}
+
+	// Load UTF-8 project file into QString
+	QFile projectFile(QString::fromStdString(path));
+	projectFile.open(QFile::ReadOnly);
+	QString projectContents = QString::fromUtf8(projectFile.readAll());
+
+	// Convert all relative paths into absolute paths (if requested)
+	if (convert_absolute_paths) {
+
+		// Find all "image" or "path" references in JSON (using regex). Must loop through match results
+		// due to our path matching needs, which are not possible with the QString::replace() function.
+		QRegularExpression allPathsRegex(QStringLiteral("\"(image|path)\":.*?\"(.*?)\""));
+		std::vector<QRegularExpressionMatch> matchedPositions;
+		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(projectContents);
+		while (i.hasNext()) {
+			QRegularExpressionMatch match = i.next();
+			if (match.hasMatch()) {
+				// Push all match objects into a vector (so we can reverse them later)
+				matchedPositions.push_back(match);
+			}
+		}
+
+		// Reverse the matches (bottom of file to top, so our replacements don't break our match positions)
+		std::vector<QRegularExpressionMatch>::reverse_iterator itr;
+		for (itr = matchedPositions.rbegin(); itr != matchedPositions.rend(); itr++) {
+			QRegularExpressionMatch match = *itr;
+			QString relativeKey = match.captured(1); // image or path
+			QString relativePath = match.captured(2); // relative file path
+			QString absolutePath = "";
+
+			// Find absolute path of all path, image (including special replacements of @assets and @transitions)
+			if (relativePath.startsWith("@assets")) {
+				absolutePath = QFileInfo(asset_folder.absoluteFilePath(relativePath.replace("@assets", "."))).canonicalFilePath();
+			} else if (relativePath.startsWith("@transitions")) {
+				absolutePath = QFileInfo(openshotTransPath.absoluteFilePath(relativePath.replace("@transitions", "."))).canonicalFilePath();
+			} else {
+				absolutePath = QFileInfo(filePath.absoluteDir().absoluteFilePath(relativePath)).canonicalFilePath();
+			}
+
+			// Replace path in JSON content, if an absolute path was successfully found
+			if (!absolutePath.isEmpty()) {
+				projectContents.replace(match.capturedStart(0), match.capturedLength(0), "\"" + relativeKey + "\": \"" + absolutePath + "\"");
+			}
+		}
+		// Clear matches
+		matchedPositions.clear();
+	}
+
+	// Set JSON of project
+	SetJson(projectContents.toStdString());
+
+	// Calculate valid duration and set has_audio and has_video
+	// based on content inside this Timeline's clips.
+	float calculated_duration = 0.0;
+	for (auto clip : clips)
+	{
+		float clip_last_frame = clip->Position() + clip->Duration();
+		if (clip_last_frame > calculated_duration)
+			calculated_duration = clip_last_frame;
+		if (clip->Reader() && clip->Reader()->info.has_audio)
+			info.has_audio = true;
+		if (clip->Reader() && clip->Reader()->info.has_video)
+			info.has_video = true;
+
+	}
+	info.video_length = calculated_duration * info.fps.ToFloat();
+	info.duration = calculated_duration;
+
+	// Init FileInfo settings
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
+	info.video_timebase = info.fps.Reciprocal();
+	info.has_video = true;
+	info.has_audio = true;
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -395,9 +524,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Loop through pixels
 		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
 		{
-			// Get the alpha values from the pixel
-			int A = pixels[byte_index + 3];
-
 			// Apply alpha to pixel
 			pixels[byte_index + 3] *= alpha;
 		}
@@ -548,6 +674,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	y += (Settings::Instance()->MAX_HEIGHT * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
+	float origin_x = source_clip->origin_x.GetValue(clip_frame_number);
+	float origin_y = source_clip->origin_y.GetValue(clip_frame_number);
 
 	bool transformed = false;
 	QTransform transform;
@@ -555,21 +683,22 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
-	if (!isEqual(r, 0)) {
-		// ROTATE CLIP
-		float origin_x = x + (scaled_source_width / 2.0);
-		float origin_y = y + (scaled_source_height / 2.0);
-		transform.translate(origin_x, origin_y);
-		transform.rotate(r);
-		transform.translate(-origin_x,-origin_y);
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.translate(x, y);
 		transformed = true;
 	}
 
-    if (!isEqual(x, 0) || !isEqual(y, 0)) {
-        // TRANSLATE/MOVE CLIP
-        transform.translate(x, y);
-        transformed = true;
-    }
+	if (!isEqual(r, 0) || !isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
+		// ROTATE CLIP (around origin_x, origin_y)
+		float origin_x_value = (scaled_source_width * origin_x);
+		float origin_y_value = (scaled_source_height * origin_y);
+		transform.translate(origin_x_value, origin_y_value);
+		transform.rotate(r);
+		transform.shear(shear_x, shear_y);
+		transform.translate(-origin_x_value,-origin_y_value);
+		transformed = true;
+	}
 
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
@@ -579,12 +708,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		transform.scale(source_width_scale, source_height_scale);
 		transformed = true;
 	}
-
-    if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
-        // SHEAR HEIGHT/WIDTH
-        transform.shear(shear_x, shear_y);
-        transformed = true;
-    }
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed);
@@ -706,7 +829,8 @@ void Timeline::Close()
 	is_open = false;
 
 	// Clear cache
-	final_cache->Clear();
+	if (final_cache)
+		final_cache->Clear();
 }
 
 // Open the reader (and start consuming resources)
@@ -984,6 +1108,7 @@ Json::Value Timeline::JsonValue() const {
 	root["viewport_x"] = viewport_x.JsonValue();
 	root["viewport_y"] = viewport_y.JsonValue();
 	root["color"] = color.JsonValue();
+	root["path"] = path;
 
 	// Add array of clips
 	root["clips"] = Json::Value(Json::arrayValue);
@@ -1036,6 +1161,10 @@ void Timeline::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
+
+	// Set data from Json (if key is found)
+	if (!root["path"].isNull())
+		path = root["path"].asString();
 
 	if (!root["clips"].isNull()) {
 		// Clear existing clips

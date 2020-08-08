@@ -35,7 +35,7 @@ using namespace openshot;
 
 // Constructor that reads samples from a reader
 AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
-	: reader(audio_reader), frame_number(starting_frame_number), original_frame_number(starting_frame_number),
+	: reader(audio_reader), frame_number(starting_frame_number),
 	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
 
 	// Initialize an audio buffer (based on reader)

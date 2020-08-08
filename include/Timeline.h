@@ -36,6 +36,7 @@
 #include <set>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
+#include <QtCore/QRegularExpression>
 #include "CacheBase.h"
 #include "CacheDisk.h"
 #include "CacheMemory.h"
@@ -156,6 +157,7 @@ namespace openshot {
 		CacheBase *final_cache; ///<Final cache of timeline frames
 		std::set<FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
+		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
@@ -209,6 +211,11 @@ namespace openshot {
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
 
+		/// @brief Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+		/// @param projectPath The path of the UTF-8 *.osp project file (JSON contents). Contents will be loaded automatically.
+		/// @param convert_absolute_paths Should all paths be converted to absolute paths (based on the folder of the path provided)
+		Timeline(std::string projectPath, bool convert_absolute_paths);
+
         virtual ~Timeline();
 
 		/// @brief Add an openshot::Clip to the timeline
@@ -235,13 +242,13 @@ namespace openshot {
 		std::list<Clip*> Clips() { return clips; };
 
 		/// Close the timeline reader (and any resources it was consuming)
-		void Close();
+		void Close() override;
 
 		/// Return the list of effects on the timeline
 		std::list<EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
-		CacheBase* GetCache() { return final_cache; };
+		CacheBase* GetCache() override { return final_cache; };
 
 		/// Set the cache object used by this reader. You must now manage the lifecycle
 		/// of this cache object though (Timeline will not delete it for you).
@@ -251,7 +258,7 @@ namespace openshot {
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
 
 		// Curves for the viewport
 		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
@@ -262,16 +269,16 @@ namespace openshot {
 		Color color; ///<Background color of timeline canvas
 
 		/// Determine if reader is open or closed
-		bool IsOpen() { return is_open; };
+		bool IsOpen() override { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "Timeline"; };
+		std::string Name() override { return "Timeline"; };
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value); ///< Load JSON string into this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Set Max Image Size (used for performance optimization). Convenience function for setting
 		/// Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
@@ -284,7 +291,7 @@ namespace openshot {
 		void ApplyJsonDiff(std::string value);
 
 		/// Open the reader (and start consuming resources)
-		void Open();
+		void Open() override;
 
 		/// @brief Remove an openshot::Clip from the timeline
 		/// @param clip Remove an openshot::Clip from the timeline.

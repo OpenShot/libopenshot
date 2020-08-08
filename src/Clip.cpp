@@ -38,6 +38,7 @@
 #include "../include/QtImageReader.h"
 #include "../include/ChunkReader.h"
 #include "../include/DummyReader.h"
+#include "../include/Timeline.h"
 
 using namespace openshot;
 
@@ -88,6 +89,8 @@ void Clip::init_settings()
 	// Init shear and perspective curves
 	shear_x = Keyframe(0.0);
 	shear_y = Keyframe(0.0);
+	origin_x = Keyframe(0.5);
+	origin_y = Keyframe(0.5);
 	perspective_c1_x = Keyframe(-1.0);
 	perspective_c1_y = Keyframe(-1.0);
 	perspective_c2_x = Keyframe(-1.0);
@@ -131,14 +134,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(new_reader), allocated_reader(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -147,19 +150,22 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(
 	Open();
 	Close();
 
-	// Update duration
-	End(reader->info.duration);
+	// Update duration and set parent
+	if (reader) {
+		End(reader->info.duration);
+		reader->SetClip(this);
+	}
 }
 
 // Constructor with filepath
-Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 
 	// Get file extension (and convert to lower case)
 	std::string ext = get_file_extension(path);
-	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
 	if (ext=="avi" || ext=="mov" || ext=="mkv" ||  ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" ||
@@ -172,6 +178,16 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 		} catch(...) { }
 	}
+	if (ext=="osp")
+	{
+		try
+		{
+			// Open common video format
+			reader = new Timeline(path, true);
+
+		} catch(...) { }
+	}
+
 
 	// If no video found, try each reader
 	if (!reader)
@@ -191,9 +207,10 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 		}
 	}
 
-	// Update duration
+	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
+		reader->SetClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
@@ -319,12 +336,10 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
-		#pragma omp critical (Clip_GetFrame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
 		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		#pragma omp critical (Clip_GetFrame)
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -413,7 +428,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 		int delta = int(round(time.GetDelta(frame_number)));
 
 		// Init audio vars
-		int sample_rate = reader->info.sample_rate;
 		int channels = reader->info.channels;
 		int number_of_samples = GetOrCreateFrame(new_frame_number)->GetAudioSamplesCount();
 
@@ -424,7 +438,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *resampled_buffer = NULL;
-				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
 				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
@@ -445,9 +458,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample the data (since it's the 1st slice)
 				resampled_buffer = resampler->GetResampledBuffer();
-
-				// Get the length of the resampled buffer (if one exists)
-				resampled_buffer_size = resampled_buffer->getNumSamples();
 
 				// Just take the samples we need for the requested frame
 				int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
@@ -558,7 +568,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
-				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
@@ -709,6 +718,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
 	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
+	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", &time, 0.0, 30 * 60 * 60 * 48, false, requested_frame);
 	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", &channel_filter, -1, 10, false, requested_frame);
@@ -765,6 +776,8 @@ Json::Value Clip::JsonValue() const {
 	root["crop_y"] = crop_y.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
 	root["shear_y"] = shear_y.JsonValue();
+	root["origin_x"] = origin_x.JsonValue();
+	root["origin_y"] = origin_y.JsonValue();
 	root["channel_filter"] = channel_filter.JsonValue();
 	root["channel_mapping"] = channel_mapping.JsonValue();
 	root["has_audio"] = has_audio.JsonValue();
@@ -789,6 +802,8 @@ Json::Value Clip::JsonValue() const {
 
 	if (reader)
 		root["reader"] = reader->JsonValue();
+	else
+		root["reader"] = Json::Value(Json::objectValue);
 
 	// return JsonValue
 	return root;
@@ -860,6 +875,10 @@ void Clip::SetJsonValue(const Json::Value root) {
 		shear_x.SetJsonValue(root["shear_x"]);
 	if (!root["shear_y"].isNull())
 		shear_y.SetJsonValue(root["shear_y"]);
+	if (!root["origin_x"].isNull())
+		origin_x.SetJsonValue(root["origin_x"]);
+	if (!root["origin_y"].isNull())
+		origin_y.SetJsonValue(root["origin_y"]);
 	if (!root["channel_filter"].isNull())
 		channel_filter.SetJsonValue(root["channel_filter"]);
 	if (!root["channel_mapping"].isNull())
@@ -964,6 +983,12 @@ void Clip::SetJsonValue(const Json::Value root) {
 				// Create new reader
 				reader = new DummyReader();
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "Timeline") {
+
+				// Create new reader (always load from file again)
+				// This prevents FrameMappers from being loaded on accident
+				reader = new Timeline(root["reader"]["path"].asString(), true);
 			}
 
 			// mark as managed reader and set parent
