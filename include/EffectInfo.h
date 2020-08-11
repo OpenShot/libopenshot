@@ -34,9 +34,10 @@
 #include "Effects.h"
 
 
+
 namespace openshot
 {
-
+	class Clip;
 	/**
 	 * @brief This class returns a listing of all effects supported by libopenshot
 	 *

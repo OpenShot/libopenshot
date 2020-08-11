@@ -147,4 +147,28 @@ TEST(Copy_Constructor)
 	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
 }
 
+#ifdef USE_OPENCV
+TEST(Convert_Image)
+{
+	// Create a video clip
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	Clip c1(path.str());
+	c1.Open();
+
+	// Get first frame
+	std::shared_ptr<Frame> f1 = c1.GetFrame(1);
+
+	// Get first Mat image
+	cv::Mat cvimage = f1->GetImageCV();
+
+	CHECK(!cvimage.empty());
+
+	CHECK_EQUAL(1, f1->number);
+	CHECK_EQUAL(f1->GetWidth(), cvimage.cols);
+	CHECK_EQUAL(f1->GetHeight(), cvimage.rows);
+	CHECK_EQUAL(3, cvimage.channels());
+}
+#endif
+
 } // SUITE(Frame_Tests)

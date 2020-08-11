@@ -90,6 +90,51 @@ if (ImageMagick_FOUND)
   mark_as_advanced(HAVE_IMAGEMAGICK)
 endif()
 
+################ OPENCV ##################
+
+find_package( OpenCV 4 )
+if (OpenCV_FOUND)
+  message("\nCOMPILING WITH OPENCV\n")
+  set(CMAKE_SWIG_FLAGS "-DUSE_OPENCV=1")
+  add_definitions( -DUSE_OPENCV=1 )
+else()
+  message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
+endif()
+
+################ PROTOBUF ##################
+if (OpenCV_FOUND)
+  find_package(Protobuf 3)
+  
+  if (NOT Protobuf_FOUND)
+    # Protobuf is required when compiling with opencv
+    message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
+  endif()
+  
+  include_directories(${PROTOBUF_INCLUDE_DIR})
+
+  set(PROTOBUF_MESSAGES_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/protobuf_messages")
+
+  FILE(GLOB PROTO_MSGS "${PROTOBUF_MESSAGES_FOLDER}/*.proto")
+  foreach(PROTO_MSG ${PROTO_MSGS})
+    execute_process (
+      COMMAND bash -c "${PROTOBUF_PROTOC_EXECUTABLE} -I=${PROTOBUF_MESSAGES_FOLDER} --cpp_out=${PROTOBUF_MESSAGES_FOLDER} ${PROTO_MSG}"
+    )
+  endforeach()
+
+  FILE(GLOB PROTO_CCS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.cc")
+  foreach(PROTO_CC ${PROTO_CCS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_CC} ${CMAKE_CURRENT_SOURCE_DIR})
+    file(REMOVE ${PROTO_CC})
+  endforeach()
+  
+  FILE(GLOB PROTO_HS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.h")
+  foreach(PROTO_H ${PROTO_HS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_H} ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+    file(REMOVE ${PROTO_H})
+  endforeach()
+
+endif()
+
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 find_package(OpenShotAudio 0.2.0 REQUIRED)
@@ -178,6 +223,26 @@ set(OPENSHOT_SOURCES
   Settings.cpp
   Timeline.cpp)
 
+# OpenCV related classes
+set(OPENSHOT_CV_SOURCES
+  CVTracker.cpp
+  CVStabilization.cpp
+  ClipProcessingJobs.cpp
+  CVObjectDetection.cpp
+  effects/Stabilizer.cpp
+  effects/Tracker.cpp
+  effects/ObjectDetection.cpp
+  ./sort_filter/sort.cpp
+  ./sort_filter/Hungarian.cpp
+  ./sort_filter/KalmanTracker.cpp)
+
+# Compiled Protobuf messages
+set(PROTOBUF_MESSAGES
+    stabilizedata.pb.cc
+    trackerdata.pb.cc
+    objdetectdata.pb.cc
+    )
+
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -193,6 +258,7 @@ set(EFFECTS_SOURCES
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
+
   effects/Wave.cpp)
 
 # Qt video player components
@@ -219,16 +285,14 @@ target_sources(openshot PRIVATE
   ${OPENSHOT_SOURCES}
   ${EFFECTS_SOURCES}
   ${QT_PLAYER_SOURCES}
-  ${OPENSHOT_QT_HEADERS}
-  )
+  ${OPENSHOT_QT_HEADERS})
 
 # Set SONAME and other library properties
 set_target_properties(openshot PROPERTIES
   AUTOMOC ON
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_SO_VERSION}
-  INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-  )
+  INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
 
 # Add optional ImageMagic-dependent sources
 if(ImageMagick_FOUND)
@@ -246,6 +310,14 @@ if(BLACKMAGIC_FOUND)
     DecklinkOutput.cpp
     DecklinkWriter.cpp)
 endif()
+
+# OpenCV related files
+if (OpenCV_FOUND)
+  target_sources(openshot PRIVATE
+    ${OPENSHOT_CV_SOURCES}
+    ${PROTOBUF_MESSAGES})
+endif()
+
 
 # Location of our includes, both internally and when installed
 target_include_directories(openshot
@@ -403,6 +475,10 @@ if(BLACKMAGIC_FOUND)
   target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 endif()
 
+if (OpenCV_FOUND)
+  target_link_libraries(openshot PUBLIC ${OpenCV_LIBS} ${PROTOBUF_LIBRARY})
+endif()
+
 if(WIN32)
   # Required for exception handling on Windows
   target_link_libraries(openshot PUBLIC "imagehlp" "dbghelp" )
@@ -412,6 +488,7 @@ endif()
 ############### CLI EXECUTABLES ################
 # Create test executable
 add_executable(openshot-example examples/Example.cpp)
+
 
 # Define path to test input files
 set(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
@@ -424,8 +501,22 @@ target_compile_definitions(openshot-example PRIVATE
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
 
+
 add_executable(openshot-html-test examples/ExampleHtml.cpp)
 target_link_libraries(openshot-html-test openshot Qt5::Gui)
+
+############### OPENCV EXAMPLE EXECUTABLE ################
+if (OpenCV_FOUND)
+  # Create test Opencv executable
+  add_executable( openshotCV-example examples/Example_opencv.cpp )
+  # Define path to test input files  
+  target_link_libraries( openshotCV-example ${OpenCV_LIBS} openshot)
+  target_compile_definitions(openshotCV-example PRIVATE
+	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
+  # Link test executable to the new library
+  target_link_libraries(openshot-example openshot)
+endif()
+
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable

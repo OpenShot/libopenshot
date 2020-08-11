@@ -47,5 +47,12 @@
 #include "effects/Shift.h"
 #include "effects/Wave.h"
 
+#ifdef USE_OPENCV
+#include "effects/ObjectDetection.h"
+#include "effects/Tracker.h"
+#include "effects/Stabilizer.h"
+#endif
+
+
 
 #endif

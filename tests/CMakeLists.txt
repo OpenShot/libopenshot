@@ -106,6 +106,24 @@ if(ENABLE_BLACKMAGIC)
 	endif()
 endif()
 
+####################### OPENCV ##########################
+find_package( OpenCV 4 )
+if (OpenCV_FOUND)
+  add_definitions( -DUSE_OPENCV=1 )
+else()
+  message("\nOPENCV NOT FOUND, OPENCV RELATED TESTS ARE DISABLED\n")
+endif()
+
+################ PROTOBUF ##################
+if (OpenCV_FOUND)
+  find_package(Protobuf 3)
+  
+  if (NOT Protobuf_FOUND)
+    # Protobuf is required when compiling with opencv
+    message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
+  endif()
+  include_directories(${PROTOBUF_INCLUDE_DIR})
+endif()
 
 ###############  SET TEST SOURCE FILES  #################
 set(OPENSHOT_TEST_FILES
@@ -124,17 +142,38 @@ set(OPENSHOT_TEST_FILES
   KeyFrame_Tests.cpp
   Point_Tests.cpp
   Settings_Tests.cpp
-  Timeline_Tests.cpp )
+  Timeline_Tests.cpp)
+
+##########  SET OPENCV RELATED TEST FILES  ###############
+set(OPENSHOT_CV_TEST_FILES
+  CVTracker_Tests.cpp
+  CVStabilizer_Tests.cpp
+  # CVObjectDetection_Tests.cpp
+  )
+
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
-add_executable(openshot-test
-  tests.cpp
-  ${OPENSHOT_TEST_FILES} )
+if (OpenCV_FOUND)
+  add_executable(openshot-test
+    tests.cpp
+    ${OPENSHOT_TEST_FILES} 
+    ${OPENSHOT_CV_TEST_FILES})
+  
+  # Link libraries to the new executable
+  target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARY})
 
-# Link libraries to the new executable
-target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
+else()
+  add_executable(openshot-test
+    tests.cpp
+    ${OPENSHOT_TEST_FILES})
+
+  # Link libraries to the new executable
+  target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
+endif()
+
+
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable

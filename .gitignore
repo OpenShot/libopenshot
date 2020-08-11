@@ -8,3 +8,5 @@
 /.metadata/
 tags
 *~
+
+.vscode/
