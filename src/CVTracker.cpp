@@ -124,6 +124,16 @@ bool CVTracker::initTracker(cv::Mat &frame, size_t frameId){
     // Create new tracker object
     tracker = selectTracker(trackerType);
 
+    // Correct if bounding box contains negative proportions (width and/or height < 0)
+    if(bbox.width < 0){
+        bbox.x = bbox.x - abs(bbox.width);
+        bbox.width = abs(bbox.width);
+    }
+    if(bbox.height < 0){
+        bbox.y = bbox.y - abs(bbox.height);
+        bbox.height = abs(bbox.height);
+    }
+
     // Initialize tracker
     tracker->init(frame, bbox);
 
