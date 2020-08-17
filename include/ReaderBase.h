@@ -43,7 +43,7 @@
 #include "Frame.h"
 #include "Json.h"
 #include "ZmqLogger.h"
-#include <QtCore/qstring.h>
+#include <QString>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>

@@ -34,6 +34,16 @@ if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
 
+# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
+# -DNDEBUG is set by cmake for all release configs, so add
+# -DDEBUG for debug builds. We'll do this for all OSes, even
+# though only MacOS requires it.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+# Make sure we've picked some build type, default to debug
+if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 ################ WINDOWS ##################
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
@@ -45,7 +55,6 @@ endif()
 if (APPLE)
 	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
 	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	add_definitions(-DNDEBUG)
 	set(EXTENSION "mm")
 	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
 	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")

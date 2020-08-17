@@ -992,7 +992,7 @@ void Frame::Play()
 
 	// Output error (if any)
 	if (error.isNotEmpty()) {
-		cout << "Error on initialise(): " << error.toStdString() << endl;
+		cout << "Error on initialise(): " << error << endl;
 	}
 
 	juce::AudioSourcePlayer audioSourcePlayer;

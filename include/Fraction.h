@@ -31,7 +31,7 @@
 #ifndef OPENSHOT_FRACTION_H
 #define OPENSHOT_FRACTION_H
 
-#include <math.h>
+#include <cmath>
 
 namespace openshot {
 

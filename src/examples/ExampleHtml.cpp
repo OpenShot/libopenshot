@@ -32,10 +32,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include "../../include/OpenShot.h"
-//#include "../../include/CrashHandler.h"
 #include <QGuiApplication>
 #include <QTimer>
+
+#include "../../include/OpenShot.h"
+#include "../../include/CrashHandler.h"
 
 using namespace openshot;
 
