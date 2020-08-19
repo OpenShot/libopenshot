@@ -94,7 +94,7 @@ windows-builder-x86:
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
     - $env:UNITTEST_DIR = "C:\msys32\usr"
     - $env:RESVGDIR = "C:\msys32\usr"
-    - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;C:\msys32\usr\local\x64\mingw\bin;C:\msys32\usr\local;C:\msys32\mingw64\bin;C:\msys32\mingw64\include;C:\msys32\mingw64\lib;" + $env:Path;
+    - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;C:\msys32\usr\local\x64\mingw\bin;C:\msys32\usr\local;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
     - cd build
     - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32" ../
