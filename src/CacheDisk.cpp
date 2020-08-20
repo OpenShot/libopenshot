@@ -29,6 +29,9 @@
  */
 
 #include "../include/CacheDisk.h"
+#include <Qt>
+#include <QString>
+#include <QTextStream>
 
 using namespace std;
 using namespace openshot;
