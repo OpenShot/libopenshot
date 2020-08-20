@@ -99,7 +99,7 @@ namespace openshot
 	 *       );
 	 *
 	 * // Some methods require a shared pointer to an openshot::Frame object.
-	 * std::shared_ptr<Frame> f(new Frame(1, 720, 480, "#000000", 44100, 2));
+	 * auto f = std::make_shared<openshot::Frame>(1, 720, 480, "#000000", 44100, 2);
 	 *
 	 * @endcode
 	 */

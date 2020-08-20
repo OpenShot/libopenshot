@@ -86,7 +86,9 @@ std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64
 	}
 
 	// Resize deinterlaced image back to original size, and update frame's image
-	image = std::shared_ptr<QImage>(new QImage(deinterlaced_image.scaled(original_width, original_height, Qt::IgnoreAspectRatio, Qt::FastTransformation)));
+	image = std::make_shared<QImage>(deinterlaced_image.scaled(
+		original_width, original_height,
+		Qt::IgnoreAspectRatio, Qt::FastTransformation));
 
 	// Update image on frame
 	frame->AddImage(image);
