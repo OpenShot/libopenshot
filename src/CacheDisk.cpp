@@ -29,6 +29,7 @@
  */
 
 #include "../include/CacheDisk.h"
+#include "../include/QtUtilities.h"
 #include <Qt>
 #include <QString>
 #include <QTextStream>
