@@ -33,41 +33,35 @@
 using namespace std;
 using namespace openshot;
 
-// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
+// Constructor - blank frame
 Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), color("#000000"),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 		max_audio_sample(0)
 {
-	// Init the image magic and audio buffer
+	// Allocate and zero (fill with silence) the audio buffer
 	audio = std::make_shared<juce::AudioSampleBuffer>(channels, 0);
-
-	// initialize the audio samples to zero (silence)
 	audio->clear();
 }
 
-// Constructor - image only (48kHz audio silence)
+// Constructor - image only
 Frame::Frame(int64_t number, int width, int height, std::string color)
 	: number(number), pixel_ratio(1,1), channels(2), width(width), height(height), color(color),
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 	  max_audio_sample(0)
 {
-	// Init the image magic and audio buffer
+	// Allocate and zero (fill with silence) the audio buffer
 	audio = std::make_shared<juce::AudioSampleBuffer>(channels, 0);
-
-	// initialize the audio samples to zero (silence)
 	audio->clear();
 }
 
-// Constructor - audio only (300x200 blank image)
+// Constructor - audio only
 Frame::Frame(int64_t number, int samples, int channels) :
 		number(number), pixel_ratio(1,1), channels(channels), width(1), height(1), color("#000000"),
 		channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 		max_audio_sample(0)
 {
-	// Init the image magic and audio buffer
+	// Allocate and zero (fill with silence) the audio buffer
 	audio = std::make_shared<juce::AudioSampleBuffer>(channels, samples);
-
-	// initialize the audio samples to zero (silence)
 	audio->clear();
 }
 
@@ -77,10 +71,8 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 	  channel_layout(LAYOUT_STEREO), sample_rate(44100), qbuffer(NULL), has_audio_data(false), has_image_data(false),
 	  max_audio_sample(0)
 {
-	// Init the image magic and audio buffer
+	// Allocate and zero (fill with silence) the audio buffer
 	audio = std::make_shared<juce::AudioSampleBuffer>(channels, samples);
-
-	// initialize the audio samples to zero (silence)
 	audio->clear();
 }
 
