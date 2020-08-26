@@ -92,7 +92,7 @@ namespace openshot {
 	 * c2.alpha.AddPoint(384, 1.0); // Animate the alpha to visible (between frame #360 and frame #384)
 	 * @endcode
 	 */
-	class Clip : public openshot::ClipBase {
+	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 	protected:
 		/// Section lock for multiple threads
 	    juce::CriticalSection getFrameCriticalSection;
@@ -100,6 +100,7 @@ namespace openshot {
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
+		bool is_open;	///> Is Reader opened
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -117,6 +118,9 @@ namespace openshot {
 		/// Apply effects to the source frame (if any)
 		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame);
 
+		/// Apply keyframes to the source frame (if any)
+		std::shared_ptr<openshot::Frame> apply_keyframes(std::shared_ptr<openshot::Frame> frame);
+
 		/// Get file extension
 		std::string get_file_extension(std::string path);
 
@@ -131,6 +135,9 @@ namespace openshot {
 
 		/// Update default rotation from reader
 		void init_reader_rotation();
+
+		/// Compare 2 floating point numbers
+		bool isEqual(double a, double b);
 
 		/// Sort effects by order
 		void sort_effects();
@@ -158,6 +165,18 @@ namespace openshot {
 
 		/// Destructor
 		virtual ~Clip();
+
+
+		/// Get the cache object used by this reader (always returns NULL for this object)
+		CacheMemory* GetCache() override { return NULL; };
+
+		/// Determine if reader is open or closed
+		bool IsOpen() override { return is_open; };
+
+		/// Return the type name of the class
+		std::string Name() override { return "Clip"; };
+
+
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.
