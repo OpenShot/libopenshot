@@ -119,7 +119,7 @@ namespace openshot {
 		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame);
 
 		/// Apply keyframes to the source frame (if any)
-		std::shared_ptr<openshot::Frame> apply_keyframes(std::shared_ptr<openshot::Frame> frame);
+		std::shared_ptr<openshot::Frame> apply_keyframes(std::shared_ptr<openshot::Frame> frame, int width, int height);
 
 		/// Get file extension
 		std::string get_file_extension(std::string path);
@@ -188,11 +188,23 @@ namespace openshot {
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
+		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
+		/// of samples match the source reader.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
+
+		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
+		/// of samples can be customized to match the Timeline, or any custom output. Extra samples will be moved to the
+		/// next Frame. Missing samples will be moved from the next Frame.
+		///
+		/// @returns The requested frame (containing the image)
+		/// @param requested_frame The frame number that is requested
+		/// @param width The width of the image requested
+		/// @param height The height of the image requested
+		/// @param samples The number of samples requested
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame, int width, int height, int samples);
 
 		/// Open the internal reader
 		void Open();
