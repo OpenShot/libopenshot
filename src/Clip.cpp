@@ -134,14 +134,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
@@ -158,7 +158,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 }
 
 // Constructor with filepath
-Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
@@ -262,6 +262,10 @@ void Clip::Open()
 	{
 		// Open the reader
 		reader->Open();
+		is_open = true;
+
+		// Copy Reader info to Clip
+		info = reader->info;
 
 		// Set some clip properties from the file reader
 		if (end == 0.0)
@@ -275,6 +279,7 @@ void Clip::Open()
 // Close the internal reader
 void Clip::Close()
 {
+	is_open = false;
 	if (reader) {
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
 
@@ -311,6 +316,10 @@ float Clip::End() const
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+
 	if (reader)
 	{
 		// Adjust out of bounds frame number
@@ -362,6 +371,9 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
+
+		// Apply keyframe / transforms
+		apply_keyframes(frame);
 
 		// Return processed 'frame'
 		return frame;
@@ -1053,6 +1065,287 @@ std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 		frame = effect->GetFrame(frame, frame->number);
 
 	} // end effect loop
+
+	// Return modified frame
+	return frame;
+}
+
+// Compare 2 floating point numbers for equality
+bool Clip::isEqual(double a, double b)
+{
+	return fabs(a - b) < 0.000001;
+}
+
+
+// Apply keyframes to the source frame (if any)
+std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
+{
+	// Get actual frame image data
+	std::shared_ptr<QImage> source_image = frame->GetImage();
+
+	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
+	if (Waveform())
+	{
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+
+		// Get the color of the waveform
+		int red = wave_color.red.GetInt(frame->number);
+		int green = wave_color.green.GetInt(frame->number);
+		int blue = wave_color.blue.GetInt(frame->number);
+		int alpha = wave_color.alpha.GetInt(frame->number);
+
+		// Generate Waveform Dynamically (the size of the timeline)
+		source_image = frame->GetWaveform(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, red, green, blue, alpha);
+		frame->AddImage(std::shared_ptr<QImage>(source_image));
+	}
+
+	/* ALPHA & OPACITY */
+	if (alpha.GetValue(frame->number) != 1.0)
+	{
+		float alpha_value = alpha.GetValue(frame->number);
+
+		// Get source image's pixels
+		unsigned char *pixels = (unsigned char *) source_image->bits();
+
+		// Loop through pixels
+		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
+		{
+			// Apply alpha to pixel
+			pixels[byte_index + 3] *= alpha_value;
+		}
+
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
+	}
+
+	/* RESIZE SOURCE IMAGE - based on scale type */
+	QSize source_size = source_image->size();
+	switch (scale)
+	{
+		case (SCALE_FIT): {
+			// keep aspect ratio
+			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::KeepAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_STRETCH): {
+			// ignore aspect ratio
+			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::IgnoreAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_CROP): {
+			QSize width_size(Settings::Instance()->MAX_WIDTH, round(Settings::Instance()->MAX_WIDTH / (float(source_size.width()) / float(source_size.height()))));
+			QSize height_size(round(Settings::Instance()->MAX_HEIGHT / (float(source_size.height()) / float(source_size.width()))), Settings::Instance()->MAX_HEIGHT);
+
+			// respect aspect ratio
+			if (width_size.width() >= Settings::Instance()->MAX_WIDTH && width_size.height() >= Settings::Instance()->MAX_HEIGHT)
+				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
+			else
+				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_NONE): {
+			// Calculate ratio of source size to project size
+			// Even with no scaling, previews need to be adjusted correctly
+			// (otherwise NONE scaling draws the frame image outside of the preview)
+			float source_width_ratio = source_size.width() / float(Settings::Instance()->MAX_WIDTH);
+			float source_height_ratio = source_size.height() / float(Settings::Instance()->MAX_HEIGHT);
+			source_size.scale(Settings::Instance()->MAX_WIDTH * source_width_ratio, Settings::Instance()->MAX_HEIGHT * source_height_ratio, Qt::KeepAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+	}
+
+	float crop_x_value = crop_x.GetValue(frame->number);
+	float crop_y_value = crop_y.GetValue(frame->number);
+	float crop_w_value = crop_width.GetValue(frame->number);
+	float crop_h_value = crop_height.GetValue(frame->number);
+	switch(crop_gravity)
+	{
+		case (GRAVITY_TOP_LEFT):
+			// This is only here to prevent unused-enum warnings
+			break;
+		case (GRAVITY_TOP):
+			crop_x_value += 0.5;
+			break;
+		case (GRAVITY_TOP_RIGHT):
+			crop_x_value += 1.0;
+			break;
+		case (GRAVITY_LEFT):
+			crop_y_value += 0.5;
+			break;
+		case (GRAVITY_CENTER):
+			crop_x_value += 0.5;
+			crop_y_value += 0.5;
+			break;
+		case (GRAVITY_RIGHT):
+			crop_x_value += 1.0;
+			crop_y_value += 0.5;
+			break;
+		case (GRAVITY_BOTTOM_LEFT):
+			crop_y_value += 1.0;
+			break;
+		case (GRAVITY_BOTTOM):
+			crop_x_value += 0.5;
+			crop_y_value += 1.0;
+			break;
+		case (GRAVITY_BOTTOM_RIGHT):
+			crop_x_value += 1.0;
+			crop_y_value += 1.0;
+			break;
+	}
+
+	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
+	float x = 0.0; // left
+	float y = 0.0; // top
+
+	// Adjust size for scale x and scale y
+	float sx = scale_x.GetValue(frame->number); // percentage X scale
+	float sy = scale_y.GetValue(frame->number); // percentage Y scale
+	float scaled_source_width = source_size.width() * sx;
+	float scaled_source_height = source_size.height() * sy;
+
+	switch (gravity)
+	{
+		case (GRAVITY_TOP_LEFT):
+			// This is only here to prevent unused-enum warnings
+			break;
+		case (GRAVITY_TOP):
+			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+			break;
+		case (GRAVITY_TOP_RIGHT):
+			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+			break;
+		case (GRAVITY_LEFT):
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_CENTER):
+			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_RIGHT):
+			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_BOTTOM_LEFT):
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			break;
+		case (GRAVITY_BOTTOM):
+			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			break;
+		case (GRAVITY_BOTTOM_RIGHT):
+			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			break;
+	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
+
+	/* LOCATION, ROTATION, AND SCALE */
+	float r = rotation.GetValue(frame->number); // rotate in degrees
+	x += (Settings::Instance()->MAX_WIDTH * location_x.GetValue(frame->number)); // move in percentage of final width
+	y += (Settings::Instance()->MAX_HEIGHT * location_y.GetValue(frame->number)); // move in percentage of final height
+	float shear_x_value = shear_x.GetValue(frame->number);
+	float shear_y_value = shear_y.GetValue(frame->number);
+	float origin_x_value = origin_x.GetValue(frame->number);
+	float origin_y_value = origin_y.GetValue(frame->number);
+
+	bool transformed = false;
+	QTransform transform;
+
+	// Transform source image (if needed)
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.translate(x, y);
+		transformed = true;
+	}
+
+	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
+		// ROTATE CLIP (around origin_x, origin_y)
+		float origin_x_offset = (scaled_source_width * origin_x_value);
+		float origin_y_offset = (scaled_source_height * origin_y_value);
+		transform.translate(origin_x_offset, origin_y_offset);
+		transform.rotate(r);
+		transform.shear(shear_x_value, shear_y_value);
+		transform.translate(-origin_x_offset,-origin_y_offset);
+		transformed = true;
+	}
+
+	// SCALE CLIP (if needed)
+	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
+	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
+
+	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
+		transform.scale(source_width_scale, source_height_scale);
+		transformed = true;
+	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "transformed", transformed);
+
+	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+	std::shared_ptr<QImage> new_image;
+	new_image = std::shared_ptr<QImage>(new QImage(*source_image));
+	new_image->fill(QColor(QString::fromStdString("#00000000")));
+
+	// Load timeline's new frame image into a QPainter
+	QPainter painter(new_image.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+
+	// Apply transform (translate, rotate, scale)... if any
+	if (transformed)
+		painter.setTransform(transform);
+
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *source_image, crop_x_value * source_image->width(), crop_y_value * source_image->height(), crop_w_value * source_image->width(), crop_h_value * source_image->height());
+
+	// Draw frame #'s on top of image (if needed)
+	if (display != FRAME_DISPLAY_NONE) {
+		std::stringstream frame_number_str;
+		switch (display)
+		{
+			case (FRAME_DISPLAY_NONE):
+				// This is only here to prevent unused-enum warnings
+				break;
+
+			case (FRAME_DISPLAY_CLIP):
+				frame_number_str << frame->number;
+				break;
+
+			case (FRAME_DISPLAY_TIMELINE):
+				frame_number_str << "N/A";
+				break;
+
+			case (FRAME_DISPLAY_BOTH):
+				frame_number_str << "N/A" << " (" << frame->number << ")";
+				break;
+		}
+
+		// Draw frame number on top of image
+		painter.setPen(QColor("#ffffff"));
+		painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
+	}
+
+	painter.end();
+
+	// Add new QImage to frame
+	frame->AddImage(new_image);
 
 	// Return modified frame
 	return frame;
