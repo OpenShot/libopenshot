@@ -325,6 +325,33 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		// Adjust out of bounds frame number
 		requested_frame = adjust_frame_number_minimum(requested_frame);
 
+		// Is a time map detected
+		int64_t new_frame_number = requested_frame;
+		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
+		if (time.GetLength() > 1)
+			new_frame_number = time_mapped_number;
+
+		// Get the # of audio samples from the time mapped Frame instance
+		std::shared_ptr<Frame> time_mapped_original_frame = GetOrCreateFrame(new_frame_number);
+		return GetFrame(requested_frame, reader->info.width, reader->info.height, time_mapped_original_frame->GetAudioSamplesCount());
+	}
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+// Get an openshot::Frame object for a specific frame number of this reader.
+std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame, int width, int height, int samples)
+{
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+
+	if (reader)
+	{
+		// Adjust out of bounds frame number
+		requested_frame = adjust_frame_number_minimum(requested_frame);
+
 		// Adjust has_video and has_audio overrides
 		int enabled_audio = has_audio.GetInt(requested_frame);
 		if (enabled_audio == -1 && reader && reader->info.has_audio)
@@ -367,13 +394,17 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
+		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
 		get_time_mapped_frame(frame, requested_frame);
+
+		// Adjust # of samples to match requested (the interaction with time curves will make this tricky)
+		// TODO: Implement move samples to/from next frame
 
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
 
 		// Apply keyframe / transforms
-		apply_keyframes(frame);
+		apply_keyframes(frame, width, height);
 
 		// Return processed 'frame'
 		return frame;
@@ -646,13 +677,9 @@ int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 {
 	std::shared_ptr<Frame> new_frame;
-
-	// Init some basic properties about this frame
-	int samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
-
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
@@ -669,14 +696,17 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 		// ...
 	}
 
+	// Estimate # of samples needed for this frame
+	int estimated_samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
+
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "estimated_samples_in_frame", estimated_samples_in_frame);
 
 	// Create blank frame
-	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
+	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", estimated_samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
-	new_frame->AddAudioSilence(samples_in_frame);
+	new_frame->AddAudioSilence(estimated_samples_in_frame);
 	return new_frame;
 }
 
@@ -1078,7 +1108,7 @@ bool Clip::isEqual(double a, double b)
 
 
 // Apply keyframes to the source frame (if any)
-std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
+std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 {
 	// Get actual frame image data
 	std::shared_ptr<QImage> source_image = frame->GetImage();
@@ -1096,7 +1126,7 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 		int alpha = wave_color.alpha.GetInt(frame->number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = frame->GetWaveform(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, red, green, blue, alpha);
+		source_image = frame->GetWaveform(width, height, red, green, blue, alpha);
 		frame->AddImage(std::shared_ptr<QImage>(source_image));
 	}
 
@@ -1125,7 +1155,7 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 	{
 		case (SCALE_FIT): {
 			// keep aspect ratio
-			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::KeepAspectRatio);
+			source_size.scale(width, height, Qt::KeepAspectRatio);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
@@ -1133,18 +1163,18 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 		}
 		case (SCALE_STRETCH): {
 			// ignore aspect ratio
-			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::IgnoreAspectRatio);
+			source_size.scale(width, height, Qt::IgnoreAspectRatio);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;
 		}
 		case (SCALE_CROP): {
-			QSize width_size(Settings::Instance()->MAX_WIDTH, round(Settings::Instance()->MAX_WIDTH / (float(source_size.width()) / float(source_size.height()))));
-			QSize height_size(round(Settings::Instance()->MAX_HEIGHT / (float(source_size.height()) / float(source_size.width()))), Settings::Instance()->MAX_HEIGHT);
+			QSize width_size(width, round(width / (float(source_size.width()) / float(source_size.height()))));
+			QSize height_size(round(height / (float(source_size.height()) / float(source_size.width()))), height);
 
 			// respect aspect ratio
-			if (width_size.width() >= Settings::Instance()->MAX_WIDTH && width_size.height() >= Settings::Instance()->MAX_HEIGHT)
+			if (width_size.width() >= width && width_size.height() >= height)
 				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
 			else
 				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
@@ -1157,9 +1187,9 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 			// Calculate ratio of source size to project size
 			// Even with no scaling, previews need to be adjusted correctly
 			// (otherwise NONE scaling draws the frame image outside of the preview)
-			float source_width_ratio = source_size.width() / float(Settings::Instance()->MAX_WIDTH);
-			float source_height_ratio = source_size.height() / float(Settings::Instance()->MAX_HEIGHT);
-			source_size.scale(Settings::Instance()->MAX_WIDTH * source_width_ratio, Settings::Instance()->MAX_HEIGHT * source_height_ratio, Qt::KeepAspectRatio);
+			float source_width_ratio = source_size.width() / float(width);
+			float source_height_ratio = source_size.height() / float(height);
+			source_size.scale(width * source_width_ratio, height * source_height_ratio, Qt::KeepAspectRatio);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::add_keyframes (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
@@ -1222,32 +1252,32 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 			// This is only here to prevent unused-enum warnings
 			break;
 		case (GRAVITY_TOP):
-			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
+			x = (width - scaled_source_width) / 2.0; // center
 			break;
 		case (GRAVITY_TOP_RIGHT):
-			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
+			x = width - scaled_source_width; // right
 			break;
 		case (GRAVITY_LEFT):
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			y = (height - scaled_source_height) / 2.0; // center
 			break;
 		case (GRAVITY_CENTER):
-			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			x = (width - scaled_source_width) / 2.0; // center
+			y = (height - scaled_source_height) / 2.0; // center
 			break;
 		case (GRAVITY_RIGHT):
-			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
+			x = width - scaled_source_width; // right
+			y = (height - scaled_source_height) / 2.0; // center
 			break;
 		case (GRAVITY_BOTTOM_LEFT):
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			y = (height - scaled_source_height); // bottom
 			break;
 		case (GRAVITY_BOTTOM):
-			x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			x = (width - scaled_source_width) / 2.0; // center
+			y = (height - scaled_source_height); // bottom
 			break;
 		case (GRAVITY_BOTTOM_RIGHT):
-			x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
-			y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
+			x = width - scaled_source_width; // right
+			y = (height - scaled_source_height); // bottom
 			break;
 	}
 
@@ -1256,8 +1286,8 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame)
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number); // rotate in degrees
-	x += (Settings::Instance()->MAX_WIDTH * location_x.GetValue(frame->number)); // move in percentage of final width
-	y += (Settings::Instance()->MAX_HEIGHT * location_y.GetValue(frame->number)); // move in percentage of final height
+	x += (width * location_x.GetValue(frame->number)); // move in percentage of final width
+	y += (height * location_y.GetValue(frame->number)); // move in percentage of final height
 	float shear_x_value = shear_x.GetValue(frame->number);
 	float shear_y_value = shear_y.GetValue(frame->number);
 	float origin_x_value = origin_x.GetValue(frame->number);
