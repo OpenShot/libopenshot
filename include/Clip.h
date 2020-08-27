@@ -116,10 +116,10 @@ namespace openshot {
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
 
 		/// Apply effects to the source frame (if any)
-		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame);
+		void apply_effects(std::shared_ptr<openshot::Frame> frame);
 
 		/// Apply keyframes to the source frame (if any)
-		std::shared_ptr<openshot::Frame> apply_keyframes(std::shared_ptr<openshot::Frame> frame, int width, int height);
+		void apply_keyframes(std::shared_ptr<openshot::Frame> frame, int width, int height);
 
 		/// Get file extension
 		std::string get_file_extension(std::string path);
@@ -146,6 +146,9 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
+		/// Final cache object used to hold final frames
+		CacheMemory final_cache;
+
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
@@ -168,7 +171,7 @@ namespace openshot {
 
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() override { return NULL; };
+		CacheMemory* GetCache() override { return &final_cache; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
