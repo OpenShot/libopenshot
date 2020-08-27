@@ -368,7 +368,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		#pragma omp critical (T_GetOtCreateFrame)
-		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number, info.width, info.height, samples_in_frame));
+		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, samples_in_frame));
 
 		// Return real frame
 		return new_frame;
@@ -671,7 +671,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 					int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 					// Cache clip object
-					clip->GetFrame(clip_frame_number, info.width, info.height, samples_in_frame);
+					clip->GetFrame(clip_frame_number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, samples_in_frame);
 				}
 			}
 		}

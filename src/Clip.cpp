@@ -107,6 +107,9 @@ void Clip::init_settings()
 	// Init audio and video overrides
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
+
+	// Initialize Clip cache
+	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Init reader's rotation (if any)
@@ -352,6 +355,16 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame, int width, int he
 		// Adjust out of bounds frame number
 		requested_frame = adjust_frame_number_minimum(requested_frame);
 
+		// Check the cache for this frame
+		std::shared_ptr<Frame> cached_frame = final_cache.GetFrame(requested_frame);
+		if (cached_frame) {
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::GetFrame", "returned cached frame", requested_frame);
+
+			// Return the cached frame
+			return cached_frame;
+		}
+
 		// Adjust has_video and has_audio overrides
 		int enabled_audio = has_audio.GetInt(requested_frame);
 		if (enabled_audio == -1 && reader && reader->info.has_audio)
@@ -402,6 +415,9 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame, int width, int he
 
 		// Apply keyframe / transforms
 		apply_keyframes(frame, width, height);
+
+		// Cache frame
+		final_cache.Add(frame);
 
 		// Return processed 'frame'
 		return frame;
@@ -874,6 +890,9 @@ void Clip::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	ClipBase::SetJsonValue(root);
 
+	// Clear cache
+	final_cache.Clear();
+
 	// Set data from Json (if key is found)
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
@@ -1062,16 +1081,22 @@ void Clip::AddEffect(EffectBase* effect)
 
 	// Sort effects
 	sort_effects();
+
+	// Clear cache
+	final_cache.Clear();
 }
 
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
+
+	// Clear cache
+	final_cache.Clear();
 }
 
 // Apply effects to the source frame (if any)
-std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
+void Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
 	for (auto effect : effects)
@@ -1080,9 +1105,6 @@ std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 		frame = effect->GetFrame(frame, frame->number);
 
 	} // end effect loop
-
-	// Return modified frame
-	return frame;
 }
 
 // Compare 2 floating point numbers for equality
@@ -1093,7 +1115,7 @@ bool Clip::isEqual(double a, double b)
 
 
 // Apply keyframes to the source frame (if any)
-std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 {
 	// Get actual frame image data
 	std::shared_ptr<QImage> source_image = frame->GetImage();
@@ -1315,7 +1337,7 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame, int w
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	std::shared_ptr<QImage> new_image;
-	new_image = std::shared_ptr<QImage>(new QImage(*source_image));
+	new_image = std::shared_ptr<QImage>(new QImage(QSize(width, height), source_image->format()));
 	new_image->fill(QColor(QString::fromStdString("#00000000")));
 
 	// Load timeline's new frame image into a QPainter
@@ -1328,7 +1350,7 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame, int w
 
 	// Composite a new layer onto the image
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-	painter.drawImage(0, 0, *source_image, crop_x_value * source_image->width(), crop_y_value * source_image->height(), crop_w_value * source_image->width(), crop_h_value * source_image->height());
+	painter.drawImage(0, 0, *source_image);
 
 	// Draw frame #'s on top of image (if needed)
 	if (display != FRAME_DISPLAY_NONE) {
@@ -1361,7 +1383,4 @@ std::shared_ptr<Frame> Clip::apply_keyframes(std::shared_ptr<Frame> frame, int w
 
 	// Add new QImage to frame
 	frame->AddImage(new_image);
-
-	// Return modified frame
-	return frame;
 }
