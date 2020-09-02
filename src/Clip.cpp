@@ -368,6 +368,18 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
+// Look up an effect by ID
+openshot::EffectBase* Clip::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
+}
+
 // Get file extension
 std::string Clip::get_file_extension(std::string path)
 {
