@@ -33,6 +33,9 @@
 
 #include "../include/FFmpegReader.h"
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+
 #define ENABLE_VAAPI 0
 
 #if HAVE_HW_ACCEL
@@ -925,7 +928,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
-					usleep(2500);
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 					processing_video_frames_size = processing_video_frames.size();
 					processing_audio_frames_size = processing_audio_frames.size();
@@ -1716,7 +1719,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
-		usleep(2500);
+		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
