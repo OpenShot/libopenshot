@@ -78,6 +78,21 @@ namespace openshot {
 			return false;
 	}};
 
+	/// Comparison method for finding the far end of the timeline, by locating
+	/// the Clip with the highest end-frame number using std::max_element
+	struct CompareClipEndFrames {
+		bool operator()(const openshot::Clip* lhs, const openshot::Clip* rhs) {
+			return (lhs->Position() + lhs->Duration())
+			    <= (rhs->Position() + rhs->Duration());
+	}};
+
+	/// Like CompareClipEndFrames, but for effects
+	struct CompareEffectEndFrames {
+		bool operator()(const openshot::EffectBase* lhs, const openshot::EffectBase* rhs) {
+			return (lhs->Position() + lhs->Duration())
+				<= (rhs->Position() + rhs->Duration());
+	}};
+
 	/**
 	 * @brief This class represents a timeline
 	 *
@@ -240,6 +255,18 @@ namespace openshot {
 
 		/// Return a list of clips on the timeline
 		std::list<openshot::Clip*> Clips() { return clips; };
+
+		/// Look up a single clip by ID
+		openshot::ClipBase* GetClip(const std::string& id);
+
+		/// Look up a clip effect by ID
+		openshot::EffectBase* GetClipEffect(const std::string& id);
+
+		/// Look up a timeline effect by ID
+		openshot::EffectBase* GetEffect(const std::string& id);
+
+		/// Look up the end frame number of the latest element on the timeline
+		int64_t GetMaxFrame();
 
 		/// Close the timeline reader (and any resources it was consuming)
 		void Close() override;

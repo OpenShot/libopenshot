@@ -263,6 +263,59 @@ void Timeline::RemoveClip(Clip* clip)
 	clips.remove(clip);
 }
 
+// Look up a clip
+openshot::ClipBase* Timeline::GetClip(const std::string& id)
+{
+	// Find the matching clip (if any)
+	for (const auto& clip : clips) {
+		if (clip->Id() == id) {
+			return clip;
+		}
+	}
+	return nullptr;
+}
+
+// Look up a timeline effect
+openshot::EffectBase* Timeline::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
+}
+
+openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
+{
+	// Search all clips for matching effect ID
+	for (const auto& clip : clips) {
+		auto e = clip->GetEffect(id);
+		if (e != nullptr) {
+			return e;
+		}
+	}
+	return nullptr;
+}
+
+int64_t Timeline::GetMaxFrame() {
+	int64_t last_clip = 1;
+	int64_t last_effect = 1;
+
+	if (!clips.empty()) {
+		const auto max_clip = std::max_element(
+				clips.begin(), clips.end(), CompareClipEndFrames());
+		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+	}
+	if (!effects.empty()) {
+		const auto max_effect = std::max_element(
+				effects.begin(), effects.end(), CompareEffectEndFrames());
+		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+	}
+	return std::max(last_clip, last_effect);
+}
+
 // Apply a FrameMapper to a clip which matches the settings of this timeline
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
