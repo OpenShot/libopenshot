@@ -265,6 +265,8 @@ namespace openshot {
 		/// Look up a timeline effect by ID
 		openshot::EffectBase* GetEffect(const std::string& id);
 
+		/// Look up the end time of the latest timeline element
+		double GetMaxTime();
 		/// Look up the end frame number of the latest element on the timeline
 		int64_t GetMaxFrame();
 

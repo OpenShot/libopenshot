@@ -299,9 +299,10 @@ openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
 	return nullptr;
 }
 
-int64_t Timeline::GetMaxFrame() {
-	int64_t last_clip = 1;
-	int64_t last_effect = 1;
+// Compute the end time of the latest timeline element
+double Timeline::GetMaxTime() {
+	double last_clip = 0.0;
+	double last_effect = 0.0;
 
 	if (!clips.empty()) {
 		const auto max_clip = std::max_element(
@@ -314,6 +315,13 @@ int64_t Timeline::GetMaxFrame() {
 		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
 	}
 	return std::max(last_clip, last_effect);
+}
+
+// Compute the highest frame# based on the latest time and FPS
+int64_t Timeline::GetMaxFrame() {
+	double fps = info.fps.ToDouble();
+	auto max_time = GetMaxTime();
+	return std::round(max_time * fps) + 1;
 }
 
 // Apply a FrameMapper to a clip which matches the settings of this timeline
