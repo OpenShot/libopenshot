@@ -1293,7 +1293,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		if (max_height <= 0)
 			max_height = info.height;
 
-		Clip *parent = (Clip *) GetClip();
+		Clip *parent = (Clip *) GetParentClip();
 		if (parent) {
 			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)

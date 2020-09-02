@@ -153,7 +153,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetClip(this);
+		reader->SetParentClip(this);
 	}
 }
 
@@ -210,7 +210,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetClip(this);
+		reader->SetParentClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
@@ -239,7 +239,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	reader = new_reader;
 
 	// set parent
-	reader->SetClip(this);
+	reader->SetParentClip(this);
 
 	// Init rotation (if any)
 	init_reader_rotation();
@@ -993,7 +993,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 			// mark as managed reader and set parent
 			if (reader) {
-				reader->SetClip(this);
+				reader->SetParentClip(this);
 				allocated_reader = reader;
 			}
 
