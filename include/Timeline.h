@@ -61,7 +61,7 @@ namespace openshot {
 	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
 	/// by position (left to right).
 	struct CompareClips{
-		bool operator()( Clip* lhs, Clip* rhs){
+		bool operator()( openshot::Clip* lhs, openshot::Clip* rhs){
 			if( lhs->Layer() < rhs->Layer() ) return true;
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() <= rhs->Position() ) return true;
 			return false;
@@ -71,7 +71,7 @@ namespace openshot {
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
 	/// position, and then by effect order.
 	struct CompareEffects{
-		bool operator()( EffectBase* lhs, EffectBase* rhs){
+		bool operator()( openshot::EffectBase* lhs, openshot::EffectBase* rhs){
 			if( lhs->Layer() < rhs->Layer() ) return true;
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() < rhs->Position() ) return true;
 			if( lhs->Layer() == rhs->Layer() && lhs->Position() == rhs->Position() && lhs->Order() > rhs->Order() ) return true;
@@ -146,33 +146,33 @@ namespace openshot {
 	 * t.Close();
 	 * @endcode
 	 */
-	class Timeline : public ReaderBase {
+	class Timeline : public openshot::ReaderBase {
 	private:
 		bool is_open; ///<Is Timeline Open?
 		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips
-		std::list<Clip*> clips; ///<List of clips on this timeline
-		std::list<Clip*> closing_clips; ///<List of clips that need to be closed
-		std::map<Clip*, Clip*> open_clips; ///<List of 'opened' clips on this timeline
-		std::list<EffectBase*> effects; ///<List of clips on this timeline
-		CacheBase *final_cache; ///<Final cache of timeline frames
-		std::set<FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
+		std::list<openshot::Clip*> clips; ///<List of clips on this timeline
+		std::list<openshot::Clip*> closing_clips; ///<List of clips that need to be closed
+		std::map<openshot::Clip*, openshot::Clip*> open_clips; ///<List of 'opened' clips on this timeline
+		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
+		openshot::CacheBase *final_cache; ///<Final cache of timeline frames
+		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 
 		/// Process a new layer of video or audio
-		void add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
+		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
 
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
-		void apply_mapper_to_clip(Clip* clip);
+		void apply_mapper_to_clip(openshot::Clip* clip);
 
 		/// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change); ///<Apply JSON diff to clips
 		void apply_json_to_effects(Json::Value change); ///< Apply JSON diff to effects
-		void apply_json_to_effects(Json::Value change, EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
+		void apply_json_to_effects(Json::Value change, openshot::EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
 		void apply_json_to_timeline(Json::Value change); ///<Apply JSON diff to timeline properties
 
 		/// Calculate time of a frame number, based on a framerate
-		double calculate_time(int64_t number, Fraction rate);
+		double calculate_time(int64_t number, openshot::Fraction rate);
 
 		/// Find intersecting (or non-intersecting) openshot::Clip objects
 		///
@@ -180,13 +180,13 @@ namespace openshot {
 		/// @param requested_frame The frame number that is requested.
 		/// @param number_of_frames The number of frames to check
 		/// @param include Include or Exclude intersecting clips
-		std::vector<Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
+		std::vector<openshot::Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
 
 		/// Get or generate a blank frame
-		std::shared_ptr<Frame> GetOrCreateFrame(Clip* clip, int64_t number);
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(openshot::Clip* clip, int64_t number);
 
 		/// Apply effects to the source frame (if any)
-		std::shared_ptr<Frame> apply_effects(std::shared_ptr<Frame> frame, int64_t timeline_frame_number, int layer);
+		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer);
 
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
@@ -198,7 +198,7 @@ namespace openshot {
 		void sort_effects();
 
 		/// Update the list of 'opened' clips
-		void update_open_clips(Clip *clip, bool does_clip_intersect);
+		void update_open_clips(openshot::Clip *clip, bool does_clip_intersect);
 
 	public:
 
@@ -209,7 +209,7 @@ namespace openshot {
 		/// @param sample_rate The sample rate of the timeline's audio
 		/// @param channels The number of audio channels of the timeline
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
-		Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout);
+		Timeline(int width, int height, openshot::Fraction fps, int sample_rate, int channels, openshot::ChannelLayout channel_layout);
 
 		/// @brief Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 		/// @param projectPath The path of the UTF-8 *.osp project file (JSON contents). Contents will be loaded automatically.
@@ -220,11 +220,11 @@ namespace openshot {
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
-		void AddClip(Clip* clip);
+		void AddClip(openshot::Clip* clip);
 
 		/// @brief Add an effect to the timeline
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
-		void AddEffect(EffectBase* effect);
+		void AddEffect(openshot::EffectBase* effect);
 
 		/// Apply the timeline's framerate and samplerate to all clips
 		void ApplyMapperToClips();
@@ -239,34 +239,34 @@ namespace openshot {
         void ClearAllCache();
 
 		/// Return a list of clips on the timeline
-		std::list<Clip*> Clips() { return clips; };
+		std::list<openshot::Clip*> Clips() { return clips; };
 
 		/// Close the timeline reader (and any resources it was consuming)
 		void Close() override;
 
 		/// Return the list of effects on the timeline
-		std::list<EffectBase*> Effects() { return effects; };
+		std::list<openshot::EffectBase*> Effects() { return effects; };
 
 		/// Get the cache object used by this reader
-		CacheBase* GetCache() override { return final_cache; };
+		openshot::CacheBase* GetCache() override { return final_cache; };
 
 		/// Set the cache object used by this reader. You must now manage the lifecycle
 		/// of this cache object though (Timeline will not delete it for you).
-		void SetCache(CacheBase* new_cache);
+		void SetCache(openshot::CacheBase* new_cache);
 
 		/// Get an openshot::Frame object for a specific frame number of this timeline.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame) override;
 
 		// Curves for the viewport
-		Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
-		Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
-		Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
+		openshot::Keyframe viewport_scale; ///<Curve representing the scale of the viewport (0 to 100)
+		openshot::Keyframe viewport_x; ///<Curve representing the x coordinate for the viewport
+		openshot::Keyframe viewport_y; ///<Curve representing the y coordinate for the viewport
 
 		// Background color
-		Color color; ///<Background color of timeline canvas
+		openshot::Color color; ///<Background color of timeline canvas
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -295,14 +295,13 @@ namespace openshot {
 
 		/// @brief Remove an openshot::Clip from the timeline
 		/// @param clip Remove an openshot::Clip from the timeline.
-		void RemoveClip(Clip* clip);
+		void RemoveClip(openshot::Clip* clip);
 
 		/// @brief Remove an effect from the timeline
 		/// @param effect Remove an effect from the timeline.
-		void RemoveEffect(EffectBase* effect);
+		void RemoveEffect(openshot::EffectBase* effect);
 	};
-
 
 }
 
-#endif
+#endif // OPENSHOT_TIMELINE_H
