@@ -291,7 +291,7 @@ openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
 {
 	// Search all clips for matching effect ID
 	for (const auto& clip : clips) {
-		auto e = clip->GetEffect(id);
+		const auto e = clip->GetEffect(id);
 		if (e != nullptr) {
 			return e;
 		}
