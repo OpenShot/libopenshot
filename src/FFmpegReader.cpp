@@ -1875,6 +1875,8 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 			// Also, determine if PTS is invalid (too far away from zero)
 			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
 			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
 			int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
 			if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
 				// Ignore PTS, it seems invalid
@@ -1892,6 +1894,8 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 			// Also, determine if PTS is invalid (too far away from zero)
 			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
 			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
 			audio_pts_offset = 0 - packet->pts;
 			int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
 			if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
