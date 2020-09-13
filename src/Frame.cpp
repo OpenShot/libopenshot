@@ -762,31 +762,31 @@ void Frame::AddColor(int new_width, int new_height, std::string new_color)
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
+void Frame::AddImage(
+	int new_width, int new_height, int bytes_per_pixel,
+	QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	int buffer_size = new_width * new_height * bytes_per_pixel;
-	qbuffer = new unsigned char[buffer_size]();
-
-	// Copy buffer data
-	memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
-
-	// Create new image object, and fill with pixel data
-	#pragma omp critical (AddImage)
 	{
-		image = std::make_shared<QImage>(
-			qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer);
+		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		int buffer_size = new_width * new_height * bytes_per_pixel;
+		qbuffer = new unsigned char[buffer_size]();
 
-		// Always convert to RGBA8888 (if different)
-		if (image->format() != QImage::Format_RGBA8888)
-			*image = image->convertToFormat(QImage::Format_RGBA8888);
+		// Copy buffer data
+		memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
 
-			// Update height and width
-		width = image->width();
-		height = image->height();
-		has_image_data = true;
-	}
+	}  // Release addingImageSection lock
+
+	// Create new image object from pixel data
+	auto new_image = std::make_shared<QImage>(
+		qbuffer,
+		new_width, new_height,
+		new_width * bytes_per_pixel,
+		type,
+		(QImageCleanupFunction) &openshot::Frame::cleanUpBuffer,
+		(void*) qbuffer
+	);
+	AddImage(new_image);
 }
 
 // Add (or replace) pixel data to the frame
@@ -826,7 +826,6 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		AddImage(new_image);
 
 	} else {
-
 		// Ignore image of different sizes or formats
 		bool ret=false;
 		#pragma omp critical (AddImage)
