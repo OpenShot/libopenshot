@@ -339,7 +339,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 	if (info.has_video && stream == VIDEO_STREAM && video_st) {
 		st = video_st;
 		// Get codec context
-		c = AV_GET_CODEC_PAR_CONTEXT(st, video_codec);
+		c = AV_GET_CODEC_PAR_CONTEXT(st, video_codec_ctx);
 		// Was a codec / stream found?
 		if (c) {
 			if (info.interlaced_frame) {
