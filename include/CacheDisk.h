@@ -38,8 +38,6 @@
 #include "Frame.h"
 #include "Exceptions.h"
 #include <QDir>
-#include <QString>
-#include <QTextStream>
 
 namespace openshot {
 

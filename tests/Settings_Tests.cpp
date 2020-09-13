@@ -41,7 +41,7 @@ TEST(Settings_Default_Constructor)
 	// Create an empty color
 	Settings *s = Settings::Instance();
 
-	CHECK_EQUAL(0, s->HARDWARE_DECODER);
+	CHECK_EQUAL(12, s->OMP_THREADS);
 	CHECK_EQUAL(false, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(false, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }
@@ -50,15 +50,15 @@ TEST(Settings_Change_Settings)
 {
 	// Create an empty color
 	Settings *s = Settings::Instance();
-	s->HARDWARE_DECODER = 1;
+	s->OMP_THREADS = 8;
 	s->HIGH_QUALITY_SCALING = true;
 	s->WAIT_FOR_VIDEO_PROCESSING_TASK = true;
 
-	CHECK_EQUAL(1, s->HARDWARE_DECODER);
+	CHECK_EQUAL(8, s->OMP_THREADS);
 	CHECK_EQUAL(true, s->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, s->WAIT_FOR_VIDEO_PROCESSING_TASK);
 
-	CHECK_EQUAL(1, s->HARDWARE_DECODER);
+	CHECK_EQUAL(8, Settings::Instance()->OMP_THREADS);
 	CHECK_EQUAL(true, Settings::Instance()->HIGH_QUALITY_SCALING);
 	CHECK_EQUAL(true, Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK);
 }
