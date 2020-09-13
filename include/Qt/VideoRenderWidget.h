@@ -31,11 +31,13 @@
 #ifndef OPENSHOT_VIDEO_RENDERER_WIDGET_H
 #define OPENSHOT_VIDEO_RENDERER_WIDGET_H
 
-#include <QtWidgets/QWidget>
-#include <QtGui/QImage>
 #include "../Fraction.h"
 #include "VideoRenderer.h"
 
+#include <QWidget>
+#include <QImage>
+#include <QPaintEvent>
+#include <QRect>
 
 class VideoRenderWidget : public QWidget
 {
