@@ -29,6 +29,21 @@
  */
 
 #include "../include/Frame.h"
+#include "JuceHeader.h"
+
+#include <QApplication>
+#include <QImage>
+#include <QPixmap>
+#include <QBitmap>
+#include <QColor>
+#include <QString>
+#include <QVector>
+#include <QPainter>
+#include <QHBoxLayout>
+#include <QWidget>
+#include <QLabel>
+#include <QPointF>
+#include <QWidget>
 
 using namespace std;
 using namespace openshot;
