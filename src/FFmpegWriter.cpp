@@ -438,6 +438,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							c->pix_fmt = PIX_FMT_YUV444P; // no chroma subsampling
 						}
 						break;
 					case AV_CODEC_ID_HEVC :
@@ -498,6 +499,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							c->pix_fmt = PIX_FMT_YUV444P; // no chroma subsampling
 						}
 						break;
 					case AV_CODEC_ID_HEVC :
@@ -537,7 +539,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 				switch (c->codec_id) {
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+						if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
 						}
 						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
@@ -1237,7 +1239,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 					info.video_bit_rate = calculated_quality;
 				} // medium
 			}
-			if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+			if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
 				av_opt_set_int(c->priv_data, "preset", 6, 0);
 				av_opt_set_int(c->priv_data, "forced-idr",1,0);
 			}

@@ -1,14 +1,12 @@
 /**
  * @file
- * @brief Header file for OpenMPUtilities (set some common macros)
- * @author Jonathan Thomas <jonathan@openshot.org>
- *
- * @ref License
+ * @brief Header file for QtUtilities (compatibiity overlay)
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  */
 
 /* LICENSE
  *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * Copyright (c) 2008-2020 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,18 +26,19 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_OPENMP_UTILITIES_H
-#define OPENSHOT_OPENMP_UTILITIES_H
+#ifndef OPENSHOT_QT_UTILITIES_H
+#define OPENSHOT_QT_UTILITIES_H
 
-#include <omp.h>
-#include <algorithm>
-#include <string>
+#include <Qt>
+#include <QTextStream>
 
-#include "Settings.h"
-
-// Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->OMP_THREADS) ))
-#define FF_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->FF_THREADS) ))
-
-
+// Fix Qt::endl for older Qt versions
+// From: https://bugreports.qt.io/browse/QTBUG-82680
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+namespace Qt {
+  using TextStreamFunction = QTextStream& (*)(QTextStream&);
+  constexpr TextStreamFunction endl = ::endl;
+}
 #endif
+
+#endif // OPENSHOT_QT_UTILITIES_H
