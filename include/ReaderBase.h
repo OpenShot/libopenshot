@@ -43,7 +43,7 @@
 #include "Frame.h"
 #include "Json.h"
 #include "ZmqLogger.h"
-#include <QtCore/qstring.h>
+#include <QString>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>
@@ -111,10 +111,16 @@ namespace openshot
 		openshot::ReaderInfo info;
 
 		/// Parent clip object of this reader (which can be unparented and NULL)
-		openshot::ClipBase* GetClip();
+		inline openshot::ClipBase* GetParentClip() { return parent; };
+
+		/// Deprecated alias for GetParentClip()
+		inline openshot::ClipBase* GetClip() { return parent; };
 
 		/// Set parent clip object of this reader
-		void SetClip(openshot::ClipBase* clip);
+		inline void SetParentClip(openshot::ClipBase* clip) { parent = clip; };
+
+		/// Deprecated alias for SetParentClip()
+		inline void SetClip(openshot::ClipBase* clip) { parent = clip; };
 
 		/// Close the reader (and any resources it was consuming)
 		virtual void Close() = 0;

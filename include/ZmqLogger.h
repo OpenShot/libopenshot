@@ -35,11 +35,11 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <sstream>
-#include <stdio.h>
-#include <time.h>
+#include <cstdio>
+#include <ctime>
 #include <zmq.hpp>
 #include <unistd.h>
 #include "JuceHeader.h"

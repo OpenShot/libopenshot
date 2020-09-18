@@ -37,6 +37,12 @@
 #endif
 
 using namespace openshot;
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::duration::microseconds
 
 
 // Global reference to logger

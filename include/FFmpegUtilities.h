@@ -40,7 +40,7 @@
 	#ifndef IS_FFMPEG_3_2
 	#define IS_FFMPEG_3_2 (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 64, 101))
 	#endif
-	
+
 	#ifndef HAVE_HW_ACCEL
 	#define HAVE_HW_ACCEL (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 107, 100))
 	#endif
@@ -122,6 +122,9 @@
 	#ifndef PIX_FMT_YUV420P
 		#define PIX_FMT_YUV420P AV_PIX_FMT_YUV420P
 	#endif
+	#ifndef PIX_FMT_YUV444P
+		#define PIX_FMT_YUV444P AV_PIX_FMT_YUV444P
+	#endif
 
 	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
 	// definition in ruby/config.h, so we move it to FF_RSHIFT
@@ -177,13 +180,13 @@
 		#define AV_OUTPUT_CONTEXT(output_context, path) avformat_alloc_output_context2( output_context, NULL, NULL, path)
 		#define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
 		#define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) 	av_opt_set(priv_data, name, value, 0); avcodec_parameters_from_context(av_stream->codecpar, avcodec);
-		#define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) 	av_st = avformat_new_stream(oc, NULL);\
+		#define AV_FORMAT_NEW_STREAM(oc, st_codec_ctx, av_codec, av_st) 	av_st = avformat_new_stream(oc, NULL);\
 			if (!av_st) \
 				throw OutOfMemory("Could not allocate memory for the video stream.", path); \
 			c = avcodec_alloc_context3(av_codec); \
-			st_codec = c; \
+			st_codec_ctx = c; \
 			av_st->codecpar->codec_id = av_codec->id;
-		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) avcodec_parameters_from_context(av_stream->codecpar, av_codec);
+		#define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec_ctx) avcodec_parameters_from_context(av_stream->codecpar, av_codec_ctx);
 	#elif IS_FFMPEG_3_2
 		#define AV_REGISTER_ALL av_register_all();
 		#define AVCODEC_REGISTER_ALL	avcodec_register_all();

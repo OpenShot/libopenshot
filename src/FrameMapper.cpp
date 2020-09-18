@@ -61,9 +61,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 // Destructor
 FrameMapper::~FrameMapper() {
-	if (is_open)
-		// Auto Close if not already
-		Close();
+
+	// Auto Close if not already
+	Close();
 
 	reader = NULL;
 }
@@ -487,7 +487,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			// includes some additional input samples on first iteration,
 			// and continues the offset to ensure that the sample rate
 			// converter isn't input limited.
-			const int EXTRA_INPUT_SAMPLES = 20;
+			const int EXTRA_INPUT_SAMPLES = 100;
 
 			// Extend end sample count by an additional EXTRA_INPUT_SAMPLES samples
 			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;

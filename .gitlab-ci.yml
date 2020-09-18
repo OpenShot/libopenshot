@@ -16,7 +16,7 @@ linux-builder:
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DUSE_SYSTEM_JSONCPP=0 ../
+    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 ../
     - make
     - make install
     - make doc
@@ -27,7 +27,7 @@ linux-builder:
   except:
   - tags
   tags:
-    - linux
+    - linux-bionic
 
 mac-builder:
   stage: build-libopenshot
@@ -43,7 +43,7 @@ mac-builder:
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/qt5/5.5/clang_64 -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPYTHON_MODULE_PATH=python -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
+    - cmake -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPYTHON_MODULE_PATH=python -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
     - make
     - make install
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"

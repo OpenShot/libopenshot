@@ -33,7 +33,7 @@
 
 #include <iostream>
 #include <iomanip>
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 #include <vector>
 #include "Exceptions.h"

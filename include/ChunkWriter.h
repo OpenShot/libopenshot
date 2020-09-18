@@ -34,19 +34,19 @@
 #include "ReaderBase.h"
 #include "WriterBase.h"
 #include "FFmpegWriter.h"
+#include "CacheMemory.h"
+#include "Exceptions.h"
+#include "Json.h"
 
 #include <cmath>
 #include <ctime>
 #include <iostream>
 #include <fstream>
-#include <omp.h>
-#include <QtCore/qdir.h>
-#include <stdio.h>
+#include <cstdio>
 #include <sstream>
 #include <unistd.h>
-#include "CacheMemory.h"
-#include "Exceptions.h"
-#include "Json.h"
+#include <omp.h>
+#include <QtCore/QDir>
 
 
 namespace openshot
