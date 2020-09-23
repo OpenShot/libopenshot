@@ -36,6 +36,12 @@
 
 using namespace std;
 using namespace openshot;
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::duration::microseconds
 
 
 // Global reference to logger
@@ -108,7 +114,7 @@ void ZmqLogger::Connection(std::string new_connection)
 	}
 
 	// Sleeping to allow connection to wake up (0.25 seconds)
-	usleep(250000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
 void ZmqLogger::Log(std::string message)

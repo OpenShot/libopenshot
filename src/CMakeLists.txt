@@ -365,7 +365,7 @@ endif ()
 
 ################# QT5 ###################
 # Find QT5 libraries
-set(_qt_components Widgets Core Gui Multimedia MultimediaWidgets)
+set(_qt_components Core Gui Widgets)
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
@@ -397,11 +397,6 @@ foreach(ff_comp IN LISTS all_comps)
   endif()
 
 endforeach()
-
-################### Threads ####################
-# Threading library -- uses IMPORTED target Threads::Threads (since CMake 3.1)
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)

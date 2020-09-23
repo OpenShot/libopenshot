@@ -36,7 +36,10 @@
 using namespace std;
 using namespace openshot;
 
-TEST(Timeline_Constructor)
+SUITE(Timeline)
+{
+
+TEST(Constructor)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
@@ -54,7 +57,7 @@ TEST(Timeline_Constructor)
 	CHECK_EQUAL(240, t2.info.height);
 }
 
-TEST(Timeline_Width_and_Height_Functions)
+TEST(Width_and_Height_Functions)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
@@ -79,7 +82,7 @@ TEST(Timeline_Width_and_Height_Functions)
 	CHECK_EQUAL(400, t1.info.height);
 }
 
-TEST(Timeline_Framerate)
+TEST(Framerate)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction fps(24,1);
@@ -89,7 +92,7 @@ TEST(Timeline_Framerate)
 	CHECK_CLOSE(24.0f, t1.info.fps.ToFloat(), 0.00001);
 }
 
-TEST(Timeline_Check_Two_Track_Video)
+TEST(Check_Two_Track_Video)
 {
 	// Create a reader
 	stringstream path;
@@ -186,7 +189,7 @@ TEST(Timeline_Check_Two_Track_Video)
 	t.Close();
 }
 
-TEST(Timeline_Clip_Order)
+TEST(Clip_Order)
 {
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
@@ -281,7 +284,7 @@ TEST(Timeline_Clip_Order)
 }
 
 
-TEST(Timeline_Effect_Order)
+TEST(Effect_Order)
 {
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
@@ -413,7 +416,127 @@ TEST(Timeline_Effect_Order)
 	t.Close();
 }
 
-TEST(Timeline_Effect_Blur)
+TEST(GetClip_by_id)
+{
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	stringstream path1;
+	path1 << TEST_MEDIA_PATH << "interlaced.png";
+	auto media_path1 = path1.str();
+
+	stringstream path2;
+	path2 << TEST_MEDIA_PATH << "front.png";
+	auto media_path2 = path2.str();
+
+	Clip clip1(media_path1);
+	std::string clip1_id("CLIP00001");
+	clip1.Id(clip1_id);
+	clip1.Layer(1);
+
+	Clip clip2(media_path2);
+	std::string clip2_id("CLIP00002");
+	clip2.Id(clip2_id);
+	clip2.Layer(2);
+
+	t.AddClip(&clip1);
+	t.AddClip(&clip2);
+
+	auto matched = t.GetClip(clip1_id);
+	CHECK_EQUAL(clip1_id, matched->Id());
+	CHECK_EQUAL(1, matched->Layer());
+
+	auto matched2 = t.GetClip(clip2_id);
+	CHECK_EQUAL(clip2_id, matched2->Id());
+	CHECK_EQUAL(false, matched2->Layer() < 2);
+
+	auto matched3 = t.GetClip("BAD_ID");
+	CHECK_EQUAL(true, matched3 == nullptr);
+}
+
+TEST(GetClipEffect_by_id)
+{
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	stringstream path1;
+	path1 << TEST_MEDIA_PATH << "interlaced.png";
+	auto media_path1 = path1.str();
+
+	// Create a clip, nothing special
+	Clip clip1(media_path1);
+	std::string clip1_id("CLIP00001");
+	clip1.Id(clip1_id);
+	clip1.Layer(1);
+
+	// Add a blur effect
+	Keyframe horizontal_radius(5.0);
+	Keyframe vertical_radius(5.0);
+	Keyframe sigma(3.0);
+	Keyframe iterations(3.0);
+	Blur blur1(horizontal_radius, vertical_radius, sigma, iterations);
+	std::string blur1_id("EFFECT00011");
+	blur1.Id(blur1_id);
+	clip1.AddEffect(&blur1);
+
+	// A second clip, different layer
+	Clip clip2(media_path1);
+	std::string clip2_id("CLIP00002");
+	clip2.Id(clip2_id);
+	clip2.Layer(2);
+
+	// Some effects for clip2
+	Negate neg2;
+	std::string neg2_id("EFFECT00021");
+	neg2.Id(neg2_id);
+	neg2.Layer(2);
+	clip2.AddEffect(&neg2);
+	Blur blur2(horizontal_radius, vertical_radius, sigma, iterations);
+	std::string blur2_id("EFFECT00022");
+	blur2.Id(blur2_id);
+	blur2.Layer(2);
+	clip2.AddEffect(&blur2);
+
+	t.AddClip(&clip1);
+
+	// Check that we can look up clip1's effect
+	auto match1 = t.GetClipEffect("EFFECT00011");
+	CHECK_EQUAL(blur1_id, match1->Id());
+
+	// clip2 hasn't been added yet, shouldn't be found
+	match1 = t.GetClipEffect(blur2_id);
+	CHECK_EQUAL(true, match1 == nullptr);
+
+	t.AddClip(&clip2);
+
+	// Check that blur2 can now be found via clip2
+	match1 = t.GetClipEffect(blur2_id);
+	CHECK_EQUAL(blur2_id, match1->Id());
+	CHECK_EQUAL(2, match1->Layer());
+}
+
+TEST(GetEffect_by_id)
+{
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	// Create a timeline effect
+	Keyframe horizontal_radius(5.0);
+	Keyframe vertical_radius(5.0);
+	Keyframe sigma(3.0);
+	Keyframe iterations(3.0);
+	Blur blur1(horizontal_radius, vertical_radius, sigma, iterations);
+	std::string blur1_id("EFFECT00011");
+	blur1.Id(blur1_id);
+	blur1.Layer(1);
+	t.AddEffect(&blur1);
+
+	auto match1 = t.GetEffect(blur1_id);
+	CHECK_EQUAL(blur1_id, match1->Id());
+	CHECK_EQUAL(1, match1->Layer());
+
+	match1 = t.GetEffect("NOSUCHNAME");
+	CHECK_EQUAL(true, match1 == nullptr);
+}
+
+TEST(Effect_Blur)
 {
 	// Create a timeline
 	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
@@ -443,3 +566,39 @@ TEST(Timeline_Effect_Blur)
 	// Close reader
 	t.Close();
 }
+
+TEST(GetMaxFrame_GetMaxTime)
+{
+	// Create a timeline
+	Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+	stringstream path1;
+	path1 << TEST_MEDIA_PATH << "interlaced.png";
+	Clip clip1(path1.str());
+	clip1.Layer(1);
+	clip1.Position(50);
+	clip1.End(45);
+	t.AddClip(&clip1);
+
+	CHECK_CLOSE(95.0, t.GetMaxTime(), 0.001);
+	CHECK_EQUAL(95 * 30 + 1, t.GetMaxFrame());
+
+	Clip clip2(path1.str());
+	clip2.Layer(2);
+	clip2.Position(0);
+	clip2.End(55);
+	t.AddClip(&clip2);
+
+	CHECK_EQUAL(95 * 30 + 1, t.GetMaxFrame());
+	CHECK_CLOSE(95.0, t.GetMaxTime(), 0.001);
+
+	clip2.Position(100);
+	clip1.Position(80);
+	CHECK_EQUAL(155 * 30 + 1, t.GetMaxFrame());
+	CHECK_CLOSE(155.0, t.GetMaxTime(), 0.001);
+	t.RemoveClip(&clip2);
+	CHECK_EQUAL(125 * 30 + 1, t.GetMaxFrame());
+	CHECK_CLOSE(125.0, t.GetMaxTime(), 0.001);
+}
+
+}  // SUITE

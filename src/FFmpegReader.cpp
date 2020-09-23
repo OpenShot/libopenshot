@@ -33,6 +33,9 @@
 
 #include "../include/FFmpegReader.h"
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+
 #define ENABLE_VAAPI 0
 
 #if HAVE_HW_ACCEL
@@ -928,7 +931,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
-					usleep(2500);
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 					processing_video_frames_size = processing_video_frames.size();
 					processing_audio_frames_size = processing_audio_frames.size();
@@ -1296,7 +1299,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		if (max_height <= 0)
 			max_height = info.height;
 
-		Clip *parent = (Clip *) GetClip();
+		Clip *parent = (Clip *) GetParentClip();
 		if (parent) {
 			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
@@ -1719,7 +1722,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
-		usleep(2500);
+		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
@@ -1868,8 +1871,20 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			video_pts_offset = 0 - std::max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
+			// Find the difference between PTS and frame number
+			video_pts_offset = 0 - GetVideoPTS();
+
+			// Find the difference between PTS and frame number
+			// Also, determine if PTS is invalid (too far away from zero)
+			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
+			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
+			int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
+			if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
+				// Ignore PTS, it seems invalid
+				video_pts_offset = 0;
+			}
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1878,8 +1893,18 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// AUDIO PACKET
 		if (audio_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			audio_pts_offset = 0 - std::max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
+			// Find the difference between PTS and frame number
+			// Also, determine if PTS is invalid (too far away from zero)
+			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
+			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
+			audio_pts_offset = 0 - packet->pts;
+			int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
+			if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
+				// Ignore PTS, it seems invalid
+				audio_pts_offset = 0;
+			}
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Audio)", "audio_pts_offset", audio_pts_offset, "is_video", is_video);
