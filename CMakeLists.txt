@@ -77,6 +77,7 @@ option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
+option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
