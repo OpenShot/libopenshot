@@ -42,6 +42,7 @@
 #include "Effects.h"
 #include "EffectInfo.h"
 #include "Fraction.h"
+#include "Frame.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
@@ -146,9 +147,6 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
-		/// Final cache object used to hold final frames
-		CacheMemory final_cache;
-
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
@@ -169,9 +167,8 @@ namespace openshot {
 		/// Destructor
 		virtual ~Clip();
 
-
-		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() override { return &final_cache; };
+		/// Get the cache object used by this clip
+		CacheMemory* GetCache() { return &cache; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -191,23 +188,24 @@ namespace openshot {
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
-		/// of samples match the source reader.
+		/// @brief This method is required for all derived classes of ClipBase, and returns a
+		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
+		/// pixels.
 		///
-		/// @returns The requested frame (containing the image)
-		/// @param requested_frame The frame number that is requested
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
+		/// @returns A new openshot::Frame object
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number);
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
-		/// of samples can be customized to match the Timeline, or any custom output. Extra samples will be moved to the
-		/// next Frame. Missing samples will be moved from the next Frame.
+		/// @brief This method is required for all derived classes of ClipBase, and returns a
+		/// modified openshot::Frame object
 		///
-		/// @returns The requested frame (containing the image)
-		/// @param requested_frame The frame number that is requested
-		/// @param width The width of the image requested
-		/// @param height The height of the image requested
-		/// @param samples The number of samples requested
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame, int width, int height, int samples);
+		/// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
+		/// rendered.
+		///
+		/// @returns The modified openshot::Frame object
+		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
 
 		/// Open the internal reader
 		void Open();
@@ -261,13 +259,6 @@ namespace openshot {
 
 		/// Curve representing the color of the audio wave form
 		openshot::Color wave_color;
-
-		// Crop settings and curves
-		openshot::GravityType crop_gravity; ///< Cropping needs to have a gravity to determine what side we are cropping
-		openshot::Keyframe crop_width; ///< Curve representing width in percent (0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_height; ///< Curve representing height in percent (0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_x; ///< Curve representing X offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_y; ///< Curve representing Y offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
 
 		// Perspective curves
 		openshot::Keyframe perspective_c1_x; ///< Curves representing X for coordinate 1

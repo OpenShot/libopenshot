@@ -54,6 +54,8 @@
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 #include "Settings.h"
+#include "TimelineBase.h"
+
 
 namespace openshot {
 
@@ -146,7 +148,7 @@ namespace openshot {
 	 * t.Close();
 	 * @endcode
 	 */
-	class Timeline : public ReaderBase {
+	class Timeline : public TimelineBase, public ReaderBase {
 	private:
 		bool is_open; ///<Is Timeline Open?
 		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips

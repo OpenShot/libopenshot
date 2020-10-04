@@ -98,9 +98,9 @@ namespace openshot
 	{
 	protected:
 		/// Section lock for multiple threads
-	  juce::CriticalSection getFrameCriticalSection;
-	  juce::CriticalSection processingCriticalSection;
-		openshot::ClipBase* parent;
+		juce::CriticalSection getFrameCriticalSection;
+		juce::CriticalSection processingCriticalSection;
+		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
 
@@ -111,10 +111,10 @@ namespace openshot
 		openshot::ReaderInfo info;
 
 		/// Parent clip object of this reader (which can be unparented and NULL)
-		openshot::ClipBase* GetClip();
+		openshot::ClipBase* ParentClip();
 
 		/// Set parent clip object of this reader
-		void SetClip(openshot::ClipBase* clip);
+		void ParentClip(openshot::ClipBase* new_clip);
 
 		/// Close the reader (and any resources it was consuming)
 		virtual void Close() = 0;

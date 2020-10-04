@@ -180,15 +180,16 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
 	// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
 	// the future.
-	int max_width = Settings::Instance()->MAX_WIDTH;
-	if (max_width <= 0)
-		max_width = info.width;
-	int max_height = Settings::Instance()->MAX_HEIGHT;
-	if (max_height <= 0)
-		max_height = info.height;
+	int max_width = info.width;
+	int max_height = info.height;
 
-	Clip* parent = (Clip*) GetClip();
+	Clip* parent = (Clip*) ParentClip();
 	if (parent) {
+		if (parent->ParentTimeline()) {
+			// Set max width/height based on parent clip's timeline (if attached to a timeline)
+			max_width = parent->ParentTimeline()->preview_width;
+			max_height = parent->ParentTimeline()->preview_height;
+		}
 		if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
