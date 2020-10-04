@@ -130,9 +130,9 @@ add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate 
 # -DDEBUG for debug builds. We'll do this for all OSes, even
 # though only MacOS requires it.
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-# Make sure we've picked some build type, default to debug
+# Make sure we've picked some build type, default to release
 if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-  set(CMAKE_BUILD_TYPE "Debug")
+  set(CMAKE_BUILD_TYPE "Release")
 endif()
 
 ############## PROCESS src/ DIRECTORIES ##############
