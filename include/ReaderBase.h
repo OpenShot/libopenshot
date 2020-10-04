@@ -98,9 +98,9 @@ namespace openshot
 	{
 	protected:
 		/// Section lock for multiple threads
-	  juce::CriticalSection getFrameCriticalSection;
-	  juce::CriticalSection processingCriticalSection;
-		openshot::ClipBase* parent;
+		juce::CriticalSection getFrameCriticalSection;
+		juce::CriticalSection processingCriticalSection;
+		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
 

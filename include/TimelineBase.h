@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for global Settings class
+ * @brief Header file for Timeline class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,32 +28,20 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Settings.h"
-
-using namespace std;
-using namespace openshot;
+#ifndef OPENSHOT_TIMELINE_BASE_H
+#define OPENSHOT_TIMELINE_BASE_H
 
 
-// Global reference to logger
-Settings *Settings::m_pInstance = NULL;
+namespace openshot {
+	/**
+	 * @brief This class represents a timeline (used for building generic timeline implementations)
+	 */
+	class TimelineBase {
 
-// Create or Get an instance of the logger singleton
-Settings *Settings::Instance()
-{
-	if (!m_pInstance) {
-		// Create the actual instance of logger only once
-		m_pInstance = new Settings;
-		m_pInstance->HARDWARE_DECODER = 0;
-		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
-		m_pInstance->OMP_THREADS = 12;
-		m_pInstance->FF_THREADS = 8;
-		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
-		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
-		m_pInstance->HW_DE_DEVICE_SET = 0;
-		m_pInstance->HW_EN_DEVICE_SET = 0;
-		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
-	}
-
-	return m_pInstance;
+	public:
+		int preview_width; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
+		int preview_height; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
+	};
 }
+
+#endif

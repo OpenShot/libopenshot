@@ -105,7 +105,6 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 	}
 	else if (event->key() == Qt::Key_J) {
-		std::cout << "BACKWARD" << player->Speed() - 1 << std::endl;
 		if (player->Speed() - 1 != 0)
 			player->Speed(player->Speed() - 1);
 		else
@@ -115,7 +114,6 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 			player->Play();
 	}
 	else if (event->key() == Qt::Key_L) {
-		std::cout << "FORWARD" << player->Speed() + 1 << std::endl;
 		if (player->Speed() + 1 != 0)
 			player->Speed(player->Speed() + 1);
 		else
@@ -126,19 +124,16 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 	}
 	else if (event->key() == Qt::Key_Left) {
-		std::cout << "FRAME STEP -1" << std::endl;
 		if (player->Speed() != 0)
 			player->Speed(0);
 		player->Seek(player->Position() - 1);
 	}
 	else if (event->key() == Qt::Key_Right) {
-		std::cout << "FRAME STEP +1" << std::endl;
 		if (player->Speed() != 0)
 			player->Speed(0);
 		player->Seek(player->Position() + 1);
 	}
 	else if (event->key() == Qt::Key_Escape) {
-		std::cout << "QUIT PLAYER" << std::endl;
 		QWidget *pWin = QApplication::activeWindow();
 		pWin->hide();
 

@@ -81,16 +81,24 @@ namespace openshot
 		/// @param alpha_y The curve to adjust the Alpha y shift (between -1 and 1, percentage)
 		ColorShift(Keyframe red_x, Keyframe red_y, Keyframe green_x, Keyframe green_y, Keyframe blue_x, Keyframe blue_y, Keyframe alpha_x, Keyframe alpha_y);
 
-		/// @brief This method is required for all derived classes of EffectBase, and returns a
+		/// @brief This method is required for all derived classes of ClipBase, and returns a
+		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
+		/// pixels.
+		///
+		/// @returns A new openshot::Frame object
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+
+		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
 		///
-		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from its keyframes (starting at 1).
+		/// The frame object is passed into this method and used as a starting point (pixels and audio).
+		/// All Clip keyframes and effects are resolved into pixels.
 		///
 		/// @returns The modified openshot::Frame object
-		/// @param frame The frame object that needs the effect applied to it
-		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
+		/// @param frame The frame object that needs the clip or effect applied to it
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

@@ -138,3 +138,13 @@ Json::Value EffectBase::JsonInfo() const {
 	// return JsonValue
 	return root;
 }
+
+/// Parent clip object of this reader (which can be unparented and NULL)
+openshot::ClipBase* EffectBase::ParentClip() {
+	return clip;
+}
+
+/// Set parent clip object of this reader
+void EffectBase::ParentClip(openshot::ClipBase* new_clip) {
+	clip = new_clip;
+}

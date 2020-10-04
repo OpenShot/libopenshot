@@ -52,6 +52,8 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init FileInfo struct (clear all values)
 	info.width = width;
 	info.height = height;
+	preview_width = info.width;
+	preview_height = info.height;
 	info.fps = fps;
 	info.sample_rate = sample_rate;
 	info.channels = channels;
@@ -241,6 +243,9 @@ Timeline::~Timeline() {
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
+	// Assign timeline to clip
+	clip->ParentTimeline(this);
+
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips)
 		// Apply framemapper (or update existing framemapper)
@@ -256,6 +261,9 @@ void Timeline::AddClip(Clip* clip)
 // Add an effect to the timeline
 void Timeline::AddEffect(EffectBase* effect)
 {
+	// Assign timeline to effect
+	effect->ParentTimeline(this);
+
 	// Add effect to list
 	effects.push_back(effect);
 
@@ -441,7 +449,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		#pragma omp critical (T_GetOtCreateFrame)
-		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, samples_in_frame));
+		new_frame = std::shared_ptr<Frame>(clip->GetFrame(number));
 
 		// Return real frame
 		return new_frame;
@@ -458,7 +466,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
 
 	// Create blank frame
-	new_frame = std::make_shared<Frame>(number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels);
+	new_frame = std::make_shared<Frame>(number, preview_width, preview_height, "#000000", samples_in_frame, info.channels);
 	#pragma omp critical (T_GetOtCreateFrame)
 	{
 		new_frame->SampleRate(info.sample_rate);
@@ -560,29 +568,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Skip the rest of the image processing for performance reasons
 		return;
 
-	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number);
-
-	// Get actual frame image data
-	source_image = source_frame->GetImage();
-
-	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "source_image->width()", source_image->width());
-
-	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	std::shared_ptr<QImage> new_image;
-	new_image = new_frame->GetImage();
-
-	// Load timeline's new frame image into a QPainter
-	QPainter painter(new_image.get());
-
-	// Composite a new layer onto the image
-    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawImage(0, 0, *source_image, 0, 0, source_image->width(), source_image->height());
-    painter.end();
-
 	// Add new QImage to frame
-	new_frame->AddImage(new_image);
+	new_frame->AddImage(source_frame->GetImage());
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width());
@@ -737,10 +724,9 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 					// Get clip frame #
                     long clip_start_frame = (clip->Start() * info.fps.ToDouble()) + 1;
 					long clip_frame_number = frame_number - clip_start_position + clip_start_frame;
-					int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 					// Cache clip object
-					clip->GetFrame(clip_frame_number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, samples_in_frame);
+					clip->GetFrame(clip_frame_number);
 				}
 			}
 		}
@@ -758,7 +744,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 				// Create blank frame (which will become the requested frame)
-				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels));
+				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, preview_width, preview_height, "#000000", samples_in_frame, info.channels));
 				#pragma omp critical (T_GetFrame)
 				{
 					new_frame->AddAudioSilence(samples_in_frame);
@@ -772,7 +758,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				// Add Background Color to 1st layer (if animated or not black)
 				if ((color.red.GetCount() > 1 || color.green.GetCount() > 1 || color.blue.GetCount() > 1) ||
 					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
-				new_frame->AddColor(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, color.GetColorHex(frame_number));
+				new_frame->AddColor(preview_width, preview_height, color.GetColorHex(frame_number));
 
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size());
@@ -1036,6 +1022,10 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		info.video_length = info.fps.ToFloat() * info.duration;
 	}
 
+	// Update preview settings
+	preview_width = info.width;
+	preview_height = info.height;
+
 	// Re-open if needed
 	if (was_open)
 		Open();
@@ -1264,6 +1254,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 			// Add Effect to Timeline
 			AddEffect(e);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) e->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 		}
 
 	} else if (change_type == "update") {
@@ -1275,6 +1271,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 
 			// Update effect properties from JSON
 			existing_effect->SetJsonValue(change["value"]);
@@ -1289,6 +1291,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 
 			// Remove effect from timeline
 			RemoveEffect(existing_effect);
@@ -1308,7 +1316,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		sub_key = change["key"][(uint)1].asString();
 
 	// Clear entire cache
-	final_cache->Clear();
+	ClearAllCache();
 
 	// Determine type of change operation
 	if (change_type == "insert" || change_type == "update") {
@@ -1332,12 +1340,16 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 			info.duration = change["value"].asDouble();
 			info.video_length = info.fps.ToFloat() * info.duration;
 		}
-		else if (root_key == "width")
+		else if (root_key == "width") {
 			// Set width
 			info.width = change["value"].asInt();
-		else if (root_key == "height")
+			preview_width = info.width;
+		}
+		else if (root_key == "height") {
 			// Set height
 			info.height = change["value"].asInt();
+			preview_height = info.height;
+		}
 		else if (root_key == "fps" && sub_key == "" && change["value"].isObject()) {
 			// Set fps fraction
 			if (!change["value"]["num"].isNull())
@@ -1429,6 +1441,7 @@ void Timeline::ClearAllCache() {
     for (auto clip : clips)
     {
         // Clear cache on clip
+		clip->GetCache()->Clear();
         clip->Reader()->GetCache()->Clear();
 
         // Clear nested Reader (if any)
@@ -1451,7 +1464,7 @@ void Timeline::SetMaxSize(int width, int height) {
 	// Scale QSize up to proposed size
 	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);
 
-	// Set max size
-	Settings::Instance()->MAX_WIDTH = display_ratio_size.width();
-	Settings::Instance()->MAX_HEIGHT = display_ratio_size.height();
+	// Update preview settings
+	preview_width = display_ratio_size.width();
+	preview_height = display_ratio_size.height();
 }
