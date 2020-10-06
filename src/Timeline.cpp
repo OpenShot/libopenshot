@@ -495,8 +495,29 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Skip the rest of the image processing for performance reasons
 		return;
 
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Get Source Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number);
+
+	// Get actual frame image data
+	source_image = source_frame->GetImage();
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "source_image->width()", source_image->width());
+
+	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+	std::shared_ptr<QImage> new_image;
+	new_image = new_frame->GetImage();
+
+	// Load timeline's new frame image into a QPainter
+	QPainter painter(new_image.get());
+
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *source_image, 0, 0, source_image->width(), source_image->height());
+	painter.end();
+
 	// Add new QImage to frame
-	new_frame->AddImage(source_frame->GetImage());
+	new_frame->AddImage(new_image);
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width());

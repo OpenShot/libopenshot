@@ -69,7 +69,15 @@ namespace openshot {
 		CacheMemory cache;
 
 		/// Constructor for the base clip
-		ClipBase() { };
+		ClipBase() {
+			// Initialize values
+			position = 0.0;
+			layer = 0;
+			start = 0.0;
+			end = 0.0;
+			previous_properties = "";
+			timeline = NULL;
+		};
 
 		// Compare a clip using the Position() property
 		bool operator< ( ClipBase& a) { return (Position() < a.Position()); }
