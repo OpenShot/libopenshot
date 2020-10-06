@@ -35,6 +35,7 @@
 #include "effects/Bars.h"
 #include "effects/Blur.h"
 #include "effects/Brightness.h"
+#include "effects/Caption.h"
 #include "effects/ChromaKey.h"
 #include "effects/ColorShift.h"
 #include "effects/Crop.h"
