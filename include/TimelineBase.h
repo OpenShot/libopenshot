@@ -41,6 +41,9 @@ namespace openshot {
 	public:
 		int preview_width; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
 		int preview_height; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
+
+		/// Constructor for the base timeline
+		TimelineBase();
 	};
 }
 

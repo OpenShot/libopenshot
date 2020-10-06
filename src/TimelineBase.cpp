@@ -31,3 +31,11 @@
 #include "../include/TimelineBase.h"
 
 using namespace openshot;
+
+/// Constructor for the base timeline
+TimelineBase::TimelineBase()
+{
+	// Init preview size (default)
+	preview_width = 1920;
+	preview_height = 1080;
+}
