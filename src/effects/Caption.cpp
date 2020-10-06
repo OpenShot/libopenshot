@@ -35,14 +35,14 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.001), font_size(30.0), is_dirty(true) {
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.5), font_size(30.0), is_dirty(true) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
 Caption::Caption(Color color, std::string captions, std::string format) :
-		color(color), caption_text(captions), caption_format(format), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.001), font_size(30.0), is_dirty(true)
+		color(color), caption_text(captions), caption_format(format), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.5), font_size(30.0), is_dirty(true)
 {
 	// Init effect properties
 	init_effect_details();
@@ -148,7 +148,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	if (stroke_width.GetValue(frame_number) > 0.0) {
 		QPen pen;
 		pen.setColor(QColor(QString(stroke.GetColorHex(frame_number).c_str())));
-		pen.setWidth(stroke_width.GetValue(frame_number) * scale_factor);
+		pen.setWidthF(stroke_width.GetValue(frame_number) * scale_factor);
 		painter.setPen(pen);
 	}
 
