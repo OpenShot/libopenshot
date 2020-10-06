@@ -58,35 +58,36 @@ set_package_properties(UnitTest++ PROPERTIES
   PURPOSE "Unit testing framework")
 
 ################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-if(MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-else()
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
+if(ENABLE_MAGICK)
+  # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+  if(MAGICKCORE_QUANTUM_DEPTH)
+  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+  else()
+  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
+  endif()
+
+  if(MAGICKCORE_HDRI_ENABLE)
+  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+  else()
+  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
+  endif()
+
+  if(OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
+  	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
+  else()
+  	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
+  endif()
+
+  # Find the ImageMagick++ library
+  find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+  if(ImageMagick_FOUND)
+  	# Include ImageMagick++ headers (needed for compile)
+  	include_directories(${ImageMagick_INCLUDE_DIRS})
+
+  	# define a global var (used in the C++)
+  	add_definitions( -DUSE_IMAGEMAGICK=1 )
+  endif()
 endif()
-
-if(MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-else()
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-endif()
-
-if(OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-else()
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-endif()
-
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if(ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-endif()
-
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
 find_package(OpenShotAudio 0.2.0 REQUIRED)

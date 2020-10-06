@@ -188,6 +188,9 @@ namespace openshot {
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
 
+		/// Look up an effect by ID
+		openshot::EffectBase* GetEffect(const std::string& id);
+
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
 		/// pixels.
@@ -278,8 +281,6 @@ namespace openshot {
 		openshot::Keyframe has_audio; ///< An optional override to determine if this clip has audio (-1=undefined, 0=no, 1=yes)
 		openshot::Keyframe has_video; ///< An optional override to determine if this clip has video (-1=undefined, 0=no, 1=yes)
 	};
+}  // namespace
 
-
-}
-
-#endif
+#endif  // OPENSHOT_CLIP_H

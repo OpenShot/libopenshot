@@ -271,6 +271,67 @@ void Timeline::RemoveClip(Clip* clip)
 	clips.remove(clip);
 }
 
+// Look up a clip
+openshot::ClipBase* Timeline::GetClip(const std::string& id)
+{
+	// Find the matching clip (if any)
+	for (const auto& clip : clips) {
+		if (clip->Id() == id) {
+			return clip;
+		}
+	}
+	return nullptr;
+}
+
+// Look up a timeline effect
+openshot::EffectBase* Timeline::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
+}
+
+openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
+{
+	// Search all clips for matching effect ID
+	for (const auto& clip : clips) {
+		const auto e = clip->GetEffect(id);
+		if (e != nullptr) {
+			return e;
+		}
+	}
+	return nullptr;
+}
+
+// Compute the end time of the latest timeline element
+double Timeline::GetMaxTime() {
+	double last_clip = 0.0;
+	double last_effect = 0.0;
+
+	if (!clips.empty()) {
+		const auto max_clip = std::max_element(
+				clips.begin(), clips.end(), CompareClipEndFrames());
+		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+	}
+	if (!effects.empty()) {
+		const auto max_effect = std::max_element(
+				effects.begin(), effects.end(), CompareEffectEndFrames());
+		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+	}
+	return std::max(last_clip, last_effect);
+}
+
+// Compute the highest frame# based on the latest time and FPS
+int64_t Timeline::GetMaxFrame() {
+	double fps = info.fps.ToDouble();
+	auto max_time = GetMaxTime();
+	return std::round(max_time * fps) + 1;
+}
+
 // Apply a FrameMapper to a clip which matches the settings of this timeline
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
