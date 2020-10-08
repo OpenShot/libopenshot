@@ -41,6 +41,7 @@ void EffectBase::InitEffectInfo()
 	Start(0.0);
 	End(0.0);
 	Order(0);
+	ParentClip(NULL);
 
 	info.has_video = false;
 	info.has_audio = false;
