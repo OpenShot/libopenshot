@@ -147,6 +147,9 @@ namespace openshot
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		SWRCONTEXT *avr;	// Audio resampling context object
 
+		float position;
+		float start;
+
 		// Internal methods used by init
 		void AddField(int64_t frame);
 		void AddField(Field field);
@@ -166,13 +169,13 @@ namespace openshot
 		std::vector<MappedFrame> frames;	// List of all frames
 
 		/// Default constructor for openshot::FrameMapper class
-		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
+		FrameMapper(ReaderBase *reader, Fraction target_fps, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout, float clipPosition, float clipStart);
 
 		/// Destructor
 		virtual ~FrameMapper();
 
 		/// Change frame rate or audio mapping details
-		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout);
+		void ChangeMapping(Fraction target_fps, PulldownType pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout, float clipPosition, float clipStart);
 
 		/// Close the openshot::FrameMapper and internal reader
 		void Close() override;
@@ -218,6 +221,7 @@ namespace openshot
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);
 
+		int64_t ConvPositon(int64_t clip_frame_number);
 	};
 }
 

@@ -33,7 +33,7 @@
 using namespace std;
 using namespace openshot;
 
-FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
+FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout, float clipPosition, float clipStart) :
 		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL)
 {
 	// Set the original frame rate from the reader
@@ -52,6 +52,8 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	info.width = reader->info.width;
 	info.height = reader->info.height;
 
+	position = clipPosition;
+	start = clipStart;
 	// Used to toggle odd / even fields
 	field_toggle = true;
 
@@ -257,12 +259,12 @@ void FrameMapper::Init()
 			// the original sample rate.
 			int64_t end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
-			int remaining_samples = Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate, reader->info.channels);
+			int remaining_samples = Frame::GetSamplesPerFrame(ConvPositon(frame_number), target, reader->info.sample_rate, reader->info.channels);
 
 			while (remaining_samples > 0)
 			{
 				// get original samples
-				int original_samples = Frame::GetSamplesPerFrame(end_samples_frame, original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
+				int original_samples = Frame::GetSamplesPerFrame(ConvPositon(end_samples_frame), original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -282,12 +284,12 @@ void FrameMapper::Init()
 
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(frame_number, target, reader->info.sample_rate, reader->info.channels)};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(ConvPositon(frame_number), target, reader->info.sample_rate, reader->info.channels)};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
 			start_samples_position = end_samples_position + 1;
-			if (start_samples_position >= Frame::GetSamplesPerFrame(start_samples_frame, original, reader->info.sample_rate, reader->info.channels))
+			if (start_samples_position >= Frame::GetSamplesPerFrame(ConvPositon(start_samples_frame), original, reader->info.sample_rate, reader->info.channels))
 			{
 				start_samples_frame += 1; // increment the frame (since we need to wrap onto the next one)
 				start_samples_position = 0; // reset to 0, since we wrapped
@@ -354,7 +356,7 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	std::shared_ptr<Frame> new_frame;
 
 	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
-	int samples_in_frame = Frame::GetSamplesPerFrame(number, target, reader->info.sample_rate, reader->info.channels);
+	int samples_in_frame = Frame::GetSamplesPerFrame(ConvPositon(number), target, reader->info.sample_rate, reader->info.channels);
 
 	try {
 		// Debug output
@@ -427,7 +429,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		// Get # of channels in the actual frame
 		int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-		int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, target, mapped_frame->SampleRate(), channels_in_frame);
+		int samples_in_frame = Frame::GetSamplesPerFrame(ConvPositon(frame_number), target, mapped_frame->SampleRate(), channels_in_frame);
 
 		// Determine if mapped frame is identical to source frame
 		// including audio sample distribution according to mapped.Samples,
@@ -687,6 +689,7 @@ Json::Value FrameMapper::JsonValue() const {
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "FrameMapper";
+	root["position"] = position;
 
 	// return JsonValue
 	return root;
@@ -715,6 +718,10 @@ void FrameMapper::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
 
+	if(!root["position"].isNull()){
+		position = root["position"].asDouble();
+	}
+
 	// Re-Open path, and re-init everything (if needed)
 	if (reader) {
 
@@ -724,7 +731,7 @@ void FrameMapper::SetJsonValue(const Json::Value root) {
 }
 
 // Change frame rate or audio mapping details
-void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
+void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout, float clipPosition, float clipStart)
 {
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.den, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
 
@@ -742,6 +749,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
 	info.channel_layout = target_channel_layout;
+
+	position = clipPosition;
+	start = clipStart;
 
 	// Clear cache
 	final_cache.Clear();
@@ -826,7 +836,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	total_frame_samples = Frame::GetSamplesPerFrame(frame->number, target, info.sample_rate, info.channels);
+	total_frame_samples = Frame::GetSamplesPerFrame(ConvPositon(frame->number), target, info.sample_rate, info.channels);
 
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
@@ -934,4 +944,15 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Delete arrays
 	delete[] resampled_samples;
 	resampled_samples = NULL;
+}
+
+int64_t FrameMapper::ConvPositon(int64_t clip_frame_number){
+
+	int64_t clip_start_frame = (start * info.fps.ToDouble()) + 1;
+	int64_t clip_start_position = round(position * info.fps.ToDouble()) + 1;
+	
+	int64_t frame_number = clip_frame_number + clip_start_position - clip_start_frame;
+
+	///std::cout << "Conv Position " << round(position * info.fps.ToDouble()) << " position: " << position << " info::fps: " << info.fps.ToDouble() << std::endl; 
+	return frame_number;
 }

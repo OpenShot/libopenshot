@@ -340,14 +340,14 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
-		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout, clip->Position(), clip->Start());
 		allocated_frame_mappers.insert(mapper);
 		clip_reader = (ReaderBase*) mapper;
 	}
 
 	// Update the mapping
 	FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
-	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout, clip->Position(), clip->Start());
 
 	// Update clip reader
 	clip->Reader(clip_reader);
@@ -545,11 +545,12 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				// Currently, the ResampleContext sometimes leaves behind a few samples for the next call, and the
 				// number of samples returned is variable... and does not match the number expected.
 				// This is a crude solution at best. =)
-				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount())
+				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount()){
 					// Force timeline frame to match the source frame
 					#pragma omp critical (T_addLayer)
-					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
 
+					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+				}
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
 				#pragma omp critical (T_addLayer)
@@ -909,6 +910,7 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
+
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
