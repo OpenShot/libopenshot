@@ -759,11 +759,11 @@ void Frame::AddColor(int new_width, int new_height, std::string new_color)
 }
 
 // Add (or replace) pixel data to the frame
-void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_)
+void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, int bytes_per_line, QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
 	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	int buffer_size = new_width * new_height * bytes_per_pixel;
+	int buffer_size = bytes_per_line * new_height;
 	qbuffer = new unsigned char[buffer_size]();
 
 	// Copy buffer data
@@ -772,7 +772,7 @@ void Frame::AddImage(int new_width, int new_height, int bytes_per_pixel, QImage:
 	// Create new image object, and fill with pixel data
 	#pragma omp critical (AddImage)
 	{
-		image = std::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, new_width * bytes_per_pixel, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
+		image = std::shared_ptr<QImage>(new QImage(qbuffer, new_width, new_height, bytes_per_line, type, (QImageCleanupFunction) &openshot::Frame::cleanUpBuffer, (void*) qbuffer));
 
 		// Always convert to RGBA8888 (if different)
 		if (image->format() != QImage::Format_RGBA8888)

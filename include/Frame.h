@@ -156,7 +156,7 @@ namespace openshot
 		void AddColor(int new_width, int new_height, std::string new_color);
 
 		/// Add (or replace) pixel data to the frame
-		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
+		void AddImage(int new_width, int new_height, int bytes_per_pixel, int bytes_per_line, QImage::Format type, const unsigned char *pixels_);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);

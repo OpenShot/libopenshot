@@ -159,7 +159,7 @@
 		#define AV_SET_FILENAME(oc, f) oc->AV_FILENAME = av_strdup(f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE AV_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
-		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
+		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, av_cpu_max_align())
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
 		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
@@ -175,8 +175,8 @@
 		#define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_stream->codecpar
 		#define AV_GET_CODEC_PIXEL_FORMAT(av_stream, av_context) (AVPixelFormat) av_stream->codecpar->format
 		#define AV_GET_SAMPLE_FORMAT(av_stream, av_context) av_stream->codecpar->format
-		#define AV_GET_IMAGE_SIZE(pix_fmt, width, height) av_image_get_buffer_size(pix_fmt, width, height, 1)
-		#define AV_COPY_PICTURE_DATA(av_frame, buffer, pix_fmt, width, height) av_image_fill_arrays(av_frame->data, av_frame->linesize, buffer, pix_fmt, width, height, 1)
+		#define AV_GET_IMAGE_SIZE(pix_fmt, width, height) av_image_get_buffer_size(pix_fmt, width, height, av_cpu_max_align())
+		#define AV_COPY_PICTURE_DATA(av_frame, buffer, pix_fmt, width, height) av_image_fill_arrays(av_frame->data, av_frame->linesize, buffer, pix_fmt, width, height, av_cpu_max_align())
 		#define AV_OUTPUT_CONTEXT(output_context, path) avformat_alloc_output_context2( output_context, NULL, NULL, path)
 		#define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
 		#define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) 	av_opt_set(priv_data, name, value, 0); avcodec_parameters_from_context(av_stream->codecpar, avcodec);
@@ -194,7 +194,7 @@
 		#define AV_SET_FILENAME(oc, f) snprintf(oc->AV_FILENAME, sizeof(oc->AV_FILENAME), "%s", f)
 		#define MY_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 		#define AV_ALLOCATE_FRAME() av_frame_alloc()
-		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 1)
+		#define AV_ALLOCATE_IMAGE(av_frame, pix_fmt, width, height) av_image_alloc(av_frame->data, av_frame->linesize, width, height, pix_fmt, 32)
 		#define AV_RESET_FRAME(av_frame) av_frame_unref(av_frame)
 		#define AV_FREE_FRAME(av_frame) av_frame_free(av_frame)
 		#define AV_FREE_PACKET(av_packet) av_packet_unref(av_packet)
@@ -210,8 +210,8 @@
 		#define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_stream->codecpar
 		#define AV_GET_CODEC_PIXEL_FORMAT(av_stream, av_context) (AVPixelFormat) av_stream->codecpar->format
 		#define AV_GET_SAMPLE_FORMAT(av_stream, av_context) av_stream->codecpar->format
-		#define AV_GET_IMAGE_SIZE(pix_fmt, width, height) av_image_get_buffer_size(pix_fmt, width, height, 1)
-		#define AV_COPY_PICTURE_DATA(av_frame, buffer, pix_fmt, width, height) av_image_fill_arrays(av_frame->data, av_frame->linesize, buffer, pix_fmt, width, height, 1)
+		#define AV_GET_IMAGE_SIZE(pix_fmt, width, height) av_image_get_buffer_size(pix_fmt, width, height, 32)
+		#define AV_COPY_PICTURE_DATA(av_frame, buffer, pix_fmt, width, height) av_image_fill_arrays(av_frame->data, av_frame->linesize, buffer, pix_fmt, width, height, 32)
 		#define AV_OUTPUT_CONTEXT(output_context, path) avformat_alloc_output_context2( output_context, NULL, NULL, path)
 		#define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
 		#define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) 	av_opt_set(priv_data, name, value, 0); avcodec_parameters_from_context(av_stream->codecpar, avcodec);
