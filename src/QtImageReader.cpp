@@ -98,10 +98,6 @@ void QtImageReader::Open()
 			throw InvalidFile("File could not be opened.", path.toStdString());
 		}
 
-		// Convert to proper format
-		image = std::make_shared<QImage>(
-			image->convertToFormat(QImage::Format_RGBA8888));
-
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
@@ -254,9 +250,6 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 			cached_image = std::make_shared<QImage>(image->scaled(
 				max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}
-
-		cached_image = std::make_shared<QImage>(
-			cached_image->convertToFormat(QImage::Format_RGBA8888));
 
 		// Set max size (to later determine if max_size is changed)
 		max_size.setWidth(max_width);

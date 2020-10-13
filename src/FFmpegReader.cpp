@@ -1342,7 +1342,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			scale_mode = SWS_BICUBIC;
 		}
 		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+															  height, AV_PIX_FMT_RGB32, scale_mode, NULL, NULL, NULL);
 
 		// Resize / Convert to RGB
 		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
@@ -1352,7 +1352,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		std::shared_ptr<Frame> f = CreateFrame(current_frame);
 
 		// Add Image data to frame
-		f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
+		f->AddImage(width, height, 4, QImage::Format_ARGB32_Premultiplied, buffer);
 
 		// Update working cache
 		working_cache.Add(f);

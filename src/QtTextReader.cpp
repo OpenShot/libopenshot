@@ -67,7 +67,7 @@ void QtTextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888);
+		image = std::make_shared<QImage>(width, height, QImage::Format_ARGB32_Premultiplied);
 		image->fill(QColor(background_color.c_str()));
 
 		QPainter painter;
