@@ -98,6 +98,15 @@ namespace openshot {
 		/// Section lock for multiple threads
 	    juce::CriticalSection getFrameCriticalSection;
 
+		/// Init default settings for a clip
+		void init_settings();
+
+		/// Init reader info details
+		void init_reader_settings();
+
+		/// Update default rotation from reader
+		void init_reader_rotation();
+
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
@@ -130,12 +139,6 @@ namespace openshot {
 
 		/// Adjust the audio and image of a time mapped frame
 		void get_time_mapped_frame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
-
-		/// Init default settings for a clip
-		void init_settings();
-
-		/// Update default rotation from reader
-		void init_reader_rotation();
 
 		/// Compare 2 floating point numbers
 		bool isEqual(double a, double b);

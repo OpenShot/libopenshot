@@ -69,9 +69,6 @@ void Clip::init_settings()
 	// Init alpha
 	alpha = Keyframe(1.0);
 
-	// Init rotation
-	init_reader_rotation();
-
 	// Init time & volume
 	time = Keyframe(1.0);
 	volume = Keyframe(1.0);
@@ -101,8 +98,22 @@ void Clip::init_settings()
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
 
-	// Initialize Clip cache
-	cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	// Init reader info struct and cache size
+	init_reader_settings();
+}
+
+// Init reader info details
+void Clip::init_reader_settings() {
+	if (reader) {
+		// Init rotation (if any)
+		init_reader_rotation();
+
+		// Initialize info struct
+		info = reader->info;
+
+		// Initialize Clip cache
+		cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	}
 }
 
 // Init reader's rotation (if any)
@@ -208,8 +219,8 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		End(reader->info.duration);
 		reader->SetParentClip(this);
 		allocated_reader = reader;
-		init_reader_rotation();
-	}
+		// Init reader info struct and cache size
+		init_reader_settings();	}
 }
 
 // Destructor
@@ -237,8 +248,8 @@ void Clip::Reader(ReaderBase* new_reader)
 	// set parent
 	reader->SetParentClip(this);
 
-	// Init rotation (if any)
-	init_reader_rotation();
+	// Init reader info struct and cache size
+	init_reader_settings();
 }
 
 /// Get the current reader
