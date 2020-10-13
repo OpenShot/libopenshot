@@ -360,14 +360,14 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
-		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout, clip->Position(), clip->Start());
+		FrameMapper* mapper = new FrameMapper(clip->Reader(), info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 		allocated_frame_mappers.insert(mapper);
 		clip_reader = (ReaderBase*) mapper;
 	}
 
 	// Update the mapping
 	FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
-	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout, clip->Position(), clip->Start());
+	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 
 	// Update clip reader
 	clip->Reader(clip_reader);
