@@ -29,6 +29,10 @@
  */
 
 #include "../include/CacheDisk.h"
+#include "../include/QtUtilities.h"
+#include <Qt>
+#include <QString>
+#include <QTextStream>
 
 using namespace std;
 using namespace openshot;
@@ -191,10 +195,10 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 
 			if (audio_file.open(QIODevice::WriteOnly)) {
 				QTextStream audio_stream(&audio_file);
-				audio_stream << frame->SampleRate() << endl;
-				audio_stream << frame->GetAudioChannelsCount() << endl;
-				audio_stream << frame->GetAudioSamplesCount() << endl;
-				audio_stream << frame->ChannelsLayout() << endl;
+				audio_stream << frame->SampleRate() << Qt::endl;
+				audio_stream << frame->GetAudioChannelsCount() << Qt::endl;
+				audio_stream << frame->GetAudioSamplesCount() << Qt::endl;
+				audio_stream << frame->ChannelsLayout() << Qt::endl;
 
 				// Loop through all samples
 				for (int channel = 0; channel < frame->GetAudioChannelsCount(); channel++)
@@ -202,7 +206,7 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 					// Get audio for this channel
 					float *samples = frame->GetAudioSamples(channel);
 					for (int sample = 0; sample < frame->GetAudioSamplesCount(); sample++)
-						audio_stream << samples[sample] << endl;
+						audio_stream << samples[sample] << Qt::endl;
 				}
 
 			}

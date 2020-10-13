@@ -77,6 +77,7 @@ option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
+option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
@@ -129,9 +130,9 @@ add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate 
 # -DDEBUG for debug builds. We'll do this for all OSes, even
 # though only MacOS requires it.
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-# Make sure we've picked some build type, default to debug
+# Make sure we've picked some build type, default to release
 if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-  set(CMAKE_BUILD_TYPE "Debug")
+  set(CMAKE_BUILD_TYPE "Release")
 endif()
 
 ############## PROCESS src/ DIRECTORIES ##############

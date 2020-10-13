@@ -418,20 +418,20 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-		#if HAVE_HW_ACCEL
+#if HAVE_HW_ACCEL
 			if (hw_en_on) {
 				av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 			} else
-		#endif // HAVE_HW_ACCEL
+#endif // HAVE_HW_ACCEL
 			{
 				switch (c->codec_id) {
-		#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
 				// FFmpeg 4.0+
 				case AV_CODEC_ID_AV1 :
 					c->bit_rate = 0;
 					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 					break;
-		#endif
+#endif
 				case AV_CODEC_ID_VP8 :
 					c->bit_rate = 10000000;
 					av_opt_set_int(c->priv_data, "qp", std::max(std::min(std::stoi(value), 63), 4), 0); // 4-63
@@ -448,6 +448,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 					av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value), 51), 0); // 0-51
 					if (std::stoi(value) == 0) {
 						av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							c->pix_fmt = PIX_FMT_YUV444P; // no chroma subsampling
 					}
 					break;
 				case AV_CODEC_ID_HEVC :
@@ -507,6 +508,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 						av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value), 51), 0); // 0-51
 						if (std::stoi(value) == 0) {
 							av_opt_set(c->priv_data, "preset", "veryslow", 0);
+							c->pix_fmt = PIX_FMT_YUV444P; // no chroma subsampling
 						}
 						break;
 					case AV_CODEC_ID_HEVC :
@@ -546,7 +548,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 				switch (c->codec_id) {
 					case AV_CODEC_ID_AV1 :
 						c->bit_rate = 0;
-						if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+						if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
 							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
 						}
 						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
@@ -1207,7 +1209,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 					info.video_bit_rate = calculated_quality;
 				} // medium
 			}
-			if (strstr(info.vcodec.c_str(), "svt_av1") != NULL) {
+			if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
 				av_opt_set_int(c->priv_data, "preset", 6, 0);
 				av_opt_set_int(c->priv_data, "forced-idr",1,0);
 			}

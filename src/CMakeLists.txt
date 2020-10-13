@@ -34,6 +34,16 @@ if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
 
+# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
+# -DNDEBUG is set by cmake for all release configs, so add
+# -DDEBUG for debug builds. We'll do this for all OSes, even
+# though only MacOS requires it.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+# Make sure we've picked some build type, default to debug
+if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
+
 ################ WINDOWS ##################
 # Set some compiler options for Windows
 # required for libopenshot-audio headers
@@ -45,7 +55,6 @@ endif()
 if (APPLE)
 	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
 	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	add_definitions(-DNDEBUG)
 	set(EXTENSION "mm")
 	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
 	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
@@ -56,29 +65,31 @@ endif()
 
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-IF (MAGICKCORE_QUANTUM_DEPTH)
-  add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-ELSE (MAGICKCORE_QUANTUM_DEPTH)
-  add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-IF (MAGICKCORE_HDRI_ENABLE)
-  add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-ELSE (MAGICKCORE_HDRI_ENABLE)
-  add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-ENDIF (MAGICKCORE_HDRI_ENABLE)
+if(ENABLE_MAGICK)
+  IF (MAGICKCORE_QUANTUM_DEPTH)
+    add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
+  ELSE (MAGICKCORE_QUANTUM_DEPTH)
+    add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
+  ENDIF (MAGICKCORE_QUANTUM_DEPTH)
+  IF (MAGICKCORE_HDRI_ENABLE)
+    add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
+  ELSE (MAGICKCORE_HDRI_ENABLE)
+    add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
+  ENDIF (MAGICKCORE_HDRI_ENABLE)
 
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if (ImageMagick_FOUND)
-  # Include ImageMagick++ headers (needed for compile)
-  include_directories(${ImageMagick_INCLUDE_DIRS})
+  # Find the ImageMagick++ library
+  find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+  if (ImageMagick_FOUND)
+    # Include ImageMagick++ headers (needed for compile)
+    include_directories(${ImageMagick_INCLUDE_DIRS})
 
-  # define a global var (used in the C++)
-  add_definitions( -DUSE_IMAGEMAGICK=1 )
-  list(APPEND CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+    # define a global var (used in the C++)
+    add_definitions( -DUSE_IMAGEMAGICK=1 )
+    list(APPEND CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
 
-  set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
-  mark_as_advanced(HAVE_IMAGEMAGICK)
+    set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
+    mark_as_advanced(HAVE_IMAGEMAGICK)
+  endif()
 endif()
 
 ################# LIBOPENSHOT-AUDIO ###################
@@ -284,7 +295,7 @@ endif ()
 
 ################# QT5 ###################
 # Find QT5 libraries
-set(_qt_components Widgets Core Gui Multimedia MultimediaWidgets)
+set(_qt_components Core Gui Widgets)
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
