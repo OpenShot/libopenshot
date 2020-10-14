@@ -117,6 +117,7 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		R = mask_pixels[byte_index];
 		G = mask_pixels[byte_index + 1];
 		B = mask_pixels[byte_index + 2];
+		A = mask_pixels[byte_index + 3];
 
 		// Get the average luminosity
 		gray_value = qGray(R, G, B);
@@ -131,16 +132,23 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		// Constrain the value from 0 to 255
 		gray_value = constrain(gray_value);
 
+		// Calculate the % change in alpha
+		float alpha_percent = float(constrain(A - gray_value)) / 255.0;
+
 		// Set the alpha channel to the gray value
 		if (replace_image) {
-			// Replace frame pixels with gray value
+			// Replace frame pixels with gray value (including alpha channel)
 			pixels[byte_index + 0] = gray_value;
 			pixels[byte_index + 1] = gray_value;
 			pixels[byte_index + 2] = gray_value;
+			pixels[byte_index + 3] = gray_value;
 		} else {
-			// Set alpha channel
-			A = pixels[byte_index + 3];
-			pixels[byte_index + 3] = constrain(A - gray_value);
+			// Mulitply new alpha value with all the colors (since we are using a premultiplied
+			// alpha format)
+			pixels[byte_index + 0] *= alpha_percent;
+			pixels[byte_index + 1] *= alpha_percent;
+			pixels[byte_index + 2] *= alpha_percent;
+			pixels[byte_index + 3] *= alpha_percent;
 		}
 
 	}
