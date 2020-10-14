@@ -76,7 +76,7 @@ void QtImageReader::Open()
 			if (renderer.isValid()) {
 
 				image = std::make_shared<QImage>(
-					renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied);
+					renderer.defaultSize(), QImage::Format_RGBA8888_Premultiplied);
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
@@ -232,7 +232,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				// Create empty QImage
 				cached_image = std::make_shared<QImage>(
 					QSize(svg_size.width(), svg_size.height()),
-					QImage::Format_ARGB32_Premultiplied);
+					QImage::Format_RGBA8888_Premultiplied);
 				cached_image->fill(Qt::transparent);
 
 				// Render SVG into QImage

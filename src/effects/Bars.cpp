@@ -69,7 +69,7 @@ std::shared_ptr<Frame> Bars::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 
 	// Get bar color (and create small color image)
 	auto tempColor = std::make_shared<QImage>(
-		frame_image->width(), 1, QImage::Format_ARGB32_Premultiplied);
+		frame_image->width(), 1, QImage::Format_RGBA8888_Premultiplied);
 	tempColor->fill(QColor(QString::fromStdString(color.GetColorHex(frame_number))));
 
 	// Get current keyframe values
