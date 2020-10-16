@@ -1162,7 +1162,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			pixels[byte_index + 2] *= alpha_value;
 			pixels[byte_index + 3] *= alpha_value;
 		}
-		pixels = NULL;
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
