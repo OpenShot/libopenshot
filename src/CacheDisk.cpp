@@ -231,14 +231,14 @@ std::shared_ptr<Frame> CacheDisk::GetFrame(int64_t frame_number)
 		if (path.exists(frame_path)) {
 
 			// Load image file
-			std::shared_ptr<QImage> image = std::shared_ptr<QImage>(new QImage());
+			auto image = std::make_shared<QImage>();
 			image->load(frame_path);
 
 			// Set pixel formatimage->
-			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888_Premultiplied)));
+			image = std::make_shared<QImage>(image->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
 
 			// Create frame object
-			std::shared_ptr<Frame> frame(new Frame());
+			auto frame = std::make_shared<Frame>();
 			frame->number = frame_number;
 			frame->AddImage(image);
 

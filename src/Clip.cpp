@@ -387,7 +387,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)

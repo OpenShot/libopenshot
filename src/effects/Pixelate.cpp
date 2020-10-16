@@ -29,6 +29,12 @@
  */
 
 #include "../../include/effects/Pixelate.h"
+#include "Json.h"
+
+#include <QImage>
+#include <QPainter>
+#include <QRect>
+#include <QPoint>
 
 using namespace openshot;
 

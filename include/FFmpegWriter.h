@@ -47,8 +47,6 @@
 
 #include <cmath>
 #include <ctime>
-#include <iostream>
-#include <stdio.h>
 #include <unistd.h>
 #include "CacheMemory.h"
 #include "Exceptions.h"
@@ -251,9 +249,11 @@ namespace openshot {
 
 	public:
 
-		/// @brief Constructor for FFmpegWriter. Throws one of the following exceptions.
+		/// @brief Constructor for FFmpegWriter.
+		/// Throws an exception on failure to open path.
+		///
 		/// @param path The file path of the video file you want to open and read
-		FFmpegWriter(std::string path);
+		FFmpegWriter(const std::string& path);
 
 		/// Close the writer
 		void Close();

@@ -64,15 +64,21 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		Keyframe saturation;	///< The color saturation: 0.0 = black and white, 1.0 = normal, 2.0 = double saturation
+		Keyframe saturation;	///< Overall color saturation: 0.0 = greyscale, 1.0 = normal, 2.0 = double saturation
+		Keyframe saturation_R;	///< Red color saturation
+		Keyframe saturation_G;	///< Green color saturation
+		Keyframe saturation_B;	///< Blue color saturation
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Saturation();
 
-		/// Default constructor, which takes 1 curve, to adjust the color saturation over time.
+		/// Default constructor, which takes four curves (one common curve and one curve per color), to adjust the color saturation over time.
 		///
-		/// @param new_saturation The curve to adjust the saturation of the frame's image (0.0 = black and white, 1.0 = normal, 2.0 = double saturation)
-		Saturation(Keyframe new_saturation);
+		/// @param saturation The curve to adjust the saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
+		/// @param saturation_R The curve to adjust red saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
+		/// @param saturation_G The curve to adjust green saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
+		/// @param saturation_B The curve to adjust blue saturation of the frame's image (0.0 = greyscale, 1.0 = normal, 2.0 = double saturation)
+		Saturation(Keyframe saturation, Keyframe saturation_R, Keyframe saturation_G, Keyframe saturation_B);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

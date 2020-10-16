@@ -233,14 +233,13 @@ namespace openshot {
 		/// codecs have trouble seeking, and can introduce artifacts or blank images into the video.
 		bool enable_seek;
 
-		/// Constructor for FFmpegReader.  This automatically opens the media file and loads
-		/// frame 1, or it throws one of the following exceptions.
-		FFmpegReader(std::string path);
-
-		/// Constructor for FFmpegReader.  This only opens the media file to inspect its properties
-		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
-		/// when you are inflating the object using JSON after instantiating it.
-		FFmpegReader(std::string path, bool inspect_reader);
+		/// @brief Constructor for FFmpegReader.
+		///
+		/// Sets (and possibly opens) the media file path,
+		/// or throws an exception.
+		/// @param path  The filesystem location to load
+		/// @param inspect_reader  if true (the default), automatically open the media file and loads frame 1.
+		FFmpegReader(const std::string& path, bool inspect_reader=true);
 
 		/// Destructor
 		virtual ~FFmpegReader();

@@ -84,13 +84,14 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 			(original_mask && original_mask->size() != frame_image->size())) {
 
 			// Only get mask if needed
-			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(
-					new QImage(*reader->GetFrame(frame_number)->GetImage()));
+			auto mask_without_sizing = std::make_shared<QImage>(
+				*reader->GetFrame(frame_number)->GetImage());
 
 			// Resize mask image to match frame size
-			original_mask = std::shared_ptr<QImage>(new QImage(
-					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
-												Qt::SmoothTransformation)));
+			original_mask = std::make_shared<QImage>(
+				mask_without_sizing->scaled(
+					frame_image->width(), frame_image->height(),
+					Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 		}
 	}
 

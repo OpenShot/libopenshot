@@ -478,7 +478,8 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		}
 
 		// Create a new frame
-		std::shared_ptr<Frame> frame = std::make_shared<Frame>(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame);
+		auto frame = std::make_shared<Frame>(
+			frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame);
 		frame->SampleRate(mapped_frame->SampleRate());
 		frame->ChannelsLayout(mapped_frame->ChannelsLayout());
 
@@ -488,13 +489,14 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 		if (odd_frame)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+			frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
 		if (mapped.Odd.Frame != mapped.Even.Frame) {
 			// Add even lines (if different than the previous image)
 			std::shared_ptr<Frame> even_frame;
 			even_frame = GetOrCreateFrame(mapped.Even.Frame);
 			if (even_frame)
-				frame->AddImage(std::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+				frame->AddImage(
+					std::make_shared<QImage>(*even_frame->GetImage()), false);
 		}
 
 		// Resample audio on frame (if needed)
