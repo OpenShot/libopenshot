@@ -1150,7 +1150,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		float alpha_value = alpha.GetValue(frame->number);
 
 		// Get source image's pixels
-		unsigned char *pixels = (unsigned char *) source_image->bits();
+		unsigned char *pixels = source_image->bits();
 
 		// Loop through pixels
 		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
@@ -1162,6 +1162,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			pixels[byte_index + 2] *= alpha_value;
 			pixels[byte_index + 3] *= alpha_value;
 		}
+		pixels = NULL;
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
