@@ -287,13 +287,8 @@ TEST(FrameMapper_AudioSample_Distribution)
 	c2.End(10.0);
 
 	// Add clips
-
 	t1.AddClip(&c1);
 	t1.AddClip(&c2);
-	
-	std::string json_val = t1.Json();
-	
-	//std::cout << json_val << std::endl;
 
 	//t1.SetJson(t1.Json());
 	t1.Open();
