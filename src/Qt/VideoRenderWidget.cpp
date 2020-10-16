@@ -29,7 +29,13 @@
  */
 
 #include "../../include/Qt/VideoRenderWidget.h"
-#include <QtGui/QPaintEvent>
+#include <QWidget>
+#include <QImage>
+#include <QPainter>
+#include <QPaintEvent>
+#include <QSizePolicy>
+#include <QPalette>
+
 
 VideoRenderWidget::VideoRenderWidget(QWidget *parent)
     : QWidget(parent), renderer(new VideoRenderer(this))

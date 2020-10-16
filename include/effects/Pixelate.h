@@ -36,7 +36,6 @@
 #include <cmath>
 #include <stdio.h>
 #include <memory>
-#include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 

@@ -34,16 +34,8 @@
 #include <iomanip>
 #include <sstream>
 #include <queue>
-#include <QtWidgets/QApplication>
-#include <QtGui/QImage>
-#include <QtGui/QColor>
-#include <QtGui/QBitmap>
-#include <QtCore/QString>
-#include <QtCore/QVector>
-#include <QtGui/QPainter>
-#include <QtWidgets/QHBoxLayout>
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QLabel>
+#include <QApplication>
+#include <QImage>
 #include <memory>
 #include <unistd.h>
 #include "ZmqLogger.h"
@@ -73,17 +65,17 @@ namespace openshot
 	 * There are many ways to create an instance of an openshot::Frame:
 	 * @code
 	 *
-	 * // Most basic: a blank frame (300x200 blank image, 48kHz audio silence)
+	 * // Most basic: a blank frame (all default values)
 	 * Frame();
 	 *
-	 * // Image only settings (48kHz audio silence)
+	 * // Image only settings
 	 * Frame(1, // Frame number
 	 *       720, // Width of image
 	 *       480, // Height of image
 	 *       "#000000" // HTML color code of background color
 	 *       );
 	 *
-	 * // Audio only (300x200 blank image)
+	 * // Audio only
 	 * Frame(number, // Frame number
 	 *       44100, // Sample rate of audio stream
 	 *       2 // Number of audio channels
@@ -99,7 +91,7 @@ namespace openshot
 	 *       );
 	 *
 	 * // Some methods require a shared pointer to an openshot::Frame object.
-	 * std::shared_ptr<Frame> f(new Frame(1, 720, 480, "#000000", 44100, 2));
+	 * auto f = std::make_shared<openshot::Frame>(1, 720, 480, "#000000", 44100, 2);
 	 *
 	 * @endcode
 	 */
@@ -131,13 +123,13 @@ namespace openshot
 		bool has_image_data; ///< This frame has been loaded with pixel data
 
 
-		/// Constructor - blank frame (300x200 blank image, 48kHz audio silence)
+		/// Constructor - blank frame
 		Frame();
 
-		/// Constructor - image only (48kHz audio silence)
+		/// Constructor - image only
 		Frame(int64_t number, int width, int height, std::string color);
 
-		/// Constructor - audio only (300x200 blank image)
+		/// Constructor - audio only
 		Frame(int64_t number, int samples, int channels);
 
 		/// Constructor - image & audio

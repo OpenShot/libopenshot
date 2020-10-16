@@ -69,7 +69,7 @@ namespace openshot
 	 *   // Create blank frame (with specific frame #, samples, and channels)
 	 *   // Sample count should be 44100 / 30 fps = 1470 samples per frame
 	 *   int sample_count = 1470;
-	 *   std::shared_ptr<openshot::Frame> f(new openshot::Frame(frame_number, sample_count, 2));
+	 *   auto f = std::make_shared<openshot::Frame>(frame_number, sample_count, 2);
 	 *
 	 *   // Create test samples with incrementing value
 	 *   float *audio_buffer = new float[sample_count];

@@ -339,7 +339,10 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
-		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
+		auto frame = std::make_shared<Frame>(
+			new_frame_number, 1, 1, "#000000",
+			original_frame->GetAudioSamplesCount(),
+			original_frame->GetAudioChannelsCount());
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -347,7 +350,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)

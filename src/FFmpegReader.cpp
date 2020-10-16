@@ -2138,7 +2138,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 			// Add this frame to the processed map (since it's already done)
 			std::shared_ptr<QImage> parent_image = parent_frame->GetImage();
 			if (parent_image) {
-				missing_frame->AddImage(std::shared_ptr<QImage>(new QImage(*parent_image)));
+				missing_frame->AddImage(std::make_shared<QImage>(*parent_image));
 				processed_video_frames[missing_frame->number] = missing_frame->number;
 			}
 		}
@@ -2228,7 +2228,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 
 			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
-				f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+				f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				is_video_ready = true;
 			}
 
@@ -2250,7 +2250,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 				// Add missing image (if needed - sometimes end_of_stream causes frames with only audio)
 				if (info.has_video && !is_video_ready && last_video_frame)
 					// Copy image from last frame
-					f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 
 				// Reset counter since last 'final' frame
 				num_checks_since_final = 0;

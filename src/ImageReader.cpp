@@ -61,7 +61,7 @@ void ImageReader::Open()
 		try
 		{
 			// load image
-			image = std::shared_ptr<Magick::Image>(new Magick::Image(path));
+			image = std::make_shared<Magick::Image>(path);
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
@@ -126,7 +126,9 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
 	// Create or get frame object
-	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+	auto image_frame = std::make_shared<Frame>(
+		requested_frame, image->size().width(), image->size().height(),
+		"#000000", 0, 2);
 
 	// Add Image data to frame
 	image_frame->AddMagickImage(image);
