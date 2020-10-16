@@ -151,9 +151,9 @@ std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_
 		B = constrain(B);
 
 		// Set all pixels to new value
-		pixels[byte_index] = R;
-		pixels[byte_index + 1] = G;
-		pixels[byte_index + 2] = B;
+		pixels[pixel * 4]     = R;
+		pixels[pixel * 4 + 1] = G;
+		pixels[pixel * 4 + 2] = B;
 	}
 
 	// return the modified frame
