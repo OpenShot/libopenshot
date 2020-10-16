@@ -492,7 +492,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
-	if (is_top_clip && source_frame) {
+	if (is_top_clip) {
 		#pragma omp critical (T_addLayer)
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 	}

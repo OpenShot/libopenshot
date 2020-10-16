@@ -102,12 +102,6 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
 	unsigned char *mask_pixels = (unsigned char *) original_mask->bits();
 
-	int R = 0;
-	int G = 0;
-	int B = 0;
-	int A = 0;
-	int gray_value = 0;
-	float factor = 0.0;
 	double contrast_value = (contrast.GetValue(frame_number));
 	double brightness_value = (brightness.GetValue(frame_number));
 
@@ -115,16 +109,16 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	for (int pixel = 0, byte_index=0; pixel < original_mask->width() * original_mask->height(); pixel++, byte_index+=4)
 	{
 		// Get the RGB values from the pixel
-		R = mask_pixels[byte_index];
-		G = mask_pixels[byte_index + 1];
-		B = mask_pixels[byte_index + 2];
-		A = mask_pixels[byte_index + 3];
+		int R = mask_pixels[byte_index];
+		int G = mask_pixels[byte_index + 1];
+		int B = mask_pixels[byte_index + 2];
+		int A = mask_pixels[byte_index + 3];
 
 		// Get the average luminosity
-		gray_value = qGray(R, G, B);
+		int gray_value = qGray(R, G, B);
 
 		// Adjust the contrast
-		factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
+		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
 		gray_value = constrain((factor * (gray_value - 128)) + 128);
 
 		// Adjust the brightness
