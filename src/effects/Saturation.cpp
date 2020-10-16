@@ -154,7 +154,6 @@ std::shared_ptr<Frame> Saturation::GetFrame(std::shared_ptr<Frame> frame, int64_
 		pixels[byte_index] = R;
 		pixels[byte_index + 1] = G;
 		pixels[byte_index + 2] = B;
-		pixels[byte_index + 3] = A; // leave the alpha value alone
 	}
 
 	// return the modified frame
