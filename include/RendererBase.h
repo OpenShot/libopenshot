@@ -32,7 +32,7 @@
 #define OPENSHOT_RENDERER_BASE_H
 
 #include "Frame.h"
-#include <stdlib.h> // for realloc
+#include <cstdlib> // for realloc
 #include <memory>
 
 namespace openshot

@@ -75,15 +75,19 @@ namespace openshot {
 	 * @code SIMPLE EXAMPLE
 	 *
 	 * // Create a reader for a video
-	 * FFmpegReader r("MyAwesomeVideo.webm");
-	 * r.Open(); // Open thetarget_ reader
+	 * openshot::FFmpegReader r("MyAwesomeVideo.webm");
+	 * r.Open(); // Open the target reader
 	 *
 	 * // Create a writer (which will create a WebM video)
-	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
+	 * openshot::FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
-	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
+	 *
+	 * // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, openshot::ChannelLayout::LAYOUT_STEREO, 128000);
+	 *
+	 * // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
+	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000);
 	 *
 	 * // Open the writer
 	 * w.Open();
@@ -102,15 +106,19 @@ namespace openshot {
 	 * @code ADVANCED WRITER EXAMPLE
 	 *
 	 * // Create a reader for a video
-	 * FFmpegReader r("MyAwesomeVideo.webm");
+	 * openshot::FFmpegReader r("MyAwesomeVideo.webm");
 	 * r.Open(); // Open the reader
 	 *
 	 * // Create a writer (which will create a WebM video)
-	 * FFmpegWriter w("/home/jonathan/NewVideo.webm");
+	 * openshot::FFmpegWriter w("/home/jonathan/NewVideo.webm");
 	 *
 	 * // Set options
-	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, ChannelLayout::LAYOUT_STEREO, 128000); // Sample Rate: 44100, Channels: 2, Bitrate: 128000
-	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000); // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
+	 *
+	 * // Sample Rate: 44100, Channels: 2, Bitrate: 128000
+	 * w.SetAudioOptions(true, "libvorbis", 44100, 2, openshot::ChannelLayout::LAYOUT_STEREO, 128000);
+	 *
+	 * // FPS: 24, Size: 720x480, Pixel Ratio: 1/1, Bitrate: 300000
+	 * w.SetVideoOptions(true, "libvpx", openshot::Fraction(24,1), 720, 480, openshot::Fraction(1,1), false, false, 300000);
 	 *
 	 * // Prepare Streams (Optional method that must be called before any SetOption calls)
 	 * w.PrepareStreams();
@@ -156,10 +164,9 @@ namespace openshot {
 		AVOutputFormat *fmt;
 		AVFormatContext *oc;
 		AVStream *audio_st, *video_st;
-		AVCodecContext *video_codec;
-		AVCodecContext *audio_codec;
+		AVCodecContext *video_codec_ctx;
+		AVCodecContext *audio_codec_ctx;
 		SwsContext *img_convert_ctx;
-		double audio_pts, video_pts;
 		int16_t *samples;
 		uint8_t *audio_outbuf;
 		uint8_t *audio_encoder_buffer;
@@ -285,7 +292,20 @@ namespace openshot {
 		/// @param channels The number of audio channels needed in this file
 		/// @param channel_layout The 'layout' of audio channels (i.e. mono, stereo, surround, etc...)
 		/// @param bit_rate The audio bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
 		void SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, openshot::ChannelLayout channel_layout, int bit_rate);
+
+		/// @brief Set audio export options.
+		///
+		/// Enables the stream and configures a default 2-channel stereo layout.
+		///
+		/// @param codec The codec used to encode the audio for this file
+		/// @param sample_rate The number of audio samples needed in this file
+		/// @param bit_rate The audio bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
+		void SetAudioOptions(std::string codec, int sample_rate, int bit_rate);
 
 		/// @brief Set the cache size
 		/// @param new_size The number of frames to queue before writing to the file
@@ -301,10 +321,27 @@ namespace openshot {
 		/// @param interlaced Does this video need to be interlaced?
 		/// @param top_field_first Which frame should be used as the top field?
 		/// @param bit_rate The video bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
 		void SetVideoOptions(bool has_video, std::string codec, openshot::Fraction fps, int width, int height, openshot::Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate);
+
+		/// @brief Set video export options.
+		///
+		/// Enables the stream and configures non-interlaced video with a 1:1 pixel aspect ratio.
+		///
+		/// @param codec The codec used to encode the images in this video
+		/// @param width The width in pixels of this video
+		/// @param height The height in pixels of this video
+		/// @param fps The number of frames per second
+		/// @param bit_rate The video bit rate used during encoding
+		///
+		/// \note This is an overloaded function.
+		/// \warning Observe the argument order, which is consistent with the openshot::Timeline constructor, but differs from the other signature.
+		void SetVideoOptions(std::string codec, int width, int height,  openshot::Fraction fps, int bit_rate);
 
 		/// @brief Set custom options (some codecs accept additional params). This must be called after the
 		/// PrepareStreams() method, otherwise the streams have not been initialized yet.
+		///
 		/// @param stream The stream (openshot::StreamType) this option should apply to
 		/// @param name The name of the option you want to set (i.e. qmin, qmax, etc...)
 		/// @param value The new value of this option
@@ -316,12 +353,16 @@ namespace openshot {
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
+		///
+		/// \note This is an overloaded function.
 		void WriteFrame(std::shared_ptr<openshot::Frame> frame);
 
 		/// @brief Write a block of frames from a reader
 		/// @param reader A openshot::ReaderBase object which will provide frames to be written
 		/// @param start The starting frame number of the reader
 		/// @param length The number of frames to write
+		///
+		/// \note This is an overloaded function.
 		void WriteFrame(openshot::ReaderBase *reader, int64_t start, int64_t length);
 
 		/// @brief Write the file trailer (after all frames are written). This is called automatically

@@ -32,8 +32,8 @@
 #define OPENSHOT_OPENMP_UTILITIES_H
 
 #include <omp.h>
-#include <stdlib.h>
-#include <string.h>
+#include <algorithm>
+#include <string>
 
 #include "Settings.h"
 

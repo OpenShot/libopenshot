@@ -29,14 +29,22 @@
  */
 
 #include "UnitTest++.h"
+
+// Work around older versions of UnitTest++ without REQUIRE
+#ifndef REQUIRE
+  #define REQUIRE
+#endif
+
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "../include/OpenShot.h"
 
-using namespace std;
 using namespace openshot;
 
-TEST(Clip_Default_Constructor)
+SUITE(Clip)
+{
+
+TEST(Default_Constructor)
 {
 	// Create a empty clip
 	Clip c1;
@@ -54,7 +62,7 @@ TEST(Clip_Default_Constructor)
 TEST(Clip_Constructor)
 {
 	// Create a empty clip
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
 	Clip c1(path.str());
 	c1.Open();
@@ -69,7 +77,7 @@ TEST(Clip_Constructor)
 	CHECK_CLOSE(4.39937f, c1.End(), 0.00001);
 }
 
-TEST(Clip_Basic_Gettings_and_Setters)
+TEST(Basic_Gettings_and_Setters)
 {
 	// Create a empty clip
 	Clip c1;
@@ -96,7 +104,7 @@ TEST(Clip_Basic_Gettings_and_Setters)
 	CHECK_CLOSE(10.5f, c1.End(), 0.00001);
 }
 
-TEST(Clip_Properties)
+TEST(Properties)
 {
 	// Create a empty clip
 	Clip c1;
@@ -110,116 +118,75 @@ TEST(Clip_Properties)
 	c1.alpha.AddPoint(500, 0.0);
 
 	// Get properties JSON string at frame 1
-	string properties = c1.PropertiesJSON(1);
+	std::string properties = c1.PropertiesJSON(1);
 
 	// Parse JSON string into JSON objects
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 	Json::CharReader* reader(rbuilder.newCharReader());
-	string errors;
-	bool success = reader->parse( properties.c_str(),
-	                 properties.c_str() + properties.size(), &root, &errors );
+	std::string errors;
+	bool success = reader->parse(
+		properties.c_str(),
+		properties.c_str() + properties.size(),
+		&root, &errors );
+	CHECK_EQUAL(true, success);
 
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
-	try
-	{
-		// Check for specific things
-		CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.01);
-		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
-
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-	}
-
+	// Check for specific things
+	CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.01);
+	CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 250
 	properties = c1.PropertiesJSON(250);
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader->parse( properties.c_str(),
-	            properties.c_str() + properties.size(), &root, &errors );
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+	success = reader->parse(
+		properties.c_str(),
+		properties.c_str() + properties.size(),
+		&root, &errors );
+	REQUIRE CHECK_EQUAL(true, success);
 
-	try
-	{
-		// Check for specific things
-		CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.01);
-		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
-
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-	}
-
+	// Check for specific things
+	CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.01);
+	CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 250 (again)
-	properties = c1.PropertiesJSON(250); // again
+	properties = c1.PropertiesJSON(250);
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader->parse( properties.c_str(),
-				properties.c_str() + properties.size(), &root, &errors );
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+	success = reader->parse(
+		properties.c_str(),
+		properties.c_str() + properties.size(),
+		&root, &errors );
+	REQUIRE CHECK_EQUAL(true, success);
 
-	try
-	{
-		// Check for specific things
-		CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
-
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-	}
-
+	// Check for specific things
+	CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 500
 	properties = c1.PropertiesJSON(500);
 
 	// Parse JSON string into JSON objects
 	root.clear();
-	success = reader->parse( properties.c_str(),
-	            properties.c_str() + properties.size(), &root, &errors );
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+	success = reader->parse(
+		properties.c_str(),
+		properties.c_str() + properties.size(),
+		&root, &errors );
+	REQUIRE CHECK_EQUAL(true, success);
 
-	try
-	{
-		// Check for specific things
-		CHECK_CLOSE(0.0f, root["alpha"]["value"].asDouble(), 0.00001);
-		CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
-
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-	}
-
+	// Check for specific things
+	CHECK_CLOSE(0.0f, root["alpha"]["value"].asDouble(), 0.00001);
+	CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
 
 	// Free up the reader we allocated
 	delete reader;
 }
 
-TEST(Clip_Effects)
+TEST(Effects)
 {
 	// Load clip with video
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	Clip c10(path.str());
 	c10.Open();
@@ -241,7 +208,7 @@ TEST(Clip_Effects)
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
-	CHECK_EQUAL(1, c10.Effects().size());
+	CHECK_EQUAL(1, (int)c10.Effects().size());
 
 
 	// Add a 2nd negate effect
@@ -262,5 +229,8 @@ TEST(Clip_Effects)
 	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
 
 	// Check the # of Effects
-	CHECK_EQUAL(2, c10.Effects().size());
+	CHECK_EQUAL(2, (int)c10.Effects().size());
 }
+
+} // SUITE
+

@@ -31,12 +31,12 @@
 #ifndef OPENSHOT_PLAYER_DEMO_H
 #define OPENSHOT_PLAYER_DEMO_H
 
-#include <QtWidgets/QWidget>
-#include <QtWidgets/QBoxLayout>
-#include <QtWidgets/QMenuBar>
-#include <QtWidgets/QMenu>
-#include <QtGui/qevent.h>
-#include <QApplication>
+#include <QObject>
+#include <QWidget>
+#include <QKeyEvent>
+#include <QCloseEvent>
+#include <QVBoxLayout>
+#include <QMenuBar>
 
 #include "VideoRenderWidget.h"
 

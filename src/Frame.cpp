@@ -30,6 +30,9 @@
 
 #include "../include/Frame.h"
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+
 using namespace std;
 using namespace openshot;
 
@@ -43,7 +46,7 @@ Frame::Frame() : number(1), pixel_ratio(1,1), channels(2), width(1), height(1), 
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - image only (48kHz audio silence)
 Frame::Frame(int64_t number, int width, int height, std::string color)
@@ -56,7 +59,7 @@ Frame::Frame(int64_t number, int width, int height, std::string color)
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - audio only (300x200 blank image)
 Frame::Frame(int64_t number, int samples, int channels) :
@@ -69,7 +72,7 @@ Frame::Frame(int64_t number, int samples, int channels) :
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
@@ -82,7 +85,7 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 
 	// initialize the audio samples to zero (silence)
 	audio->clear();
-};
+}
 
 
 // Copy constructor
@@ -109,11 +112,12 @@ void Frame::DeepCopy(const Frame& other)
 	width = other.width;
 	height = other.height;
 	channel_layout = other.channel_layout;
-	has_audio_data = other.has_image_data;
+	has_audio_data = other.has_audio_data;
 	has_image_data = other.has_image_data;
 	sample_rate = other.sample_rate;
 	pixel_ratio = Fraction(other.pixel_ratio.num, other.pixel_ratio.den);
 	color = other.color;
+	max_audio_sample = other.max_audio_sample;
 
 	if (other.image)
 		image = std::shared_ptr<QImage>(new QImage(*(other.image)));
@@ -280,7 +284,7 @@ const unsigned char* Frame::GetWaveformPixels(int width, int height, int Red, in
 	wave_image = GetWaveform(width, height, Red, Green, Blue, Alpha);
 
 	// Return array of pixel packets
-	return wave_image->bits();
+	return wave_image->constBits();
 }
 
 // Display the wave form
@@ -473,14 +477,19 @@ const unsigned char* Frame::GetPixels()
 		AddColor(width, height, color);
 
 	// Return array of pixel packets
-	return image->bits();
+	return image->constBits();
 }
 
 // Get pixel data (for only a single scan-line)
 const unsigned char* Frame::GetPixels(int row)
 {
+	// Check for blank image
+	if (!image)
+		// Fill with black
+		AddColor(width, height, color);
+
 	// Return array of pixel packets
-	return image->scanLine(row);
+	return image->constScanLine(row);
 }
 
 // Check a specific pixel color value (returns True/False)
@@ -580,7 +589,7 @@ void Frame::Save(std::string path, float scale, std::string format, int quality)
 	std::shared_ptr<QImage> previewImage = GetImage();
 
 	// scale image if needed
-	if (abs(scale) > 1.001 || abs(scale) < 0.999)
+	if (fabs(scale) > 1.001 || fabs(scale) < 0.999)
 	{
 		int new_width = width;
 		int new_height = height;
@@ -692,7 +701,7 @@ void Frame::Thumbnail(std::string path, int new_width, int new_height, std::stri
 
 		// Get pixels
 		unsigned char *pixels = (unsigned char *) thumbnail->bits();
-		unsigned char *mask_pixels = (unsigned char *) mask->bits();
+		const unsigned char *mask_pixels = (const unsigned char *) mask->constBits();
 
 		// Convert the mask image to grayscale
 		// Loop through pixels
@@ -817,17 +826,24 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		// Ignore image of different sizes or formats
 		bool ret=false;
 		#pragma omp critical (AddImage)
-		if (image == new_image || image->size() != image->size() || image->format() != image->format())
-			ret=true;
-		if (ret)
+		{
+			if (image == new_image || image->size() != new_image->size()) {
+				ret = true;
+			}
+			else if (new_image->format() != image->format()) {
+				new_image = std::shared_ptr<QImage>(new QImage(new_image->convertToFormat(image->format())));
+			}
+		}
+		if (ret) {
 			return;
+		}
 
 		// Get the frame's image
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		#pragma omp critical (AddImage)
 		{
-			const unsigned char *pixels = image->bits();
-			const unsigned char *new_pixels = new_image->bits();
+			unsigned char *pixels = image->bits();
+			const unsigned char *new_pixels = new_image->constBits();
 
 			// Loop through the scanlines of the image (even or odd)
 			int start = 0;
@@ -835,13 +851,13 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 				start = 1;
 
 			for (int row = start; row < image->height(); row += 2) {
-				memcpy((unsigned char *) pixels, new_pixels + (row * image->bytesPerLine()), image->bytesPerLine());
-				new_pixels += image->bytesPerLine();
+				int offset = row * image->bytesPerLine();
+				memcpy(pixels + offset, new_pixels + offset, image->bytesPerLine());
 			}
 
 			// Update height and width
-			width = image->width();
 			height = image->height();
+			width = image->width();
 			has_image_data = true;
 		}
 	}
@@ -922,7 +938,7 @@ std::shared_ptr<Magick::Image> Frame::GetMagickImage()
 		AddColor(width, height, "#000000");
 
 	// Get the pixels from the frame image
-	QRgb const *tmpBits = (const QRgb*)image->bits();
+	const QRgb *tmpBits = (const QRgb*)image->constBits();
 
 	// Create new image object, and fill with pixel data
 	std::shared_ptr<Magick::Image> magick_image = std::shared_ptr<Magick::Image>(new Magick::Image(image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits));
@@ -971,21 +987,22 @@ void Frame::Play()
 		return;
 
 	juce::AudioDeviceManager deviceManager;
-	String error = deviceManager.initialise (0, /* number of input channels */
+	juce::String error = deviceManager.initialise (
+	        0, /* number of input channels */
 	        2, /* number of output channels */
 	        0, /* no XML settings.. */
 	        true  /* select default device on failure */);
 
 	// Output error (if any)
 	if (error.isNotEmpty()) {
-		cout << "Error on initialise(): " << error.toStdString() << endl;
+		cout << "Error on initialise(): " << error << endl;
 	}
 
 	juce::AudioSourcePlayer audioSourcePlayer;
 	deviceManager.addAudioCallback (&audioSourcePlayer);
 
-	ScopedPointer<AudioBufferSource> my_source;
-	my_source = new AudioBufferSource(audio.get());
+	std::unique_ptr<AudioBufferSource> my_source;
+	my_source.reset (new AudioBufferSource (audio.get()));
 
 	// Create TimeSliceThread for audio buffering
 	juce::TimeSliceThread my_thread("Audio buffer thread");
@@ -993,8 +1010,8 @@ void Frame::Play()
 	// Start thread
 	my_thread.startThread();
 
-	AudioTransportSource transport1;
-	transport1.setSource (my_source,
+	juce::AudioTransportSource transport1;
+	transport1.setSource (my_source.get(),
 			5000, // tells it to buffer this many samples ahead
 			&my_thread,
 			(double) sample_rate,
@@ -1014,7 +1031,7 @@ void Frame::Play()
 	while (transport1.isPlaying())
 	{
 		cout << "playing" << endl;
-		usleep(1000000);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
 	cout << "DONE!!!" << endl;

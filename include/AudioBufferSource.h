@@ -31,14 +31,6 @@
 #ifndef OPENSHOT_AUDIOBUFFERSOURCE_H
 #define OPENSHOT_AUDIOBUFFERSOURCE_H
 
-/// Do not include the juce unittest headers, because it collides with unittest++
-#define __JUCE_UNITTEST_JUCEHEADER__
-
-#ifndef _NDEBUG
-	/// Define NO debug for JUCE on mac os
-	#define _NDEBUG
-#endif
-
 #include <iomanip>
 #include "JuceHeader.h"
 
@@ -56,7 +48,6 @@ namespace openshot
 	{
 	private:
 		int position;
-		int start;
 		bool repeat;
 		juce::AudioSampleBuffer *buffer;
 

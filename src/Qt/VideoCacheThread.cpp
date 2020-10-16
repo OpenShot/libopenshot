@@ -29,13 +29,17 @@
  */
 
 #include "../../include/Qt/VideoCacheThread.h"
+#include <algorithm>
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
 
 namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false), position(1)
-	, reader(NULL), max_frames(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
+	, reader(NULL), max_frames(std::min(OPEN_MP_NUM_PROCESSORS * 8, 64)), current_display_frame(1)
     {
     }
 
@@ -80,10 +84,14 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-	while (!threadShouldExit() && is_playing) {
+        // Types for storing time durations in whole and fractional milliseconds
+        using ms = std::chrono::milliseconds;
+        using double_ms = std::chrono::duration<double, ms::period>;
 
-		// Calculate sleep time for frame rate
-		double frame_time = (1000.0 / reader->info.fps.ToDouble());
+        // Calculate on-screen time for a single frame in milliseconds
+        const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+
+		while (!threadShouldExit() && is_playing) {
 
 	    // Cache frames before the other threads need them
 	    // Cache frames up to the max frames
@@ -116,7 +124,7 @@ namespace openshot
 	    }
 
 		// Sleep for 1 frame length
-		usleep(frame_time * 1000);
+		std::this_thread::sleep_for(frame_duration);
 	}
 
 	return;

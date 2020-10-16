@@ -108,13 +108,12 @@ void ReaderBase::DisplayInfo() {
 	std::cout << "----------------------------" << std::endl;
 
 	// Iterate through metadata
-	std::map<std::string, std::string>::iterator it;
-	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
-		std::cout << "--> " << it->first << ": " << it->second << std::endl;
+	for (auto it : info.metadata)
+		std::cout << "--> " << it.first << ": " << it.second << std::endl;
 }
 
-// Generate Json::JsonValue for this object
-Json::Value ReaderBase::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ReaderBase::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -160,16 +159,16 @@ Json::Value ReaderBase::JsonValue() {
 
 	// Append metadata map
 	root["metadata"] = Json::Value(Json::objectValue);
-	std::map<std::string, std::string>::iterator it;
-	for (it = info.metadata.begin(); it != info.metadata.end(); it++)
-		root["metadata"][it->first] = it->second;
+
+	for (const auto it : info.metadata)
+		root["metadata"][it.first] = it.second;
 
 	// return JsonValue
 	return root;
 }
 
-// Load Json::JsonValue into this object
-void ReaderBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ReaderBase::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["has_video"].isNull())
@@ -244,19 +243,9 @@ void ReaderBase::SetJsonValue(Json::Value root) {
 			info.audio_timebase.den = root["audio_timebase"]["den"].asInt();
 	}
 	if (!root["metadata"].isNull() && root["metadata"].isObject()) {
-		for( Json::Value::iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
+		for( Json::Value::const_iterator itr = root["metadata"].begin() ; itr != root["metadata"].end() ; itr++ ) {
 			std::string key = itr.key().asString();
 			info.metadata[key] = root["metadata"][key].asString();
 		}
 	}
-}
-
-/// Parent clip object of this reader (which can be unparented and NULL)
-openshot::ClipBase* ReaderBase::GetClip() {
-	return parent;
-}
-
-/// Set parent clip object of this reader
-void ReaderBase::SetClip(openshot::ClipBase* clip) {
-	parent = clip;
 }

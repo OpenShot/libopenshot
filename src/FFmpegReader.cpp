@@ -33,15 +33,18 @@
 
 #include "../include/FFmpegReader.h"
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+
 #define ENABLE_VAAPI 0
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 #pragma message "You are compiling with experimental hardware decode"
 #else
 #pragma message "You are compiling only with software decode"
 #endif
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 #define MAX_SUPPORTED_WIDTH 1950
 #define MAX_SUPPORTED_HEIGHT 1100
 
@@ -71,14 +74,14 @@ typedef struct VAAPIDecodeContext {
 	 enum AVPixelFormat    surface_format;
 	 int                   surface_count;
  } VAAPIDecodeContext;
-#endif
-#endif
+#endif // ENABLE_VAAPI
+#endif // HAVE_HW_ACCEL
 
 
 using namespace openshot;
 
 int hw_de_on = 0;
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 	AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
@@ -153,7 +156,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 	return false;
 }
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 
 // Get hardware pix format
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
@@ -191,10 +194,10 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 #if defined(__APPLE__)
 			// Apple pix formats
 			case AV_PIX_FMT_VIDEOTOOLBOX:
-					hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
-					hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
-					return *p;
-					break;
+				hw_de_av_pix_fmt_global = AV_PIX_FMT_VIDEOTOOLBOX;
+				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_VIDEOTOOLBOX;
+				return *p;
+				break;
 #endif
 				// Cross-platform pix formats
 			case AV_PIX_FMT_CUDA:
@@ -206,6 +209,9 @@ static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPi
 				hw_de_av_pix_fmt_global = AV_PIX_FMT_QSV;
 				hw_de_av_device_type_global = AV_HWDEVICE_TYPE_QSV;
 				return *p;
+				break;
+			default:
+				// This is only here to silence unused-enum warnings
 				break;
 		}
 	}
@@ -231,7 +237,7 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 	}
 	return ret;
 }
-#endif
+#endif // HAVE_HW_ACCEL
 
 void FFmpegReader::Open() {
 	// Open reader if not already open
@@ -284,7 +290,7 @@ void FFmpegReader::Open() {
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
 			do {
 				pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 				if (hw_de_on && (retry_decode_open==2)) {
 					// Up to here no decision is made if hardware or software decode
 					hw_de_supported = IsHardwareDecodeSupported(pCodecCtx->codec_id);
@@ -301,7 +307,7 @@ void FFmpegReader::Open() {
 
 				// Init options
 				av_dict_set(&opts, "strict", "experimental", 0);
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					// Open Hardware Acceleration
 					int i_decoder_hw = 0;
@@ -430,13 +436,13 @@ void FFmpegReader::Open() {
 						  throw InvalidCodec("Hardware device create failed.", path);
 					}
 				}
-#endif
+#endif // HAVE_HW_ACCEL
 
 				// Open video codec
 				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 					throw InvalidCodec("A video codec was found, but could not be opened.", path);
 
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					AVHWFramesConstraints *constraints = NULL;
 					void *hwconfig = NULL;
@@ -446,7 +452,7 @@ void FFmpegReader::Open() {
 #if ENABLE_VAAPI
 					((AVVAAPIHWConfig *)hwconfig)->config_id = ((VAAPIDecodeContext *)(pCodecCtx->priv_data))->va_config;
 					constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx,hwconfig);
-#endif
+#endif // ENABLE_VAAPI
 					if (constraints) {
 						if (pCodecCtx->coded_width < constraints->min_width  	||
 								pCodecCtx->coded_height < constraints->min_height ||
@@ -503,7 +509,7 @@ void FFmpegReader::Open() {
 				}
 #else
 				retry_decode_open = 0;
-#endif
+#endif // HAVE_HW_ACCEL
 			} while (retry_decode_open); // retry_decode_open
 			// Free options
 			av_dict_free(&opts);
@@ -589,14 +595,14 @@ void FFmpegReader::Close() {
 		if (info.has_video) {
 			avcodec_flush_buffers(pCodecCtx);
 			AV_FREE_CONTEXT(pCodecCtx);
-#if IS_FFMPEG_3_2
+#if HAVE_HW_ACCEL
 			if (hw_de_on) {
 				if (hw_device_ctx) {
 					av_buffer_unref(&hw_device_ctx);
 					hw_device_ctx = NULL;
 				}
 			}
-#endif
+#endif // HAVE_HW_ACCEL
 		}
 		if (info.has_audio) {
 			avcodec_flush_buffers(aCodecCtx);
@@ -703,9 +709,16 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.vcodec = pCodecCtx->codec->name;
 	info.video_bit_rate = (pFormatCtx->bit_rate / 8);
 
-	// set frames per second (fps)
-	info.fps.num = pStream->avg_frame_rate.num;
-	info.fps.den = pStream->avg_frame_rate.den;
+	// Frame rate from the container and codec
+	AVRational framerate = av_guess_frame_rate(pFormatCtx, pStream, NULL);
+	info.fps.num = framerate.num;
+	info.fps.den = framerate.den;
+
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo", "info.fps.num", info.fps.num, "info.fps.den", info.fps.den);
+
+	// TODO: remove excessive debug info in the next releases
+	// The debug info below is just for comparison and troubleshooting on users side during the transition period
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdateVideoInfo (pStream->avg_frame_rate)", "num", pStream->avg_frame_rate.num, "den", pStream->avg_frame_rate.den);
 
 	if (pStream->sample_aspect_ratio.num != 0) {
 		info.pixel_ratio.num = pStream->sample_aspect_ratio.num;
@@ -915,7 +928,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 				// Wait if too many frames are being processed
 				while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
-					usleep(2500);
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 					processing_video_frames_size = processing_video_frames.size();
 					processing_audio_frames_size = processing_audio_frames.size();
@@ -1097,19 +1110,22 @@ bool FFmpegReader::GetAVFrame() {
 
 		ret = avcodec_send_packet(pCodecCtx, packet);
 
+	#if HAVE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
 		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
 		hw_de_av_device_type = hw_de_av_device_type_global;
-
+	#endif // HAVE_HW_ACCEL
 		if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)");
 		}
 		else {
 			AVFrame *next_frame2;
+	#if HAVE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				next_frame2 = AV_ALLOCATE_FRAME();
 			}
 			else
+	#endif // HAVE_HW_ACCEL
 			{
 				next_frame2 = next_frame;
 			}
@@ -1122,6 +1138,7 @@ bool FFmpegReader::GetAVFrame() {
 				if (ret != 0) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (invalid return frame received)");
 				}
+	#if HAVE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					int err;
 					if (next_frame2->format == hw_de_av_pix_fmt) {
@@ -1135,6 +1152,7 @@ bool FFmpegReader::GetAVFrame() {
 					}
 				}
 				else
+	#endif // HAVE_HW_ACCEL
 				{	// No hardware acceleration used -> no copy from GPU memory needed
 					next_frame = next_frame2;
 				}
@@ -1148,9 +1166,11 @@ bool FFmpegReader::GetAVFrame() {
 												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
 				}
 			}
+	#if HAVE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				AV_FREE_FRAME(&next_frame2);
 			}
+	#endif // HAVE_HW_ACCEL
 		}
 #else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
@@ -1166,7 +1186,7 @@ bool FFmpegReader::GetAVFrame() {
 			av_picture_copy((AVPicture *) pFrame, (AVPicture *) next_frame, pCodecCtx->pix_fmt, info.width,
 							info.height);
 		}
-#endif
+#endif // IS_FFMPEG_3_2
 	}
 
 	// deallocate the frame
@@ -1276,7 +1296,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		if (max_height <= 0)
 			max_height = info.height;
 
-		Clip *parent = (Clip *) GetClip();
+		Clip *parent = (Clip *) GetParentClip();
 		if (parent) {
 			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
@@ -1409,8 +1429,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int packet_samples = 0;
 	int data_size = 0;
 
-	// re-initialize buffer size (it gets changed in the avcodec_decode_audio2 method call)
-	int buf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE + MY_INPUT_BUFFER_PADDING_SIZE;
 #pragma omp critical (ProcessAudioPacket)
 	{
 #if IS_FFMPEG_3_2
@@ -1448,7 +1466,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	if (frame_finished) {
 
 		// determine how many samples were decoded
-		int planar = av_sample_fmt_is_planar((AVSampleFormat) AV_GET_CODEC_PIXEL_FORMAT(aStream, aCodecCtx));
 		int plane_size = -1;
 		data_size = av_samples_get_buffer_size(&plane_size,
 											   AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
@@ -1537,7 +1554,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_opt_set_int(avr, "out_sample_rate", info.sample_rate, 0);
 	av_opt_set_int(avr, "in_channels", info.channels, 0);
 	av_opt_set_int(avr, "out_channels", info.channels, 0);
-	int r = SWR_INIT(avr);
+	SWR_INIT(avr);
 
 	// Convert audio samples
 	nb_samples = SWR_CONVERT(avr,    // audio resample context
@@ -1617,9 +1634,8 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 			else
 				partial_frame = true;
 
-			// Add samples for current channel to the frame. Reduce the volume to 98%, to prevent
-			// some louder samples from maxing out at 1.0 (not sure why this happens)
-			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 0.98f);
+			// Add samples for current channel to the frame.
+			f->AddAudio(true, channel_filter, start, iterate_channel_buffer, samples, 1.0f);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (f->AddAudio)", "frame", starting_frame_number, "start", start, "samples", samples, "channel", channel_filter, "partial_frame", partial_frame, "samples_per_frame", samples_per_frame);
@@ -1703,7 +1719,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
-		usleep(2500);
+		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
@@ -1852,8 +1868,20 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			video_pts_offset = 0 - std::max(GetVideoPTS(), (int64_t) info.video_timebase.ToInt() * 10);
+			// Find the difference between PTS and frame number
+			video_pts_offset = 0 - GetVideoPTS();
+
+			// Find the difference between PTS and frame number
+			// Also, determine if PTS is invalid (too far away from zero)
+			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
+			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
+			int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
+			if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
+				// Ignore PTS, it seems invalid
+				video_pts_offset = 0;
+			}
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1862,8 +1890,18 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// AUDIO PACKET
 		if (audio_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number (no more than 10 timebase units allowed)
-			audio_pts_offset = 0 - std::max(packet->pts, (int64_t) info.audio_timebase.ToInt() * 10);
+			// Find the difference between PTS and frame number
+			// Also, determine if PTS is invalid (too far away from zero)
+			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
+			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
+			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+			// for ideas to improve this logic.
+			audio_pts_offset = 0 - packet->pts;
+			int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
+			if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
+				// Ignore PTS, it seems invalid
+				audio_pts_offset = 0;
+			}
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Audio)", "audio_pts_offset", audio_pts_offset, "is_video", is_video);
@@ -2083,7 +2121,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 		// CPU time looking for missing images for all the audio-only frames.
 		if (checked_frames[requested_frame] > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
-			last_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
+			last_frame && last_video_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
 			missing_video_frames.insert(std::pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
 			missing_video_frames_source.insert(std::pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
 			missing_frames.Add(last_video_frame);
@@ -2424,14 +2462,14 @@ int64_t FFmpegReader::GetSmallestAudioFrame() {
 }
 
 // Generate JSON string of this object
-std::string FFmpegReader::Json() {
+std::string FFmpegReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value FFmpegReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value FFmpegReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -2443,23 +2481,11 @@ Json::Value FFmpegReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void FFmpegReader::SetJson(std::string value) {
+void FFmpegReader::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse(value.c_str(), value.c_str() + value.size(),
-	                 &root, &errors);
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try {
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -2469,8 +2495,8 @@ void FFmpegReader::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void FFmpegReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void FFmpegReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

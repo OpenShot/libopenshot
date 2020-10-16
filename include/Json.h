@@ -31,6 +31,12 @@
 #ifndef OPENSHOT_JSON_H
 #define OPENSHOT_JSON_H
 
+#include <string>
 #include "json/json.h"
+#include "Exceptions.h"
+
+namespace openshot {
+    const Json::Value stringToJson(const std::string value);
+}
 
 #endif

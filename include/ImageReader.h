@@ -87,32 +87,32 @@ namespace openshot
 		ImageReader(std::string path, bool inspect_reader);
 
 		/// Close File
-		void Close();
+		void Close() override;
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() { return NULL; };
+		CacheMemory* GetCache() override { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
 		///
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
-		std::shared_ptr<Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
 
 		/// Determine if reader is open or closed
-		bool IsOpen() { return is_open; };
+		bool IsOpen() override { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "ImageReader"; };
+		std::string Name() override { return "ImageReader"; };
 
 		/// Get and Set JSON methods
-		std::string Json(); ///< Generate JSON string of this object
-		void SetJson(std::string value); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		std::string Json() const override; ///< Generate JSON string of this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
+		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Open File - which is called by the constructor automatically
-		void Open();
+		void Open() override;
 	};
 
 }

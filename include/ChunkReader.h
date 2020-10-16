@@ -37,10 +37,10 @@
 #include <iostream>
 #include <fstream>
 #include <omp.h>
-#include <QtCore/qdir.h>
-#include <stdio.h>
+#include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <QtCore/QDir>
 #include "Json.h"
 #include "CacheMemory.h"
 #include "Exceptions.h"
@@ -132,7 +132,7 @@ namespace openshot
 		ChunkReader(std::string path, ChunkVersion chunk_version);
 
 		/// Close the reader
-		void Close();
+		void Close() override;
 
 		/// @brief Get the chunk size (number of frames to write in each chunk)
 		/// @returns	The number of frames in this chunk
@@ -143,27 +143,27 @@ namespace openshot
 		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		openshot::CacheMemory* GetCache() { return NULL; };
+		openshot::CacheMemory* GetCache() override { return NULL; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)
 		/// @param requested_frame	The frame number you want to retrieve
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame) override;
 
 		/// Determine if reader is open or closed
-		bool IsOpen() { return is_open; };
+		bool IsOpen() override { return is_open; };
 
 		/// Return the type name of the class
-		std::string Name() { return "ChunkReader"; };
+		std::string Name() override { return "ChunkReader"; };
 
 		/// Get and Set JSON methods
-		std::string Json(); ///< Generate JSON string of this object
-		void SetJson(std::string value); ///< Load JSON string into this object
-		Json::Value JsonValue(); ///< Generate Json::JsonValue for this object
-		void SetJsonValue(Json::Value root); ///< Load Json::JsonValue into this object
+		std::string Json() const override; ///< Generate JSON string of this object
+		void SetJson(const std::string value) override; ///< Load JSON string into this object
+		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Open the reader. This is required before you can access frames or data from the reader.
-		void Open();
+		void Open() override;
 	};
 
 }

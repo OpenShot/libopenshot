@@ -29,6 +29,10 @@
  */
 
 #include "../include/CacheDisk.h"
+#include "../include/QtUtilities.h"
+#include <Qt>
+#include <QString>
+#include <QTextStream>
 
 using namespace std;
 using namespace openshot;
@@ -47,7 +51,7 @@ CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, 
 
 	// Init path directory
 	InitPath(cache_path);
-};
+}
 
 // Constructor that sets the max bytes to cache
 CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, float scale, int64_t max_bytes) : CacheBase(max_bytes) {
@@ -62,7 +66,7 @@ CacheDisk::CacheDisk(std::string cache_path, std::string format, float quality, 
 
 	// Init path directory
 	InitPath(cache_path);
-};
+}
 
 // Initialize cache directory
 void CacheDisk::InitPath(std::string cache_path) {
@@ -103,25 +107,19 @@ void CacheDisk::CalculateRanges() {
 		// Increment range version
 		range_version++;
 
-		std::vector<int64_t>::iterator itr_ordered;
 		int64_t starting_frame = *ordered_frame_numbers.begin();
-		int64_t ending_frame = *ordered_frame_numbers.begin();
+		int64_t ending_frame = starting_frame;
 
 		// Loop through all known frames (in sequential order)
-		for (itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered) {
-			int64_t frame_number = *itr_ordered;
+		for (const auto frame_number : ordered_frame_numbers) {
 			if (frame_number - ending_frame > 1) {
 				// End of range detected
 				Json::Value range;
 
 				// Add JSON object with start/end attributes
 				// Use strings, since int64_ts are supported in JSON
-				std::stringstream start_str;
-				start_str << starting_frame;
-				std::stringstream end_str;
-				end_str << ending_frame;
-				range["start"] = start_str.str();
-				range["end"] = end_str.str();
+				range["start"] = std::to_string(starting_frame);
+				range["end"] = std::to_string(ending_frame);
 				ranges.append(range);
 
 				// Set new starting range
@@ -137,12 +135,8 @@ void CacheDisk::CalculateRanges() {
 
 		// Add JSON object with start/end attributes
 		// Use strings, since int64_ts are supported in JSON
-		std::stringstream start_str;
-		start_str << starting_frame;
-		std::stringstream end_str;
-		end_str << ending_frame;
-		range["start"] = start_str.str();
-		range["end"] = end_str.str();
+		range["start"] = std::to_string(starting_frame);
+		range["end"] = std::to_string(ending_frame);
 		ranges.append(range);
 
 		// Cache range JSON as string
@@ -201,10 +195,10 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 
 			if (audio_file.open(QIODevice::WriteOnly)) {
 				QTextStream audio_stream(&audio_file);
-				audio_stream << frame->SampleRate() << endl;
-				audio_stream << frame->GetAudioChannelsCount() << endl;
-				audio_stream << frame->GetAudioSamplesCount() << endl;
-				audio_stream << frame->ChannelsLayout() << endl;
+				audio_stream << frame->SampleRate() << Qt::endl;
+				audio_stream << frame->GetAudioChannelsCount() << Qt::endl;
+				audio_stream << frame->GetAudioSamplesCount() << Qt::endl;
+				audio_stream << frame->ChannelsLayout() << Qt::endl;
 
 				// Loop through all samples
 				for (int channel = 0; channel < frame->GetAudioChannelsCount(); channel++)
@@ -212,7 +206,7 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 					// Get audio for this channel
 					float *samples = frame->GetAudioSamples(channel);
 					for (int sample = 0; sample < frame->GetAudioSamplesCount(); sample++)
-						audio_stream << samples[sample] << endl;
+						audio_stream << samples[sample] << Qt::endl;
 				}
 
 			}
@@ -238,7 +232,7 @@ std::shared_ptr<Frame> CacheDisk::GetFrame(int64_t frame_number)
 
 			// Load image file
 			std::shared_ptr<QImage> image = std::shared_ptr<QImage>(new QImage());
-			bool success = image->load(QString::fromStdString(frame_path.toStdString()));
+			image->load(frame_path);
 
 			// Set pixel formatimage->
 			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
@@ -471,7 +465,7 @@ std::string CacheDisk::Json() {
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value CacheDisk::JsonValue() {
 
 	// Process range data (if anything has changed)
@@ -488,41 +482,23 @@ Json::Value CacheDisk::JsonValue() {
 	root["version"] = range_version_str.str();
 
 	// Parse and append range data (if any)
-	Json::Value ranges;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( json_ranges.c_str(),
-	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
-	delete reader;
-
-	if (success)
+	// Parse and append range data (if any)
+	try {
+		const Json::Value ranges = openshot::stringToJson(json_ranges);
 		root["ranges"] = ranges;
+	} catch (...) { }
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void CacheDisk::SetJson(std::string value) {
+void CacheDisk::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-	               value.c_str() + value.size(), &root, &errors );
- 	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -533,8 +509,8 @@ void CacheDisk::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void CacheDisk::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void CacheDisk::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();

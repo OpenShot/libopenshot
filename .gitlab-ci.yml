@@ -16,20 +16,18 @@ linux-builder:
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
-    - mkdir -p install-x64/python;
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"CMAKE_BUILD_TYPE:STRING=Release" -D"USE_SYSTEM_JSONCPP=0" ../
+    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 ../
     - make
     - make install
     - make doc
     - ~/auto-update-docs "$CI_PROJECT_DIR/build" "$CI_COMMIT_REF_NAME"
-    - mv install-x64/lib/python3.4/site-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
+    - git log $(git describe --tags --abbrev=0 @^)..@ --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
   tags:
-    - linux
+    - linux-bionic
 
 mac-builder:
   stage: build-libopenshot
@@ -45,13 +43,11 @@ mac-builder:
     - unzip artifacts.zip
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
-    - mkdir -p install-x64/python;
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/qt5/5.5/clang_64 -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Debug" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
+    - cmake -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPYTHON_MODULE_PATH=python -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
     - make
     - make install
-    - mv install-x64/lib/python3.6/site-packages/*openshot* install-x64/python
     - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
-    - git log $(git describe --tags --abbrev=0)..HEAD --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
+    - git log $(git describe --tags --abbrev=0 @^)..@ --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
@@ -73,14 +69,12 @@ windows-builder-x64:
     - $env:RESVGDIR = "C:\msys64\usr"
     - $env:Path = "C:\msys64\mingw64\bin;C:\msys64\mingw64\lib;C:\msys64\usr\lib\cmake\UnitTest++;C:\msys64\home\jonathan\depot_tools;C:\msys64\usr;C:\msys64\usr\lib;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
-    - New-Item -ItemType Directory -Force -Path build\install-x64\python
     - cd build
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" ../
+    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - Move-Item -Force -path "install-x64\lib\python3.7\site-packages\*openshot*" -destination "install-x64\python\"
     - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
-    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
-    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
+    - git log "$PREV_GIT_LABEL..@" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags
@@ -102,14 +96,12 @@ windows-builder-x86:
     - $env:RESVGDIR = "C:\msys32\usr"
     - $env:Path = "C:\msys32\mingw32\bin;C:\msys32\mingw32\lib;C:\msys32\usr\lib\cmake\UnitTest++;C:\msys32\home\jonathan\depot_tools;C:\msys32\usr;C:\msys32\usr\lib;" + $env:Path;
     - New-Item -ItemType Directory -Force -Path build
-    - New-Item -ItemType Directory -Force -Path build\install-x86\python
     - cd build
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32" ../
+    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32" ../
     - mingw32-make install
-    - Move-Item -Force -path "install-x86\lib\python3.7\site-packages\*openshot*" -destination "install-x86\python\"
     - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
-    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0)
-    - git log "$PREV_GIT_LABEL..HEAD" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
+    - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
+    - git log "$PREV_GIT_LABEL..@" --oneline --pretty=format:"%C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x86/share/$CI_PROJECT_NAME.log"
   when: always
   except:
   - tags

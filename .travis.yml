@@ -1,5 +1,7 @@
 language: cpp
 compiler: gcc
+os: linux
+dist: xenial
 
 # This section uses a rather esoteric (and tricky!) feature of YAML,
 # &aliases and *anchors, to build package lists out of sublists without
@@ -9,17 +11,12 @@ addons:
   apt:
     packages: &p_common  # Packages common to all Ubuntu builds
     - cmake
-    - swig
     - libopenshot-audio-dev
     - libmagick++-dev
     - libunittest++-dev
     - libzmq3-dev
     - qtbase5-dev
     - qtmultimedia5-dev
-    - doxygen
-    - graphviz
-    packages: &ff_common  # Common set of FFmpeg packages
-    - *p_common
     - libfdk-aac-dev
     - libavcodec-dev
     - libavformat-dev
@@ -28,13 +25,80 @@ addons:
     - libavfilter-dev
     - libswscale-dev
     - libpostproc-dev
-    - libavresample-dev
     - libswresample-dev
+    - swig
+    - doxygen
+    - graphviz
+    - curl
 
-matrix:
+jobs:
   include:
+    - name: "Coverage + FFmpeg 3.4 GCC (Ubuntu 18.04 Bionic)"
+      env:
+        - BUILD_VERSION=coverage_ffmpeg34
+        - CMAKE_EXTRA_ARGS="-DENABLE_COVERAGE=1"
+        - TEST_TARGET=coverage
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          packages:
+          - *p_common
+          - qt5-default
+          - libavresample-dev
+          - libjsoncpp-dev
+          - lcov
+          - binutils-common # For c++filt
+
+    - name: "FFmpeg 4 GCC (Ubuntu 20.04 Focal)"
+      env:
+        - BUILD_VERSION=ffmpeg4
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET=test
+      os: linux
+      dist: focal
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          packages:
+          - *p_common
+          - qt5-default
+          - libjsoncpp-dev
+          - libavcodec58
+          - libavformat58
+          - libavdevice58
+          - libavutil56
+          - libavfilter7
+          - libswscale5
+          - libpostproc55
+          - libswresample3
+
+    - name: "FFmpeg 3.4 Clang (Ubuntu 18.04 Bionic)"
+      env:
+        - BUILD_VERSION=clang_ffmpeg34
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET=test
+      os: linux
+      dist: bionic
+      compiler: clang
+      addons:
+        apt:
+          sources:
+          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
+          packages:
+          - *p_common
+          - qt5-default
+          - libavresample-dev
+          - libomp-dev
+
     - name: "FFmpeg 2 GCC (Ubuntu 16.04 Xenial)"
-      env: BUILD_VERSION=ffmpeg2
+      env:
+        - BUILD_VERSION=ffmpeg2
+        - CMAKE_EXTRA_ARGS=""
+        - TEST_TARGET="os_test"
       os: linux
       dist: xenial
       addons:
@@ -43,62 +107,16 @@ matrix:
           - sourceline: 'ppa:openshot.developers/libopenshot-daily'
           - sourceline: 'ppa:beineri/opt-qt-5.10.0-xenial'
           packages:
-          - *ff_common
-
-    - name: "FFmpeg 3 GCC (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg3
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          sources:
-          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
-          packages:
-          - *ff_common
-          - qt5-default
-
-    - name: "FFmpeg 4 GCC (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg4
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          sources:
-          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
-          - sourceline: 'ppa:jonathonf/ffmpeg-4'
-          packages:
-          - *ff_common
-          - qt5-default
-          - libavcodec58
-          - libavformat58
-          - libavdevice58
-          - libavutil56
-          - libavfilter7
-          - libswscale5
-          - libpostproc55
-          - libavresample4
-          - libswresample3
-
-    - name: "FFmpeg 3 Clang (Ubuntu 18.04 Bionic)"
-      env: BUILD_VERSION=ffmpeg3
-      os: linux
-      dist: bionic
-      compiler: clang
-      addons:
-        apt:
-          sources:
-          - sourceline: 'ppa:openshot.developers/libopenshot-daily'
-          - sourceline: 'ppa:beineri/opt-qt-5.12.3-bionic'
-          packages:
-          - *ff_common
-          - qt5-default
-          - libomp-dev
+          - *p_common
+          - libavresample-dev
 
 script:
   - mkdir -p build; cd build;
-  - cmake -DCMAKE_BUILD_TYPE:STRING="Debug" ../
+  - cmake -DCMAKE_INSTALL_PREFIX:PATH="$TRAVIS_OS_NAME-x64" -DCMAKE_BUILD_TYPE:STRING="Debug" ${CMAKE_EXTRA_ARGS} ../
   - make VERBOSE=1
-  - make os_test
-  - make install DESTDIR="$BUILD_VERSION"
+  - make ${TEST_TARGET}
+  - make install
+  - cd ..
+
+after_success:
+  - if [ "x$TEST_TARGET" = "xcoverage" ]; then bash <(curl -s https://codecov.io/bash) -f build/coverage.info || echo "Codecov did not collect coverage reports"; fi
