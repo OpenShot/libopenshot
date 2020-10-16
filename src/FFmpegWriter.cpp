@@ -85,7 +85,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 }
 #endif // HAVE_HW_ACCEL
 
-FFmpegWriter::FFmpegWriter(std::string path) :
+FFmpegWriter::FFmpegWriter(const std::string& path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
@@ -96,6 +96,12 @@ FFmpegWriter::FFmpegWriter(std::string path) :
 	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
 	info.has_video = false;
+
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -717,11 +723,6 @@ void FFmpegWriter::write_queued_frames() {
 	// Empty spool
 	spooled_video_frames.clear();
 	spooled_audio_frames.clear();
-
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
 
 	// Create blank exception
 	bool has_error_encoding_video = false;
