@@ -37,16 +37,32 @@ using namespace std;
 using namespace openshot;
 
 #ifdef USE_IMAGEMAGICK
-TEST(ImageWriter_Test_Gif)
+SUITE(ImageWriter)
 {
-	// Reader
+
+TEST(Gif)
+{
+	// Reader ---------------
+
+	// Bad path
+	FFmpegReader bad_r("/tmp/bleeblorp.xls", false);
+	CHECK_THROW(bad_r.Open(), InvalidFile);
+
+	// Good path
 	stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
+
+	// Read-before-open error
+	CHECK_THROW(r.GetFrame(1), ReaderClosed);
+
 	r.Open();
 
 	/* WRITER ---------------- */
 	ImageWriter w("output1.gif");
+
+	// Check for exception on write-before-open
+	CHECK_THROW(w.WriteFrame(&r, 500, 504), WriterClosed);
 
 	// Set the image output settings (format, fps, width, height, quality, loops, combine)
 	w.SetVideoOptions("GIF", r.info.fps, r.info.width, r.info.height, 70, 1, true);
@@ -82,4 +98,6 @@ TEST(ImageWriter_Test_Gif)
 	CHECK_CLOSE(11, (int)pixels[pixel_index + 2], 5);
 	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
 }
+
+} // SUITE
 #endif
