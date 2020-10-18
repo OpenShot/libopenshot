@@ -180,7 +180,7 @@ if(OpenShotAudio_FOUND AND NOT TARGET OpenShot::Audio)
       "-lobjc"
       "-framework Accelerate"
       )
-    target_link_libraries(OpenShot::Audio PRIVATE ${framework_deps})
+    target_link_libraries(OpenShot::Audio INTERFACE ${framework_deps})
   endif()
 
   set_property(TARGET OpenShot::Audio APPEND PROPERTY
