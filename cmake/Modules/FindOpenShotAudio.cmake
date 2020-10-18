@@ -145,15 +145,28 @@ if(OpenShotAudio_FOUND AND NOT TARGET OpenShot::Audio)
   set_property(TARGET OpenShot::Audio APPEND PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES "${OpenShotAudio_INCLUDE_DIRS}")
 
+  # Juce requires either DEBUG or NDEBUG to be defined on MacOS.
+  # -DNDEBUG is set by cmake for all release configs, so add
+  # -DDEBUG for debug builds. We'll do this for all OSes, even
+  # though only MacOS requires it.
+  # The generator expression translates to:
+  #   CONFIG == "DEBUG" ? "DEBUG" : ""
+  set_property(TARGET OpenShot::Audio APPEND PROPERTY
+    INTERFACE_COMPILE_DEFINITIONS $<$<CONFIG:DEBUG>:DEBUG>)
+
+  # For the Ruby bindings
+  set_property(TARGET OpenShot::Audio APPEND PROPERTY
+    INTERFACE_COMPILE_DEFINITIONS HAVE_ISFINITE=1)
+
   if(WIN32)
     set_property(TARGET OpenShot::Audio APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS -DIGNORE_JUCE_HYPOT=1)
+      INTERFACE_COMPILE_DEFINITIONS IGNORE_JUCE_HYPOT=1)
     set_property(TARGET OpenShot::Audio APPEND PROPERTY
       INTERFACE_COMPILE_OPTIONS -include cmath)
   elseif(APPLE)
     # Prevent compiling with __cxx11
     set_property(TARGET OpenShot::Audio APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS -D_GLIBCXX_USE_CXX11_ABI=0)
+      INTERFACE_COMPILE_DEFINITIONS _GLIBCXX_USE_CXX11_ABI=0)
     list(APPEND framework_deps
       "-framework Carbon"
       "-framework Cocoa"

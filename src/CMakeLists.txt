@@ -43,36 +43,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
-
-################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-if(ENABLE_MAGICK)
-  IF (MAGICKCORE_QUANTUM_DEPTH)
-    add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-  ELSE (MAGICKCORE_QUANTUM_DEPTH)
-    add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-  ENDIF (MAGICKCORE_QUANTUM_DEPTH)
-  IF (MAGICKCORE_HDRI_ENABLE)
-    add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-  ELSE (MAGICKCORE_HDRI_ENABLE)
-    add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-  ENDIF (MAGICKCORE_HDRI_ENABLE)
-
-  # Find the ImageMagick++ library
-  find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-  if (ImageMagick_FOUND)
-    # Include ImageMagick++ headers (needed for compile)
-    include_directories(${ImageMagick_INCLUDE_DIRS})
-
-    # define a global var (used in the C++)
-    add_definitions( -DUSE_IMAGEMAGICK=1 )
-    list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
-
-    set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
-    mark_as_advanced(HAVE_IMAGEMAGICK)
-  endif()
-endif()
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -185,13 +155,6 @@ set_target_properties(openshot PROPERTIES
   INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 )
 
-# Add optional ImageMagic-dependent sources
-if(ImageMagick_FOUND)
-  target_sources(openshot PRIVATE
-    ImageReader.cpp
-    ImageWriter.cpp
-    TextReader.cpp)
-endif()
 
 # BlackMagic related files
 if(BLACKMAGIC_FOUND)
@@ -216,6 +179,62 @@ target_include_directories(openshot
 # Find JUCE-based openshot Audio libraries
 find_package(OpenShotAudio 0.2.0 REQUIRED)
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
+
+###
+### ImageMagick
+###
+
+# Find the ImageMagick++ library
+find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+
+if(ImageMagick_FOUND)
+  if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
+    add_library(Magick++_TARGET INTERFACE)
+
+    # Include ImageMagick++ headers (needed for compile)
+    set_property(TARGET Magick++_TARGET APPEND PROPERTY
+      INTERFACE_INCLUDE_DIRECTORIES ${ImageMagick_INCLUDE_DIRS})
+
+    # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+    if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+      set(MAGICKCORE_QUANTUM_DEPTH 16)
+    endif()
+    if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+      set(MAGICKCORE_HDRI_ENABLE 0)
+    endif()
+
+    set_property(TARGET Magick++_TARGET APPEND PROPERTY
+      INTERFACE_COMPILE_DEFINITIONS
+        MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
+    set_property(TARGET Magick++_TARGET APPEND PROPERTY
+      INTERFACE_COMPILE_DEFINITIONS
+        MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
+
+    target_link_libraries(Magick++_TARGET INTERFACE
+      ${ImageMagick_LIBRARIES})
+
+    # Alias to our namespaced name
+    add_library(ImageMagick::Magick++ ALIAS Magick++_TARGET)
+
+  endif()
+
+  # Add optional ImageMagic-dependent sources
+  target_sources(openshot PRIVATE
+    ImageReader.cpp
+    ImageWriter.cpp
+    TextReader.cpp)
+
+  # define a preprocessor macro (used in the C++ source)
+  target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
+  list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
+
+  # Link with ImageMagick library
+  target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
+
+  set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
+  mark_as_advanced(HAVE_IMAGEMAGICK)
+endif()
+
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -366,9 +385,6 @@ if(DEFINED PROFILER)
   target_link_libraries(openshot PUBLIC ${PROFILER})
 endif()
 
-if(ImageMagick_FOUND)
-  target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
-endif()
 
 if(BLACKMAGIC_FOUND)
   target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
