@@ -35,8 +35,8 @@
 #include <QGuiApplication>
 #include <QTimer>
 
-#include "../../include/OpenShot.h"
-#include "../../include/CrashHandler.h"
+#include "OpenShot.h"
+#include "CrashHandler.h"
 
 using namespace openshot;
 
