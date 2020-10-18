@@ -46,19 +46,15 @@
 /* Unhandled STL Exception Handling */
 %include <std_except.i>
 
-namespace std {
-  template<class T> class shared_ptr {
-  public:
-    T *operator->();
-  };
-}
+/* Include shared pointer code */
+%include <std_shared_ptr.i>
 
 /* Mark these classes as shared_ptr classes */
 #ifdef USE_IMAGEMAGICK
-	%template(SPtrImage) std::shared_ptr<Magick::Image>;
+	%shared_ptr(Magick::Image)
 #endif
-%template(SPtrAudioBuffer) std::shared_ptr<juce::AudioSampleBuffer>;
-%template(SPtrOpenFrame) std::shared_ptr<openshot::Frame>;
+%shared_ptr(juce::AudioSampleBuffer)
+%shared_ptr(openshot::Frame)
 
 %{
 /* Ruby and FFmpeg define competing RSHIFT macros,
