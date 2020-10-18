@@ -31,7 +31,7 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/TextReader.h"
+#include "TextReader.h"
 
 using namespace openshot;
 

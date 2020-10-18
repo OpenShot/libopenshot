@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Frame.h"
+#include "Frame.h"
 #include "JuceHeader.h"
 
 #include <QApplication>

@@ -33,14 +33,9 @@
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
+#include <string>
 #include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 

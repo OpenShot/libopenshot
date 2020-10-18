@@ -33,12 +33,12 @@
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 
+#include <memory>
+#include <string>
 
 namespace openshot
 {

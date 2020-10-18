@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/AudioResampler.h"
+#include "AudioResampler.h"
 
 using namespace std;
 using namespace openshot;

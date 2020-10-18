@@ -33,27 +33,16 @@
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
-#ifdef USE_IMAGEMAGICK
-	#include "../MagickUtilities.h"
-	#include "../ImageReader.h"
-#endif
+
+#include <string>
+#include <memory>
 
 namespace openshot
 {
+	// Forward declaration
+	class ReaderBase;
 
 	/**
 	 * @brief This class uses the image libraries to apply alpha (or transparency) masks

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ZmqLogger.h"
+#include "ZmqLogger.h"
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"
