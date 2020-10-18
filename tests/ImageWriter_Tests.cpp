@@ -61,6 +61,8 @@ TEST(Gif)
 	/* WRITER ---------------- */
 	ImageWriter w("output1.gif");
 
+	CHECK_EQUAL(false, w.IsOpen());
+
 	// Check for exception on write-before-open
 	CHECK_THROW(w.WriteFrame(&r, 500, 504), WriterClosed);
 
@@ -79,7 +81,16 @@ TEST(Gif)
 
 	// Open up the 5th frame from the newly created GIF
 	ImageReader r1("output1.gif[4]");
+
+	// Basic Reader state queries
+	CHECK_EQUAL("ImageReader", r1.Name());
+
+	CacheMemory* c = r1.GetCache();
+	CHECK_EQUAL(true, c == nullptr);
+
+	CHECK_EQUAL(false, r1.IsOpen());
 	r1.Open();
+	CHECK_EQUAL(true, r1.IsOpen());
 
 	// Verify various settings
 	CHECK_EQUAL(r.info.width, r1.info.width);
