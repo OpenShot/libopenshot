@@ -107,8 +107,8 @@ ENDIF(WIN32)
 
 ############## Code Coverage #########################
 if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
-  message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
-  set(DISABLE_TESTS OFF CACHE BOOL "Don't build unit tests" FORCE)
+  message(WARNING "ENABLE_COVERAGE requires unit tests, forcing ENABLE_TESTS")
+  set(ENABLE_TESTS ON CACHE BOOL "Don't build unit tests" FORCE)
 endif()
 
 if (ENABLE_COVERAGE)
@@ -121,11 +121,6 @@ if (ENABLE_COVERAGE)
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
-# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
-# -DNDEBUG is set by cmake for all release configs, so add
-# -DDEBUG for debug builds. We'll do this for all OSes, even
-# though only MacOS requires it.
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 # Make sure we've picked some build type, default to release
 if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
@@ -138,11 +133,16 @@ add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(bindings)
 
-########## Configure Version.h header ##############
+###
+### Configure Version.h header
+###
+# (Note: This comes after the subdirectories, because it needs variables
+#        set during the dependency discovery in src/CMakeLists.txt)
 configure_file(src/OpenShotVersion.h.in src/OpenShotVersion.h @ONLY)
 # We'll want that installed later
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/src/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
+
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
@@ -180,8 +180,10 @@ if (ENABLE_COVERAGE)
     NAME coverage
     LCOV_ARGS "--no-external"
     EXECUTABLE openshot-test
-    DEPENDENCIES openshot-test)
-    message("Generate coverage report with 'make coverage'")
+    DEPENDENCIES openshot-test
+    EXCLUDE "bindings" "examples" "${CMAKE_CURRENT_BINARY_DIR}/bindings"
+  )
+  message("Generate coverage report with 'make coverage'")
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############

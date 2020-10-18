@@ -34,15 +34,6 @@ if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
 
-# Juce requires either DEBUG or NDEBUG to be defined on MacOS.
-# -DNDEBUG is set by cmake for all release configs, so add
-# -DDEBUG for debug builds. We'll do this for all OSes, even
-# though only MacOS requires it.
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-# Make sure we've picked some build type, default to debug
-if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Debug")
-endif()
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -154,16 +145,6 @@ set_target_properties(openshot PROPERTIES
   SOVERSION ${PROJECT_SO_VERSION}
   INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
 )
-
-
-# BlackMagic related files
-if(BLACKMAGIC_FOUND)
-  target_sources(openshot PRIVATE
-    DecklinkInput.cpp
-    DecklinkReader.cpp
-    DecklinkOutput.cpp
-    DecklinkWriter.cpp)
-endif()
 
 # Location of our includes, both internally and when installed
 target_include_directories(openshot
@@ -320,7 +301,10 @@ endif()
 
 target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
 
-################### ZEROMQ #####################
+###
+### ZeroMQ
+###
+
 # Find ZeroMQ library (used for socket communication & logging)
 find_package(ZeroMQ REQUIRED) # Creates libzmq target
 
@@ -370,8 +354,18 @@ if (ENABLE_BLACKMAGIC)
   find_package(BlackMagic)
 
   if (BLACKMAGIC_FOUND)
+    # BlackMagic related files
+    target_sources(openshot PRIVATE
+      DecklinkInput.cpp
+      DecklinkReader.cpp
+      DecklinkOutput.cpp
+      DecklinkWriter.cpp)
+
     # Include Blackmagic headers (needed for compile)
     target_include_directories(openshot PRIVATE ${BLACKMAGIC_INCLUDE_DIR})
+
+    # Link libopenshot with BlackMagic libs
+    target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 
     # define a preprocessor macro (used in the C++)
     target_compile_definitions(openshot PUBLIC -DUSE_BLACKMAGIC=1)
@@ -383,11 +377,6 @@ endif()
 # Link remaining dependency libraries
 if(DEFINED PROFILER)
   target_link_libraries(openshot PUBLIC ${PROFILER})
-endif()
-
-
-if(BLACKMAGIC_FOUND)
-  target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 endif()
 
 if(WIN32)
