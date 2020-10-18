@@ -75,18 +75,14 @@ option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
+option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
-  if(ENABLE_COVERAGE)
-    message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
-    set(ENABLE_TESTS ON)
-  else()
-    set(ENABLE_TESTS OFF)
-  endif()
+  set(ENABLE_TESTS OFF)
 endif()
 
 if(DEFINED ENABLE_TESTS)
@@ -110,7 +106,7 @@ IF (WIN32)
 ENDIF(WIN32)
 
 ############## Code Coverage #########################
-if (DISABLE_TESTS AND ENABLE_COVERAGE)
+if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
   message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
   set(DISABLE_TESTS OFF CACHE BOOL "Don't build unit tests" FORCE)
 endif()
@@ -135,13 +131,17 @@ if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-############## PROCESS src/ DIRECTORIES ##############
+###
+### Process subdirectories
+###
 add_subdirectory(src)
+add_subdirectory(examples)
+add_subdirectory(bindings)
 
 ########## Configure Version.h header ##############
-configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
+configure_file(src/OpenShotVersion.h.in src/OpenShotVersion.h @ONLY)
 # We'll want that installed later
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/src/OpenShotVersion.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
 ################### DOCUMENTATION ###################
