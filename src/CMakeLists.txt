@@ -85,7 +85,7 @@ if(ENABLE_MAGICK)
 
     # define a global var (used in the C++)
     add_definitions( -DUSE_IMAGEMAGICK=1 )
-    list(APPEND CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
+    list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
 
     set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
     mark_as_advanced(HAVE_IMAGEMAGICK)
@@ -98,24 +98,6 @@ find_package(OpenShotAudio 0.2.0 REQUIRED)
 
 # Include Juce headers (needed for compile)
 include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
-
-################# BLACKMAGIC DECKLINK ###################
-# Find BlackMagic DeckLinkAPI libraries
-if (ENABLE_BLACKMAGIC)
-
-  find_package(BlackMagic)
-
-  if (BLACKMAGIC_FOUND)
-    # Include Blackmagic headers (needed for compile)
-    include_directories(${BLACKMAGIC_INCLUDE_DIR})
-
-    # define a global var (used in the C++)
-    add_definitions( -DUSE_BLACKMAGIC=1 )
-    list(APPEND CMAKE_SWIG_FLAGS "-DUSE_BLACKMAGIC=1")
-  endif()
-
-endif()
-
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -207,9 +189,6 @@ set(QT_PLAYER_SOURCES
   Qt/VideoRenderer.cpp
   Qt/VideoRenderWidget.cpp)
 
-# Get list of MOC'able headers
-file(GLOB_RECURSE OPENSHOT_QT_HEADERS ${CMAKE_SOURCE_DIR}/include/Qt/*.h)
-
 # Disable RPATH
 set(CMAKE_MACOSX_RPATH 0)
 
@@ -221,7 +200,6 @@ target_sources(openshot PRIVATE
   ${OPENSHOT_SOURCES}
   ${EFFECTS_SOURCES}
   ${QT_PLAYER_SOURCES}
-  ${OPENSHOT_QT_HEADERS}
   )
 
 # Set SONAME and other library properties
@@ -230,7 +208,7 @@ set_target_properties(openshot PROPERTIES
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_SO_VERSION}
   INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-  )
+)
 
 # Add optional ImageMagic-dependent sources
 if(ImageMagick_FOUND)
@@ -252,11 +230,11 @@ endif()
 # Location of our includes, both internally and when installed
 target_include_directories(openshot
   PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_BINARY_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
 
 
@@ -378,12 +356,26 @@ if (TARGET RESVG::resvg)
   #include_directories(${RESVG_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC RESVG::resvg)
 
-  target_compile_definitions(openshot PUBLIC "-DUSE_RESVG=1")
-  list(APPEND CMAKE_SWIG_FLAGS "-DUSE_RESVG=1")
+  target_compile_definitions(openshot PUBLIC -DUSE_RESVG=1)
+  list(APPEND CMAKE_SWIG_FLAGS -DUSE_RESVG=1)
 
   set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
   mark_as_advanced(HAVE_RESVG)
+endif()
 
+################# BLACKMAGIC DECKLINK ###################
+# Find BlackMagic DeckLinkAPI libraries
+if (ENABLE_BLACKMAGIC)
+  find_package(BlackMagic)
+
+  if (BLACKMAGIC_FOUND)
+    # Include Blackmagic headers (needed for compile)
+    target_include_directories(openshot PRIVATE ${BLACKMAGIC_INCLUDE_DIR})
+
+    # define a preprocessor macro (used in the C++)
+    target_compile_definitions(openshot PUBLIC -DUSE_BLACKMAGIC=1)
+    list(APPEND CMAKE_SWIG_FLAGS -DUSE_BLACKMAGIC=1)
+  endif()
 endif()
 
 ###############  LINK LIBRARY  #################
@@ -405,56 +397,22 @@ if(WIN32)
   target_link_libraries(openshot PUBLIC "imagehlp" "dbghelp" )
 endif()
 
-
-############### CLI EXECUTABLES ################
-# Create test executable
-add_executable(openshot-example examples/Example.cpp)
-
-# Define path to test input files
-set(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
-if (WIN32)
-  string(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
-endif()
-target_compile_definitions(openshot-example PRIVATE
-	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-# Link test executable to the new library
-target_link_libraries(openshot-example openshot)
-
-add_executable(openshot-html-test examples/ExampleHtml.cpp)
-target_link_libraries(openshot-html-test openshot Qt5::Gui)
-
-############### PLAYER EXECUTABLE ################
-# Create test executable
-add_executable(openshot-player Qt/demo/main.cpp)
-
-# Link test executable to the new library
-target_link_libraries(openshot-player openshot)
-
-############### TEST BLACKMAGIC CAPTURE APP ################
-if (BLACKMAGIC_FOUND)
-  # Create test executable
-  add_executable(openshot-blackmagic
-    examples/ExampleBlackmagic.cpp)
-
-  # Link test executable to the new library
-  target_link_libraries(openshot-blackmagic openshot)
-endif()
-
-############### INCLUDE SWIG BINDINGS ################
-add_subdirectory(bindings)
-
-############### INSTALL HEADERS & LIBRARY ################
+###
+### INSTALL HEADERS & LIBRARY
+###
 
 # Install primary library
 install(TARGETS openshot
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+install(
+  DIRECTORY .
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
-  FILES_MATCHING PATTERN "*.h")
+  FILES_MATCHING PATTERN "*.h"
+)
 
 ############### CPACK PACKAGING ##############
 if(MINGW)
