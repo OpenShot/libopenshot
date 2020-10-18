@@ -25,7 +25,7 @@
 ################################################################################
 
 # Test media path, used by unit tests for input data
-file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/src/examples/" TEST_MEDIA_PATH)
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
 ################### UNITTEST++ #####################
