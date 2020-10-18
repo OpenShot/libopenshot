@@ -44,25 +44,6 @@ if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if (WIN32)
-  add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-  set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
-
-if (APPLE)
-	# If you still get errors compiling with GCC 4.8, mac headers need to be patched: http://hamelot.co.uk/programming/osx-gcc-dispatch_block_t-has-not-been-declared-invalid-typedef/
-	set_property(GLOBAL PROPERTY JUCE_MAC "JUCE_MAC")
-	set(EXTENSION "mm")
-	set(JUCE_PLATFORM_SPECIFIC_DIR build/macosx/platform_specific_code)
-	set(JUCE_PLATFORM_SPECIFIC_LIBRARIES "-framework Carbon -framework Cocoa -framework CoreFoundation -framework CoreAudio -framework CoreMidi -framework IOKit -framework AGL -framework AudioToolbox -framework QuartzCore -lobjc -framework Accelerate")
-
-	# Prevent compiling with __cxx11
-	add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-endif()
-
 ################ IMAGE MAGICK ##################
 # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
 if(ENABLE_MAGICK)
@@ -92,12 +73,6 @@ if(ENABLE_MAGICK)
   endif()
 endif()
 
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
-
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -237,6 +212,10 @@ target_include_directories(openshot
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
 
+################# LIBOPENSHOT-AUDIO ###################
+# Find JUCE-based openshot Audio libraries
+find_package(OpenShotAudio 0.2.0 REQUIRED)
+target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -380,9 +359,9 @@ endif()
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
-target_link_libraries(openshot PUBLIC
-  ${LIBOPENSHOT_AUDIO_LIBRARIES}
-  ${PROFILER})
+if(DEFINED PROFILER)
+  target_link_libraries(openshot PUBLIC ${PROFILER})
+endif()
 
 if(ImageMagick_FOUND)
   target_link_libraries(openshot PUBLIC ${ImageMagick_LIBRARIES})
