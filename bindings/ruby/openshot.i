@@ -42,6 +42,7 @@
 %include "std_list.i"
 %include "std_vector.i"
 %include "std_map.i"
+%include <stdint.i>
 
 /* Unhandled STL Exception Handling */
 %include <std_except.i>
