@@ -35,14 +35,7 @@
 
 using namespace openshot;
 
-ImageReader::ImageReader(std::string path) : path(path), is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
-ImageReader::ImageReader(std::string path, bool inspect_reader) : path(path), is_open(false)
+ImageReader::ImageReader(const std::string& path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {

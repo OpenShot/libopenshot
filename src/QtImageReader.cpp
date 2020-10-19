@@ -44,13 +44,6 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(std::string path) : path{QString::fromStdString(path)}, is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
 QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
