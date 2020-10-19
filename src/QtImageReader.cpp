@@ -174,7 +174,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	int max_width = info.width;
 	int max_height = info.height;
 
-	Clip* parent = (Clip*) GetParentClip();
+	Clip* parent = (Clip*) ParentClip();
 	if (parent) {
 		if (parent->ParentTimeline()) {
 			// Set max width/height based on parent clip's timeline (if attached to a timeline)

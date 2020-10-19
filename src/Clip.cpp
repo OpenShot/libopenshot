@@ -160,7 +160,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetParentClip(this);
+		reader->ParentClip(this);
 	}
 }
 
@@ -217,7 +217,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetParentClip(this);
+		reader->ParentClip(this);
 		allocated_reader = reader;
 		// Init reader info struct and cache size
 		init_reader_settings();	}
@@ -246,7 +246,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	reader = new_reader;
 
 	// set parent
-	reader->SetParentClip(this);
+	reader->ParentClip(this);
 
 	// Init reader info struct and cache size
 	init_reader_settings();
@@ -1062,7 +1062,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 			// mark as managed reader and set parent
 			if (reader) {
-				reader->SetParentClip(this);
+				reader->ParentClip(this);
 				allocated_reader = reader;
 			}
 

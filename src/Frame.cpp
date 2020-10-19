@@ -221,7 +221,8 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		}
 
 		// Create blank image
-		wave_image = std::make_shared<QImage>(total_width, total_height, QImage::Format_RGBA8888_Premultiplied);
+		wave_image = std::make_shared<QImage>(
+			total_width, total_height, QImage::Format_RGBA8888_Premultiplied);
 		wave_image->fill(QColor(0,0,0,0));
 
 		// Load QPainter with wave_image device
@@ -836,7 +837,8 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 				ret = true;
 			}
 			else if (new_image->format() != QImage::Format_RGBA8888_Premultiplied) {
-				new_image = std::make_shared<QImage>(new_image->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
+				new_image = std::make_shared<QImage>(
+					new_image->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
 			}
 		}
 		if (ret) {
