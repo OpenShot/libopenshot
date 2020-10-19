@@ -396,7 +396,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
-		get_time_mapped_frame(frame, requested_frame);
+		get_time_mapped_frame(frame, new_frame_number);
 
 		// Adjust # of samples to match requested (the interaction with time curves will make this tricky)
 		// TODO: Implement move samples to/from next frame
