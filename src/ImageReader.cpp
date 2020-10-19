@@ -31,18 +31,11 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/ImageReader.h"
+#include "ImageReader.h"
 
 using namespace openshot;
 
-ImageReader::ImageReader(std::string path) : path(path), is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
-ImageReader::ImageReader(std::string path, bool inspect_reader) : path(path), is_open(false)
+ImageReader::ImageReader(const std::string& path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -61,7 +54,7 @@ void ImageReader::Open()
 		try
 		{
 			// load image
-			image = std::shared_ptr<Magick::Image>(new Magick::Image(path));
+			image = std::make_shared<Magick::Image>(path);
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
@@ -126,7 +119,9 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
 	// Create or get frame object
-	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+	auto image_frame = std::make_shared<Frame>(
+		requested_frame, image->size().width(), image->size().height(),
+		"#000000", 0, 2);
 
 	// Add Image data to frame
 	image_frame->AddMagickImage(image);
@@ -136,14 +131,14 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-std::string ImageReader::Json() {
+std::string ImageReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value ImageReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ImageReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -155,24 +150,12 @@ Json::Value ImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void ImageReader::SetJson(std::string value) {
+void ImageReader::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -183,8 +166,8 @@ void ImageReader::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void ImageReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ImageReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

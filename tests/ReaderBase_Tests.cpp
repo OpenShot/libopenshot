@@ -31,7 +31,7 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "OpenShot.h"
 
 using namespace std;
 using namespace openshot;
@@ -49,9 +49,9 @@ TEST(ReaderBase_Derived_Class)
 		std::shared_ptr<Frame> GetFrame(int64_t number) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
-		string Json() { return NULL; };
+		string Json() const { return ""; };
 		void SetJson(string value) { };
-		Json::Value JsonValue() { return (int) NULL; };
+		Json::Value JsonValue() const { return Json::Value("{}"); };
 		void SetJsonValue(Json::Value root) { };
 		bool IsOpen() { return true; };
 		string Name() { return "TestReader"; };
@@ -59,6 +59,23 @@ TEST(ReaderBase_Derived_Class)
 
 	// Create an instance of the derived class
 	TestReader t1;
+
+	// Validate the new class
+	CHECK_EQUAL("TestReader", t1.Name());
+
+	t1.Close();
+	t1.Open();
+	CHECK_EQUAL(true, t1.IsOpen());
+
+	CHECK_EQUAL(true, t1.GetCache() == NULL);
+
+	t1.SetJson("{ }");
+	t1.SetJsonValue(Json::Value("{}"));
+	CHECK_EQUAL("", t1.Json());
+	auto json = t1.JsonValue();
+	CHECK_EQUAL(json, Json::Value("{}"));
+
+	auto f = t1.GetFrame(1);
 
 	// Check some of the default values of the FileInfo struct on the base class
 	CHECK_EQUAL(false, t1.info.has_audio);

@@ -28,7 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Mask.h"
+#include "Mask.h"
+#include "FFmpegReader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+#endif
+#include "ReaderBase.h"
 
 using namespace openshot;
 
@@ -84,13 +89,14 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 			(original_mask && original_mask->size() != frame_image->size())) {
 
 			// Only get mask if needed
-			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(
-					new QImage(*reader->GetFrame(frame_number)->GetImage()));
+			auto mask_without_sizing = std::make_shared<QImage>(
+				*reader->GetFrame(frame_number)->GetImage());
 
 			// Resize mask image to match frame size
-			original_mask = std::shared_ptr<QImage>(new QImage(
-					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
-												Qt::SmoothTransformation)));
+			original_mask = std::make_shared<QImage>(
+				mask_without_sizing->scaled(
+					frame_image->width(), frame_image->height(),
+					Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 		}
 	}
 
@@ -150,14 +156,14 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 }
 
 // Generate JSON string of this object
-std::string Mask::Json() {
+std::string Mask::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Mask::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Mask::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -175,24 +181,12 @@ Json::Value Mask::JsonValue() {
 }
 
 // Load JSON string into this object
-void Mask::SetJson(std::string value) {
+void Mask::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -203,8 +197,8 @@ void Mask::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Mask::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Mask::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -271,7 +265,7 @@ void Mask::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Mask::PropertiesJSON(int64_t requested_frame) {
+std::string Mask::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

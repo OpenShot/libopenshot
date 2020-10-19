@@ -28,12 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/ColorShift.h"
+#include "ColorShift.h"
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-ColorShift::ColorShift() : red_x(-0.05), red_y(0.0), green_x(0.05), green_y(0.0), blue_x(0.0), blue_y(0.0), alpha_x(0.0), alpha_y(0.0) {
+ColorShift::ColorShift() : red_x(0.0), red_y(0.0), green_x(0.0), green_y(0.0), blue_x(0.0), blue_y(0.0), alpha_x(0.0), alpha_y(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
@@ -75,25 +75,24 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 	// Get the current shift amount, and clamp to range (-1 to 1 range)
 	// Red Keyframes
 	float red_x_shift = red_x.GetValue(frame_number);
-	int red_x_shift_limit = round(frame_image_width * fmod(abs(red_x_shift), 1.0));
+	int red_x_shift_limit = round(frame_image_width * fmod(fabs(red_x_shift), 1.0));
 	float red_y_shift = red_y.GetValue(frame_number);
-	int red_y_shift_limit = round(frame_image_height * fmod(abs(red_y_shift), 1.0));
+	int red_y_shift_limit = round(frame_image_height * fmod(fabs(red_y_shift), 1.0));
 	// Green Keyframes
 	float green_x_shift = green_x.GetValue(frame_number);
-	int green_x_shift_limit = round(frame_image_width * fmod(abs(green_x_shift), 1.0));
+	int green_x_shift_limit = round(frame_image_width * fmod(fabs(green_x_shift), 1.0));
 	float green_y_shift = green_y.GetValue(frame_number);
-	int green_y_shift_limit = round(frame_image_height * fmod(abs(green_y_shift), 1.0));
+	int green_y_shift_limit = round(frame_image_height * fmod(fabs(green_y_shift), 1.0));
 	// Blue Keyframes
 	float blue_x_shift = blue_x.GetValue(frame_number);
-	int blue_x_shift_limit = round(frame_image_width * fmod(abs(blue_x_shift), 1.0));
+	int blue_x_shift_limit = round(frame_image_width * fmod(fabs(blue_x_shift), 1.0));
 	float blue_y_shift = blue_y.GetValue(frame_number);
-	int blue_y_shift_limit = round(frame_image_height * fmod(abs(blue_y_shift), 1.0));
+	int blue_y_shift_limit = round(frame_image_height * fmod(fabs(blue_y_shift), 1.0));
 	// Alpha Keyframes
 	float alpha_x_shift = alpha_x.GetValue(frame_number);
-	int alpha_x_shift_limit = round(frame_image_width * fmod(abs(alpha_x_shift), 1.0));
+	int alpha_x_shift_limit = round(frame_image_width * fmod(fabs(alpha_x_shift), 1.0));
 	float alpha_y_shift = alpha_y.GetValue(frame_number);
-	int alpha_y_shift_limit = round(frame_image_height * fmod(abs(alpha_y_shift), 1.0));
-
+	int alpha_y_shift_limit = round(frame_image_height * fmod(fabs(alpha_y_shift), 1.0));
 
 	// Make temp copy of pixels
 	unsigned char *temp_image = new unsigned char[frame_image_width * frame_image_height * 4]();
@@ -129,7 +128,6 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 			green_starting_row_index = starting_row_index;
 			blue_starting_row_index = starting_row_index;
 			alpha_starting_row_index = starting_row_index;
-
 
 			red_pixel_offset = 0;
 			green_pixel_offset = 0;
@@ -194,14 +192,14 @@ std::shared_ptr<Frame> ColorShift::GetFrame(std::shared_ptr<Frame> frame, int64_
 }
 
 // Generate JSON string of this object
-std::string ColorShift::Json() {
+std::string ColorShift::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value ColorShift::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ColorShift::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -220,24 +218,12 @@ Json::Value ColorShift::JsonValue() {
 }
 
 // Load JSON string into this object
-void ColorShift::SetJson(std::string value) {
+void ColorShift::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -248,8 +234,8 @@ void ColorShift::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void ColorShift::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ColorShift::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -274,7 +260,7 @@ void ColorShift::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string ColorShift::PropertiesJSON(int64_t requested_frame) {
+std::string ColorShift::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

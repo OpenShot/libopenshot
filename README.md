@@ -1,6 +1,6 @@
-OpenShot Video Library (libopenshot) is a free, open-source C++ library dedicated to
-delivering high quality video editing, animation, and playback solutions to the 
-world.
+OpenShot Video Library (libopenshot) is a free, open-source C++ library
+dedicated to delivering high quality video editing, animation, and playback
+solutions to the world.
 
 ## Build Status
 
@@ -15,7 +15,8 @@ world.
 * Time Mapping (Curve-based Slow Down, Speed Up, Reverse)
 * Audio Mixing & Resampling (Curve-based)
 * Audio Plug-ins (VST & AU)
-* Audio Drivers (ASIO, WASAPI, DirectSound, CoreAudio, iPhone Audio, ALSA, JACK, and Android)
+* Audio Drivers (ASIO, WASAPI, DirectSound, CoreAudio, iPhone Audio,
+  ALSA, JACK, and Android)
 * Telecine and Inverse Telecine (Film to TV, TV to Film)
 * Frame Rate Conversions
 * Multi-Processor Support (Performance)
@@ -27,8 +28,8 @@ world.
 
 ## Install
 
-Detailed instructions for building libopenshot and libopenshot-audio for each OS. These instructions
-are also available in the /docs/ source folder.
+Detailed instructions for building libopenshot and libopenshot-audio for
+each OS. These instructions are also available in the `/docs/` source folder.
 
    * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
    * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
@@ -36,10 +37,12 @@ are also available in the /docs/ source folder.
 
 ## Hardware Acceleration
 
-OpenShot now supports experimental hardware acceleration, both for encoding and
-decoding videos. When enabled, this can either speed up those operations or slow
-them down, depending on the power and features supported by your graphics card.
-Please see [doc/HW-ACCELL.md](doc/HW-ACCEL.md) for more information.
+OpenShot now supports experimental hardware acceleration, both for encoding
+and decoding videos. When enabled, this can either speed up those operations
+or slow them down, depending on the power and features supported by your
+graphics card.
+
+Please see [`doc/HW-ACCEL.md`](doc/HW-ACCEL.md) for more information.
 
 ## Documentation
 
@@ -51,10 +54,11 @@ make doc
 
 ## Developers
 
-Are you interested in becoming more involved in the development of 
-OpenShot? Build exciting new features, fix bugs, make friends, and become a hero! 
-Please read the [step-by-step](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer) 
-instructions for getting source code, configuring dependencies, and building OpenShot.
+Are you interested in becoming more involved in the development of OpenShot?
+Build exciting new features, fix bugs, make friends, and become a hero!
+Please read the [step-by-step](https://github.com/OpenShot/openshot-qt/wiki/Become-a-Developer)
+instructions for getting source code, configuring dependencies, and building
+OpenShot.
 
 ## Report a bug
 
@@ -72,7 +76,7 @@ https://github.com/OpenShot/libopenshot/issues
 
 ### License
 
-Copyright (c) 2008-2019 OpenShot Studios, LLC.
+Copyright (c) 2008-2020 OpenShot Studios, LLC.
 
 OpenShot Library (libopenshot) is free software: you can redistribute it
 and/or modify it under the terms of the GNU Lesser General Public License

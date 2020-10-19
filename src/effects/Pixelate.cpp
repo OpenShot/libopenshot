@@ -28,12 +28,18 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Pixelate.h"
+#include "Pixelate.h"
+#include "Json.h"
+
+#include <QImage>
+#include <QPainter>
+#include <QRect>
+#include <QPoint>
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Pixelate::Pixelate() : pixelization(0.7), left(0.0), top(0.0), right(0.0), bottom(0.0) {
+Pixelate::Pixelate() : pixelization(0.5), left(0.0), top(0.0), right(0.0), bottom(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
@@ -68,41 +74,31 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get current keyframe values
-	double pixelization_value = 1.0 - std::min(fabs(pixelization.GetValue(frame_number)), 1.0);
+	double pixelization_value = std::min(pow(0.001, fabs(pixelization.GetValue(frame_number))), 1.0);
 	double left_value = left.GetValue(frame_number);
 	double top_value = top.GetValue(frame_number);
 	double right_value = right.GetValue(frame_number);
 	double bottom_value = bottom.GetValue(frame_number);
 
 	if (pixelization_value > 0.0) {
-		// Resize frame image smaller (based on pixelization value)
-		std::shared_ptr<QImage> smaller_frame_image = std::shared_ptr<QImage>(new QImage(frame_image->scaledToWidth(std::max(frame_image->width() * pixelization_value, 2.0), Qt::SmoothTransformation)));
+		int w = frame_image->width();
+		int h = frame_image->height();
 
-		// Resize image back to original size (with no smoothing to create pixelated image)
-		std::shared_ptr<QImage> pixelated_image = std::shared_ptr<QImage>(new QImage(smaller_frame_image->scaledToWidth(frame_image->width(), Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888)));
+		// Define area we're working on in terms of a QRect with QMargins applied
+		QRect area(QPoint(0,0), frame_image->size());
+		area = area.marginsRemoved({int(left_value * w), int(top_value * h), int(right_value * w), int(bottom_value * h)});
 
-		// Get pixel array pointer
-		unsigned char *pixels = (unsigned char *) frame_image->bits();
-		unsigned char *pixelated_pixels = (unsigned char *) pixelated_image->bits();
-
-		// Get pixels sizes of all margins
-		int top_bar_height = top_value * frame_image->height();
-		int bottom_bar_height = bottom_value * frame_image->height();
-		int left_bar_width = left_value * frame_image->width();
-		int right_bar_width = right_value * frame_image->width();
-
-		// Loop through rows
-		for (int row = 0; row < frame_image->height(); row++) {
-
-			// Copy pixelated pixels into original frame image (where needed)
-			if ((row >= top_bar_height) && (row <= frame_image->height() - bottom_bar_height)) {
-				memcpy(&pixels[(row * frame_image->width() + left_bar_width) * 4], &pixelated_pixels[(row * frame_image->width() + left_bar_width) * 4], sizeof(char) * (frame_image->width() - left_bar_width - right_bar_width) * 4);
-			}
+		int scale_to = (int) (area.width() * pixelization_value);
+		if (scale_to < 1) {
+			scale_to = 1; // Not less than one pixel
 		}
+		// Copy and scale pixels in area to be pixelated
+		auto frame_scaled = frame_image->copy(area).scaledToWidth(scale_to, Qt::SmoothTransformation);
 
-		// Cleanup temp images
-		smaller_frame_image.reset();
-		pixelated_image.reset();
+		// Draw pixelated image back over original
+		QPainter painter(frame_image.get());
+		painter.drawImage(area, frame_scaled);
+		painter.end();
 	}
 
 	// return the modified frame
@@ -110,14 +106,14 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 }
 
 // Generate JSON string of this object
-std::string Pixelate::Json() {
+std::string Pixelate::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Pixelate::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Pixelate::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -133,24 +129,12 @@ Json::Value Pixelate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Pixelate::SetJson(std::string value) {
+void Pixelate::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -161,8 +145,8 @@ void Pixelate::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Pixelate::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Pixelate::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -181,7 +165,7 @@ void Pixelate::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Pixelate::PropertiesJSON(int64_t requested_frame) {
+std::string Pixelate::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
