@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Point.h"
+#include "Point.h"
 
 using namespace std;
 using namespace openshot;
