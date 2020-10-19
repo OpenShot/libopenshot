@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheMemory.h"
+#include "CacheMemory.h"
 
 using namespace std;
 using namespace openshot;
@@ -39,7 +39,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Constructor that sets the max bytes to cache
 CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
@@ -47,7 +47,7 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Default destructor
 CacheMemory::~CacheMemory()
@@ -92,12 +92,8 @@ void CacheMemory::CalculateRanges() {
 
 				// Add JSON object with start/end attributes
 				// Use strings, since int64_ts are supported in JSON
-				std::stringstream start_str;
-				start_str << starting_frame;
-				std::stringstream end_str;
-				end_str << ending_frame;
-				range["start"] = start_str.str();
-				range["end"] = end_str.str();
+				range["start"] = std::to_string(starting_frame);
+				range["end"] = std::to_string(ending_frame);
 				ranges.append(range);
 
 				// Set new starting range
@@ -113,12 +109,8 @@ void CacheMemory::CalculateRanges() {
 
 		// Add JSON object with start/end attributes
 		// Use strings, since int64_ts are not supported in JSON
-		std::stringstream start_str;
-		start_str << starting_frame;
-		std::stringstream end_str;
-		end_str << ending_frame;
-		range["start"] = start_str.str();
-		range["end"] = end_str.str();
+		range["start"] = std::to_string(starting_frame);
+		range["end"] = std::to_string(ending_frame);
 		ranges.append(range);
 
 		// Cache range JSON as string
@@ -327,7 +319,7 @@ std::string CacheMemory::Json() {
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value CacheMemory::JsonValue() {
 
 	// Process range data (if anything has changed)
@@ -337,45 +329,25 @@ Json::Value CacheMemory::JsonValue() {
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
 
-	std::stringstream range_version_str;
-	range_version_str << range_version;
-	root["version"] = range_version_str.str();
+	root["version"] = std::to_string(range_version);
 
 	// Parse and append range data (if any)
-	Json::Value ranges;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( json_ranges.c_str(),
-	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
-	delete reader;
-
-	if (success)
+	try {
+		const Json::Value ranges = openshot::stringToJson(json_ranges);
 		root["ranges"] = ranges;
+	} catch (...) { }
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void CacheMemory::SetJson(std::string value) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+void CacheMemory::SetJson(const std::string value) {
 
 	try
 	{
+		// Parse string to Json::Value
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -386,8 +358,8 @@ void CacheMemory::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void CacheMemory::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void CacheMemory::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();

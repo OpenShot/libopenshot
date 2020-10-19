@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Bars.h"
+#include "Bars.h"
 
 using namespace openshot;
 
@@ -68,7 +68,8 @@ std::shared_ptr<Frame> Bars::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get bar color (and create small color image)
-	std::shared_ptr<QImage> tempColor = std::shared_ptr<QImage>(new QImage(frame_image->width(), 1, QImage::Format_RGBA8888));
+	auto tempColor = std::make_shared<QImage>(
+		frame_image->width(), 1, QImage::Format_RGBA8888);
 	tempColor->fill(QColor(QString::fromStdString(color.GetColorHex(frame_number))));
 
 	// Get current keyframe values
@@ -114,14 +115,14 @@ std::shared_ptr<Frame> Bars::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 }
 
 // Generate JSON string of this object
-std::string Bars::Json() {
+std::string Bars::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Bars::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Bars::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -137,24 +138,12 @@ Json::Value Bars::JsonValue() {
 }
 
 // Load JSON string into this object
-void Bars::SetJson(std::string value) {
+void Bars::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -165,8 +154,8 @@ void Bars::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Bars::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Bars::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -185,7 +174,7 @@ void Bars::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Bars::PropertiesJSON(int64_t requested_frame) {
+std::string Bars::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

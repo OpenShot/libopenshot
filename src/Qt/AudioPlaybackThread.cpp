@@ -29,7 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/AudioPlaybackThread.h"
+#include "AudioPlaybackThread.h"
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
 
 namespace openshot
 {
@@ -194,7 +197,7 @@ namespace openshot
     			transport.start();
 
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
-					usleep(2500);
+					std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
 				// Stop audio and shutdown transport
 				Stop();

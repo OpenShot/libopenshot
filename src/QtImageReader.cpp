@@ -28,10 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtImageReader.h"
-#include "../include/Settings.h"
-#include "../include/Clip.h"
-#include "../include/CacheMemory.h"
+#include "QtImageReader.h"
+#include "Settings.h"
+#include "Clip.h"
+#include "CacheMemory.h"
 #include <QtCore/QString>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
@@ -43,13 +43,6 @@
 #endif
 
 using namespace openshot;
-
-QtImageReader::QtImageReader(std::string path) : path{QString::fromStdString(path)}, is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
 
 QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
@@ -71,7 +64,7 @@ void QtImageReader::Open()
 	if (!is_open)
 	{
 		bool success = true;
-		image = std::shared_ptr<QImage>(new QImage());
+		bool loaded = false;
 
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
@@ -80,44 +73,45 @@ void QtImageReader::Open()
 		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
 
 			ResvgRenderer renderer(path);
-			if (!renderer.isValid()) {
-				// Attempt to open file (old method using Qt5 limited SVG parsing)
-				success = image->load(path);
-				if (success) {
-					image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
-				}
-			} else {
+			if (renderer.isValid()) {
 
-				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_RGBA8888));
+				image = std::make_shared<QImage>(
+					renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied);
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
 				renderer.render(&p);
 				p.end();
+				loaded = true;
 			}
-
-		} else {
-			// Attempt to open file (old method)
-			success = image->load(path);
-			if (success)
-				image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 		}
-#else
-		// Attempt to open file using Qt's build in image processing capabilities
-		success = image->load(path);
-		if (success)
-			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 #endif
 
-		if (!success)
+		if (!loaded) {
+			// Attempt to open file using Qt's build in image processing capabilities
+			image = std::make_shared<QImage>();
+			success = image->load(path);
+		}
+
+		if (!success) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
+		}
+
+		// Convert to proper format
+		image = std::make_shared<QImage>(
+			image->convertToFormat(QImage::Format_RGBA8888));
 
 		// Update image properties
 		info.has_audio = false;
 		info.has_video = true;
 		info.has_single_image = true;
-		info.file_size = image->byteCount();
+		#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+			// byteCount() is deprecated from Qt 5.10
+			info.file_size = image->sizeInBytes();
+		#else
+			info.file_size = image->byteCount();
+		#endif
 		info.vcodec = "QImage";
 		info.width = image->width();
 		info.height = image->height();
@@ -188,7 +182,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	if (max_height <= 0)
 		max_height = info.height;
 
-	Clip* parent = (Clip*) GetClip();
+	Clip* parent = (Clip*) GetParentClip();
 	if (parent) {
 		if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
@@ -224,11 +218,14 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 
 	// Scale image smaller (or use a previous scaled image)
 	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
+
+		bool rendered = false;
 #if USE_RESVG == 1
 		// If defined and found in CMake, utilize the libresvg for parsing
 		// SVG files and rasterizing them to QImages.
 		// Only use resvg for files ending in '.svg' or '.svgz'
 		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+
 			ResvgRenderer renderer(path);
 			if (renderer.isValid()) {
 				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
@@ -236,30 +233,29 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				svg_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
 				// Create empty QImage
-				cached_image = std::shared_ptr<QImage>(new QImage(QSize(svg_size.width(), svg_size.height()), QImage::Format_RGBA8888));
+				cached_image = std::make_shared<QImage>(
+					QSize(svg_size.width(), svg_size.height()),
+					QImage::Format_ARGB32_Premultiplied);
 				cached_image->fill(Qt::transparent);
 
 				// Render SVG into QImage
 				QPainter p(cached_image.get());
 				renderer.render(&p);
 				p.end();
-			} else {
-				// Resize current rasterized SVG (since we failed to parse original SVG file with resvg)
-				cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-				cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
+				rendered = true;
 			}
-		} else {
+		}
+#endif
+
+		if (!rendered) {
 			// We need to resize the original image to a smaller image (for performance reasons)
 			// Only do this once, to prevent tons of unneeded scaling operations
-			cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-			cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
+			cached_image = std::make_shared<QImage>(image->scaled(
+				max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}
-#else
-		// We need to resize the original image to a smaller image (for performance reasons)
-		// Only do this once, to prevent tons of unneeded scaling operations
-		cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-		cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
-#endif
+
+		cached_image = std::make_shared<QImage>(
+			cached_image->convertToFormat(QImage::Format_RGBA8888));
 
 		// Set max size (to later determine if max_size is changed)
 		max_size.setWidth(max_width);
@@ -267,7 +263,10 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Create or get frame object
-	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, cached_image->width(), cached_image->height(), "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+	auto image_frame = std::make_shared<Frame>(
+		requested_frame, cached_image->width(), cached_image->height(), "#000000",
+		Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels),
+		info.channels);
 
 	// Add Image data to frame
 	image_frame->AddImage(cached_image);
@@ -277,14 +276,14 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-std::string QtImageReader::Json() {
+std::string QtImageReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value QtImageReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value QtImageReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -296,24 +295,12 @@ Json::Value QtImageReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtImageReader::SetJson(std::string value) {
+void QtImageReader::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -324,8 +311,8 @@ void QtImageReader::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void QtImageReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void QtImageReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/KeyFrame.h"
+#include "KeyFrame.h"
 #include <algorithm>
 #include <functional>
 #include <utility>
@@ -71,7 +71,7 @@ namespace {
 			}
 			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
 			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
-			if (abs(target - x) < allowed_error) {
+			if (fabs(target - x) < allowed_error) {
 				return y;
 			}
 			if (x > target) {
@@ -169,7 +169,7 @@ void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 // Get the index of a point by matching a coordinate
 int64_t Keyframe::FindIndex(Point p) const {
 	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
+	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
 		// Get each point
 		Point existing_point = Points[x];
 
@@ -325,17 +325,15 @@ std::string Keyframe::Json() const {
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value Keyframe::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
 	root["Points"] = Json::Value(Json::arrayValue);
 
-	// loop through points, and find a matching coordinate
-	for (int x = 0; x < Points.size(); x++) {
-		// Get each point
-		Point existing_point = Points[x];
+	// loop through points
+	for (const auto existing_point : Points) {
 		root["Points"].append(existing_point.JsonValue());
 	}
 
@@ -344,24 +342,12 @@ Json::Value Keyframe::JsonValue() const {
 }
 
 // Load JSON string into this object
-void Keyframe::SetJson(std::string value) {
+void Keyframe::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -372,17 +358,14 @@ void Keyframe::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Keyframe::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Keyframe::SetJsonValue(const Json::Value root) {
 	// Clear existing points
 	Points.clear();
 
 	if (!root["Points"].isNull())
 		// loop through points
-		for (int64_t x = 0; x < root["Points"].size(); x++) {
-			// Get each point
-			Json::Value existing_point = root["Points"][(Json::UInt) x];
-
+		for (const auto existing_point : root["Points"]) {
 			// Create Point
 			Point p;
 
@@ -509,7 +492,7 @@ double Keyframe::GetDelta(int64_t index) const {
 // Get a point at a specific index
 Point const & Keyframe::GetPoint(int64_t index) const {
 	// Is index a valid point?
-	if (index >= 0 && index < Points.size())
+	if (index >= 0 && index < (int64_t)Points.size())
 		return Points[index];
 	else
 		// Invalid index
@@ -532,7 +515,7 @@ int64_t Keyframe::GetCount() const {
 // Remove a point by matching a coordinate
 void Keyframe::RemovePoint(Point p) {
 	// loop through points, and find a matching coordinate
-	for (int64_t x = 0; x < Points.size(); x++) {
+	for (std::vector<Point>::size_type x = 0; x < Points.size(); x++) {
 		// Get each point
 		Point existing_point = Points[x];
 
@@ -551,7 +534,7 @@ void Keyframe::RemovePoint(Point p) {
 // Remove a point by index
 void Keyframe::RemovePoint(int64_t index) {
 	// Is index a valid point?
-	if (index >= 0 && index < Points.size())
+	if (index >= 0 && index < (int64_t)Points.size())
 	{
 		// Remove a specific point by index
 		Points.erase(Points.begin() + index);
@@ -581,7 +564,7 @@ void Keyframe::PrintValues() const {
 	cout << fixed << setprecision(4);
 	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
 
-	for (uint64_t i = 1; i < GetLength(); ++i) {
+	for (int64_t i = 1; i < GetLength(); ++i) {
 		cout << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
 		cout << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
 	}
@@ -597,7 +580,7 @@ void Keyframe::ScalePoints(double scale)
 	// TODO: What if scale < 0?
 
 	// Loop through each point (skipping the 1st point)
-	for (int64_t point_index = 1; point_index < Points.size(); point_index++) {
+	for (std::vector<Point>::size_type point_index = 1; point_index < Points.size(); point_index++) {
 		// Scale X value
 		Points[point_index].co.X = round(Points[point_index].co.X * scale);
 	}
@@ -605,7 +588,7 @@ void Keyframe::ScalePoints(double scale)
 
 // Flip all the points in this openshot::Keyframe (useful for reversing an effect or transition, etc...)
 void Keyframe::FlipPoints() {
-	for (int64_t point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
+	for (std::vector<Point>::size_type point_index = 0, reverse_index = Points.size() - 1; point_index < reverse_index; point_index++, reverse_index--) {
 		// Flip the points
 		using std::swap;
 		swap(Points[point_index].co.Y, Points[reverse_index].co.Y);

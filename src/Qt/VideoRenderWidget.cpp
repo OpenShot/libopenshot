@@ -28,8 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoRenderWidget.h"
-#include <QtGui/QPaintEvent>
+#include "VideoRenderWidget.h"
+#include <QWidget>
+#include <QImage>
+#include <QPainter>
+#include <QPaintEvent>
+#include <QSizePolicy>
+#include <QPalette>
+
 
 VideoRenderWidget::VideoRenderWidget(QWidget *parent)
     : QWidget(parent), renderer(new VideoRenderer(this))

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/WriterBase.h"
+#include "WriterBase.h"
 
 using namespace openshot;
 
@@ -139,14 +139,14 @@ void WriterBase::DisplayInfo() {
 }
 
 // Generate JSON string of this object
-std::string WriterBase::Json() {
+std::string WriterBase::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value WriterBase::JsonValue() {
+// Generate Json::Value for this object
+Json::Value WriterBase::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -195,24 +195,12 @@ Json::Value WriterBase::JsonValue() {
 }
 
 // Load JSON string into this object
-void WriterBase::SetJson(std::string value) {
+void WriterBase::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -223,8 +211,8 @@ void WriterBase::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void WriterBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void WriterBase::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["has_video"].isNull())

@@ -28,16 +28,17 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/FrameMapper.h"
+#include "Clip.h"
+#include "FFmpegReader.h"
+#include "FrameMapper.h"
 #ifdef USE_IMAGEMAGICK
-	#include "../include/ImageReader.h"
-	#include "../include/TextReader.h"
+	#include "ImageReader.h"
+	#include "TextReader.h"
 #endif
-#include "../include/QtImageReader.h"
-#include "../include/ChunkReader.h"
-#include "../include/DummyReader.h"
+#include "QtImageReader.h"
+#include "ChunkReader.h"
+#include "DummyReader.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -88,6 +89,8 @@ void Clip::init_settings()
 	// Init shear and perspective curves
 	shear_x = Keyframe(0.0);
 	shear_y = Keyframe(0.0);
+	origin_x = Keyframe(0.5);
+	origin_y = Keyframe(0.5);
 	perspective_c1_x = Keyframe(-1.0);
 	perspective_c1_y = Keyframe(-1.0);
 	perspective_c2_x = Keyframe(-1.0);
@@ -131,14 +134,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(new_reader), allocated_reader(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
@@ -147,19 +150,22 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), audio_cache(NULL), reader(
 	Open();
 	Close();
 
-	// Update duration
-	End(reader->info.duration);
+	// Update duration and set parent
+	if (reader) {
+		End(reader->info.duration);
+		reader->SetParentClip(this);
+	}
 }
 
 // Constructor with filepath
-Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL)
 {
 	// Init all default settings
 	init_settings();
 
 	// Get file extension (and convert to lower case)
 	std::string ext = get_file_extension(path);
-	transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
 	// Determine if common video formats
 	if (ext=="avi" || ext=="mov" || ext=="mkv" ||  ext=="mpg" || ext=="mpeg" || ext=="mp3" || ext=="mp4" || ext=="mts" ||
@@ -172,6 +178,16 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 
 		} catch(...) { }
 	}
+	if (ext=="osp")
+	{
+		try
+		{
+			// Open common video format
+			reader = new Timeline(path, true);
+
+		} catch(...) { }
+	}
+
 
 	// If no video found, try each reader
 	if (!reader)
@@ -191,9 +207,10 @@ Clip::Clip(std::string path) : resampler(NULL), audio_cache(NULL), reader(NULL),
 		}
 	}
 
-	// Update duration
+	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
+		reader->SetParentClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
@@ -222,7 +239,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	reader = new_reader;
 
 	// set parent
-	reader->SetClip(this);
+	reader->SetParentClip(this);
 
 	// Init rotation (if any)
 	init_reader_rotation();
@@ -270,7 +287,7 @@ void Clip::Close()
 }
 
 // Get end position of clip (trim end of video), which can be affected by the time curve.
-float Clip::End()
+float Clip::End() const
 {
 	// if a time curve is present, use its length
 	if (time.GetCount() > 1)
@@ -319,12 +336,13 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame;
-		#pragma omp critical (Clip_GetFrame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
-		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		#pragma omp critical (Clip_GetFrame)
+		auto frame = std::make_shared<Frame>(
+			new_frame_number, 1, 1, "#000000",
+			original_frame->GetAudioSamplesCount(),
+			original_frame->GetAudioChannelsCount());
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -332,7 +350,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)
@@ -351,6 +369,18 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+// Look up an effect by ID
+openshot::EffectBase* Clip::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
 }
 
 // Get file extension
@@ -413,7 +443,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 		int delta = int(round(time.GetDelta(frame_number)));
 
 		// Init audio vars
-		int sample_rate = reader->info.sample_rate;
 		int channels = reader->info.channels;
 		int number_of_samples = GetOrCreateFrame(new_frame_number)->GetAudioSamplesCount();
 
@@ -424,7 +453,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *resampled_buffer = NULL;
-				int resampled_buffer_size = 0;
 
 				// SLOW DOWN audio (split audio)
 				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
@@ -445,9 +473,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample the data (since it's the 1st slice)
 				resampled_buffer = resampler->GetResampledBuffer();
-
-				// Get the length of the resampled buffer (if one exists)
-				resampled_buffer_size = resampled_buffer->getNumSamples();
 
 				// Just take the samples we need for the requested frame
 				int start = (number_of_samples * (time.GetRepeatFraction(frame_number).num - 1));
@@ -558,7 +583,6 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 
 				// Resample data, and return new buffer pointer
 				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
-				int resampled_buffer_size = buffer->getNumSamples();
 
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
@@ -645,14 +669,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 }
 
 // Generate JSON string of this object
-std::string Clip::Json() {
+std::string Clip::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Get all properties for a specific frame
-std::string Clip::PropertiesJSON(int64_t requested_frame) {
+std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -709,6 +733,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) {
 	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
 	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
+	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
 	root["time"] = add_property_json("Time", time.GetValue(requested_frame), "float", "", &time, 0.0, 30 * 60 * 60 * 48, false, requested_frame);
 	root["channel_filter"] = add_property_json("Channel Filter", channel_filter.GetValue(requested_frame), "int", "", &channel_filter, -1, 10, false, requested_frame);
@@ -739,8 +765,8 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) {
 	return root.toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Clip::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Clip::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
@@ -765,6 +791,8 @@ Json::Value Clip::JsonValue() {
 	root["crop_y"] = crop_y.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
 	root["shear_y"] = shear_y.JsonValue();
+	root["origin_x"] = origin_x.JsonValue();
+	root["origin_y"] = origin_y.JsonValue();
 	root["channel_filter"] = channel_filter.JsonValue();
 	root["channel_mapping"] = channel_mapping.JsonValue();
 	root["has_audio"] = has_audio.JsonValue();
@@ -782,40 +810,27 @@ Json::Value Clip::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	std::list<EffectBase*>::iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (auto existing_effect : effects)
 	{
-		// Get clip object from the iterator
-		EffectBase *existing_effect = (*effect_itr);
 		root["effects"].append(existing_effect->JsonValue());
 	}
 
 	if (reader)
 		root["reader"] = reader->JsonValue();
+	else
+		root["reader"] = Json::Value(Json::objectValue);
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void Clip::SetJson(std::string value) {
+void Clip::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -826,8 +841,8 @@ void Clip::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Clip::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Clip::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ClipBase::SetJsonValue(root);
@@ -875,6 +890,10 @@ void Clip::SetJsonValue(Json::Value root) {
 		shear_x.SetJsonValue(root["shear_x"]);
 	if (!root["shear_y"].isNull())
 		shear_y.SetJsonValue(root["shear_y"]);
+	if (!root["origin_x"].isNull())
+		origin_x.SetJsonValue(root["origin_x"]);
+	if (!root["origin_y"].isNull())
+		origin_y.SetJsonValue(root["origin_y"]);
 	if (!root["channel_filter"].isNull())
 		channel_filter.SetJsonValue(root["channel_filter"]);
 	if (!root["channel_mapping"].isNull())
@@ -905,10 +924,7 @@ void Clip::SetJsonValue(Json::Value root) {
 		effects.clear();
 
 		// loop through effects
-		for (int x = 0; x < root["effects"].size(); x++) {
-			// Get each effect
-			Json::Value existing_effect = root["effects"][x];
-
+		for (const auto existing_effect : root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
 
@@ -982,11 +998,17 @@ void Clip::SetJsonValue(Json::Value root) {
 				// Create new reader
 				reader = new DummyReader();
 				reader->SetJsonValue(root["reader"]);
+
+			} else if (type == "Timeline") {
+
+				// Create new reader (always load from file again)
+				// This prevents FrameMappers from being loaded on accident
+				reader = new Timeline(root["reader"]["path"].asString(), true);
 			}
 
 			// mark as managed reader and set parent
 			if (reader) {
-				reader->SetClip(this);
+				reader->SetParentClip(this);
 				allocated_reader = reader;
 			}
 
@@ -1025,12 +1047,8 @@ void Clip::RemoveEffect(EffectBase* effect)
 std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
-	std::list<EffectBase*>::iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (auto effect : effects)
 	{
-		// Get clip object from the iterator
-		EffectBase *effect = (*effect_itr);
-
 		// Apply the effect to this frame
 		frame = effect->GetFrame(frame, frame->number);
 

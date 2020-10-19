@@ -30,78 +30,36 @@ if(ENABLE_COVERAGE)
   include(CodeCoverage)
 endif()
 
-set(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
-
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if (WIN32)
-	STRING(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
-  #add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	SET(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
-
+# Test media path, used by unit tests for input data
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 
 ################### UNITTEST++ #####################
 # Find UnitTest++ libraries (used for unit testing)
-FIND_PACKAGE(UnitTest++ REQUIRED)
+find_package(UnitTest++)
 
-# Include UnitTest++ headers (needed for compile)
-include_directories(${UNITTEST++_INCLUDE_DIR})
-
-################ IMAGE MAGICK ##################
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if(ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-
-  #Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-  if (MAGICKCORE_QUANTUM_DEPTH)
-  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-  else()
-  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-  endif()
-
-  if (MAGICKCORE_HDRI_ENABLE)
-  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-  else()
-  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-  endif()
-
+if (NOT UnitTest++_FOUND)
+  set(TESTS_ENABLED OFF PARENT_SCOPE)
+  return()
 endif()
 
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.1.8 REQUIRED)
+# Include UnitTest++ headers (needed for compile)
+include_directories(${UnitTest++_INCLUDE_DIRS})
 
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
+set_package_properties(UnitTest++ PROPERTIES
+  TYPE RECOMMENDED
+  PURPOSE "Unit testing framework")
 
 
 ################# BLACKMAGIC DECKLINK ###################
-if (ENABLE_BLACKMAGIC)
+if(ENABLE_BLACKMAGIC)
 	# Find BlackMagic DeckLinkAPI libraries
 	find_package(BlackMagic)
 
-	if (BLACKMAGIC_FOUND)
+	if(BLACKMAGIC_FOUND)
 		# Include Blackmagic headers (needed for compile)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 	endif()
-endif()
-
-
-################### RESVG #####################
-# Find resvg library (used for rendering svg files)
-find_package(RESVG)
-
-# Include resvg headers (optional SVG library)
-if (RESVG_FOUND)
-	include_directories(${RESVG_INCLUDE_DIRS})
 endif()
 
 
@@ -113,16 +71,19 @@ set(OPENSHOT_TESTS
 	Clip
 	Color
 	Coordinate
+	DummyReader
 	ReaderBase
 	ImageWriter
 	FFmpegReader
 	FFmpegWriter
 	Fraction
+	Frame
 	FrameMapper
 	KeyFrame
 	Point
 	Settings
-	Timeline )
+	Timeline
+)
 
 foreach(testname IN LISTS OPENSHOT_TESTS)
   # Create unit test executable (openshot-${testname}-test)

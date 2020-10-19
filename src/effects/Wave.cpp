@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Wave.h"
+#include "Wave.h"
 
 using namespace openshot;
 
@@ -68,15 +68,13 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Get pixels for frame image
+	// Get original pixels for frame image, and also make a copy for editing
+	const unsigned char *original_pixels = (unsigned char *) frame_image->constBits();
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-
-	// Make temp copy of pixels before we start changing them
-	unsigned char *temp_image = new unsigned char[frame_image->width() * frame_image->height() * 4]();
-	memcpy(temp_image, pixels, sizeof(char) * frame_image->width() * frame_image->height() * 4);
+	int pixel_count = frame_image->width() * frame_image->height();
 
 	// Get current keyframe values
-	double time = frame_number;//abs(((frame_number + 255) % 510) - 255);
+	double time = frame_number;
 	double wavelength_value = wavelength.GetValue(frame_number);
 	double amplitude_value = amplitude.GetValue(frame_number);
 	double multiplier_value = multiplier.GetValue(frame_number);
@@ -84,43 +82,41 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	double speed_y_value = speed_y.GetValue(frame_number);
 
 	// Loop through pixels
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+	#pragma omp parallel for
+	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Calculate X and Y pixel coordinates
+		// Calculate pixel Y value
 		int Y = pixel / frame_image->width();
 
 		// Calculate wave pixel offsets
-		float noiseVal = (100 + Y * 0.001) * multiplier_value; // Time and time multiplier (to make the wave move)
-		float noiseAmp = noiseVal * amplitude_value; // Apply amplitude / height of the wave
-		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value)); // Waveform algorithm on y-axis
-		float waveVal = (waveformVal + shift_x_value) * noiseAmp; // Shifts pixels on the x-axis
+		float noiseVal = (100 + Y * 0.001) * multiplier_value;  // Time and time multiplier (to make the wave move)
+		float noiseAmp = noiseVal * amplitude_value;  // Apply amplitude / height of the wave
+		float waveformVal = sin((Y * wavelength_value) + (time * speed_y_value));  // Waveform algorithm on y-axis
+		float waveVal = (waveformVal + shift_x_value) * noiseAmp;  // Shifts pixels on the x-axis
 
-		int source_X = round(pixel + waveVal) * 4;
-		if (source_X < 0)
-			source_X = 0;
-		if (source_X > frame_image->width() * frame_image->height() * 4 * sizeof(char))
-			source_X = (frame_image->width() * frame_image->height() * 4 * sizeof(char)) - (sizeof(char) * 4);
+		long unsigned int source_px = round(pixel + waveVal);
+		if (source_px < 0)
+			source_px = 0;
+		if (source_px >= pixel_count)
+			source_px = pixel_count - 1;
 
 		// Calculate source array location, and target array location, and copy the 4 color values
-		memcpy(&pixels[byte_index], &temp_image[source_X], sizeof(char) * 4);
+		memcpy(&pixels[pixel * 4], &original_pixels[source_px * 4], sizeof(char) * 4);
 	}
-
-	// Delete arrays
-	delete[] temp_image;
 
 	// return the modified frame
 	return frame;
 }
 
 // Generate JSON string of this object
-std::string Wave::Json() {
+std::string Wave::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Wave::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Wave::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -136,24 +132,12 @@ Json::Value Wave::JsonValue() {
 }
 
 // Load JSON string into this object
-void Wave::SetJson(std::string value) {
+void Wave::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -164,8 +148,8 @@ void Wave::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Wave::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Wave::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -184,7 +168,7 @@ void Wave::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Wave::PropertiesJSON(int64_t requested_frame) {
+std::string Wave::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

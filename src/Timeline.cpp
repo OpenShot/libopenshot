@@ -28,13 +28,13 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Timeline.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true), managed_cache(true)
+		is_open(false), auto_map_clips(true), managed_cache(true), path("")
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -64,8 +64,149 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.display_ratio = openshot::Fraction(width, height);
 	info.display_ratio.Reduce();
 	info.pixel_ratio = openshot::Fraction(1, 1);
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
 
-    // Init max image size
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
+	// Init max image size
+	SetMaxSize(info.width, info.height);
+
+	// Init cache
+	final_cache = new CacheMemory();
+	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+}
+
+// Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
+Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
+		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
+
+	// Create CrashHandler and Attach (incase of errors)
+	CrashHandler::Instance();
+
+	// Init final cache as NULL (will be created after loading json)
+	final_cache = NULL;
+
+	// Init viewport size (curve based, because it can be animated)
+	viewport_scale = Keyframe(100.0);
+	viewport_x = Keyframe(0.0);
+	viewport_y = Keyframe(0.0);
+
+	// Init background color
+	color.red = Keyframe(0.0);
+	color.green = Keyframe(0.0);
+	color.blue = Keyframe(0.0);
+
+	// Check if path exists
+	QFileInfo filePath(QString::fromStdString(path));
+	if (!filePath.exists()) {
+		throw InvalidFile("File could not be opened.", path);
+	}
+
+	// Check OpenShot Install Path exists
+	Settings *s = Settings::Instance();
+	QDir openshotPath(QString::fromStdString(s->PATH_OPENSHOT_INSTALL));
+	if (!openshotPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL could not be found.", s->PATH_OPENSHOT_INSTALL);
+	}
+	QDir openshotTransPath(openshotPath.filePath("transitions"));
+	if (!openshotTransPath.exists()) {
+		throw InvalidFile("PATH_OPENSHOT_INSTALL/transitions could not be found.", openshotTransPath.path().toStdString());
+	}
+
+	// Determine asset path
+	QString asset_name = filePath.baseName().left(30) + "_assets";
+	QDir asset_folder(filePath.dir().filePath(asset_name));
+	if (!asset_folder.exists()) {
+		// Create directory if needed
+		asset_folder.mkpath(".");
+	}
+
+	// Load UTF-8 project file into QString
+	QFile projectFile(QString::fromStdString(path));
+	projectFile.open(QFile::ReadOnly);
+	QString projectContents = QString::fromUtf8(projectFile.readAll());
+
+	// Convert all relative paths into absolute paths (if requested)
+	if (convert_absolute_paths) {
+
+		// Find all "image" or "path" references in JSON (using regex). Must loop through match results
+		// due to our path matching needs, which are not possible with the QString::replace() function.
+		QRegularExpression allPathsRegex(QStringLiteral("\"(image|path)\":.*?\"(.*?)\""));
+		std::vector<QRegularExpressionMatch> matchedPositions;
+		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(projectContents);
+		while (i.hasNext()) {
+			QRegularExpressionMatch match = i.next();
+			if (match.hasMatch()) {
+				// Push all match objects into a vector (so we can reverse them later)
+				matchedPositions.push_back(match);
+			}
+		}
+
+		// Reverse the matches (bottom of file to top, so our replacements don't break our match positions)
+		std::vector<QRegularExpressionMatch>::reverse_iterator itr;
+		for (itr = matchedPositions.rbegin(); itr != matchedPositions.rend(); itr++) {
+			QRegularExpressionMatch match = *itr;
+			QString relativeKey = match.captured(1); // image or path
+			QString relativePath = match.captured(2); // relative file path
+			QString absolutePath = "";
+
+			// Find absolute path of all path, image (including special replacements of @assets and @transitions)
+			if (relativePath.startsWith("@assets")) {
+				absolutePath = QFileInfo(asset_folder.absoluteFilePath(relativePath.replace("@assets", "."))).canonicalFilePath();
+			} else if (relativePath.startsWith("@transitions")) {
+				absolutePath = QFileInfo(openshotTransPath.absoluteFilePath(relativePath.replace("@transitions", "."))).canonicalFilePath();
+			} else {
+				absolutePath = QFileInfo(filePath.absoluteDir().absoluteFilePath(relativePath)).canonicalFilePath();
+			}
+
+			// Replace path in JSON content, if an absolute path was successfully found
+			if (!absolutePath.isEmpty()) {
+				projectContents.replace(match.capturedStart(0), match.capturedLength(0), "\"" + relativeKey + "\": \"" + absolutePath + "\"");
+			}
+		}
+		// Clear matches
+		matchedPositions.clear();
+	}
+
+	// Set JSON of project
+	SetJson(projectContents.toStdString());
+
+	// Calculate valid duration and set has_audio and has_video
+	// based on content inside this Timeline's clips.
+	float calculated_duration = 0.0;
+	for (auto clip : clips)
+	{
+		float clip_last_frame = clip->Position() + clip->Duration();
+		if (clip_last_frame > calculated_duration)
+			calculated_duration = clip_last_frame;
+		if (clip->Reader() && clip->Reader()->info.has_audio)
+			info.has_audio = true;
+		if (clip->Reader() && clip->Reader()->info.has_video)
+			info.has_video = true;
+
+	}
+	info.video_length = calculated_duration * info.fps.ToFloat();
+	info.duration = calculated_duration;
+
+	// Init FileInfo settings
+	info.acodec = "openshot::timeline";
+	info.vcodec = "openshot::timeline";
+	info.video_timebase = info.fps.Reciprocal();
+	info.has_video = true;
+	info.has_audio = true;
+
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -79,15 +220,16 @@ Timeline::~Timeline() {
 		Close();
 
 	// Free all allocated frame mappers
-	std::set<FrameMapper *>::iterator frame_mapper_itr;
-	for (frame_mapper_itr = allocated_frame_mappers.begin(); frame_mapper_itr != allocated_frame_mappers.end(); ++frame_mapper_itr) {
-		// Get frame mapper object from the iterator
-		FrameMapper *frame_mapper = (*frame_mapper_itr);
-		frame_mapper->Reader(NULL);
-		frame_mapper->Close();
-		delete frame_mapper;
+	std::set<FrameMapper *>::iterator it;
+	for (it = allocated_frame_mappers.begin(); it != allocated_frame_mappers.end(); ) {
+		// Dereference and clean up FrameMapper object
+		FrameMapper *mapper = (*it);
+		mapper->Reader(NULL);
+		mapper->Close();
+		delete mapper;
+		// Remove reference and proceed to next element
+		it = allocated_frame_mappers.erase(it);
 	}
-	allocated_frame_mappers.clear();
 
 	// Destroy previous cache (if managed by timeline)
 	if (managed_cache && final_cache) {
@@ -133,6 +275,67 @@ void Timeline::RemoveClip(Clip* clip)
 	clips.remove(clip);
 }
 
+// Look up a clip
+openshot::ClipBase* Timeline::GetClip(const std::string& id)
+{
+	// Find the matching clip (if any)
+	for (const auto& clip : clips) {
+		if (clip->Id() == id) {
+			return clip;
+		}
+	}
+	return nullptr;
+}
+
+// Look up a timeline effect
+openshot::EffectBase* Timeline::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
+}
+
+openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
+{
+	// Search all clips for matching effect ID
+	for (const auto& clip : clips) {
+		const auto e = clip->GetEffect(id);
+		if (e != nullptr) {
+			return e;
+		}
+	}
+	return nullptr;
+}
+
+// Compute the end time of the latest timeline element
+double Timeline::GetMaxTime() {
+	double last_clip = 0.0;
+	double last_effect = 0.0;
+
+	if (!clips.empty()) {
+		const auto max_clip = std::max_element(
+				clips.begin(), clips.end(), CompareClipEndFrames());
+		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+	}
+	if (!effects.empty()) {
+		const auto max_effect = std::max_element(
+				effects.begin(), effects.end(), CompareEffectEndFrames());
+		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+	}
+	return std::max(last_clip, last_effect);
+}
+
+// Compute the highest frame# based on the latest time and FPS
+int64_t Timeline::GetMaxFrame() {
+	double fps = info.fps.ToDouble();
+	auto max_time = GetMaxTime();
+	return std::round(max_time * fps) + 1;
+}
+
 // Apply a FrameMapper to a clip which matches the settings of this timeline
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
@@ -169,12 +372,8 @@ void Timeline::ApplyMapperToClips()
 	ClearAllCache();
 
 	// Loop through all clips
-	std::list<Clip*>::iterator clip_itr;
-	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	for (auto clip : clips)
 	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
-
 		// Apply framemapper (or update existing framemapper)
 		apply_mapper_to_clip(clip);
 	}
@@ -197,12 +396,8 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::apply_effects", "frame->number", frame->number, "timeline_frame_number", timeline_frame_number, "layer", layer);
 
 	// Find Effects at this position and layer
-	std::list<EffectBase*>::iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (auto effect : effects)
 	{
-		// Get effect object from the iterator
-		EffectBase *effect = (*effect_itr);
-
 		// Does clip intersect the current requested time
 		long effect_start_position = round(effect->Position() * info.fps.ToDouble()) + 1;
 		long effect_end_position = round((effect->Position() + (effect->Duration())) * info.fps.ToDouble()) + 1;
@@ -379,8 +574,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	}
 
-	// Skip out if only an audio frame
-	if (!source_clip->Waveform() && !source_clip->Reader()->info.has_video)
+	// Skip out if video was disabled or only an audio frame (no visualisation in use)
+	if (source_clip->has_video.GetInt(clip_frame_number) == 0 ||
+	    (!source_clip->Waveform() && !source_clip->Reader()->info.has_video))
 		// Skip the rest of the image processing for performance reasons
 		return;
 
@@ -401,9 +597,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		// Loop through pixels
 		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
 		{
-			// Get the alpha values from the pixel
-			int A = pixels[byte_index + 3];
-
 			// Apply alpha to pixel
 			pixels[byte_index + 3] *= alpha;
 		}
@@ -466,34 +659,37 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
     float crop_h = source_clip->crop_height.GetValue(clip_frame_number);
     switch(source_clip->crop_gravity)
     {
-      case (GRAVITY_TOP):
-          crop_x += 0.5;
-          break;
-      case (GRAVITY_TOP_RIGHT):
-          crop_x += 1.0;
-          break;
-      case (GRAVITY_LEFT):
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_CENTER):
-          crop_x += 0.5;
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_RIGHT):
-          crop_x += 1.0;
-          crop_y += 0.5;
-          break;
-      case (GRAVITY_BOTTOM_LEFT):
-          crop_y += 1.0;
-          break;
-      case (GRAVITY_BOTTOM):
-          crop_x += 0.5;
-          crop_y += 1.0;
-          break;
-      case (GRAVITY_BOTTOM_RIGHT):
-          crop_x += 1.0;
-          crop_y += 1.0;
-          break;
+    case (GRAVITY_TOP_LEFT):
+        // This is only here to prevent unused-enum warnings
+        break;
+    case (GRAVITY_TOP):
+        crop_x += 0.5;
+        break;
+    case (GRAVITY_TOP_RIGHT):
+        crop_x += 1.0;
+        break;
+    case (GRAVITY_LEFT):
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_CENTER):
+        crop_x += 0.5;
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_RIGHT):
+        crop_x += 1.0;
+        crop_y += 0.5;
+        break;
+    case (GRAVITY_BOTTOM_LEFT):
+        crop_y += 1.0;
+        break;
+    case (GRAVITY_BOTTOM):
+        crop_x += 0.5;
+        crop_y += 1.0;
+        break;
+    case (GRAVITY_BOTTOM_RIGHT):
+        crop_x += 1.0;
+        crop_y += 1.0;
+        break;
     }
 
 
@@ -509,6 +705,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	switch (source_clip->gravity)
 	{
+	case (GRAVITY_TOP_LEFT):
+		// This is only here to prevent unused-enum warnings
+		break;
 	case (GRAVITY_TOP):
 		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
 		break;
@@ -548,6 +747,8 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	y += (Settings::Instance()->MAX_HEIGHT * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
 	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
 	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
+	float origin_x = source_clip->origin_x.GetValue(clip_frame_number);
+	float origin_y = source_clip->origin_y.GetValue(clip_frame_number);
 
 	bool transformed = false;
 	QTransform transform;
@@ -555,21 +756,22 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
-	if (!isEqual(r, 0)) {
-		// ROTATE CLIP
-		float origin_x = x + (scaled_source_width / 2.0);
-		float origin_y = y + (scaled_source_height / 2.0);
-		transform.translate(origin_x, origin_y);
-		transform.rotate(r);
-		transform.translate(-origin_x,-origin_y);
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.translate(x, y);
 		transformed = true;
 	}
 
-    if (!isEqual(x, 0) || !isEqual(y, 0)) {
-        // TRANSLATE/MOVE CLIP
-        transform.translate(x, y);
-        transformed = true;
-    }
+	if (!isEqual(r, 0) || !isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
+		// ROTATE CLIP (around origin_x, origin_y)
+		float origin_x_value = (scaled_source_width * origin_x);
+		float origin_y_value = (scaled_source_height * origin_y);
+		transform.translate(origin_x_value, origin_y_value);
+		transform.rotate(r);
+		transform.shear(shear_x, shear_y);
+		transform.translate(-origin_x_value,-origin_y_value);
+		transformed = true;
+	}
 
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
@@ -579,12 +781,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		transform.scale(source_width_scale, source_height_scale);
 		transformed = true;
 	}
-
-    if (!isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
-        // SHEAR HEIGHT/WIDTH
-        transform.shear(shear_x, shear_y);
-        transformed = true;
-    }
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed);
@@ -611,6 +807,10 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
         std::stringstream frame_number_str;
         switch (source_clip->display)
         {
+            case (FRAME_DISPLAY_NONE):
+                // This is only here to prevent unused-enum warnings
+                break;
+
             case (FRAME_DISPLAY_CLIP):
                 frame_number_str << clip_frame_number;
                 break;
@@ -692,12 +892,8 @@ void Timeline::Close()
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::Close");
 
 	// Close all open clips
-	std::list<Clip*>::iterator clip_itr;
-	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	for (auto clip : clips)
 	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
-
 		// Open or Close this clip, based on if it's intersecting or not
 		update_open_clips(clip, false);
 	}
@@ -706,7 +902,8 @@ void Timeline::Close()
 	is_open = false;
 
 	// Clear cache
-	final_cache->Clear();
+	if (final_cache)
+		final_cache->Clear();
 }
 
 // Open the reader (and start consuming resources)
@@ -768,10 +965,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		#pragma omp critical (T_GetFrame)
 		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
 
-		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-		// Allow nested OpenMP sections
-		omp_set_nested(true);
-
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
 
@@ -780,10 +973,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 		{
 			// Loop through clips
-			for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
+			for (auto clip : nearby_clips)
 			{
-				// Get clip object from the iterator
-				Clip *clip = nearby_clips[clip_index];
                 long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
                 long clip_end_position = round((clip->Position() + clip->Duration()) * info.fps.ToDouble()) + 1;
 
@@ -832,10 +1023,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size());
 
 				// Find Clips near this time
-				for (int clip_index = 0; clip_index < nearby_clips.size(); clip_index++)
+				for (auto clip : nearby_clips)
 				{
-					// Get clip object from the iterator
-					Clip *clip = nearby_clips[clip_index];
                     long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
                     long clip_end_position = round((clip->Position() + clip->Duration()) * info.fps.ToDouble()) + 1;
 
@@ -850,9 +1039,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 						// Determine if clip is "top" clip on this layer (only happens when multiple clips are overlapping)
 						bool is_top_clip = true;
 						float max_volume = 0.0;
-						for (int top_clip_index = 0; top_clip_index < nearby_clips.size(); top_clip_index++)
+						for (auto nearby_clip : nearby_clips)
 						{
-							Clip *nearby_clip = nearby_clips[top_clip_index];
                             long nearby_clip_start_position = round(nearby_clip->Position() * info.fps.ToDouble()) + 1;
                             long nearby_clip_end_position = round((nearby_clip->Position() + nearby_clip->Duration()) * info.fps.ToDouble()) + 1;
 							long nearby_clip_start_frame = (nearby_clip->Start() * info.fps.ToDouble()) + 1;
@@ -927,12 +1115,8 @@ std::vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, in
 	sort_clips();
 
 	// Find Clips at this time
-	std::list<Clip*>::iterator clip_itr;
-	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	for (auto clip : clips)
 	{
-		// Get clip object from the iterator
-		Clip *clip = (*clip_itr);
-
 		// Does clip intersect the current requested time
 		long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
 		long clip_end_position = round((clip->Position() + clip->Duration()) * info.fps.ToDouble()) + 1;
@@ -977,14 +1161,14 @@ void Timeline::SetCache(CacheBase* new_cache) {
 }
 
 // Generate JSON string of this object
-std::string Timeline::Json() {
+std::string Timeline::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Timeline::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Timeline::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -993,16 +1177,14 @@ Json::Value Timeline::JsonValue() {
 	root["viewport_x"] = viewport_x.JsonValue();
 	root["viewport_y"] = viewport_y.JsonValue();
 	root["color"] = color.JsonValue();
+	root["path"] = path;
 
 	// Add array of clips
 	root["clips"] = Json::Value(Json::arrayValue);
 
 	// Find Clips at this time
-	std::list<Clip*>::iterator clip_itr;
-	for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+	for (const auto existing_clip : clips)
 	{
-		// Get clip object from the iterator
-		Clip *existing_clip = (*clip_itr);
 		root["clips"].append(existing_clip->JsonValue());
 	}
 
@@ -1010,11 +1192,8 @@ Json::Value Timeline::JsonValue() {
 	root["effects"] = Json::Value(Json::arrayValue);
 
 	// loop through effects
-	std::list<EffectBase*>::iterator effect_itr;
-	for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+	for (const auto existing_effect: effects)
 	{
-		// Get clip object from the iterator
-		EffectBase *existing_effect = (*effect_itr);
 		root["effects"].append(existing_effect->JsonValue());
 	}
 
@@ -1023,27 +1202,15 @@ Json::Value Timeline::JsonValue() {
 }
 
 // Load JSON string into this object
-void Timeline::SetJson(std::string value) {
+void Timeline::SetJson(const std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -1054,8 +1221,8 @@ void Timeline::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Timeline::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Timeline::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	bool was_open = is_open;
@@ -1064,15 +1231,16 @@ void Timeline::SetJsonValue(Json::Value root) {
 	// Set parent data
 	ReaderBase::SetJsonValue(root);
 
+	// Set data from Json (if key is found)
+	if (!root["path"].isNull())
+		path = root["path"].asString();
+
 	if (!root["clips"].isNull()) {
 		// Clear existing clips
 		clips.clear();
 
 		// loop through clips
-		for (int x = 0; x < root["clips"].size(); x++) {
-			// Get each clip
-			Json::Value existing_clip = root["clips"][x];
-
+		for (const Json::Value existing_clip : root["clips"]) {
 			// Create Clip
 			Clip *c = new Clip();
 
@@ -1089,10 +1257,7 @@ void Timeline::SetJsonValue(Json::Value root) {
 		effects.clear();
 
 		// loop through effects
-		for (int x = 0; x < root["effects"].size(); x++) {
-			// Get each effect
-			Json::Value existing_effect = root["effects"][x];
-
+		for (const Json::Value existing_effect :root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
 
@@ -1128,33 +1293,19 @@ void Timeline::ApplyJsonDiff(std::string value) {
     const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success || !root.isArray())
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid).");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Process the JSON change array, loop through each item
-		for (int x = 0; x < root.size(); x++) {
-			// Get each change
-			Json::Value change = root[x];
-			std::string root_key = change["key"][(uint)0].asString();
+		for (const Json::Value change : root) {
+			std::string change_key = change["key"][(uint)0].asString();
 
 			// Process each type of change
-			if (root_key == "clips")
+			if (change_key == "clips")
 				// Apply to CLIPS
 				apply_json_to_clips(change);
 
-			else if (root_key == "effects")
+			else if (change_key == "effects")
 				// Apply to EFFECTS
 				apply_json_to_effects(change);
 
@@ -1180,10 +1331,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 	Clip *existing_clip = NULL;
 
 	// Find id of clip (if any)
-	for (int x = 0; x < change["key"].size(); x++) {
+	for (auto key_part : change["key"]) {
 		// Get each change
-		Json::Value key_part = change["key"][x];
-
 		if (key_part.isObject()) {
 			// Check for id
 			if (!key_part["id"].isNull()) {
@@ -1191,11 +1340,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 				clip_id = key_part["id"].asString();
 
 				// Find matching clip in timeline (if any)
-				std::list<Clip*>::iterator clip_itr;
-				for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+				for (auto c : clips)
 				{
-					// Get clip object from the iterator
-					Clip *c = (*clip_itr);
 					if (c->Id() == clip_id) {
 						existing_clip = c;
 						break; // clip found, exit loop
@@ -1222,11 +1368,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 				// Find matching effect in timeline (if any)
 				std::list<EffectBase*> effect_list = existing_clip->Effects();
-				std::list<EffectBase*>::iterator effect_itr;
-				for (effect_itr=effect_list.begin(); effect_itr != effect_list.end(); ++effect_itr)
+				for (auto e : effect_list)
 				{
-					// Get effect object from the iterator
-					EffectBase *e = (*effect_itr);
 					if (e->Id() == effect_id) {
 						// Apply the change to the effect directly
 						apply_json_to_effects(change, e);
@@ -1308,9 +1451,7 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 	EffectBase *existing_effect = NULL;
 
 	// Find id of an effect (if any)
-	for (int x = 0; x < change["key"].size(); x++) {
-		// Get each change
-		Json::Value key_part = change["key"][x];
+	for (auto key_part : change["key"]) {
 
 		if (key_part.isObject()) {
 			// Check for id
@@ -1320,11 +1461,8 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 				std::string effect_id = key_part["id"].asString();
 
 				// Find matching effect in timeline (if any)
-				std::list<EffectBase*>::iterator effect_itr;
-				for (effect_itr=effects.begin(); effect_itr != effects.end(); ++effect_itr)
+				for (auto e : effects)
 				{
-					// Get effect object from the iterator
-					EffectBase *e = (*effect_itr);
 					if (e->Id() == effect_id) {
 						existing_effect = e;
 						break; // effect found, exit loop
@@ -1533,12 +1671,8 @@ void Timeline::ClearAllCache() {
     final_cache->Clear();
 
     // Loop through all clips
-    std::list<Clip*>::iterator clip_itr;
-    for (clip_itr=clips.begin(); clip_itr != clips.end(); ++clip_itr)
+    for (auto clip : clips)
     {
-        // Get clip object from the iterator
-        Clip *clip = (*clip_itr);
-
         // Clear cache on clip
         clip->Reader()->GetCache()->Clear();
 

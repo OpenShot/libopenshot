@@ -26,7 +26,7 @@ The following table summarizes our current level of support:
 
 ## Supported FFmpeg Versions
 
-* HW accel is supported from FFmpeg version 3.2 (3.3 for nVidia drivers)
+* HW accel is supported from FFmpeg version 3.4
 * HW accel was removed for nVidia drivers in Ubuntu for FFmpeg 4+
 
 **Notice:** The FFmpeg versions of Ubuntu and PPAs for Ubuntu show the

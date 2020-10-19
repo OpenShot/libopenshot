@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Shift.h"
+#include "Shift.h"
 
 using namespace openshot;
 
@@ -69,9 +69,9 @@ std::shared_ptr<Frame> Shift::GetFrame(std::shared_ptr<Frame> frame, int64_t fra
 
 	// Get the current shift amount, and clamp to range (-1 to 1 range)
 	double x_shift = x.GetValue(frame_number);
-	double x_shift_limit = fmod(abs(x_shift), 1.0);
+	double x_shift_limit = fmod(fabs(x_shift), 1.0);
 	double y_shift = y.GetValue(frame_number);
-	double y_shift_limit = fmod(abs(y_shift), 1.0);
+	double y_shift_limit = fmod(fabs(y_shift), 1.0);
 
 	// Declare temp arrays to hold pixels while we move things around
 	unsigned char *temp_row = new unsigned char[frame_image->width() * 4]();
@@ -133,14 +133,14 @@ std::shared_ptr<Frame> Shift::GetFrame(std::shared_ptr<Frame> frame, int64_t fra
 }
 
 // Generate JSON string of this object
-std::string Shift::Json() {
+std::string Shift::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Shift::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Shift::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -153,24 +153,12 @@ Json::Value Shift::JsonValue() {
 }
 
 // Load JSON string into this object
-void Shift::SetJson(std::string value) {
+void Shift::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -181,8 +169,8 @@ void Shift::SetJson(std::string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Shift::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Shift::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -195,7 +183,7 @@ void Shift::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Shift::PropertiesJSON(int64_t requested_frame) {
+std::string Shift::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
