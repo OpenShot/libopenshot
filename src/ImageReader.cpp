@@ -31,18 +31,11 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/ImageReader.h"
+#include "ImageReader.h"
 
 using namespace openshot;
 
-ImageReader::ImageReader(std::string path) : path(path), is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
-ImageReader::ImageReader(std::string path, bool inspect_reader) : path(path), is_open(false)
+ImageReader::ImageReader(const std::string& path, bool inspect_reader) : path(path), is_open(false)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -61,7 +54,7 @@ void ImageReader::Open()
 		try
 		{
 			// load image
-			image = std::shared_ptr<Magick::Image>(new Magick::Image(path));
+			image = std::make_shared<Magick::Image>(path);
 
 			// Give image a transparent background color
 			image->backgroundColor(Magick::Color("none"));
@@ -126,7 +119,9 @@ std::shared_ptr<Frame> ImageReader::GetFrame(int64_t requested_frame)
 		throw ReaderClosed("The FFmpegReader is closed.  Call Open() before calling this method.", path);
 
 	// Create or get frame object
-	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+	auto image_frame = std::make_shared<Frame>(
+		requested_frame, image->size().width(), image->size().height(),
+		"#000000", 0, 2);
 
 	// Add Image data to frame
 	image_frame->AddMagickImage(image);

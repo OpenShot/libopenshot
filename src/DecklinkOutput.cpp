@@ -53,7 +53,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DecklinkOutput.h"
+#include "DecklinkOutput.h"
 
 using namespace std;
 
