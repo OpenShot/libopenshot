@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Wave.h"
+#include "Wave.h"
 
 using namespace openshot;
 
@@ -74,7 +74,7 @@ std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	int pixel_count = frame_image->width() * frame_image->height();
 
 	// Get current keyframe values
-	double time = frame_number;//abs(((frame_number + 255) % 510) - 255);
+	double time = frame_number;
 	double wavelength_value = wavelength.GetValue(frame_number);
 	double amplitude_value = amplitude.GetValue(frame_number);
 	double multiplier_value = multiplier.GetValue(frame_number);

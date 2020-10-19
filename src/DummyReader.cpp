@@ -28,20 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DummyReader.h"
+#include "DummyReader.h"
 
 using namespace openshot;
 
-// Blank constructor for DummyReader, with default settings.
-DummyReader::DummyReader() {
-
-	// Call actual constructor with default values
-	DummyReader(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
-}
-
-// Constructor for DummyReader.  Pass a framerate and samplerate.
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
-
+// Initialize variables used by constructor
+void DummyReader::init(Fraction fps, int width, int height, int sample_rate, int channels, float duration) {
 	// Set key info settings
 	info.has_audio = false;
 	info.has_video = true;
@@ -68,10 +60,30 @@ DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, i
 	// Set the ratio based on the reduced fraction
 	info.display_ratio.num = size.num;
 	info.display_ratio.den = size.den;
+}
 
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
+// Blank constructor for DummyReader, with default settings.
+DummyReader::DummyReader() : dummy_cache(NULL), is_open(false) {
+
+	// Initialize important variables
+	init(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
+}
+
+// Constructor for DummyReader.  Pass a framerate and samplerate.
+DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) : dummy_cache(NULL), is_open(false) {
+
+	// Initialize important variables
+	init(fps, width, height, sample_rate, channels, duration);
+}
+
+// Constructor which also takes a cache object
+DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration, CacheBase* cache) : is_open(false) {
+
+	// Initialize important variables
+	init(fps, width, height, sample_rate, channels, duration);
+
+	// Set cache object
+	dummy_cache = (CacheBase*) cache;
 }
 
 DummyReader::~DummyReader() {
@@ -102,21 +114,40 @@ void DummyReader::Close()
 	}
 }
 
-// Get an openshot::Frame object for a specific frame number of this reader.
+// Get an openshot::Frame object for a specific frame number of this reader. It is either a blank frame
+// or a custom frame added with passing a Cache object to the constructor.
 std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw ReaderClosed("The ImageReader is closed.  Call Open() before calling this method.", "dummy");
 
-	if (image_frame)
-	{
+	int dummy_cache_count = 0;
+	if (dummy_cache) {
+		dummy_cache_count = dummy_cache->Count();
+	}
+
+	if (dummy_cache_count == 0 && image_frame) {
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
 		// Always return same frame (regardless of which frame number was requested)
 		image_frame->number = requested_frame;
 		return image_frame;
+
+	} else if (dummy_cache_count > 0) {
+		// Create a scoped lock, allowing only a single thread to run the following code at one time
+		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+
+		// Get a frame from the dummy cache
+		std::shared_ptr<openshot::Frame> f = dummy_cache->GetFrame(requested_frame);
+		if (f) {
+			// return frame from cache (if found)
+			return f;
+		} else {
+			// No cached frame found
+			throw InvalidFile("Requested frame not found. You can only access Frame numbers that exist in the Cache object.", "dummy");
+		}
 	}
 	else
 		// no frame loaded

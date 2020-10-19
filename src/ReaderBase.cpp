@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ReaderBase.h"
+#include "ReaderBase.h"
 
 using namespace openshot;
 
@@ -248,14 +248,4 @@ void ReaderBase::SetJsonValue(const Json::Value root) {
 			info.metadata[key] = root["metadata"][key].asString();
 		}
 	}
-}
-
-/// Parent clip object of this reader (which can be unparented and NULL)
-openshot::ClipBase* ReaderBase::GetClip() {
-	return parent;
-}
-
-/// Set parent clip object of this reader
-void ReaderBase::SetClip(openshot::ClipBase* clip) {
-	parent = clip;
 }

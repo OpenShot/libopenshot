@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Shift.h"
+#include "Shift.h"
 
 using namespace openshot;
 
@@ -69,9 +69,9 @@ std::shared_ptr<Frame> Shift::GetFrame(std::shared_ptr<Frame> frame, int64_t fra
 
 	// Get the current shift amount, and clamp to range (-1 to 1 range)
 	double x_shift = x.GetValue(frame_number);
-	double x_shift_limit = fmod(abs(x_shift), 1.0);
+	double x_shift_limit = fmod(fabs(x_shift), 1.0);
 	double y_shift = y.GetValue(frame_number);
-	double y_shift_limit = fmod(abs(y_shift), 1.0);
+	double y_shift_limit = fmod(fabs(y_shift), 1.0);
 
 	// Declare temp arrays to hold pixels while we move things around
 	unsigned char *temp_row = new unsigned char[frame_image->width() * 4]();

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FrameMapper.h"
+#include "FrameMapper.h"
 
 using namespace std;
 using namespace openshot;
@@ -61,9 +61,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 
 // Destructor
 FrameMapper::~FrameMapper() {
-	if (is_open)
-		// Auto Close if not already
-		Close();
+
+	// Auto Close if not already
+	Close();
 
 	reader = NULL;
 }
@@ -450,7 +450,8 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		}
 
 		// Create a new frame
-		std::shared_ptr<Frame> frame = std::make_shared<Frame>(frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame);
+		auto frame = std::make_shared<Frame>(
+			frame_number, 1, 1, "#000000", samples_in_frame, channels_in_frame);
 		frame->SampleRate(mapped_frame->SampleRate());
 		frame->ChannelsLayout(mapped_frame->ChannelsLayout());
 
@@ -460,13 +461,14 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 		odd_frame = GetOrCreateFrame(mapped.Odd.Frame);
 
 		if (odd_frame)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*odd_frame->GetImage())), true);
+			frame->AddImage(std::make_shared<QImage>(*odd_frame->GetImage()), true);
 		if (mapped.Odd.Frame != mapped.Even.Frame) {
 			// Add even lines (if different than the previous image)
 			std::shared_ptr<Frame> even_frame;
 			even_frame = GetOrCreateFrame(mapped.Even.Frame);
 			if (even_frame)
-				frame->AddImage(std::shared_ptr<QImage>(new QImage(*even_frame->GetImage())), false);
+				frame->AddImage(
+					std::make_shared<QImage>(*even_frame->GetImage()), false);
 		}
 
 		// Resample audio on frame (if needed)
@@ -487,7 +489,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			// includes some additional input samples on first iteration,
 			// and continues the offset to ensure that the sample rate
 			// converter isn't input limited.
-			const int EXTRA_INPUT_SAMPLES = 20;
+			const int EXTRA_INPUT_SAMPLES = 100;
 
 			// Extend end sample count by an additional EXTRA_INPUT_SAMPLES samples
 			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
@@ -785,10 +787,23 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Create a new array (to hold all S16 audio samples for the current queued frames)
  	int16_t* frame_samples = (int16_t*) av_malloc(sizeof(int16_t)*total_frame_samples);
 
-	// Translate audio sample values back to 16 bit integers
-	for (int s = 0; s < total_frame_samples; s++)
-		// Translate sample value and copy into buffer
-		frame_samples[s] = int(frame_samples_float[s] * (1 << 15));
+	// Translate audio sample values back to 16 bit integers with saturation
+	float valF;
+	int16_t conv;
+	const int16_t max16 = 32767;
+	const int16_t min16 = -32768;
+	for (int s = 0; s < total_frame_samples; s++) {
+		valF = frame_samples_float[s] * (1 << 15);
+		if (valF > max16)
+			conv = max16;
+		else if (valF < min16)
+			conv = min16;
+		else
+			conv = int(valF + 32768.5) - 32768; // +0.5 is for rounding
+
+		// Copy into buffer
+		frame_samples[s] = conv;
+	}
 
 
 	// Deallocate float array
