@@ -25,16 +25,8 @@
 ################################################################################
 
 # Test media path, used by unit tests for input data
-file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/src/examples/" TEST_MEDIA_PATH)
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if(WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
 
 ################### UNITTEST++ #####################
 # Find UnitTest++ libraries (used for unit testing)
@@ -51,44 +43,6 @@ include_directories(${UnitTest++_INCLUDE_DIRS})
 set_package_properties(UnitTest++ PROPERTIES
   TYPE RECOMMENDED
   PURPOSE "Unit testing framework")
-
-################ IMAGE MAGICK ##################
-# Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-if(MAGICKCORE_QUANTUM_DEPTH)
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-else()
-	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-endif()
-
-if(MAGICKCORE_HDRI_ENABLE)
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-else()
-	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-endif()
-
-if(OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-else()
-	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-endif()
-
-# Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-if(ImageMagick_FOUND)
-	# Include ImageMagick++ headers (needed for compile)
-	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-	# define a global var (used in the C++)
-	add_definitions( -DUSE_IMAGEMAGICK=1 )
-	set(CMAKE_SWIG_FLAGS "-DUSE_IMAGEMAGICK=1")
-endif()
-
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
-
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
 
 
 ################# BLACKMAGIC DECKLINK ###################
@@ -109,6 +63,7 @@ set(OPENSHOT_TEST_FILES
   Clip_Tests.cpp
   Color_Tests.cpp
   Coordinate_Tests.cpp
+  DummyReader_Tests.cpp
   ReaderBase_Tests.cpp
   ImageWriter_Tests.cpp
   FFmpegReader_Tests.cpp

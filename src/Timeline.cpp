@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Timeline.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -67,7 +67,13 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.acodec = "openshot::timeline";
 	info.vcodec = "openshot::timeline";
 
-    // Init max image size
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -76,7 +82,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
-Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
+Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
 
 	// Create CrashHandler and Attach (incase of errors)
@@ -194,6 +200,12 @@ Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
 	info.has_video = true;
 	info.has_audio = true;
 
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
 	// Init max image size
 	SetMaxSize(info.width, info.height);
 
@@ -261,6 +273,67 @@ void Timeline::RemoveEffect(EffectBase* effect)
 void Timeline::RemoveClip(Clip* clip)
 {
 	clips.remove(clip);
+}
+
+// Look up a clip
+openshot::ClipBase* Timeline::GetClip(const std::string& id)
+{
+	// Find the matching clip (if any)
+	for (const auto& clip : clips) {
+		if (clip->Id() == id) {
+			return clip;
+		}
+	}
+	return nullptr;
+}
+
+// Look up a timeline effect
+openshot::EffectBase* Timeline::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
+}
+
+openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
+{
+	// Search all clips for matching effect ID
+	for (const auto& clip : clips) {
+		const auto e = clip->GetEffect(id);
+		if (e != nullptr) {
+			return e;
+		}
+	}
+	return nullptr;
+}
+
+// Compute the end time of the latest timeline element
+double Timeline::GetMaxTime() {
+	double last_clip = 0.0;
+	double last_effect = 0.0;
+
+	if (!clips.empty()) {
+		const auto max_clip = std::max_element(
+				clips.begin(), clips.end(), CompareClipEndFrames());
+		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+	}
+	if (!effects.empty()) {
+		const auto max_effect = std::max_element(
+				effects.begin(), effects.end(), CompareEffectEndFrames());
+		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+	}
+	return std::max(last_clip, last_effect);
+}
+
+// Compute the highest frame# based on the latest time and FPS
+int64_t Timeline::GetMaxFrame() {
+	double fps = info.fps.ToDouble();
+	auto max_time = GetMaxTime();
+	return std::round(max_time * fps) + 1;
 }
 
 // Apply a FrameMapper to a clip which matches the settings of this timeline
@@ -891,10 +964,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		std::vector<Clip*> nearby_clips;
 		#pragma omp critical (T_GetFrame)
 		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
-
-		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-		// Allow nested OpenMP sections
-		omp_set_nested(true);
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);

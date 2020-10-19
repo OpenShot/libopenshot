@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoRenderer.h"
+#include "VideoRenderer.h"
 
 
 VideoRenderer::VideoRenderer(QObject *parent)

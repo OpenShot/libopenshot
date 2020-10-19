@@ -28,17 +28,17 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/FrameMapper.h"
+#include "Clip.h"
+#include "FFmpegReader.h"
+#include "FrameMapper.h"
 #ifdef USE_IMAGEMAGICK
-	#include "../include/ImageReader.h"
-	#include "../include/TextReader.h"
+	#include "ImageReader.h"
+	#include "TextReader.h"
 #endif
-#include "../include/QtImageReader.h"
-#include "../include/ChunkReader.h"
-#include "../include/DummyReader.h"
-#include "../include/Timeline.h"
+#include "QtImageReader.h"
+#include "ChunkReader.h"
+#include "DummyReader.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -153,7 +153,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetClip(this);
+		reader->SetParentClip(this);
 	}
 }
 
@@ -210,7 +210,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetClip(this);
+		reader->SetParentClip(this);
 		allocated_reader = reader;
 		init_reader_rotation();
 	}
@@ -239,7 +239,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	reader = new_reader;
 
 	// set parent
-	reader->SetClip(this);
+	reader->SetParentClip(this);
 
 	// Init rotation (if any)
 	init_reader_rotation();
@@ -339,7 +339,10 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Create a new frame
-		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
+		auto frame = std::make_shared<Frame>(
+			new_frame_number, 1, 1, "#000000",
+			original_frame->GetAudioSamplesCount(),
+			original_frame->GetAudioChannelsCount());
 		{
 			frame->SampleRate(original_frame->SampleRate());
 			frame->ChannelsLayout(original_frame->ChannelsLayout());
@@ -347,7 +350,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)
@@ -366,6 +369,18 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+// Look up an effect by ID
+openshot::EffectBase* Clip::GetEffect(const std::string& id)
+{
+	// Find the matching effect (if any)
+	for (const auto& effect : effects) {
+		if (effect->Id() == id) {
+			return effect;
+		}
+	}
+	return nullptr;
 }
 
 // Get file extension
@@ -993,7 +1008,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 			// mark as managed reader and set parent
 			if (reader) {
-				reader->SetClip(this);
+				reader->SetParentClip(this);
 				allocated_reader = reader;
 			}
 

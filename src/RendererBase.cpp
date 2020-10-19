@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/RendererBase.h"
+#include "RendererBase.h"
 using namespace openshot;
 
 RendererBase::RendererBase()
