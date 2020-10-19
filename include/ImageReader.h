@@ -76,15 +76,15 @@ namespace openshot
 		bool is_open;
 
 	public:
-
-		/// Constructor for ImageReader.  This automatically opens the media file and loads
-		/// frame 1, or it throws one of the following exceptions.
-		ImageReader(std::string path);
-
-		/// Constructor for ImageReader.  This only opens the media file to inspect its properties
-		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
-		/// when you are inflating the object using JSON after instantiating it.
-		ImageReader(std::string path, bool inspect_reader);
+		/// @brief Constructor for ImageReader.
+		///
+		/// Opens the media file to inspect its properties and loads frame 1,
+		/// iff inspect_reader == true (the default). Pass a false value in
+		/// the optional parameter to defer this initial Open()/Close() cycle.
+		///
+		/// When not inspecting the media file, it's much faster, and useful
+		/// when you are inflating the object using JSON after instantiation.
+		ImageReader(const std::string& path, bool inspect_reader=true);
 
 		/// Close File
 		void Close() override;

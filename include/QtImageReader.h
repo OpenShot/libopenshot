@@ -72,15 +72,15 @@ namespace openshot
 		QSize max_size;	///> Current max_size as calculated with Clip properties
 
 	public:
-
-		/// Constructor for QtImageReader.  This automatically opens the media file and loads
-		/// frame 1, or it throws one of the following exceptions.
-		QtImageReader(std::string path);
-
-		/// Constructor for QtImageReader.  This only opens the media file to inspect its properties
-		/// if inspect_reader=true. When not inspecting the media file, it's much faster, and useful
-		/// when you are inflating the object using JSON after instantiating it.
-		QtImageReader(std::string path, bool inspect_reader);
+		/// @brief Constructor for QtImageReader.
+		///
+		/// Opens the media file to inspect its properties and loads frame 1,
+		/// iff inspect_reader == true (the default). Pass a false value in
+		/// the optional parameter to defer this initial Open()/Close() cycle.
+		///
+		/// When not inspecting the media file, it's much faster, and useful
+		/// when you are inflating the object using JSON after instantiation.
+		QtImageReader(std::string path, bool inspect_reader=true);
 
 		virtual ~QtImageReader();
 
