@@ -53,7 +53,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DecklinkInput.h"
+#include "DecklinkInput.h"
 
 using namespace std;
 
@@ -139,7 +139,7 @@ HRESULT DeckLinkInputDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame* 
 {
 	// Handle Video Frame
 	if(videoFrame)
-	{	
+	{
 
 		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
 		{
@@ -245,7 +245,8 @@ omp_set_nested(true);
 						m_rgbFrame->GetBytes(&frameBytes);
 
 						// *********** CREATE OPENSHOT FRAME **********
-						std::shared_ptr<openshot::Frame> f(new openshot::Frame(copy_frameCount, width, height, "#000000", 2048, 2));
+						auto f = std::make_shared<openshot::Frame>(
+                            copy_frameCount, width, height, "#000000", 2048, 2);
 
 						// Add Image data to openshot frame
 						// TODO: Fix Decklink support with QImage Upgrade
@@ -289,6 +290,3 @@ HRESULT DeckLinkInputDelegate::VideoInputFormatChanged(BMDVideoInputFormatChange
 {
     return S_OK;
 }
-
-
-

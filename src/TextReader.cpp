@@ -31,7 +31,7 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/TextReader.h"
+#include "TextReader.h"
 
 using namespace openshot;
 
@@ -43,7 +43,7 @@ TextReader::TextReader() : width(1024), height(768), x_offset(0), y_offset(0), t
 	Close();
 }
 
-TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, string text, string font, double size, string text_color, string background_color)
+TextReader::TextReader(int width, int height, int x_offset, int y_offset, GravityType gravity, std::string text, std::string font, double size, std::string text_color, std::string background_color)
 : width(width), height(height), x_offset(x_offset), y_offset(y_offset), text(text), font(font), size(size), text_color(text_color), background_color(background_color), is_open(false), gravity(gravity)
 {
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
@@ -51,7 +51,7 @@ TextReader::TextReader(int width, int height, int x_offset, int y_offset, Gravit
 	Close();
 }
 
-void TextReader::SetTextBackgroundColor(string color) {
+void TextReader::SetTextBackgroundColor(std::string color) {
 	text_background_color = color;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
@@ -66,7 +66,8 @@ void TextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width,height), Magick::Color(background_color)));
+		image = std::make_shared<Magick::Image>(
+			Magick::Geometry(width,height), Magick::Color(background_color));
 
 		// Give image a transparent background color
 		image->backgroundColor(Magick::Color("none"));
@@ -166,10 +167,12 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 	if (image)
 	{
 		// Create or get frame object
-		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+		auto image_frame = std::make_shared<Frame>(
+			requested_frame, image->size().width(), image->size().height(),
+			"#000000", 0, 2);
 
 		// Add Image data to frame
-		std::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+		auto copy_image = std::make_shared<Magick::Image>(*image.get());
 		copy_image->modifyImage(); // actually copy the image data to this object
 		//TODO: Reimplement this with QImage
 		image_frame->AddMagickImage(copy_image);
@@ -178,7 +181,7 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 		return image_frame;
 	} else {
 		// return empty frame
-		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
+		auto image_frame = std::make_shared<Frame>(1, 640, 480, "#000000", 0, 2);
 
 		// return frame object
 		return image_frame;
@@ -187,14 +190,14 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string TextReader::Json() {
+std::string TextReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value TextReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value TextReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -216,24 +219,10 @@ Json::Value TextReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void TextReader::SetJson(string value) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
+void TextReader::SetJson(const std::string value) {
 	try
 	{
+		Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -244,8 +233,8 @@ void TextReader::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void TextReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void TextReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

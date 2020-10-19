@@ -28,14 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Profiles.h"
+#include "Profiles.h"
 
 using namespace openshot;
 
 
 // @brief Constructor for Profile.
 // @param path 	The folder path / location of a profile file
-Profile::Profile(string path) {
+Profile::Profile(std::string path) {
 
 	bool read_file = false;
 
@@ -67,51 +67,51 @@ Profile::Profile(string path) {
 
 				// Split current line
 				QStringList parts = line.split( "=" );
-				string setting = parts[0].toStdString();
-				string value = parts[1].toStdString();
+				std::string setting = parts[0].toStdString();
+				std::string value = parts[1].toStdString();
 				int value_int = 0;
 
 				// update struct (based on line number)
 				if (setting == "description")
 					info.description = value;
 				else if (setting == "frame_rate_num") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.fps.num = value_int;
 				}
 				else if (setting == "frame_rate_den") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.fps.den = value_int;
 				}
 				else if (setting == "width") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.width = value_int;
 				}
 				else if (setting == "height") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.height = value_int;
 				}
 				else if (setting == "progressive") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.interlaced_frame = !(bool)value_int;
 				}
 				else if (setting == "sample_aspect_num") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.pixel_ratio.num = value_int;
 				}
 				else if (setting == "sample_aspect_den") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.pixel_ratio.den = value_int;
 				}
 				else if (setting == "display_aspect_num") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.display_ratio.num = value_int;
 				}
 				else if (setting == "display_aspect_den") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.display_ratio.den = value_int;
 				}
 				else if (setting == "colorspace") {
-					stringstream(value) >> value_int;
+					std::stringstream(value) >> value_int;
 					info.pixel_format = value_int;
 				}
 			}
@@ -133,14 +133,14 @@ Profile::Profile(string path) {
 }
 
 // Generate JSON string of this object
-string Profile::Json() {
+std::string Profile::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Profile::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Profile::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -163,24 +163,12 @@ Json::Value Profile::JsonValue() {
 }
 
 // Load JSON string into this object
-void Profile::SetJson(string value) {
+void Profile::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -191,8 +179,8 @@ void Profile::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Profile::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Profile::SetJsonValue(const Json::Value root) {
 
 	if (!root["height"].isNull())
 		info.height = root["height"].asInt();

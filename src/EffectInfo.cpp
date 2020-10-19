@@ -28,11 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectInfo.h"
+#include "EffectInfo.h"
 
 using namespace openshot;
-static map<std::string, EffectBase*(*)(uint16_t)> m_loadedDynamicEffects;
-static vector<void*> m_loadedDynamicHandles;
+
+static std::map<std::string, EffectBase*(*)(uint16_t)> m_loadedDynamicEffects;
+static std::vector<void*> m_loadedDynamicHandles;
 
 // Generate JSON string of this object
 std::string EffectInfo::Json() {
@@ -61,7 +62,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
 
-	else if (effect_type == "Color Shift")
+	else if (effect_type == "ColorShift")
 		return new ColorShift();
 
 	else if (effect_type == "Crop")
@@ -149,7 +150,7 @@ void EffectInfo::UnloadDynamicEffects(){
 }
 #endif
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value EffectInfo::JsonValue() {
 
 	// Create root json object

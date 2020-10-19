@@ -28,12 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ClipBase.h"
+#include "ClipBase.h"
 
 using namespace openshot;
 
-// Generate Json::JsonValue for this object
-Json::Value ClipBase::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ClipBase::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -48,8 +48,8 @@ Json::Value ClipBase::JsonValue() {
 	return root;
 }
 
-// Load Json::JsonValue into this object
-void ClipBase::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ClipBase::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["id"].isNull())
@@ -65,10 +65,10 @@ void ClipBase::SetJsonValue(Json::Value root) {
 }
 
 // Generate JSON for a property
-Json::Value ClipBase::add_property_json(string name, float value, string type, string memo, Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) {
+Json::Value ClipBase::add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const {
 
 	// Requested Point
-	Point requested_point(requested_frame, requested_frame);
+	const Point requested_point(requested_frame, requested_frame);
 
 	// Create JSON Object
 	Json::Value prop = Json::Value(Json::objectValue);
@@ -101,7 +101,7 @@ Json::Value ClipBase::add_property_json(string name, float value, string type, s
 	return prop;
 }
 
-Json::Value ClipBase::add_property_choice_json(string name, int value, int selected_value) {
+Json::Value ClipBase::add_property_choice_json(std::string name, int value, int selected_value) const {
 
 	// Create choice
 	Json::Value new_choice = Json::Value(Json::objectValue);

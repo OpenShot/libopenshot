@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Coordinate.h"
+#include "Coordinate.h"
 
 using namespace std;
 using namespace openshot;
@@ -45,14 +45,14 @@ Coordinate::Coordinate(double x, double y) :
 
 
 // Generate JSON string of this object
-string Coordinate::Json() {
+std::string Coordinate::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Coordinate::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Coordinate::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -69,24 +69,12 @@ Json::Value Coordinate::JsonValue() {
 }
 
 // Load JSON string into this object
-void Coordinate::SetJson(string value) {
+void Coordinate::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -97,8 +85,8 @@ void Coordinate::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Coordinate::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Coordinate::SetJsonValue(const Json::Value root) {
 
 	// Set data from Json (if key is found)
 	if (!root["X"].isNull())

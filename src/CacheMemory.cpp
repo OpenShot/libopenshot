@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheMemory.h"
+#include "CacheMemory.h"
 
 using namespace std;
 using namespace openshot;
@@ -39,7 +39,7 @@ CacheMemory::CacheMemory() : CacheBase(0) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Constructor that sets the max bytes to cache
 CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
@@ -47,7 +47,7 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 	cache_type = "CacheMemory";
 	range_version = 0;
 	needs_range_processing = false;
-};
+}
 
 // Default destructor
 CacheMemory::~CacheMemory()
@@ -79,7 +79,7 @@ void CacheMemory::CalculateRanges() {
 		// Increment range version
 		range_version++;
 
-		vector<int64_t>::iterator itr_ordered;
+		std::vector<int64_t>::iterator itr_ordered;
 		int64_t starting_frame = *ordered_frame_numbers.begin();
 		int64_t ending_frame = *ordered_frame_numbers.begin();
 
@@ -92,12 +92,8 @@ void CacheMemory::CalculateRanges() {
 
 				// Add JSON object with start/end attributes
 				// Use strings, since int64_ts are supported in JSON
-				stringstream start_str;
-				start_str << starting_frame;
-				stringstream end_str;
-				end_str << ending_frame;
-				range["start"] = start_str.str();
-				range["end"] = end_str.str();
+				range["start"] = std::to_string(starting_frame);
+				range["end"] = std::to_string(ending_frame);
 				ranges.append(range);
 
 				// Set new starting range
@@ -113,12 +109,8 @@ void CacheMemory::CalculateRanges() {
 
 		// Add JSON object with start/end attributes
 		// Use strings, since int64_ts are not supported in JSON
-		stringstream start_str;
-		start_str << starting_frame;
-		stringstream end_str;
-		end_str << ending_frame;
-		range["start"] = start_str.str();
-		range["end"] = end_str.str();
+		range["start"] = std::to_string(starting_frame);
+		range["end"] = std::to_string(ending_frame);
 		ranges.append(range);
 
 		// Cache range JSON as string
@@ -178,7 +170,7 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 	std::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
-	deque<int64_t>::iterator itr;
+	std::deque<int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 	{
@@ -201,7 +193,7 @@ int64_t CacheMemory::GetBytes()
 	int64_t total_bytes = 0;
 
 	// Loop through frames, and calculate total bytes
-	deque<int64_t>::reverse_iterator itr;
+	std::deque<int64_t>::reverse_iterator itr;
 	for(itr = frame_numbers.rbegin(); itr != frame_numbers.rend(); ++itr)
 	{
 		total_bytes += frames[*itr]->GetBytes();
@@ -223,7 +215,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
 
 	// Loop through frame numbers
-	deque<int64_t>::iterator itr;
+	std::deque<int64_t>::iterator itr;
 	for(itr = frame_numbers.begin(); itr != frame_numbers.end();)
 	{
 		if (*itr >= start_frame_number && *itr <= end_frame_number)
@@ -235,7 +227,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 	}
 
 	// Loop through ordered frame numbers
-	vector<int64_t>::iterator itr_ordered;
+	std::vector<int64_t>::iterator itr_ordered;
 	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end();)
 	{
 		if (*itr_ordered >= start_frame_number && *itr_ordered <= end_frame_number)
@@ -261,7 +253,7 @@ void CacheMemory::MoveToFront(int64_t frame_number)
 	if (frames.count(frame_number))
 	{
 		// Loop through frame numbers
-		deque<int64_t>::iterator itr;
+		std::deque<int64_t>::iterator itr;
 		for(itr = frame_numbers.begin(); itr != frame_numbers.end(); ++itr)
 		{
 			if (*itr == frame_number)
@@ -321,13 +313,13 @@ void CacheMemory::CleanUp()
 
 
 // Generate JSON string of this object
-string CacheMemory::Json() {
+std::string CacheMemory::Json() {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
+// Generate Json::Value for this object
 Json::Value CacheMemory::JsonValue() {
 
 	// Process range data (if anything has changed)
@@ -337,45 +329,25 @@ Json::Value CacheMemory::JsonValue() {
 	Json::Value root = CacheBase::JsonValue(); // get parent properties
 	root["type"] = cache_type;
 
-	stringstream range_version_str;
-	range_version_str << range_version;
-	root["version"] = range_version_str.str();
+	root["version"] = std::to_string(range_version);
 
 	// Parse and append range data (if any)
-	Json::Value ranges;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( json_ranges.c_str(),
-	                 json_ranges.c_str() + json_ranges.size(), &ranges, &errors );
-	delete reader;
-
-	if (success)
+	try {
+		const Json::Value ranges = openshot::stringToJson(json_ranges);
 		root["ranges"] = ranges;
+	} catch (...) { }
 
 	// return JsonValue
 	return root;
 }
 
 // Load JSON string into this object
-void CacheMemory::SetJson(string value) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+void CacheMemory::SetJson(const std::string value) {
 
 	try
 	{
+		// Parse string to Json::Value
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -386,8 +358,8 @@ void CacheMemory::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void CacheMemory::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void CacheMemory::SetJsonValue(const Json::Value root) {
 
 	// Close timeline before we do anything (this also removes all open and closing clips)
 	Clear();

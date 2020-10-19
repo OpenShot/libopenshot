@@ -28,14 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/AudioBufferSource.h"
+#include "AudioBufferSource.h"
 
 using namespace std;
 using namespace openshot;
 
 // Default constructor
 AudioBufferSource::AudioBufferSource(juce::AudioSampleBuffer *audio_buffer)
-		: position(0), start(0), repeat(false), buffer(audio_buffer)
+		: position(0), repeat(false), buffer(audio_buffer)
 { }
 
 // Destructor
@@ -43,7 +43,7 @@ AudioBufferSource::~AudioBufferSource()
 {
 	// forget the AudioSampleBuffer. It still exists; we just don't know about it.
 	buffer = NULL;
-};
+}
 
 // Get the next block of audio samples
 void AudioBufferSource::getNextAudioBlock (const juce::AudioSourceChannelInfo& info)

@@ -28,12 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ChunkReader.h"
-#include "../include/FFmpegReader.h"
+#include "ChunkReader.h"
+#include "FFmpegReader.h"
+
+#include <QDir>
 
 using namespace openshot;
 
-ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
+ChunkReader::ChunkReader(std::string path, ChunkVersion chunk_version)
 		: path(path), chunk_size(24 * 3), is_open(false), version(chunk_version), local_reader(NULL)
 {
 	// Check if folder exists?
@@ -51,7 +53,7 @@ ChunkReader::ChunkReader(string path, ChunkVersion chunk_version)
 }
 
 // Check if folder path existing
-bool ChunkReader::does_folder_exist(string path)
+bool ChunkReader::does_folder_exist(std::string path)
 {
 	QDir dir(path.c_str());
 	return dir.exists();
@@ -61,12 +63,12 @@ bool ChunkReader::does_folder_exist(string path)
 void ChunkReader::load_json()
 {
 	// Load path of chunk folder
-	string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
-	stringstream json_string;
+	std::string json_path = QDir::cleanPath(QString(path.c_str()) + QDir::separator() + "info.json").toStdString();
+	std::stringstream json_string;
 
 	// Read the JSON file
-	ifstream myfile (json_path.c_str());
-	string line = "";
+	std::ifstream myfile (json_path.c_str());
+	std::string line = "";
 	if (myfile.is_open())
 	{
 		while (myfile.good())
@@ -81,7 +83,7 @@ void ChunkReader::load_json()
 	Json::Value root;
 	Json::CharReaderBuilder rbuilder;
 
-	string errors;
+	std::string errors;
 	bool success = Json::parseFromStream(rbuilder, json_string, &root, &errors);
 	if (!success)
 		// Raise exception
@@ -170,10 +172,10 @@ void ChunkReader::Close()
 }
 
 // get a formatted path of a specific chunk
-string ChunkReader::get_chunk_path(int64_t chunk_number, string folder, string extension)
+std::string ChunkReader::get_chunk_path(int64_t chunk_number, std::string folder, std::string extension)
 {
 	// Create path of new chunk video
-	stringstream chunk_count_string;
+	std::stringstream chunk_count_string;
 	chunk_count_string << chunk_number;
 	QString padded_count = "%1"; //chunk_count_string.str().c_str();
 	padded_count = padded_count.arg(chunk_count_string.str().c_str(), 6, '0');
@@ -202,7 +204,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 	if (previous_location.number != location.number)
 	{
 		// Determine version of chunk
-		string folder_name = "";
+		std::string folder_name = "";
 		switch (version)
 		{
 		case THUMBNAIL:
@@ -217,12 +219,12 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 		}
 
 		// Load path of chunk video
-		string chunk_video_path = get_chunk_path(location.number, folder_name, ".webm");
+		std::string chunk_video_path = get_chunk_path(location.number, folder_name, ".webm");
 
 		// Close existing reader (if needed)
 		if (local_reader)
 		{
-			cout << "Close READER" << endl;
+			std::cout << "Close READER" << std::endl;
 			// Close and delete old reader
 			local_reader->Close();
 			delete local_reader;
@@ -230,7 +232,7 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 
 		try
 		{
-			cout << "Load READER: " << chunk_video_path << endl;
+			std::cout << "Load READER: " << chunk_video_path << std::endl;
 			// Load new FFmpegReader
 			local_reader = new FFmpegReader(chunk_video_path);
 			local_reader->Open(); // open reader
@@ -256,20 +258,20 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-string ChunkReader::Json() {
+std::string ChunkReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value ChunkReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value ChunkReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
 	root["type"] = "ChunkReader";
 	root["path"] = path;
-	stringstream chunk_size_stream;
+	std::stringstream chunk_size_stream;
 	chunk_size_stream << chunk_size;
 	root["chunk_size"] = chunk_size_stream.str();
 	root["chunk_version"] = version;
@@ -279,23 +281,11 @@ Json::Value ChunkReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void ChunkReader::SetJson(string value) {
-
-	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-	                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
+void ChunkReader::SetJson(const std::string value) {
 
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -306,8 +296,8 @@ void ChunkReader::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void ChunkReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void ChunkReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

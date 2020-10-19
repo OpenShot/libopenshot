@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Hue.h"
+#include "Hue.h"
 
 using namespace openshot;
 
@@ -66,36 +66,35 @@ std::shared_ptr<Frame> Hue::GetFrame(std::shared_ptr<Frame> frame, int64_t frame
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
+	int pixel_count = frame_image->width() * frame_image->height();
+
 	// Get the current hue percentage shift amount, and convert to degrees
 	double degrees = 360.0 * hue.GetValue(frame_number);
 	float cosA = cos(degrees*3.14159265f/180);
 	float sinA = sin(degrees*3.14159265f/180);
 
 	// Calculate a rotation matrix for the RGB colorspace (based on the current hue shift keyframe value)
-	float matrix[3][3] = {{cosA + (1.0f - cosA) / 3.0f, 1.0f/3.0f * (1.0f - cosA) - sqrtf(1.0f/3.0f) * sinA, 1.0f/3.0f * (1.0f - cosA) + sqrtf(1.0f/3.0f) * sinA},
-						  {1.0f/3.0f * (1.0f - cosA) + sqrtf(1.0f/3.0f) * sinA, cosA + 1.0f/3.0f*(1.0f - cosA), 1.0f/3.0f * (1.0f - cosA) - sqrtf(1.0f/3.0f) * sinA},
-						  {1.0f/3.0f * (1.0f - cosA) - sqrtf(1.0f/3.0f) * sinA, 1.0f/3.0f * (1.0f - cosA) + sqrtf(1.0f/3.0f) * sinA, cosA + 1.0f/3.0f * (1.0f - cosA)}};
+	float matrix[3] = {
+		cosA + (1.0f - cosA) / 3.0f,
+		1.0f/3.0f * (1.0f - cosA) - sqrtf(1.0f/3.0f) * sinA,
+		1.0f/3.0f * (1.0f - cosA) + sqrtf(1.0f/3.0f) * sinA
+	};
 
 	// Loop through pixels
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
+
+	#pragma omp parallel for shared (pixels)
+	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Get the RGB values from the pixel
-		int R = pixels[byte_index];
-		int G = pixels[byte_index + 1];
-		int B = pixels[byte_index + 2];
-		int A = pixels[byte_index + 3];
+		// Get the RGB values from the pixel (ignore the alpha channel)
+		int R = pixels[pixel * 4];
+		int G = pixels[pixel * 4 + 1];
+		int B = pixels[pixel * 4 + 2];
 
 		// Multiply each color by the hue rotation matrix
-		float rx = constrain(R * matrix[0][0] + G * matrix[0][1] + B * matrix[0][2]);
-		float gx = constrain(R * matrix[1][0] + G * matrix[1][1] + B * matrix[1][2]);
-		float bx = constrain(R * matrix[2][0] + G * matrix[2][1] + B * matrix[2][2]);
-
-		// Set all pixels to new value
-		pixels[byte_index] = rx;
-		pixels[byte_index + 1] = gx;
-		pixels[byte_index + 2] = bx;
-		pixels[byte_index + 3] = A; // leave the alpha value alone
+		pixels[pixel * 4] = constrain(R * matrix[0] + G * matrix[1] + B * matrix[2]);
+		pixels[pixel * 4 + 1] = constrain(R * matrix[2] + G * matrix[0] + B * matrix[1]);
+		pixels[pixel * 4 + 2] = constrain(R * matrix[1] + G * matrix[2] + B * matrix[0]);
 	}
 
 	// return the modified frame
@@ -103,14 +102,14 @@ std::shared_ptr<Frame> Hue::GetFrame(std::shared_ptr<Frame> frame, int64_t frame
 }
 
 // Generate JSON string of this object
-string Hue::Json() {
+std::string Hue::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Hue::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Hue::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -122,24 +121,12 @@ Json::Value Hue::JsonValue() {
 }
 
 // Load JSON string into this object
-void Hue::SetJson(string value) {
+void Hue::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -150,8 +137,8 @@ void Hue::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Hue::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Hue::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -162,7 +149,7 @@ void Hue::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Hue::PropertiesJSON(int64_t requested_frame) {
+std::string Hue::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

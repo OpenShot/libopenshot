@@ -30,7 +30,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtTextReader.h"
+#include "QtTextReader.h"
 #include <QImage>
 #include <QPainter>
 
@@ -52,7 +52,7 @@ QtTextReader::QtTextReader(int width, int height, int x_offset, int y_offset, Gr
 	Close();
 }
 
-void QtTextReader::SetTextBackgroundColor(string color) {
+void QtTextReader::SetTextBackgroundColor(std::string color) {
 	text_background_color = color;
 
 	// Open and Close the reader, to populate it's attributes (such as height, width, etc...) plus the text background color
@@ -67,7 +67,7 @@ void QtTextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888);
 		image->fill(QColor(background_color.c_str()));
 
 		QPainter painter;
@@ -179,7 +179,9 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 	if (image)
 	{
 		// Create or get frame object
-		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), background_color, 0, 2));
+		auto image_frame = std::make_shared<Frame>(
+			requested_frame, image->size().width(), image->size().height(),
+			background_color, 0, 2);
 
 		// Add Image data to frame
 		image_frame->AddImage(image);
@@ -188,7 +190,7 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 		return image_frame;
 	} else {
 		// return empty frame
-		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, background_color, 0, 2));
+		auto image_frame = std::make_shared<Frame>(1, 640, 480, background_color, 0, 2);
 
 		// return frame object
 		return image_frame;
@@ -197,14 +199,14 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 }
 
 // Generate JSON string of this object
-std::string QtTextReader::Json() {
+std::string QtTextReader::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value QtTextReader::JsonValue() {
+// Generate Json::Value for this object
+Json::Value QtTextReader::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ReaderBase::JsonValue(); // get parent properties
@@ -225,36 +227,24 @@ Json::Value QtTextReader::JsonValue() {
 }
 
 // Load JSON string into this object
-void QtTextReader::SetJson(std::string value) {
+void QtTextReader::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	std::string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)", "");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
-	catch (exception e)
+	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)", "");
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
-// Load Json::JsonValue into this object
-void QtTextReader::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void QtTextReader::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	ReaderBase::SetJsonValue(root);

@@ -28,12 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Point.h"
+#include "Point.h"
 
 using namespace std;
 using namespace openshot;
 
-// Default constructor (defaults to 0,0)
+// Default constructor (defaults to 1,0)
 Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 {
 	// set new coorinate
@@ -43,7 +43,7 @@ Point::Point() : interpolation(BEZIER), handle_type(AUTO)
 	Initialize_Handles();
 }
 
-// Constructor which creates a single coordinate at X=0
+// Constructor which creates a single coordinate at X=1
 Point::Point(float y) :
 	interpolation(CONSTANT), handle_type(AUTO) {
 	// set new coorinate
@@ -108,14 +108,14 @@ void Point::Initialize_RightHandle(float x, float y) {
 }
 
 // Generate JSON string of this object
-string Point::Json() {
+std::string Point::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Point::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Point::JsonValue() const {
 
 	// Create root json object
 	Json::Value root;
@@ -132,24 +132,12 @@ Json::Value Point::JsonValue() {
 }
 
 // Load JSON string into this object
-void Point::SetJson(string value) {
+void Point::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -160,8 +148,8 @@ void Point::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Point::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Point::SetJsonValue(const Json::Value root) {
 
 	if (!root["co"].isNull())
 		co.SetJsonValue(root["co"]); // update coordinate

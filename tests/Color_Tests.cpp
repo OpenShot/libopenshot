@@ -31,7 +31,7 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "OpenShot.h"
 
 using namespace std;
 using namespace openshot;
@@ -79,7 +79,7 @@ TEST(Color_HEX_Value)
 	c.blue.AddPoint(100, 255);
 
 	CHECK_EQUAL("#000000", c.GetColorHex(1));
-	CHECK_EQUAL("#7f7f7f", c.GetColorHex(50));
+	CHECK_EQUAL("#7d7d7d", c.GetColorHex(50));
 	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
 
 }
@@ -93,7 +93,7 @@ TEST(Color_HEX_Constructor)
 	c.blue.AddPoint(100, 255);
 
 	CHECK_EQUAL("#4586db", c.GetColorHex(1));
-	CHECK_EQUAL("#a2c2ed", c.GetColorHex(50));
+	CHECK_EQUAL("#a0c1ed", c.GetColorHex(50));
 	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
 }
 
@@ -118,7 +118,7 @@ TEST(Color_RGBA_Constructor)
 	c.blue.AddPoint(100, 255);
 
 	CHECK_EQUAL("#4586db", c.GetColorHex(1));
-	CHECK_EQUAL("#a2c2ed", c.GetColorHex(50));
+	CHECK_EQUAL("#a0c1ed", c.GetColorHex(50));
 	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
 
 	// Color with alpha

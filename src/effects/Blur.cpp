@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Blur.h"
+#include "Blur.h"
 
 using namespace openshot;
 
@@ -74,192 +74,109 @@ std::shared_ptr<Frame> Blur::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	float sigma_value = sigma.GetValue(frame_number);
 	int iteration_value = iterations.GetInt(frame_number);
 
+	int w = frame_image->width();
+	int h = frame_image->height();
 
-	// Declare arrays for each color channel
-	unsigned char *red = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *green = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blue = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *alpha = new unsigned char[frame_image->width() * frame_image->height()]();
-	// Create empty target RGBA arrays (for the results of our blur)
-	unsigned char *blur_red = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_green = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_blue = new unsigned char[frame_image->width() * frame_image->height()]();
-	unsigned char *blur_alpha = new unsigned char[frame_image->width() * frame_image->height()]();
-
-	// Loop through pixels and split RGBA channels into separate arrays
-	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
-	{
-		// Get the RGBA values from each pixel
-		unsigned char R = pixels[byte_index];
-		unsigned char G = pixels[byte_index + 1];
-		unsigned char B = pixels[byte_index + 2];
-		unsigned char A = pixels[byte_index + 3];
-
-		// Split channels into their own arrays
-		red[pixel] = R;
-		green[pixel] = G;
-		blue[pixel] = B;
-		alpha[pixel] = A;
-	}
-
-	// Init target RGBA arrays
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_red[i] = red[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_green[i] = green[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_blue[i] = blue[i];
-	for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blur_alpha[i] = alpha[i];
+	// Grab two copies of the image pixel data
+	QImage image_copy = frame_image->copy();
+	std::shared_ptr<QImage> frame_image_2 = std::make_shared<QImage>(image_copy);
 
 	// Loop through each iteration
-	for (int iteration = 0; iteration < iteration_value; iteration++)
+	for (int iteration = 0; iteration < iteration_value; ++iteration)
 	{
 		// HORIZONTAL BLUR (if any)
 		if (horizontal_radius_value > 0.0) {
-			// Init boxes for computing blur
-			int *bxs = initBoxes(sigma_value, horizontal_radius_value);
-
 			// Apply horizontal blur to target RGBA channels
-			boxBlurH(red, blur_red, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(green, blur_green, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(blue, blur_blue, frame_image->width(), frame_image->height(), horizontal_radius_value);
-			boxBlurH(alpha, blur_alpha, frame_image->width(), frame_image->height(), horizontal_radius_value);
+			boxBlurH(frame_image->bits(), frame_image_2->bits(), w, h, horizontal_radius_value);
 
-			// Remove boxes
-			delete[] bxs;
-
-			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
+			// Swap output image back to input
+			frame_image.swap(frame_image_2);
 		}
 
 		// VERTICAL BLUR (if any)
 		if (vertical_radius_value > 0.0) {
-			// Init boxes for computing blur
-			int *bxs = initBoxes(sigma_value, vertical_radius_value);
-
 			// Apply vertical blur to target RGBA channels
-			boxBlurT(red, blur_red, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(green, blur_green, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(blue, blur_blue, frame_image->width(), frame_image->height(), vertical_radius_value);
-			boxBlurT(alpha, blur_alpha, frame_image->width(), frame_image->height(), vertical_radius_value);
+			boxBlurT(frame_image->bits(), frame_image_2->bits(), w, h, vertical_radius_value);
 
-			// Remove boxes
-			delete[] bxs;
-
-			// Copy blur_<chan> back to <chan> for vertical blur or next iteration
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) red[i] = blur_red[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) green[i] = blur_green[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) blue[i] = blur_blue[i];
-			for (int i = 0; i < (frame_image->width() * frame_image->height()); i++) alpha[i] = blur_alpha[i];
+			// Swap output image back to input
+			frame_image.swap(frame_image_2);
 		}
 	}
-
-	// Copy RGBA channels back to original image
-	for (int pixel = 0, byte_index=0; pixel < frame_image->width() * frame_image->height(); pixel++, byte_index+=4)
-	{
-		// Get the RGB values from the pixel
-		unsigned char R = blur_red[pixel];
-		unsigned char G = blur_green[pixel];
-		unsigned char B = blur_blue[pixel];
-		unsigned char A = blur_alpha[pixel];
-
-		// Split channels into their own arrays
-		pixels[byte_index] = R;
-		pixels[byte_index + 1] = G;
-		pixels[byte_index + 2] = B;
-		pixels[byte_index + 3] = A;
-	}
-
-	// Delete channel arrays
-	delete[] red;
-	delete[] green;
-	delete[] blue;
-	delete[] alpha;
-	delete[] blur_red;
-	delete[] blur_green;
-	delete[] blur_blue;
-	delete[] blur_alpha;
 
 	// return the modified frame
 	return frame;
 }
 
 // Credit: http://blog.ivank.net/fastest-gaussian-blur.html (MIT License)
-int* Blur::initBoxes(float sigma, int n)  // standard deviation, number of boxes
-{
-	float wIdeal = sqrt((12.0 * sigma * sigma / n) + 1.0);  // Ideal averaging filter width
-	int wl = floor(wIdeal);
-	if (wl % 2 == 0) wl--;
-	int wu = wl + 2;
-
-	float mIdeal = (12.0 * sigma * sigma - n * wl * wl - 4 * n * wl - 3 * n) / (-4.0 * wl - 4);
-	int m = round(mIdeal);
-
-	int *sizes = new int[n]();
-	for (int i = 0; i < n; i++) sizes[i] = i < m ? wl : wu;
-	return sizes;
-}
-
-// Credit: http://blog.ivank.net/fastest-gaussian-blur.html (MIT License)
+// Modified to process all four channels in a pixel array
 void Blur::boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r) {
 	float iarr = 1.0 / (r + r + 1);
-	for (int i = 0; i < h; i++) {
-		int ti = i * w, li = ti, ri = ti + r;
-		int fv = scl[ti], lv = scl[ti + w - 1], val = (r + 1) * fv;
-		for (int j = 0; j < r; j++) val += scl[ti + j];
-		for (int j = 0; j <= r; j++) {
-			val += scl[ri++] - fv;
-			tcl[ti++] = round(val * iarr);
-		}
-		for (int j = r + 1; j < w - r; j++) {
-			val += scl[ri++] - scl[li++];
-			tcl[ti++] = round(val * iarr);
-		}
-		for (int j = w - r; j < w; j++) {
-			val += lv - scl[li++];
-			tcl[ti++] = round(val * iarr);
+
+	#pragma omp parallel for shared (scl, tcl)
+	for (int i = 0; i < h; ++i) {
+		for (int ch = 0; ch < 4; ++ch) {
+			int ti = i * w, li = ti, ri = ti + r;
+			int fv = scl[ti * 4 + ch], lv = scl[(ti + w - 1) * 4 + ch], val = (r + 1) * fv;
+			for (int j = 0; j < r; ++j) {
+				val += scl[(ti + j) * 4 + ch];
+			}
+			for (int j = 0; j <= r; ++j) {
+				val += scl[ri++ * 4 + ch] - fv;
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
+			for (int j = r + 1; j < w - r; ++j) {
+				val += scl[ri++ * 4 + ch] - scl[li++ * 4 + ch];
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
+			for (int j = w - r; j < w; ++j) {
+				val += lv - scl[li++ * 4 + ch];
+				tcl[ti++ * 4 + ch] = round(val * iarr);
+			}
 		}
 	}
 }
 
 void Blur::boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r) {
 	float iarr = 1.0 / (r + r + 1);
+
+	#pragma omp parallel for shared (scl, tcl)
 	for (int i = 0; i < w; i++) {
-		int ti = i, li = ti, ri = ti + r * w;
-		int fv = scl[ti], lv = scl[ti + w * (h - 1)], val = (r + 1) * fv;
-		for (int j = 0; j < r; j++) val += scl[ti + j * w];
-		for (int j = 0; j <= r; j++) {
-			val += scl[ri] - fv;
-			tcl[ti] = round(val * iarr);
-			ri += w;
-			ti += w;
-		}
-		for (int j = r + 1; j < h - r; j++) {
-			val += scl[ri] - scl[li];
-			tcl[ti] = round(val * iarr);
-			li += w;
-			ri += w;
-			ti += w;
-		}
-		for (int j = h - r; j < h; j++) {
-			val += lv - scl[li];
-			tcl[ti] = round(val * iarr);
-			li += w;
-			ti += w;
+		for (int ch = 0; ch < 4; ++ch) {
+			int ti = i, li = ti, ri = ti + r * w;
+			int fv = scl[ti * 4 + ch], lv = scl[(ti + w * (h - 1)) * 4 + ch], val = (r + 1) * fv;
+			for (int j = 0; j < r; j++) val += scl[(ti + j * w) * 4 + ch];
+			for (int j = 0; j <= r; j++) {
+				val += scl[ri * 4 + ch] - fv;
+				tcl[ti * 4 + ch] = round(val * iarr);
+				ri += w;
+				ti += w;
+			}
+			for (int j = r + 1; j < h - r; j++) {
+				val += scl[ri * 4 + ch] - scl[li * 4 + ch];
+				tcl[ti * 4 + ch] = round(val * iarr);
+				li += w;
+				ri += w;
+				ti += w;
+			}
+			for (int j = h - r; j < h; j++) {
+				val += lv - scl[li * 4 + ch];
+				tcl[ti * 4 + ch] = round(val * iarr);
+				li += w;
+				ti += w;
+			}
 		}
 	}
 }
 
 // Generate JSON string of this object
-string Blur::Json() {
+std::string Blur::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
-// Generate Json::JsonValue for this object
-Json::Value Blur::JsonValue() {
+// Generate Json::Value for this object
+Json::Value Blur::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -274,24 +191,12 @@ Json::Value Blur::JsonValue() {
 }
 
 // Load JSON string into this object
-void Blur::SetJson(string value) {
+void Blur::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
-	Json::Value root;
-	Json::CharReaderBuilder rbuilder;
-	Json::CharReader* reader(rbuilder.newCharReader());
-
-	string errors;
-	bool success = reader->parse( value.c_str(),
-                 value.c_str() + value.size(), &root, &errors );
-	delete reader;
-
-	if (!success)
-		// Raise exception
-		throw InvalidJSON("JSON could not be parsed (or is invalid)");
-
 	try
 	{
+		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
 	}
@@ -302,8 +207,8 @@ void Blur::SetJson(string value) {
 	}
 }
 
-// Load Json::JsonValue into this object
-void Blur::SetJsonValue(Json::Value root) {
+// Load Json::Value into this object
+void Blur::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -320,7 +225,7 @@ void Blur::SetJsonValue(Json::Value root) {
 }
 
 // Get all properties for a specific frame
-string Blur::PropertiesJSON(int64_t requested_frame) {
+std::string Blur::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

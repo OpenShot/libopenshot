@@ -34,12 +34,12 @@
 //Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/ImageWriter.h"
+#include "ImageWriter.h"
 
 using namespace openshot;
 
-ImageWriter::ImageWriter(string path) :
-		path(path), cache_size(8), is_writing(false), write_video_count(0), image_quality(75), number_of_loops(1),
+ImageWriter::ImageWriter(std::string path) :
+		path(path), cache_size(8), write_video_count(0), image_quality(75), number_of_loops(1),
 		combine_frames(true), is_open(false)
 {
 	// Disable audio & video (so they can be independently enabled)
@@ -48,7 +48,7 @@ ImageWriter::ImageWriter(string path) :
 }
 
 // Set video export options
-void ImageWriter::SetVideoOptions(string format, Fraction fps, int width, int height,
+void ImageWriter::SetVideoOptions(std::string format, Fraction fps, int width, int height,
 		int quality, int loops, bool combine)
 {
 	// Set frames per second (if provided)

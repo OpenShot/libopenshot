@@ -29,7 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/AudioPlaybackThread.h"
+#include "AudioPlaybackThread.h"
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
 
 namespace openshot
 {
@@ -66,13 +69,13 @@ namespace openshot
 			for (int i = 0; i < m_pInstance->audioDeviceManager.getAvailableDeviceTypes().size(); ++i)
 			{
 				const AudioIODeviceType* t = m_pInstance->audioDeviceManager.getAvailableDeviceTypes()[i];
-				const StringArray deviceNames = t->getDeviceNames ();
+				const juce::StringArray deviceNames = t->getDeviceNames ();
 
 				for (int j = 0; j < deviceNames.size (); ++j )
 				{
 					juce::String deviceName = deviceNames[j];
 					juce::String typeName = t->getTypeName();
-					AudioDeviceInfo deviceInfo = {deviceName.toRawUTF8(), typeName.toRawUTF8()};
+					openshot::AudioDeviceInfo deviceInfo = {deviceName.toRawUTF8(), typeName.toRawUTF8()};
 					m_pInstance->audio_device_names.push_back(deviceInfo);
 				}
 			}
@@ -92,7 +95,7 @@ namespace openshot
 
     // Constructor
     AudioPlaybackThread::AudioPlaybackThread()
-	: Thread("audio-playback")
+	: juce::Thread("audio-playback")
 	, player()
 	, transport()
 	, mixer()
@@ -111,7 +114,7 @@ namespace openshot
     }
 
     // Set the reader object
-    void AudioPlaybackThread::Reader(ReaderBase *reader) {
+    void AudioPlaybackThread::Reader(openshot::ReaderBase *reader) {
 		if (source)
 			source->Reader(reader);
 		else {
@@ -132,10 +135,10 @@ namespace openshot
 	}
 
     // Get the current frame object (which is filling the buffer)
-    std::shared_ptr<Frame> AudioPlaybackThread::getFrame()
+    std::shared_ptr<openshot::Frame> AudioPlaybackThread::getFrame()
     {
 	if (source) return source->getFrame();
-	return std::shared_ptr<Frame>();
+	return std::shared_ptr<openshot::Frame>();
     }
 
     // Get the currently playing frame number
@@ -194,7 +197,7 @@ namespace openshot
     			transport.start();
 
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
-					usleep(2500);
+					std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
 				// Stop audio and shutdown transport
 				Stop();
