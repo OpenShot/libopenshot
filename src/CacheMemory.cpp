@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheMemory.h"
+#include "CacheMemory.h"
 
 using namespace std;
 using namespace openshot;

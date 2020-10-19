@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Negate class
+ * @brief Header file for De-interlace class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,35 +28,42 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_NEGATE_EFFECT_H
-#define OPENSHOT_NEGATE_EFFECT_H
+#ifndef OPENSHOT_DEINTERLACE_EFFECT_H
+#define OPENSHOT_DEINTERLACE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
+#include <string>
 #include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
+#include "../Json.h"
 #include "../KeyFrame.h"
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to negate image (i.e. negative)
+	 * @brief This class uses the ImageMagick++ libraries, to de-interlace the image, which
+	 * removes the EVEN or ODD horizontal lines (which represent different points of time).
 	 *
-	 * This produces a common negative effect popular in photography.
+	 * This is most useful when converting video made for traditional TVs to computers,
+	 * which are not interlaced.
 	 */
-	class Negate : public EffectBase
+	class Deinterlace : public EffectBase
 	{
+	private:
+		bool isOdd;
+
+		/// Init effect settings
+		void init_effect_details();
+
 	public:
 
+		/// Blank constructor, useful when using Json to load the effect properties
+		Deinterlace();
+
 		/// Default constructor
-		Negate();
+		Deinterlace(bool isOdd);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object

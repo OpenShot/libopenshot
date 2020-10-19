@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Pixelate effect class
+ * @brief Header file for Mask class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,52 +28,55 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_PIXELATE_EFFECT_H
-#define OPENSHOT_PIXELATE_EFFECT_H
+#ifndef OPENSHOT_MASK_EFFECT_H
+#define OPENSHOT_MASK_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
 #include "../Json.h"
 #include "../KeyFrame.h"
 
+#include <string>
+#include <memory>
 
 namespace openshot
 {
+	// Forward declaration
+	class ReaderBase;
 
 	/**
-	 * @brief This class pixelates an image, and can be animated with openshot::Keyframe curves over time.
+	 * @brief This class uses the image libraries to apply alpha (or transparency) masks
+	 * to any frame. It can also be animated, and used as a powerful Wipe transition.
 	 *
-	 * Pixelating the image is the process of increasing the size of visible pixels, thus loosing visual
-	 * clarity of the image. The area to pixelate can be set and animated with keyframes also.
+	 * These masks / wipes can also be combined, such as a transparency mask on top of a clip, which
+	 * is then wiped away with another animated version of this effect.
 	 */
-	class Pixelate : public EffectBase
+	class Mask : public EffectBase
 	{
 	private:
+		ReaderBase *reader;
+		std::shared_ptr<QImage> original_mask;
+		bool needs_refresh;
+
 		/// Init effect settings
 		void init_effect_details();
 
-
 	public:
-		Keyframe pixelization;	///< Amount of pixelization
-		Keyframe left;			///< Size of left margin
-		Keyframe top;			///< Size of top margin
-		Keyframe right;			///< Size of right margin
-		Keyframe bottom;		///< Size of bottom margin
+		bool replace_image;		///< Replace the frame image with a grayscale image representing the mask. Great for debugging a mask.
+		Keyframe brightness;	///< Brightness keyframe to control the wipe / mask effect. A constant value here will prevent animation.
+		Keyframe contrast;		///< Contrast keyframe to control the hardness of the wipe effect / mask.
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Pixelate();
+		Mask();
 
-		/// Default constructor, which takes 5 curves. These curves animate the pixelization effect over time.
+		/// Default constructor, which takes 2 curves and a mask image path. The mask is used to
+		/// determine the alpha for each pixel (black is transparent, white is visible). The curves
+		/// adjust the brightness and contrast of this file, to animate the effect.
 		///
-		/// @param pixelization The curve to adjust the amount of pixelization (0 to 1)
-		/// @param left The curve to adjust the left margin size (between 0 and 1)
-		/// @param top The curve to adjust the top margin size (between 0 and 1)
-		/// @param right The curve to adjust the right margin size (between 0 and 1)
-		/// @param bottom The curve to adjust the bottom margin size (between 0 and 1)
-		Pixelate(Keyframe pixelization, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
+		/// @param mask_reader The reader of a grayscale mask image or video, to be used by the wipe transition
+		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask (between 100 and -100)
+		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask (3 is typical, 20 is a lot, 0 is invalid)
+		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -95,6 +98,12 @@ namespace openshot
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
+
+		/// Get the reader object of the mask grayscale image
+		ReaderBase* Reader() { return reader; };
+
+		/// Set a new reader to be used by the mask effect (grayscale image)
+		void Reader(ReaderBase *new_reader) { reader = new_reader; };
 	};
 
 }

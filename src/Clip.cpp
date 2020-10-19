@@ -28,17 +28,17 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/FrameMapper.h"
+#include "Clip.h"
+#include "FFmpegReader.h"
+#include "FrameMapper.h"
 #ifdef USE_IMAGEMAGICK
-	#include "../include/ImageReader.h"
-	#include "../include/TextReader.h"
+	#include "ImageReader.h"
+	#include "TextReader.h"
 #endif
-#include "../include/QtImageReader.h"
-#include "../include/ChunkReader.h"
-#include "../include/DummyReader.h"
-#include "../include/Timeline.h"
+#include "QtImageReader.h"
+#include "ChunkReader.h"
+#include "DummyReader.h"
+#include "Timeline.h"
 
 using namespace openshot;
 

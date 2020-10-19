@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Mask class
+ * @brief Header file for Blur effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,66 +28,57 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_MASK_EFFECT_H
-#define OPENSHOT_MASK_EFFECT_H
+#ifndef OPENSHOT_BLUR_EFFECT_H
+#define OPENSHOT_BLUR_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
-#ifdef USE_IMAGEMAGICK
-	#include "../MagickUtilities.h"
-	#include "../ImageReader.h"
-#endif
+
+#include <memory>
+#include <string>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the image libraries to apply alpha (or transparency) masks
-	 * to any frame. It can also be animated, and used as a powerful Wipe transition.
+	 * @brief This class adjusts the blur of an image, and can be animated
+	 * with openshot::Keyframe curves over time.
 	 *
-	 * These masks / wipes can also be combined, such as a transparency mask on top of a clip, which
-	 * is then wiped away with another animated version of this effect.
+	 * Adjusting the blur of an image over time can create many different powerful effects. To achieve a
+	 * box blur effect, use identical horizontal and vertical blur values. To achieve a Gaussian blur,
+	 * use 3 iterations, a sigma of 3.0, and a radius between 3 and X (depending on how much blur you want).
 	 */
-	class Mask : public EffectBase
+	class Blur : public EffectBase
 	{
 	private:
-		ReaderBase *reader;
-		std::shared_ptr<QImage> original_mask;
-		bool needs_refresh;
-
 		/// Init effect settings
 		void init_effect_details();
 
+		/// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
+		void boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
+		void boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
+
+
 	public:
-		bool replace_image;		///< Replace the frame image with a grayscale image representing the mask. Great for debugging a mask.
-		Keyframe brightness;	///< Brightness keyframe to control the wipe / mask effect. A constant value here will prevent animation.
-		Keyframe contrast;		///< Contrast keyframe to control the hardness of the wipe effect / mask.
+		Keyframe horizontal_radius;	///< Horizontal blur radius keyframe. The size of the horizontal blur operation in pixels.
+		Keyframe vertical_radius;	///< Vertical blur radius keyframe. The size of the vertical blur operation in pixels.
+		Keyframe sigma;				///< Sigma keyframe. The amount of spread in the blur operation. Should be larger than radius.
+		Keyframe iterations;		///< Iterations keyframe. The # of blur iterations per pixel. 3 iterations = Gaussian.
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Mask();
+		Blur();
 
-		/// Default constructor, which takes 2 curves and a mask image path. The mask is used to
-		/// determine the alpha for each pixel (black is transparent, white is visible). The curves
-		/// adjust the brightness and contrast of this file, to animate the effect.
+		/// Default constructor, which takes 1 curve. The curve adjusts the blur radius
+		/// of a frame's image.
 		///
-		/// @param mask_reader The reader of a grayscale mask image or video, to be used by the wipe transition
-		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask (between 100 and -100)
-		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask (3 is typical, 20 is a lot, 0 is invalid)
-		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast);
+		/// @param new_horizontal_radius The curve to adjust the horizontal blur radius (between 0 and 100, rounded to int)
+		/// @param new_vertical_radius The curve to adjust the vertical blur radius (between 0 and 100, rounded to int)
+		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
+		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
+		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -109,12 +100,6 @@ namespace openshot
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
-
-		/// Get the reader object of the mask grayscale image
-		ReaderBase* Reader() { return reader; };
-
-		/// Set a new reader to be used by the mask effect (grayscale image)
-		void Reader(ReaderBase *new_reader) { reader = new_reader; };
 	};
 
 }

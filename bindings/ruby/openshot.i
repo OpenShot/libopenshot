@@ -42,23 +42,20 @@
 %include "std_list.i"
 %include "std_vector.i"
 %include "std_map.i"
+%include <stdint.i>
 
 /* Unhandled STL Exception Handling */
 %include <std_except.i>
 
-namespace std {
-  template<class T> class shared_ptr {
-  public:
-    T *operator->();
-  };
-}
+/* Include shared pointer code */
+%include <std_shared_ptr.i>
 
 /* Mark these classes as shared_ptr classes */
 #ifdef USE_IMAGEMAGICK
-	%template(SPtrImage) std::shared_ptr<Magick::Image>;
+	%shared_ptr(Magick::Image)
 #endif
-%template(SPtrAudioBuffer) std::shared_ptr<juce::AudioSampleBuffer>;
-%template(SPtrOpenFrame) std::shared_ptr<openshot::Frame>;
+%shared_ptr(juce::AudioSampleBuffer)
+%shared_ptr(openshot::Frame)
 
 %{
 /* Ruby and FFmpeg define competing RSHIFT macros,
@@ -227,5 +224,5 @@ namespace std {
 %template(PointsVector) std::vector<openshot::Point>;
 %template(FieldVector) std::vector<openshot::Field>;
 %template(MappedFrameVector) std::vector<openshot::MappedFrame>;
-%template(MappedMetadata) std::map<std::string, std::string>;
+%template(MetadataMap) std::map<std::string, std::string>;
 %template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

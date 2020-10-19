@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for ChromaKey class
+ * @brief Header file for Negate class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,51 +28,33 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_CHROMAKEY_EFFECT_H
-#define OPENSHOT_CHROMAKEY_EFFECT_H
+#ifndef OPENSHOT_NEGATE_EFFECT_H
+#define OPENSHOT_NEGATE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../KeyFrame.h"
+
+#include <memory>
+#include <string>
+
+#include <QImage>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to remove (i.e. key out) a color (i.e. greenscreen)
+	 * @brief This class uses the ImageMagick++ libraries, to negate image (i.e. negative)
 	 *
-	 * The greenscreen / bluescreen effect replaces matching colors in the video image with
-	 * transparent pixels, revealing lower layers in the timeline.
+	 * This produces a common negative effect popular in photography.
 	 */
-	class ChromaKey : public EffectBase
+	class Negate : public EffectBase
 	{
-	private:
-		Color color;
-		Keyframe fuzz;
-
-		/// Init effect settings
-		void init_effect_details();
-
 	public:
 
-		/// Blank constructor, useful when using Json to load the effect properties
-		ChromaKey();
-
-		/// Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
-		/// is used to determine how similar colored pixels are matched. The higher the fuzz, the
-		/// more colors are matched.
-		///
-		/// @param color The color to match
-		/// @param fuzz The fuzz factor (or threshold)
-		ChromaKey(Color color, Keyframe fuzz);
+		/// Default constructor
+		Negate();
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object

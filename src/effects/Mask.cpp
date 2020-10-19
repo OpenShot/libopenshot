@@ -28,7 +28,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Mask.h"
+#include "Mask.h"
+#include "FFmpegReader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+#endif
+#include "ReaderBase.h"
 
 using namespace openshot;
 

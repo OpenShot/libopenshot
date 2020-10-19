@@ -1,13 +1,13 @@
 # vim: ts=2 sw=2
 #[=======================================================================[.rst:
-FindRESVG
+FindResvg
 ---------
 Try to find the shared-library build of resvg, the Rust SVG library
 
 IMPORTED targets
 ^^^^^^^^^^^^^^^^
 
-This module defines :prop_tgt:`IMPORTED` target ``RESVG::resvg`` when
+This module defines :prop_tgt:`IMPORTED` target ``Resvg::Resvg`` when
 the library and headers are found.
 
 Result Variables
@@ -17,10 +17,10 @@ This module defines the following variables:
 
 ::
 
-  RESVG_FOUND         - Library and header files found
-  RESVG_INCLUDE_DIRS  - Include directory path
-  RESVG_LIBRARIES     - Link path to the library
-  RESVG_DEFINITIONS   - Compiler switches (currently unused)
+  Resvg_FOUND         - Library and header files found
+  Resvg_INCLUDE_DIRS  - Include directory path
+  Resvg_LIBRARIES     - Link path to the library
+  Resvg_DEFINITIONS   - Compiler switches (currently unused)
 
 Backwards compatibility
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -47,7 +47,7 @@ if(DEFINED RESVGDIR AND CMAKE_VERSION VERSION_GREATER 3.4)
     BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-find_path(RESVG_INCLUDE_DIRS
+find_path(Resvg_INCLUDE_DIRS
   ResvgQt.h
   PATHS
     ${RESVGDIR}
@@ -62,7 +62,7 @@ find_path(RESVG_INCLUDE_DIRS
     resvg/capi/include
 )
 
-find_library(RESVG_LIBRARIES
+find_library(Resvg_LIBRARIES
   NAMES resvg
   PATHS
     ${RESVGDIR}
@@ -77,39 +77,39 @@ find_library(RESVG_LIBRARIES
     resvg/target/release
 )
 
-if (RESVG_INCLUDE_DIRS AND RESVG_LIBRARIES)
-  set(RESVG_FOUND TRUE)
+if (Resvg_INCLUDE_DIRS AND Resvg_LIBRARIES)
+  set(Resvg_FOUND TRUE)
 endif()
-set(RESVG_LIBRARIES ${RESVG_LIBRARIES} CACHE STRING "The Resvg library link path")
-set(RESVG_INCLUDE_DIRS ${RESVG_INCLUDE_DIRS} CACHE STRING "The Resvg include directories")
-set(RESVG_DEFINITIONS "" CACHE STRING "The Resvg CFLAGS")
+set(Resvg_LIBRARIES ${Resvg_LIBRARIES} CACHE STRING "The Resvg library link path")
+set(Resvg_INCLUDE_DIRS ${Resvg_INCLUDE_DIRS} CACHE STRING "The Resvg include directories")
+set(Resvg_DEFINITIONS "" CACHE STRING "The Resvg CFLAGS")
 
-mark_as_advanced(RESVG_LIBRARIES RESVG_INCLUDE_DIRS RESVG_DEFINITIONS)
+mark_as_advanced(Resvg_LIBRARIES Resvg_INCLUDE_DIRS Resvg_DEFINITIONS)
 
 # Give a nice error message if some of the required vars are missing.
-find_package_handle_standard_args(RESVG
-  "Could NOT find RESVG, using Qt SVG parsing instead"
-  RESVG_LIBRARIES RESVG_INCLUDE_DIRS )
+find_package_handle_standard_args(Resvg
+  "Could NOT find Resvg, using Qt SVG parsing instead"
+  Resvg_LIBRARIES Resvg_INCLUDE_DIRS )
 
 # Export target
-if(RESVG_FOUND AND NOT TARGET RESVG::resvg)
-  message(STATUS "Creating IMPORTED target RESVG::resvg")
+if(Resvg_FOUND AND NOT TARGET Resvg::Resvg)
+  message(STATUS "Creating IMPORTED target Resvg::Resvg")
   if (WIN32)
     # Windows mis-links SHARED library targets
-    add_library(RESVG::resvg UNKNOWN IMPORTED)
+    add_library(Resvg::Resvg UNKNOWN IMPORTED)
   else()
     # Linux needs SHARED to link because libresvg has no SONAME
-    add_library(RESVG::resvg SHARED IMPORTED)
-    set_property(TARGET RESVG::resvg APPEND PROPERTY
+    add_library(Resvg::Resvg SHARED IMPORTED)
+    set_property(TARGET Resvg::Resvg APPEND PROPERTY
       IMPORTED_NO_SONAME TRUE)
   endif()
 
-  set_property(TARGET RESVG::resvg APPEND PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES "${RESVG_INCLUDE_DIRS}")
+  set_property(TARGET Resvg::Resvg APPEND PROPERTY
+    INTERFACE_INCLUDE_DIRECTORIES "${Resvg_INCLUDE_DIRS}")
 
-  set_property(TARGET RESVG::resvg APPEND PROPERTY
-    INTERFACE_COMPILE_DEFINITIONS "${RESVG_DEFINITIONS}")
+  set_property(TARGET Resvg::Resvg APPEND PROPERTY
+    INTERFACE_COMPILE_DEFINITIONS "${Resvg_DEFINITIONS}")
 
-  set_property(TARGET RESVG::resvg APPEND PROPERTY
-    IMPORTED_LOCATION "${RESVG_LIBRARIES}")
+  set_property(TARGET Resvg::Resvg APPEND PROPERTY
+    IMPORTED_LOCATION "${Resvg_LIBRARIES}")
 endif()

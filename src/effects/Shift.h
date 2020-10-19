@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Wave effect class
+ * @brief Header file for Shift effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,53 +28,48 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_WAVE_EFFECT_H
-#define OPENSHOT_WAVE_EFFECT_H
+#ifndef OPENSHOT_SHIFT_EFFECT_H
+#define OPENSHOT_SHIFT_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
+#include <string>
+#include <memory>
 
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class distorts an image using a wave pattern
+	 * @brief This class shifts the pixels of an image up, down, left, or right, and can be animated
+	 * with openshot::Keyframe curves over time.
 	 *
-	 * Distoring an image with a wave can be used to simulate analog transmissions, and other effects, and each
-	 * value of the wave computation can be animated with an openshot::Keyframe curves over time.
+	 * Shifting pixels can be used in many interesting ways, especially when animating the movement of the pixels.
+	 * The pixels wrap around the image (the pixels drop off one side and appear on the other side of the image).
 	 */
-	class Wave : public EffectBase
+	class Shift : public EffectBase
 	{
 	private:
-		//unsigned char *perm;
-
 		/// Init effect settings
 		void init_effect_details();
 
+
 	public:
-		Keyframe wavelength;	///< The length of the wave
-		Keyframe amplitude;		///< The height of the wave
-		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)
-		Keyframe shift_x;		///< Amount to shift X-axis
-		Keyframe speed_y;		///< Speed of the wave on the Y-axis
+		Keyframe x;	///< Shift the X coordinates (left or right)
+		Keyframe y;	///< Shift the Y coordinates (up or down)
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Wave();
+		Shift();
 
-		/// Default constructor, which takes 5 curves. The curves will distort the image.
+		/// Default constructor, which takes 2 curve. The curves will shift the pixels up, down, left, or right
 		///
-		/// @param wavelength The curve to adjust the wavelength (0.0 to 3.0)
-		/// @param amplitude The curve to adjust the amplitude (0.0 to 5.0)
-		/// @param multiplier The curve to adjust the multiplier (0.0 to 1.0)
-		/// @param shift_x The curve to shift pixels along the x-axis (0 to 100)
-		/// @param speed_y The curve to adjust the vertical speed (0 to 10)
-		Wave(Keyframe wavelength, Keyframe amplitude, Keyframe multiplier, Keyframe shift_x, Keyframe speed_y);
+		/// @param x The curve to adjust the x shift (between -1 and 1, percentage)
+		/// @param y The curve to adjust the y shift (between -1 and 1, percentage)
+		Shift(Keyframe x, Keyframe y);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object

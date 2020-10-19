@@ -237,5 +237,5 @@
 %template(PointsVector) std::vector<openshot::Point>;
 %template(FieldVector) std::vector<openshot::Field>;
 %template(MappedFrameVector) std::vector<openshot::MappedFrame>;
-%template(MappedMetadata) std::map<std::string, std::string>;
+%template(MetadataMap) std::map<std::string, std::string>;
 %template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

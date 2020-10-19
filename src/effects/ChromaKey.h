@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Hue effect class
+ * @brief Header file for ChromaKey class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,44 +28,49 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_HUE_EFFECT_H
-#define OPENSHOT_HUE_EFFECT_H
+#ifndef OPENSHOT_CHROMAKEY_EFFECT_H
+#define OPENSHOT_CHROMAKEY_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
-#include "../Json.h"
+#include "../Color.h"
+#include "../Frame.h"
+#include "../Exceptions.h"
 #include "../KeyFrame.h"
 
+#include <memory>
+#include <string>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class shifts the hue of an image, and can be animated with openshot::Keyframe curves over time.
+	 * @brief This class uses the ImageMagick++ libraries, to remove (i.e. key out) a color (i.e. greenscreen)
 	 *
-	 * Shifting hue can adjust the colors in an image towards red, blue, green, or anywhere in between. Animating hue
-	 * can create some fun and interesting effects, but can also be used to change the mood of a scene, etc...
+	 * The greenscreen / bluescreen effect replaces matching colors in the video image with
+	 * transparent pixels, revealing lower layers in the timeline.
 	 */
-	class Hue : public EffectBase
+	class ChromaKey : public EffectBase
 	{
 	private:
+		Color color;
+		Keyframe fuzz;
+
 		/// Init effect settings
 		void init_effect_details();
 
-
 	public:
-		Keyframe hue;	///< Shift the hue coordinates (left or right)
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Hue();
+		ChromaKey();
 
-		/// Default constructor, which takes 1 curve. The curves will shift the hue of the image.
+		/// Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
+		/// is used to determine how similar colored pixels are matched. The higher the fuzz, the
+		/// more colors are matched.
 		///
-		/// @param hue The curve to adjust the hue shift (between 0 and 1)
-		Hue(Keyframe hue);
+		/// @param color The color to match
+		/// @param fuzz The fuzz factor (or threshold)
+		ChromaKey(Color color, Keyframe fuzz);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -84,8 +89,7 @@ namespace openshot
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		/// Get all properties for a specific frame (perfect for a UI to display the current state
-		/// of all properties at any time)
+		// Get all properties for a specific frame
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 	};
 

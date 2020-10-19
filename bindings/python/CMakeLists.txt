@@ -50,11 +50,11 @@ include_directories(${PYTHON_INCLUDE_PATH})
 if (CMAKE_VERSION VERSION_LESS 3.12)
   ### Include project headers
   include_directories(
-    "${PROJECT_SOURCE_DIR}/include"
-    "${PROJECT_BINARY_DIR}/include")
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_BINARY_DIR}/src")
 endif()
 
-### Enable C++ support in SWIG
+### Enable C++ in SWIG
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 

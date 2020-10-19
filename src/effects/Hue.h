@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Brightness class
+ * @brief Header file for Hue effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,54 +28,45 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_BRIGHTNESS_EFFECT_H
-#define OPENSHOT_BRIGHTNESS_EFFECT_H
+#ifndef OPENSHOT_HUE_EFFECT_H
+#define OPENSHOT_HUE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
+
+#include <string>
+#include <memory>
+
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class adjusts the brightness and contrast of an image, and can be animated
-	 * with openshot::Keyframe curves over time.
+	 * @brief This class shifts the hue of an image, and can be animated with openshot::Keyframe curves over time.
 	 *
-	 * Adjusting the brightness and contrast over time can create many different powerful effects.
+	 * Shifting hue can adjust the colors in an image towards red, blue, green, or anywhere in between. Animating hue
+	 * can create some fun and interesting effects, but can also be used to change the mood of a scene, etc...
 	 */
-	class Brightness : public EffectBase
+	class Hue : public EffectBase
 	{
 	private:
 		/// Init effect settings
 		void init_effect_details();
 
+
 	public:
-		Keyframe brightness;	///< Brightness keyframe. A constant value here will prevent animation.
-		Keyframe contrast;		///< Contrast keyframe.
+		Keyframe hue;	///< Shift the hue coordinates (left or right)
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Brightness();
+		Hue();
 
-		/// Default constructor, which takes 2 curves. The curves adjust the brightness and
-		// contrast of a frame's image.
+		/// Default constructor, which takes 1 curve. The curves will shift the hue of the image.
 		///
-		/// @param new_brightness The curve to adjust the brightness (from -1 to +1, 0 is default/"off")
-		/// @param new_contrast The curve to adjust the contrast (3 is typical, 20 is a lot, 100 is max. 0 is invalid)
-		Brightness(Keyframe new_brightness, Keyframe new_contrast);
+		/// @param hue The curve to adjust the hue shift (between 0 and 1)
+		Hue(Keyframe hue);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object

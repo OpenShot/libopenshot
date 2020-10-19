@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for De-interlace class
+ * @brief Header file for Wave effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,47 +28,54 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_DEINTERLACE_EFFECT_H
-#define OPENSHOT_DEINTERLACE_EFFECT_H
+#ifndef OPENSHOT_WAVE_EFFECT_H
+#define OPENSHOT_WAVE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
+#include <string>
+#include <memory>
+
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to de-interlace the image, which
-	 * removes the EVEN or ODD horizontal lines (which represent different points of time).
+	 * @brief This class distorts an image using a wave pattern
 	 *
-	 * This is most useful when converting video made for traditional TVs to computers,
-	 * which are not interlaced.
+	 * Distoring an image with a wave can be used to simulate analog transmissions, and other effects, and each
+	 * value of the wave computation can be animated with an openshot::Keyframe curves over time.
 	 */
-	class Deinterlace : public EffectBase
+	class Wave : public EffectBase
 	{
 	private:
-		bool isOdd;
+		//unsigned char *perm;
 
 		/// Init effect settings
 		void init_effect_details();
 
 	public:
+		Keyframe wavelength;	///< The length of the wave
+		Keyframe amplitude;		///< The height of the wave
+		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)
+		Keyframe shift_x;		///< Amount to shift X-axis
+		Keyframe speed_y;		///< Speed of the wave on the Y-axis
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Deinterlace();
+		Wave();
 
-		/// Default constructor
-		Deinterlace(bool isOdd);
+		/// Default constructor, which takes 5 curves. The curves will distort the image.
+		///
+		/// @param wavelength The curve to adjust the wavelength (0.0 to 3.0)
+		/// @param amplitude The curve to adjust the amplitude (0.0 to 5.0)
+		/// @param multiplier The curve to adjust the multiplier (0.0 to 1.0)
+		/// @param shift_x The curve to shift pixels along the x-axis (0 to 100)
+		/// @param speed_y The curve to adjust the vertical speed (0 to 10)
+		Wave(Keyframe wavelength, Keyframe amplitude, Keyframe multiplier, Keyframe shift_x, Keyframe speed_y);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -87,7 +94,8 @@ namespace openshot
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		// Get all properties for a specific frame
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 	};
 

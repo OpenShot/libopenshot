@@ -28,8 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ChunkReader.h"
-#include "../include/FFmpegReader.h"
+#include "ChunkReader.h"
+#include "FFmpegReader.h"
+
+#include <QDir>
 
 using namespace openshot;
 

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Blur effect class
+ * @brief Header file for Pixelate effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,66 +28,52 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_BLUR_EFFECT_H
-#define OPENSHOT_BLUR_EFFECT_H
+#ifndef OPENSHOT_PIXELATE_EFFECT_H
+#define OPENSHOT_PIXELATE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include <QRect>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
+
+#include <memory>
+#include <string>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class adjusts the blur of an image, and can be animated
-	 * with openshot::Keyframe curves over time.
+	 * @brief This class pixelates an image, and can be animated with openshot::Keyframe curves over time.
 	 *
-	 * Adjusting the blur of an image over time can create many different powerful effects. To achieve a
-	 * box blur effect, use identical horizontal and vertical blur values. To achieve a Gaussian blur,
-	 * use 3 iterations, a sigma of 3.0, and a radius between 3 and X (depending on how much blur you want).
+	 * Pixelating the image is the process of increasing the size of visible pixels, thus loosing visual
+	 * clarity of the image. The area to pixelate can be set and animated with keyframes also.
 	 */
-	class Blur : public EffectBase
+	class Pixelate : public EffectBase
 	{
 	private:
 		/// Init effect settings
 		void init_effect_details();
 
-		/// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
-		void boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
-		void boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
-
 
 	public:
-		Keyframe horizontal_radius;	///< Horizontal blur radius keyframe. The size of the horizontal blur operation in pixels.
-		Keyframe vertical_radius;	///< Vertical blur radius keyframe. The size of the vertical blur operation in pixels.
-		Keyframe sigma;				///< Sigma keyframe. The amount of spread in the blur operation. Should be larger than radius.
-		Keyframe iterations;		///< Iterations keyframe. The # of blur iterations per pixel. 3 iterations = Gaussian.
+		Keyframe pixelization;	///< Amount of pixelization
+		Keyframe left;			///< Size of left margin
+		Keyframe top;			///< Size of top margin
+		Keyframe right;			///< Size of right margin
+		Keyframe bottom;		///< Size of bottom margin
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Blur();
+		Pixelate();
 
-		/// Default constructor, which takes 1 curve. The curve adjusts the blur radius
-		/// of a frame's image.
+		/// Default constructor, which takes 5 curves. These curves animate the pixelization effect over time.
 		///
-		/// @param new_horizontal_radius The curve to adjust the horizontal blur radius (between 0 and 100, rounded to int)
-		/// @param new_vertical_radius The curve to adjust the vertical blur radius (between 0 and 100, rounded to int)
-		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
-		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
-		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations);
+		/// @param pixelization The curve to adjust the amount of pixelization (0 to 1)
+		/// @param left The curve to adjust the left margin size (between 0 and 1)
+		/// @param top The curve to adjust the top margin size (between 0 and 1)
+		/// @param right The curve to adjust the right margin size (between 0 and 1)
+		/// @param bottom The curve to adjust the bottom margin size (between 0 and 1)
+		Pixelate(Keyframe pixelization, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
