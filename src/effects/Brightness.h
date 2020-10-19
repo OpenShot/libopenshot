@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Wave effect class
+ * @brief Header file for Brightness class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,53 +28,46 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_WAVE_EFFECT_H
-#define OPENSHOT_WAVE_EFFECT_H
+#ifndef OPENSHOT_BRIGHTNESS_EFFECT_H
+#define OPENSHOT_BRIGHTNESS_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 
+#include <memory>
+#include <string>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class distorts an image using a wave pattern
+	 * @brief This class adjusts the brightness and contrast of an image, and can be animated
+	 * with openshot::Keyframe curves over time.
 	 *
-	 * Distoring an image with a wave can be used to simulate analog transmissions, and other effects, and each
-	 * value of the wave computation can be animated with an openshot::Keyframe curves over time.
+	 * Adjusting the brightness and contrast over time can create many different powerful effects.
 	 */
-	class Wave : public EffectBase
+	class Brightness : public EffectBase
 	{
 	private:
-		//unsigned char *perm;
-
 		/// Init effect settings
 		void init_effect_details();
 
 	public:
-		Keyframe wavelength;	///< The length of the wave
-		Keyframe amplitude;		///< The height of the wave
-		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)
-		Keyframe shift_x;		///< Amount to shift X-axis
-		Keyframe speed_y;		///< Speed of the wave on the Y-axis
+		Keyframe brightness;	///< Brightness keyframe. A constant value here will prevent animation.
+		Keyframe contrast;		///< Contrast keyframe.
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Wave();
+		Brightness();
 
-		/// Default constructor, which takes 5 curves. The curves will distort the image.
+		/// Default constructor, which takes 2 curves. The curves adjust the brightness and
+		// contrast of a frame's image.
 		///
-		/// @param wavelength The curve to adjust the wavelength (0.0 to 3.0)
-		/// @param amplitude The curve to adjust the amplitude (0.0 to 5.0)
-		/// @param multiplier The curve to adjust the multiplier (0.0 to 1.0)
-		/// @param shift_x The curve to shift pixels along the x-axis (0 to 100)
-		/// @param speed_y The curve to adjust the vertical speed (0 to 10)
-		Wave(Keyframe wavelength, Keyframe amplitude, Keyframe multiplier, Keyframe shift_x, Keyframe speed_y);
+		/// @param new_brightness The curve to adjust the brightness (from -1 to +1, 0 is default/"off")
+		/// @param new_contrast The curve to adjust the contrast (3 is typical, 20 is a lot, 100 is max. 0 is invalid)
+		Brightness(Keyframe new_brightness, Keyframe new_contrast);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

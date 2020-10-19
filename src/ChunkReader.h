@@ -32,18 +32,12 @@
 #define OPENSHOT_CHUNK_READER_H
 
 #include "ReaderBase.h"
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <fstream>
-#include <omp.h>
-#include <cstdio>
-#include <cstdlib>
+#include <string>
 #include <memory>
-#include <QtCore/QDir>
+
+#include "Frame.h"
 #include "Json.h"
 #include "CacheMemory.h"
-#include "Exceptions.h"
 
 namespace openshot
 {

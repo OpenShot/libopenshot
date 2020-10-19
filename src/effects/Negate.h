@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Brightness class
+ * @brief Header file for Negate class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,54 +28,33 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_BRIGHTNESS_EFFECT_H
-#define OPENSHOT_BRIGHTNESS_EFFECT_H
+#ifndef OPENSHOT_NEGATE_EFFECT_H
+#define OPENSHOT_NEGATE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
-#include "../Json.h"
+#include "../Frame.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
+
+#include <memory>
+#include <string>
+
+#include <QImage>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class adjusts the brightness and contrast of an image, and can be animated
-	 * with openshot::Keyframe curves over time.
+	 * @brief This class uses the ImageMagick++ libraries, to negate image (i.e. negative)
 	 *
-	 * Adjusting the brightness and contrast over time can create many different powerful effects.
+	 * This produces a common negative effect popular in photography.
 	 */
-	class Brightness : public EffectBase
+	class Negate : public EffectBase
 	{
-	private:
-		/// Init effect settings
-		void init_effect_details();
-
 	public:
-		Keyframe brightness;	///< Brightness keyframe. A constant value here will prevent animation.
-		Keyframe contrast;		///< Contrast keyframe.
 
-		/// Blank constructor, useful when using Json to load the effect properties
-		Brightness();
-
-		/// Default constructor, which takes 2 curves. The curves adjust the brightness and
-		// contrast of a frame's image.
-		///
-		/// @param new_brightness The curve to adjust the brightness (from -1 to +1, 0 is default/"off")
-		/// @param new_contrast The curve to adjust the contrast (3 is typical, 20 is a lot, 100 is max. 0 is invalid)
-		Brightness(Keyframe new_brightness, Keyframe new_contrast);
+		/// Default constructor
+		Negate();
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -102,8 +81,7 @@ namespace openshot
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		/// Get all properties for a specific frame (perfect for a UI to display the current state
-		/// of all properties at any time)
+		// Get all properties for a specific frame
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 	};
 

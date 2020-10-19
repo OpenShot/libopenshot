@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoRenderWidget.h"
+#include "VideoRenderWidget.h"
 #include <QWidget>
 #include <QImage>
 #include <QPainter>

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoCacheThread.h"
+#include "VideoCacheThread.h"
 #include <algorithm>
 
 #include <thread>    // for std::this_thread::sleep_for

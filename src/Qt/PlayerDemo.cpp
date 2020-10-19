@@ -28,9 +28,11 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdio>
-#include "../../include/QtPlayer.h"
-#include "../../include/Qt/PlayerDemo.h"
+#include <string>
+
+#include "PlayerDemo.h"
+#include "../QtPlayer.h"
+
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QWidget>

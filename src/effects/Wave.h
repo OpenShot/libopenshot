@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Pixelate effect class
+ * @brief Header file for Wave effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,52 +28,54 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_PIXELATE_EFFECT_H
-#define OPENSHOT_PIXELATE_EFFECT_H
+#ifndef OPENSHOT_WAVE_EFFECT_H
+#define OPENSHOT_WAVE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
+#include <string>
+#include <memory>
 
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class pixelates an image, and can be animated with openshot::Keyframe curves over time.
+	 * @brief This class distorts an image using a wave pattern
 	 *
-	 * Pixelating the image is the process of increasing the size of visible pixels, thus loosing visual
-	 * clarity of the image. The area to pixelate can be set and animated with keyframes also.
+	 * Distoring an image with a wave can be used to simulate analog transmissions, and other effects, and each
+	 * value of the wave computation can be animated with an openshot::Keyframe curves over time.
 	 */
-	class Pixelate : public EffectBase
+	class Wave : public EffectBase
 	{
 	private:
+		//unsigned char *perm;
+
 		/// Init effect settings
 		void init_effect_details();
 
-
 	public:
-		Keyframe pixelization;	///< Amount of pixelization
-		Keyframe left;			///< Size of left margin
-		Keyframe top;			///< Size of top margin
-		Keyframe right;			///< Size of right margin
-		Keyframe bottom;		///< Size of bottom margin
+		Keyframe wavelength;	///< The length of the wave
+		Keyframe amplitude;		///< The height of the wave
+		Keyframe multiplier;	///< Amount to multiply the wave (make it bigger)
+		Keyframe shift_x;		///< Amount to shift X-axis
+		Keyframe speed_y;		///< Speed of the wave on the Y-axis
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Pixelate();
+		Wave();
 
-		/// Default constructor, which takes 5 curves. These curves animate the pixelization effect over time.
+		/// Default constructor, which takes 5 curves. The curves will distort the image.
 		///
-		/// @param pixelization The curve to adjust the amount of pixelization (0 to 1)
-		/// @param left The curve to adjust the left margin size (between 0 and 1)
-		/// @param top The curve to adjust the top margin size (between 0 and 1)
-		/// @param right The curve to adjust the right margin size (between 0 and 1)
-		/// @param bottom The curve to adjust the bottom margin size (between 0 and 1)
-		Pixelate(Keyframe pixelization, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
+		/// @param wavelength The curve to adjust the wavelength (0.0 to 3.0)
+		/// @param amplitude The curve to adjust the amplitude (0.0 to 5.0)
+		/// @param multiplier The curve to adjust the multiplier (0.0 to 1.0)
+		/// @param shift_x The curve to shift pixels along the x-axis (0 to 100)
+		/// @param speed_y The curve to adjust the vertical speed (0 to 10)
+		Wave(Keyframe wavelength, Keyframe amplitude, Keyframe multiplier, Keyframe shift_x, Keyframe speed_y);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

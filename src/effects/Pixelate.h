@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Shift effect class
+ * @brief Header file for Pixelate effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,29 +28,28 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_SHIFT_EFFECT_H
-#define OPENSHOT_SHIFT_EFFECT_H
+#ifndef OPENSHOT_PIXELATE_EFFECT_H
+#define OPENSHOT_PIXELATE_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
-#include <memory>
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 
+#include <memory>
+#include <string>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class shifts the pixels of an image up, down, left, or right, and can be animated
-	 * with openshot::Keyframe curves over time.
+	 * @brief This class pixelates an image, and can be animated with openshot::Keyframe curves over time.
 	 *
-	 * Shifting pixels can be used in many interesting ways, especially when animating the movement of the pixels.
-	 * The pixels wrap around the image (the pixels drop off one side and appear on the other side of the image).
+	 * Pixelating the image is the process of increasing the size of visible pixels, thus loosing visual
+	 * clarity of the image. The area to pixelate can be set and animated with keyframes also.
 	 */
-	class Shift : public EffectBase
+	class Pixelate : public EffectBase
 	{
 	private:
 		/// Init effect settings
@@ -58,17 +57,23 @@ namespace openshot
 
 
 	public:
-		Keyframe x;	///< Shift the X coordinates (left or right)
-		Keyframe y;	///< Shift the Y coordinates (up or down)
+		Keyframe pixelization;	///< Amount of pixelization
+		Keyframe left;			///< Size of left margin
+		Keyframe top;			///< Size of top margin
+		Keyframe right;			///< Size of right margin
+		Keyframe bottom;		///< Size of bottom margin
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Shift();
+		Pixelate();
 
-		/// Default constructor, which takes 2 curve. The curves will shift the pixels up, down, left, or right
+		/// Default constructor, which takes 5 curves. These curves animate the pixelization effect over time.
 		///
-		/// @param x The curve to adjust the x shift (between -1 and 1, percentage)
-		/// @param y The curve to adjust the y shift (between -1 and 1, percentage)
-		Shift(Keyframe x, Keyframe y);
+		/// @param pixelization The curve to adjust the amount of pixelization (0 to 1)
+		/// @param left The curve to adjust the left margin size (between 0 and 1)
+		/// @param top The curve to adjust the top margin size (between 0 and 1)
+		/// @param right The curve to adjust the right margin size (between 0 and 1)
+		/// @param bottom The curve to adjust the bottom margin size (between 0 and 1)
+		Pixelate(Keyframe pixelization, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

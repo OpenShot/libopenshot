@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Fraction.h"
+#include "Fraction.h"
 
 using namespace openshot;
 

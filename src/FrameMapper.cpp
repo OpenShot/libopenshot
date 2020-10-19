@@ -28,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FrameMapper.h"
-#include "../include/Clip.h"
+#include "FrameMapper.h"
+#include "Clip.h"
 
 using namespace std;
 using namespace openshot;

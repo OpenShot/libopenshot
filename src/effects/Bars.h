@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for De-interlace class
+ * @brief Header file for Bars effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,47 +28,54 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_DEINTERLACE_EFFECT_H
-#define OPENSHOT_DEINTERLACE_EFFECT_H
+#ifndef OPENSHOT_BARS_EFFECT_H
+#define OPENSHOT_BARS_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
 #include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
+#include <string>
+#include <memory>
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to de-interlace the image, which
-	 * removes the EVEN or ODD horizontal lines (which represent different points of time).
+	 * @brief This class draws black bars around your video (from any side), and can be animated with
+	 * openshot::Keyframe curves over time.
 	 *
-	 * This is most useful when converting video made for traditional TVs to computers,
-	 * which are not interlaced.
+	 * Adding bars around your video can be done for cinematic reasons, and creates a fun way to frame
+	 * in the focal point of a scene. The bars can be any color, and each side can be animated independently.
 	 */
-	class Deinterlace : public EffectBase
+	class Bars : public EffectBase
 	{
 	private:
-		bool isOdd;
-
 		/// Init effect settings
 		void init_effect_details();
 
+
 	public:
+		Color color;		///< Color of bars
+		Keyframe left;		///< Size of left bar
+		Keyframe top;		///< Size of top bar
+		Keyframe right;		///< Size of right bar
+		Keyframe bottom;	///< Size of bottom bar
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Deinterlace();
+		Bars();
 
-		/// Default constructor
-		Deinterlace(bool isOdd);
+		/// Default constructor, which takes 4 curves and a color. These curves animated the bars over time.
+		///
+		/// @param color The curve to adjust the color of bars
+		/// @param left The curve to adjust the left bar size (between 0 and 1)
+		/// @param top The curve to adjust the top bar size (between 0 and 1)
+		/// @param right The curve to adjust the right bar size (between 0 and 1)
+		/// @param bottom The curve to adjust the bottom bar size (between 0 and 1)
+		Bars(Color color, Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -95,7 +102,8 @@ namespace openshot
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		// Get all properties for a specific frame
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 	};
 

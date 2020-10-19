@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Negate class
+ * @brief Header file for Mask class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,35 +28,55 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_NEGATE_EFFECT_H
-#define OPENSHOT_NEGATE_EFFECT_H
+#ifndef OPENSHOT_MASK_EFFECT_H
+#define OPENSHOT_MASK_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
+#include "../Json.h"
 #include "../KeyFrame.h"
+
+#include <string>
+#include <memory>
 
 namespace openshot
 {
+	// Forward declaration
+	class ReaderBase;
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to negate image (i.e. negative)
+	 * @brief This class uses the image libraries to apply alpha (or transparency) masks
+	 * to any frame. It can also be animated, and used as a powerful Wipe transition.
 	 *
-	 * This produces a common negative effect popular in photography.
+	 * These masks / wipes can also be combined, such as a transparency mask on top of a clip, which
+	 * is then wiped away with another animated version of this effect.
 	 */
-	class Negate : public EffectBase
+	class Mask : public EffectBase
 	{
-	public:
+	private:
+		ReaderBase *reader;
+		std::shared_ptr<QImage> original_mask;
+		bool needs_refresh;
 
-		/// Default constructor
-		Negate();
+		/// Init effect settings
+		void init_effect_details();
+
+	public:
+		bool replace_image;		///< Replace the frame image with a grayscale image representing the mask. Great for debugging a mask.
+		Keyframe brightness;	///< Brightness keyframe to control the wipe / mask effect. A constant value here will prevent animation.
+		Keyframe contrast;		///< Contrast keyframe to control the hardness of the wipe effect / mask.
+
+		/// Blank constructor, useful when using Json to load the effect properties
+		Mask();
+
+		/// Default constructor, which takes 2 curves and a mask image path. The mask is used to
+		/// determine the alpha for each pixel (black is transparent, white is visible). The curves
+		/// adjust the brightness and contrast of this file, to animate the effect.
+		///
+		/// @param mask_reader The reader of a grayscale mask image or video, to be used by the wipe transition
+		/// @param mask_brightness The curve to adjust the brightness of the wipe's mask (between 100 and -100)
+		/// @param mask_contrast The curve to adjust the contrast of the wipe's mask (3 is typical, 20 is a lot, 0 is invalid)
+		Mask(ReaderBase *mask_reader, Keyframe mask_brightness, Keyframe mask_contrast);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -83,8 +103,15 @@ namespace openshot
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
 		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		// Get all properties for a specific frame
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
+
+		/// Get the reader object of the mask grayscale image
+		ReaderBase* Reader() { return reader; };
+
+		/// Set a new reader to be used by the mask effect (grayscale image)
+		void Reader(ReaderBase *new_reader) { reader = new_reader; };
 	};
 
 }

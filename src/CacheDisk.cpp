@@ -28,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheDisk.h"
-#include "../include/QtUtilities.h"
+#include "CacheDisk.h"
+#include "QtUtilities.h"
 #include <Qt>
 #include <QString>
 #include <QTextStream>

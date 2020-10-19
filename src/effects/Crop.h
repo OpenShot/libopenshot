@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Blur effect class
+ * @brief Header file for Crop effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,66 +28,54 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_BLUR_EFFECT_H
-#define OPENSHOT_BLUR_EFFECT_H
+#ifndef OPENSHOT_CROP_EFFECT_H
+#define OPENSHOT_CROP_EFFECT_H
 
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
-#include <memory>
-#include <QRect>
 #include "../Color.h"
-#include "../Exceptions.h"
+#include "../Frame.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
+
+#include <memory>
+#include <string>
+
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class adjusts the blur of an image, and can be animated
-	 * with openshot::Keyframe curves over time.
+	 * @brief This class crops a frame image (from any side), and can be animated with
+	 * openshot::Keyframe curves over time.
 	 *
-	 * Adjusting the blur of an image over time can create many different powerful effects. To achieve a
-	 * box blur effect, use identical horizontal and vertical blur values. To achieve a Gaussian blur,
-	 * use 3 iterations, a sigma of 3.0, and a radius between 3 and X (depending on how much blur you want).
+	 * Cropping images can be useful when wanting to remove a border around an image or video, and animating
+	 * the crop can create some very interesting effects.
 	 */
-	class Blur : public EffectBase
+	class Crop : public EffectBase
 	{
 	private:
 		/// Init effect settings
 		void init_effect_details();
 
-		/// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
-		void boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
-		void boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
-
 
 	public:
-		Keyframe horizontal_radius;	///< Horizontal blur radius keyframe. The size of the horizontal blur operation in pixels.
-		Keyframe vertical_radius;	///< Vertical blur radius keyframe. The size of the vertical blur operation in pixels.
-		Keyframe sigma;				///< Sigma keyframe. The amount of spread in the blur operation. Should be larger than radius.
-		Keyframe iterations;		///< Iterations keyframe. The # of blur iterations per pixel. 3 iterations = Gaussian.
+		Color color;		///< Color of bars
+		Keyframe left;		///< Size of left bar
+		Keyframe top;		///< Size of top bar
+		Keyframe right;		///< Size of right bar
+		Keyframe bottom;	///< Size of bottom bar
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Blur();
+		Crop();
 
-		/// Default constructor, which takes 1 curve. The curve adjusts the blur radius
-		/// of a frame's image.
+		/// Default constructor, which takes 4 curves. These curves animate the crop over time.
 		///
-		/// @param new_horizontal_radius The curve to adjust the horizontal blur radius (between 0 and 100, rounded to int)
-		/// @param new_vertical_radius The curve to adjust the vertical blur radius (between 0 and 100, rounded to int)
-		/// @param new_sigma The curve to adjust the sigma amount (the size of the blur brush (between 0 and 100), float values accepted)
-		/// @param new_iterations The curve to adjust the # of iterations (between 1 and 100)
-		Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations);
+		/// @param left The curve to adjust the left bar size (between 0 and 1)
+		/// @param top The curve to adjust the top bar size (between 0 and 1)
+		/// @param right The curve to adjust the right bar size (between 0 and 1)
+		/// @param bottom The curve to adjust the bottom bar size (between 0 and 1)
+		Crop(Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
