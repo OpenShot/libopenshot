@@ -24,8 +24,8 @@ Instructions on how to install these dependencies vary for each operating system
 Libraries and executables have been labeled in the list below to help distinguish between them.
 
 #### FFmpeg (libavformat, libavcodec, libavutil, libavdevice, libavresample, libswscale)
-
 *   <http://www.ffmpeg.org/> **(Library)**
+
 *   This library is used to decode and encode video, audio, and image files.
     It is also used to obtain information about media files,
     such as frame rate, sample rate, aspect ratio, and other common attributes.
@@ -36,39 +36,46 @@ Libraries and executables have been labeled in the list below to help distinguis
 
 #### OpenShot Audio Library (libopenshot-audio)
 *   <https://github.com/OpenShot/libopenshot-audio/> **(Library)**
+
 *   This library is used to mix, resample, host plug-ins, and play audio.
     It is based on the JUCE project,
     an outstanding audio library used by many different applications.
 
 #### Qt 5 (libqt5)
 *   <http://www.qt.io/qt5/> **(Library)**
+
 *   Qt5 is used to display video, store image data, composite images,
     apply image effects, and many other utility functions,
     such as file system manipulation, high resolution timers, etc.
 
 #### ZeroMQ (libzmq)
 *   <http://zeromq.org/> **(Library)**
+
 *   This library is used to communicate between libopenshot and other applications (publisher / subscriber).
     Primarily used to send debug data from libopenshot.
 
 #### OpenMP (`-fopenmp`)
 *   <http://openmp.org/wp/> **(Compiler Flag)**
+
 *   If your compiler supports this flag (GCC, Clang, and most other compilers),
     it provides libopenshot with implementations of common parallel programming techniques
     used to improve performance and take advantage of multi-core processors.
 
 #### CMake (`cmake`)
 *   <http://www.cmake.org/> **(Executable)**
+
 *   This executable is used to automate the generation of Makefiles,
     check for dependencies, and is the backbone of libopenshot’s cross-platform build process.
 
 #### SWIG (`swig`)
 *   <http://www.swig.org/> **(Executable)**
+
 *   This executable is used to generate the Python and Ruby bindings for libopenshot.
     It is a powerful wrapper for C++ libraries, and supports many languages.
 
 #### Python 3 (libpython)
 *   <http://www.python.org/> **(Executable and Library)**
+
 *   This library is used by swig to create the Python (version 3+) bindings for libopenshot.
     This is also the official language used by OpenShot Video Editor (a graphical interface to libopenshot).
 
@@ -78,6 +85,7 @@ Libraries and executables have been labeled in the list below to help distinguis
 
 #### UnitTest++ (libunittest++)
 *   <https://github.com/unittest-cpp/> **(Library)**
+
 *   This library is used to execute unit tests for libopenshot.
     It contains many macros used to keep our unit testing code clean and easy-to-follow.
 
@@ -87,7 +95,7 @@ The first step in installing libopenshot is to obtain the most recent source cod
 The source code is available on [GitHub](https://github.com/OpenShot/libopenshot).
 Use the following command to obtain the latest libopenshot source code.
 
-```
+```sh
 git clone https://github.com/OpenShot/libopenshot.git
 git clone https://github.com/OpenShot/libopenshot-audio.git
 ```
@@ -152,11 +160,12 @@ we highly recommend you use a `/build/` sub-folder to compile each library.
 These instructions have only been tested with the following compiler stacks:
 *   The GNU compiler suite (including MSYS2/MinGW for Windows)
 *   The Clang compiler (including AppleClang on MacOS)
+
 Other compilers, including MSVC, are entirely unsupported.
 It may be possible to build libopenshot using other compiler stacks,
 but most likely not without modifications to the build system which you would have to make yourself.
 
-## CMake Flags (Optional)
+### CMake Flags (Optional)
 There are many different build flags that can be passed to cmake to adjust how libopenshot is compiled.
 Some of these flags might be required when compiling on certain OSes,
 depending on how your build environment is setup.
@@ -164,35 +173,35 @@ depending on how your build environment is setup.
 To add a build flag, follow this general syntax:
 
 ```sh
-$ cmake -B build -S . -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ...
+cmake -B build -S . -DMAGICKCORE_HDRI_ENABLE=1 -DENABLE_TESTS=1 ...
 ```
 
 Following are some of the flags you might need to set when generating your build system.
 
-##### Optional behavior:
+#### Optional behaviors of the build system
 *   `-DENABLE_TESTS=0` (default: `ON`)
 *   `-DENABLE_COVERAGE=1` (default: `OFF`)
 *   `-DENABLE_DOCS=0` (default: `ON` if doxygen found)
 *   `-DENABLE_RUBY=0` (default: `ON` if SWIG and Ruby detected)
 *   `-DENABLE_PYTHON=0` (default: `ON` if SWIG and Python detected)
 
-##### Compiler configuration:
+#### Options to configure the compiler
 *   `-DCMAKE_BUILD_TYPE=Release`, `-DCMAKE_BUILD_TYPE=Debug` (default: `Release` if unset)
 *   `-DCMAKE_CXX_FLAGS="-Wall -Wextra"` (default: CMake builtin defaults for build type)
 *   `-DCMAKE_CXX_COMPILER=/path/to/g++`, `-DCMAKE_CXX_COMPILER=/path/to/clang++`
 *   `-DCMAKE_C_COMPILER=/path/to/gcc`, `-DCMAKE_CXX_COMPILER=/path/to/clang` (used by CMake for OS probes)
 
-##### Dependency configuration:
+#### Options to configure dependencies
 *   `-DCMAKE_PREFIX_PATH=/extra/path/to/search/for/libraries/`
 *   `-DUSE_SYSTEM_JSONCPP=0` (default: auto if discovered)
 *   `-DENABLE_MAGICK=0` (default: auto if discovered)
 
-##### To compile bindings for a specific Python installation:
+#### Options to compile bindings for a specific Python installation
 *   `-DPYTHON_INCLUDE_DIR=/location/of/python/includes/`
 *   `-DPYTHON_LIBRARY=/location/of/libpython*.so`
 *   `-DPYTHON_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/` (MacOS only)
 
-##### Only used when building with ImageMagick enabled:
+#### Options only relevant when building with ImageMagick
 *   `-DMAGICKCORE_HDRI_ENABLE=1` (default `0`)
 *   `-DMAGICKCORE_QUANTUM_DEPTH=8` (default `16`)
 
