@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CVObjectDetection.h"
+#include "CVObjectDetection.h"
 
 // // Initialize the parameters
 // float confThreshold = 0.5; // Confidence threshold

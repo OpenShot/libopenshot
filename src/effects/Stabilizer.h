@@ -114,6 +114,8 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+
 		// Load protobuf data file
         bool LoadStabilizedData(std::string inputFilePath);
         

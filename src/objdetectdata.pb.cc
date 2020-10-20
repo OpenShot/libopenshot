@@ -86,10 +86,10 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_objdetectdata_2eproto::offsets
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
-  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, x1_),
-  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, y1_),
-  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, x2_),
-  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, y2_),
+  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, x_),
+  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, y_),
+  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, w_),
+  PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, h_),
   PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, classid_),
   PROTOBUF_FIELD_OFFSET(::libopenshotobjdetect::Frame_Box, confidence_),
   ~0u,  // no _has_bits_
@@ -122,15 +122,15 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 
 const char descriptor_table_protodef_objdetectdata_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
   "\n\023objdetectdata.proto\022\024libopenshotobjdet"
-  "ect\032\037google/protobuf/timestamp.proto\"\246\001\n"
+  "ect\032\037google/protobuf/timestamp.proto\"\242\001\n"
   "\005Frame\022\n\n\002id\030\001 \001(\005\0225\n\014bounding_box\030\002 \003(\013"
-  "2\037.libopenshotobjdetect.Frame.Box\032Z\n\003Box"
-  "\022\n\n\002x1\030\001 \001(\005\022\n\n\002y1\030\002 \001(\005\022\n\n\002x2\030\003 \001(\005\022\n\n\002"
-  "y2\030\004 \001(\005\022\017\n\007classId\030\005 \001(\005\022\022\n\nconfidence\030"
-  "\006 \001(\002\"}\n\tObjDetect\022*\n\005frame\030\001 \003(\0132\033.libo"
-  "penshotobjdetect.Frame\0220\n\014last_updated\030\002"
-  " \001(\0132\032.google.protobuf.Timestamp\022\022\n\nclas"
-  "sNames\030\003 \003(\tb\006proto3"
+  "2\037.libopenshotobjdetect.Frame.Box\032V\n\003Box"
+  "\022\t\n\001x\030\001 \001(\002\022\t\n\001y\030\002 \001(\002\022\t\n\001w\030\003 \001(\002\022\t\n\001h\030\004"
+  " \001(\002\022\017\n\007classId\030\005 \001(\005\022\022\n\nconfidence\030\006 \001("
+  "\002\"}\n\tObjDetect\022*\n\005frame\030\001 \003(\0132\033.libopens"
+  "hotobjdetect.Frame\0220\n\014last_updated\030\002 \001(\013"
+  "2\032.google.protobuf.Timestamp\022\022\n\nclassNam"
+  "es\030\003 \003(\tb\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_objdetectdata_2eproto_deps[1] = {
   &::descriptor_table_google_2fprotobuf_2ftimestamp_2eproto,
@@ -142,7 +142,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_obj
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_objdetectdata_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_objdetectdata_2eproto = {
-  false, false, descriptor_table_protodef_objdetectdata_2eproto, "objdetectdata.proto", 380,
+  false, false, descriptor_table_protodef_objdetectdata_2eproto, "objdetectdata.proto", 376,
   &descriptor_table_objdetectdata_2eproto_once, descriptor_table_objdetectdata_2eproto_sccs, descriptor_table_objdetectdata_2eproto_deps, 3, 1,
   schemas, file_default_instances, TableStruct_objdetectdata_2eproto::offsets,
   file_level_metadata_objdetectdata_2eproto, 3, file_level_enum_descriptors_objdetectdata_2eproto, file_level_service_descriptors_objdetectdata_2eproto,
@@ -169,16 +169,16 @@ Frame_Box::Frame_Box(::PROTOBUF_NAMESPACE_ID::Arena* arena)
 Frame_Box::Frame_Box(const Frame_Box& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  ::memcpy(&x1_, &from.x1_,
+  ::memcpy(&x_, &from.x_,
     static_cast<size_t>(reinterpret_cast<char*>(&confidence_) -
-    reinterpret_cast<char*>(&x1_)) + sizeof(confidence_));
+    reinterpret_cast<char*>(&x_)) + sizeof(confidence_));
   // @@protoc_insertion_point(copy_constructor:libopenshotobjdetect.Frame.Box)
 }
 
 void Frame_Box::SharedCtor() {
-  ::memset(&x1_, 0, static_cast<size_t>(
+  ::memset(&x_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&confidence_) -
-      reinterpret_cast<char*>(&x1_)) + sizeof(confidence_));
+      reinterpret_cast<char*>(&x_)) + sizeof(confidence_));
 }
 
 Frame_Box::~Frame_Box() {
@@ -212,9 +212,9 @@ void Frame_Box::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  ::memset(&x1_, 0, static_cast<size_t>(
+  ::memset(&x_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&confidence_) -
-      reinterpret_cast<char*>(&x1_)) + sizeof(confidence_));
+      reinterpret_cast<char*>(&x_)) + sizeof(confidence_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -226,32 +226,32 @@ const char* Frame_Box::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     CHK_(ptr);
     switch (tag >> 3) {
-      // int32 x1 = 1;
+      // float x = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
-          x1_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 13)) {
+          x_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
-      // int32 y1 = 2;
+      // float y = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
-          y1_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 21)) {
+          y_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
-      // int32 x2 = 3;
+      // float w = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
-          x2_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 29)) {
+          w_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
-      // int32 y2 = 4;
+      // float h = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
-          y2_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 37)) {
+          h_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
+          ptr += sizeof(float);
         } else goto handle_unusual;
         continue;
       // int32 classId = 5;
@@ -296,28 +296,28 @@ failure:
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // int32 x1 = 1;
-  if (this->x1() != 0) {
+  // float x = 1;
+  if (!(this->x() <= 0 && this->x() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->_internal_x1(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteFloatToArray(1, this->_internal_x(), target);
   }
 
-  // int32 y1 = 2;
-  if (this->y1() != 0) {
+  // float y = 2;
+  if (!(this->y() <= 0 && this->y() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->_internal_y1(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteFloatToArray(2, this->_internal_y(), target);
   }
 
-  // int32 x2 = 3;
-  if (this->x2() != 0) {
+  // float w = 3;
+  if (!(this->w() <= 0 && this->w() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(3, this->_internal_x2(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteFloatToArray(3, this->_internal_w(), target);
   }
 
-  // int32 y2 = 4;
-  if (this->y2() != 0) {
+  // float h = 4;
+  if (!(this->h() <= 0 && this->h() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(4, this->_internal_y2(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteFloatToArray(4, this->_internal_h(), target);
   }
 
   // int32 classId = 5;
@@ -348,32 +348,24 @@ size_t Frame_Box::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // int32 x1 = 1;
-  if (this->x1() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_x1());
+  // float x = 1;
+  if (!(this->x() <= 0 && this->x() >= 0)) {
+    total_size += 1 + 4;
   }
 
-  // int32 y1 = 2;
-  if (this->y1() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_y1());
+  // float y = 2;
+  if (!(this->y() <= 0 && this->y() >= 0)) {
+    total_size += 1 + 4;
   }
 
-  // int32 x2 = 3;
-  if (this->x2() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_x2());
+  // float w = 3;
+  if (!(this->w() <= 0 && this->w() >= 0)) {
+    total_size += 1 + 4;
   }
 
-  // int32 y2 = 4;
-  if (this->y2() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_y2());
+  // float h = 4;
+  if (!(this->h() <= 0 && this->h() >= 0)) {
+    total_size += 1 + 4;
   }
 
   // int32 classId = 5;
@@ -419,17 +411,17 @@ void Frame_Box::MergeFrom(const Frame_Box& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from.x1() != 0) {
-    _internal_set_x1(from._internal_x1());
+  if (!(from.x() <= 0 && from.x() >= 0)) {
+    _internal_set_x(from._internal_x());
   }
-  if (from.y1() != 0) {
-    _internal_set_y1(from._internal_y1());
+  if (!(from.y() <= 0 && from.y() >= 0)) {
+    _internal_set_y(from._internal_y());
   }
-  if (from.x2() != 0) {
-    _internal_set_x2(from._internal_x2());
+  if (!(from.w() <= 0 && from.w() >= 0)) {
+    _internal_set_w(from._internal_w());
   }
-  if (from.y2() != 0) {
-    _internal_set_y2(from._internal_y2());
+  if (!(from.h() <= 0 && from.h() >= 0)) {
+    _internal_set_h(from._internal_h());
   }
   if (from.classid() != 0) {
     _internal_set_classid(from._internal_classid());
@@ -463,9 +455,9 @@ void Frame_Box::InternalSwap(Frame_Box* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(Frame_Box, confidence_)
       + sizeof(Frame_Box::confidence_)
-      - PROTOBUF_FIELD_OFFSET(Frame_Box, x1_)>(
-          reinterpret_cast<char*>(&x1_),
-          reinterpret_cast<char*>(&other->x1_));
+      - PROTOBUF_FIELD_OFFSET(Frame_Box, x_)>(
+          reinterpret_cast<char*>(&x_),
+          reinterpret_cast<char*>(&other->x_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata Frame_Box::GetMetadata() const {

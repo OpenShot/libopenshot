@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Object Detection effect class
+ * @brief Header file for Tracker effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,65 +28,78 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_OBJECT_DETECTION_EFFECT_H
-#define OPENSHOT_OBJECT_DETECTION_EFFECT_H
+#ifndef OPENSHOT_TRACKER_EFFECT_H
+#define OPENSHOT_TRACKER_EFFECT_H
 
 #include "../EffectBase.h"
 
+#include <google/protobuf/util/time_util.h>
+
 #include <cmath>
+#include <fstream>
 #include <stdio.h>
 #include <memory>
-#include <opencv2/opencv.hpp>
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../objdetectdata.pb.h"
+#include "trackerdata.pb.h"
 
-struct DetectionData{
-    DetectionData(){}
-    DetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
-        classIds = _classIds;
-        confidences = _confidences;
-        boxes = _boxes;
-        frameId = _frameId;
-    }
-    size_t frameId;
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<cv::Rect_<float>> boxes;
+using namespace std;
+using google::protobuf::util::TimeUtil;
+
+
+// Tracking info struct
+struct EffectFrameData{
+  size_t frame_id = -1;
+  float rotation = 0;
+  float x1 = -1;
+  float y1 = -1;
+  float x2 = -1;
+  float y2 = -1;
+
+  // Constructors
+  EffectFrameData()
+  {}
+
+  EffectFrameData( int _frame_id)
+  {frame_id = _frame_id;}
+
+  EffectFrameData( int _frame_id , float _rotation, float _x1, float _y1, float _x2, float _y2)
+  {
+      frame_id = _frame_id;
+      rotation = _rotation;
+      x1 = _x1;
+      y1 = _y1;
+      x2 = _x2;
+      y2 = _y2;
+  }
 };
+
 
 namespace openshot
 {
-	
+
 	/**
-	 * @brief This class stabilizes video clip to remove undesired shaking and jitter.
+	 * @brief This class track a given object through the clip and, when called, draws a box surrounding it.
 	 *
-	 * Adding stabilization is useful to increase video quality overall, since it removes 
-	 * from subtle to harsh unexpected camera movements.
+	 * Tracking is useful to better visualize and follow the movement of an object through video.
 	 */
-	class ObjectDetection : public EffectBase
+	class Tracker : public EffectBase
 	{
 	private:
-		std::string protobuf_data_path;
-		std::map<size_t, DetectionData> detectionsData;
-		std::vector<std::string> classNames;
-		
-		std::vector<cv::Scalar> classesColor;
-
 		/// Init effect settings
 		void init_effect_details();
-
-		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame);
+		std::string protobuf_data_path;
 
 	public:
 
+        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		ObjectDetection(std::string clipTrackerDataPath);
+		Tracker(std::string clipTrackerDataPath);
 
 		/// Default constructor
-		ObjectDetection();
+		Tracker();
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -98,12 +111,14 @@ namespace openshot
 		/// @param frame The frame object that needs the effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
-
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+		
 		// Load protobuf data file
-        bool LoadObjDetectdData(std::string inputFilePath);
-
-		DetectionData GetTrackedData(size_t frameId);
+        bool LoadTrackedData(std::string inputFilePath);
         
+		// Get tracker info for the desired frame 
+        EffectFrameData GetTrackedData(size_t frameId);
+
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object

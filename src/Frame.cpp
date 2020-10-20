@@ -939,6 +939,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 }
 
 #ifdef USE_OPENCV
+
 // Convert Qimage to Mat
 cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
 

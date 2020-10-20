@@ -114,6 +114,52 @@ if (ENABLE_BLACKMAGIC)
 
 endif()
 
+################ OPENCV ##################
+
+find_package( OpenCV 4 )
+if (OpenCV_FOUND)
+  message("\nCOMPILING WITH OPENCV\n")
+  set(CMAKE_SWIG_FLAGS "-DUSE_OPENCV=1")
+  add_definitions( -DUSE_OPENCV=1 )
+else()
+  message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
+endif()
+
+################ PROTOBUF ##################
+if (OpenCV_FOUND)
+  find_package(Protobuf 3)
+  
+  if (NOT Protobuf_FOUND)
+    # Protobuf is required when compiling with opencv
+    message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
+  endif()
+  
+  include_directories(${PROTOBUF_INCLUDE_DIR})
+
+  set(PROTOBUF_MESSAGES_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/protobuf_messages")
+
+  FILE(GLOB PROTO_MSGS "${PROTOBUF_MESSAGES_FOLDER}/*.proto")
+  foreach(PROTO_MSG ${PROTO_MSGS})
+    execute_process (
+      COMMAND bash -c "${PROTOBUF_PROTOC_EXECUTABLE} -I=${PROTOBUF_MESSAGES_FOLDER} --cpp_out=${PROTOBUF_MESSAGES_FOLDER} ${PROTO_MSG}"
+    )
+  endforeach()
+
+  FILE(GLOB PROTO_CCS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.cc")
+  foreach(PROTO_CC ${PROTO_CCS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_CC} ${CMAKE_CURRENT_SOURCE_DIR})
+    file(REMOVE ${PROTO_CC})
+  endforeach()
+  
+  FILE(GLOB PROTO_HS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.h")
+  foreach(PROTO_H ${PROTO_HS})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_H} ${CMAKE_CURRENT_SOURCE_DIR})
+    file(REMOVE ${PROTO_H})
+  endforeach()
+
+endif()
+
+
 ###############  PROFILING  #################
 #set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
@@ -515,45 +561,6 @@ endif()
 ### INSTALL HEADERS & LIBRARY
 ###
 
-############### CLI EXECUTABLES ################
-# Create test executable
-add_executable(openshot-example examples/Example.cpp)
-
-
-# Define path to test input files
-set(TEST_MEDIA_PATH "${PROJECT_SOURCE_DIR}/src/examples/")
-if (WIN32)
-  string(REPLACE "/" "\\\\" TEST_MEDIA_PATH TEST_MEDIA_PATH)
-endif()
-target_compile_definitions(openshot-example PRIVATE
-	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-# Link test executable to the new library
-target_link_libraries(openshot-example openshot)
-
-
-add_executable(openshot-html-test examples/ExampleHtml.cpp)
-target_link_libraries(openshot-html-test openshot Qt5::Gui)
-
-############### OPENCV EXAMPLE EXECUTABLE ################
-if (OpenCV_FOUND)
-  # Create test Opencv executable
-  add_executable( openshotCV-example examples/Example_opencv.cpp )
-  # Define path to test input files  
-  target_link_libraries( openshotCV-example ${OpenCV_LIBS} openshot)
-  target_compile_definitions(openshotCV-example PRIVATE
-	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-  # Link test executable to the new library
-  target_link_libraries(openshot-example openshot)
-endif()
-
-
-############### PLAYER EXECUTABLE ################
-# Create test executable
-add_executable(openshot-player Qt/demo/main.cpp)
-
-# Link test executable to the new library
-target_link_libraries(openshot-player openshot)
 
 ############### TEST BLACKMAGIC CAPTURE APP ################
 if (BLACKMAGIC_FOUND)
@@ -565,8 +572,6 @@ if (BLACKMAGIC_FOUND)
   target_link_libraries(openshot-blackmagic openshot)
 endif()
 
-############### INCLUDE SWIG BINDINGS ################
-add_subdirectory(bindings)
 
 ############### INSTALL HEADERS & LIBRARY ################
 

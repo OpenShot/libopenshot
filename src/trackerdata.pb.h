@@ -193,40 +193,40 @@ class Frame_Box PROTOBUF_FINAL :
     kX2FieldNumber = 3,
     kY2FieldNumber = 4,
   };
-  // int32 x1 = 1;
+  // float x1 = 1;
   void clear_x1();
-  ::PROTOBUF_NAMESPACE_ID::int32 x1() const;
-  void set_x1(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float x1() const;
+  void set_x1(float value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_x1() const;
-  void _internal_set_x1(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float _internal_x1() const;
+  void _internal_set_x1(float value);
   public:
 
-  // int32 y1 = 2;
+  // float y1 = 2;
   void clear_y1();
-  ::PROTOBUF_NAMESPACE_ID::int32 y1() const;
-  void set_y1(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float y1() const;
+  void set_y1(float value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_y1() const;
-  void _internal_set_y1(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float _internal_y1() const;
+  void _internal_set_y1(float value);
   public:
 
-  // int32 x2 = 3;
+  // float x2 = 3;
   void clear_x2();
-  ::PROTOBUF_NAMESPACE_ID::int32 x2() const;
-  void set_x2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float x2() const;
+  void set_x2(float value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_x2() const;
-  void _internal_set_x2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float _internal_x2() const;
+  void _internal_set_x2(float value);
   public:
 
-  // int32 y2 = 4;
+  // float y2 = 4;
   void clear_y2();
-  ::PROTOBUF_NAMESPACE_ID::int32 y2() const;
-  void set_y2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float y2() const;
+  void set_y2(float value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_y2() const;
-  void _internal_set_y2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  float _internal_y2() const;
+  void _internal_set_y2(float value);
   public:
 
   // @@protoc_insertion_point(class_scope:libopenshottracker.Frame.Box)
@@ -236,10 +236,10 @@ class Frame_Box PROTOBUF_FINAL :
   template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
-  ::PROTOBUF_NAMESPACE_ID::int32 x1_;
-  ::PROTOBUF_NAMESPACE_ID::int32 y1_;
-  ::PROTOBUF_NAMESPACE_ID::int32 x2_;
-  ::PROTOBUF_NAMESPACE_ID::int32 y2_;
+  float x1_;
+  float y1_;
+  float x2_;
+  float y2_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_trackerdata_2eproto;
 };
@@ -590,82 +590,82 @@ class Tracker PROTOBUF_FINAL :
 #endif  // __GNUC__
 // Frame_Box
 
-// int32 x1 = 1;
+// float x1 = 1;
 inline void Frame_Box::clear_x1() {
   x1_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::_internal_x1() const {
+inline float Frame_Box::_internal_x1() const {
   return x1_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::x1() const {
+inline float Frame_Box::x1() const {
   // @@protoc_insertion_point(field_get:libopenshottracker.Frame.Box.x1)
   return _internal_x1();
 }
-inline void Frame_Box::_internal_set_x1(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::_internal_set_x1(float value) {
   
   x1_ = value;
 }
-inline void Frame_Box::set_x1(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::set_x1(float value) {
   _internal_set_x1(value);
   // @@protoc_insertion_point(field_set:libopenshottracker.Frame.Box.x1)
 }
 
-// int32 y1 = 2;
+// float y1 = 2;
 inline void Frame_Box::clear_y1() {
   y1_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::_internal_y1() const {
+inline float Frame_Box::_internal_y1() const {
   return y1_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::y1() const {
+inline float Frame_Box::y1() const {
   // @@protoc_insertion_point(field_get:libopenshottracker.Frame.Box.y1)
   return _internal_y1();
 }
-inline void Frame_Box::_internal_set_y1(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::_internal_set_y1(float value) {
   
   y1_ = value;
 }
-inline void Frame_Box::set_y1(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::set_y1(float value) {
   _internal_set_y1(value);
   // @@protoc_insertion_point(field_set:libopenshottracker.Frame.Box.y1)
 }
 
-// int32 x2 = 3;
+// float x2 = 3;
 inline void Frame_Box::clear_x2() {
   x2_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::_internal_x2() const {
+inline float Frame_Box::_internal_x2() const {
   return x2_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::x2() const {
+inline float Frame_Box::x2() const {
   // @@protoc_insertion_point(field_get:libopenshottracker.Frame.Box.x2)
   return _internal_x2();
 }
-inline void Frame_Box::_internal_set_x2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::_internal_set_x2(float value) {
   
   x2_ = value;
 }
-inline void Frame_Box::set_x2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::set_x2(float value) {
   _internal_set_x2(value);
   // @@protoc_insertion_point(field_set:libopenshottracker.Frame.Box.x2)
 }
 
-// int32 y2 = 4;
+// float y2 = 4;
 inline void Frame_Box::clear_y2() {
   y2_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::_internal_y2() const {
+inline float Frame_Box::_internal_y2() const {
   return y2_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Frame_Box::y2() const {
+inline float Frame_Box::y2() const {
   // @@protoc_insertion_point(field_get:libopenshottracker.Frame.Box.y2)
   return _internal_y2();
 }
-inline void Frame_Box::_internal_set_y2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::_internal_set_y2(float value) {
   
   y2_ = value;
 }
-inline void Frame_Box::set_y2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Frame_Box::set_y2(float value) {
   _internal_set_y2(value);
   // @@protoc_insertion_point(field_set:libopenshottracker.Frame.Box.y2)
 }

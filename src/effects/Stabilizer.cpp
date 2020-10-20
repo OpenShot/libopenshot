@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Stabilizer.h"
+#include "effects/Stabilizer.h"
 
 using namespace openshot;
 
@@ -46,7 +46,6 @@ Stabilizer::Stabilizer()
 {
 	// Init effect properties
 	init_effect_details();
-	// LoadStabilizedData("/home/gustavostahl/LabVisao/VideoEditor/openshot-qt/stabilization.data");
 }
 
 // Init effect settings

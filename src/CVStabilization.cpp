@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CVStabilization.h"
+#include "CVStabilization.h"
 
 // Set default smoothing window value to compute stabilization 
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)

@@ -1,4 +1,4 @@
-#include "../include/ClipProcessingJobs.h"
+#include "ClipProcessingJobs.h"
 
 // Constructor responsible to choose processing type and apply to clip
 ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string processInfoJson) : 

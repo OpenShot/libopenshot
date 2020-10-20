@@ -32,9 +32,9 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
-#include "../include/ProcessingController.h"
-#include "../include/Json.h"
+#include "OpenShot.h"
+//#include "ProcessingController.h"
+//#include "Json.h"
 #include <QImage>
 
 using namespace openshot;
