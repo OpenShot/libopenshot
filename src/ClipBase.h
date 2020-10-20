@@ -39,12 +39,10 @@
 #include "Point.h"
 #include "KeyFrame.h"
 #include "Json.h"
+#include "TimelineBase.h"
+
 
 namespace openshot {
-
-    // Forward declaration
-    class TimelineBase;
-   
 	/**
 	 * @brief This abstract class is the base class, used by all clips in libopenshot.
 	 *

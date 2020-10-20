@@ -1267,7 +1267,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	float origin_x_value = origin_x.GetValue(frame->number);
 	float origin_y_value = origin_y.GetValue(frame->number);
 
-	bool transformed = false;
 	QTransform transform;
 
 	// Transform source image (if needed)
@@ -1276,7 +1275,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-		transformed = true;
 	}
 
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
@@ -1287,7 +1285,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		transform.rotate(r);
 		transform.shear(shear_x_value, shear_y_value);
 		transform.translate(-origin_x_offset,-origin_y_offset);
-		transformed = true;
 	}
 
 	// SCALE CLIP (if needed)
@@ -1296,11 +1293,10 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 
 	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
-		transformed = true;
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "transformed", transformed);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	auto new_image = std::make_shared<QImage>(QSize(width, height), source_image->format());
@@ -1310,9 +1306,8 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	QPainter painter(new_image.get());
 	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
-	// Apply transform (translate, rotate, scale)... if any
-	if (transformed)
-		painter.setTransform(transform);
+	// Apply transform (translate, rotate, scale)
+	painter.setTransform(transform);
 
 	// Composite a new layer onto the image
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
