@@ -30,7 +30,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtTextReader.h"
+#include "QtTextReader.h"
 #include <QImage>
 #include <QPainter>
 
@@ -67,7 +67,7 @@ void QtTextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::shared_ptr<QImage>(new QImage(width, height, QImage::Format_RGBA8888));
+		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 		image->fill(QColor(background_color.c_str()));
 
 		QPainter painter;
@@ -179,7 +179,9 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 	if (image)
 	{
 		// Create or get frame object
-		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), background_color, 0, 2));
+		auto image_frame = std::make_shared<Frame>(
+			requested_frame, image->size().width(), image->size().height(),
+			background_color, 0, 2);
 
 		// Add Image data to frame
 		image_frame->AddImage(image);
@@ -188,7 +190,7 @@ std::shared_ptr<Frame> QtTextReader::GetFrame(int64_t requested_frame)
 		return image_frame;
 	} else {
 		// return empty frame
-		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, background_color, 0, 2));
+		auto image_frame = std::make_shared<Frame>(1, 640, 480, background_color, 0, 2);
 
 		// return frame object
 		return image_frame;

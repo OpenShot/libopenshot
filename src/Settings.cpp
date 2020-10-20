@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Settings.h"
+#include "Settings.h"
 
 using namespace std;
 using namespace openshot;
@@ -45,8 +45,6 @@ Settings *Settings::Instance()
 		m_pInstance = new Settings;
 		m_pInstance->HARDWARE_DECODER = 0;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->MAX_WIDTH = 0;
-		m_pInstance->MAX_HEIGHT = 0;
 		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
 		m_pInstance->OMP_THREADS = 12;
 		m_pInstance->FF_THREADS = 8;

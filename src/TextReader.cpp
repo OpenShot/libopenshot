@@ -31,7 +31,7 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/TextReader.h"
+#include "TextReader.h"
 
 using namespace openshot;
 
@@ -66,7 +66,8 @@ void TextReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::shared_ptr<Magick::Image>(new Magick::Image(Magick::Geometry(width,height), Magick::Color(background_color)));
+		image = std::make_shared<Magick::Image>(
+			Magick::Geometry(width,height), Magick::Color(background_color));
 
 		// Give image a transparent background color
 		image->backgroundColor(Magick::Color("none"));
@@ -166,10 +167,12 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 	if (image)
 	{
 		// Create or get frame object
-		std::shared_ptr<Frame> image_frame(new Frame(requested_frame, image->size().width(), image->size().height(), "#000000", 0, 2));
+		auto image_frame = std::make_shared<Frame>(
+			requested_frame, image->size().width(), image->size().height(),
+			"#000000", 0, 2);
 
 		// Add Image data to frame
-		std::shared_ptr<Magick::Image> copy_image(new Magick::Image(*image.get()));
+		auto copy_image = std::make_shared<Magick::Image>(*image.get());
 		copy_image->modifyImage(); // actually copy the image data to this object
 		//TODO: Reimplement this with QImage
 		image_frame->AddMagickImage(copy_image);
@@ -178,7 +181,7 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 		return image_frame;
 	} else {
 		// return empty frame
-		std::shared_ptr<Frame> image_frame(new Frame(1, 640, 480, "#000000", 0, 2));
+		auto image_frame = std::make_shared<Frame>(1, 640, 480, "#000000", 0, 2);
 
 		// return frame object
 		return image_frame;

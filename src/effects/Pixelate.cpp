@@ -28,7 +28,13 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Pixelate.h"
+#include "Pixelate.h"
+#include "Json.h"
+
+#include <QImage>
+#include <QPainter>
+#include <QRect>
+#include <QPoint>
 
 using namespace openshot;
 

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectBase.h"
+#include "EffectBase.h"
 
 using namespace openshot;
 
@@ -41,6 +41,7 @@ void EffectBase::InitEffectInfo()
 	Start(0.0);
 	End(0.0);
 	Order(0);
+	ParentClip(NULL);
 
 	info.has_video = false;
 	info.has_audio = false;
@@ -137,4 +138,14 @@ Json::Value EffectBase::JsonInfo() const {
 
 	// return JsonValue
 	return root;
+}
+
+/// Parent clip object of this reader (which can be unparented and NULL)
+openshot::ClipBase* EffectBase::ParentClip() {
+	return clip;
+}
+
+/// Set parent clip object of this reader
+void EffectBase::ParentClip(openshot::ClipBase* new_clip) {
+	clip = new_clip;
 }

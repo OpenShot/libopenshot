@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Brightness.h"
+#include "Brightness.h"
 
 using namespace openshot;
 

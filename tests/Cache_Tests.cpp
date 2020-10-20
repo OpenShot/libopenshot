@@ -31,8 +31,8 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
-#include "../include/Json.h"
+#include "OpenShot.h"
+#include "Json.h"
 
 using namespace openshot;
 
