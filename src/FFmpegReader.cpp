@@ -637,6 +637,9 @@ void FFmpegReader::Close() {
 }
 
 bool FFmpegReader::HasAlbumArt() {
+	// Check if the video stream we use is an attached picture
+	// This won't return true if the file has a cover image as a secondary stream
+	// like an MKV file with an attached image file
 	return pFormatCtx && videoStream >= 0 && pFormatCtx->streams[videoStream]
 		&& (pFormatCtx->streams[videoStream]->disposition & AV_DISPOSITION_ATTACHED_PIC);
 }
