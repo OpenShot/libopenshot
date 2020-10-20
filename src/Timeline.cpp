@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Timeline.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -69,7 +69,13 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.acodec = "openshot::timeline";
 	info.vcodec = "openshot::timeline";
 
-    // Init max image size
+	// Configure OpenMP parallelism
+	// Default number of threads per block
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+
+	// Init max image size
 	SetMaxSize(info.width, info.height);
 
 	// Init cache
@@ -78,7 +84,7 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
-Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
+Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
 
 	// Create CrashHandler and Attach (incase of errors)
@@ -195,6 +201,12 @@ Timeline::Timeline(std::string projectPath, bool convert_absolute_paths) :
 	info.video_timebase = info.fps.Reciprocal();
 	info.has_video = true;
 	info.has_audio = true;
+
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Init max image size
 	SetMaxSize(info.width, info.height);
@@ -480,7 +492,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
-	if (is_top_clip && source_frame) {
+	if (is_top_clip) {
 		#pragma omp critical (T_addLayer)
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 	}
@@ -534,11 +546,12 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				// Currently, the ResampleContext sometimes leaves behind a few samples for the next call, and the
 				// number of samples returned is variable... and does not match the number expected.
 				// This is a crude solution at best. =)
-				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount())
+				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount()){
 					// Force timeline frame to match the source frame
 					#pragma omp critical (T_addLayer)
-					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
 
+					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+				}
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
 				#pragma omp critical (T_addLayer)
@@ -670,6 +683,7 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
+
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
@@ -713,10 +727,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		std::vector<Clip*> nearby_clips;
 		#pragma omp critical (T_GetFrame)
 		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
-
-		omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-		// Allow nested OpenMP sections
-		omp_set_nested(true);
 
 		// Debug output
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);

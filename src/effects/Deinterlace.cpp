@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Deinterlace.h"
+#include "Deinterlace.h"
 
 using namespace openshot;
 
@@ -73,7 +73,7 @@ std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64
 	const unsigned char* pixels = image->bits();
 
 	// Create a smaller, new image
-	QImage deinterlaced_image(image->width(), image->height() / 2, QImage::Format_RGBA8888);
+	QImage deinterlaced_image(image->width(), image->height() / 2, QImage::Format_RGBA8888_Premultiplied);
 	const unsigned char* deinterlaced_pixels = deinterlaced_image.bits();
 
 	// Loop through the scanlines of the image (even or odd)
@@ -86,7 +86,9 @@ std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64
 	}
 
 	// Resize deinterlaced image back to original size, and update frame's image
-	image = std::shared_ptr<QImage>(new QImage(deinterlaced_image.scaled(original_width, original_height, Qt::IgnoreAspectRatio, Qt::FastTransformation)));
+	image = std::make_shared<QImage>(deinterlaced_image.scaled(
+		original_width, original_height,
+		Qt::IgnoreAspectRatio, Qt::FastTransformation));
 
 	// Update image on frame
 	frame->AddImage(image);

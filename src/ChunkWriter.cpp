@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ChunkWriter.h"
+#include "ChunkWriter.h"
 
 using namespace openshot;
 
@@ -134,7 +134,9 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 			writer_thumb->WriteFrame(last_frame);
 		} else {
 			// Write the 1st frame (of the 1st chunk)... since no previous chunk is available
-			std::shared_ptr<Frame> blank_frame(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+			auto blank_frame = std::make_shared<Frame>(
+				1, info.width, info.height, "#000000",
+				info.sample_rate, info.channels);
 			blank_frame->AddColor(info.width, info.height, "#000000");
 			writer_final->WriteFrame(blank_frame);
 			writer_preview->WriteFrame(blank_frame);

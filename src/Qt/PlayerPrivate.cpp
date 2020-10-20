@@ -29,7 +29,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/PlayerPrivate.h"
+#include "PlayerPrivate.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono milliseconds, high_resolution_clock

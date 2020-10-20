@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/KeyFrame.h"
+#include "KeyFrame.h"
 #include <algorithm>
 #include <functional>
 #include <utility>

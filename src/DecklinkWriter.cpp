@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/DecklinkWriter.h"
+#include "DecklinkWriter.h"
 
 using namespace openshot;
 
@@ -142,7 +142,7 @@ void DecklinkWriter::Open()
 	    //	throw DecklinkError("Failed to enable audio output. Is another application using the card?");
 
 		// Begin video preroll by scheduling a second of frames in hardware
-		//std::shared_ptr<Frame> f(new Frame(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue"));
+		//auto f = std::make_shared<Frame>(1, displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
 		//f->AddColor(displayMode->GetWidth(), displayMode->GetHeight(), "Blue");
 
 		// Preroll 1 second of video

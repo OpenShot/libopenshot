@@ -29,12 +29,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/Timeline.h"
-#include "../include/QtPlayer.h"
-#include "../include/Qt/PlayerPrivate.h"
-#include "../include/Qt/VideoRenderer.h"
+#include "Clip.h"
+#include "FFmpegReader.h"
+#include "Timeline.h"
+#include "QtPlayer.h"
+#include "Qt/PlayerPrivate.h"
+#include "Qt/VideoRenderer.h"
 
 namespace openshot
 {

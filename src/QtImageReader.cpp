@@ -28,10 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/QtImageReader.h"
-#include "../include/Settings.h"
-#include "../include/Clip.h"
-#include "../include/CacheMemory.h"
+#include "QtImageReader.h"
+#include "Settings.h"
+#include "Clip.h"
+#include "CacheMemory.h"
 #include <QtCore/QString>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
@@ -43,13 +43,6 @@
 #endif
 
 using namespace openshot;
-
-QtImageReader::QtImageReader(std::string path) : path{QString::fromStdString(path)}, is_open(false)
-{
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
 
 QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
@@ -82,7 +75,8 @@ void QtImageReader::Open()
 			ResvgRenderer renderer(path);
 			if (renderer.isValid()) {
 
-				image = std::shared_ptr<QImage>(new QImage(renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied));
+				image = std::make_shared<QImage>(
+					renderer.defaultSize(), QImage::Format_RGBA8888_Premultiplied);
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
@@ -95,7 +89,7 @@ void QtImageReader::Open()
 
 		if (!loaded) {
 			// Attempt to open file using Qt's build in image processing capabilities
-			image = std::shared_ptr<QImage>(new QImage());
+			image = std::make_shared<QImage>();
 			success = image->load(path);
 		}
 
@@ -103,9 +97,6 @@ void QtImageReader::Open()
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
 		}
-
-		// Convert to proper format
-		image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Update image properties
 		info.has_audio = false;
@@ -239,7 +230,9 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				svg_size.scale(max_width, max_height, Qt::KeepAspectRatio);
 
 				// Create empty QImage
-				cached_image = std::shared_ptr<QImage>(new QImage(QSize(svg_size.width(), svg_size.height()), QImage::Format_ARGB32_Premultiplied));
+				cached_image = std::make_shared<QImage>(
+					QSize(svg_size.width(), svg_size.height()),
+					QImage::Format_RGBA8888_Premultiplied);
 				cached_image->fill(Qt::transparent);
 
 				// Render SVG into QImage
@@ -254,10 +247,9 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 		if (!rendered) {
 			// We need to resize the original image to a smaller image (for performance reasons)
 			// Only do this once, to prevent tons of unneeded scaling operations
-			cached_image = std::shared_ptr<QImage>(new QImage(image->scaled(max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+			cached_image = std::make_shared<QImage>(image->scaled(
+				max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}
-
-		cached_image = std::shared_ptr<QImage>(new QImage(cached_image->convertToFormat(QImage::Format_RGBA8888)));
 
 		// Set max size (to later determine if max_size is changed)
 		max_size.setWidth(max_width);
@@ -265,7 +257,10 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	}
 
 	// Create or get frame object
-	std::shared_ptr<Frame> image_frame(new Frame(requested_frame, cached_image->width(), cached_image->height(), "#000000", Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels), info.channels));
+	auto image_frame = std::make_shared<Frame>(
+		requested_frame, cached_image->width(), cached_image->height(), "#000000",
+		Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels),
+		info.channels);
 
 	// Add Image data to frame
 	image_frame->AddImage(cached_image);

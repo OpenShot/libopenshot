@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ReaderBase.h"
+#include "ReaderBase.h"
 
 using namespace openshot;
 
