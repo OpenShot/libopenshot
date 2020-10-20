@@ -325,7 +325,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
 
 	if (reader)
 	{
@@ -346,7 +346,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
 
 	if (reader)
 	{
@@ -698,7 +698,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		std::shared_ptr<Frame> reader_frame = reader->GetFrame(number);
+		auto reader_frame = reader->GetFrame(number);
 
 		// Return real frame
 		if (reader_frame) {
@@ -706,11 +706,9 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			//std::shared_ptr<Frame> reader_copy(new Frame(number, 1, 1, "#000000", reader_frame->GetAudioSamplesCount(), reader_frame->GetAudioChannelsCount()));
-			std::shared_ptr<Frame> reader_copy(new Frame(*reader_frame.get()));
-			{
-				reader_copy->SampleRate(reader_frame->SampleRate());
-				reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
-			}
+			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
+			reader_copy->SampleRate(reader_frame->SampleRate());
+			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
 			return reader_copy;
 		}
 
@@ -729,7 +727,9 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "estimated_samples_in_frame", estimated_samples_in_frame);
 
 	// Create blank frame
-	std::shared_ptr<Frame> new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", estimated_samples_in_frame, reader->info.channels);
+	auto new_frame = std::make_shared<Frame>(
+		number, reader->info.width, reader->info.height,
+		"#000000", estimated_samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
 	new_frame->AddAudioSilence(estimated_samples_in_frame);
@@ -1176,7 +1176,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	switch (scale)
 	{
 		case (SCALE_FIT): {
-			// keep aspect ratio
 			source_size.scale(width, height, Qt::KeepAspectRatio);
 
 			// Debug output
@@ -1184,7 +1183,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 		case (SCALE_STRETCH): {
-			// ignore aspect ratio
 			source_size.scale(width, height, Qt::IgnoreAspectRatio);
 
 			// Debug output
@@ -1192,14 +1190,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 		case (SCALE_CROP): {
-			QSize width_size(width, round(width / (float(source_size.width()) / float(source_size.height()))));
-			QSize height_size(round(height / (float(source_size.height()) / float(source_size.width()))), height);
-
-			// respect aspect ratio
-			if (width_size.width() >= width && width_size.height() >= height)
-				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
-			else
-				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
+			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
@@ -1312,8 +1303,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "transformed", transformed);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	std::shared_ptr<QImage> new_image;
-	new_image = std::shared_ptr<QImage>(new QImage(QSize(width, height), source_image->format()));
+	auto new_image = std::make_shared<QImage>(QSize(width, height), source_image->format());
 	new_image->fill(QColor(QString::fromStdString("#00000000")));
 
 	// Load timeline's new frame image into a QPainter
