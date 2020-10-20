@@ -171,7 +171,7 @@ namespace openshot {
 		virtual ~Clip();
 
 		/// Get the cache object used by this clip
-		CacheMemory* GetCache() { return &cache; };
+		CacheMemory* GetCache() override { return &cache; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -211,10 +211,10 @@ namespace openshot {
 		/// @returns The modified openshot::Frame object
 		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
 		/// Open the internal reader
-		void Open();
+		void Open() override;
 
 		/// @brief Set the current reader
 		/// @param new_reader The reader to be used by this clip
