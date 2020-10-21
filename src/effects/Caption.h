@@ -31,13 +31,12 @@
 #ifndef OPENSHOT_CAPTION_EFFECT_H
 #define OPENSHOT_CAPTION_EFFECT_H
 
-#include "../EffectBase.h"
-
 #include <cmath>
 #include <stdio.h>
 #include <memory>
 #include <QtCore/QRegularExpression>
 #include "../Color.h"
+#include "../EffectBase.h"
 #include "../Fraction.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
@@ -57,8 +56,9 @@ namespace openshot
 	{
 	private:
 		std::vector<QRegularExpressionMatch> matchedCaptions; ///< RegEx to capture cues and text
-		std::string caption_text; ///< Text of caption
-		std::string caption_format; ///< Format of caption (application/x-subrip, text/vtt)
+		std::string caption_text;    ///< Text of caption
+		QFontMetrics* metrics;       ///< Font metrics object
+		QFont* font; 			     ///< QFont object
 		bool is_dirty;
 
 		/// Init effect settings
@@ -71,12 +71,19 @@ namespace openshot
 	public:
 		Color color;		 ///< Color of caption text
 		Color stroke;		 ///< Color of text border / stroke
+		Color background;	 ///< Color of caption area background
+		Keyframe background_alpha;     ///< Background color alpha
+		Keyframe background_corner;    ///< Background cornder radius
+		Keyframe background_padding;    ///< Background padding
 		Keyframe stroke_width;  ///< Width of text border / stroke
 		Keyframe font_size;     ///< Font size in points
+		Keyframe font_alpha;     ///< Font color alpha
 		Keyframe left;		 ///< Size of left bar
 		Keyframe top;		 ///< Size of top bar
 		Keyframe right;		 ///< Size of right bar
-		Keyframe bottom;	 ///< Size of bottom bar
+		Keyframe fade_in;		 ///< Fade in per caption (# of seconds)
+		Keyframe fade_out;		 ///< Fade in per caption (# of seconds)
+		std::string font_name;	///< Font string
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Caption();
@@ -84,11 +91,8 @@ namespace openshot
 		/// Default constructor, which takes 4 curves and a color. These curves animated the bars over time.
 		///
 		/// @param color The curve to adjust the color of bars
-		/// @param left The curve to adjust the left bar size (between 0 and 1)
-		/// @param top The curve to adjust the top bar size (between 0 and 1)
-		/// @param right The curve to adjust the right bar size (between 0 and 1)
-		/// @param bottom The curve to adjust the bottom bar size (between 0 and 1)
-		Caption(Color color, std::string captions, std::string format);
+		/// @param captions A string with VTT/Subrip format text captions
+		Caption(Color color, std::string captions);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -112,8 +116,6 @@ namespace openshot
 		// Get and Set caption data
 		std::string CaptionText(); ///< Set the caption string to use (see VTT format)
 		void CaptionText(std::string new_caption_text); ///< Get the caption string
-		std::string CaptionFormat(); ///< Set the caption format to use (only VTT format is currently supported)
-		void CaptionFormat(std::string new_caption_format); ///< Get the caption format
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

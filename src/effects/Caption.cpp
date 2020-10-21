@@ -28,21 +28,26 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Caption.h"
-#include "../../include/Clip.h"
-#include "../../include/Timeline.h"
+#include "Caption.h"
+#include "../Clip.h"
+#include "../Timeline.h"
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.5), font_size(30.0), is_dirty(true) {
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.25), top(0.7), right(0.1),
+					 stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
+					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0)
+{
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
-Caption::Caption(Color color, std::string captions, std::string format) :
-		color(color), caption_text(captions), caption_format(format), stroke("#a9a9a9"), left(0.25), top(0.8), right(0.1), bottom(0.1), stroke_width(0.5), font_size(30.0), is_dirty(true)
+Caption::Caption(Color color, std::string captions) :
+		color(color), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
+		left(0.25), top(0.7), right(0.1), stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
+		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -70,17 +75,6 @@ std::string Caption::CaptionText() {
 // Get the caption string
 void Caption::CaptionText(std::string new_caption_text) {
 	caption_text = new_caption_text;
-	is_dirty = true;
-}
-
-// Set the caption format to use (only VTT format is currently supported)
-std::string Caption::CaptionFormat() {
-	return caption_format;
-}
-
-// Get the caption format
-void Caption::CaptionFormat(std::string new_caption_format) {
-	caption_format = new_caption_format;
 	is_dirty = true;
 }
 
@@ -127,6 +121,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	if (timeline != NULL) {
 		fps.num = timeline->info.fps.num;
 		fps.den = timeline->info.fps.den;
+		// preview window is sometimes smaller/larger than the timeline size
 		scale_factor = (double) timeline->preview_width / (double) timeline->info.width;
 	} else if (clip != NULL && clip->Reader() != NULL) {
 		fps.num = clip->Reader()->info.fps.num;
@@ -144,29 +139,58 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	// Composite a new layer onto the image
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-	// Stroke / border pen
-	if (stroke_width.GetValue(frame_number) > 0.0) {
-		QPen pen;
-		pen.setColor(QColor(QString(stroke.GetColorHex(frame_number).c_str())));
+	// Font options and metrics for caption text
+	double font_size_value = font_size.GetValue(frame_number) * scale_factor;
+	QFont font(QString(font_name.c_str()), int(font_size_value));
+	font.setPointSizeF(std::max(font_size_value, 1.0));
+	QFontMetricsF metrics = QFontMetricsF(font);
+
+	// Get current keyframe values
+	double left_value = left.GetValue(frame_number);
+	double top_value = top.GetValue(frame_number);
+	double fade_in_value = fade_in.GetValue(frame_number) * fps.ToDouble();
+	double fade_out_value = fade_out.GetValue(frame_number) * fps.ToDouble();
+	double right_value = right.GetValue(frame_number);
+	double background_corner_value = background_corner.GetValue(frame_number);
+	double padding_value = background_padding.GetValue(frame_number);
+
+	// Calculate caption area (based on left, top, and right margin)
+	double left_margin_x = frame_image->width() * left_value;
+	double starting_y = (frame_image->height() * top_value) + (metrics.lineSpacing() * scale_factor);
+	double right_margin_x = frame_image->width() - (frame_image->width() * right_value);
+	double caption_area_width = right_margin_x - left_margin_x;
+	QRectF caption_area = QRectF(left_margin_x, starting_y, caption_area_width, frame_image->height());
+	QRectF caption_area_with_padding = QRectF(left_margin_x - (padding_value / 2.0), starting_y - (padding_value / 2.0), caption_area_width + padding_value, frame_image->height() + padding_value);
+
+	// Set background color of caption
+	QBrush brush;
+	QColor background_qcolor = QColor(QString(background.GetColorHex(frame_number).c_str()));
+	background_qcolor.setAlphaF(background_alpha.GetValue(frame_number));
+	brush.setColor(background_qcolor);
+	brush.setStyle(Qt::SolidPattern);
+	painter.setBrush(brush);
+	painter.setPen(Qt::NoPen);
+	painter.drawRoundedRect(caption_area_with_padding, background_corner_value, background_corner_value);
+
+	// Set text color of caption
+	QPen pen;
+	QColor stroke_qcolor;
+	if (stroke_width.GetValue(frame_number) <= 0.0) {
+		// No stroke
+		painter.setPen(Qt::NoPen);
+	} else {
+		// Stroke color
+		stroke_qcolor = QColor(QString(stroke.GetColorHex(frame_number).c_str()));
+		stroke_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
+		pen.setColor(stroke_qcolor);
 		pen.setWidthF(stroke_width.GetValue(frame_number) * scale_factor);
 		painter.setPen(pen);
 	}
-
-	// Fill color brush
-	QBrush brush;
-	brush.setColor(QColor(QString(color.GetColorHex(frame_number).c_str())));
-	brush.setStyle(Qt::SolidPattern);
+	// Fill color of text
+	QColor font_qcolor = QColor(QString(color.GetColorHex(frame_number).c_str()));
+	font_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
+	brush.setColor(font_qcolor);
 	painter.setBrush(brush);
-
-	// Font options for caption
-	// TODO: Allow more font options (family, bold, style)
-	QFont font;
-	if (font_size.GetValue(frame_number) > 0.0) {
-		font.setPointSizeF(font_size.GetValue(frame_number) * scale_factor);
-	} else {
-		// Font can't be 0 sized
-		font.setPointSizeF(1.0);
-	}
 
 	// Loop through matches and find text to display (if any)
 	for (auto match = matchedCaptions.begin(); match != matchedCaptions.end(); match++) {
@@ -176,18 +200,6 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 							   match->captured(3).toFloat() + (match->captured(4).toFloat() / 1000.0)) * fps.ToFloat();
 		int64_t end_frame = ((match->captured(5).toFloat() * 60.0 * 60.0 ) + (match->captured(6).toFloat() * 60.0 ) +
 							 match->captured(7).toFloat() + (match->captured(8).toFloat() / 1000.0)) * fps.ToFloat();
-
-		// Get current keyframe values
-		double left_value = left.GetValue(frame_number);
-		double top_value = top.GetValue(frame_number);
-
-		// TODO: Use all 4 margins and wrap text
-		double right_value = right.GetValue(frame_number);
-		double bottom_value = bottom.GetValue(frame_number);
-
-		// Parse WEBVTT caption format
-		double starting_x = frame_image->width() * left_value;
-		double starting_y = frame_image->height() * top_value;;
 
 		// Split multiple lines into separate paths
 		QStringList lines = match->captured(9).split("\n");
@@ -199,16 +211,61 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 				!line.isEmpty() && frame_number >= start_frame && frame_number <= end_frame &&
 				!line.length() <= 1	) {
 
-				// Location for text
-				QPoint p(starting_x, starting_y);
+				// Calculate fade in/out ranges
+				double fade_in_percentage = ((float) frame_number - (float) start_frame) / fade_in_value;
+				double fade_out_percentage = 1.0 - (((float) frame_number - ((float) end_frame - fade_out_value)) / fade_out_value);
+				if (fade_in_percentage < 1.0) {
+					// Fade in
+					font_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
+					stroke_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
+				} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
+					// Fade out
+					font_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
+					stroke_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
+				}
+				pen.setColor(stroke_qcolor);
+				brush.setColor(font_qcolor);
+				painter.setPen(pen);
+				painter.setBrush(brush);
 
-				// Draw text onto path (for correct border and fill)
-				QPainterPath path1;
-				path1.addText(p, font, line);
-				painter.drawPath(path1);
+				// Loop through words, and find word-wrap boundaries
+				QStringList words = line.split(" ");
+				int words_remaining = words.length();
+				while (words_remaining > 0) {
+					bool words_displayed = false;
+					for(int word_index = words.length(); word_index > 0; word_index--) {
+						// Current matched caption string (from the beginning to the current word index)
+						QString fitting_line = words.mid(0, word_index).join(" ");
 
-				// Increment QPoint to height of text (for next line) + padding
-				starting_y += path1.boundingRect().height() + (10.0 * scale_factor);
+						// Calculate size of text
+						QRectF textRect = metrics.boundingRect(caption_area, Qt::TextSingleLine, fitting_line);
+						if (textRect.width() <= caption_area.width()) {
+							// Location for text
+							QPoint p(left_margin_x, starting_y);
+
+							// Draw text onto path (for correct border and fill)
+							QPainterPath path1;
+							QString fitting_line = words.mid(0, word_index).join(" ");
+							path1.addText(p, font, fitting_line);
+							painter.drawPath(path1);
+
+							// Increment QPoint to height of text (for next line) + padding
+							starting_y += path1.boundingRect().height() + (metrics.lineSpacing() * scale_factor);
+
+							// Update line (to remove words already drawn
+							words = words.mid(word_index, words.length());
+							words_remaining = words.length();
+							words_displayed = true;
+							break;
+						}
+					}
+
+					if (words_displayed == false) {
+						// Exit loop if no words displayed
+						words_remaining = 0;
+					}
+				}
+
 			}
 		}
 	}
@@ -235,14 +292,20 @@ Json::Value Caption::JsonValue() const {
 	root["type"] = info.class_name;
 	root["color"] = color.JsonValue();
 	root["stroke"] = stroke.JsonValue();
+	root["background"] = background.JsonValue();
+	root["background_alpha"] = background_alpha.JsonValue();
+	root["background_corner"] = background_corner.JsonValue();
+	root["background_padding"] = background_padding.JsonValue();
 	root["stroke_width"] = stroke_width.JsonValue();
 	root["font_size"] = font_size.JsonValue();
+	root["font_alpha"] = font_alpha.JsonValue();
+	root["fade_in"] = fade_in.JsonValue();
+	root["fade_out"] = fade_out.JsonValue();
 	root["left"] = left.JsonValue();
 	root["top"] = top.JsonValue();
 	root["right"] = right.JsonValue();
-	root["bottom"] = bottom.JsonValue();
 	root["caption_text"] = caption_text;
-	root["caption_format"] = caption_format;
+	root["caption_font"] = font_name;
 
 	// return JsonValue
 	return root;
@@ -276,22 +339,34 @@ void Caption::SetJsonValue(const Json::Value root) {
 		color.SetJsonValue(root["color"]);
 	if (!root["stroke"].isNull())
 		stroke.SetJsonValue(root["stroke"]);
+	if (!root["background"].isNull())
+		background.SetJsonValue(root["background"]);
+	if (!root["background_alpha"].isNull())
+		background_alpha.SetJsonValue(root["background_alpha"]);
+	if (!root["background_corner"].isNull())
+		background_corner.SetJsonValue(root["background_corner"]);
+	if (!root["background_padding"].isNull())
+		background_padding.SetJsonValue(root["background_padding"]);
 	if (!root["stroke_width"].isNull())
 		stroke_width.SetJsonValue(root["stroke_width"]);
 	if (!root["font_size"].isNull())
 		font_size.SetJsonValue(root["font_size"]);
+	if (!root["font_alpha"].isNull())
+		font_alpha.SetJsonValue(root["font_alpha"]);
+	if (!root["fade_in"].isNull())
+		fade_in.SetJsonValue(root["fade_in"]);
+	if (!root["fade_out"].isNull())
+		fade_out.SetJsonValue(root["fade_out"]);
 	if (!root["left"].isNull())
 		left.SetJsonValue(root["left"]);
 	if (!root["top"].isNull())
 		top.SetJsonValue(root["top"]);
 	if (!root["right"].isNull())
 		right.SetJsonValue(root["right"]);
-	if (!root["bottom"].isNull())
-		bottom.SetJsonValue(root["bottom"]);
 	if (!root["caption_text"].isNull())
 		caption_text = root["caption_text"].asString();
-	if (!root["caption_format"].isNull())
-		caption_format = root["caption_format"].asString();
+	if (!root["caption_font"].isNull())
+		font_name = root["caption_font"].asString();
 
 	// Mark effect as dirty to reparse Regex
 	is_dirty = true;
@@ -318,14 +393,23 @@ std::string Caption::PropertiesJSON(int64_t requested_frame) const {
 	root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
 	root["stroke"]["blue"] = add_property_json("Blue", stroke.blue.GetValue(requested_frame), "float", "", &stroke.blue, 0, 255, false, requested_frame);
 	root["stroke"]["green"] = add_property_json("Green", stroke.green.GetValue(requested_frame), "float", "", &stroke.green, 0, 255, false, requested_frame);
+	root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
+	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "float", "", &background_corner, 0.0, 60.0, false, requested_frame);
+	root["background_padding"] = add_property_json("Background Padding", background_padding.GetValue(requested_frame), "float", "", &background_padding, 0.0, 60.0, false, requested_frame);
+	root["background"] = add_property_json("Background", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
+	root["background"]["red"] = add_property_json("Red", background.red.GetValue(requested_frame), "float", "", &background.red, 0, 255, false, requested_frame);
+	root["background"]["blue"] = add_property_json("Blue", background.blue.GetValue(requested_frame), "float", "", &background.blue, 0, 255, false, requested_frame);
+	root["background"]["green"] = add_property_json("Green", background.green.GetValue(requested_frame), "float", "", &background.green, 0, 255, false, requested_frame);
 	root["stroke_width"] = add_property_json("Stroke Width", stroke_width.GetValue(requested_frame), "float", "", &stroke_width, 0, 10.0, false, requested_frame);
 	root["font_size"] = add_property_json("Font Size", font_size.GetValue(requested_frame), "float", "", &font_size, 0, 200.0, false, requested_frame);
+	root["font_alpha"] = add_property_json("Font Alpha", font_alpha.GetValue(requested_frame), "float", "", &font_alpha, 0.0, 1.0, false, requested_frame);
+	root["fade_in"] = add_property_json("Fade In (Seconds)", fade_in.GetValue(requested_frame), "float", "", &fade_in, 0.0, 3.0, false, requested_frame);
+	root["fade_out"] = add_property_json("Fade Out (Seconds)", fade_out.GetValue(requested_frame), "float", "", &fade_out, 0.0, 3.0, false, requested_frame);
 	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
-	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 0.5, false, requested_frame);
+	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
 	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
-	root["bottom"] = add_property_json("Bottom Size", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 0.5, false, requested_frame);
 	root["caption_text"] = add_property_json("Captions", 0.0, "string", caption_text, NULL, -1, -1, false, requested_frame);
-	root["caption_format"] = add_property_json("Format", 0.0, "string", caption_format, NULL, -1, -1, false, requested_frame);
+	root["caption_font"] = add_property_json("Font", 0.0, "string", font_name, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
