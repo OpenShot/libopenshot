@@ -65,6 +65,11 @@ void Caption::init_effect_details()
 	info.description = "Add text captions on top of your video.";
 	info.has_audio = false;
 	info.has_video = true;
+
+	// Init placeholder caption (for demo)
+	if (caption_text.length() == 0) {
+		caption_text = "00:00:00:000 --> 00:10:00:000\nEdit this caption with our caption editor";
+	}
 }
 
 // Set the caption string to use (see VTT format)
@@ -86,9 +91,15 @@ void Caption::process_regex() {
 		// Clear existing matches
 		matchedCaptions.clear();
 
+		QString caption_prepared = QString(caption_text.c_str());
+		if (caption_prepared.endsWith("\n\n") == false) {
+			// We need a couple line ends at the end of the caption string (for our regex to work correctly)
+			caption_prepared.append("\n\n");
+		}
+
 		// Parse regex and find all matches
 		QRegularExpression allPathsRegex(QStringLiteral("(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})\\s*-->\\s*(\\d{2})?:*(\\d{2}):(\\d{2}).(\\d{2,3})([\\s\\S]*?)\\n(.*?)(?=\\n\\d{2,3}|\\Z)"), QRegularExpression::MultilineOption);
-		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(QString(caption_text.c_str()));
+		QRegularExpressionMatchIterator i = allPathsRegex.globalMatch(caption_prepared);
 		while (i.hasNext()) {
 			QRegularExpressionMatch match = i.next();
 			if (match.hasMatch()) {
@@ -408,8 +419,8 @@ std::string Caption::PropertiesJSON(int64_t requested_frame) const {
 	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
 	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
 	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
-	root["caption_text"] = add_property_json("Captions", 0.0, "string", caption_text, NULL, -1, -1, false, requested_frame);
-	root["caption_font"] = add_property_json("Font", 0.0, "string", font_name, NULL, -1, -1, false, requested_frame);
+	root["caption_text"] = add_property_json("Captions", 0.0, "caption", caption_text, NULL, -1, -1, false, requested_frame);
+	root["caption_font"] = add_property_json("Font", 0.0, "font", font_name, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
