@@ -246,6 +246,11 @@ void Timeline::AddClip(Clip* clip)
 	// Assign timeline to clip
 	clip->ParentTimeline(this);
 
+	// Clear cache of clip and nested reader (if any)
+	clip->cache.Clear();
+	if (clip->Reader() && clip->Reader()->GetCache())
+		clip->Reader()->GetCache()->Clear();
+
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips)
 		// Apply framemapper (or update existing framemapper)

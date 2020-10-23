@@ -161,6 +161,8 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	if (reader) {
 		End(reader->info.duration);
 		reader->ParentClip(this);
+		// Init reader info struct and cache size
+		init_reader_settings();
 	}
 }
 
@@ -220,7 +222,8 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		reader->ParentClip(this);
 		allocated_reader = reader;
 		// Init reader info struct and cache size
-		init_reader_settings();	}
+		init_reader_settings();
+	}
 }
 
 // Destructor
