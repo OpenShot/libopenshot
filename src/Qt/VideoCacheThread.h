@@ -45,10 +45,13 @@ namespace openshot
      */
     class VideoCacheThread : Thread
     {
+	private:
+	std::atomic_int position;
+
+	protected:
 	std::shared_ptr<Frame> frame;
 	int speed;
 	bool is_playing;
-	int64_t position;
 	int64_t current_display_frame;
 	ReaderBase *reader;
 	int max_frames;
