@@ -88,9 +88,9 @@ namespace openshot
 		/// Blank constructor, useful when using Json to load the effect properties
 		Caption();
 
-		/// Default constructor, which takes 4 curves and a color. These curves animated the bars over time.
+		/// Default constructor, which takes a string of VTT/Subrip formatted caption data, and displays them over time.
 		///
-		/// @param color The curve to adjust the color of bars
+		/// @param color The curve to adjust the color of caption text
 		/// @param captions A string with VTT/Subrip format text captions
 		Caption(Color color, std::string captions);
 
