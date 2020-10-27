@@ -44,8 +44,8 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 }
 
 // Default constructor
-Caption::Caption(Color color, std::string captions) :
-		color(color), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
+Caption::Caption(std::string captions) :
+		color("#ffffff"), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
 		left(0.25), top(0.7), right(0.1), stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
 		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0)
 {
@@ -220,7 +220,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 			// Ignore lines that start with NOTE, or are <= 1 char long
 			if (!line.startsWith(QStringLiteral("NOTE")) &&
 				!line.isEmpty() && frame_number >= start_frame && frame_number <= end_frame &&
-				!line.length() <= 1	) {
+				line.length() > 1) {
 
 				// Calculate fade in/out ranges
 				double fade_in_percentage = ((float) frame_number - (float) start_frame) / fade_in_value;

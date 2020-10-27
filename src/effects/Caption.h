@@ -90,9 +90,8 @@ namespace openshot
 
 		/// Default constructor, which takes a string of VTT/Subrip formatted caption data, and displays them over time.
 		///
-		/// @param color The curve to adjust the color of caption text
 		/// @param captions A string with VTT/Subrip format text captions
-		Caption(Color color, std::string captions);
+		Caption(std::string captions);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
