@@ -94,8 +94,10 @@ namespace openshot
 		while (!threadShouldExit() && is_playing) {
 
 	    // Cache frames before the other threads need them
-	    // Cache frames up to the max frames
-	    while (speed == 1 && (position - current_display_frame) < max_frames)
+	    // Cache frames up to the max frames. Reset to current position
+		// if cache gets too far away from display frame. Cache frames
+		// even when player is paused (i.e. speed 0).
+	    while ((position - current_display_frame) < max_frames)
 	    {
 	    	// Only cache up till the max_frames amount... then sleep
 			try
@@ -104,6 +106,14 @@ namespace openshot
 					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
 
 					// Force the frame to be generated
+					if (reader->GetCache()->GetSmallestFrame()) {
+						int64_t smallest_cached_frame = reader->GetCache()->GetSmallestFrame()->number;
+						if (smallest_cached_frame > current_display_frame) {
+							// Cache position has gotten too far away from current display frame.
+							// Reset the position to the current display frame.
+							position = current_display_frame;
+						}
+					}
 					reader->GetFrame(position);
 				}
 
@@ -113,14 +123,8 @@ namespace openshot
 				// Ignore out of bounds frame exceptions
 			}
 
-			// Is cache position behind current display frame?
-			if (position < current_display_frame) {
-				// Jump ahead
-				position = current_display_frame;
-			}
-
 	    	// Increment frame number
-	    	position++;
+			position++;
 	    }
 
 		// Sleep for 1 frame length

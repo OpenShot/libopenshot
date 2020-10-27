@@ -138,6 +138,7 @@
 #include "QtHtmlReader.h"
 #include "QtImageReader.h"
 #include "QtTextReader.h"
+#include "TimelineBase.h"
 #include "Timeline.h"
 #include "Settings.h"
 

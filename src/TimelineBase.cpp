@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for global Settings class
+ * @brief Source file for Timeline class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,32 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Settings.h"
+#include "TimelineBase.h"
 
-using namespace std;
 using namespace openshot;
 
-
-// Global reference to logger
-Settings *Settings::m_pInstance = NULL;
-
-// Create or Get an instance of the logger singleton
-Settings *Settings::Instance()
+/// Constructor for the base timeline
+TimelineBase::TimelineBase()
 {
-	if (!m_pInstance) {
-		// Create the actual instance of logger only once
-		m_pInstance = new Settings;
-		m_pInstance->HARDWARE_DECODER = 0;
-		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
-		m_pInstance->OMP_THREADS = 12;
-		m_pInstance->FF_THREADS = 8;
-		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
-		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
-		m_pInstance->HW_DE_DEVICE_SET = 0;
-		m_pInstance->HW_EN_DEVICE_SET = 0;
-		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
-	}
-
-	return m_pInstance;
+	// Init preview size (default)
+	preview_width = 1920;
+	preview_height = 1080;
 }

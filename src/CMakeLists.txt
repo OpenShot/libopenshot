@@ -96,6 +96,7 @@ set(OPENSHOT_SOURCES
   QtPlayer.cpp
   QtTextReader.cpp
   Settings.cpp
+  TimelineBase.cpp
   Timeline.cpp)
 
 # Video effects

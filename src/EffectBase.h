@@ -67,6 +67,10 @@ namespace openshot
 	{
 	private:
 		int order; ///< The order to evaluate this effect. Effects are processed in this order (when more than one overlap).
+
+	protected:
+		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
+
 	public:
 
 		/// Information about the current effect
@@ -78,20 +82,15 @@ namespace openshot
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
 
-		/// @brief This method is required for all derived classes of EffectBase, and returns a
-		/// modified openshot::Frame object
-		///
-		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from its keyframes (starting at 1).
-		///
-		/// @returns The modified openshot::Frame object
-		/// @param frame The frame object that needs the effect applied to it
-		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		virtual std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) = 0;
-
 		/// Initialize the values of the EffectInfo struct.  It is important for derived classes to call
 		/// this method, or the EffectInfo struct values will not be initialized.
 		void InitEffectInfo();
+
+		/// Parent clip object of this effect (which can be unparented and NULL)
+		openshot::ClipBase* ParentClip();
+
+		/// Set parent clip object of this effect
+		void ParentClip(openshot::ClipBase* new_clip);
 
 		/// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object

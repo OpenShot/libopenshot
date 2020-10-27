@@ -62,7 +62,7 @@ void QtHtmlReader::Open()
 	if (!is_open)
 	{
 		// create image
-		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888);
+		image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 		image->fill(QColor(background_color.c_str()));
 
 		//start painting

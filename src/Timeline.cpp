@@ -52,6 +52,8 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init FileInfo struct (clear all values)
 	info.width = width;
 	info.height = height;
+	preview_width = info.width;
+	preview_height = info.height;
 	info.fps = fps;
 	info.sample_rate = sample_rate;
 	info.channels = channels;
@@ -241,6 +243,14 @@ Timeline::~Timeline() {
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
+	// Assign timeline to clip
+	clip->ParentTimeline(this);
+
+	// Clear cache of clip and nested reader (if any)
+	clip->cache.Clear();
+	if (clip->Reader() && clip->Reader()->GetCache())
+		clip->Reader()->GetCache()->Clear();
+
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips)
 		// Apply framemapper (or update existing framemapper)
@@ -256,6 +266,9 @@ void Timeline::AddClip(Clip* clip)
 // Add an effect to the timeline
 void Timeline::AddEffect(EffectBase* effect)
 {
+	// Assign timeline to effect
+	effect->ParentTimeline(this);
+
 	// Add effect to list
 	effects.push_back(effect);
 
@@ -458,7 +471,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
 
 	// Create blank frame
-	new_frame = std::make_shared<Frame>(number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels);
+	new_frame = std::make_shared<Frame>(number, preview_width, preview_height, "#000000", samples_in_frame, info.channels);
 	#pragma omp critical (T_GetOtCreateFrame)
 	{
 		new_frame->SampleRate(info.sample_rate);
@@ -482,28 +495,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
 
-	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
-	if (source_clip->Waveform())
-	{
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Generate Waveform Image)", "source_frame->number", source_frame->number, "source_clip->Waveform()", source_clip->Waveform(), "clip_frame_number", clip_frame_number);
-
-		// Get the color of the waveform
-		int red = source_clip->wave_color.red.GetInt(clip_frame_number);
-		int green = source_clip->wave_color.green.GetInt(clip_frame_number);
-		int blue = source_clip->wave_color.blue.GetInt(clip_frame_number);
-		int alpha = source_clip->wave_color.alpha.GetInt(clip_frame_number);
-
-		// Generate Waveform Dynamically (the size of the timeline)
-		std::shared_ptr<QImage> source_image;
-		#pragma omp critical (T_addLayer)
-		source_image = source_frame->GetWaveform(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, red, green, blue, alpha);
-		source_frame->AddImage(std::shared_ptr<QImage>(source_image));
-	}
-
 	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
 	 * effects on the top clip. */
-	if (is_top_clip && source_frame) {
+	if (is_top_clip) {
 		#pragma omp critical (T_addLayer)
 		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
 	}
@@ -557,11 +551,12 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 				// Currently, the ResampleContext sometimes leaves behind a few samples for the next call, and the
 				// number of samples returned is variable... and does not match the number expected.
 				// This is a crude solution at best. =)
-				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount())
+				if (new_frame->GetAudioSamplesCount() != source_frame->GetAudioSamplesCount()){
 					// Force timeline frame to match the source frame
 					#pragma omp critical (T_addLayer)
-					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
 
+					new_frame->ResizeAudio(info.channels, source_frame->GetAudioSamplesCount(), info.sample_rate, info.channel_layout);
+				}
 				// Copy audio samples (and set initial volume).  Mix samples with existing audio samples.  The gains are added together, to
 				// be sure to set the gain's correctly, so the sum does not exceed 1.0 (of audio distortion will happen).
 				#pragma omp critical (T_addLayer)
@@ -571,7 +566,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		else
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
-
 	}
 
 	// Skip out if video was disabled or only an audio frame (no visualisation in use)
@@ -586,253 +580,26 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	// Get actual frame image data
 	source_image = source_frame->GetImage();
 
-	/* ALPHA & OPACITY */
-	if (source_clip->alpha.GetValue(clip_frame_number) != 1.0)
-	{
-		float alpha = source_clip->alpha.GetValue(clip_frame_number);
-
-		// Get source image's pixels
-		unsigned char *pixels = (unsigned char *) source_image->bits();
-
-		// Loop through pixels
-		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
-		{
-			// Apply alpha to pixel
-			pixels[byte_index + 3] *= alpha;
-		}
-
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Set Alpha & Opacity)", "alpha", alpha, "source_frame->number", source_frame->number, "clip_frame_number", clip_frame_number);
-	}
-
-	/* RESIZE SOURCE IMAGE - based on scale type */
-	QSize source_size = source_image->size();
-	switch (source_clip->scale)
-	{
-		case (SCALE_FIT): {
-			// keep aspect ratio
-			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::KeepAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_FIT)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height());
-			break;
-		}
-		case (SCALE_STRETCH): {
-			// ignore aspect ratio
-			source_size.scale(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, Qt::IgnoreAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_STRETCH)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height());
-			break;
-		}
-		case (SCALE_CROP): {
-			QSize width_size(Settings::Instance()->MAX_WIDTH, round(Settings::Instance()->MAX_WIDTH / (float(source_size.width()) / float(source_size.height()))));
-			QSize height_size(round(Settings::Instance()->MAX_HEIGHT / (float(source_size.height()) / float(source_size.width()))), Settings::Instance()->MAX_HEIGHT);
-
-			// respect aspect ratio
-			if (width_size.width() >= Settings::Instance()->MAX_WIDTH && width_size.height() >= Settings::Instance()->MAX_HEIGHT)
-				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
-			else
-				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_CROP)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height());
-			break;
-		}
-		case (SCALE_NONE): {
-			// Calculate ratio of source size to project size
-			// Even with no scaling, previews need to be adjusted correctly
-			// (otherwise NONE scaling draws the frame image outside of the preview)
-			float source_width_ratio = source_size.width() / float(info.width);
-			float source_height_ratio = source_size.height() / float(info.height);
-			source_size.scale(Settings::Instance()->MAX_WIDTH * source_width_ratio, Settings::Instance()->MAX_HEIGHT * source_height_ratio, Qt::KeepAspectRatio);
-
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Scale: SCALE_NONE)", "source_frame->number", source_frame->number, "source_width", source_size.width(), "source_height", source_size.height());
-			break;
-		}
-	}
-
-    float crop_x = source_clip->crop_x.GetValue(clip_frame_number);
-    float crop_y = source_clip->crop_y.GetValue(clip_frame_number);
-    float crop_w = source_clip->crop_width.GetValue(clip_frame_number);
-    float crop_h = source_clip->crop_height.GetValue(clip_frame_number);
-    switch(source_clip->crop_gravity)
-    {
-    case (GRAVITY_TOP_LEFT):
-        // This is only here to prevent unused-enum warnings
-        break;
-    case (GRAVITY_TOP):
-        crop_x += 0.5;
-        break;
-    case (GRAVITY_TOP_RIGHT):
-        crop_x += 1.0;
-        break;
-    case (GRAVITY_LEFT):
-        crop_y += 0.5;
-        break;
-    case (GRAVITY_CENTER):
-        crop_x += 0.5;
-        crop_y += 0.5;
-        break;
-    case (GRAVITY_RIGHT):
-        crop_x += 1.0;
-        crop_y += 0.5;
-        break;
-    case (GRAVITY_BOTTOM_LEFT):
-        crop_y += 1.0;
-        break;
-    case (GRAVITY_BOTTOM):
-        crop_x += 0.5;
-        crop_y += 1.0;
-        break;
-    case (GRAVITY_BOTTOM_RIGHT):
-        crop_x += 1.0;
-        crop_y += 1.0;
-        break;
-    }
-
-
-	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
-	float x = 0.0; // left
-	float y = 0.0; // top
-
-	// Adjust size for scale x and scale y
-	float sx = source_clip->scale_x.GetValue(clip_frame_number); // percentage X scale
-	float sy = source_clip->scale_y.GetValue(clip_frame_number); // percentage Y scale
-	float scaled_source_width = source_size.width() * sx;
-	float scaled_source_height = source_size.height() * sy;
-
-	switch (source_clip->gravity)
-	{
-	case (GRAVITY_TOP_LEFT):
-		// This is only here to prevent unused-enum warnings
-		break;
-	case (GRAVITY_TOP):
-		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
-		break;
-	case (GRAVITY_TOP_RIGHT):
-		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
-		break;
-	case (GRAVITY_LEFT):
-		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
-		break;
-	case (GRAVITY_CENTER):
-		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
-		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
-		break;
-	case (GRAVITY_RIGHT):
-		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
-		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height) / 2.0; // center
-		break;
-	case (GRAVITY_BOTTOM_LEFT):
-        y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
-		break;
-	case (GRAVITY_BOTTOM):
-		x = (Settings::Instance()->MAX_WIDTH - scaled_source_width) / 2.0; // center
-		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
-		break;
-	case (GRAVITY_BOTTOM_RIGHT):
-		x = Settings::Instance()->MAX_WIDTH - scaled_source_width; // right
-		y = (Settings::Instance()->MAX_HEIGHT - scaled_source_height); // bottom
-		break;
-	}
-
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Gravity)", "source_frame->number", source_frame->number, "source_clip->gravity", source_clip->gravity, "info.width", info.width, "scaled_source_width", scaled_source_width, "info.height", info.height, "scaled_source_height", scaled_source_height);
-
-	/* LOCATION, ROTATION, AND SCALE */
-	float r = source_clip->rotation.GetValue(clip_frame_number); // rotate in degrees
-	x += (Settings::Instance()->MAX_WIDTH * source_clip->location_x.GetValue(clip_frame_number)); // move in percentage of final width
-	y += (Settings::Instance()->MAX_HEIGHT * source_clip->location_y.GetValue(clip_frame_number)); // move in percentage of final height
-	float shear_x = source_clip->shear_x.GetValue(clip_frame_number);
-	float shear_y = source_clip->shear_y.GetValue(clip_frame_number);
-	float origin_x = source_clip->origin_x.GetValue(clip_frame_number);
-	float origin_y = source_clip->origin_y.GetValue(clip_frame_number);
-
-	bool transformed = false;
-	QTransform transform;
-
-	// Transform source image (if needed)
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Build QTransform - if needed)", "source_frame->number", source_frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
-
-	if (!isEqual(x, 0) || !isEqual(y, 0)) {
-		// TRANSLATE/MOVE CLIP
-		transform.translate(x, y);
-		transformed = true;
-	}
-
-	if (!isEqual(r, 0) || !isEqual(shear_x, 0) || !isEqual(shear_y, 0)) {
-		// ROTATE CLIP (around origin_x, origin_y)
-		float origin_x_value = (scaled_source_width * origin_x);
-		float origin_y_value = (scaled_source_height * origin_y);
-		transform.translate(origin_x_value, origin_y_value);
-		transform.rotate(r);
-		transform.shear(shear_x, shear_y);
-		transform.translate(-origin_x_value,-origin_y_value);
-		transformed = true;
-	}
-
-	// SCALE CLIP (if needed)
-	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
-	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
-
-	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
-		transform.scale(source_width_scale, source_height_scale);
-		transformed = true;
-	}
-
-	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Prepare)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "source_image->width()", source_image->width());
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
 	std::shared_ptr<QImage> new_image;
-	#pragma omp critical (T_addLayer)
-		new_image = new_frame->GetImage();
+	new_image = new_frame->GetImage();
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-
-	// Apply transform (translate, rotate, scale)... if any
-	if (transformed)
-		painter.setTransform(transform);
 
 	// Composite a new layer onto the image
-    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawImage(0, 0, *source_image, crop_x * source_image->width(), crop_y * source_image->height(), crop_w * source_image->width(), crop_h * source_image->height());
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *source_image, 0, 0, source_image->width(), source_image->height());
+	painter.end();
 
-    // Draw frame #'s on top of image (if needed)
-    if (source_clip->display != FRAME_DISPLAY_NONE) {
-        std::stringstream frame_number_str;
-        switch (source_clip->display)
-        {
-            case (FRAME_DISPLAY_NONE):
-                // This is only here to prevent unused-enum warnings
-                break;
-
-            case (FRAME_DISPLAY_CLIP):
-                frame_number_str << clip_frame_number;
-                break;
-
-            case (FRAME_DISPLAY_TIMELINE):
-                frame_number_str << timeline_frame_number;
-                break;
-
-            case (FRAME_DISPLAY_BOTH):
-                frame_number_str << timeline_frame_number << " (" << clip_frame_number << ")";
-                break;
-        }
-
-        // Draw frame number on top of image
-        painter.setPen(QColor("#ffffff"));
-        painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
-    }
-
-    painter.end();
+	// Add new QImage to frame
+	new_frame->AddImage(new_image);
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "transformed", transformed);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width());
 }
 
 // Update the list of 'opened' clips
@@ -921,12 +688,14 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
+
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
 
 	// Check cache
 	std::shared_ptr<Frame> frame;
+	std::lock_guard<std::mutex> guard(get_frame_mutex);
 	#pragma omp critical (T_GetFrame)
 	frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
@@ -954,6 +723,15 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 			// Return cached frame
 			return frame;
+		}
+
+		// Check if previous frame was cached? (if not, assume we are seeking somewhere else on the Timeline, and need
+		// to clear all cache (for continuity sake). For example, jumping back to a previous spot can cause issues with audio
+		// data where the new jump location doesn't match up with the previously cached audio data.
+		std::shared_ptr<Frame> previous_frame = final_cache->GetFrame(requested_frame - 1);
+		if (!previous_frame) {
+			// Seeking to new place on timeline (destroy cache)
+			ClearAllCache();
 		}
 
 		// Minimum number of frames to process (for performance reasons)
@@ -984,6 +762,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 					// Get clip frame #
                     long clip_start_frame = (clip->Start() * info.fps.ToDouble()) + 1;
 					long clip_frame_number = frame_number - clip_start_position + clip_start_frame;
+
 					// Cache clip object
 					clip->GetFrame(clip_frame_number);
 				}
@@ -1003,7 +782,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				int samples_in_frame = Frame::GetSamplesPerFrame(frame_number, info.fps, info.sample_rate, info.channels);
 
 				// Create blank frame (which will become the requested frame)
-				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, "#000000", samples_in_frame, info.channels));
+				std::shared_ptr<Frame> new_frame(std::make_shared<Frame>(frame_number, preview_width, preview_height, "#000000", samples_in_frame, info.channels));
 				#pragma omp critical (T_GetFrame)
 				{
 					new_frame->AddAudioSilence(samples_in_frame);
@@ -1017,7 +796,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 				// Add Background Color to 1st layer (if animated or not black)
 				if ((color.red.GetCount() > 1 || color.green.GetCount() > 1 || color.blue.GetCount() > 1) ||
 					(color.red.GetValue(frame_number) != 0.0 || color.green.GetValue(frame_number) != 0.0 || color.blue.GetValue(frame_number) != 0.0))
-				new_frame->AddColor(Settings::Instance()->MAX_WIDTH, Settings::Instance()->MAX_HEIGHT, color.GetColorHex(frame_number));
+				new_frame->AddColor(preview_width, preview_height, color.GetColorHex(frame_number));
 
 				// Debug output
 				ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Loop through clips)", "frame_number", frame_number, "clips.size()", clips.size(), "nearby_clips.size()", nearby_clips.size());
@@ -1281,6 +1060,10 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		info.video_length = info.fps.ToFloat() * info.duration;
 	}
 
+	// Update preview settings
+	preview_width = info.width;
+	preview_height = info.height;
+
 	// Re-open if needed
 	if (was_open)
 		Open();
@@ -1509,6 +1292,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 			// Add Effect to Timeline
 			AddEffect(e);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) e->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 		}
 
 	} else if (change_type == "update") {
@@ -1520,6 +1309,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 
 			// Update effect properties from JSON
 			existing_effect->SetJsonValue(change["value"]);
@@ -1534,6 +1329,12 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
+
+			// Clear cache on parent clip (if any)
+			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
+			if (parent_clip && parent_clip->GetCache()) {
+				parent_clip->GetCache()->Clear();
+			}
 
 			// Remove effect from timeline
 			RemoveEffect(existing_effect);
@@ -1553,7 +1354,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 		sub_key = change["key"][(uint)1].asString();
 
 	// Clear entire cache
-	final_cache->Clear();
+	ClearAllCache();
 
 	// Determine type of change operation
 	if (change_type == "insert" || change_type == "update") {
@@ -1577,12 +1378,16 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 			info.duration = change["value"].asDouble();
 			info.video_length = info.fps.ToFloat() * info.duration;
 		}
-		else if (root_key == "width")
+		else if (root_key == "width") {
 			// Set width
 			info.width = change["value"].asInt();
-		else if (root_key == "height")
+			preview_width = info.width;
+		}
+		else if (root_key == "height") {
 			// Set height
 			info.height = change["value"].asInt();
+			preview_height = info.height;
+		}
 		else if (root_key == "fps" && sub_key == "" && change["value"].isObject()) {
 			// Set fps fraction
 			if (!change["value"]["num"].isNull())
@@ -1674,6 +1479,7 @@ void Timeline::ClearAllCache() {
     for (auto clip : clips)
     {
         // Clear cache on clip
+		clip->GetCache()->Clear();
         clip->Reader()->GetCache()->Clear();
 
         // Clear nested Reader (if any)
@@ -1696,7 +1502,7 @@ void Timeline::SetMaxSize(int width, int height) {
 	// Scale QSize up to proposed size
 	display_ratio_size.scale(proposed_size, Qt::KeepAspectRatio);
 
-	// Set max size
-	Settings::Instance()->MAX_WIDTH = display_ratio_size.width();
-	Settings::Instance()->MAX_HEIGHT = display_ratio_size.height();
+	// Update preview settings
+	preview_width = display_ratio_size.width();
+	preview_height = display_ratio_size.height();
 }

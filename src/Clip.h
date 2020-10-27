@@ -42,6 +42,7 @@
 #include "Effects.h"
 #include "EffectInfo.h"
 #include "Fraction.h"
+#include "Frame.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
@@ -92,14 +93,24 @@ namespace openshot {
 	 * c2.alpha.AddPoint(384, 1.0); // Animate the alpha to visible (between frame #360 and frame #384)
 	 * @endcode
 	 */
-	class Clip : public openshot::ClipBase {
+	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 	protected:
 		/// Section lock for multiple threads
 	    juce::CriticalSection getFrameCriticalSection;
 
+		/// Init default settings for a clip
+		void init_settings();
+
+		/// Init reader info details
+		void init_reader_settings();
+
+		/// Update default rotation from reader
+		void init_reader_rotation();
+
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
+		bool is_open;	///> Is Reader opened
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -115,7 +126,10 @@ namespace openshot {
 		int64_t adjust_frame_number_minimum(int64_t frame_number);
 
 		/// Apply effects to the source frame (if any)
-		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame);
+		void apply_effects(std::shared_ptr<openshot::Frame> frame);
+
+		/// Apply keyframes to the source frame (if any)
+		void apply_keyframes(std::shared_ptr<openshot::Frame> frame, int width, int height);
 
 		/// Get file extension
 		std::string get_file_extension(std::string path);
@@ -126,11 +140,8 @@ namespace openshot {
 		/// Adjust the audio and image of a time mapped frame
 		void get_time_mapped_frame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number);
 
-		/// Init default settings for a clip
-		void init_settings();
-
-		/// Update default rotation from reader
-		void init_reader_rotation();
+		/// Compare 2 floating point numbers
+		bool isEqual(double a, double b);
 
 		/// Sort effects by order
 		void sort_effects();
@@ -159,6 +170,17 @@ namespace openshot {
 		/// Destructor
 		virtual ~Clip();
 
+		/// Get the cache object used by this clip
+		CacheMemory* GetCache() override { return &cache; };
+
+		/// Determine if reader is open or closed
+		bool IsOpen() override { return is_open; };
+
+		/// Return the type name of the class
+		std::string Name() override { return "Clip"; };
+
+
+
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.
 		void AddEffect(openshot::EffectBase* effect);
@@ -172,14 +194,27 @@ namespace openshot {
 		/// Look up an effect by ID
 		openshot::EffectBase* GetEffect(const std::string& id);
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline.
+		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
+		/// of samples match the source reader.
 		///
-		/// @returns The requested frame (containing the image)
-		/// @param requested_frame The frame number that is requested
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t requested_frame);
+		/// @returns A new openshot::Frame object
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number);
+
+		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
+		/// of samples can be customized to match the Timeline, or any custom output. Extra samples will be moved to the
+		/// next Frame. Missing samples will be moved from the next Frame.
+		///
+		/// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
+		/// rendered.
+		///
+		/// @returns The modified openshot::Frame object
+		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
+		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
 		/// Open the internal reader
-		void Open();
+		void Open() override;
 
 		/// @brief Set the current reader
 		/// @param new_reader The reader to be used by this clip
@@ -230,13 +265,6 @@ namespace openshot {
 
 		/// Curve representing the color of the audio wave form
 		openshot::Color wave_color;
-
-		// Crop settings and curves
-		openshot::GravityType crop_gravity; ///< Cropping needs to have a gravity to determine what side we are cropping
-		openshot::Keyframe crop_width; ///< Curve representing width in percent (0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_height; ///< Curve representing height in percent (0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_x; ///< Curve representing X offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
-		openshot::Keyframe crop_y; ///< Curve representing Y offset in percent (-1.0=-100%, 0.0=0%, 1.0=100%)
 
 		// Perspective curves
 		openshot::Keyframe perspective_c1_x; ///< Curves representing X for coordinate 1

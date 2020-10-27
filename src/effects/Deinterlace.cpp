@@ -73,7 +73,7 @@ std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64
 	const unsigned char* pixels = image->bits();
 
 	// Create a smaller, new image
-	QImage deinterlaced_image(image->width(), image->height() / 2, QImage::Format_RGBA8888);
+	QImage deinterlaced_image(image->width(), image->height() / 2, QImage::Format_RGBA8888_Premultiplied);
 	const unsigned char* deinterlaced_pixels = deinterlaced_image.bits();
 
 	// Loop through the scanlines of the image (even or odd)

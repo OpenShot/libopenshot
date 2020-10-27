@@ -154,6 +154,9 @@ namespace openshot
 		// Get Frame or Generate Blank Frame
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
+		/// Adjust frame number for Clip position and start (which can result in a different number)
+		int64_t AdjustFrameNumber(int64_t clip_frame_number);
+
 		// Use the original and target frame rates and a pull-down technique to create
 		// a mapping between the original fields and frames or a video to a new frame rate.
 		// This might repeat or skip fields and frames of the original video, depending on
@@ -217,7 +220,6 @@ namespace openshot
 
 		/// Resample audio and map channels (if needed)
 		void ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t original_frame_number);
-
 	};
 }
 

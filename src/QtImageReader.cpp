@@ -76,7 +76,7 @@ void QtImageReader::Open()
 			if (renderer.isValid()) {
 
 				image = std::make_shared<QImage>(
-					renderer.defaultSize(), QImage::Format_ARGB32_Premultiplied);
+					renderer.defaultSize(), QImage::Format_RGBA8888_Premultiplied);
 				image->fill(Qt::transparent);
 
 				QPainter p(image.get());
@@ -97,10 +97,6 @@ void QtImageReader::Open()
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
 		}
-
-		// Convert to proper format
-		image = std::make_shared<QImage>(
-			image->convertToFormat(QImage::Format_RGBA8888));
 
 		// Update image properties
 		info.has_audio = false;
@@ -175,15 +171,16 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
 	// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
 	// the future.
-	int max_width = Settings::Instance()->MAX_WIDTH;
-	if (max_width <= 0)
-		max_width = info.width;
-	int max_height = Settings::Instance()->MAX_HEIGHT;
-	if (max_height <= 0)
-		max_height = info.height;
+	int max_width = info.width;
+	int max_height = info.height;
 
-	Clip* parent = (Clip*) GetParentClip();
+	Clip* parent = (Clip*) ParentClip();
 	if (parent) {
+		if (parent->ParentTimeline()) {
+			// Set max width/height based on parent clip's timeline (if attached to a timeline)
+			max_width = parent->ParentTimeline()->preview_width;
+			max_height = parent->ParentTimeline()->preview_height;
+		}
 		if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
@@ -235,7 +232,7 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 				// Create empty QImage
 				cached_image = std::make_shared<QImage>(
 					QSize(svg_size.width(), svg_size.height()),
-					QImage::Format_ARGB32_Premultiplied);
+					QImage::Format_RGBA8888_Premultiplied);
 				cached_image->fill(Qt::transparent);
 
 				// Render SVG into QImage
@@ -253,9 +250,6 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 			cached_image = std::make_shared<QImage>(image->scaled(
 				max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 		}
-
-		cached_image = std::make_shared<QImage>(
-			cached_image->convertToFormat(QImage::Format_RGBA8888));
 
 		// Set max size (to later determine if max_size is changed)
 		max_size.setWidth(max_width);
