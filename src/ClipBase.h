@@ -41,8 +41,8 @@
 #include "Json.h"
 #include "TimelineBase.h"
 
-namespace openshot {
 
+namespace openshot {
 	/**
 	 * @brief This abstract class is the base class, used by all clips in libopenshot.
 	 *

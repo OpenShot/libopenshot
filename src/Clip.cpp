@@ -161,6 +161,8 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	if (reader) {
 		End(reader->info.duration);
 		reader->ParentClip(this);
+		// Init reader info struct and cache size
+		init_reader_settings();
 	}
 }
 
@@ -220,7 +222,8 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		reader->ParentClip(this);
 		allocated_reader = reader;
 		// Init reader info struct and cache size
-		init_reader_settings();	}
+		init_reader_settings();
+	}
 }
 
 // Destructor
@@ -325,7 +328,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
 
 	if (reader)
 	{
@@ -346,7 +349,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
-		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method", "N/A");
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
 
 	if (reader)
 	{
@@ -698,7 +701,7 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		std::shared_ptr<Frame> reader_frame = reader->GetFrame(number);
+		auto reader_frame = reader->GetFrame(number);
 
 		// Return real frame
 		if (reader_frame) {
@@ -706,11 +709,9 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			//std::shared_ptr<Frame> reader_copy(new Frame(number, 1, 1, "#000000", reader_frame->GetAudioSamplesCount(), reader_frame->GetAudioChannelsCount()));
-			std::shared_ptr<Frame> reader_copy(new Frame(*reader_frame.get()));
-			{
-				reader_copy->SampleRate(reader_frame->SampleRate());
-				reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
-			}
+			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
+			reader_copy->SampleRate(reader_frame->SampleRate());
+			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
 			return reader_copy;
 		}
 
@@ -729,7 +730,9 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "estimated_samples_in_frame", estimated_samples_in_frame);
 
 	// Create blank frame
-	std::shared_ptr<Frame> new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", estimated_samples_in_frame, reader->info.channels);
+	auto new_frame = std::make_shared<Frame>(
+		number, reader->info.width, reader->info.height,
+		"#000000", estimated_samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
 	new_frame->AddAudioSilence(estimated_samples_in_frame);
@@ -1176,7 +1179,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	switch (scale)
 	{
 		case (SCALE_FIT): {
-			// keep aspect ratio
 			source_size.scale(width, height, Qt::KeepAspectRatio);
 
 			// Debug output
@@ -1184,7 +1186,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 		case (SCALE_STRETCH): {
-			// ignore aspect ratio
 			source_size.scale(width, height, Qt::IgnoreAspectRatio);
 
 			// Debug output
@@ -1192,14 +1193,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 		case (SCALE_CROP): {
-			QSize width_size(width, round(width / (float(source_size.width()) / float(source_size.height()))));
-			QSize height_size(round(height / (float(source_size.height()) / float(source_size.width()))), height);
-
-			// respect aspect ratio
-			if (width_size.width() >= width && width_size.height() >= height)
-				source_size.scale(width_size.width(), width_size.height(), Qt::KeepAspectRatio);
-			else
-				source_size.scale(height_size.width(), height_size.height(), Qt::KeepAspectRatio);
+			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
 
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
@@ -1276,7 +1270,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	float origin_x_value = origin_x.GetValue(frame->number);
 	float origin_y_value = origin_y.GetValue(frame->number);
 
-	bool transformed = false;
 	QTransform transform;
 
 	// Transform source image (if needed)
@@ -1285,7 +1278,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-		transformed = true;
 	}
 
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
@@ -1296,7 +1288,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		transform.rotate(r);
 		transform.shear(shear_x_value, shear_y_value);
 		transform.translate(-origin_x_offset,-origin_y_offset);
-		transformed = true;
 	}
 
 	// SCALE CLIP (if needed)
@@ -1305,24 +1296,21 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 
 	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
-		transformed = true;
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "transformed", transformed);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
 
 	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	std::shared_ptr<QImage> new_image;
-	new_image = std::shared_ptr<QImage>(new QImage(QSize(width, height), source_image->format()));
+	auto new_image = std::make_shared<QImage>(QSize(width, height), source_image->format());
 	new_image->fill(QColor(QString::fromStdString("#00000000")));
 
 	// Load timeline's new frame image into a QPainter
 	QPainter painter(new_image.get());
 	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
 
-	// Apply transform (translate, rotate, scale)... if any
-	if (transformed)
-		painter.setTransform(transform);
+	// Apply transform (translate, rotate, scale)
+	painter.setTransform(transform);
 
 	// Composite a new layer onto the image
 	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);

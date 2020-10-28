@@ -117,15 +117,6 @@ void FrameMapper::Init()
 	// Clear cache
 	final_cache.Clear();
 
-	// Get clip position from parent clip (if any)
-	float clipPosition = 0.0;
-	float clipStart = 0.0;
-	Clip *parent = (Clip *) ParentClip();
-	if (parent) {
-		clipPosition = parent->Position();
-		clipStart = parent->Start();
-	}
-
 	// Some framerates are handled special, and some use a generic Keyframe curve to
 	// map the framerates. These are the special framerates:
 	if ((fabs(original.ToFloat() - 24.0) < 1e-7 || fabs(original.ToFloat() - 25.0) < 1e-7 || fabs(original.ToFloat() - 30.0) < 1e-7) &&
@@ -267,12 +258,12 @@ void FrameMapper::Init()
 			// the original sample rate.
 			int64_t end_samples_frame = start_samples_frame;
 			int end_samples_position = start_samples_position;
-			int remaining_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number, clipPosition, clipStart), target, reader->info.sample_rate, reader->info.channels);
+			int remaining_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number), target, reader->info.sample_rate, reader->info.channels);
 
 			while (remaining_samples > 0)
 			{
 				// get original samples
-				int original_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(end_samples_frame, clipPosition, clipStart), original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
+				int original_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(end_samples_frame), original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -292,12 +283,12 @@ void FrameMapper::Init()
 
 
 			// Create the sample mapping struct
-			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number, clipPosition, clipStart), target, reader->info.sample_rate, reader->info.channels)};
+			SampleRange Samples = {start_samples_frame, start_samples_position, end_samples_frame, end_samples_position, Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number), target, reader->info.sample_rate, reader->info.channels)};
 
 			// Reset the audio variables
 			start_samples_frame = end_samples_frame;
 			start_samples_position = end_samples_position + 1;
-			if (start_samples_position >= Frame::GetSamplesPerFrame(AdjustFrameNumber(start_samples_frame, clipPosition, clipStart), original, reader->info.sample_rate, reader->info.channels))
+			if (start_samples_position >= Frame::GetSamplesPerFrame(AdjustFrameNumber(start_samples_frame), original, reader->info.sample_rate, reader->info.channels))
 			{
 				start_samples_frame += 1; // increment the frame (since we need to wrap onto the next one)
 				start_samples_position = 0; // reset to 0, since we wrapped
@@ -363,17 +354,8 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 {
 	std::shared_ptr<Frame> new_frame;
 
-	// Get clip position from parent clip (if any)
-	float clipPosition = 0.0;
-	float clipStart = 0.0;
-	Clip *parent = (Clip *) ParentClip();
-	if (parent) {
-		clipPosition = parent->Position();
-		clipStart = parent->Start();
-	}
-
 	// Init some basic properties about this frame (keep sample rate and # channels the same as the original reader for now)
-	int samples_in_frame = Frame::GetSamplesPerFrame(AdjustFrameNumber(number, clipPosition, clipStart), target, reader->info.sample_rate, reader->info.channels);
+	int samples_in_frame = Frame::GetSamplesPerFrame(AdjustFrameNumber(number), target, reader->info.sample_rate, reader->info.channels);
 
 	try {
 		// Debug output
@@ -423,15 +405,6 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	final_frame = final_cache.GetFrame(requested_frame);
 	if (final_frame) return final_frame;
 
-	// Get clip position from parent clip (if any)
-	float clipPosition = 0.0;
-	float clipStart = 0.0;
-	Clip *parent = (Clip *) ParentClip();
-	if (parent) {
-		clipPosition = parent->Position();
-		clipStart = parent->Start();
-	}
-
 	// Minimum number of frames to process (for performance reasons)
 	// Dialing this down to 1 for now, as it seems to improve performance, and reduce export crashes
 	int minimum_frames = 1;
@@ -455,7 +428,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 
 		// Get # of channels in the actual frame
 		int channels_in_frame = mapped_frame->GetAudioChannelsCount();
-		int samples_in_frame = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number, clipPosition, clipStart), target, mapped_frame->SampleRate(), channels_in_frame);
+		int samples_in_frame = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame_number), target, mapped_frame->SampleRate(), channels_in_frame);
 
 		// Determine if mapped frame is identical to source frame
 		// including audio sample distribution according to mapped.Samples,
@@ -778,15 +751,6 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		// Recalculate mappings
 		Init();
 
-	// Get clip position from parent clip (if any)
-	float clipPosition = 0.0;
-	float clipStart = 0.0;
-	Clip *parent = (Clip *) ParentClip();
-	if (parent) {
-		clipPosition = parent->Position();
-		clipStart = parent->Start();
-	}
-
 	// Init audio buffers / variables
 	int total_frame_samples = 0;
 	int channels_in_frame = frame->GetAudioChannelsCount();
@@ -848,7 +812,7 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	}
 
 	// Update total samples & input frame size (due to bigger or smaller data types)
-	total_frame_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame->number, clipPosition, clipStart), target, info.sample_rate, info.channels);
+	total_frame_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame->number), target, info.sample_rate, info.channels);
 
 	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
 
@@ -959,13 +923,23 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 }
 
 // Adjust frame number for Clip position and start (which can result in a different number)
-int64_t FrameMapper::AdjustFrameNumber(int64_t clip_frame_number, float position, float start) {
+int64_t FrameMapper::AdjustFrameNumber(int64_t clip_frame_number) {
 
+	// Get clip position from parent clip (if any)
+	float position = 0.0;
+	float start = 0.0;
+	Clip *parent = (Clip *) ParentClip();
+	if (parent) {
+		position = parent->Position();
+		start = parent->Start();
+	}
+
+	// Adjust start frame and position based on parent clip. This prevents ensures the same
+	// frame # is used by mapped readers and clips, when calculating samples per frame. Thus,
+	// this prevents gaps and mismatches in # of samples.
 	int64_t clip_start_frame = (start * info.fps.ToDouble()) + 1;
 	int64_t clip_start_position = round(position * info.fps.ToDouble()) + 1;
-	
 	int64_t frame_number = clip_frame_number + clip_start_position - clip_start_frame;
 
-	///std::cout << "Conv Position " << round(position * info.fps.ToDouble()) << " position: " << position << " info::fps: " << info.fps.ToDouble() << std::endl; 
 	return frame_number;
 }

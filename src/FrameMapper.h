@@ -155,7 +155,7 @@ namespace openshot
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 
 		/// Adjust frame number for Clip position and start (which can result in a different number)
-		int64_t AdjustFrameNumber(int64_t clip_frame_number, float position, float start);
+		int64_t AdjustFrameNumber(int64_t clip_frame_number);
 
 		// Use the original and target frame rates and a pull-down technique to create
 		// a mapping between the original fields and frames or a video to a new frame rate.

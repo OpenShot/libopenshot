@@ -241,5 +241,35 @@ TEST(Multiple_Open_and_Close)
 	r.Close();
 }
 
+TEST(Verify_Parent_Timeline)
+{
+	// Create a reader
+	stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	// Check size of frame image
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 1280);
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 720);
+	r.GetFrame(1)->GetImage()->save("reader-1.png", "PNG");
+
+	// Create a Clip associated with this reader
+	Clip c1(&r);
+	c1.Open();
+
+	// Check size of frame image (should still be the same)
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 1280);
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 720);
+
+	// Create Timeline
+	Timeline t1(640, 480, Fraction(30,1), 44100, 2, LAYOUT_STEREO);
+	t1.AddClip(&c1);
+
+	// Check size of frame image (it should now match the parent timeline)
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 640);
+	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 360);
+}
+
 } // SUITE(FFmpegReader)
 

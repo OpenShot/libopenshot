@@ -246,6 +246,11 @@ void Timeline::AddClip(Clip* clip)
 	// Assign timeline to clip
 	clip->ParentTimeline(this);
 
+	// Clear cache of clip and nested reader (if any)
+	clip->cache.Clear();
+	if (clip->Reader() && clip->Reader()->GetCache())
+		clip->Reader()->GetCache()->Clear();
+
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips)
 		// Apply framemapper (or update existing framemapper)
@@ -690,6 +695,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 	// Check cache
 	std::shared_ptr<Frame> frame;
+	std::lock_guard<std::mutex> guard(get_frame_mutex);
 	#pragma omp critical (T_GetFrame)
 	frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
@@ -717,6 +723,15 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 			// Return cached frame
 			return frame;
+		}
+
+		// Check if previous frame was cached? (if not, assume we are seeking somewhere else on the Timeline, and need
+		// to clear all cache (for continuity sake). For example, jumping back to a previous spot can cause issues with audio
+		// data where the new jump location doesn't match up with the previously cached audio data.
+		std::shared_ptr<Frame> previous_frame = final_cache->GetFrame(requested_frame - 1);
+		if (!previous_frame) {
+			// Seeking to new place on timeline (destroy cache)
+			ClearAllCache();
 		}
 
 		// Minimum number of frames to process (for performance reasons)
