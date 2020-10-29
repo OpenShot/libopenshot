@@ -494,3 +494,43 @@ TEST(Keyframe_Handle_Large_Segment)
 	Fraction fr = kf.GetRepeatFraction(250000);
 	CHECK_CLOSE(0.5, (double)fr.num / fr.den, 0.01);
 }
+
+
+TEST(KeyFrameBBox_init_test) {
+	
+	KeyFrameBBox kfb;
+
+}
+
+TEST(KeyFrameBBox_addBox_test) {
+	KeyFrameBBox kfb;
+
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
+
+	CHECK_EQUAL(true, kfb.Contains(1));
+	CHECK_EQUAL(1, kfb.GetLength());
+
+	kfb.PrintParams();
+
+	kfb.RemovePoint(1);
+
+	CHECK_EQUAL(false, kfb.Contains(1));
+	CHECK_EQUAL(0, kfb.GetLength());
+}
+
+
+TEST(KeyFrameBBox_GetVal_test) {
+	KeyFrameBBox kfb;
+
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
+	
+	kfb.AddDisplacement(1, 20.0, 20.0);
+	kfb.AddScale(1, 30, 30);
+	
+	BBox val = kfb.GetValue(1);
+	
+	CHECK_EQUAL(30.0, val.cx);
+	CHECK_EQUAL(30.0, val.cy);
+	CHECK_EQUAL(130.0,val.width);
+	CHECK_EQUAL(130.0, val.height);
+}
