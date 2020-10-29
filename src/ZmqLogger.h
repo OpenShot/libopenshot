@@ -43,6 +43,7 @@
 #include <zmq.hpp>
 #include <unistd.h>
 #include "JuceHeader.h"
+#include "Settings.h"
 
 
 namespace openshot {
@@ -70,17 +71,17 @@ namespace openshot {
 		zmq::socket_t *publisher;
 
 		/// Default constructor
-		ZmqLogger(){}; 						 // Don't allow user to create an instance of this singleton
+		ZmqLogger(){};  // Don't allow user to create an instance of this singleton
 
 #if __GNUC__ >=7
 		/// Default copy method
-		ZmqLogger(ZmqLogger const&) = delete; // Don't allow the user to assign this instance
+		ZmqLogger(ZmqLogger const&) = delete;  // Don't allow the user to assign this instance
 
 		/// Default assignment operator
 		ZmqLogger & operator=(ZmqLogger const&) = delete;  // Don't allow the user to assign this instance
 #else
 		/// Default copy method
-		ZmqLogger(ZmqLogger const&) {}; // Don't allow the user to assign this instance
+		ZmqLogger(ZmqLogger const&) {};  // Don't allow the user to assign this instance
 
 		/// Default assignment operator
 		ZmqLogger & operator=(ZmqLogger const&);  // Don't allow the user to assign this instance
@@ -94,13 +95,15 @@ namespace openshot {
 		static ZmqLogger * Instance();
 
 		/// Append debug information
-		void AppendDebugMethod(std::string method_name,
-					std::string arg1_name="", float arg1_value=-1.0,
-					std::string arg2_name="", float arg2_value=-1.0,
-					std::string arg3_name="", float arg3_value=-1.0,
-					std::string arg4_name="", float arg4_value=-1.0,
-					std::string arg5_name="", float arg5_value=-1.0,
-					std::string arg6_name="", float arg6_value=-1.0);
+		void AppendDebugMethod(
+			std::string method_name,
+			std::string arg1_name="", float arg1_value=-1.0,
+			std::string arg2_name="", float arg2_value=-1.0,
+			std::string arg3_name="", float arg3_value=-1.0,
+			std::string arg4_name="", float arg4_value=-1.0,
+			std::string arg5_name="", float arg5_value=-1.0,
+			std::string arg6_name="", float arg6_value=-1.0
+		);
 
 		/// Close logger (sockets and/or files)
 		void Close();

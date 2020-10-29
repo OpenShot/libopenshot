@@ -34,14 +34,14 @@ using namespace std;
 using namespace openshot;
 
 
-// Global reference to logger
+// Global reference to Settings
 Settings *Settings::m_pInstance = NULL;
 
-// Create or Get an instance of the logger singleton
+// Create or Get an instance of the settings singleton
 Settings *Settings::Instance()
 {
 	if (!m_pInstance) {
-		// Create the actual instance of logger only once
+		// Create the actual instance of Settings only once
 		m_pInstance = new Settings;
 		m_pInstance->HARDWARE_DECODER = 0;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
@@ -53,6 +53,7 @@ Settings *Settings::Instance()
 		m_pInstance->HW_DE_DEVICE_SET = 0;
 		m_pInstance->HW_EN_DEVICE_SET = 0;
 		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
+		m_pInstance->DEBUG_TO_STDERR = false;
 	}
 
 	return m_pInstance;

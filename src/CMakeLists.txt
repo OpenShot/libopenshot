@@ -35,7 +35,7 @@ if (POLICY CMP0057)
 endif()
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
+#set(PROFILER "/usr/lib//usr/lib/libprofiler.so.0.4.5")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
 if(CMAKE_VERSION VERSION_LESS 3.3)
@@ -124,6 +124,7 @@ set(EFFECTS_SOURCES
   effects/Bars.cpp
   effects/Blur.cpp
   effects/Brightness.cpp
+  effects/Caption.cpp
   effects/ChromaKey.cpp
   effects/ColorShift.cpp
   effects/Crop.cpp
