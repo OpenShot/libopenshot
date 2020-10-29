@@ -46,6 +46,7 @@
 using namespace std;
 using google::protobuf::util::TimeUtil;
 
+// Store the relative transformation parameters between consecutive frames
 struct EffectTransformParam
 {
     EffectTransformParam() {}
@@ -60,6 +61,7 @@ struct EffectTransformParam
     double da; // angle
 };
 
+// Stores the global camera trajectory for one frame
 struct EffectCamTrajectory
 {
     EffectCamTrajectory() {}

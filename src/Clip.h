@@ -72,7 +72,6 @@ namespace openshot {
 			return false;
 	}};
 
-
 	/**
 	 * @brief This class represents a clip (used to arrange readers on the timeline)
 	 *
@@ -200,8 +199,6 @@ namespace openshot {
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 
-
-
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.
 		void AddEffect(openshot::EffectBase* effect);
@@ -265,9 +262,6 @@ namespace openshot {
 		/// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
-
-		/// Stabilize the clip using opencv and opticalflow
-		//void stabilize_video();
 
 		// Scale, Location, and Alpha curves
 		openshot::Keyframe scale_x; ///< Curve representing the horizontal scaling in percent (0 to 1)

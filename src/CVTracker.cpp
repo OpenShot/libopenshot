@@ -30,6 +30,9 @@
 
 #include "CVTracker.h"
 
+using namespace openshot;
+
+
 // Constructor
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), json_interval(false){   

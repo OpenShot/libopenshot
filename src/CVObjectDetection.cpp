@@ -30,12 +30,8 @@
 
 #include "CVObjectDetection.h"
 
-// // Initialize the parameters
-// float confThreshold = 0.5; // Confidence threshold
-// float nmsThreshold = 0.4;  // Non-maximum suppression threshold
-// int inpWidth = 416;  // Width of network's input image
-// int inpHeight = 416; // Height of network's input image
-// vector<string> classes;
+using namespace openshot;
+
 
 CVObjectDetection::CVObjectDetection(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), processingDevice("CPU"){
@@ -98,7 +94,7 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
         // Update progress
         processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
 
-        std::cout<<"Frame: "<<frame_number<<"\n";
+        // std::cout<<"Frame: "<<frame_number<<"\n";
     }
 }
 
@@ -395,15 +391,11 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
 	}
 }
 
-
-
 /*
 ||||||||||||||||||||||||||||||||||||||||||||||||||
                 ONLY FOR MAKE TEST
 ||||||||||||||||||||||||||||||||||||||||||||||||||
 */
-
-
 
 // Load protobuf data file
 bool CVObjectDetection::_LoadObjDetectdData(){

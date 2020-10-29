@@ -101,7 +101,6 @@ set(OPENSHOT_CV_TEST_FILES
   # CVObjectDetection_Tests.cpp
   )
 
-
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
@@ -117,13 +116,11 @@ if (OpenCV_FOUND)
 else()
   add_executable(openshot-test
     tests.cpp
-    ${OPENSHOT_TEST_FILES})
+    ${OPENSHOT_TEST_FILES} )
 
   # Link libraries to the new executable
   target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
 endif()
-
-
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable

@@ -107,7 +107,7 @@ namespace openshot
 	class Frame
 	{
 	private:
-		std::shared_ptr<QImage> image; ///< RGBA Format
+		std::shared_ptr<QImage> image;
 		std::shared_ptr<QImage> wave_image;
 		std::shared_ptr<juce::AudioSampleBuffer> audio;
 		std::shared_ptr<QApplication> previewApp;

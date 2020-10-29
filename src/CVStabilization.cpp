@@ -30,6 +30,9 @@
 
 #include "CVStabilization.h"
 
+using namespace openshot;
+
+
 // Set default smoothing window value to compute stabilization 
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController){
@@ -206,7 +209,6 @@ std::vector<CamTrajectory> CVStabilization::ComputeFramesTrajectory(){
         // Save trajectory data to vector
         trajectory.push_back(CamTrajectory(x,y,a));
     }
-
     return trajectory;
 }
 
@@ -268,7 +270,6 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
     }
     return new_prev_to_cur_transform;
 }
-
 
 // Save stabilization data to protobuf file
 bool CVStabilization::SaveStabilizedData(){
@@ -368,15 +369,11 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 	}
 }
 
-
-
 /*
 ||||||||||||||||||||||||||||||||||||||||||||||||||
                 ONLY FOR MAKE TEST
 ||||||||||||||||||||||||||||||||||||||||||||||||||
 */
-
-
 
 // Load protobuf data file
 bool CVStabilization::_LoadStabilizedData(){

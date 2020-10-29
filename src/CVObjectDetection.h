@@ -46,78 +46,90 @@
 
 #include "../src/sort_filter/sort.hpp"
 
-using google::protobuf::util::TimeUtil;
+namespace openshot
+{
+    using google::protobuf::util::TimeUtil;
 
-struct CVDetectionData{
-    CVDetectionData(){}
-    CVDetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
-        classIds = _classIds;
-        confidences = _confidences;
-        boxes = _boxes;
-        frameId = _frameId;
-    }
-    size_t frameId;
-    std::vector<int> classIds;
-    std::vector<float> confidences;
-    std::vector<cv::Rect_<float>> boxes;
-};
+    // Stores the detected object bounding boxes and its properties.
+    struct CVDetectionData{
+        CVDetectionData(){}
+        CVDetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
+            classIds = _classIds;
+            confidences = _confidences;
+            boxes = _boxes;
+            frameId = _frameId;
+        }
+        size_t frameId;
+        std::vector<int> classIds;
+        std::vector<float> confidences;
+        std::vector<cv::Rect_<float>> boxes;
+    };
 
-class CVObjectDetection{
+    /**
+     * @brief This class runs trought a clip to detect objects and returns the bounding boxes and its properties.
+     * 
+     * Object detection is performed using YoloV3 model with OpenCV DNN module 
+     */
+    class CVObjectDetection{
 
-    private:
-    
-    cv::dnn::Net net;
-    std::vector<std::string> classNames;
-    float confThreshold, nmsThreshold;
+        private:
+        
+        cv::dnn::Net net;
+        std::vector<std::string> classNames;
+        float confThreshold, nmsThreshold;
 
-    std::string classesFile;
-    std::string modelConfiguration;
-    std::string modelWeights;
-    std::string processingDevice;
-    std::string protobuf_data_path;
+        std::string classesFile;
+        std::string modelConfiguration;
+        std::string modelWeights;
+        std::string processingDevice;
+        std::string protobuf_data_path;
 
-    SortTracker sort;
+        SortTracker sort;
 
-    uint progress;
+        uint progress;
 
-    size_t start;
-    size_t end;
+        size_t start;
+        size_t end;
 
-    /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
-	ProcessingController *processingController;
+        /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
+        ProcessingController *processingController;
 
-    void setProcessingDevice();
+        void setProcessingDevice();
+        
+        // Detect onbects on a single frame
+        void DetectObjects(const cv::Mat &frame, size_t frame_number);
 
-    void DetectObjects(const cv::Mat &frame, size_t frame_number);
+        bool iou(cv::Rect pred_box, cv::Rect sort_box);
 
-    bool iou(cv::Rect pred_box, cv::Rect sort_box);
+        // Remove the bounding boxes with low confidence using non-maxima suppression
+        void postprocess(const cv::Size &frameDims, const std::vector<cv::Mat>& out, size_t frame_number);
 
-    // Remove the bounding boxes with low confidence using non-maxima suppression
-    void postprocess(const cv::Size &frameDims, const std::vector<cv::Mat>& out, size_t frame_number);
+        // Get the names of the output layers
+        std::vector<cv::String> getOutputsNames(const cv::dnn::Net& net);
 
-    // Get the names of the output layers
-    std::vector<cv::String> getOutputsNames(const cv::dnn::Net& net);
+        public:
 
-    public:
+        std::map<size_t, CVDetectionData> detectionsData;
 
-    std::map<size_t, CVDetectionData> detectionsData;
+        CVObjectDetection(std::string processInfoJson, ProcessingController &processingController);
 
-    CVObjectDetection(std::string processInfoJson, ProcessingController &processingController);
+        // Iterate over a clip object and run inference for each video frame
+        void detectObjectsClip(openshot::Clip &video, size_t start=0, size_t end=0, bool process_interval=false);
 
-    void detectObjectsClip(openshot::Clip &video, size_t start=0, size_t end=0, bool process_interval=false);
+        CVDetectionData GetDetectionData(size_t frameId);
 
-    CVDetectionData GetDetectionData(size_t frameId);
+        /// Protobuf Save and Load methods
+        // Save protobuf file
+        bool SaveObjDetectedData();
+        // Add frame object detection data into protobuf message.
+        void AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData);
 
-    /// Protobuf Save and Load methods
-    // Save protobuf file
-    bool SaveObjDetectedData();
-    // Add frame object detection data into protobuf message.
-    void AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData);
+        /// Get and Set JSON methods
+        void SetJson(const std::string value); ///< Load JSON string into this object
+        void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
-    /// Get and Set JSON methods
-    void SetJson(const std::string value); ///< Load JSON string into this object
-    void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+        // Load protobuf file (ONLY FOR MAKE TEST)
+        bool _LoadObjDetectdData();
+    };
 
-    // Load protobuf file (ONLY FOR MAKE TEST)
-    bool _LoadObjDetectdData();
-};
+}

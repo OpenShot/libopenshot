@@ -48,6 +48,7 @@
 using namespace std;
 using google::protobuf::util::TimeUtil;
 
+// Store the relative transformation parameters between consecutive frames
 struct TransformParam
 {
     TransformParam() {}
@@ -62,6 +63,7 @@ struct TransformParam
     double da; // angle
 };
 
+// Stores the global camera trajectory for one frame
 struct CamTrajectory
 {
     CamTrajectory() {}
@@ -76,6 +78,13 @@ struct CamTrajectory
     double a; // angle
 };
 
+
+/**
+ * @brief This class stabilizes a video frame using optical flow
+ *
+ * The relative motion between two consecutive frames is computed to obtain the global camera trajectory. 
+ * The camera trajectory is then smoothed to reduce jittering.
+ */
 class CVStabilization {      
 
     private:

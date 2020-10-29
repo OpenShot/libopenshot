@@ -42,6 +42,7 @@
 #include "../KeyFrame.h"
 #include "../objdetectdata.pb.h"
 
+// Struct that stores the detected bounding boxes for all the clip frames
 struct DetectionData{
     DetectionData(){}
     DetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
@@ -58,12 +59,8 @@ struct DetectionData{
 
 namespace openshot
 {
-	
 	/**
-	 * @brief This class stabilizes video clip to remove undesired shaking and jitter.
-	 *
-	 * Adding stabilization is useful to increase video quality overall, since it removes 
-	 * from subtle to harsh unexpected camera movements.
+	 * @brief This effect displays all the detected objects on a clip.
 	 */
 	class ObjectDetection : public EffectBase
 	{
@@ -80,7 +77,6 @@ namespace openshot
 		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame);
 
 	public:
-
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		ObjectDetection(std::string clipTrackerDataPath);

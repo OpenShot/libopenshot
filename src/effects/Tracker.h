@@ -78,7 +78,6 @@ struct EffectFrameData{
 
 namespace openshot
 {
-
 	/**
 	 * @brief This class track a given object through the clip and, when called, draws a box surrounding it.
 	 *
