@@ -91,6 +91,8 @@ namespace openshot
         size_t start;
         size_t end;
 
+        bool error = false;
+
         /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
         ProcessingController *processingController;
 

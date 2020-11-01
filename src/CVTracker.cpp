@@ -65,7 +65,6 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
 void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
 
     video.Open();
-
     if(!json_interval){
         start = _start; end = _end;
 
@@ -79,7 +78,12 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         start = start + video.Start() * video.Reader()->info.fps.ToInt();
         end = video.End() * video.Reader()->info.fps.ToInt();
     }
-
+    
+    if(error){
+        return;
+    } 
+    
+    processingController->SetError(false, "");
     bool trackerInit = false;
 
     size_t frame;
@@ -274,6 +278,7 @@ void CVTracker::SetJsonValue(const Json::Value root) {
     if (!root["tracker_type"].isNull()){
 		trackerType = (root["tracker_type"].asString());
 	}
+    
     if (!root["bbox"].isNull()){
         double x = root["bbox"]["x"].asDouble();
         double y = root["bbox"]["y"].asDouble();
@@ -282,9 +287,20 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
 	}
-    if (!root["first_frame"].isNull()){
-        start = root["first_frame"].asInt64();
-        json_interval = true;
+    else{
+        processingController->SetError(true, "No initial bounding box selected");
+        error = true;
+    }
+
+    if(root.isMember("first_frame")){
+        if (!root["first_frame"].isNull()){
+            start = root["first_frame"].asInt64();
+            json_interval = true;
+        }
+    }
+    else{
+        processingController->SetError(true, "No first_frame");
+        error = true;
     }
 }
 

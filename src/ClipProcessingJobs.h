@@ -75,11 +75,14 @@ class ClipProcessingJobs{
 		// Constructor
 		ClipProcessingJobs(std::string processingType, std::string processInfoJson);
 		// Process clip accordingly to processingType	
-		void processClip(Clip& clip);
+		void processClip(Clip& clip, std::string json);
 
 		// Thread related variables and methods
 		int GetProgress();
 		bool IsDone();
 		void CancelProcessing();
+		bool GetError();
+		std::string GetErrorMessage();
+
 
 };
