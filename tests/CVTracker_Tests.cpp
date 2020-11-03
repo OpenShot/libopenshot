@@ -55,14 +55,11 @@ SUITE(CVTracker_Tests)
         c1.Open();
 
         // Create tracker
-        CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
-
+        CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}, \"first_frame\": 0}", processingController);
         // Track clip for frames 0-20
         kcfTracker.trackClip(c1, 0, 20, true);
-
         // Get tracked data
         FrameData fd = kcfTracker.GetTrackedData(20);
-
         float x = fd.x1;
         float y = fd.y1;
         float width = fd.x2 - x;
@@ -88,7 +85,7 @@ SUITE(CVTracker_Tests)
         c1.Open();
 
         // Create first tracker
-        CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}}", processingController);
+        CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}, \"first_frame\": 0}", processingController);
 
         // Track clip for frames 0-20
         kcfTracker_1.trackClip(c1, 0, 20, true);
@@ -105,7 +102,7 @@ SUITE(CVTracker_Tests)
         kcfTracker_1.SaveTrackedData();
 
         // Create second tracker
-        CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"\", \"bbox\": {\"x\": -1, \"y\": -1, \"w\": -1, \"h\": -1}}", processingController);
+        CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"\", \"bbox\": {\"x\": -1, \"y\": -1, \"w\": -1, \"h\": -1}, \"first_frame\": 0}", processingController);
 
         // Load tracked data from first tracker protobuf data
         kcfTracker_2._LoadTrackedData();
