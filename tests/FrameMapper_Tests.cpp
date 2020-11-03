@@ -44,6 +44,7 @@ using namespace std;
 using namespace openshot;
 
 SUITE(FrameMapper) {
+
 TEST(NoOp_GetMappedFrame)
 {
 	// Create a reader
@@ -57,6 +58,15 @@ TEST(NoOp_GetMappedFrame)
 	MappedFrame f = mapping.GetMappedFrame(100);
 	CHECK_EQUAL(100, f.Odd.Frame);
 	CHECK_EQUAL(100, f.Even.Frame);
+
+	// Should return end frame
+	f = mapping.GetMappedFrame(150);
+	CHECK_EQUAL(120, f.Odd.Frame);
+	CHECK_EQUAL(120, f.Even.Frame);
+
+	mapping.Close();
+	mapping.Reader(nullptr);
+	CHECK_THROW(mapping.Reader(), ReaderClosed);
 }
 
 TEST(Invalid_Frame_Too_Small)
@@ -473,6 +483,19 @@ TEST(redistribute_samples_per_frame) {
 	// Clean up
 	cache.Clear();
 	r.Close();
+}
+
+TEST(Json)
+{
+	DummyReader r(Fraction(30,1), 1280, 720, 48000, 2, 5.0);
+	FrameMapper map(&r, Fraction(30, 1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
+
+	// Read JSON config & write it back again
+	const std::string map_config = map.Json();
+	map.SetJson(map_config);
+
+	CHECK_EQUAL(48000, map.info.sample_rate);
+	CHECK_EQUAL(30, map.info.fps.num);
 }
 
 }  // SUITE
