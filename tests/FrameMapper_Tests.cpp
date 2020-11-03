@@ -31,33 +31,35 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
+#include "CacheMemory.h"
+#include "Clip.h"
+#include "DummyReader.h"
+#include "FFmpegReader.h"
+#include "Fraction.h"
+#include "Frame.h"
+#include "FrameMapper.h"
+#include "Timeline.h"
 
 using namespace std;
 using namespace openshot;
 
-TEST(FrameMapper_Get_Valid_Frame)
+SUITE(FrameMapper) {
+TEST(NoOp_GetMappedFrame)
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
-	// Create mapping between 24 fps and 29.97 fps using classic pulldown
-	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC, 22000, 2, LAYOUT_STEREO);
+	// Create mapping between 24 fps and 24 fps without pulldown
+	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_NONE, 22000, 2, LAYOUT_STEREO);
+	CHECK_EQUAL("FrameMapper", mapping.Name());
 
-	try
-	{
-		// Should find this frame
-		MappedFrame f = mapping.GetMappedFrame(125);
-		CHECK(true); // success
-	}
-	catch (OutOfBoundsFrame &e)
-	{
-		// Unexpected failure to find frame
-		CHECK(false);
-	}
+	// Should find this frame
+	MappedFrame f = mapping.GetMappedFrame(125);
+	CHECK_EQUAL(125, f.Odd.Frame);
+	CHECK_EQUAL(125, f.Even.Frame);
 }
 
-TEST(FrameMapper_Invalid_Frame_Too_Small)
+TEST(Invalid_Frame_Too_Small)
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -70,7 +72,7 @@ TEST(FrameMapper_Invalid_Frame_Too_Small)
 
 }
 
-TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
+TEST(24_fps_to_30_fps_Pulldown_Classic)
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -87,7 +89,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Classic)
 	CHECK_EQUAL(3, frame3.Even.Frame);
 }
 
-TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
+TEST(24_fps_to_30_fps_Pulldown_Advanced)
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -107,7 +109,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_Advanced)
 	CHECK_EQUAL(3, frame4.Even.Frame);
 }
 
-TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
+TEST(24_fps_to_30_fps_Pulldown_None)
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -124,7 +126,7 @@ TEST(FrameMapper_24_fps_to_30_fps_Pulldown_None)
 	CHECK_EQUAL(4, frame5.Even.Frame);
 }
 
-TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
+TEST(30_fps_to_24_fps_Pulldown_Classic)
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -144,7 +146,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Classic)
 	CHECK_EQUAL(6, frame5.Even.Frame);
 }
 
-TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
+TEST(30_fps_to_24_fps_Pulldown_Advanced)
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -164,7 +166,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_Advanced)
 	CHECK_EQUAL(5, frame4.Even.Frame);
 }
 
-TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
+TEST(30_fps_to_24_fps_Pulldown_None)
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -181,7 +183,7 @@ TEST(FrameMapper_30_fps_to_24_fps_Pulldown_None)
 	CHECK_EQUAL(6, frame5.Even.Frame);
 }
 
-TEST(FrameMapper_resample_audio_48000_to_41000)
+TEST(resample_audio_48000_to_41000)
 {
 	// Create a reader: 24 fps, 2 channels, 48000 sample rate
 	stringstream path;
@@ -211,7 +213,7 @@ TEST(FrameMapper_resample_audio_48000_to_41000)
 	map.Close();
 }
 
-TEST (FrameMapper_resample_audio_mapper) {
+TEST(resample_audio_mapper) {
 	// This test verifies that audio data can be resampled on FrameMapper
 	// instances, even on frame rates that do not divide evenly, and that no audio data is misplaced
 	// or duplicated. We verify this by creating a SIN wave, add those data points to a DummyReader,
@@ -350,7 +352,7 @@ TEST (FrameMapper_resample_audio_mapper) {
 	r.Close();
 }
 
-TEST (FrameMapper_redistribute_samples_per_frame) {
+TEST(redistribute_samples_per_frame) {
 	// This test verifies that audio data is correctly aligned on
 	// FrameMapper instances. We do this by creating 2 Clips based on the same parent reader
 	// (i.e. same exact audio sample data). We use a Timeline to overlap these clips
@@ -472,3 +474,6 @@ TEST (FrameMapper_redistribute_samples_per_frame) {
 	cache.Clear();
 	r.Close();
 }
+
+}  // SUITE
+
