@@ -54,9 +54,9 @@ TEST(NoOp_GetMappedFrame)
 	CHECK_EQUAL("FrameMapper", mapping.Name());
 
 	// Should find this frame
-	MappedFrame f = mapping.GetMappedFrame(125);
-	CHECK_EQUAL(125, f.Odd.Frame);
-	CHECK_EQUAL(125, f.Even.Frame);
+	MappedFrame f = mapping.GetMappedFrame(100);
+	CHECK_EQUAL(100, f.Odd.Frame);
+	CHECK_EQUAL(100, f.Even.Frame);
 }
 
 TEST(Invalid_Frame_Too_Small)
@@ -476,4 +476,3 @@ TEST(redistribute_samples_per_frame) {
 }
 
 }  // SUITE
-
