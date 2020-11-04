@@ -52,9 +52,6 @@ TEST(Keyframe_constructor)
 	for (auto& kf : kfs) {
 		kf.AddPoint(100, ++i * 20);
 	}
-	// for (auto kf : kfs) {
-	// 	kf.PrintPoints();
-	// }
 	auto c = openshot::Color(kfs[0], kfs[1], kfs[2], kfs[3]);
 
 	CHECK_CLOSE(20, c.red.GetLong(100), 0.01);
@@ -163,7 +160,7 @@ TEST(Json)
 }
 
 TEST(SetJson) {
-	std::string json_input = R"json(
+	const std::string json_input = R"json(
 	{
 		"red": { "Points": [ { "co": { "X": 1.0, "Y": 0.0 }, "interpolation": 0 } ] },
 		"green": { "Points": [ { "co": { "X": 1.0, "Y": 128.0 }, "interpolation": 0 } ] },
