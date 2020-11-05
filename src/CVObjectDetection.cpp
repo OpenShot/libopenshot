@@ -58,7 +58,9 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     if(error){
         return;
     }
-
+    
+    processingController->SetError(false, "");
+    
     // Load names of classes
     std::ifstream ifs(classesFile.c_str());
     std::string line;
@@ -380,11 +382,11 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
 	}
-    if (!root["processing_device"].isNull()){
-		processingDevice = (root["processing_device"].asString());
+    if (!root["processing-device"].isNull()){
+		processingDevice = (root["processing-device"].asString());
 	}
-    if (!root["model_configuration"].isNull()){
-		modelConfiguration = (root["model_configuration"].asString()); 
+    if (!root["model-config"].isNull()){
+		modelConfiguration = (root["model-config"].asString()); 
         std::ifstream infile(modelConfiguration);
         if(!infile.good()){
             processingController->SetError(true, "Incorrect path to model config file");
@@ -392,8 +394,8 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
         }
     
 	}
-    if (!root["model_weights"].isNull()){
-		modelWeights= (root["model_weights"].asString());
+    if (!root["model-weights"].isNull()){
+		modelWeights= (root["model-weights"].asString());
         std::ifstream infile(modelWeights);
         if(!infile.good()){
             processingController->SetError(true, "Incorrect path to model weight file");
@@ -401,8 +403,8 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
         }
 
 	}
-    if (!root["classes_file"].isNull()){
-		classesFile = (root["classes_file"].asString());
+    if (!root["class-names"].isNull()){
+		classesFile = (root["class-names"].asString());
 
         std::ifstream infile(classesFile);
         if(!infile.good()){

@@ -101,6 +101,7 @@ class CVStabilization {
     std::string protobuf_data_path;
 
     uint progress;
+    bool error = false;
 
     /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 	ProcessingController *processingController;

@@ -55,7 +55,7 @@ SUITE(CVStabilizer_Tests)
         c1.Open();
 
         // Create stabilizer
-        CVStabilization stabilizer("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing_window\": 30}", processingController);
+        CVStabilization stabilizer("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
 
         // Stabilize clip for frames 0-21
         stabilizer.stabilizeClip(c1, 0, 21, true);
@@ -93,7 +93,7 @@ SUITE(CVStabilizer_Tests)
         c1.Open();
 
         // Create first stabilizer
-        CVStabilization stabilizer_1("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing_window\": 30}", processingController);
+        CVStabilization stabilizer_1("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
 
         // Stabilize clip for frames 0-20
         stabilizer_1.stabilizeClip(c1, 0, 20+1, true);
@@ -106,7 +106,7 @@ SUITE(CVStabilizer_Tests)
         stabilizer_1.SaveStabilizedData();
 
         // Create second stabilizer
-        CVStabilization stabilizer_2("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing_window\": 30}", processingController);
+        CVStabilization stabilizer_2("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
 
         // Load stabilized data from first stabilizer protobuf data
         stabilizer_2._LoadStabilizedData();
