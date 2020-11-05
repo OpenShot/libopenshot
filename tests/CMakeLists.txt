@@ -95,32 +95,34 @@ set(OPENSHOT_TEST_FILES
   Timeline_Tests.cpp)
 
 ##########  SET OPENCV RELATED TEST FILES  ###############
-set(OPENSHOT_CV_TEST_FILES
-  CVTracker_Tests.cpp
-  CVStabilizer_Tests.cpp
-  # CVObjectDetection_Tests.cpp
+if(OpenCV_FOUND)
+  set(OPENSHOT_CV_TEST_FILES
+    CVTracker_Tests.cpp
+    CVStabilizer_Tests.cpp
+    # CVObjectDetection_Tests.cpp
+    )
+  set(OPENSHOT_CV_LIBRARIES
+    ${OpenCV_LIBS}
+    ${PROTOBUF_LIBRARY}
   )
+endif()
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
-if (OpenCV_FOUND)
-  add_executable(openshot-test
-    tests.cpp
-    ${OPENSHOT_TEST_FILES} 
-    ${OPENSHOT_CV_TEST_FILES})
-  
-  # Link libraries to the new executable
-  target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARY})
 
-else()
-  add_executable(openshot-test
-    tests.cpp
-    ${OPENSHOT_TEST_FILES} )
+add_executable(openshot-test
+  tests.cpp
+  ${OPENSHOT_TEST_FILES} 
+  ${OPENSHOT_CV_TEST_FILES}
+  )
 
-  # Link libraries to the new executable
-  target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
-endif()
+# Link libraries to the new executable
+target_link_libraries(openshot-test
+  openshot
+  ${UnitTest++_LIBRARIES}
+  ${OPENSHOT_CV_LIBRARIES}
+  )
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable

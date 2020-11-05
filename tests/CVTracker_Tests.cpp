@@ -54,8 +54,18 @@ SUITE(CVTracker_Tests)
         openshot::Clip c1(path.str());
         c1.Open();
 
+        std::string proto_data = R"proto(
+        {
+            "protobuf_data_path": "", 
+            "tracker-type": "KCF", 
+            "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
+        } )proto";
+
         // Create tracker
-        CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker-type\": \"KCF\", \"region\": {\"x\": 294, \"y\": 102, \"width\": 180, \"height\": 166, \"first-frame\": 0}}", processingController);
+        //CVTracker kcfTracker("{\"protobuf_data_path\": \"\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}, \"first_frame\": 0}", processingController);
+        CVTracker kcfTracker(proto_data, processingController);
+        
+        
         // Track clip for frames 0-20
         kcfTracker.trackClip(c1, 0, 20, true);
         // Get tracked data
@@ -84,8 +94,18 @@ SUITE(CVTracker_Tests)
         openshot::Clip c1(path.str());
         c1.Open();
 
+        std::string proto_data = R"proto(
+        {
+            "protobuf_data_path": "kcf_tracker.data", 
+            "tracker_type": "KCF", 
+            "bbox": {"x": 294, "y": 102, "w": 180, "h": 166},
+            "first_frame": 0
+        } )proto";
+
         // Create first tracker
-        CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker-type\": \"KCF\", \"region\": {\"x\": 294, \"y\": 102, \"width\": 180, \"height\": 166, \"first-frame\": 0}}", processingController);
+        //CVTracker kcfTracker_1("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"KCF\", \"bbox\": {\"x\": 294, \"y\": 102, \"w\": 180, \"h\": 166}, \"first_frame\": 0}", processingController);
+        CVTracker kcfTracker_1(proto_data, processingController);
+
 
         // Track clip for frames 0-20
         kcfTracker_1.trackClip(c1, 0, 20, true);
@@ -101,8 +121,18 @@ SUITE(CVTracker_Tests)
         // Save tracked data
         kcfTracker_1.SaveTrackedData();
 
+        std::string proto_data_1 = R"proto(
+        {
+            "protobuf_data_path": "kcf_tracker.data", 
+            "tracker_type": "", 
+            "bbox": {"x": -1, "y": -1, "w": -1, "h": -1},
+            "first_frame": 0
+        } )proto";
+
         // Create second tracker
-        CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker-type\": \"\", \"region\": {\"x\": -1, \"y\": -1, \"width\": -1, \"height\": -1, \"first-frame\": 0}}", processingController);
+        //CVTracker kcfTracker_2("{\"protobuf_data_path\": \"kcf_tracker.data\", \"tracker_type\": \"\", \"bbox\": {\"x\": -1, \"y\": -1, \"w\": -1, \"h\": -1}, \"first_frame\": 0}", processingController);
+        CVTracker kcfTracker_2(proto_data_1, processingController);
+
 
         // Load tracked data from first tracker protobuf data
         kcfTracker_2._LoadTrackedData();
