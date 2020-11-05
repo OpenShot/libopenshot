@@ -7,8 +7,8 @@ coverage:
         base: pr # Only post a status to pull requests
         informational: true # Don't block PRs based on coverage stats (yet?)
 ignore:
-  - "examples/**/*"
-  - "bindings/**/*"
+  - "examples"
+  - "bindings"
   - "thirdparty/jsoncpp"
   - "doc"
   - "cmake"
