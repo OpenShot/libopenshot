@@ -54,8 +54,14 @@ SUITE(CVStabilizer_Tests)
         openshot::Clip c1(path.str());
         c1.Open();
 
+        std::string json_data = R"proto(
+        {
+            "protobuf_data_path": "stabilizer.data", 
+            "smoothing-window": 30 
+        } )proto";
+        
         // Create stabilizer
-        CVStabilization stabilizer("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
+        CVStabilization stabilizer(json_data, processingController);
 
         // Stabilize clip for frames 0-21
         stabilizer.stabilizeClip(c1, 0, 21, true);
@@ -92,8 +98,14 @@ SUITE(CVStabilizer_Tests)
         openshot::Clip c1(path.str());
         c1.Open();
 
+        std::string json_data = R"proto(
+        {
+            "protobuf_data_path": "stabilizer.data", 
+            "smoothing-window": 30
+        } )proto";
+
         // Create first stabilizer
-        CVStabilization stabilizer_1("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
+        CVStabilization stabilizer_1(json_data, processingController);
 
         // Stabilize clip for frames 0-20
         stabilizer_1.stabilizeClip(c1, 0, 20+1, true);
@@ -106,7 +118,7 @@ SUITE(CVStabilizer_Tests)
         stabilizer_1.SaveStabilizedData();
 
         // Create second stabilizer
-        CVStabilization stabilizer_2("{\"protobuf_data_path\": \"stabilizer.data\", \"smoothing-window\": 30}", processingController);
+        CVStabilization stabilizer_2(json_data, processingController);
 
         // Load stabilized data from first stabilizer protobuf data
         stabilizer_2._LoadStabilizedData();
@@ -114,7 +126,7 @@ SUITE(CVStabilizer_Tests)
         // Get stabilized data
         TransformParam tp_2 = stabilizer_2.GetTransformParamData(20);
         CamTrajectory ct_2 = stabilizer_2.GetCamTrajectoryTrackedData(20);
-        
+
         // Compare first stabilizer data with second stabilizer data
         CHECK_EQUAL((int) (tp_1.dx * 10000), (int) (tp_2.dx *10000));
         CHECK_EQUAL((int) (tp_1.dy * 10000), (int) (tp_2.dy * 10000));
