@@ -28,8 +28,11 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoCacheThread.h"
+#include "VideoCacheThread.h"
 #include <algorithm>
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
 
 namespace openshot
 {
@@ -81,14 +84,20 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-	while (!threadShouldExit() && is_playing) {
+        // Types for storing time durations in whole and fractional milliseconds
+        using ms = std::chrono::milliseconds;
+        using double_ms = std::chrono::duration<double, ms::period>;
 
-		// Calculate sleep time for frame rate
-		double frame_time = (1000.0 / reader->info.fps.ToDouble());
+        // Calculate on-screen time for a single frame in milliseconds
+        const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+
+		while (!threadShouldExit() && is_playing) {
 
 	    // Cache frames before the other threads need them
-	    // Cache frames up to the max frames
-	    while (speed == 1 && (position - current_display_frame) < max_frames)
+	    // Cache frames up to the max frames. Reset to current position
+		// if cache gets too far away from display frame. Cache frames
+		// even when player is paused (i.e. speed 0).
+	    while ((position - current_display_frame) < max_frames)
 	    {
 	    	// Only cache up till the max_frames amount... then sleep
 			try
@@ -97,6 +106,14 @@ namespace openshot
 					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
 
 					// Force the frame to be generated
+					if (reader->GetCache()->GetSmallestFrame()) {
+						int64_t smallest_cached_frame = reader->GetCache()->GetSmallestFrame()->number;
+						if (smallest_cached_frame > current_display_frame) {
+							// Cache position has gotten too far away from current display frame.
+							// Reset the position to the current display frame.
+							position = current_display_frame;
+						}
+					}
 					reader->GetFrame(position);
 				}
 
@@ -106,18 +123,12 @@ namespace openshot
 				// Ignore out of bounds frame exceptions
 			}
 
-			// Is cache position behind current display frame?
-			if (position < current_display_frame) {
-				// Jump ahead
-				position = current_display_frame;
-			}
-
 	    	// Increment frame number
-	    	position++;
+			position++;
 	    }
 
 		// Sleep for 1 frame length
-		usleep(frame_time * 1000);
+		std::this_thread::sleep_for(frame_duration);
 	}
 
 	return;

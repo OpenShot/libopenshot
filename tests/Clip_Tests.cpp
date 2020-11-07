@@ -37,7 +37,7 @@
 
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "OpenShot.h"
 
 using namespace openshot;
 
@@ -230,6 +230,28 @@ TEST(Effects)
 
 	// Check the # of Effects
 	CHECK_EQUAL(2, (int)c10.Effects().size());
+}
+
+TEST(Verify_Parent_Timeline)
+{
+	Timeline t1(640, 480, Fraction(30,1), 44100, 2, LAYOUT_STEREO);
+
+	// Load clip with video
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	Clip c1(path.str());
+	c1.Open();
+
+	// Check size of frame image
+	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->width(), 1280);
+	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 720);
+
+	// Add clip to timeline
+	t1.AddClip(&c1);
+
+	// Check size of frame image (with an associated timeline)
+	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->width(), 640);
+	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 480);
 }
 
 } // SUITE

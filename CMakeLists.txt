@@ -75,27 +75,19 @@ option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
+option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
+option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
+option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
-  if(ENABLE_COVERAGE)
-    message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
-    set(ENABLE_TESTS ON)
-  else()
-    set(ENABLE_TESTS OFF)
-  endif()
+  set(ENABLE_TESTS OFF)
 endif()
 
 if(DEFINED ENABLE_TESTS)
   set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
 endif()
-
-########## Configure Version.h header ##############
-configure_file(include/OpenShotVersion.h.in include/OpenShotVersion.h @ONLY)
-# We'll want that installed later
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OpenShotVersion.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
@@ -114,9 +106,9 @@ IF (WIN32)
 ENDIF(WIN32)
 
 ############## Code Coverage #########################
-if (DISABLE_TESTS AND ENABLE_COVERAGE)
-  message(WARNING "ENABLE_COVERAGE requires tests, overriding DISABLE_TESTS")
-  set(DISABLE_TESTS OFF CACHE BOOL "Don't build unit tests" FORCE)
+if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
+  message(WARNING "ENABLE_COVERAGE requires unit tests, forcing ENABLE_TESTS")
+  set(ENABLE_TESTS ON CACHE BOOL "Don't build unit tests" FORCE)
 endif()
 
 if (ENABLE_COVERAGE)
@@ -129,8 +121,28 @@ if (ENABLE_COVERAGE)
 endif()
 add_feature_info("Coverage" ENABLE_COVERAGE "analyze test coverage and generate report")
 
-############## PROCESS src/ DIRECTORIES ##############
+# Make sure we've picked some build type, default to release
+if(NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+###
+### Process subdirectories
+###
 add_subdirectory(src)
+add_subdirectory(examples)
+add_subdirectory(bindings)
+
+###
+### Configure Version.h header
+###
+# (Note: This comes after the subdirectories, because it needs variables
+#        set during the dependency discovery in src/CMakeLists.txt)
+configure_file(src/OpenShotVersion.h.in src/OpenShotVersion.h @ONLY)
+# We'll want that installed later
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/src/OpenShotVersion.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
+
 
 ################### DOCUMENTATION ###################
 # Find Doxygen (used for documentation)
@@ -168,8 +180,10 @@ if (ENABLE_COVERAGE)
     NAME coverage
     LCOV_ARGS "--no-external"
     EXECUTABLE openshot-test
-    DEPENDENCIES openshot-test)
-    message("Generate coverage report with 'make coverage'")
+    DEPENDENCIES openshot-test
+    EXCLUDE "bindings" "examples" "${CMAKE_CURRENT_BINARY_DIR}/bindings"
+  )
+  message("Generate coverage report with 'make coverage'")
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############

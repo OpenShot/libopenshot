@@ -28,7 +28,11 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheDisk.h"
+#include "CacheDisk.h"
+#include "QtUtilities.h"
+#include <Qt>
+#include <QString>
+#include <QTextStream>
 
 using namespace std;
 using namespace openshot;
@@ -191,10 +195,10 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 
 			if (audio_file.open(QIODevice::WriteOnly)) {
 				QTextStream audio_stream(&audio_file);
-				audio_stream << frame->SampleRate() << endl;
-				audio_stream << frame->GetAudioChannelsCount() << endl;
-				audio_stream << frame->GetAudioSamplesCount() << endl;
-				audio_stream << frame->ChannelsLayout() << endl;
+				audio_stream << frame->SampleRate() << Qt::endl;
+				audio_stream << frame->GetAudioChannelsCount() << Qt::endl;
+				audio_stream << frame->GetAudioSamplesCount() << Qt::endl;
+				audio_stream << frame->ChannelsLayout() << Qt::endl;
 
 				// Loop through all samples
 				for (int channel = 0; channel < frame->GetAudioChannelsCount(); channel++)
@@ -202,7 +206,7 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 					// Get audio for this channel
 					float *samples = frame->GetAudioSamples(channel);
 					for (int sample = 0; sample < frame->GetAudioSamplesCount(); sample++)
-						audio_stream << samples[sample] << endl;
+						audio_stream << samples[sample] << Qt::endl;
 				}
 
 			}
@@ -227,14 +231,14 @@ std::shared_ptr<Frame> CacheDisk::GetFrame(int64_t frame_number)
 		if (path.exists(frame_path)) {
 
 			// Load image file
-			std::shared_ptr<QImage> image = std::shared_ptr<QImage>(new QImage());
-			bool success = image->load(QString::fromStdString(frame_path.toStdString()));
+			auto image = std::make_shared<QImage>();
+			image->load(frame_path);
 
 			// Set pixel formatimage->
-			image = std::shared_ptr<QImage>(new QImage(image->convertToFormat(QImage::Format_RGBA8888)));
+			image = std::make_shared<QImage>(image->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
 
 			// Create frame object
-			std::shared_ptr<Frame> frame(new Frame());
+			auto frame = std::make_shared<Frame>();
 			frame->number = frame_number;
 			frame->AddImage(image);
 

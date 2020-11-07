@@ -28,8 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectInfo.h"
-
+#include "EffectInfo.h"
 
 using namespace openshot;
 
@@ -52,6 +51,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if (effect_type == "Brightness")
 		return new Brightness();
+
+	else if (effect_type == "Caption")
+		return new Caption();
 
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
@@ -98,6 +100,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Bars().JsonInfo());
 	root.append(Blur().JsonInfo());
 	root.append(Brightness().JsonInfo());
+	root.append(Caption().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
 	root.append(ColorShift().JsonInfo());
 	root.append(Crop().JsonInfo());

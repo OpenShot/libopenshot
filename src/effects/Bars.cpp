@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Bars.h"
+#include "Bars.h"
 
 using namespace openshot;
 
@@ -68,7 +68,8 @@ std::shared_ptr<Frame> Bars::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get bar color (and create small color image)
-	std::shared_ptr<QImage> tempColor = std::shared_ptr<QImage>(new QImage(frame_image->width(), 1, QImage::Format_RGBA8888));
+	auto tempColor = std::make_shared<QImage>(
+		frame_image->width(), 1, QImage::Format_RGBA8888_Premultiplied);
 	tempColor->fill(QColor(QString::fromStdString(color.GetColorHex(frame_number))));
 
 	// Get current keyframe values

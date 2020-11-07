@@ -31,25 +31,39 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "OpenShot.h"
 
-using namespace std;
-using namespace openshot;
+SUITE(Color) {
 
-TEST(Color_Default_Constructor)
+TEST(Default_Constructor)
 {
 	// Create an empty color
-	Color c1;
+	openshot::Color c1;
 
 	CHECK_CLOSE(0.0f, c1.red.GetValue(0), 0.00001);
 	CHECK_CLOSE(0.0f, c1.green.GetValue(0), 0.00001);
 	CHECK_CLOSE(0.0f, c1.blue.GetValue(0), 0.00001);
 }
 
-TEST(Color_Animate_Colors)
+TEST(Keyframe_constructor)
+{
+	std::vector<openshot::Keyframe> kfs{0, 0, 0, 0};
+	int64_t i(0);
+	for (auto& kf : kfs) {
+		kf.AddPoint(100, ++i * 20);
+	}
+	auto c = openshot::Color(kfs[0], kfs[1], kfs[2], kfs[3]);
+
+	CHECK_CLOSE(20, c.red.GetLong(100), 0.01);
+	CHECK_CLOSE(40, c.green.GetLong(100), 0.01);
+	CHECK_CLOSE(60, c.blue.GetLong(100), 0.01);
+	CHECK_CLOSE(80, c.alpha.GetLong(100), 0.01);
+}
+
+TEST(Animate_Colors)
 {
 	// Create an empty color
-	Color c1;
+	openshot::Color c1;
 
 	// Set starting color (on frame 0)
 	c1.red.AddPoint(1, 0);
@@ -67,7 +81,7 @@ TEST(Color_Animate_Colors)
 	CHECK_CLOSE(160, c1.blue.GetLong(500), 0.01);
 }
 
-TEST(Color_HEX_Value)
+TEST(HEX_Value)
 {
 	// Color
 	openshot::Color c;
@@ -84,7 +98,7 @@ TEST(Color_HEX_Value)
 
 }
 
-TEST(Color_HEX_Constructor)
+TEST(HEX_Constructor)
 {
 	// Color
 	openshot::Color c("#4586db");
@@ -97,7 +111,7 @@ TEST(Color_HEX_Constructor)
 	CHECK_EQUAL("#ffffff", c.GetColorHex(100));
 }
 
-TEST(Color_Distance)
+TEST(Distance)
 {
 	// Color
 	openshot::Color c1("#040a0c");
@@ -105,11 +119,11 @@ TEST(Color_Distance)
 	openshot::Color c3("#000000");
 	openshot::Color c4("#ffffff");
 
-	CHECK_CLOSE(19.0f, Color::GetDistance(c1.red.GetInt(1), c1.blue.GetInt(1), c1.green.GetInt(1), c2.red.GetInt(1), c2.blue.GetInt(1), c2.green.GetInt(1)), 0.001);
-	CHECK_CLOSE(764.0f, Color::GetDistance(c3.red.GetInt(1), c3.blue.GetInt(1), c3.green.GetInt(1), c4.red.GetInt(1), c4.blue.GetInt(1), c4.green.GetInt(1)), 0.001);
+	CHECK_CLOSE(19.0f, openshot::Color::GetDistance(c1.red.GetInt(1), c1.blue.GetInt(1), c1.green.GetInt(1), c2.red.GetInt(1), c2.blue.GetInt(1), c2.green.GetInt(1)), 0.001);
+	CHECK_CLOSE(764.0f, openshot::Color::GetDistance(c3.red.GetInt(1), c3.blue.GetInt(1), c3.green.GetInt(1), c4.red.GetInt(1), c4.blue.GetInt(1), c4.green.GetInt(1)), 0.001);
 }
 
-TEST(Color_RGBA_Constructor)
+TEST(RGBA_Constructor)
 {
 	// Color
 	openshot::Color c(69, 134, 219, 255);
@@ -126,3 +140,41 @@ TEST(Color_RGBA_Constructor)
 	CHECK_EQUAL("#4586db", c1.GetColorHex(1));
 	CHECK_EQUAL(128, c1.alpha.GetInt(1));
 }
+
+TEST(Json)
+{
+	openshot::Color c(128, 128, 128, 0);
+	openshot::Color c1;
+	c1.red.AddPoint(1, 128);
+	c1.green.AddPoint(1, 128);
+	c1.blue.AddPoint(1, 128);
+	c1.alpha.AddPoint(1, 0);
+	// Check that JSON produced is identical
+	auto j = c.Json();
+	auto j1 = c1.Json();
+	CHECK_EQUAL(j, j1);
+	// Check Json::Value representation
+	auto jv = c.JsonValue();
+	auto jv_string = jv.toStyledString();
+	CHECK_EQUAL(jv_string, j1);
+}
+
+TEST(SetJson) {
+	const std::string json_input = R"json(
+	{
+		"red": { "Points": [ { "co": { "X": 1.0, "Y": 0.0 }, "interpolation": 0 } ] },
+		"green": { "Points": [ { "co": { "X": 1.0, "Y": 128.0 }, "interpolation": 0 } ] },
+		"blue": { "Points": [ { "co": { "X": 1.0, "Y": 64.0 }, "interpolation": 0 } ] },
+		"alpha": { "Points": [ { "co": { "X": 1.0, "Y": 192.0 }, "interpolation": 0 } ] }
+	}
+		)json";
+	openshot::Color c;
+	CHECK_THROW(c.SetJson("}{"), openshot::InvalidJSON);
+	c.SetJson(json_input);
+	CHECK_CLOSE(0, c.red.GetLong(10), 0.01);
+	CHECK_CLOSE(128, c.green.GetLong(10), 0.01);
+	CHECK_CLOSE(64, c.blue.GetLong(10), 0.01);
+	CHECK_CLOSE(192, c.alpha.GetLong(10), 0.01);
+}
+
+}  // SUITE

@@ -1,0 +1,79 @@
+/**
+ * @file
+ * @brief Header file that includes the version number of libopenshot
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef OPENSHOT_VERSION_H
+#define OPENSHOT_VERSION_H
+
+#define OPENSHOT_VERSION_ALL "@PROJECT_VERSION@"        /// A string of the entire version "Major.Minor.Build"
+#define OPENSHOT_VERSION_FULL "@PROJECT_VERSION_FULL@"   /// A string of the full version identifier, including suffixes (e.g. "0.0.0-dev0")
+
+#define OPENSHOT_VERSION_MAJOR_MINOR "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@" /// A string of the "Major.Minor" version
+
+#define OPENSHOT_VERSION_MAJOR @PROJECT_VERSION_MAJOR@   /// Major version number is incremented when huge features are added or improved.
+#define OPENSHOT_VERSION_MINOR @PROJECT_VERSION_MINOR@   /// Minor version is incremented when smaller (but still very important) improvements are added.
+#define OPENSHOT_VERSION_BUILD @PROJECT_VERSION_PATCH@   /// Build number is incremented when minor bug fixes and less important improvements are added.
+
+#define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
+
+// Useful dependency versioning / feature availability
+#cmakedefine QT_VERSION_STR "@QT_VERSION_STR@"
+#cmakedefine AVCODEC_VERSION_STR "@AVCODEC_VERSION_STR@"
+#cmakedefine AVFORMAT_VERSION_STR "@AVFORMAT_VERSION_STR@"
+#cmakedefine AVUTIL_VERSION_STR "@AVUTIL_VERSION_STR@"
+#cmakedefine01 HAVE_IMAGEMAGICK
+#cmakedefine01 HAVE_RESVG
+#cmakedefine01 APPIMAGE_BUILD
+
+#include <sstream>
+
+namespace openshot
+{
+	/// This struct holds version number information. Use the GetVersion() method to access the current version of libopenshot.
+	struct OpenShotVersion {
+		static const int Major = OPENSHOT_VERSION_MAJOR; /// Major version number
+		static const int Minor = OPENSHOT_VERSION_MINOR; /// Minor version number
+		static const int Build = OPENSHOT_VERSION_BUILD; /// Build number
+		static const int So = OPENSHOT_VERSION_SO; /// Shared Object Number (incremented when API or ABI changes)
+
+		/// Get a string version of the version (i.e. "Major.Minor.Build")
+		inline static const std::string ToString() {
+			std::stringstream version_string;
+			version_string << Major << "." << Minor << "." << Build;
+			return version_string.str();
+		}
+	};
+
+	static const openshot::OpenShotVersion Version;
+
+	/// Get the current version number of libopenshot (major, minor, and build number)
+	openshot::OpenShotVersion GetVersion();
+}
+
+#endif // OPENSHOT_VERSION_H

@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ChunkWriter.h"
+#include "ChunkWriter.h"
 
 using namespace openshot;
 
@@ -134,7 +134,9 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 			writer_thumb->WriteFrame(last_frame);
 		} else {
 			// Write the 1st frame (of the 1st chunk)... since no previous chunk is available
-			std::shared_ptr<Frame> blank_frame(new Frame(1, info.width, info.height, "#000000", info.sample_rate, info.channels));
+			auto blank_frame = std::make_shared<Frame>(
+				1, info.width, info.height, "#000000",
+				info.sample_rate, info.channels);
 			blank_frame->AddColor(info.width, info.height, "#000000");
 			writer_final->WriteFrame(blank_frame);
 			writer_preview->WriteFrame(blank_frame);
@@ -157,10 +159,6 @@ void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	// Write the frames once it reaches the correct chunk size
 	if (frame_count % chunk_size == 0 && frame_count >= chunk_size)
 	{
-		std::cout << "Done with chunk" << std::endl;
-		std::cout << "frame_count: " << frame_count << std::endl;
-		std::cout << "chunk_size: " << chunk_size << std::endl;
-
 		// Pad an additional 12 frames
 		for (int z = 0; z<12; z++)
 		{
@@ -229,10 +227,6 @@ void ChunkWriter::Close()
 	// Write the frames once it reaches the correct chunk size
 	if (is_writing)
 	{
-		std::cout << "Final chunk" << std::endl;
-		std::cout << "frame_count: " << frame_count << std::endl;
-		std::cout << "chunk_size: " << chunk_size << std::endl;
-
 		// Pad an additional 12 frames
 		for (int z = 0; z<12; z++)
 		{

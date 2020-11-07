@@ -28,14 +28,20 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ZmqLogger.h"
+#include "ZmqLogger.h"
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"
 #endif
 
-using namespace std;
 using namespace openshot;
+
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::duration::microseconds
 
 
 // Global reference to logger
@@ -64,7 +70,6 @@ ZmqLogger *ZmqLogger::Instance()
 			// This can only happen 1 time or it will crash
 			ResvgRenderer::initLog();
 		#endif
-
 	}
 
 	return m_pInstance;
@@ -74,7 +79,7 @@ ZmqLogger *ZmqLogger::Instance()
 void ZmqLogger::Connection(std::string new_connection)
 {
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
 	// Does anything need to happen?
 	if (new_connection == connection)
@@ -108,7 +113,7 @@ void ZmqLogger::Connection(std::string new_connection)
 	}
 
 	// Sleeping to allow connection to wake up (0.25 seconds)
-	usleep(250000);
+	std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
 void ZmqLogger::Log(std::string message)
@@ -118,7 +123,7 @@ void ZmqLogger::Log(std::string message)
 		return;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
@@ -189,19 +194,20 @@ void ZmqLogger::AppendDebugMethod(std::string method_name,
 				  std::string arg5_name, float arg5_value,
 				  std::string arg6_name, float arg6_value)
 {
-	if (!enabled)
+	if (!enabled && !openshot::Settings::Instance()->DEBUG_TO_STDERR)
 		// Don't do anything
 		return;
 
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(loggerCriticalSection);
+		const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
 
 		std::stringstream message;
 		message << std::fixed << std::setprecision(4);
+
+		// Construct message
 		message << method_name << " (";
 
-		// Add attributes to method JSON
 		if (arg1_name.length() > 0)
 			message << arg1_name << "=" << arg1_value;
 
@@ -220,10 +226,16 @@ void ZmqLogger::AppendDebugMethod(std::string method_name,
 		if (arg6_name.length() > 0)
 			message << ", " << arg6_name << "=" << arg6_value;
 
-		// Output to standard output
-		message << ")" << endl;
+		message << ")" << std::endl;
 
-		// Send message through ZMQ
-		Log(message.str());
+		if (openshot::Settings::Instance()->DEBUG_TO_STDERR) {
+			// Print message to stderr
+			std::clog << message.str();
+		}
+
+		if (enabled) {
+			// Send message through ZMQ
+			Log(message.str());
+		}
 	}
 }

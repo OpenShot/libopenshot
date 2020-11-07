@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ReaderBase.h"
+#include "ReaderBase.h"
 
 using namespace openshot;
 
@@ -63,7 +63,7 @@ ReaderBase::ReaderBase()
 	info.audio_timebase = Fraction();
 
 	// Init parent clip
-	parent = NULL;
+	clip = NULL;
 }
 
 // Display file information
@@ -251,11 +251,11 @@ void ReaderBase::SetJsonValue(const Json::Value root) {
 }
 
 /// Parent clip object of this reader (which can be unparented and NULL)
-openshot::ClipBase* ReaderBase::GetClip() {
-	return parent;
+openshot::ClipBase* ReaderBase::ParentClip() {
+	return clip;
 }
 
 /// Set parent clip object of this reader
-void ReaderBase::SetClip(openshot::ClipBase* clip) {
-	parent = clip;
+void ReaderBase::ParentClip(openshot::ClipBase* new_clip) {
+	clip = new_clip;
 }

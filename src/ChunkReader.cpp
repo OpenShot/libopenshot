@@ -28,8 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/ChunkReader.h"
-#include "../include/FFmpegReader.h"
+#include "ChunkReader.h"
+#include "FFmpegReader.h"
+
+#include <QDir>
 
 using namespace openshot;
 
@@ -222,7 +224,6 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 		// Close existing reader (if needed)
 		if (local_reader)
 		{
-			std::cout << "Close READER" << std::endl;
 			// Close and delete old reader
 			local_reader->Close();
 			delete local_reader;
@@ -230,7 +231,6 @@ std::shared_ptr<Frame> ChunkReader::GetFrame(int64_t requested_frame)
 
 		try
 		{
-			std::cout << "Load READER: " << chunk_video_path << std::endl;
 			// Load new FFmpegReader
 			local_reader = new FFmpegReader(chunk_video_path);
 			local_reader->Open(); // open reader
