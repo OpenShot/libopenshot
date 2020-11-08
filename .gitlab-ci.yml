@@ -17,6 +17,7 @@ linux-builder:
     -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
     - fi
     - unzip artifacts.zip
+    - export COMMIT_DATE_UNIX=$(git log --date=unix --format="%ad" $CI_COMMIT_SHA)
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
     - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 ../
@@ -24,7 +25,7 @@ linux-builder:
     - make install
     - make doc
     - ~/auto-update-docs "$CI_PROJECT_DIR/build" "$CI_COMMIT_REF_NAME"
-    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID\nCOMMIT_DATE_UNIX:$COMMIT_DATE_UNIX" > "install-x64/share/$CI_PROJECT_NAME"
     - git log $(git describe --tags --abbrev=0 '@^')..@ --oneline --no-abbrev --date=short --no-merges --pretty="tformat:$GIT_LOG_FORMAT" > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
@@ -44,12 +45,13 @@ mac-builder:
     -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
     - fi
     - unzip artifacts.zip
+    - export COMMIT_DATE_UNIX=$(git log --date=unix --format="%ad" -1 $CI_COMMIT_SHA)
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
     - cmake -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -DPYTHON_INCLUDE_DIR=/Library/Frameworks/Python.framework/Versions/3.6/include/python3.6m -DPYTHON_LIBRARY=/Library/Frameworks/Python.framework/Versions/3.6/lib/libpython3.6.dylib -DPYTHON_MODULE_PATH=python -DPython_FRAMEWORKS=/Library/Frameworks/Python.framework/ -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
     - make
     - make install
-    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID" > "install-x64/share/$CI_PROJECT_NAME"
+    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID\nCOMMIT_DATE_UNIX:$COMMIT_DATE_UNIX" > "build/install-x64/share/$CI_PROJECT_NAME"
     - git log $(git describe --tags --abbrev=0 '@^')..@ --oneline --no-abbrev --date=short --no-merges --pretty="tformat:$GIT_LOG_FORMAT" > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
   except:
@@ -67,6 +69,7 @@ windows-builder-x64:
     - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
     - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x64" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:COMMIT_DATE_UNIX = git log --date=unix --format="%ad" -1 $CI_COMMIT_SHA
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x64"
     - $env:UNITTEST_DIR = "C:\msys64\usr"
     - $env:RESVGDIR = "C:\msys64\usr"
@@ -75,7 +78,7 @@ windows-builder-x64:
     - cd build
     - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" ../
     - mingw32-make install
-    - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - New-Item -path "install-x64/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID`nCOMMIT_DATE_UNIX:$env:COMMIT_DATE_UNIX" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
     - git log "$PREV_GIT_LABEL..@" --oneline --no-abbrev --date=short --no-merges --pretty="tformat:$GIT_LOG_FORMAT" > "install-x64/share/$CI_PROJECT_NAME.log"
   when: always
@@ -94,6 +97,7 @@ windows-builder-x86:
     - try { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" } catch { $_.Exception.Response.StatusCode.Value__ }
     - if (-not (Test-Path "artifacts.zip")) { Invoke-WebRequest -Uri "http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=windows-builder-x86" -Headers @{"PRIVATE-TOKEN"="$ACCESS_TOKEN"} -OutFile "artifacts.zip" }
     - Expand-Archive -Path artifacts.zip -DestinationPath .
+    - $env:COMMIT_DATE_UNIX = git log --date=unix --format="%ad" -1 $CI_COMMIT_SHA
     - $env:LIBOPENSHOT_AUDIO_DIR = "$CI_PROJECT_DIR\build\install-x86"
     - $env:UNITTEST_DIR = "C:\msys32\usr"
     - $env:RESVGDIR = "C:\msys32\usr"
@@ -102,7 +106,7 @@ windows-builder-x86:
     - cd build
     - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR\build\install-x86" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -G "MSYS Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_CXX_FLAGS=-m32" -D"CMAKE_EXE_LINKER_FLAGS=-Wl,--large-address-aware" -D"CMAKE_C_FLAGS=-m32" ../
     - mingw32-make install
-    - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID" -ItemType file -force
+    - New-Item -path "install-x86/share/" -Name "$CI_PROJECT_NAME" -Value "CI_PROJECT_NAME:$CI_PROJECT_NAME`nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME`nCI_COMMIT_SHA:$CI_COMMIT_SHA`nCI_JOB_ID:$CI_JOB_ID`nCOMMIT_DATE_UNIX:$env:COMMIT_DATE_UNIX" -ItemType file -force
     - $PREV_GIT_LABEL=(git describe --tags --abbrev=0 '@^')
     - git log "$PREV_GIT_LABEL..@" --oneline --no-abbrev --date=short --no-merges --pretty="tformat:$GIT_LOG_FORMAT" > "install-x86/share/$CI_PROJECT_NAME.log"
   when: always
