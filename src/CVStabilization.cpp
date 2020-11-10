@@ -42,6 +42,11 @@ CVStabilization::CVStabilization(std::string processInfoJson, ProcessingControll
 // Process clip and store necessary stabilization data
 void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
 
+    if(error){
+        return;
+    }
+    processingController->SetError(false, "");
+
     start = _start; end = _end;
     // Compute max and average transformation parameters
     avr_dx=0; avr_dy=0; avr_da=0; max_dx=0; max_dy=0; max_da=0;
@@ -364,8 +369,8 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
 	}
-    if (!root["smoothing_window"].isNull()){
-		smoothingWindow = (root["smoothing_window"].asInt());
+    if (!root["smoothing-window"].isNull()){
+		smoothingWindow = (root["smoothing-window"].asInt());
 	}
 }
 

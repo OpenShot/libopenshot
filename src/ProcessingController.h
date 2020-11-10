@@ -41,10 +41,13 @@ class ProcessingController{
         uint processingProgress;
         bool processingFinished;
         bool stopProcessing;
+        bool error = true;
+        std::string error_message;
 
         std::mutex mtxProgress;
         std::mutex mtxFinished;
         std::mutex mtxStop;
+        std::mutex mtxerror;
 
 	public:
     
@@ -85,6 +88,24 @@ class ProcessingController{
         std::lock_guard<std::mutex> lck (mtxStop);
         bool s = stopProcessing;
         return s;
+    }
+
+    void SetError(bool err, std::string message){
+        std::lock_guard<std::mutex> lck (mtxerror); 
+        error = err;
+        error_message = message;
+    }
+
+    bool GetError(){
+        std::lock_guard<std::mutex> lck (mtxerror);
+        bool e = error;
+        return e;
+    }
+    
+    std::string GetErrorMessage(){
+        std::lock_guard<std::mutex> lck (mtxerror);
+        std::string message = error_message;
+        return message;
     }
 
 };

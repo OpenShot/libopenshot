@@ -35,7 +35,7 @@ if (POLICY CMP0057)
 endif()
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib/libprofiler.so.0.3.2")
+#set(PROFILER "/usr/lib//usr/lib/libprofiler.so.0.4.5")
 #set(PROFILER "/usr/lib/libtcmalloc.so.4")
 
 if(CMAKE_VERSION VERSION_LESS 3.3)
@@ -125,6 +125,7 @@ set(EFFECTS_SOURCES
   effects/Bars.cpp
   effects/Blur.cpp
   effects/Brightness.cpp
+  effects/Caption.cpp
   effects/ChromaKey.cpp
   effects/ColorShift.cpp
   effects/Crop.cpp
@@ -400,8 +401,8 @@ endif()
 find_package( OpenCV 4 )
 if (OpenCV_FOUND)
   message("\nCOMPILING WITH OPENCV\n")
-  set(CMAKE_SWIG_FLAGS "-DUSE_OPENCV=1")
-  add_definitions( -DUSE_OPENCV=1 )
+  list(APPEND CMAKE_SWIG_FLAGS -DUSE_OPENCV=1)
+  target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
 else()
   message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
 endif()

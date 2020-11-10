@@ -157,7 +157,7 @@ TEST(Convert_Image)
 	c1.Open();
 
 	// Get first frame
-	std::shared_ptr<Frame> f1 = c1.GetFrame(1);
+	auto f1 = c1.GetFrame(1);
 
 	// Get first Mat image
 	cv::Mat cvimage = f1->GetImageCV();

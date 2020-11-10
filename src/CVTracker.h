@@ -103,10 +103,12 @@ namespace openshot
 
 			/// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 			ProcessingController *processingController;
-
+			
 			bool json_interval;
 			size_t start;
 			size_t end;
+
+			bool error = false;
 		
 			// Initialize the tracker
 			bool initTracker(cv::Mat &frame, size_t frameId);

@@ -5,7 +5,8 @@ ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string p
 processingType(processingType), processInfoJson(processInfoJson){
 }
 
-void ClipProcessingJobs::processClip(Clip& clip){
+void ClipProcessingJobs::processClip(Clip& clip, std::string json){
+    processInfoJson = json;
 
     // Process clip and save processed data
     if(processingType == "Stabilizer"){
@@ -83,11 +84,13 @@ void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& control
     }
 }
 
+// Get processing progress while iterating on the clip 
 int ClipProcessingJobs::GetProgress(){
 
     return (int)processingController.GetProgress();
 }
 
+// Check if processing finished 
 bool ClipProcessingJobs::IsDone(){
 
     if(processingController.GetFinished()){
@@ -96,6 +99,17 @@ bool ClipProcessingJobs::IsDone(){
     return processingController.GetFinished();
 }
 
+// stop preprocessing before finishing it
 void ClipProcessingJobs::CancelProcessing(){
     processingController.CancelProcessing();
+}
+
+// check if there is an error with the config
+bool ClipProcessingJobs::GetError(){
+    return processingController.GetError();
+}
+
+// get the error message
+std::string ClipProcessingJobs::GetErrorMessage(){
+    return processingController.GetErrorMessage();
 }

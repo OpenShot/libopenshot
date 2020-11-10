@@ -65,7 +65,6 @@ cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
 void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, bool process_interval){
 
     video.Open();
-
     if(!json_interval){
         start = _start; end = _end;
 
@@ -79,7 +78,12 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         start = start + video.Start() * video.Reader()->info.fps.ToInt();
         end = video.End() * video.Reader()->info.fps.ToInt();
     }
-
+    
+    if(error){
+        return;
+    } 
+    
+    processingController->SetError(false, "");
     bool trackerInit = false;
 
     size_t frame;
@@ -92,7 +96,6 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
             return;
         }
 
-        std::cout<<"Frame: "<<frame<<"\n";
         size_t frame_number = frame;
         // Get current frame
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
@@ -271,32 +274,38 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
 	}
-    if (!root["tracker_type"].isNull()){
-		trackerType = (root["tracker_type"].asString());
+    if (!root["tracker-type"].isNull()){
+		trackerType = (root["tracker-type"].asString());
 	}
-    if (!root["bbox"].isNull()){
-        double x = root["bbox"]["x"].asDouble();
-        double y = root["bbox"]["y"].asDouble();
-        double w = root["bbox"]["w"].asDouble();
-        double h = root["bbox"]["h"].asDouble();
+    
+    if (!root["region"].isNull()){
+        double x = root["region"]["x"].asDouble();
+        double y = root["region"]["y"].asDouble();
+        double w = root["region"]["width"].asDouble();
+        double h = root["region"]["height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
 	}
-    if (!root["first_frame"].isNull()){
-        start = root["first_frame"].asInt64();
+    else{
+        processingController->SetError(true, "No initial bounding box selected");
+        error = true;
+    }
+
+    if (!root["region"]["first-frame"].isNull()){
+        start = root["region"]["first-frame"].asInt64();
         json_interval = true;
     }
+    else{
+        processingController->SetError(true, "No first-frame");
+        error = true;
+    }
 }
-
-
 
 /*
 ||||||||||||||||||||||||||||||||||||||||||||||||||
                 ONLY FOR MAKE TEST
 ||||||||||||||||||||||||||||||||||||||||||||||||||
 */
-
-
 
 // Load protobuf data file
 bool CVTracker::_LoadTrackedData(){
