@@ -17,7 +17,7 @@ linux-builder:
     -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
     - fi
     - unzip artifacts.zip
-    - export COMMIT_DATE_UNIX=$(git log --date=unix --format="%cd" $CI_COMMIT_SHA)
+    - export COMMIT_DATE_UNIX=$(git log --date=unix --format="%cd" -1 $CI_COMMIT_SHA)
     - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
     - mkdir -p build; cd build;
     - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 ../
