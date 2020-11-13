@@ -510,7 +510,7 @@ TEST(KeyFrameBBox_addBox_test) {
 	CHECK_EQUAL(true, kfb.Contains(1));
 	CHECK_EQUAL(1, kfb.GetLength());
 
-	kfb.PrintParams();
+	//kfb.PrintParams();
 
 	kfb.RemovePoint(1);
 
@@ -524,15 +524,15 @@ TEST(KeyFrameBBox_GetVal_test) {
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
 	
-	kfb.AddDisplacement(1, 20.0, 20.0);
-	kfb.AddScale(1, 30, 30);
+	//kfb.AddDisplacement(1, 20.0, 20.0);
+	//kfb.AddScale(1, 30, 30);
 	
 	BBox val = kfb.GetValue(1);
 	
-	CHECK_EQUAL(30.0, val.cx);
-	CHECK_EQUAL(30.0, val.cy);
-	CHECK_EQUAL(130.0,val.width);
-	CHECK_EQUAL(130.0, val.height);
+	CHECK_EQUAL(10.0, val.cx);
+	CHECK_EQUAL(10.0, val.cy);
+	CHECK_EQUAL(100.0,val.width);
+	CHECK_EQUAL(100.0, val.height);
 }
 
 

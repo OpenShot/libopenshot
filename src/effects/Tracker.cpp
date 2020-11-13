@@ -33,28 +33,22 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Tracker::Tracker(std::string clipTrackerDataPath)
+Tracker::Tracker(std::string clipTrackerDataPath): delta_x(0.0), delta_y(0.0), scale_x(0.0), scale_y(0.0), rotation(0.0) 
 {   
     // Init effect properties
 	init_effect_details();
-/*
-	this->trackedData.SetBaseFPS(fps);
-	this->trackedData.SetOpFPS(fps);
-*/
     // Tries to load the tracker data from protobuf
     LoadTrackedData(clipTrackerDataPath);
 }
 
 // Default constructor
-Tracker::Tracker()
+Tracker::Tracker(): delta_x(0.0), delta_y(0.0), scale_x(0.0), scale_y(0.0), rotation(0.0) 
 {
 	// Init effect properties
 	init_effect_details();
-/*
-	this->trackedData.SetBaseFPS(fps);
-	this->trackedData.SetOpFPS(fps);
-*/
+
 }
+
 
 // Init effect settings
 void Tracker::init_effect_details()
@@ -89,15 +83,21 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			float fw = frame_image.size().width;
         	float fh = frame_image.size().height;
 
+			double scale_x = this->scale_x.GetValue(frame_number);
+			double scale_y = this->scale_y.GetValue(frame_number);
+			double delta_x = this->delta_x.GetValue(frame_number);
+			double delta_y = this->delta_y.GetValue(frame_number);
+
+
             // Draw box on image
             //EffectFrameData fd = trackedDataById[frame_number];
 
 			BBox fd = this->trackedData.GetValue(frame_number);
-
-            cv::Rect2d box((int)(fd.cx*fw),
-						   (int)(fd.cy*fh),
-						   (int)(fd.width*fw),
-						   (int)(fd.height*fh));
+ 
+            cv::Rect2d box((int)( (fd.cx + delta_x) * fw ),
+						   (int)( (fd.cy + delta_y) * fh ),
+						   (int)( (fd.width + scale_x) * fw),
+						   (int)( (fd.height + scale_y) * fh) );
             cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
     }
@@ -147,7 +147,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
         //trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
 		if ((x1 >= 0.0) && (y1 >= 0.0) && (x2 >= 0.0) && (y2 >= 0.0)){
 			trackedData.AddBox(id, x1, y1, (x2-x1), (y2-y1));
-			trackedData.AddRotation(id, rotation);
+			//trackedData.AddRotation(id, rotation);
 		}
 	}
 
@@ -184,6 +184,13 @@ Json::Value Tracker::JsonValue() const {
     root["BaseFPS"]["num"] = BaseFPS.num;
 	root["BaseFPS"]["den"] = BaseFPS.den;
 	root["TimeScale"] = this->TimeScale;
+    
+	root["delta_x"] = delta_x.JsonValue();
+    root["delta_y"] = delta_y.JsonValue();
+    root["scale_x"] = scale_x.JsonValue();
+    root["scale_y"] = scale_y.JsonValue(); 
+    root["rotation"] = rotation.JsonValue();
+	
 	// return JsonValue
 	return root;
 }
@@ -234,6 +241,19 @@ void Tracker::SetJsonValue(const Json::Value root) {
 			protobuf_data_path = "";
 		}
 	}
+
+	if (!root["delta_x"].isNull())
+		delta_x.SetJsonValue(root["delta_x"]);
+	if (!root["delta_y"].isNull())
+		delta_y.SetJsonValue(root["delta_y"]);
+	if (!root["scale_x"].isNull())
+		scale_x.SetJsonValue(root["scale_x"]);
+	if (!root["scale_y"].isNull())
+		scale_y.SetJsonValue(root["scale_y"]);
+	if (!root["rotation"].isNull())
+		rotation.SetJsonValue(root["rotation"]);
+
+
 }
 
 // Get all properties for a specific frame
@@ -247,6 +267,13 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+
+	// Keyframes
+	root["delta_x"] = add_property_json("Displacement X-axis", delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
+	root["delta_y"] = add_property_json("Displacement Y-axis", delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, -1.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
+	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

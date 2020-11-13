@@ -138,18 +138,18 @@ namespace openshot {
             double TimeScale;
             std::map<double, BBox> BoxVec;
         public:
-            Keyframe delta_x;
-            Keyframe delta_y;
-            Keyframe scale_x;
-            Keyframe scale_y;
-            Keyframe rotation;
+            //Keyframe delta_x;
+            //Keyframe delta_y;
+            //Keyframe scale_x;
+            //Keyframe scale_y;
+            //Keyframe rotation;
 
             KeyFrameBBox();
             
-            void AddDisplacement(int64_t _frame_num, double _delta_x, double _delta_y);
-            void AddScale(int64_t _frame_num, double _delta_x, double _delta_y);
+            //void AddDisplacement(int64_t _frame_num, double _delta_x, double _delta_y);
+            //void AddScale(int64_t _frame_num, double _delta_x, double _delta_y);
             void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height);
-            void AddRotation(int64_t _frame_num, double rot);
+            //void AddRotation(int64_t _frame_num, double rot);
 
             void SetBaseFPS(Fraction fps);
             Fraction GetBaseFPS();
@@ -162,19 +162,19 @@ namespace openshot {
 
             /// Remove a points by frame_number
             void RemovePoint(int64_t frame_number);
-            void RemoveDelta(int64_t frame_number);
-            void RemoveScale(int64_t frame_number); 
-            void RemoveRotation(int64_t frame_number);
+            //void RemoveDelta(int64_t frame_number);
+            //void RemoveScale(int64_t frame_number); 
+            //void RemoveRotation(int64_t frame_number);
 
             BBox GetValue(int64_t frame_number);
 
             /// Print collection of points
-            void PrintParams();
+            //void PrintParams();
 
             double FrameNToTime(int64_t frame_number, double time_scale);
             BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
 
-           /// Get and Set JSON methods
+            		/// Get and Set JSON methods
             std::string Json(); ///< Generate JSON string of this object
             Json::Value JsonValue(); ///< Generate Json::Value for this object
             void SetJson(const std::string value); ///< Load JSON string into this object

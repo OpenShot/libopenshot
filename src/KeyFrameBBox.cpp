@@ -114,12 +114,19 @@ namespace {
 	}
 }
 
-
+/*
 KeyFrameBBox::KeyFrameBBox(): delta_x(0.0), delta_y(0.0), scale_x(0.0), scale_y(0.0), rotation(0.0) {
     this->TimeScale = 1.0;
     return;
 }
+*/
 
+
+KeyFrameBBox::KeyFrameBBox(){
+    this->TimeScale = 1.0;
+    return;
+}
+/*
 void KeyFrameBBox::AddDisplacement(int64_t frame_num, double _delta_x, double _delta_y){
     if (!this->Contains((int64_t) frame_num))
          return;
@@ -156,7 +163,7 @@ void KeyFrameBBox::AddRotation(int64_t _frame_num, double rot){
 
     rotation.AddPoint(time, rot, openshot::InterpolationType::LINEAR);
 }
-
+*/
 void KeyFrameBBox::AddBox(int64_t _frame_num , float _cx, float _cy, float _width, float _height){
     
     if (_frame_num < 0)
@@ -202,12 +209,12 @@ void KeyFrameBBox::RemovePoint(int64_t frame_number){
     if (it != BoxVec.end()){
         BoxVec.erase(time);
     
-        RemoveDelta(time);
-        RemoveScale(time);
+        //RemoveDelta(time);
+        //RemoveScale(time);
     }
     return;
 }
-
+/*
 void KeyFrameBBox::RemoveDelta(int64_t frame_number) {
 
      double time = this->FrameNToTime(frame_number, 1.0);
@@ -276,6 +283,7 @@ void KeyFrameBBox::RemoveScale(int64_t frame_number) {
     
     return;
 }
+*/
 
 BBox KeyFrameBBox::GetValue(int64_t frame_number){
     double time = this->FrameNToTime(frame_number, this->TimeScale);
@@ -288,11 +296,11 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number){
     
     if ((it->first == time) || (it == BoxVec.begin())){
         BBox res = it->second;
-        res.cx += this->delta_x.GetValue(it->first); 
+        /*res.cx += this->delta_x.GetValue(it->first); 
         res.cy += this->delta_y.GetValue(it->first); 
         res.height += this->scale_y.GetValue(it->first); 
         res.width += this->scale_x.GetValue(it->first); 
-        
+        */
         return res;
     }
     
@@ -302,12 +310,12 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number){
     BBox res = InterpolateBoxes(prev(it, 1)->first, it->first, first_ref, second_ref, time);
         
     /*later add rotation transform to these points*/
-
+    /*
     res.cx += this->delta_x.GetValue(time); 
     res.cy += this->delta_y.GetValue(time); 
     res.height += this->scale_y.GetValue(time); 
     res.width += this->scale_x.GetValue(time); 
-        
+    */
     return res;
     
 
@@ -388,13 +396,13 @@ Json::Value KeyFrameBBox::JsonValue() {
         root["boxes"].append(elem);
     }
     
-
+/*
     root["delta_x"] = delta_x.JsonValue();
     root["delta_y"] = delta_y.JsonValue();
     root["scale_x"] = scale_x.JsonValue();
     root["scale_y"] = scale_y.JsonValue(); 
     root["rotation"] = rotation.JsonValue();
-
+*/
 	// return JsonValue
 	return root;
 }
@@ -428,13 +436,13 @@ void KeyFrameBBox::clear(){
 void KeyFrameBBox::SetJsonValue(const Json::Value root) {
 	// Clear existing points
 	BoxVec.clear();
-
+/*
     delta_x.SetJsonValue(root["delta_x"]);
     delta_y.SetJsonValue(root["delta_y"]);
     scale_x.SetJsonValue(root["scale_x"]);
     scale_y.SetJsonValue(root["scale_y"]);
     rotation.SetJsonValue(root["rotation"]);
-
+*/
 
 	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject()) {
         if (!root["BaseFPS"]["num"].isNull())

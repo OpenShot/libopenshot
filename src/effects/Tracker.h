@@ -93,9 +93,15 @@ namespace openshot
 		std::string protobuf_data_path;
 		Fraction BaseFPS;
 		double TimeScale;
-	public:
 
-        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
+	public:
+		Keyframe delta_x;
+        Keyframe delta_y;
+        Keyframe scale_x;
+        Keyframe scale_y;
+        Keyframe rotation;
+        
+		std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
 
 		KeyFrameBBox trackedData;
 
