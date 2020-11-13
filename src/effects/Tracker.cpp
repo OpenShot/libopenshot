@@ -207,6 +207,16 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
+	
+	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject()) {
+        if (!root["BaseFPS"]["num"].isNull())
+			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
+        if (!root["BaseFPS"]["den"].isNull())
+		    BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
+	}
+	
+	trackedData.SetBaseFPS(this->BaseFPS);
+	
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
@@ -215,13 +225,6 @@ void Tracker::SetJsonValue(const Json::Value root) {
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";
 		}
-	}
-
-	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject()) {
-        if (!root["BaseFPS"]["num"].isNull())
-			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
-        if (!root["BaseFPS"]["den"].isNull())
-		    BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
 	}
 }
 

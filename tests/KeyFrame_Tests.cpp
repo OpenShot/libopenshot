@@ -587,11 +587,8 @@ TEST(KeyFrameBBox_Json_set) {
 	KeyFrameBBox from_json;
 	from_json.SetJson(data);
 
-	BBox val = kfb.GetValue(0);
-	BBox val_json = from_json.GetValue(0);
-
 	std::cout << from_json.Json() << std::endl;
 
-	CHECK_EQUAL(val.cx, val_json.cx);
+	CHECK_EQUAL(kfb.GetBaseFPS().num, from_json.GetBaseFPS().num);
 }
 

@@ -381,13 +381,13 @@ Json::Value KeyFrameBBox::JsonValue() {
     root["boxes"] = Json::Value(Json::arrayValue);
 
 	// loop through points
-    for (auto const& x : BoxVec){
+    /*for (auto const& x : BoxVec){
         Json::Value elem;
         elem["key"] = x.first;
         elem["val"] = x.second.JsonValue();     
         root["boxes"].append(elem);
     }
-
+    */
 
     root["delta_x"] = delta_x.JsonValue();
     root["delta_y"] = delta_y.JsonValue();
@@ -445,7 +445,7 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root) {
     if (!root["TimeScale"].isNull()) {
         this->TimeScale = (double) root["TimeScale"].asDouble();
 	}
-
+    /*
 	if (!root["boxes"].isNull()){
 		// loop through points
 		for (const auto existing_point : root["boxes"]) {
@@ -456,5 +456,6 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root) {
             BoxVec.insert({existing_point["key"].asDouble(), box});
         }
     }
+    */
     return;
 }
