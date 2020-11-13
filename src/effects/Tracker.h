@@ -42,6 +42,8 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+#include "../KeyFrameBBox.h"
+#include "../Clip.h"
 #include "trackerdata.pb.h"
 
 using namespace std;
@@ -89,10 +91,12 @@ namespace openshot
 		/// Init effect settings
 		void init_effect_details();
 		std::string protobuf_data_path;
-
+		Fraction BaseFPS;
 	public:
 
         std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
+
+		KeyFrameBBox trackedData;
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
@@ -116,7 +120,7 @@ namespace openshot
         bool LoadTrackedData(std::string inputFilePath);
         
 		// Get tracker info for the desired frame 
-        EffectFrameData GetTrackedData(size_t frameId);
+        BBox GetTrackedData(size_t frameId);
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

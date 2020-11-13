@@ -46,26 +46,6 @@
 #include "KeyFrame.h"
 
 
-struct BBox{
-    float cx = -1;
-    float cy = -1;
-    float width = -1;
-    float height = -1;
-
-    // Constructors
-    BBox(){
-        return;
-    }
-
-    BBox(float _cx, float _cy, float _width, float _height){
-        //frame_num = _frame_num;
-        cx = _cx;
-        cy = _cy;
-        width = _width;
-        height = _height;
-    }
-};
-
 
 namespace openshot {
 	/**
@@ -79,48 +59,129 @@ namespace openshot {
 	 * \endcode
 	 */
 
+
+
+    struct BBox{
+        float cx = -1;
+        float cy = -1;
+        float width = -1;
+        float height = -1;
+
+        // Constructors
+        BBox(){
+            return;
+        }
+
+        BBox(float _cx, float _cy, float _width, float _height){
+            //frame_num = _frame_num;
+            cx = _cx;
+            cy = _cy;
+            width = _width;
+            height = _height;
+        }
+
+        std::string Json() const {
+            // Return formatted string
+            return JsonValue().toStyledString();
+        }
+
+        // Generate Json::Value for this object
+        Json::Value JsonValue() const {
+
+            // Create root json object
+            Json::Value root;
+            root["cx"] = cx;
+            root["cy"] = cy;
+            root["height"] = height;
+            root["width"] = width;
+
+            return root;
+        }
+
+        // Load JSON string into this object
+        void SetJson(const std::string value) {
+
+            // Parse JSON string into JSON objects
+            try
+            {
+                const Json::Value root = openshot::stringToJson(value);
+                // Set all values that match
+                SetJsonValue(root);
+            }
+            catch (const std::exception& e)
+            {
+                // Error parsing JSON (or missing keys)
+                throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+            }
+        }
+
+        // Load Json::Value into this object
+        void SetJsonValue(const Json::Value root) {
+
+            // Set data from Json (if key is found)
+            if (!root["cx"].isNull())
+                cx = root["cx"].asDouble();
+            if (!root["cy"].isNull())
+                cy = root["cy"].asDouble();
+            if (!root["height"].isNull())
+                height = root["height"].asDouble();
+            if (!root["width"].isNull())
+                width = root["width"].asDouble();
+        }
+    };
+
+
     class KeyFrameBBox {
         private:
             bool visible;
-            Fraction fps;
+            Fraction BaseFps;
+            double TimeScale;
             std::map<double, BBox> BoxVec;
         public:
             Keyframe delta_x;
             Keyframe delta_y;
             Keyframe scale_x;
             Keyframe scale_y;
-            
+            Keyframe rotation;
+
             KeyFrameBBox();
             
             void AddDisplacement(int64_t _frame_num, double _delta_x, double _delta_y);
             void AddScale(int64_t _frame_num, double _delta_x, double _delta_y);
             void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height);
-            
-            void SetFPS(Fraction fps);
-            Fraction GetFPS();
+            void AddRotation(int64_t _frame_num, double rot);
+
+            void SetBaseFPS(Fraction fps);
+            Fraction GetBaseFPS();
+
+            void ScalePoints(double scale);
 
             bool Contains(int64_t frame_number);
             //double GetDelta(int64_t index) const ;
             int64_t GetLength() const;
-            
-            /// Get and Set JSON methods
-		    //std::string Json() const ; ///< Generate JSON string of this object
-		    //Json::Value JsonValue() const ; ///< Generate Json::Value for this object
-		    //void SetJson(const std::string value) ; ///< Load JSON string into this object
-		    //void SetJsonValue(const Json::Value root) ; ///< Load Json::Value into this object
 
             /// Remove a points by frame_number
             void RemovePoint(int64_t frame_number);
             void RemoveDelta(int64_t frame_number);
             void RemoveScale(int64_t frame_number); 
+            void RemoveRotation(int64_t frame_number);
 
             BBox GetValue(int64_t frame_number);
 
             /// Print collection of points
             void PrintParams();
 
-            double FrameNToTime(int64_t frame_number);
+            double FrameNToTime(int64_t frame_number, double time_scale);
             BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
+
+           /// Get and Set JSON methods
+            std::string Json(); ///< Generate JSON string of this object
+            Json::Value JsonValue(); ///< Generate Json::Value for this object
+            void SetJson(const std::string value); ///< Load JSON string into this object
+            void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+
+            void clear(); //clear all fields
+
 
     };
 

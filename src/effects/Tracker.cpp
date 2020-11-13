@@ -37,7 +37,10 @@ Tracker::Tracker(std::string clipTrackerDataPath)
 {   
     // Init effect properties
 	init_effect_details();
-
+/*
+	this->trackedData.SetBaseFPS(fps);
+	this->trackedData.SetOpFPS(fps);
+*/
     // Tries to load the tracker data from protobuf
     LoadTrackedData(clipTrackerDataPath);
 }
@@ -47,7 +50,10 @@ Tracker::Tracker()
 {
 	// Init effect properties
 	init_effect_details();
-
+/*
+	this->trackedData.SetBaseFPS(fps);
+	this->trackedData.SetOpFPS(fps);
+*/
 }
 
 // Init effect settings
@@ -62,6 +68,7 @@ void Tracker::init_effect_details()
 	info.description = "Track the selected bounding box through the video.";
 	info.has_audio = false;
 	info.has_video = true;
+
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -76,17 +83,20 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     if(!frame_image.empty()){
 
         // Check if track data exists for the requested frame
-        if (trackedDataById.find(frame_number) != trackedDataById.end()) {
+        if (trackedData.Contains(frame_number)) {
 
 			float fw = frame_image.size().width;
         	float fh = frame_image.size().height;
 
             // Draw box on image
-            EffectFrameData fd = trackedDataById[frame_number];
-            cv::Rect2d box((int)(fd.x1*fw),
-						   (int)(fd.y1*fh),
-						   (int)((fd.x2-fd.x1)*fw),
-						   (int)((fd.y2-fd.y1)*fh));
+            //EffectFrameData fd = trackedDataById[frame_number];
+
+			BBox fd = this->trackedData.GetValue(frame_number);
+
+            cv::Rect2d box((int)(fd.cx*fw),
+						   (int)(fd.cy*fh),
+						   (int)(fd.width*fw),
+						   (int)(fd.height*fh));
             cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
     }
@@ -113,7 +123,9 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     }
 
     // Make sure the trackedData is empty
-    trackedDataById.clear();
+    //trackedDataById.clear();
+	trackedData.clear();
+
 
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
@@ -131,8 +143,10 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
         float y2 = box.y2();
 
         // Assign data to tracker map
-        trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
-    }
+        //trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
+		trackedData.AddBox(id, x1, y1, (x2-x1), (y2-y1));
+		trackedData.AddRotation(id, rotation);
+	}
 
     // Show the time stamp from the last update in tracker data file 
     if (trackerMessage.has_last_updated()) {
@@ -146,15 +160,8 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 }
 
 // Get tracker info for the desired frame 
-EffectFrameData Tracker::GetTrackedData(size_t frameId){
-
-	// Check if the tracker info for the requested frame exists
-    if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
-        return EffectFrameData();
-    } else {
-        return trackedDataById[frameId];
-    }
-
+BBox Tracker::GetTrackedData(size_t frameId){
+	return this->trackedData.GetValue(frameId);
 }
 
 // Generate JSON string of this object
@@ -171,6 +178,8 @@ Json::Value Tracker::JsonValue() const {
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
+    root["BaseFPS"]["num"] = BaseFPS.num;
+	root["BaseFPS"]["den"] = BaseFPS.den;
 
 	// return JsonValue
 	return root;
@@ -206,6 +215,13 @@ void Tracker::SetJsonValue(const Json::Value root) {
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";
 		}
+	}
+
+	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject()) {
+        if (!root["BaseFPS"]["num"].isNull())
+			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
+        if (!root["BaseFPS"]["den"].isNull())
+		    BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
 	}
 }
 

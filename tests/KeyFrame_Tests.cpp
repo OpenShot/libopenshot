@@ -534,3 +534,64 @@ TEST(KeyFrameBBox_GetVal_test) {
 	CHECK_EQUAL(130.0,val.width);
 	CHECK_EQUAL(130.0, val.height);
 }
+
+
+TEST(KeyFrameBBox_GetVal_Interpolation) {
+	KeyFrameBBox kfb;
+
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
+	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0);
+	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0);	
+	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0);
+
+
+	//kfb.AddDisplacement(1, 20.0, 20.0);
+	//kfb.AddScale(1, 30, 30);
+	
+	BBox val = kfb.GetValue(5);
+
+	CHECK_EQUAL(14.0, val.cx);
+	CHECK_EQUAL(14.0, val.cy);
+	CHECK_EQUAL(100.0,val.width);
+	CHECK_EQUAL(100.0, val.height);
+
+	val = kfb.GetValue(15);
+	
+	CHECK_EQUAL(24.0, val.cx);
+	CHECK_EQUAL(24.0, val.cy);
+	CHECK_EQUAL(100.0,val.width);
+	CHECK_EQUAL(100.0, val.height);
+
+	val = kfb.GetValue(25);
+	
+	CHECK_EQUAL(34.0, val.cx);
+	CHECK_EQUAL(34.0, val.cy);
+	CHECK_EQUAL(100.0,val.width);
+	CHECK_EQUAL(100.0, val.height);
+
+}
+
+
+TEST(KeyFrameBBox_Json_set) {
+	KeyFrameBBox kfb;
+
+	kfb.AddBox(0, 10.0, 10.0, 100.0, 100.0);
+	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0);
+	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0);	
+	kfb.AddBox(30, 40.0, 40.0, 100.0, 100.0);
+
+	kfb.SetBaseFPS(Fraction(24.0, 1.0));
+	kfb.ScalePoints(1.2);
+	auto data = kfb.Json();
+	
+	KeyFrameBBox from_json;
+	from_json.SetJson(data);
+
+	BBox val = kfb.GetValue(0);
+	BBox val_json = from_json.GetValue(0);
+
+	std::cout << from_json.Json() << std::endl;
+
+	CHECK_EQUAL(val.cx, val_json.cx);
+}
+
