@@ -92,6 +92,7 @@ namespace openshot
 		void init_effect_details();
 		std::string protobuf_data_path;
 		Fraction BaseFPS;
+		double TimeScale;
 	public:
 
         std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data

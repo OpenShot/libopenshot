@@ -69,6 +69,7 @@ void Tracker::init_effect_details()
 	info.has_audio = false;
 	info.has_video = true;
 
+	this->TimeScale = 1.0;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -144,8 +145,10 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 
         // Assign data to tracker map
         //trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
-		trackedData.AddBox(id, x1, y1, (x2-x1), (y2-y1));
-		trackedData.AddRotation(id, rotation);
+		if ((x1 >= 0.0) && (y1 >= 0.0) && (x2 >= 0.0) && (y2 >= 0.0)){
+			trackedData.AddBox(id, x1, y1, (x2-x1), (y2-y1));
+			trackedData.AddRotation(id, rotation);
+		}
 	}
 
     // Show the time stamp from the last update in tracker data file 
@@ -180,7 +183,7 @@ Json::Value Tracker::JsonValue() const {
 	root["protobuf_data_path"] = protobuf_data_path;
     root["BaseFPS"]["num"] = BaseFPS.num;
 	root["BaseFPS"]["den"] = BaseFPS.den;
-
+	root["TimeScale"] = this->TimeScale;
 	// return JsonValue
 	return root;
 }
@@ -215,8 +218,13 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		    BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
 	}
 	
+	if (!root["TimeScale"].isNull()){
+		TimeScale = (double) root["TimeScale"].asDouble();
+	}
+
 	trackedData.SetBaseFPS(this->BaseFPS);
-	
+	trackedData.ScalePoints(TimeScale);
+
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());

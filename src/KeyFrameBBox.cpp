@@ -279,19 +279,19 @@ void KeyFrameBBox::RemoveScale(int64_t frame_number) {
 
 BBox KeyFrameBBox::GetValue(int64_t frame_number){
     double time = this->FrameNToTime(frame_number, this->TimeScale);
-
     auto it = BoxVec.lower_bound(time);
+    
     if (it == BoxVec.end()){
         BBox resp;
         return resp;
     }
     
-    if (it->first == time){
+    if ((it->first == time) || (it == BoxVec.begin())){
         BBox res = it->second;
-        res.cx += this->delta_x.GetValue(time); 
-        res.cy += this->delta_y.GetValue(time); 
-        res.height += this->scale_y.GetValue(time); 
-        res.width += this->scale_x.GetValue(time); 
+        res.cx += this->delta_x.GetValue(it->first); 
+        res.cy += this->delta_y.GetValue(it->first); 
+        res.height += this->scale_y.GetValue(it->first); 
+        res.width += this->scale_x.GetValue(it->first); 
         
         return res;
     }
@@ -324,7 +324,7 @@ BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right,
     Point p2_right(t2, right.cy, openshot::InterpolationType::LINEAR);
     
     Point p2 = InterpolateBetween(p2_left, p2_right, target, 0.01);
-
+    
     Point p3_left(t1, left.height, openshot::InterpolationType::LINEAR);
     Point p3_right(t2, right.height, openshot::InterpolationType::LINEAR);
     
@@ -334,8 +334,8 @@ BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right,
     Point p4_right(t2, right.width, openshot::InterpolationType::LINEAR);
     
     Point p4 = InterpolateBetween(p4_left, p4_right, target, 0.01);
-
-    BBox ans(p1.co.Y, p2.co.Y, p3.co.Y, p4.co.Y);
+    
+    BBox ans(p1.co.Y, p2.co.Y, p4.co.Y, p3.co.Y);
 
     return ans;
 }
@@ -351,7 +351,7 @@ Fraction KeyFrameBBox::GetBaseFPS(){
 }
 
 double KeyFrameBBox::FrameNToTime(int64_t frame_number, double time_scale){
-    double time = ((double) frame_number) * this->BaseFps.Reciprocal().ToDouble() * time_scale;
+    double time = ((double) frame_number) * this->BaseFps.Reciprocal().ToDouble() * (1.0 / time_scale);
 
     return time;
 }
@@ -381,13 +381,13 @@ Json::Value KeyFrameBBox::JsonValue() {
     root["boxes"] = Json::Value(Json::arrayValue);
 
 	// loop through points
-    /*for (auto const& x : BoxVec){
+    for (auto const& x : BoxVec){
         Json::Value elem;
         elem["key"] = x.first;
         elem["val"] = x.second.JsonValue();     
         root["boxes"].append(elem);
     }
-    */
+    
 
     root["delta_x"] = delta_x.JsonValue();
     root["delta_y"] = delta_y.JsonValue();
@@ -443,9 +443,10 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root) {
 		    BaseFps.den = (int) root["BaseFPS"]["den"].asInt();
 	}
     if (!root["TimeScale"].isNull()) {
-        this->TimeScale = (double) root["TimeScale"].asDouble();
+        double scale = (double) root["TimeScale"].asDouble();
+        this->ScalePoints(scale);
 	}
-    /*
+    
 	if (!root["boxes"].isNull()){
 		// loop through points
 		for (const auto existing_point : root["boxes"]) {
@@ -456,6 +457,6 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root) {
             BoxVec.insert({existing_point["key"].asDouble(), box});
         }
     }
-    */
+    
     return;
 }
