@@ -36,7 +36,10 @@
 using namespace std;
 using namespace openshot;
 
-TEST(Coordinate_Default_Constructor)
+SUITE(Coordinate)
+{
+
+TEST(Default_Constructor)
 {
 	// Create an empty coordinate
 	Coordinate c1;
@@ -45,7 +48,7 @@ TEST(Coordinate_Default_Constructor)
 	CHECK_CLOSE(0.0f, c1.Y, 0.00001);
 }
 
-TEST(Coordinate_X_Y_Constructor)
+TEST(X_Y_Constructor)
 {
 	// Create an empty coordinate
 	Coordinate c1(2,8);
@@ -53,3 +56,37 @@ TEST(Coordinate_X_Y_Constructor)
 	CHECK_CLOSE(2.0f, c1.X, 0.00001);
 	CHECK_CLOSE(8.0f, c1.Y, 0.00001);
 }
+
+TEST(Json)
+{
+	openshot::Coordinate c(100, 200);
+	openshot::Coordinate c1;
+	c1.X = 100;
+	c1.Y = 200;
+	// Check that JSON produced is identical
+	auto j = c.Json();
+	auto j1 = c1.Json();
+	CHECK_EQUAL(j, j1);
+	// Check Json::Value representation
+	auto jv = c.JsonValue();
+	auto jv_string = jv.toStyledString();
+	CHECK_EQUAL(jv_string, j1);
+}
+
+TEST(SetJson) {
+	// Construct our input Json representation
+	const std::string json_input = R"json(
+	{
+		"X": 100.0,
+		"Y": 50.0
+	}
+		)json";
+	openshot::Coordinate c;
+	CHECK_THROW(c.SetJson("}{"), openshot::InvalidJSON);
+	// Check that values set via SetJson() are correct
+	c.SetJson(json_input);
+	CHECK_CLOSE(100.0, c.X, 0.01);
+	CHECK_CLOSE(50.0, c.Y, 0.01);
+}
+
+}  // SUITE
