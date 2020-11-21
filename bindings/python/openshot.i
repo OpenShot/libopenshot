@@ -127,6 +127,8 @@
 
 /* Instantiate the required template specializations */
 %template() std::map<std::string, int>;
+%template() std::pair<int, int>;
+%template() std::vector<int>;
 
 /* Make openshot.Fraction more Pythonic */
 %extend openshot::Fraction {
