@@ -43,13 +43,11 @@
 #include "ReaderBase.h"
 #include "WriterBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <stdio.h>
-#include <unistd.h>
+#include <string>
+#include <vector>
 #include "CacheMemory.h"
 #include "Exceptions.h"
+#include "Fraction.h"
 #include "OpenMPUtilities.h"
 #include "MagickUtilities.h"
 

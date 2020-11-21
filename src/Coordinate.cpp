@@ -29,8 +29,8 @@
  */
 
 #include "Coordinate.h"
+#include "Exceptions.h"
 
-using namespace std;
 using namespace openshot;
 
 // Default constructor for a coordinate, which defaults the X and Y to zero (0,0)

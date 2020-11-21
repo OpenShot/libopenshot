@@ -32,6 +32,12 @@
 #include "../Clip.h"
 #include "../Timeline.h"
 
+#include <QString>
+#include <QPoint>
+#include <QRect>
+#include <QPen>
+#include <QBrush>
+
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
