@@ -148,7 +148,7 @@
 	}
 	std::string __repr__() {
 		std::ostringstream result;
-		result << $self->num << ":" << $self->den;
+		result << "Fraction(" << $self->num << ", " << $self->den << ")";
 		return result.str();
   }
 }
