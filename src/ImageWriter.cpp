@@ -36,6 +36,7 @@
 
 #include "ImageWriter.h"
 #include "Exceptions.h"
+#include "ZmqLogger.h"
 
 using namespace openshot;
 

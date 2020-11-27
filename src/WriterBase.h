@@ -37,7 +37,6 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "ReaderBase.h"
-#include "ZmqLogger.h"
 
 namespace openshot
 {

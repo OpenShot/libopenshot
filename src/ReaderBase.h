@@ -36,21 +36,17 @@
 #include <memory>
 #include <cstdlib>
 #include <sstream>
-#include "CacheMemory.h"
 #include "ChannelLayouts.h"
-#include "ClipBase.h"
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
-#include "ZmqLogger.h"
-#include <QString>
-#include <QGraphicsItem>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
-#include <QPixmap>
 
 namespace openshot
 {
+	// Forward decls
+	class ClipBase;
+	class CacheBase;
+
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
