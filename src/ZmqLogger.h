@@ -36,8 +36,16 @@
 #include <fstream>
 #include <sstream>
 #include <functional>
+#include <memory>
 #include <zmq.hpp>
 
+#ifndef zmqLog
+	#define zmqLog() \
+		openshot::StreamLog(openshot::StreamLog::zmqLogFunction).GetStream()
+#endif
+#ifndef LOGVAR
+	#define LOGVAR(VAR) #VAR << " = " << VAR
+#endif
 
 #ifndef DebugLog
 	#define DebugLog(args...) openshot::ZmqLogger::Instance()->AppendDebugMethod(args)
@@ -133,6 +141,51 @@ namespace openshot {
 		static ZmqLogger * m_pInstance;
 	};
 
+    /**
+     * @brief Stream-based logging class which feeds to ZmqLogger
+     *
+     * ZmqLogger.h includes two convenience macros intended for use
+     * with this class. They make logging quick and painless, especially when
+     * logging variables and their value.
+     *
+     * @code
+     * // Use the zmqLog() macro to create an instance of StreamLogger
+     * zmqLog() << "Hyperframulated the flux capacitor!";
+     *
+     * // To log a variable with its value, use the LOGVAR() macro
+     * int x = 5;
+     * int y = 10;
+     * zmqLog() << "Out of range! " << LOGVAR(x) << ", " << LOGVAR(y);
+     * @endcode
+     *
+     * These messages will be logged:
+     * 1: Hyperframulated the flux capacitor!
+     * 2: Out of range! x = 5, y = 10
+	 *
+    **/
+
+	// Implementation largely inspired by this StackOverflow answer:
+	//   https://stackoverflow.com/a/48475646/200794
+	// Referencing the Dr. Dobbs article "Logging In C++" by Petru Marginean
+	//   https://www.drdobbs.com/cpp/logging-in-c/201804215
+    class StreamLog {
+        using LogFunction = std::function<void(const std::string&)>;
+
+    public:
+		/// Construct a StreamLog instance that calls logFunction to output messages
+        explicit StreamLog(LogFunction logFunction) : m_logFunction(std::move(logFunction)) {};
+		/// Return the logging stream that outputs to the selected function
+        std::ostringstream& GetStream() { return m_stringStream; }
+		/// Destroy the logging instance, which calls logFunction to log the stream
+        ~StreamLog() { m_logFunction(m_stringStream.str()); }
+		/// A logging function that delivers messages to ZmqLogger
+		static void zmqLogFunction(const std::string& message) {
+			ZmqLogger::Instance()->Log(message);
+		}
+    private:
+        std::ostringstream m_stringStream;
+        LogFunction m_logFunction;
+    };
 }
 
 #endif
