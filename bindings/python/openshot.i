@@ -214,7 +214,7 @@
 	}
 	const std::string __repr__() {
 		std::ostringstream result;
-		result << "Fraction(" << $self->num << ", " << $self->den << ")";
+		result << $self;
 		return result.str();
   }
 	/* Implement dict methods in Python */
