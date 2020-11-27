@@ -49,6 +49,8 @@ class QImage;
 
 namespace openshot
 {
+	// Forward decls
+	class CacheBase;
 
 	/**
 	 * @brief This class uses Qt libraries, to create frames with rendered HTML, and return
@@ -115,7 +117,7 @@ namespace openshot
 		void Close() override;
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		openshot::CacheMemory* GetCache() override { return NULL; };
+		CacheBase* GetCache() override { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
