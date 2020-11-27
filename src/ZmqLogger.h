@@ -46,8 +46,14 @@
 #include "Settings.h"
 
 
-namespace openshot {
+#ifndef DebugLog
+	#define DebugLog(args...) openshot::ZmqLogger::Instance()->AppendDebugMethod(args)
+#endif
+#ifndef DEBUGVAR
+	#define DEBUGVAR(VAR) #VAR, VAR
+#endif
 
+namespace openshot {
 	/**
 	 * @brief This class is used for logging and sending those logs over a ZemoMQ socket to a listener
 	 *
