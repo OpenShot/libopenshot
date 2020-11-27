@@ -75,6 +75,18 @@ namespace openshot {
 		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 	};
 
+	/// Stream output operator for openshot::Coordinate
+	template<class charT, class traits>
+	std::basic_ostream<charT, traits>&
+	operator<<(std::basic_ostream<charT, traits>& o, const openshot::Coordinate& co) {
+    	std::basic_ostringstream<charT, traits> s;
+    	s.flags(o.flags());
+    	s.imbue(o.getloc());
+    	s.precision(o.precision());
+    	s << "(" << co.X << ", " << co.Y << ")";
+    	return o << s.str();
+	};
+
 }
 
 #endif
