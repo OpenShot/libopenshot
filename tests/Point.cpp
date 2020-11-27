@@ -188,3 +188,26 @@ TEST_CASE( "SetJson", "[libopenshot][point]" )
 	CHECK(p1.handle_type == openshot::HandleType::MANUAL);
 	CHECK(p1.interpolation == openshot::InterpolationType::CONSTANT);
 }
+
+
+TEST_CASE( "Operator ostream", "[libopenshot][point]" )
+{
+	openshot::Coordinate c1(10, 5);
+
+	std::stringstream output1;
+	openshot::Point p1(c1, openshot::InterpolationType::LINEAR);
+	output1 << p1;
+	CHECK(output1.str() == "co(10, 5) interpolation(LINEAR)");
+
+	std::stringstream output2;
+	openshot::Point p2(c1, openshot::InterpolationType::CONSTANT);
+	output2 << p2;
+	CHECK(output2.str() == "co(10, 5) interpolation(CONSTANT)");
+
+	std::stringstream output3;
+	openshot::Point p3(c1, openshot::InterpolationType::BEZIER);
+	output3 << p3;
+	CHECK(
+		output3.str() ==
+		"co(10, 5) interpolation(BEZIER) handle_left(0.5, 1) handle_right(0.5, 0)");
+}
