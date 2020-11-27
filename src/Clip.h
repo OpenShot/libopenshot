@@ -186,7 +186,7 @@ namespace openshot {
 		void AddEffect(openshot::EffectBase* effect);
 
 		/// Close the internal reader
-		void Close();
+		void Close() override;
 
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
@@ -199,7 +199,7 @@ namespace openshot {
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number);
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override;
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
 		/// of samples can be customized to match the Timeline, or any custom output. Extra samples will be moved to the
