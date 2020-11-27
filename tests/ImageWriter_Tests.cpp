@@ -85,7 +85,7 @@ TEST(Gif)
 	// Basic Reader state queries
 	CHECK_EQUAL("ImageReader", r1.Name());
 
-	CacheMemory* c = r1.GetCache();
+	CacheBase* c = r1.GetCache();
 	CHECK_EQUAL(true, c == nullptr);
 
 	CHECK_EQUAL(false, r1.IsOpen());
