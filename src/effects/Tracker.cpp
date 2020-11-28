@@ -33,7 +33,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Tracker::Tracker(std::string clipTrackerDataPath): delta_x(0.0), delta_y(0.0), scale_x(0.0), scale_y(0.0), rotation(0.0) 
+Tracker::Tracker(std::string clipTrackerDataPath): delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0) 
 {   
     // Init effect properties
 	init_effect_details();
@@ -42,7 +42,7 @@ Tracker::Tracker(std::string clipTrackerDataPath): delta_x(0.0), delta_y(0.0), s
 }
 
 // Default constructor
-Tracker::Tracker(): delta_x(0.0), delta_y(0.0), scale_x(0.0), scale_y(0.0), rotation(0.0) 
+Tracker::Tracker(): delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0) 
 {
 	// Init effect properties
 	init_effect_details();
@@ -88,16 +88,19 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			double delta_x = this->delta_x.GetValue(frame_number);
 			double delta_y = this->delta_y.GetValue(frame_number);
 
+			// convert to [cx, cy, width, height]. Apply scale and translation
+			BBox fd = this->trackedData.GetValue(frame_number);
+			float cx = fd.x1 + (fd.width/2) + delta_x;
+			float cy = fd.y1 + (fd.height/2) + delta_y;
+			float width = fd.width * scale_x;
+			float height = fd.height * scale_y;
+
 
             // Draw box on image
-            //EffectFrameData fd = trackedDataById[frame_number];
-
-			BBox fd = this->trackedData.GetValue(frame_number);
- 
-            cv::Rect2d box((int)( (fd.cx + delta_x) * fw ),
-						   (int)( (fd.cy + delta_y) * fh ),
-						   (int)( (fd.width + scale_x) * fw),
-						   (int)( (fd.height + scale_y) * fh) );
+            cv::Rect2d box((int)( (cx - (width/2) ) * fw ),
+						   (int)( (cy - (height/2) ) * fh ),
+						   (int)( (width) * fw),
+						   (int)( (height) * fh) );
             cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
     }
@@ -256,6 +259,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 }
 
+
 // Get all properties for a specific frame
 std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 
@@ -269,11 +273,27 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
 
 	// Keyframes
-	root["delta_x"] = add_property_json("Displacement X-axis", delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
-	root["delta_y"] = add_property_json("Displacement Y-axis", delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
-	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, -1.0, 1.0, false, requested_frame);
-	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
+	float scale_x_value = this->scale_x.GetValue(requested_frame);
+	float scale_y_value = this->scale_y.GetValue(requested_frame);
+	float delta_x_value = this->delta_x.GetValue(requested_frame);
+	float delta_y_value = this->delta_y.GetValue(requested_frame);
+	root["delta_x"] = add_property_json("Displacement X-axis", this->delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
+	root["delta_y"] = add_property_json("Displacement Y-axis", this->delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale (Width)", this->scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale (Height)", this->scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
+
+	// TODO: use p1, p2 convention instead of [x1, y1, width, height]
+	BBox fd = this->trackedData.GetValue(requested_frame);
+	float cx = fd.x1 + (fd.width/2) + delta_x_value;
+	float cy = fd.y1 + (fd.height/2) + delta_y_value;
+	float width = fd.width * scale_x_value;
+	float height = fd.height * scale_y_value;
+
+	root["x1"] = add_property_json("X1", cx-(width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y1"] = add_property_json("Y1", cy-(height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x2"] = add_property_json("X2", cx+(width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y2"] = add_property_json("Y2", cy+(height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

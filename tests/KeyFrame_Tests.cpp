@@ -529,8 +529,8 @@ TEST(KeyFrameBBox_GetVal_test) {
 	
 	BBox val = kfb.GetValue(1);
 	
-	CHECK_EQUAL(10.0, val.cx);
-	CHECK_EQUAL(10.0, val.cy);
+	CHECK_EQUAL(10.0, val.x1);
+	CHECK_EQUAL(10.0, val.y1);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 }
@@ -550,22 +550,22 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 	
 	BBox val = kfb.GetValue(5);
 
-	CHECK_EQUAL(14.0, val.cx);
-	CHECK_EQUAL(14.0, val.cy);
+	CHECK_EQUAL(14.0, val.x1);
+	CHECK_EQUAL(14.0, val.y1);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 
 	val = kfb.GetValue(15);
 	
-	CHECK_EQUAL(24.0, val.cx);
-	CHECK_EQUAL(24.0, val.cy);
+	CHECK_EQUAL(24.0, val.x1);
+	CHECK_EQUAL(24.0, val.y1);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 
 	val = kfb.GetValue(25);
 	
-	CHECK_EQUAL(34.0, val.cx);
-	CHECK_EQUAL(34.0, val.cy);
+	CHECK_EQUAL(34.0, val.x1);
+	CHECK_EQUAL(34.0, val.y1);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 

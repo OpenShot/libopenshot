@@ -62,8 +62,8 @@ namespace openshot {
 
 
     struct BBox{
-        float cx = -1;
-        float cy = -1;
+        float x1 = -1;
+        float y1 = -1;
         float width = -1;
         float height = -1;
 
@@ -72,13 +72,15 @@ namespace openshot {
             return;
         }
 
-        BBox(float _cx, float _cy, float _width, float _height){
+        BBox(float _x1, float _y1, float _width, float _height){
             //frame_num = _frame_num;
-            cx = _cx;
-            cy = _cy;
+            x1 = _x1;
+            y1 = _y1;
             width = _width;
             height = _height;
         }
+
+
 
         std::string Json() const {
             // Return formatted string
@@ -90,8 +92,8 @@ namespace openshot {
 
             // Create root json object
             Json::Value root;
-            root["cx"] = cx;
-            root["cy"] = cy;
+            root["x1"] = x1;
+            root["y1"] = y1;
             root["height"] = height;
             root["width"] = width;
 
@@ -119,10 +121,10 @@ namespace openshot {
         void SetJsonValue(const Json::Value root) {
 
             // Set data from Json (if key is found)
-            if (!root["cx"].isNull())
-                cx = root["cx"].asDouble();
-            if (!root["cy"].isNull())
-                cy = root["cy"].asDouble();
+            if (!root["x1"].isNull())
+                x1 = root["x1"].asDouble();
+            if (!root["y1"].isNull())
+                y1 = root["y1"].asDouble();
             if (!root["height"].isNull())
                 height = root["height"].asDouble();
             if (!root["width"].isNull())
@@ -143,12 +145,14 @@ namespace openshot {
             //Keyframe scale_x;
             //Keyframe scale_y;
             //Keyframe rotation;
+            
+
 
             KeyFrameBBox();
             
             //void AddDisplacement(int64_t _frame_num, double _delta_x, double _delta_y);
             //void AddScale(int64_t _frame_num, double _delta_x, double _delta_y);
-            void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height);
+            void AddBox(int64_t _frame_num, float _x1, float _y1, float _width, float _height);
             //void AddRotation(int64_t _frame_num, double rot);
 
             void SetBaseFPS(Fraction fps);
@@ -166,7 +170,13 @@ namespace openshot {
             //void RemoveScale(int64_t frame_number); 
             //void RemoveRotation(int64_t frame_number);
 
+            BBox GetValue(int64_t frame_number) const
+            {
+                return const_cast<KeyFrameBBox*>(this)->GetValue(frame_number);
+            }
+
             BBox GetValue(int64_t frame_number);
+            
 
             /// Print collection of points
             //void PrintParams();

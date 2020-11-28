@@ -164,12 +164,12 @@ void KeyFrameBBox::AddRotation(int64_t _frame_num, double rot){
     rotation.AddPoint(time, rot, openshot::InterpolationType::LINEAR);
 }
 */
-void KeyFrameBBox::AddBox(int64_t _frame_num , float _cx, float _cy, float _width, float _height){
+void KeyFrameBBox::AddBox(int64_t _frame_num , float _x1, float _y1, float _width, float _height){
     
     if (_frame_num < 0)
         return;
 
-    BBox box = BBox(_cx, _cy, _width, _height);
+    BBox box = BBox(_x1, _y1, _width, _height);
 
     double time = this->FrameNToTime(_frame_num, 1.0);
 
@@ -296,8 +296,8 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number){
     
     if ((it->first == time) || (it == BoxVec.begin())){
         BBox res = it->second;
-        /*res.cx += this->delta_x.GetValue(it->first); 
-        res.cy += this->delta_y.GetValue(it->first); 
+        /*res.x1 += this->delta_x.GetValue(it->first); 
+        res.y1 += this->delta_y.GetValue(it->first); 
         res.height += this->scale_y.GetValue(it->first); 
         res.width += this->scale_x.GetValue(it->first); 
         */
@@ -311,8 +311,8 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number){
         
     /*later add rotation transform to these points*/
     /*
-    res.cx += this->delta_x.GetValue(time); 
-    res.cy += this->delta_y.GetValue(time); 
+    res.x1 += this->delta_x.GetValue(time); 
+    res.y1 += this->delta_y.GetValue(time); 
     res.height += this->scale_y.GetValue(time); 
     res.width += this->scale_x.GetValue(time); 
     */
@@ -323,13 +323,13 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number){
 
 BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target){
 
-    Point p1_left(t1, left.cx, openshot::InterpolationType::LINEAR);
-    Point p1_right(t2, right.cx, openshot::InterpolationType::LINEAR);
+    Point p1_left(t1, left.x1, openshot::InterpolationType::LINEAR);
+    Point p1_right(t2, right.x1, openshot::InterpolationType::LINEAR);
     
     Point p1 = InterpolateBetween(p1_left, p1_right, target, 0.01);
     
-    Point p2_left(t1, left.cy, openshot::InterpolationType::LINEAR);
-    Point p2_right(t2, right.cy, openshot::InterpolationType::LINEAR);
+    Point p2_left(t1, left.y1, openshot::InterpolationType::LINEAR);
+    Point p2_right(t2, right.y1, openshot::InterpolationType::LINEAR);
     
     Point p2 = InterpolateBetween(p2_left, p2_right, target, 0.01);
     
