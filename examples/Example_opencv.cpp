@@ -31,12 +31,12 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include "../../include/CVTracker.h"
-#include "../../include/CVStabilization.h"
-#include "../../include/CVObjectDetection.h"
+#include "../../src/CVTracker.h"
+#include "../../src/CVStabilization.h"
+#include "../../src/CVObjectDetection.h"
 
-#include "../../include/OpenShot.h"
-#include "../../include/CrashHandler.h"
+#include "../../src/OpenShot.h"
+#include "../../src/CrashHandler.h"
 
 using namespace openshot;
 using namespace std;
@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
         CVTracker tracker(trackerJson(r, false), processingController);
 
         // Start the tracking
-        tracker.trackClip(r9, 0, 100, true);
+        tracker.trackClip(r9, 0, 0, true);
         // Save the tracked data
         tracker.SaveTrackedData();
 
@@ -230,13 +230,14 @@ string trackerJson(cv::Rect2d r, bool onlyProtoPath){
 
     // Construct all the composition of the JSON string
     string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
-    string trackerType = jsonFormat("tracker_type", tracker);
+    string trackerType = jsonFormat("tracker-type", tracker);
     string bboxCoords = jsonFormat(
-                                    "bbox", 
+                                    "region", 
                                             "{" + jsonFormat("x", to_string(r.x), "int") + 
                                             "," + jsonFormat("y", to_string(r.y), "int") + 
-                                            "," + jsonFormat("w", to_string(r.width), "int") +
-                                            "," + jsonFormat("h", to_string(r.height), "int") + 
+                                            "," + jsonFormat("width", to_string(r.width), "int") +
+                                            "," + jsonFormat("height", to_string(r.height), "int") + 
+                                            "," + jsonFormat("first-frame", to_string(0), "int") +
                                             "}",
                                     "rstring");  
 
