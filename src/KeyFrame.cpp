@@ -129,9 +129,9 @@ Keyframe::Keyframe(double value) {
 Keyframe::Keyframe(const std::vector<Point>& points) : Points(points) {};
 
 // Constructor which takes a vector of std::pair tuples (and adds them all)
-Keyframe::Keyframe(const std::vector<std::pair<double, double>>& coordinates) {
-	for (const auto& pair : coordinates) {
-		AddPoint(Point(pair.first, pair.second));
+Keyframe::Keyframe(const std::vector<Coordinate>& coordinates) {
+	for (const auto& co : coordinates) {
+		AddPoint(Point(co));
 	}
 }
 

@@ -506,10 +506,10 @@ TEST(Point_Vector_Constructor)
 	CHECK_CLOSE(30.0f, k1.GetValue(10), 0.0001);
 }
 
-TEST(Pair_Vector_Constructor)
+TEST(Coordinate_Vector_Constructor)
 {
-	std::vector<std::pair<double,double>> coordinates{
-		{1, 100}, {10, 500}, {1000, 80000}
+	std::vector<Coordinate> coordinates{
+		Coordinate(1, 100), Coordinate(10, 500), Coordinate(1000, 80000)
 	};
 	Keyframe k1(coordinates);
 
