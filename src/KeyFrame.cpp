@@ -125,6 +125,16 @@ Keyframe::Keyframe(double value) {
 	AddPoint(Point(value));
 }
 
+// Constructor which takes a vector of Points
+Keyframe::Keyframe(const std::vector<Point>& points) : Points(points) {};
+
+// Constructor which takes a vector of std::pair tuples (and adds them all)
+Keyframe::Keyframe(const std::vector<std::pair<double, double>>& coordinates) {
+	for (const auto& pair : coordinates) {
+		AddPoint(Point(pair.first, pair.second));
+	}
+}
+
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {

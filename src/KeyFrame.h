@@ -68,6 +68,12 @@ namespace openshot {
 		/// Constructor which sets the default point & coordinate at X=1
 		Keyframe(double value);
 
+		/// Constructor which adds a supplied vector of Points
+		Keyframe(const std::vector<Point>& points);
+
+		/// Constructor which takes a vector of std::pair tuples
+		Keyframe(const std::vector<std::pair<double, double>>& coordinates);
+
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
