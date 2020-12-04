@@ -31,14 +31,9 @@
 #ifndef OPENSHOT_KEYFRAME_H
 #define OPENSHOT_KEYFRAME_H
 
-#include <iostream>
-#include <iomanip>
 #include <cmath>
-#include <assert.h>
 #include <vector>
-#include "Exceptions.h"
 #include "Fraction.h"
-#include "Coordinate.h"
 #include "Point.h"
 #include "Json.h"
 
@@ -76,11 +71,8 @@ namespace openshot {
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
-		/// Add a new point on the key-frame, with some defaults set (BEZIER)
-		void AddPoint(double x, double y);
-
-		/// Add a new point on the key-frame, with a specific interpolation type
-		void AddPoint(double x, double y, InterpolationType interpolate);
+		/// Add a new point on the key-frame, with optional interpolation type
+		void AddPoint(double x, double y, InterpolationType interpolate=BEZIER);
 
 		/// Does this keyframe contain a specific point
 		bool Contains(Point p) const;
