@@ -64,8 +64,8 @@ namespace openshot {
 		Coordinate(double x, double y);
 
 		/// @brief Constructor which accepts a std::pair tuple for {X, Y}
-		/// @param co A std::pair<int, int> tuple containing (X, Y)
-		Coordinate(const std::pair<int, int>& co);
+		/// @param co A std::pair<double, double> tuple containing (X, Y)
+		Coordinate(const std::pair<double, double>& co);
 
 		/// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object

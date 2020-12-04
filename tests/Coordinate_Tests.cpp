@@ -57,6 +57,13 @@ TEST(X_Y_Constructor)
 	CHECK_CLOSE(8.0f, c1.Y, 0.00001);
 }
 
+TEST(Pair_Constructor)
+{
+	Coordinate c1(std::pair<double,double>(12, 10));
+	CHECK_CLOSE(12.0f, c1.X, 0.00001);
+	CHECK_CLOSE(10.0f, c1.Y, 0.00001);
+}
+
 TEST(Json)
 {
 	openshot::Coordinate c(100, 200);

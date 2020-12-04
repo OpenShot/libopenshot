@@ -40,7 +40,7 @@ Coordinate::Coordinate() : Coordinate::Coordinate(0, 0) {};
 Coordinate::Coordinate(double x, double y) : X(x), Y(y) {};
 
 // Constructor which accepts a std::pair for (X, Y)
-Coordinate::Coordinate(const std::pair<int, int>& co)
+Coordinate::Coordinate(const std::pair<double, double>& co)
 	: X(co.first), Y(co.second) {};
 
 // Generate JSON string of this object
