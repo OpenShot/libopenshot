@@ -63,6 +63,10 @@ namespace openshot {
 		/// @param y The Y coordinate (usually representing the value of the property being animated)
 		Coordinate(double x, double y);
 
+		/// @brief Constructor which accepts a std::pair tuple for {X, Y}
+		/// @param co A std::pair<int, int> tuple containing (X, Y)
+		Coordinate(const std::pair<int, int>& co);
+
 		/// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
