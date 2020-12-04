@@ -59,6 +59,16 @@ TEST(XY_Constructor)
 	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
 }
 
+TEST(Pair_Constructor)
+{
+	// Create a point from a std::pair
+	std::pair<int, int> coordinates(22, 5);
+	openshot::Point p1(coordinates);
+
+	CHECK_EQUAL(22, p1.co.X);
+	CHECK_EQUAL(5, p1.co.Y);
+}
+
 TEST(Constructor_With_Coordinate)
 {
 	// Create a point with a coordinate
