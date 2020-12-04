@@ -100,13 +100,13 @@ namespace openshot
 		Point(float x, float y, InterpolationType interpolation);
 
 		/// Constructor which takes a coordinate
-		Point(Coordinate co);
+		Point(const Coordinate& co);
 
 		/// Constructor which takes a coordinate and interpolation mode
-		Point(Coordinate co, InterpolationType interpolation);
+		Point(const Coordinate& co, InterpolationType interpolation);
 
 		/// Constructor which takes a coordinate, interpolation mode, and handle type
-		Point(Coordinate co, InterpolationType interpolation, HandleType handle_type);
+		Point(const Coordinate& co, InterpolationType interpolation, HandleType handle_type);
 
 		/// Set the left and right handles to a percent of the primary coordinate (0 to 1)
 		/// Defaults to a smooth curve (Ease in and out)
