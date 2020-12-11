@@ -66,16 +66,11 @@
 # - Make all add_custom_target()s VERBATIM to auto-escape wildcard characters
 #   in EXCLUDEs, and remove manual escaping from gcovr targets
 #
-# 2020-12-11, FeRD (Frank Dana)
-# - Drop absolute-filename conversion, no longer necessary with VERBATIM
-# - Make targets automatic (use ALL), add EXCLUDE_FROM_ALL option to override
-#
 # USAGE:
 #
 # 1. Copy this file into your cmake modules path.
 #
-# 2. Add the following line to your CMakeLists.txt (best inside an if-condition
-#    using a CMake option() to enable it just optionally):
+# 2. Add the following line to your CMakeLists.txt:
 #      include(CodeCoverage)
 #
 # 3. Append necessary compiler flags:
@@ -107,32 +102,12 @@
 #           BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/src"
 #           EXCLUDE "dir2/*")
 #
-# 4.b NOTE: Since 2020-12, the default is for the coverage target to be created
-#     with "ALL" passed to add_custom_command() when the target is created with
-#     at least one DEPENDENCIES. This means that coverage targets which depend
-#     on other targets will be executed automatically during the default build.
-#     To disable this, use EXCLUDE_FROM_ALL.
-#     Example:
-#       # Target will run automatically after building 'testrunner' target
-#       setup_target_for_coverage_lcov(
-#           NAME my_coverage_target
-#           EXECUTABLE testrunner
-#           DEPENDENCIES testrunner)
-#
-#       # Target must be manually triggered
-#       setup_target_for_coverage_gcov_html(
-#           NAME my_coverage_target
-#           EXECUTABLE testrunner
-#           DEPENDENCIES testrunner
-#           EXCLUDE_FROM_ALL)
-#
 # 5. Use the functions described below to create a custom make target which
 #    runs your test executable and produces a code coverage report.
 #
 # 6. Build a Debug build:
 #      cmake -DCMAKE_BUILD_TYPE=Debug ..
 #      make
-#      # If necessary due to EXCLUDE_FROM_ALL...
 #      make my_coverage_target
 #
 
@@ -251,18 +226,11 @@ function(setup_target_for_coverage_lcov)
 
     # Conditional arguments
     if(CPPFILT_PATH AND NOT ${Coverage_NO_DEMANGLE})
-        set(GENHTML_EXTRA_ARGS "--demangle-cpp")
+      set(GENHTML_EXTRA_ARGS "--demangle-cpp")
     endif()
-
-    # Check for dependencies and add to ALL unless disabled
-    list(LENGTH Coverage_DEPENDENCIES _dep_count)
-    if(${_dep_count} GREATER 0 AND NOT Coverage_EXCLUDE_FROM_ALL)
-        set(Coverage_ALL "ALL")
-    endif()
-    unset(_dep_count)
 
     # Setup target
-    add_custom_target(${Coverage_NAME} ${Coverage_ALL}
+    add_custom_target(${Coverage_NAME}
 
         # Cleanup lcov
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -directory . -b ${BASEDIR} --zerocounters
@@ -359,15 +327,7 @@ function(setup_target_for_coverage_gcovr_xml)
         list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
-    # Check for dependencies and add to ALL unless disabled
-    list(LENGTH Coverage_DEPENDENCIES _dep_count)
-    if(${_dep_count} GREATER 0 AND NOT Coverage_EXCLUDE_FROM_ALL)
-        set(Coverage_ALL "ALL")
-    endif()
-    unset(_dep_count)
-
-    # Setup target
-    add_custom_target(${Coverage_NAME} ${Coverage_ALL}
+    add_custom_target(${Coverage_NAME}
         # Run tests
         ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
 
@@ -439,15 +399,7 @@ function(setup_target_for_coverage_gcovr_html)
         list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
-    # Check for dependencies and add to ALL unless disabled
-    list(LENGTH Coverage_DEPENDENCIES _dep_count)
-    if(${_dep_count} GREATER 0 AND NOT Coverage_EXCLUDE_FROM_ALL)
-        set(Coverage_ALL "ALL")
-    endif()
-    unset(_dep_count)
-
-    # Setup target
-    add_custom_target(${Coverage_NAME} ${Coverage_ALL}
+    add_custom_target(${Coverage_NAME}
         # Run tests
         ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
 
