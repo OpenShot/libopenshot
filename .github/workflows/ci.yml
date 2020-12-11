@@ -43,7 +43,7 @@ jobs:
       shell: bash
       run: |
         pushd build
-        cmake --build . --target test -- VERBOSE=1
+        cmake --build . --target os_test -- VERBOSE=1
         popd
 
     - name: Install libopenshot
