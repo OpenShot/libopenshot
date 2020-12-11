@@ -15,7 +15,7 @@ jobs:
     - uses: haya14busa/action-cond@v1
       id: coverage
       with:
-        cond: ${{ matrix.os == 'ubuntu-20.04' && matrix.compiler == 'clang' }}
+        cond: ${{ matrix.compiler == 'clang' }}
         if_true: "-DENABLE_COVERAGE:BOOL=1"
         if_false: "-DENABLE_COVERAGE:BOOL=0"
 
@@ -54,8 +54,7 @@ jobs:
         popd
 
     - uses: codecov/codecov-action@v1
-      if: ${{ matrix.os == 'ubuntu-20.04' && matrix.compiler == 'clang' }}
+      if: ${{ matrix.compiler == 'clang' }}
       with:
         file: build/coverage.info
-
 
