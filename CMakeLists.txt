@@ -214,6 +214,6 @@ endif()
 
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
-    INCLUDE_QUIET_PACKAGES
-    FATAL_ON_MISSING_REQUIRED_PACKAGES
-    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
+  INCLUDE_QUIET_PACKAGES
+  FATAL_ON_MISSING_REQUIRED_PACKAGES
+  DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
