@@ -113,13 +113,6 @@ set(OPENSHOT_CV_SOURCES
   ./sort_filter/Hungarian.cpp
   ./sort_filter/KalmanTracker.cpp)
 
-# Compiled Protobuf messages
-set(PROTOBUF_MESSAGES
-    stabilizedata.pb.cc
-    trackerdata.pb.cc
-    objdetectdata.pb.cc
-    )
-
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -416,37 +409,16 @@ if (OpenCV_FOUND)
     message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
   endif()
   
-  # compiling protobuf messages
-  include_directories(${PROTOBUF_INCLUDE_DIR})
-  set(PROTOBUF_MESSAGES_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/protobuf_messages")
+  add_subdirectory(protobuf_messages)
 
-  FILE(GLOB PROTO_MSGS "${PROTOBUF_MESSAGES_FOLDER}/*.proto")
-  foreach(PROTO_MSG ${PROTO_MSGS})
-    execute_process (
-      COMMAND bash -c "${PROTOBUF_PROTOC_EXECUTABLE} -I=${PROTOBUF_MESSAGES_FOLDER} --cpp_out=${PROTOBUF_MESSAGES_FOLDER} ${PROTO_MSG}"
-    )
-  endforeach()
-
-  FILE(GLOB PROTO_CCS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.cc")
-  foreach(PROTO_CC ${PROTO_CCS})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_CC} ${CMAKE_CURRENT_SOURCE_DIR})
-    file(REMOVE ${PROTO_CC})
-  endforeach()
-  
-  FILE(GLOB PROTO_HS "${PROTOBUF_MESSAGES_FOLDER}/*.pb.h")
-  foreach(PROTO_H ${PROTO_HS})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROTO_H} ${CMAKE_CURRENT_SOURCE_DIR})
-    file(REMOVE ${PROTO_H})
-  endforeach()
+  target_include_directories(openshot PUBLIC ${ProtobufMessagePath})
 
   # Add OpenCV target sources
   target_sources(openshot PRIVATE
-    ${OPENSHOT_CV_SOURCES}
-    ${PROTOBUF_MESSAGES})
+    ${OPENSHOT_CV_SOURCES})
 
   # Link libopenshot with OpenCV libs
-  target_link_libraries(openshot PUBLIC ${OpenCV_LIBS} ${PROTOBUF_LIBRARY})
-
+  target_link_libraries(openshot PUBLIC ProtoMessages ${OpenCV_LIBS} ${PROTOBUF_LIBRARY} ${Protobuf_INCLUDE_DIRS})
 endif()
 
 ###############  LINK LIBRARY  #################
@@ -490,3 +462,4 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
+

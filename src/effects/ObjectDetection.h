@@ -40,7 +40,7 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../objdetectdata.pb.h"
+#include "objdetectdata.pb.h"
 
 // Struct that stores the detected bounding boxes for all the clip frames
 struct DetectionData{
