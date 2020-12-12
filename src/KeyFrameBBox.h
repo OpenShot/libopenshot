@@ -6,7 +6,6 @@
  * @ref License
  */
 
-
 /* LICENSE
  *
  * Copyright (c) 2008-2019 OpenShot Studios, LLC
@@ -44,53 +43,56 @@
 #include "Json.h"
 #include "IKeyFrame.h"
 #include "KeyFrame.h"
+#include "trackerdata.pb.h"
+#include <google/protobuf/util/time_util.h>
 
+using google::protobuf::util::TimeUtil;
 
-
-namespace openshot {
-	/**
-	 * @brief A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
+namespace openshot
+{
+    /**
+	 * @brief This struct holds the information of a bounding-box: a rectangular shape that enclosures an object or a 
+     * desired set of pixels in a digital image.
 	 *
-	 * Keyframes are used to animate and interpolate values of properties over time.  For example, a single property
-	 * can use a Keyframe instead of a constant value.  Assume you want to slide an image (from left to right) over
-	 * a video.  You can create a Keyframe which will adjust the X value of the image over 100 frames (or however many
-	 * frames the animation needs to last) from the value of 0 to 640.
-	 *
-	 * \endcode
+	 * The bounding-box structure holds four floating-point properties: the x and y coordinates of the rectangle's
+     * top left corner (x1, y1), the rectangle's width and the rectangle's height.
 	 */
 
+    struct BBox
+    {
+        float x1 = -1; ///< x-coordinate of the top left corner
+        float y1 = -1; ///< y-coordinate of the top left corner
+        float width = -1; ///< bounding box width
+        float height = -1; ///< bounding box height
 
-
-    struct BBox{
-        float x1 = -1;
-        float y1 = -1;
-        float width = -1;
-        float height = -1;
-
-        // Constructors
-        BBox(){
+        /// Blank constructor
+        BBox()
+        {
             return;
         }
 
-        BBox(float _x1, float _y1, float _width, float _height){
-            //frame_num = _frame_num;
+        /// Default constructor, which takes the bounding box top-left corner coordinates, width and height.
+        /// @param _x1 X-coordinate of the top left corner
+        /// @param _y1 Y-coordinate of the top left corner
+        /// @param _width Bounding box width
+        /// @param _height Bouding box height
+        BBox(float _x1, float _y1, float _width, float _height)
+        {
             x1 = _x1;
             y1 = _y1;
             width = _width;
             height = _height;
         }
 
-
-
-        std::string Json() const {
-            // Return formatted string
+        /// Generate JSON string of this object
+        std::string Json() const
+        {
             return JsonValue().toStyledString();
         }
 
-        // Generate Json::Value for this object
-        Json::Value JsonValue() const {
-
-            // Create root json object
+        /// Generate Json::Value for this object
+        Json::Value JsonValue() const
+        {
             Json::Value root;
             root["x1"] = x1;
             root["y1"] = y1;
@@ -100,9 +102,9 @@ namespace openshot {
             return root;
         }
 
-        // Load JSON string into this object
-        void SetJson(const std::string value) {
-
+        /// Load JSON string into this object
+        void SetJson(const std::string value)
+        {
             // Parse JSON string into JSON objects
             try
             {
@@ -110,15 +112,16 @@ namespace openshot {
                 // Set all values that match
                 SetJsonValue(root);
             }
-            catch (const std::exception& e)
+            catch (const std::exception &e)
             {
                 // Error parsing JSON (or missing keys)
                 throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
             }
         }
 
-        // Load Json::Value into this object
-        void SetJsonValue(const Json::Value root) {
+        /// Load Json::Value into this object
+        void SetJsonValue(const Json::Value root)
+        {
 
             // Set data from Json (if key is found)
             if (!root["x1"].isNull())
@@ -132,69 +135,83 @@ namespace openshot {
         }
     };
 
+    /**
+	 * @brief This class holds the information of a bounding-box (mapped by time) over the frames that contain
+     * the object enclosured by it.
+	 *
+     * The bounding-box displacement in X and Y directions and it's width and height variation over the frames
+     * are set as openshot::Keyframe objects
+     * 
+	 * The bounding-box information over the clip's frames are saved into a protobuf file and loaded into an
+     * object of this class. 
+	 */    
 
-    class KeyFrameBBox {
-        private:
-            bool visible;
-            Fraction BaseFps;
-            double TimeScale;
-            std::map<double, BBox> BoxVec;
-        public:
-            //Keyframe delta_x;
-            //Keyframe delta_y;
-            //Keyframe scale_x;
-            //Keyframe scale_y;
-            //Keyframe rotation;
-            
+    class KeyFrameBBox
+    {
+    private:
+        bool visible;
+        Fraction BaseFps;
+        double TimeScale;   
 
+    public:
+        std::map<double, BBox> BoxVec; ///< Index the bounding-box by time of each frame
+        Keyframe delta_x; ///< X-direction displacement Keyframe
+        Keyframe delta_y; ///< Y-direction displacement Keyframe
+        Keyframe scale_x; ///< X-direction scale Keyframe
+        Keyframe scale_y; ///< Y-direction scale Keyframe
+        Keyframe rotation; ///< Rotation Keyframe
+        std::string protobufDataPath; ///< Path to the protobuf file that holds the bbox points across the frames
 
-            KeyFrameBBox();
-            
-            //void AddDisplacement(int64_t _frame_num, double _delta_x, double _delta_y);
-            //void AddScale(int64_t _frame_num, double _delta_x, double _delta_y);
-            void AddBox(int64_t _frame_num, float _x1, float _y1, float _width, float _height);
-            //void AddRotation(int64_t _frame_num, double rot);
+        /// Default Constructor
+        KeyFrameBBox();
 
-            void SetBaseFPS(Fraction fps);
-            Fraction GetBaseFPS();
+        /// Add a BBox to the BoxVec map
+        void AddBox(int64_t _frame_num, float _x1, float _y1, float _width, float _height);
+        
+        /// Update object's BaseFps
+        void SetBaseFPS(Fraction fps);
 
-            void ScalePoints(double scale);
+        /// Return the object's BaseFps
+        Fraction GetBaseFPS();
 
-            bool Contains(int64_t frame_number);
-            //double GetDelta(int64_t index) const ;
-            int64_t GetLength() const;
+        /// Update the TimeScale member variable
+        void ScalePoints(double scale);
 
-            /// Remove a points by frame_number
-            void RemovePoint(int64_t frame_number);
-            //void RemoveDelta(int64_t frame_number);
-            //void RemoveScale(int64_t frame_number); 
-            //void RemoveRotation(int64_t frame_number);
+        /// Check if there is a bounding-box in the given frame
+        bool Contains(int64_t frame_number);
 
-            BBox GetValue(int64_t frame_number) const
-            {
-                return const_cast<KeyFrameBBox*>(this)->GetValue(frame_number);
-            }
+        /// Get the size of BoxVec map
+        int64_t GetLength() const;
 
-            BBox GetValue(int64_t frame_number);
-            
+        /// Remove a bounding-box from the BoxVec map
+        void RemoveBox(int64_t frame_number);
 
-            /// Print collection of points
-            //void PrintParams();
+        /// Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
+        BBox GetValue(int64_t frame_number) const
+        {
+            return const_cast<KeyFrameBBox *>(this)->GetValue(frame_number);
+        }
+        BBox GetValue(int64_t frame_number);
 
-            double FrameNToTime(int64_t frame_number, double time_scale);
-            BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
+        /// Load the bounding-boxes information from the protobuf file 
+        bool LoadBoxData(std::string inputFilePath);
 
-            		/// Get and Set JSON methods
-            std::string Json(); ///< Generate JSON string of this object
-            Json::Value JsonValue(); ///< Generate Json::Value for this object
-            void SetJson(const std::string value); ///< Load JSON string into this object
-            void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+        /// Get the time of the given frame
+        double FrameNToTime(int64_t frame_number, double time_scale);
 
-            void clear(); //clear all fields
+        /// Interpolate the bouding-boxes properties
+        BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
 
+        /// Get and Set JSON methods
+        std::string Json();                        ///< Generate JSON string of this object
+        Json::Value JsonValue();                   ///< Generate Json::Value for this object
+        void SetJson(const std::string value);     ///< Load JSON string into this object
+        void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
+        /// Clear the BoxVec map
+        void clear(); 
     };
 
-}
+} // namespace openshot
 
 #endif

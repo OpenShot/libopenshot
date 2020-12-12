@@ -510,9 +510,7 @@ TEST(KeyFrameBBox_addBox_test) {
 	CHECK_EQUAL(true, kfb.Contains(1));
 	CHECK_EQUAL(1, kfb.GetLength());
 
-	//kfb.PrintParams();
-
-	kfb.RemovePoint(1);
+	kfb.RemoveBox(1);
 
 	CHECK_EQUAL(false, kfb.Contains(1));
 	CHECK_EQUAL(0, kfb.GetLength());
@@ -524,15 +522,12 @@ TEST(KeyFrameBBox_GetVal_test) {
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
 	
-	//kfb.AddDisplacement(1, 20.0, 20.0);
-	//kfb.AddScale(1, 30, 30);
-	
 	BBox val = kfb.GetValue(1);
 	
 	CHECK_EQUAL(10.0, val.x1);
 	CHECK_EQUAL(10.0, val.y1);
 	CHECK_EQUAL(100.0,val.width);
-	CHECK_EQUAL(100.0, val.height);
+	CHECK_EQUAL(100.0,val.height);
 }
 
 
@@ -543,10 +538,6 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0);
 	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0);	
 	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0);
-
-
-	//kfb.AddDisplacement(1, 20.0, 20.0);
-	//kfb.AddScale(1, 30, 30);
 	
 	BBox val = kfb.GetValue(5);
 
@@ -575,20 +566,46 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 TEST(KeyFrameBBox_Json_set) {
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(0, 10.0, 10.0, 100.0, 100.0);
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
 	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0);
 	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0);	
 	kfb.AddBox(30, 40.0, 40.0, 100.0, 100.0);
 
+	kfb.scale_x.AddPoint(1, 2.0);
+	kfb.scale_x.AddPoint(10, 3.0);
+
 	kfb.SetBaseFPS(Fraction(24.0, 1.0));
-	kfb.ScalePoints(1.2);
-	auto data = kfb.Json();
+
+	auto dataJSON = kfb.Json();
+	KeyFrameBBox fromJSON_kfb;
+	fromJSON_kfb.SetJson(dataJSON);
+
+	std::cout << fromJSON_kfb.Json() << std::endl;
+
+	CHECK_EQUAL(kfb.GetBaseFPS().num, fromJSON_kfb.GetBaseFPS().num);
 	
-	KeyFrameBBox from_json;
-	from_json.SetJson(data);
+	double time_kfb = kfb.FrameNToTime(1, 1.0);
+	double time_fromJSON_kfb = fromJSON_kfb.FrameNToTime(1, 1.0);
+	CHECK_EQUAL(time_kfb, time_fromJSON_kfb);
 
-	std::cout << from_json.Json() << std::endl;
+	BBox kfb_bbox =  kfb.BoxVec[time_kfb];
+	BBox fromJSON_bbox = fromJSON_kfb.BoxVec[time_fromJSON_kfb];
 
-	CHECK_EQUAL(kfb.GetBaseFPS().num, from_json.GetBaseFPS().num);
+	CHECK_EQUAL(kfb_bbox.x1, fromJSON_bbox.x1);
+	CHECK_EQUAL(kfb_bbox.y1, fromJSON_bbox.y1);
+	CHECK_EQUAL(kfb_bbox.width, fromJSON_bbox.width);
+	CHECK_EQUAL(kfb_bbox.height, fromJSON_bbox.height);
 }
 
+TEST(KeyFrameBBox_Scale_test){
+	KeyFrameBBox kfb;
+
+	kfb.AddBox(1, 10.0, 10.0, 10.0, 10.0);
+	kfb.scale_x.AddPoint(1.0, 2.0);
+	kfb.scale_y.AddPoint(1.0, 3.0);
+	
+	BBox bbox = kfb.GetValue(1);
+	
+	CHECK_EQUAL(20.0, bbox.width);
+	CHECK_EQUAL(30.0, bbox.height);
+}

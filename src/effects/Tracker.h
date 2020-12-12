@@ -49,35 +49,6 @@
 using namespace std;
 using google::protobuf::util::TimeUtil;
 
-
-// Tracking info struct
-struct EffectFrameData{
-  size_t frame_id = -1;
-  float rotation = 0;
-  float x1 = -1;
-  float y1 = -1;
-  float x2 = -1;
-  float y2 = -1;
-
-  // Constructors
-  EffectFrameData()
-  {}
-
-  EffectFrameData( int _frame_id)
-  {frame_id = _frame_id;}
-
-  EffectFrameData( int _frame_id , float _rotation, float _x1, float _y1, float _x2, float _y2)
-  {
-      frame_id = _frame_id;
-      rotation = _rotation;
-      x1 = _x1;
-      y1 = _y1;
-      x2 = _x2;
-      y2 = _y2;
-  }
-};
-
-
 namespace openshot
 {
 	/**
@@ -90,20 +61,13 @@ namespace openshot
 	private:
 		/// Init effect settings
 		void init_effect_details();
-		std::string protobuf_data_path;
+		
 		Fraction BaseFPS;
 		double TimeScale;
 
 	public:
-		Keyframe delta_x;
-        Keyframe delta_y;
-        Keyframe scale_x;
-        Keyframe scale_y;
-        Keyframe rotation;
-        
-		std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
-
-		KeyFrameBBox trackedData;
+		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
+		KeyFrameBBox trackedData; ///< Object that holds the bounding-box data and it's Keyframes
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
@@ -122,12 +86,6 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
-		
-		// Load protobuf data file
-        bool LoadTrackedData(std::string inputFilePath);
-        
-		// Get tracker info for the desired frame 
-        BBox GetTrackedData(size_t frameId);
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
@@ -138,8 +96,10 @@ namespace openshot
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
-	};
 
+		std::string Json(int64_t requested_frame) const override; ///< Generate JSON string of the trackedData object passing the frame number
+		void SetJson(int64_t requested_frame, const std::string value) override; ///< Set the tracketData object properties by a JSON string
+	};
 }
 
 #endif

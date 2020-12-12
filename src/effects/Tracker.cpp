@@ -33,20 +33,19 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Tracker::Tracker(std::string clipTrackerDataPath): delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0) 
+Tracker::Tracker(std::string clipTrackerDataPath)
 {   
     // Init effect properties
 	init_effect_details();
-    // Tries to load the tracker data from protobuf
-    LoadTrackedData(clipTrackerDataPath);
+    // Tries to load the tracked object's data from protobuf file
+	trackedData.LoadBoxData(clipTrackerDataPath);
 }
 
 // Default constructor
-Tracker::Tracker(): delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0) 
+Tracker::Tracker()
 {
 	// Init effect properties
 	init_effect_details();
-
 }
 
 
@@ -70,7 +69,6 @@ void Tracker::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
-
     // Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
 
@@ -80,27 +78,18 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
         // Check if track data exists for the requested frame
         if (trackedData.Contains(frame_number)) {
 
+			// Get the width and height of the image
 			float fw = frame_image.size().width;
         	float fh = frame_image.size().height;
 
-			double scale_x = this->scale_x.GetValue(frame_number);
-			double scale_y = this->scale_y.GetValue(frame_number);
-			double delta_x = this->delta_x.GetValue(frame_number);
-			double delta_y = this->delta_y.GetValue(frame_number);
-
-			// convert to [cx, cy, width, height]. Apply scale and translation
+			// Get the bounding-box of given frame
 			BBox fd = this->trackedData.GetValue(frame_number);
-			float cx = fd.x1 + (fd.width/2) + delta_x;
-			float cy = fd.y1 + (fd.height/2) + delta_y;
-			float width = fd.width * scale_x;
-			float height = fd.height * scale_y;
 
-
-            // Draw box on image
-            cv::Rect2d box((int)( (cx - (width/2) ) * fw ),
-						   (int)( (cy - (height/2) ) * fh ),
-						   (int)( (width) * fw),
-						   (int)( (height) * fh) );
+            // Draw the bounding-box on the image
+            cv::Rect2d box((int)( (fd.x1 ) * fw ),
+						   (int)( (fd.y1 ) * fh ),
+						   (int)( (fd.width) * fw),
+						   (int)( (fd.height) * fh) );
             cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
         }
     }
@@ -110,64 +99,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	frame->SetImageCV(frame_image);
 
 	return frame;
-}
-
-// Load protobuf data file
-bool Tracker::LoadTrackedData(std::string inputFilePath){
-    // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
-
-    {
-        // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
-        if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
-            return false;
-        }
-    }
-
-    // Make sure the trackedData is empty
-    //trackedDataById.clear();
-	trackedData.clear();
-
-
-    // Iterate over all frames of the saved message
-    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
-
-        // Load frame and rotation data
-        size_t id = pbFrameData.id();
-        float rotation = pbFrameData.rotation();
-
-        // Load bounding box data
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
-        float x1 = box.x1();
-        float y1 = box.y1();
-        float x2 = box.x2();
-        float y2 = box.y2();
-
-        // Assign data to tracker map
-        //trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
-		if ((x1 >= 0.0) && (y1 >= 0.0) && (x2 >= 0.0) && (y2 >= 0.0)){
-			trackedData.AddBox(id, x1, y1, (x2-x1), (y2-y1));
-			//trackedData.AddRotation(id, rotation);
-		}
-	}
-
-    // Show the time stamp from the last update in tracker data file 
-    if (trackerMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
-    }
-
-    // Delete all global objects allocated by libprotobuf.
-    google::protobuf::ShutdownProtobufLibrary();
-
-    return true;
-}
-
-// Get tracker info for the desired frame 
-BBox Tracker::GetTrackedData(size_t frameId){
-	return this->trackedData.GetValue(frameId);
 }
 
 // Generate JSON string of this object
@@ -187,13 +118,6 @@ Json::Value Tracker::JsonValue() const {
     root["BaseFPS"]["num"] = BaseFPS.num;
 	root["BaseFPS"]["den"] = BaseFPS.den;
 	root["TimeScale"] = this->TimeScale;
-    
-	root["delta_x"] = delta_x.JsonValue();
-    root["delta_y"] = delta_y.JsonValue();
-    root["scale_x"] = scale_x.JsonValue();
-    root["scale_y"] = scale_y.JsonValue(); 
-    root["rotation"] = rotation.JsonValue();
-	
 	// return JsonValue
 	return root;
 }
@@ -221,50 +145,45 @@ void Tracker::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	EffectBase::SetJsonValue(root);
 	
-	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject()) {
+	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
+	{
         if (!root["BaseFPS"]["num"].isNull())
+		{
 			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
+		}	
         if (!root["BaseFPS"]["den"].isNull())
-		    BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
+		{
+			BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
+		}
 	}
 	
-	if (!root["TimeScale"].isNull()){
+	if (!root["TimeScale"].isNull())
 		TimeScale = (double) root["TimeScale"].asDouble();
-	}
 
 	trackedData.SetBaseFPS(this->BaseFPS);
 	trackedData.ScalePoints(TimeScale);
 
 	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull()){
+	if (!root["protobuf_data_path"].isNull())
+	{
 		protobuf_data_path = (root["protobuf_data_path"].asString());
-		
-		if(!LoadTrackedData(protobuf_data_path)){
+		if(!trackedData.LoadBoxData(protobuf_data_path))
+		{
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";
 		}
 	}
-
-	if (!root["delta_x"].isNull())
-		delta_x.SetJsonValue(root["delta_x"]);
-	if (!root["delta_y"].isNull())
-		delta_y.SetJsonValue(root["delta_y"]);
-	if (!root["scale_x"].isNull())
-		scale_x.SetJsonValue(root["scale_x"]);
-	if (!root["scale_y"].isNull())
-		scale_y.SetJsonValue(root["scale_y"]);
-	if (!root["rotation"].isNull())
-		rotation.SetJsonValue(root["rotation"]);
-
-
 }
 
 
 // Get all properties for a specific frame
 std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
-
+	
 	// Generate JSON properties list
 	Json::Value root;
+
+	// Effect's properties
+	root["name"] = add_property_json("Tracker", 0.0, "string", "", NULL, -1, -1, true, requested_frame);
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
@@ -272,29 +191,73 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
 
-	// Keyframes
-	float scale_x_value = this->scale_x.GetValue(requested_frame);
-	float scale_y_value = this->scale_y.GetValue(requested_frame);
-	float delta_x_value = this->delta_x.GetValue(requested_frame);
-	float delta_y_value = this->delta_y.GetValue(requested_frame);
-	root["delta_x"] = add_property_json("Displacement X-axis", this->delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
-	root["delta_y"] = add_property_json("Displacement Y-axis", this->delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
-	root["scale_x"] = add_property_json("Scale (Width)", this->scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
-	root["scale_y"] = add_property_json("Scale (Height)", this->scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
+	// Get the bounding-box for the given-frame
+	BBox fd = trackedData.GetValue(requested_frame);
+	// Add the data of given frame bounding-box to the JSON object
+	root["x1"] = add_property_json("X1", fd.x1, "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y1"] = add_property_json("Y1", fd.y1, "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x2"] = add_property_json("X2", fd.x1+fd.width, "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y2"] = add_property_json("Y2", fd.y1+fd.height, "float", "", NULL, 0.0, 1.0, false, requested_frame);
 
-	// TODO: use p1, p2 convention instead of [x1, y1, width, height]
-	BBox fd = this->trackedData.GetValue(requested_frame);
-	float cx = fd.x1 + (fd.width/2) + delta_x_value;
-	float cy = fd.y1 + (fd.height/2) + delta_y_value;
-	float width = fd.width * scale_x_value;
-	float height = fd.height * scale_y_value;
-
-	root["x1"] = add_property_json("X1", cx-(width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y1"] = add_property_json("Y1", cy-(height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["x2"] = add_property_json("X2", cx+(width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y2"] = add_property_json("Y2", cy+(height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	// Add the bounding-box Keyframes to the JSON object
+	root["delta_x"] = add_property_json("Displacement X-axis", trackedData.delta_x.GetValue(requested_frame), "float", "", &trackedData.delta_x, -1.0, 1.0, false, requested_frame);
+	root["delta_y"] = add_property_json("Displacement Y-axis", trackedData.delta_y.GetValue(requested_frame), "float", "", &trackedData.delta_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale (Width)", trackedData.scale_x.GetValue(requested_frame), "float", "", &trackedData.scale_x, -1.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale (Height)", trackedData.scale_y.GetValue(requested_frame), "float", "", &trackedData.scale_y, -1.0, 1.0, false, requested_frame);
+	root["rotation"] = add_property_json("Rotation", trackedData.rotation.GetValue(requested_frame), "float", "", &trackedData.rotation, 0, 360, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
+}
+
+// Generate JSON string of the trackedData object passing the frame number
+std::string Tracker::Json(int64_t requested_frame) const {
+
+	// Generate JSON properties list
+	Json::Value root;
+
+	// Add the KeyframeBBox class properties to the JSON object
+	root["type"] = info.class_name;
+	root["protobuf_data_path"] = protobuf_data_path;
+    root["BaseFPS"]["num"] = BaseFPS.num;
+	root["BaseFPS"]["den"] = BaseFPS.den;
+	root["TimeScale"] = this->TimeScale;
+
+	// Add the bounding-box Keyframes to the JSON object
+	root["delta_x"] = trackedData.delta_x.JsonValue();
+	root["delta_y"] = trackedData.delta_y.JsonValue();
+	root["scale_x"] = trackedData.scale_x.JsonValue();
+	root["scale_y"] = trackedData.scale_y.JsonValue();
+	root["rotation"] = trackedData.rotation.JsonValue();
+
+	return root.toStyledString();
+}
+
+// Set the tracketData object properties by a JSON string
+void Tracker::SetJson(int64_t requested_frame, const std::string value) 
+{
+	// Parse JSON string into JSON objects
+	try
+	{
+		const Json::Value root = openshot::stringToJson(value);
+		
+		// Set all values that match
+		if (!root["delta_x"].isNull())
+			trackedData.delta_x.SetJsonValue(root["delta_x"]);
+		if (!root["delta_y"].isNull())
+			trackedData.delta_y.SetJsonValue(root["delta_y"]);
+		if (!root["scale_x"].isNull())
+			trackedData.scale_x.SetJsonValue(root["scale_x"]);
+		if (!root["scale_y"].isNull())
+			trackedData.scale_y.SetJsonValue(root["scale_y"]);
+		if (!root["rotation"].isNull())
+			trackedData.rotation.SetJsonValue(root["rotation"]);
+	}
+
+	catch (const std::exception& e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+	}
+	return;
 }

@@ -97,6 +97,14 @@ namespace openshot
 		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
 		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
+
+		virtual std::string Json(int64_t requested_frame) const{
+			return {};
+		};
+		virtual void SetJson(int64_t requested_frame, const std::string value) {
+			return;
+		};
+		
 		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
 
 		/// Get the order that this effect should be executed.
