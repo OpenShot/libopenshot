@@ -505,7 +505,7 @@ TEST(KeyFrameBBox_init_test) {
 TEST(KeyFrameBBox_addBox_test) {
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 
 	CHECK_EQUAL(true, kfb.Contains(1));
 	CHECK_EQUAL(1, kfb.GetLength());
@@ -520,43 +520,44 @@ TEST(KeyFrameBBox_addBox_test) {
 TEST(KeyFrameBBox_GetVal_test) {
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	
 	BBox val = kfb.GetValue(1);
 	
-	CHECK_EQUAL(10.0, val.x1);
-	CHECK_EQUAL(10.0, val.y1);
+	CHECK_EQUAL(10.0, val.cx);
+	CHECK_EQUAL(10.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0,val.height);
+	CHECK_EQUAL(0.0, val.angle);
 }
 
 
 TEST(KeyFrameBBox_GetVal_Interpolation) {
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
-	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0);
-	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0);	
-	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0);
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
+	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0, 0.0);
+	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0, 0.0);	
+	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0, 0.0);
 	
 	BBox val = kfb.GetValue(5);
 
-	CHECK_EQUAL(14.0, val.x1);
-	CHECK_EQUAL(14.0, val.y1);
+	CHECK_EQUAL(14.0, val.cx);
+	CHECK_EQUAL(14.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
-	CHECK_EQUAL(100.0, val.height);
+	CHECK_EQUAL(100.0,val.height);
 
 	val = kfb.GetValue(15);
 	
-	CHECK_EQUAL(24.0, val.x1);
-	CHECK_EQUAL(24.0, val.y1);
+	CHECK_EQUAL(24.0, val.cx);
+	CHECK_EQUAL(24.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 
 	val = kfb.GetValue(25);
 	
-	CHECK_EQUAL(34.0, val.x1);
-	CHECK_EQUAL(34.0, val.y1);
+	CHECK_EQUAL(34.0, val.cx);
+	CHECK_EQUAL(34.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 
@@ -566,10 +567,10 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 TEST(KeyFrameBBox_Json_set) {
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0);
-	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0);
-	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0);	
-	kfb.AddBox(30, 40.0, 40.0, 100.0, 100.0);
+	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
+	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0, 0.0);
+	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0, 0.0);	
+	kfb.AddBox(30, 40.0, 40.0, 100.0, 100.0, 0.0);
 
 	kfb.scale_x.AddPoint(1, 2.0);
 	kfb.scale_x.AddPoint(10, 3.0);
@@ -591,16 +592,17 @@ TEST(KeyFrameBBox_Json_set) {
 	BBox kfb_bbox =  kfb.BoxVec[time_kfb];
 	BBox fromJSON_bbox = fromJSON_kfb.BoxVec[time_fromJSON_kfb];
 
-	CHECK_EQUAL(kfb_bbox.x1, fromJSON_bbox.x1);
-	CHECK_EQUAL(kfb_bbox.y1, fromJSON_bbox.y1);
+	CHECK_EQUAL(kfb_bbox.cx, fromJSON_bbox.cx);
+	CHECK_EQUAL(kfb_bbox.cy, fromJSON_bbox.cy);
 	CHECK_EQUAL(kfb_bbox.width, fromJSON_bbox.width);
 	CHECK_EQUAL(kfb_bbox.height, fromJSON_bbox.height);
+	CHECK_EQUAL(kfb_bbox.angle, fromJSON_bbox.angle);
 }
 
 TEST(KeyFrameBBox_Scale_test){
 	KeyFrameBBox kfb;
 
-	kfb.AddBox(1, 10.0, 10.0, 10.0, 10.0);
+	kfb.AddBox(1, 10.0, 10.0, 10.0, 10.0, 0.0);
 	kfb.scale_x.AddPoint(1.0, 2.0);
 	kfb.scale_y.AddPoint(1.0, 3.0);
 	

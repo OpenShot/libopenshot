@@ -142,14 +142,14 @@ KeyFrameBBox::KeyFrameBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y
 }
 
 // Add a BBox to the BoxVec map
-void KeyFrameBBox::AddBox(int64_t _frame_num, float _x1, float _y1, float _width, float _height)
+void KeyFrameBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle)
 {
     // Check if the given frame number is valid
     if (_frame_num < 0)
         return;
 
     // Instantiate a new bounding-box
-    BBox newBBox = BBox(_x1, _y1, _width, _height);
+    BBox newBBox = BBox(_cx, _cy, _width, _height, _angle);
 
     // Get the time of given frame
     double time = this->FrameNToTime(_frame_num, 1.0);
@@ -231,25 +231,12 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number)
         BBox currentBBox = currentBBoxIterator->second;
 
         // Adjust the BBox properties by the Keyframes values
-        currentBBox.x1 += this->delta_x.GetValue(frame_number);
-        currentBBox.y1 += this->delta_y.GetValue(frame_number);
+        currentBBox.cx += this->delta_x.GetValue(frame_number);
+        currentBBox.cy += this->delta_y.GetValue(frame_number);
         currentBBox.width *= this->scale_x.GetValue(frame_number);
         currentBBox.height *= this->scale_y.GetValue(frame_number);
+        currentBBox.angle += this->rotation.GetValue(frame_number);
     
-        /* TODO - Add rotation
-            (x1,y1) -> current point
-            (x1',y1') -> transformed point
-            (xc, yc) -> center of the BBox
-            (xc, yc) = (x1 + w/2, y1 + h/2)
-            rot -> rotation angle [radians]
-            x1' = xc + (x1 - xc)*cos(rot) - (y1-yc)*sin(rot)
-            y1' = yc + (x1 - xc)*sin(rot) + (y1-yc)*cos(rot)
-            ***
-            x1' = (x1 + w/2) + (-w/2)*cos(rot) - (-h/2)*sin(rot)
-            y1' = (y1 + h/2) + (-w/2)*sin(rot) + (-h/2)*cos(rot) 
-        currentBBox.x1 += currentBBox.width/2 - (currentBBox.width/2)*cos(rot*PI/180) + (currentBBox.height)*sin(rot*PI/180);
-        currentBBox.y1 += currentBBox.height/2 - (currentBBox.width/2)*sin(rot*PI/180) - (currentBBox.height)*cos(rot*PI/180);
-        */
         return currentBBox;
     }
 
@@ -263,10 +250,11 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number)
                                              previousBBox, currentBBox, time);
 
     // Adjust the BBox properties by the Keyframes values
-    interpolatedBBox.x1 += this->delta_x.GetValue(frame_number);
-    interpolatedBBox.y1 += this->delta_y.GetValue(frame_number);
+    interpolatedBBox.cx += this->delta_x.GetValue(frame_number);
+    interpolatedBBox.cy += this->delta_y.GetValue(frame_number);
     interpolatedBBox.width *= this->scale_x.GetValue(frame_number);
     interpolatedBBox.height *= this->scale_y.GetValue(frame_number);
+    interpolatedBBox.angle += this->rotation.GetValue(frame_number);
     
     return interpolatedBBox;
 }
@@ -274,26 +262,35 @@ BBox KeyFrameBBox::GetValue(int64_t frame_number)
 // Interpolate the bouding-boxes properties
 BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target)
 {
+    // Interpolate the x-coordinate of the center point
+    Point cx_left(t1, left.cx, openshot::InterpolationType::LINEAR);
+    Point cx_right(t2, right.cx, openshot::InterpolationType::LINEAR);
+    Point cx = InterpolateBetween(cx_left, cx_right, target, 0.01);
 
-    Point p1_left(t1, left.x1, openshot::InterpolationType::LINEAR);
-    Point p1_right(t2, right.x1, openshot::InterpolationType::LINEAR);
-    Point p1 = InterpolateBetween(p1_left, p1_right, target, 0.01);
+    // Interpolate de y-coordinate of the center point
+    Point cy_left(t1, left.cy, openshot::InterpolationType::LINEAR);
+    Point cy_right(t2, right.cy, openshot::InterpolationType::LINEAR);
+    Point cy = InterpolateBetween(cy_left, cy_right, target, 0.01);
 
-    Point p2_left(t1, left.y1, openshot::InterpolationType::LINEAR);
-    Point p2_right(t2, right.y1, openshot::InterpolationType::LINEAR);
-    Point p2 = InterpolateBetween(p2_left, p2_right, target, 0.01);
+    // Interpolate the width
+    Point width_left(t1, left.width, openshot::InterpolationType::LINEAR);
+    Point width_right(t2, right.width, openshot::InterpolationType::LINEAR);
+    Point width = InterpolateBetween(width_left, width_right, target, 0.01);
 
-    Point p3_left(t1, left.height, openshot::InterpolationType::LINEAR);
-    Point p3_right(t2, right.height, openshot::InterpolationType::LINEAR);
-    Point p3 = InterpolateBetween(p3_left, p3_right, target, 0.01);
+    // Interpolate the height
+    Point height_left(t1, left.height, openshot::InterpolationType::LINEAR);
+    Point height_right(t2, right.height, openshot::InterpolationType::LINEAR);
+    Point height = InterpolateBetween(height_left, height_right, target, 0.01);
 
-    Point p4_left(t1, left.width, openshot::InterpolationType::LINEAR);
-    Point p4_right(t2, right.width, openshot::InterpolationType::LINEAR);
-    Point p4 = InterpolateBetween(p4_left, p4_right, target, 0.01);
+    // Interpolate the rotation angle
+    Point angle_left(t1, left.angle, openshot::InterpolationType::LINEAR);
+    Point angle_right(t1, right.angle, openshot::InterpolationType::LINEAR);
+    Point angle = InterpolateBetween(angle_left, angle_right, target, 0.01);
 
-    BBox ans(p1.co.Y, p2.co.Y, p4.co.Y, p3.co.Y);
+    // Create a bounding box with the interpolated points
+    BBox interpolatedBox(cx.co.Y, cy.co.Y, width.co.Y, height.co.Y, angle.co.Y);
 
-    return ans;
+    return interpolatedBox;
 }
 
 // Update object's BaseFps
@@ -348,16 +345,18 @@ bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
 
         // Get bounding box data from current frame
         const libopenshottracker::Frame::Box &box = pbFrameData.bounding_box();
-        
-        float x1 = box.x1();
-        float y1 = box.y1();
-        float x2 = box.x2();
-        float y2 = box.y2();
 
-        if ( (x1 >= 0.0) && (y1 >= 0.0) && (x2 >= 0.0) && (y2 >= 0.0) )
+        float width = box.x2() - box.x1();
+        float height = box.y2() - box.y1();
+        float cx = box.x1() + width/2;
+        float cy = box.y1() + height/2;
+        float angle = 0.0;
+
+
+        if ( (cx >= 0.0) && (cy >= 0.0) && (width >= 0.0) && (height >= 0.0) )
         {
             // The bounding-box properties are valid, so add it to the BoxVec map
-            this->AddBox(frame_number, x1, y1, (x2 - x1), (y2 - y1));
+            this->AddBox(frame_number, cx, cy, width, height, angle);
         }
     }
     
@@ -464,7 +463,6 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root)
             // Insert BBox into the BoxVec map 
             BBox box;
             box.SetJsonValue(existing_point["data"]);
-            //BoxVec.insert({existing_point["time"].asDouble(), box});
             BoxVec[existing_point["time"].asDouble()] = box;
         }
     }

@@ -73,11 +73,11 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	cv::Mat frame_image = frame->GetImageCV();
 
     // Check if frame isn't NULL
-    if(!frame_image.empty()){
-
+    if(!frame_image.empty())
+	{
         // Check if track data exists for the requested frame
-        if (trackedData.Contains(frame_number)) {
-
+        if (trackedData.Contains(frame_number)) 
+		{
 			// Get the width and height of the image
 			float fw = frame_image.size().width;
         	float fh = frame_image.size().height;
@@ -85,12 +85,18 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			// Get the bounding-box of given frame
 			BBox fd = this->trackedData.GetValue(frame_number);
 
-            // Draw the bounding-box on the image
-            cv::Rect2d box((int)( (fd.x1 ) * fw ),
-						   (int)( (fd.y1 ) * fh ),
-						   (int)( (fd.width) * fw),
-						   (int)( (fd.height) * fh) );
-            cv::rectangle(frame_image, box, cv::Scalar( 255, 0, 0 ), 2, 1 );
+			// Create a rotated rectangle object that holds the bounding box
+			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ), 
+								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ), 
+								  (int) (fd.angle) );
+			// Get the bouding box vertices
+			cv::Point2f vertices[4];
+			box.points(vertices);
+			// Draw the bounding-box on the image
+			for (int i = 0; i < 4; i++)
+			{
+				cv::line(frame_image, vertices[i], vertices[(i+1)%4], cv::Scalar(255,0,0), 2);
+			}
         }
     }
 
@@ -194,10 +200,10 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	// Get the bounding-box for the given-frame
 	BBox fd = trackedData.GetValue(requested_frame);
 	// Add the data of given frame bounding-box to the JSON object
-	root["x1"] = add_property_json("X1", fd.x1, "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y1"] = add_property_json("Y1", fd.y1, "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["x2"] = add_property_json("X2", fd.x1+fd.width, "float", "", NULL, 0.0, 1.0, false, requested_frame);
-	root["y2"] = add_property_json("Y2", fd.y1+fd.height, "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x1"] = add_property_json("X1", fd.cx-(fd.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y1"] = add_property_json("Y1", fd.cy-(fd.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x2"] = add_property_json("X2", fd.cx+(fd.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y2"] = add_property_json("Y2", fd.cy+(fd.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
 
 	// Add the bounding-box Keyframes to the JSON object
 	root["delta_x"] = add_property_json("Displacement X-axis", trackedData.delta_x.GetValue(requested_frame), "float", "", &trackedData.delta_x, -1.0, 1.0, false, requested_frame);

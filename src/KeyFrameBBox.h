@@ -60,10 +60,11 @@ namespace openshot
 
     struct BBox
     {
-        float x1 = -1; ///< x-coordinate of the top left corner
-        float y1 = -1; ///< y-coordinate of the top left corner
+        float cx = -1; ///< x-coordinate of the bounding box center
+        float cy = -1; ///< y-coordinate of the bounding box center
         float width = -1; ///< bounding box width
         float height = -1; ///< bounding box height
+        float angle = -1; ///< bounding box rotation angle [degrees]
 
         /// Blank constructor
         BBox()
@@ -72,18 +73,21 @@ namespace openshot
         }
 
         /// Default constructor, which takes the bounding box top-left corner coordinates, width and height.
-        /// @param _x1 X-coordinate of the top left corner
-        /// @param _y1 Y-coordinate of the top left corner
+        /// @param _cx X-coordinate of the bounding box center
+        /// @param _cy Y-coordinate of the bounding box center
         /// @param _width Bounding box width
-        /// @param _height Bouding box height
-        BBox(float _x1, float _y1, float _width, float _height)
+        /// @param _height Bounding box height
+        /// @param _angle Bounding box rotation angle [degrees]
+        BBox(float _cx, float _cy, float _width, float _height, float _angle)
         {
-            x1 = _x1;
-            y1 = _y1;
+            cx = _cx;
+            cy = _cy;
             width = _width;
             height = _height;
+            angle = _angle;
         }
 
+        
         /// Generate JSON string of this object
         std::string Json() const
         {
@@ -94,10 +98,11 @@ namespace openshot
         Json::Value JsonValue() const
         {
             Json::Value root;
-            root["x1"] = x1;
-            root["y1"] = y1;
-            root["height"] = height;
+            root["cx"] = cx;
+            root["cy"] = cy;
             root["width"] = width;
+            root["height"] = height;
+            root["angle"] = angle;
 
             return root;
         }
@@ -124,15 +129,17 @@ namespace openshot
         {
 
             // Set data from Json (if key is found)
-            if (!root["x1"].isNull())
-                x1 = root["x1"].asDouble();
-            if (!root["y1"].isNull())
-                y1 = root["y1"].asDouble();
-            if (!root["height"].isNull())
-                height = root["height"].asDouble();
+            if (!root["cx"].isNull())
+                cx = root["cx"].asDouble();
+            if (!root["cy"].isNull())
+                cy = root["cy"].asDouble();
             if (!root["width"].isNull())
                 width = root["width"].asDouble();
-        }
+            if (!root["height"].isNull())
+                height = root["height"].asDouble();
+            if (!root["angle"].isNull())
+                angle = root["angle"].asDouble();
+        } 
     };
 
     /**
@@ -166,7 +173,7 @@ namespace openshot
         KeyFrameBBox();
 
         /// Add a BBox to the BoxVec map
-        void AddBox(int64_t _frame_num, float _x1, float _y1, float _width, float _height);
+        void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle);
         
         /// Update object's BaseFps
         void SetBaseFPS(Fraction fps);
