@@ -265,7 +265,7 @@ namespace openshot {
 		std::list<openshot::Clip*> Clips() { return clips; };
 
 		/// Look up a single clip by ID
-		openshot::ClipBase* GetClip(const std::string& id);
+		openshot::Clip* GetClip(const std::string& id);
 
 		/// Look up a clip effect by ID
 		openshot::EffectBase* GetClipEffect(const std::string& id);

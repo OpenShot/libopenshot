@@ -289,7 +289,7 @@ void Timeline::RemoveClip(Clip* clip)
 }
 
 // Look up a clip
-openshot::ClipBase* Timeline::GetClip(const std::string& id)
+openshot::Clip* Timeline::GetClip(const std::string& id)
 {
 	// Find the matching clip (if any)
 	for (const auto& clip : clips) {

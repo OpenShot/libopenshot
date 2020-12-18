@@ -437,20 +437,26 @@ TEST(GetClip_by_id)
 	std::string clip2_id("CLIP00002");
 	clip2.Id(clip2_id);
 	clip2.Layer(2);
+	clip2.Waveform(true);
 
 	t.AddClip(&clip1);
 	t.AddClip(&clip2);
 
-	auto matched = t.GetClip(clip1_id);
+	// We explicitly want to get returned a Clip*, here
+	Clip* matched = t.GetClip(clip1_id);
 	CHECK_EQUAL(clip1_id, matched->Id());
 	CHECK_EQUAL(1, matched->Layer());
 
-	auto matched2 = t.GetClip(clip2_id);
+	Clip* matched2 = t.GetClip(clip2_id);
 	CHECK_EQUAL(clip2_id, matched2->Id());
 	CHECK_EQUAL(false, matched2->Layer() < 2);
 
-	auto matched3 = t.GetClip("BAD_ID");
+	Clip* matched3 = t.GetClip("BAD_ID");
 	CHECK_EQUAL(true, matched3 == nullptr);
+
+	// Ensure we can access the Clip API interfaces after lookup
+	CHECK_EQUAL(false, matched->Waveform());
+	CHECK_EQUAL(true, matched2->Waveform());
 }
 
 TEST(GetClipEffect_by_id)
