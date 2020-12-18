@@ -1,0 +1,60 @@
+name: CI Build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04]
+        compiler: [gcc, clang]
+    env:
+      CC: ${{ matrix.compiler }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: haya14busa/action-cond@v1
+      id: coverage
+      with:
+        cond: ${{ matrix.compiler == 'clang' }}
+        if_true: "-DENABLE_COVERAGE:BOOL=1"
+        if_false: "-DENABLE_COVERAGE:BOOL=0"
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
+        sudo apt update
+        sudo apt install cmake swig doxygen graphviz curl lcov
+        sudo apt install libopenshot-audio-dev
+        sudo apt install qtbase5-dev qtbase5-dev-tools
+        sudo apt install libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev
+        sudo apt install libzmq3-dev libmagick++-dev libunittest++-dev
+
+    - name: Build libopenshot
+      shell: bash
+      run: |
+        mkdir build
+        pushd build
+        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" "${{ steps.coverage.outputs.value }}"
+        cmake --build . -- VERBOSE=1
+        popd
+
+    - name: Test libopenshot
+      shell: bash
+      run: |
+        pushd build
+        cmake --build . --target os_test -- VERBOSE=1
+        popd
+
+    - name: Install libopenshot
+      shell: bash
+      run: |
+        pushd build
+        cmake --build . --target install -- VERBOSE=1
+        popd
+
+    - uses: codecov/codecov-action@v1
+      if: ${{ matrix.compiler == 'clang' }}
+      with:
+        file: build/coverage.info
+
