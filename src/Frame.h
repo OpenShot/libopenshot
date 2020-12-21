@@ -38,7 +38,6 @@
 #include <QImage>
 #include <memory>
 #include <unistd.h>
-#include "ZmqLogger.h"
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"

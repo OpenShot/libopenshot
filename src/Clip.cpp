@@ -36,6 +36,7 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
 	#include "TextReader.h"

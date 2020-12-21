@@ -42,7 +42,6 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "Json.h"
-#include "ZmqLogger.h"
 #include <QString>
 #include <QGraphicsItem>
 #include <QGraphicsScene>

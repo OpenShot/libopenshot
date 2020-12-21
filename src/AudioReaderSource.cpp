@@ -29,6 +29,7 @@
  */
 
 #include "AudioReaderSource.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 using namespace openshot;
