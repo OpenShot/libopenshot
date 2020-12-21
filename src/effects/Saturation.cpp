@@ -29,6 +29,7 @@
  */
 
 #include "Saturation.h"
+#include "OpenMPUtilities.h"
 
 using namespace openshot;
 

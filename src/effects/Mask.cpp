@@ -30,10 +30,11 @@
 
 #include "Mask.h"
 #include "FFmpegReader.h"
+#include "OpenMPUtilities.h"
+#include "ReaderBase.h"
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
 #endif
-#include "ReaderBase.h"
 
 using namespace openshot;
 

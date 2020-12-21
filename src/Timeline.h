@@ -52,7 +52,6 @@
 #include "Frame.h"
 #include "FrameMapper.h"
 #include "KeyFrame.h"
-#include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 #include "Settings.h"
 #include "TimelineBase.h"

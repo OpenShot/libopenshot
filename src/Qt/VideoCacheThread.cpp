@@ -29,6 +29,7 @@
  */
 
 #include "VideoCacheThread.h"
+#include "OpenMPUtilities.h"
 #include <algorithm>
 
 #include <thread>    // for std::this_thread::sleep_for

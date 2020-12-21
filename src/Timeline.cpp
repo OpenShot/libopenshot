@@ -29,6 +29,7 @@
  */
 
 #include "Timeline.h"
+#include "OpenMPUtilities.h"
 
 using namespace openshot;
 

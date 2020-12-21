@@ -50,7 +50,6 @@
 #include <unistd.h>
 #include "CacheMemory.h"
 #include "Exceptions.h"
-#include "OpenMPUtilities.h"
 #include "ZmqLogger.h"
 #include "Settings.h"
 

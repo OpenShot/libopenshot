@@ -31,14 +31,15 @@
 #include "Clip.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
+#include "OpenMPUtilities.h"
 #include "QtImageReader.h"
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+	#include "TextReader.h"
+#endif
 
 using namespace openshot;
 

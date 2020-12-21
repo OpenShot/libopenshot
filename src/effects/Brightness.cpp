@@ -29,6 +29,7 @@
  */
 
 #include "Brightness.h"
+#include "OpenMPUtilities.h"
 
 using namespace openshot;
 

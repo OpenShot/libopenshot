@@ -30,6 +30,7 @@
 
 #include "FrameMapper.h"
 #include "Clip.h"
+#include "OpenMPUtilities.h"
 
 using namespace std;
 using namespace openshot;

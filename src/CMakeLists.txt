@@ -304,7 +304,7 @@ if(NOT TARGET OpenMP::OpenMP_CXX)
     target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
 endif()
 
-target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(openshot PRIVATE OpenMP::OpenMP_CXX)
 
 ###
 ### ZeroMQ

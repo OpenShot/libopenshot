@@ -29,6 +29,7 @@
  */
 
 #include "Hue.h"
+#include "OpenMPUtilities.h"
 
 using namespace openshot;
 

@@ -37,7 +37,6 @@
 #include <ctime>
 #include <fcntl.h>
 #include <iostream>
-#include <omp.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>

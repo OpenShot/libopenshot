@@ -31,7 +31,6 @@
 #ifndef OPENSHOT_VIDEO_CACHE_THREAD_H
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
-#include "../OpenMPUtilities.h"
 #include "../ReaderBase.h"
 #include "../RendererBase.h"
 

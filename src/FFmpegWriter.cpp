@@ -32,6 +32,7 @@
  */
 
 #include "FFmpegWriter.h"
+#include "OpenMPUtilities.h"
 
 #include <iostream>
 

@@ -45,7 +45,6 @@
 #include <cstdio>
 #include <sstream>
 #include <unistd.h>
-#include <omp.h>
 #include <QtCore/QDir>
 
 

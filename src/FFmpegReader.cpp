@@ -32,6 +32,7 @@
  */
 
 #include "FFmpegReader.h"
+#include "OpenMPUtilities.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds

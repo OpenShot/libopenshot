@@ -29,6 +29,7 @@
  */
 
 #include "Blur.h"
+#include "OpenMPUtilities.h"
 
 using namespace openshot;
 
