@@ -184,7 +184,7 @@ target_link_libraries(openshot PUBLIC OpenShot::Audio)
 ###
 
 # Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+find_package(ImageMagick COMPONENTS Magick++ MagickCore)
 
 if(ImageMagick_FOUND)
   if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
