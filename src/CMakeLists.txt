@@ -272,9 +272,14 @@ mark_as_advanced(QT_VERSION_STR)
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
-find_package(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)
+find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
-set(all_comps avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
+set(all_comps avcodec avformat avutil swscale)
+if(TARGET FFmpeg::swresample)
+  list(APPEND all_comps swresample)
+else()
+  list(APPEND all_comps avresample)
+endif()
 set(version_comps avcodec avformat avutil)
 
 foreach(ff_comp IN LISTS all_comps)
