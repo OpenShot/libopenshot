@@ -52,6 +52,8 @@
 #include "Frame.h"
 #include "FrameMapper.h"
 #include "KeyFrame.h"
+#include "KeyFrameBBox.h"
+#include "KeyFrameBase.h"
 #include "OpenMPUtilities.h"
 #include "ReaderBase.h"
 #include "Settings.h"
@@ -177,7 +179,8 @@ namespace openshot {
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 		std::mutex get_frame_mutex; ///< Mutex to protect GetFrame method from different threads calling it
-
+		std::map<std::string, std::shared_ptr<openshot::KeyframeBase>> tracked_objects; ///< map of KeyframeBBoxes and their IDs
+		
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
 
@@ -240,6 +243,13 @@ namespace openshot {
 		Timeline(const std::string& projectPath, bool convert_absolute_paths);
 
         virtual ~Timeline();
+
+		/// Add to the tracked_objects map a pointer to a tracked object (KeyframeBBox) 
+		void AddTrackedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject);
+		/// Return tracked object pointer by it's id
+		std::shared_ptr<openshot::KeyframeBase> GetTrackedObject(std::string id) const;
+		/// Return the ID's of the tracked objects as a vector of strings
+		std::vector<std::string> GetTrackedObjectsIds() const;
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.

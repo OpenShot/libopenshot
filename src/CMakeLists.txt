@@ -86,6 +86,7 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   Json.cpp
   KeyFrame.cpp
+  KeyFrameBase.cpp
   KeyFrameBBox.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp

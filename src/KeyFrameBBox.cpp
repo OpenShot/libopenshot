@@ -34,105 +34,9 @@
 #include <iostream>
 #include <functional>
 
-//#define PI 3.14159265
-
 using namespace std;
 using namespace openshot;
 
-namespace openshot
-{
-    bool IsPointBeforeX(Point const &p, double const x)
-    {
-        return p.co.X < x;
-    }
-
-    double InterpolateLinearCurve(Point const &left, Point const &right, double const target)
-    {
-        double const diff_Y = right.co.Y - left.co.Y;
-        double const diff_X = right.co.X - left.co.X;
-        double const slope = diff_Y / diff_X;
-        return left.co.Y + slope * (target - left.co.X);
-    }
-
-    double InterpolateBezierCurve(Point const &left, Point const &right, double const target, double const allowed_error)
-    {
-        double const X_diff = right.co.X - left.co.X;
-        double const Y_diff = right.co.Y - left.co.Y;
-        Coordinate const p0 = left.co;
-        Coordinate const p1 = Coordinate(p0.X + left.handle_right.X * X_diff, p0.Y + left.handle_right.Y * Y_diff);
-        Coordinate const p2 = Coordinate(p0.X + right.handle_left.X * X_diff, p0.Y + right.handle_left.Y * Y_diff);
-        Coordinate const p3 = right.co;
-
-        double t = 0.5;
-        double t_step = 0.25;
-        do
-        {
-            // Bernstein polynoms
-            double B[4] = {1, 3, 3, 1};
-            double oneMinTExp = 1;
-            double tExp = 1;
-            for (int i = 0; i < 4; ++i, tExp *= t)
-            {
-                B[i] *= tExp;
-            }
-            for (int i = 0; i < 4; ++i, oneMinTExp *= 1 - t)
-            {
-                B[4 - i - 1] *= oneMinTExp;
-            }
-            double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
-            double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
-            if (fabs(target - x) < allowed_error)
-            {
-                return y;
-            }
-            if (x > target)
-            {
-                t -= t_step;
-            }
-            else
-            {
-                t += t_step;
-            }
-            t_step /= 2;
-        } while (true);
-    }
-
-    double InterpolateBetween(Point const &left, Point const &right, double target, double allowed_error)
-    {
-        assert(left.co.X < target);
-        assert(target <= right.co.X);
-        switch (right.interpolation)
-        {
-        case CONSTANT:
-            return left.co.Y;
-        case LINEAR:
-            return InterpolateLinearCurve(left, right, target);
-        case BEZIER:
-            return InterpolateBezierCurve(left, right, target, allowed_error);
-        }
-    }
-
-    template <typename Check>
-    int64_t SearchBetweenPoints(Point const &left, Point const &right, int64_t const current, Check check)
-    {
-        int64_t start = left.co.X;
-        int64_t stop = right.co.X;
-        while (start < stop)
-        {
-            int64_t const mid = (start + stop + 1) / 2;
-            double const value = InterpolateBetween(left, right, mid, 0.01);
-            if (check(round(value), current))
-            {
-                start = mid;
-            }
-            else
-            {
-                stop = mid - 1;
-            }
-        }
-        return start;
-    }
-} // namespace openshot
 
 // Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
 KeyFrameBBox::KeyFrameBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0)
@@ -207,7 +111,7 @@ void KeyFrameBBox::RemoveBox(int64_t frame_number)
 }
 
 // Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
-BBox KeyFrameBBox::GetValue(int64_t frame_number)
+BBox KeyFrameBBox::GetBox(int64_t frame_number)
 {
     // Get the time position of the given frame.
     double time = this->FrameNToTime(frame_number, this->TimeScale);
@@ -372,33 +276,32 @@ bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
     return true;
 }
 
+// Clear the BoxVec map
+void KeyFrameBBox::clear()
+{
+    BoxVec.clear();
+}
+
 // Generate JSON string of this object
-std::string KeyFrameBBox::Json()
+std::string KeyFrameBBox::Json() const
 {
     // Return formatted string
     return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
-Json::Value KeyFrameBBox::JsonValue()
+Json::Value KeyFrameBBox::JsonValue() const
 {
     // Create root json object
     Json::Value root;
 
+    // Object's properties
+    root["box_id"] = Id();
     root["BaseFPS"]["num"] = BaseFps.num;
     root["BaseFPS"]["den"] = BaseFps.den;
-    root["TimeScale"] = this->TimeScale;
-    root["Boxes"] = Json::Value(Json::arrayValue);
+    root["TimeScale"] = TimeScale;
 
-    // Loop through the BoxVec map and save the BBox data
-    for (auto const &x : BoxVec)
-    {
-        Json::Value box;
-        box["time"] = x.first;
-        box["data"] = x.second.JsonValue();
-        root["Boxes"].append(box);
-    }
-    // Get the Keyframe's Json strings
+    // Keyframe's properties
     root["delta_x"] = delta_x.JsonValue();
     root["delta_y"] = delta_y.JsonValue();
     root["scale_x"] = scale_x.JsonValue();
@@ -427,45 +330,32 @@ void KeyFrameBBox::SetJson(const std::string value)
     return;
 }
 
-// Clear the BoxVec map
-void KeyFrameBBox::clear()
-{
-    BoxVec.clear();
-}
-
 // Load Json::Value into this object
 void KeyFrameBBox::SetJsonValue(const Json::Value root)
-{
-    // Clear BoxVec
-    this->clear();
+{   
 
+    // Set the Id
+    if (!root["box_id"].isNull())
+        SetId(root["box_id"].asString());
+
+    // Set the BaseFps by the given JSON object
     if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
-    {
-        // Set the BaseFps by the given JSON object
+    {      
         if (!root["BaseFPS"]["num"].isNull())
             BaseFps.num = (int)root["BaseFPS"]["num"].asInt();
         if (!root["BaseFPS"]["den"].isNull())
             BaseFps.den = (int)root["BaseFPS"]["den"].asInt();
     }
 
+    // Set the TimeScale by the given JSON object
     if (!root["TimeScale"].isNull())
     {
-        // Set the TimeScale by the given JSON object
         double scale = (double)root["TimeScale"].asDouble();
         this->ScalePoints(scale);
     }
 
-    if (!root["Boxes"].isNull())
-    {
-        // Loop through the BBoxes data
-        for (const auto existing_point : root["Boxes"])
-        {
-            // Insert BBox into the BoxVec map 
-            BBox box;
-            box.SetJsonValue(existing_point["data"]);
-            BoxVec[existing_point["time"].asDouble()] = box;
-        }
-    }
+    if (!root["protobuf_data_path"].isNull())
+        protobufDataPath = root["protobuf_data_path"].asString();
 
     // Set the Keyframes by the given JSON object
     if (!root["delta_x"].isNull())
@@ -480,4 +370,97 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root)
         rotation.SetJsonValue(root["rotation"]);
 
     return;
+}
+
+// Get all properties for a specific frame (perfect for a UI to display the current state
+// of all properties at any time)
+Json::Value KeyFrameBBox::PropertiesJSON(int64_t requested_frame) const
+{
+    Json::Value root;
+
+    BBox box = GetBox(requested_frame);
+
+    // Id
+    root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+
+    // Add the data of given frame bounding-box to the JSON object
+	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y1"] = add_property_json("Y1", box.cy-(box.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["x2"] = add_property_json("X2", box.cx+(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+	root["y2"] = add_property_json("Y2", box.cy+(box.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
+
+	// Add the bounding-box Keyframes to the JSON object
+	root["delta_x"] = add_property_json("Displacement X-axis", delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
+	root["delta_y"] = add_property_json("Displacement Y-axis", delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, -1.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
+	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
+
+	// Return formatted string
+	return root;
+}
+
+
+// Generate JSON for a property
+Json::Value KeyFrameBBox::add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const {
+
+	// Requested Point
+	const Point requested_point(requested_frame, requested_frame);
+
+	// Create JSON Object
+	Json::Value prop = Json::Value(Json::objectValue);
+	prop["name"] = name;
+	prop["value"] = value;
+	prop["memo"] = memo;
+	prop["type"] = type;
+	prop["min"] = min_value;
+	prop["max"] = max_value;
+	if (keyframe) {
+		prop["keyframe"] = keyframe->Contains(requested_point);
+		prop["points"] = int(keyframe->GetCount());
+		Point closest_point = keyframe->GetClosestPoint(requested_point);
+		prop["interpolation"] = closest_point.interpolation;
+		prop["closest_point_x"] = closest_point.co.X;
+		prop["previous_point_x"] = keyframe->GetPreviousPoint(closest_point).co.X;
+	}
+	else {
+		prop["keyframe"] = false;
+		prop["points"] = 0;
+		prop["interpolation"] = CONSTANT;
+		prop["closest_point_x"] = -1;
+		prop["previous_point_x"] = -1;
+	}
+
+	prop["readonly"] = readonly;
+	prop["choices"] = Json::Value(Json::arrayValue);
+
+	// return JsonValue
+	return prop;
+}
+
+// Return the bounding box properties and it's keyframes indexed by their names
+std::map<std::string, float> KeyFrameBBox::GetBoxValues(int64_t frame_number){
+
+    // Create the map
+    std::map<std::string, float> boxValues;
+
+    // Get bounding box of the current frame
+    BBox box = GetBox(frame_number);
+
+    // Save the bounding box properties
+    boxValues["cx"] = box.cx;
+    boxValues["cy"] = box.cy;
+    boxValues["w"] = box.width;
+    boxValues["h"] = box.height;
+    boxValues["ang"] = box.angle;
+
+    // Save the keyframes values
+    boxValues["sx"] = this->scale_x.GetValue(frame_number);
+    boxValues["sy"] = this->scale_y.GetValue(frame_number);
+    boxValues["dx"] = this->delta_x.GetValue(frame_number);
+    boxValues["dy"] = this->delta_y.GetValue(frame_number);
+    boxValues["r"] = this->rotation.GetValue(frame_number);
+
+    
+    return boxValues;
 }

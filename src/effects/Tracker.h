@@ -67,7 +67,7 @@ namespace openshot
 
 	public:
 		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
-		KeyFrameBBox trackedData; ///< Object that holds the bounding-box data and it's Keyframes
+		std::shared_ptr<KeyFrameBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
@@ -96,9 +96,6 @@ namespace openshot
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
-
-		std::string Json(int64_t requested_frame) const override; ///< Generate JSON string of the trackedData object passing the frame number
-		void SetJson(int64_t requested_frame, const std::string value) override; ///< Set the tracketData object properties by a JSON string
 	};
 }
 

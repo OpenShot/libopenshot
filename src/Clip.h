@@ -54,6 +54,7 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
+#include "KeyFrameBase.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
@@ -123,6 +124,8 @@ namespace openshot {
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
 		bool is_open;	///> Is Reader opened
+		std::string attached_id; ///< Id of the bounding box that this clip is attached to
+		std::shared_ptr<openshot::KeyframeBase> attachedObject;
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -161,8 +164,6 @@ namespace openshot {
 		/// Reverse an audio buffer
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
-
-
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
@@ -196,6 +197,19 @@ namespace openshot {
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
 
+		/// Get and set the bounding box that this clip is attached to
+		std::string GetAttachedId() const { return attached_id; };
+		/// Set id of the bounding box that this clip is attached to
+		void SetAttachedId(std::string value) { attached_id = value; };
+
+		/// Attach clip to bounding box
+		void AttachToTracker(std::string tracked_id);
+
+		/// Set the pointer to the trackedObject this clip is attached to
+		void SetAttachedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject);
+		/// Return a pointer to the trackedObject this clip is attached to
+		std::shared_ptr<openshot::KeyframeBase> GetAttachedObject() const { return attachedObject; };
+		
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 

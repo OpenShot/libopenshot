@@ -41,6 +41,7 @@
 #include "Coordinate.h"
 #include "Point.h"
 #include "Json.h"
+#include "KeyFrameBase.h"
 
 namespace openshot {
 
@@ -61,9 +62,11 @@ namespace openshot {
 	 * kf.PrintValues();
 	 * \endcode
 	 */
-	class Keyframe {
+	class Keyframe : public KeyframeBase {
+	
+
 	private:
-		std::vector<Point> Points;			///< Vector of all Points
+		std::vector<Point> Points;	///< Vector of all Points
 
 	public:
 
@@ -145,7 +148,7 @@ namespace openshot {
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...
-		void ScalePoints(double scale);
+		void ScalePoints(double scale) override;
 
 		/// Replace an existing point with a new point
 		void UpdatePoint(int64_t index, Point p);

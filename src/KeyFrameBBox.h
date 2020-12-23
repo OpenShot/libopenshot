@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the IKeyframe class
+ * @brief Header file for the KeyFrameBBox class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -43,8 +43,10 @@
 #include "Json.h"
 #include "IKeyFrame.h"
 #include "KeyFrame.h"
+#include "KeyFrameBase.h"
 #include "trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
+
 
 using google::protobuf::util::TimeUtil;
 
@@ -153,12 +155,12 @@ namespace openshot
      * object of this class. 
 	 */    
 
-    class KeyFrameBBox
+    class KeyFrameBBox : public KeyframeBase
     {
     private:
         bool visible;
         Fraction BaseFps;
-        double TimeScale;   
+        double TimeScale;  
 
     public:
         std::map<double, BBox> BoxVec; ///< Index the bounding-box by time of each frame
@@ -182,7 +184,7 @@ namespace openshot
         Fraction GetBaseFPS();
 
         /// Update the TimeScale member variable
-        void ScalePoints(double scale);
+        void ScalePoints(double scale) override;
 
         /// Check if there is a bounding-box in the given frame
         bool Contains(int64_t frame_number);
@@ -194,11 +196,11 @@ namespace openshot
         void RemoveBox(int64_t frame_number);
 
         /// Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
-        BBox GetValue(int64_t frame_number) const
+        BBox GetBox(int64_t frame_number) const
         {
-            return const_cast<KeyFrameBBox *>(this)->GetValue(frame_number);
+            return const_cast<KeyFrameBBox *>(this)->GetBox(frame_number);
         }
-        BBox GetValue(int64_t frame_number);
+        BBox GetBox(int64_t frame_number);
 
         /// Load the bounding-boxes information from the protobuf file 
         bool LoadBoxData(std::string inputFilePath);
@@ -209,16 +211,26 @@ namespace openshot
         /// Interpolate the bouding-boxes properties
         BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
 
+        /// Clear the BoxVec map
+        void clear(); 
+
         /// Get and Set JSON methods
-        std::string Json();                        ///< Generate JSON string of this object
-        Json::Value JsonValue();                   ///< Generate Json::Value for this object
+        std::string Json() const;                  ///< Generate JSON string of this object
+        Json::Value JsonValue() const;             ///< Generate Json::Value for this object
         void SetJson(const std::string value);     ///< Load JSON string into this object
         void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
-        /// Clear the BoxVec map
-        void clear(); 
-    };
+        /// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
+        Json::Value PropertiesJSON(int64_t requested_frame) const;
 
+        // Generate JSON for a property
+        Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
+
+        /// Return the bounding box properties and it's keyframes indexed by their names
+        std::map<std::string, float> GetBoxValues(int64_t frame_number) override; 
+    
+    };
 } // namespace openshot
 
 #endif

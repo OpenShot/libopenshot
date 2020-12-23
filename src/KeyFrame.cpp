@@ -36,66 +36,7 @@
 using namespace std;
 using namespace openshot;
 
-namespace {
-	bool IsPointBeforeX(Point const & p, double const x) {
-		return p.co.X < x;
-	}
-
-	double InterpolateLinearCurve(Point const & left, Point const & right, double const target) {
-		double const diff_Y = right.co.Y - left.co.Y;
-		double const diff_X = right.co.X - left.co.X;
-		double const slope = diff_Y / diff_X;
-		return left.co.Y + slope * (target - left.co.X);
-	}
-
-	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error) {
-		double const X_diff = right.co.X - left.co.X;
-		double const Y_diff = right.co.Y - left.co.Y;
-		Coordinate const p0 = left.co;
-		Coordinate const p1 = Coordinate(p0.X + left.handle_right.X * X_diff, p0.Y + left.handle_right.Y * Y_diff);
-		Coordinate const p2 = Coordinate(p0.X + right.handle_left.X * X_diff, p0.Y + right.handle_left.Y * Y_diff);
-		Coordinate const p3 = right.co;
-
-		double t = 0.5;
-		double t_step = 0.25;
-		do {
-			// Bernstein polynoms
-			double B[4] = {1, 3, 3, 1};
-			double oneMinTExp = 1;
-			double tExp = 1;
-			for (int i = 0; i < 4; ++i, tExp *= t) {
-				B[i] *= tExp;
-			}
-			for (int i = 0; i < 4; ++i, oneMinTExp *= 1 - t) {
-				B[4 - i - 1] *= oneMinTExp;
-			}
-			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
-			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
-			if (fabs(target - x) < allowed_error) {
-				return y;
-			}
-			if (x > target) {
-				t -= t_step;
-			}
-			else {
-				t += t_step;
-			}
-			t_step /= 2;
-		} while (true);
-	}
-
-
-	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
-		assert(left.co.X < target);
-		assert(target <= right.co.X);
-		switch (right.interpolation) {
-		case CONSTANT: return left.co.Y;
-		case LINEAR: return InterpolateLinearCurve(left, right, target);
-		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
-		}
-	}
-
-
+namespace{
 	template<typename Check>
 	int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
 		int64_t start = left.co.X;
@@ -112,6 +53,7 @@ namespace {
 		return start;
 	}
 }
+
 
 
 // Constructor which sets the default point & coordinate at X=1
@@ -544,6 +486,7 @@ void Keyframe::RemovePoint(int64_t index) {
 		throw OutOfBoundsPoint("Invalid point requested", index, Points.size());
 }
 
+// Replace an existing point with a new point
 void Keyframe::UpdatePoint(int64_t index, Point p) {
 	// Remove matching point
 	RemovePoint(index);

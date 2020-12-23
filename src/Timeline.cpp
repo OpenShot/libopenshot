@@ -240,6 +240,55 @@ Timeline::~Timeline() {
 	}
 }
 
+// Add to the tracked_objects map a pointer to a tracked object (KeyframeBBox) 
+void Timeline::AddTrackedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject){
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(trackedObject->Id());
+
+	if (iterator != tracked_objects.end()){
+		// Tracked object's id already present on the map, overwrite it
+		iterator->second = trackedObject;
+	} 
+	else{
+		// Tracked object's id not present -> insert it on the map
+		tracked_objects[trackedObject->Id()] = trackedObject;
+	}
+	return;
+}
+
+// Return tracked object pointer by it's id
+std::shared_ptr<openshot::KeyframeBase> Timeline::GetTrackedObject(std::string id) const{
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(id);
+
+	if (iterator != tracked_objects.end()){
+		// Id found, return the pointer to the tracked object
+		std::shared_ptr<openshot::KeyframeBase> trackedObject = iterator->second;
+		return trackedObject;
+	}
+	else {
+		// Id not found, return a null pointer
+		return nullptr;
+	}	
+}
+
+// Return the ID's of the tracked objects as a vector of strings
+std::vector<std::string> Timeline::GetTrackedObjectsIds() const{
+
+	// Create a vector of strings
+	std::vector<std::string> trackedObjects_ids;
+
+	// Iterate through the tracked_objects map
+	for (auto const& it: tracked_objects){
+		// Add the IDs to the vector
+		trackedObjects_ids.push_back(it.first);
+	}
+
+	return trackedObjects_ids;
+}
+
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {

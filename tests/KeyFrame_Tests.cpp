@@ -522,7 +522,7 @@ TEST(KeyFrameBBox_GetVal_test) {
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	
-	BBox val = kfb.GetValue(1);
+	BBox val = kfb.GetBox(1);
 	
 	CHECK_EQUAL(10.0, val.cx);
 	CHECK_EQUAL(10.0, val.cy);
@@ -540,21 +540,21 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0, 0.0);	
 	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0, 0.0);
 	
-	BBox val = kfb.GetValue(5);
+	BBox val = kfb.GetBox(5);
 
 	CHECK_EQUAL(14.0, val.cx);
 	CHECK_EQUAL(14.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0,val.height);
 
-	val = kfb.GetValue(15);
+	val = kfb.GetBox(15);
 	
 	CHECK_EQUAL(24.0, val.cx);
 	CHECK_EQUAL(24.0, val.cy);
 	CHECK_EQUAL(100.0,val.width);
 	CHECK_EQUAL(100.0, val.height);
 
-	val = kfb.GetValue(25);
+	val = kfb.GetBox(25);
 	
 	CHECK_EQUAL(34.0, val.cx);
 	CHECK_EQUAL(34.0, val.cy);
@@ -581,8 +581,6 @@ TEST(KeyFrameBBox_Json_set) {
 	KeyFrameBBox fromJSON_kfb;
 	fromJSON_kfb.SetJson(dataJSON);
 
-	std::cout << fromJSON_kfb.Json() << std::endl;
-
 	CHECK_EQUAL(kfb.GetBaseFPS().num, fromJSON_kfb.GetBaseFPS().num);
 	
 	double time_kfb = kfb.FrameNToTime(1, 1.0);
@@ -606,8 +604,78 @@ TEST(KeyFrameBBox_Scale_test){
 	kfb.scale_x.AddPoint(1.0, 2.0);
 	kfb.scale_y.AddPoint(1.0, 3.0);
 	
-	BBox bbox = kfb.GetValue(1);
+	BBox bbox = kfb.GetBox(1);
 	
 	CHECK_EQUAL(20.0, bbox.width);
 	CHECK_EQUAL(30.0, bbox.height);
+}
+
+
+
+TEST(Attach_test){
+
+	// Create Timelime
+	Timeline t(1280, 720, Fraction(25,1), 44100, 2, ChannelLayout::LAYOUT_STEREO);
+
+	// Create Clip and add it to the Timeline
+	Clip clip(new ImageReader("../../examples/front.png"));
+	clip.Id("AAAA1234");
+
+	// Create a child clip and add it to the Timeline
+	Clip childClip(new ImageReader("../../examples/mask2.png"));
+	childClip.Id("CHILD123");
+
+	// Add clips to timeline
+	t.AddClip(&childClip);
+	t.AddClip(&clip);
+
+	// Create tracker and add it to clip
+	Tracker tracker;
+	clip.AddEffect(&tracker);
+
+	// Save a pointer to trackedData
+	std::shared_ptr<KeyFrameBBox>  trackedData = tracker.trackedData;
+
+	// Change trackedData scale
+	trackedData->scale_x.AddPoint(1, 2.0);
+	CHECK_EQUAL(2.0, trackedData->scale_x.GetValue(1));
+
+	// Tracked Data JSON
+	auto trackedDataJson = trackedData->JsonValue();
+
+	// Get and cast the trakcedObject
+	auto trackedObject_base = t.GetTrackedObject("TESTBASEID");
+	std::shared_ptr<KeyFrameBBox> trackedObject = std::static_pointer_cast<KeyFrameBBox>(trackedObject_base);
+	CHECK_EQUAL(trackedData, trackedObject);
+
+	// Set trackedObject Json Value
+	trackedObject->SetJsonValue(trackedDataJson);
+
+	// Attach childClip to tracked object
+	std::string tracked_id = trackedData->Id();
+	childClip.Open();
+	childClip.AttachToTracker(tracked_id);
+	
+	std::shared_ptr<KeyFrameBBox> trackedTest = std::static_pointer_cast<KeyFrameBBox>(childClip.GetAttachedObject());
+	
+	CHECK_EQUAL(trackedData->scale_x.GetValue(1), trackedTest->scale_x.GetValue(1));
+	
+	auto frameTest = childClip.GetFrame(1);
+	childClip.Close();
+}
+
+TEST(GetBoxValues_test){
+
+	KeyFrameBBox trackedDataObject;
+	trackedDataObject.AddBox(1, 10.0, 10.0, 20.0, 20.0, 30.0);
+
+	std::shared_ptr<KeyframeBase> trackedData = std::make_shared<KeyFrameBBox>(trackedDataObject);
+	
+	auto boxValues = trackedData->GetBoxValues(1);
+
+	CHECK_EQUAL(10.0, boxValues["cx"]);
+	CHECK_EQUAL(10.0, boxValues["cy"]);
+	CHECK_EQUAL(20.0, boxValues["w"]);
+	CHECK_EQUAL(20.0, boxValues["h"]);
+	CHECK_EQUAL(30.0, boxValues["ang"]);
 }

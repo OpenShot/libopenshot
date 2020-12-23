@@ -39,6 +39,7 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "effects/Tracker.h"
 
 using namespace openshot;
 
@@ -57,6 +58,7 @@ void Clip::init_settings()
 	mixing = VOLUME_MIX_NONE;
 	waveform = false;
 	previous_properties = "";
+	attached_id = "";
 
 	// Init scale curves
 	scale_x = Keyframe(1.0);
@@ -240,6 +242,31 @@ Clip::~Clip()
 		delete resampler;
 		resampler = NULL;
 	}
+}
+
+// Attach clip to bounding box
+void Clip::AttachToTracker(std::string tracked_id)
+{
+	// Search for the tracked object on the timeline
+	Timeline *parentTimeline = (Timeline *) ParentTimeline();
+	
+	// Create a smart pointer to the tracked object from the timeline
+	std::shared_ptr<openshot::KeyframeBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
+	
+	// Check for valid tracked object
+	if (trackedObject){
+		SetAttachedObject(trackedObject);
+		return;
+	}
+	else{
+		return;
+	}
+}
+
+// Set the pointer to the trackedObject this clip is attached to
+void Clip::SetAttachedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject){
+	attachedObject = trackedObject;
+	return;
 }
 
 /// Set the current reader
@@ -762,7 +789,24 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
+	root["attached_id"] = add_property_json("Attached ID", 0.0, "string", GetAttachedId(), NULL, -1, -1, false, requested_frame);
 
+	// Add attached id choices (dropdown style)
+	if (timeline){
+		Timeline* parentTimeline = (Timeline *) timeline;
+		std::vector<std::string> tracked_ids = parentTimeline->GetTrackedObjectsIds();
+		Json::Value temp;
+		temp["name"] = "";
+		temp["value"] = "";
+		temp["selected"] = true;
+		root["attached_id"]["choices"].append(temp);
+		for (auto it = tracked_ids.begin(); it != tracked_ids.end(); ++it){
+			temp["name"] = *it;
+			temp["value"] = *it;
+			temp["selected"] = true;
+			root["attached_id"]["choices"].append(temp);
+		}
+	}
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
 	root["gravity"]["choices"].append(add_property_choice_json("Top Center", GRAVITY_TOP, gravity));
@@ -836,6 +880,7 @@ Json::Value Clip::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
+	root["attached_id"] = attached_id;
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
@@ -913,6 +958,11 @@ void Clip::SetJsonValue(const Json::Value root) {
 	cache.Clear();
 
 	// Set data from Json (if key is found)
+	if (!root["attached_id"].isNull())
+		attached_id = root["attached_id"].asString();
+		if (attached_id.size() > 0){
+			AttachToTracker(attached_id);
+		}
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 	if (!root["scale"].isNull())
@@ -1096,6 +1146,21 @@ void Clip::AddEffect(EffectBase* effect)
 	// Sort effects
 	sort_effects();
 
+	// Add Tracker to Timeline
+	if (effect->info.class_name == "Tracker"){
+	
+		Timeline* parentTimeline = (Timeline *) ParentTimeline();
+
+		// Downcast effect as Tracker
+		Tracker* tracker = (Tracker *) effect;
+
+		// Get tracked data from the Tracker effect
+		std::shared_ptr<openshot::KeyFrameBBox> trackedData = tracker->trackedData;
+
+		// Add tracked data to the timeline
+		parentTimeline->AddTrackedObject(trackedData);
+	}
+
 	// Clear cache
 	cache.Clear();
 }
@@ -1213,6 +1278,21 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		}
 	}
 
+	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
+	if (attachedObject){
+
+		// Access the KeyframeBBox properties
+		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(frame->number);
+
+		// Set the bounding box keyframes to this clip keyframes
+		location_x.AddPoint(frame->number, (boxValues["cx"]-0.5));
+		location_y.AddPoint(frame->number, (boxValues["cy"]-0.5));
+		scale_x.AddPoint(frame->number,  boxValues["w"]*boxValues["sx"]*2.0);
+		scale_y.AddPoint(frame->number, boxValues["h"]*boxValues["sy"]);
+		rotation.AddPoint(frame->number, boxValues["r"]);
+
+	}
+
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
 	float x = 0.0; // left
 	float y = 0.0; // top
@@ -1261,6 +1341,8 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
+	QTransform transform;
+		
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number); // rotate in degrees
 	x += (width * location_x.GetValue(frame->number)); // move in percentage of final width
@@ -1270,16 +1352,13 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	float origin_x_value = origin_x.GetValue(frame->number);
 	float origin_y_value = origin_y.GetValue(frame->number);
 
-	QTransform transform;
-
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-	}
-
+	} 
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);
@@ -1289,11 +1368,9 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		transform.shear(shear_x_value, shear_y_value);
 		transform.translate(-origin_x_offset,-origin_y_offset);
 	}
-
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
 	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
-
 	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
 	}
