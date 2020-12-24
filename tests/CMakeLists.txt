@@ -56,25 +56,6 @@ if(ENABLE_BLACKMAGIC)
 	endif()
 endif()
 
-####################### OPENCV ##########################
-find_package( OpenCV 4 )
-if (OpenCV_FOUND)
-  add_definitions( -DUSE_OPENCV=1 )
-else()
-  message("\nOPENCV NOT FOUND, OPENCV RELATED TESTS ARE DISABLED\n")
-endif()
-
-################ PROTOBUF ##################
-if (OpenCV_FOUND)
-  find_package(Protobuf 3)
-  
-  if (NOT Protobuf_FOUND)
-    # Protobuf is required when compiling with opencv
-    message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
-  endif()
-  include_directories(${PROTOBUF_INCLUDE_DIR})
-endif()
-
 ###############  SET TEST SOURCE FILES  #################
 set(OPENSHOT_TEST_FILES
   Cache_Tests.cpp
@@ -95,15 +76,11 @@ set(OPENSHOT_TEST_FILES
   Timeline_Tests.cpp)
 
 ##########  SET OPENCV RELATED TEST FILES  ###############
-if(OpenCV_FOUND)
-  set(OPENSHOT_CV_TEST_FILES
+if(ENABLE_OPENCV)
+  list(APPEND OPENSHOT_TEST_FILES
     CVTracker_Tests.cpp
     CVStabilizer_Tests.cpp
     # CVObjectDetection_Tests.cpp
-    )
-  set(OPENSHOT_CV_LIBRARIES
-    ${OpenCV_LIBS}
-    ${PROTOBUF_LIBRARY}
   )
 endif()
 
@@ -113,16 +90,14 @@ message (STATUS "Tests enabled, test executable will be built as tests/openshot-
 
 add_executable(openshot-test
   tests.cpp
-  ${OPENSHOT_TEST_FILES} 
-  ${OPENSHOT_CV_TEST_FILES}
-  )
+  ${OPENSHOT_TEST_FILES}
+)
 
 # Link libraries to the new executable
 target_link_libraries(openshot-test
   openshot
   ${UnitTest++_LIBRARIES}
-  ${OPENSHOT_CV_LIBRARIES}
-  )
+)
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable,
@@ -130,4 +105,3 @@ target_link_libraries(openshot-test
 if(NOT ENABLE_COVERAGE)
   add_custom_target(os_test COMMAND openshot-test)
 endif()
-

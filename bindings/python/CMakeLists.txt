@@ -54,16 +54,6 @@ if (CMAKE_VERSION VERSION_LESS 3.12)
     "${PROJECT_BINARY_DIR}/src")
 endif()
 
-################ OPENCV ##################
-find_package( OpenCV 4 )
-if (OpenCV_FOUND)
-  message("\nCOMPILING WITH OPENCV\n")
-  set(CMAKE_SWIG_FLAGS "-DUSE_OPENCV=1")
-  add_definitions( -DUSE_OPENCV=1 )
-else()
-  message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
-endif()
-
 ### Enable C++ in SWIG
 set_property(SOURCE openshot.i PROPERTY CPLUSPLUS ON)
 set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)

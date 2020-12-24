@@ -79,6 +79,7 @@ option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
+option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)

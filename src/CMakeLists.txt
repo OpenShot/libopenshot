@@ -392,36 +392,39 @@ if (ENABLE_BLACKMAGIC)
 endif()
 
 ################## OPENCV ###################
-
-find_package( OpenCV 4 )
-if (OpenCV_FOUND)
-  message("\nCOMPILING WITH OPENCV\n")
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_OPENCV=1)
-  target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
-else()
-  message("\nOPENCV NOT FOUND, SOME FUNCTIONALITIES WILL BE DISABLED\n")
-endif()
-
-################## PROTOBUF ##################
-if (OpenCV_FOUND)
-  find_package(Protobuf 3)
-  
-  if (NOT Protobuf_FOUND)
-    # Protobuf is required when compiling with opencv
-    message(FATAL_ERROR "\nPLEASE INSTALL PROTOBUF. Protobuf is required when compiling with opencv.\n")
+if(ENABLE_OPENCV)
+  find_package(OpenCV 4)
+  if(NOT OpenCV_FOUND)
+    set(ENABLE_OPENCV FALSE CACHE BOOL
+      "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
+  else()
+    find_package(Protobuf 3 REQUIRED)
+    find_package(Boost REQUIRED)
+    set(PROTOBUF_SOURCE_FILES
+      protobuf_messages/objdetectdata.proto
+      protobuf_messages/stabilizedata.proto
+      protobuf_messages/trackerdata.proto
+    )
+    protobuf_generate_cpp(ProtoSources ProtoHeaders ${PROTOBUF_SOURCE_FILES})
+    # Add OpenCV source files and generated protobuf sources
+    target_sources(openshot PRIVATE
+      ${OPENSHOT_CV_SOURCES}
+      ${ProtoSources}
+      ${ProtoHeaders}
+    )
+    list(APPEND CMAKE_SWIG_FLAGS -DUSE_OPENCV=1)
+    target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
+    target_link_libraries(openshot PUBLIC
+      opencv_core
+      opencv_video
+      opencv_highgui
+      opencv_dnn
+      opencv_tracking
+      protobuf::libprotobuf
+    )
   endif()
-  
-  add_subdirectory(protobuf_messages)
-
-  target_include_directories(openshot PUBLIC ${ProtobufMessagePath})
-
-  # Add OpenCV target sources
-  target_sources(openshot PRIVATE
-    ${OPENSHOT_CV_SOURCES})
-
-  # Link libopenshot with OpenCV libs
-  target_link_libraries(openshot PUBLIC ProtoMessages ${OpenCV_LIBS} ${PROTOBUF_LIBRARY} ${Protobuf_INCLUDE_DIRS})
 endif()
+add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
@@ -450,6 +453,9 @@ install(
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   FILES_MATCHING PATTERN "*.h"
 )
+install(FILES ${ProtobufHeaders}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
+)
 
 ############### CPACK PACKAGING ##############
 if(MINGW)
@@ -464,5 +470,3 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
-
-
