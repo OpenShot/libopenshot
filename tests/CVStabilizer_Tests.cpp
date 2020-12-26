@@ -29,12 +29,15 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+#include <memory>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
-//#include "ProcessingController.h"
-#include <QImage>
+#include "Clip.h"
+#include "CVStabilization.h"  // for TransformParam, CamTrajectory, CVStabilization
+#include "ProcessingController.h"
 
 using namespace openshot;
 
@@ -56,10 +59,10 @@ SUITE(CVStabilizer_Tests)
 
         std::string json_data = R"proto(
         {
-            "protobuf_data_path": "stabilizer.data", 
-            "smoothing-window": 30 
+            "protobuf_data_path": "stabilizer.data",
+            "smoothing-window": 30
         } )proto";
-        
+
         // Create stabilizer
         CVStabilization stabilizer(json_data, processingController);
 
@@ -100,7 +103,7 @@ SUITE(CVStabilizer_Tests)
 
         std::string json_data = R"proto(
         {
-            "protobuf_data_path": "stabilizer.data", 
+            "protobuf_data_path": "stabilizer.data",
             "smoothing-window": 30
         } )proto";
 

@@ -41,6 +41,10 @@
 
 #include <QImage>
 
+#ifdef USE_OPENCV
+#include <opencv2/core.hpp>
+#endif
+
 using namespace openshot;
 
 SUITE(Frame_Tests)
