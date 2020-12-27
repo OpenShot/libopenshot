@@ -28,10 +28,15 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+#include <vector>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
+#include "Color.h"
+#include "KeyFrame.h"
+#include "Json.h"
 
 SUITE(Color) {
 
