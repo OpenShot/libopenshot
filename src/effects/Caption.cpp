@@ -28,6 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <QPainter>
+
 #include "Caption.h"
 #include "../Clip.h"
 #include "../Timeline.h"

@@ -31,21 +31,12 @@
 #ifndef OPENSHOT_SATURATION_EFFECT_H
 #define OPENSHOT_SATURATION_EFFECT_H
 
+#include <memory>
+
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
-#include "../Exceptions.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "../ReaderBase.h"
-#include "../FFmpegReader.h"
-#include "../QtImageReader.h"
-#include "../ChunkReader.h"
 
 namespace openshot
 {

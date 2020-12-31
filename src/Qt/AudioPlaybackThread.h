@@ -32,14 +32,20 @@
 #ifndef OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 #define OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "JuceHeader.h"
 #include "../AudioReaderSource.h"
 #include "../AudioDeviceInfo.h"
 #include "../Settings.h"
 
 namespace openshot
 {
+	// Forward decls
+	class ReaderBase;
+
 	struct SafeTimeSliceThread : juce::TimeSliceThread
 	{
 		SafeTimeSliceThread(const String & s) : juce::TimeSliceThread(s) {}

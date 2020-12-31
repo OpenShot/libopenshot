@@ -31,18 +31,17 @@
 #ifndef OPENSHOT_VIDEO_CACHE_THREAD_H
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
+#include "JuceHeader.h"
+#include "Frame.h"
 
 namespace openshot
 {
-    using juce::Thread;
-    using juce::WaitableEvent;
+    class ReaderBase;
 
     /**
      *  @brief The video cache class.
      */
-    class VideoCacheThread : Thread
+    class VideoCacheThread : juce::Thread
     {
 	private:
 	std::atomic_int position;
@@ -78,7 +77,7 @@ namespace openshot
     /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     void setSpeed(int new_speed) { speed = new_speed; }
 
-	/// Stop the audio playback
+	/// Stop playback
 	void Stop();
 
 	/// Start the thread
@@ -87,7 +86,6 @@ namespace openshot
 	/// Set the current thread's reader
 	void Reader(ReaderBase *new_reader) { reader=new_reader; Play(); };
 
-	/// Parent class of VideoCacheThread
 	friend class PlayerPrivate;
 	friend class QtPlayer;
     };

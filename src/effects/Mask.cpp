@@ -29,9 +29,11 @@
  */
 
 #include "Mask.h"
-#include "FFmpegReader.h"
-#include "OpenMPUtilities.h"
 #include "ReaderBase.h"
+#include "OpenMPUtilities.h"
+#include "ChunkReader.h"
+#include "FFmpegReader.h"
+#include "QtImageReader.h"
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
 #endif

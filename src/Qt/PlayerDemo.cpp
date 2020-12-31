@@ -32,11 +32,12 @@
 
 #include "PlayerDemo.h"
 #include "../QtPlayer.h"
+#include "VideoRenderWidget.h"
 
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QWidget>
-#include <QBoxLayout>
+#include <QVBoxLayout>
 #include <QMenuBar>
 #include <QMenu>
 #include <QKeyEvent>

@@ -33,16 +33,14 @@
 
 #include <QObject>
 #include <QWidget>
-#include <QKeyEvent>
-#include <QCloseEvent>
-#include <QVBoxLayout>
-#include <QMenuBar>
 
-#include "VideoRenderWidget.h"
-
-// Define the QtPlayer without including it (due to build issues with Qt moc / Qt macros)
-namespace openshot
-{
+// Forward declarations
+class VideoRenderWidget;
+class QCloseEvent;
+class QKeyEvent;
+class QVBoxLayout;
+class QMenuBar;
+namespace openshot {
     class QtPlayer;
 }
 

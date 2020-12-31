@@ -32,15 +32,19 @@
 #ifndef OPENSHOT_PLAYER_PRIVATE_H
 #define OPENSHOT_PLAYER_PRIVATE_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
-#include "../AudioReaderSource.h"
+#include <memory>
+
 #include "../Qt/AudioPlaybackThread.h"
 #include "../Qt/VideoPlaybackThread.h"
 #include "../Qt/VideoCacheThread.h"
+#include "Frame.h"
+#include "JuceHeader.h"
 
 namespace openshot
 {
+    class ReaderBase;
+    class RendererBase;
+
     /**
      *  @brief The private part of QtPlayer class, which contains an audio thread and video thread,
      *  and controls the video timing and audio synchronization code.
