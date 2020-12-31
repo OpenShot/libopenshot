@@ -365,22 +365,6 @@ namespace openshot {
 		virtual ~ResampleError() noexcept {}
 	};
 
-	/// Exception when too many seek attempts happen
-	class TooManySeeks : public ExceptionBase
-	{
-	public:
-		std::string file_path;
-		/**
-		 * @brief Constructor
-		 *
-		 * @param message A message to accompany the exception
-		 * @param file_path (optional) The input file being processed
-		 */
-		TooManySeeks(std::string message, std::string file_path="")
-			: ExceptionBase(message), file_path(file_path) { }
-		virtual ~TooManySeeks() noexcept {}
-	};
-
 	/// Exception when a writer is closed, and a frame is requested
 	class WriterClosed : public ExceptionBase
 	{
