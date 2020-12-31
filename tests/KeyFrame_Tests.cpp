@@ -31,7 +31,10 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
+#include "KeyFrame.h"
+#include "Coordinate.h"
+#include "Fraction.h"
+#include "Point.h"
 
 using namespace std;
 using namespace openshot;

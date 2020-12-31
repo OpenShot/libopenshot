@@ -44,7 +44,7 @@
 // Set max-active-levels to the max supported, if possible
 // (supported_active_levels is OpenMP 5.0 (November 2018) or later, only.)
 #if (_OPENMP >= 201811)
-  #define OPEN_MP_MAX_ACTIVE openmp_get_supported_active_levels()
+  #define OPEN_MP_MAX_ACTIVE omp_get_supported_active_levels()
 #else
   #define OPEN_MP_MAX_ACTIVE OPEN_MP_NUM_PROCESSORS
 #endif
