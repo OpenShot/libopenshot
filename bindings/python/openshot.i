@@ -150,7 +150,12 @@
 		map1.insert({"den", $self->den});
 		return map1;
 	}
-	std::string __repr__() {
+	const std::string __string__() {
+		std::ostringstream result;
+		result << $self->num << ":" << $self->den;
+		return result.str();
+	}
+	const std::string __repr__() {
 		std::ostringstream result;
 		result << "Fraction(" << $self->num << ", " << $self->den << ")";
 		return result.str();
