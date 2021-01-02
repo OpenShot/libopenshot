@@ -206,7 +206,7 @@
 		return map1;
 	}
 	/* Display methods */
-	const std::string __string__() {
+	const std::string __str__() {
 		std::ostringstream result;
 		result << $self->num << ":" << $self->den;
 		return result.str();
