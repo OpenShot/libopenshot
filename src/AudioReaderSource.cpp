@@ -98,8 +98,6 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 
 			} catch (const ReaderClosed & e) {
 			break;
-			} catch (const TooManySeeks & e) {
-			break;
 			} catch (const OutOfBoundsFrame & e) {
 			break;
 			}
