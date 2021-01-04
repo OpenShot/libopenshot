@@ -180,14 +180,40 @@ if (ENABLE_COVERAGE)
     NAME coverage
     LCOV_ARGS "--no-external"
     EXECUTABLE openshot-test
-    DEPENDENCIES openshot-test
-    EXCLUDE "bindings" "examples" "${CMAKE_CURRENT_BINARY_DIR}/bindings"
+    DEPENDENCIES openshot openshot-test
+    EXCLUDE
+      "bindings/*"
+      "examples/*"
+      "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
+      "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
   )
-  message("Generate coverage report with 'make coverage'")
+  if(NOT TARGET os_test)
+    add_custom_target(os_test)
+    add_dependencies(os_test coverage)
+  endif()
+endif()
+
+# Also hook up 'test' as an alias for the 'os_test' target, if possible
+# This requires CMake 3.11+, where the CMP0037 policy
+# configured to 'NEW' mode will not reserve target names
+# unless the corresponding feature is actually used
+if (POLICY CMP0037)
+	cmake_policy(SET CMP0037 NEW)
+endif()
+if(TARGET os_test)
+  if (CMAKE_VERSION VERSION_GREATER 3.11)
+    message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
+    add_custom_target(test)
+    add_dependencies(test os_test)
+    set(TEST_TARGET_NAME "test")
+  else()
+    set(TEST_TARGET_NAME "os_test")
+  endif()
+  add_feature_info("Testrunner" ENABLE_TESTS "Run unit tests with 'make ${TEST_TARGET_NAME}'")
 endif()
 
 ########### PRINT FEATURE SUMMARY ##############
 feature_summary(WHAT ALL
-    INCLUDE_QUIET_PACKAGES
-    FATAL_ON_MISSING_REQUIRED_PACKAGES
-    DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
+  INCLUDE_QUIET_PACKAGES
+  FATAL_ON_MISSING_REQUIRED_PACKAGES
+  DESCRIPTION "Displaying feature summary\n\nBuild configuration:")
