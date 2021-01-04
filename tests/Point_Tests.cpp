@@ -31,7 +31,10 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
+#include "Point.h"
+#include "Enums.h"
+#include "Coordinate.h"
+#include "Json.h"
 
 SUITE(POINT) {
 
