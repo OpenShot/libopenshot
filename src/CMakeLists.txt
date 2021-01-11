@@ -420,7 +420,7 @@ if (OpenCV_FOUND)
     ${OPENSHOT_CV_SOURCES})
 
   # Link libopenshot with OpenCV libs
-  target_link_libraries(openshot PUBLIC ProtoMessages ${OpenCV_LIBS} ${PROTOBUF_LIBRARY} ${Protobuf_INCLUDE_DIRS})
+  target_link_libraries(openshot PUBLIC openshot_protobuf ${OpenCV_LIBS} ${PROTOBUF_LIBRARY} ${Protobuf_INCLUDE_DIRS})
 endif()
 
 ###############  LINK LIBRARY  #################
