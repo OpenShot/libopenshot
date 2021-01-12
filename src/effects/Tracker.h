@@ -92,7 +92,7 @@ namespace openshot
 
 	public:
 
-        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
+		std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
@@ -113,10 +113,10 @@ namespace openshot
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
 		
 		// Load protobuf data file
-        bool LoadTrackedData(std::string inputFilePath);
+		bool LoadTrackedData(std::string inputFilePath);
         
 		// Get tracker info for the desired frame 
-        EffectFrameData GetTrackedData(size_t frameId);
+		EffectFrameData GetTrackedData(size_t frameId);
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

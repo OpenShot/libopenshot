@@ -95,9 +95,9 @@ namespace openshot
 		Keyframe zoom;
 
 	public:
-	std::string teste;
-        std::map <size_t,EffectCamTrajectory> trajectoryData; // Save camera trajectory data
-    	std::map <size_t,EffectTransformParam> transformationData; // Save transormation data 
+		std::string teste;
+		std::map <size_t,EffectCamTrajectory> trajectoryData; // Save camera trajectory data
+		std::map <size_t,EffectTransformParam> transformationData; // Save transormation data 
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Stabilizer(std::string clipTrackerDataPath);
@@ -119,7 +119,7 @@ namespace openshot
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
 
 		// Load protobuf data file
-        bool LoadStabilizedData(std::string inputFilePath);
+		bool LoadStabilizedData(std::string inputFilePath);
         
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
