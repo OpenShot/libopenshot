@@ -225,7 +225,6 @@ if(ImageMagick_FOUND)
 
   # define a preprocessor macro (used in the C++ source)
   target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
 
   # Link with ImageMagick library
   target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
@@ -359,8 +358,7 @@ if (TARGET Resvg::Resvg)
   #include_directories(${Resvg_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC Resvg::Resvg)
 
-  target_compile_definitions(openshot PUBLIC -DUSE_RESVG=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_RESVG=1)
+  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
 
   set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
   mark_as_advanced(HAVE_RESVG)
@@ -386,8 +384,7 @@ if (ENABLE_BLACKMAGIC)
     target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 
     # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC -DUSE_BLACKMAGIC=1)
-    list(APPEND CMAKE_SWIG_FLAGS -DUSE_BLACKMAGIC=1)
+    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
   endif()
 endif()
 
