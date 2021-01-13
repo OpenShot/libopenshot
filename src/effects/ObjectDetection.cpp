@@ -74,23 +74,24 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 	cv::Mat cv_image = frame->GetImageCV();
     std::cout<<"Frame number: "<<frame_number<<"\n\n";
     // Check if frame isn't NULL
-    if(!cv_image.empty()){
+    if(cv_image.empty()){
+        return frame;
+    }
 
-        // Check if track data exists for the requested frame
-        if (detectionsData.find(frame_number) != detectionsData.end()) {
-            float fw = cv_image.size().width;
-            float fh = cv_image.size().height;
+    // Check if track data exists for the requested frame
+    if (detectionsData.find(frame_number) != detectionsData.end()) {
+        float fw = cv_image.size().width;
+        float fh = cv_image.size().height;
 
-            DetectionData detections = detectionsData[frame_number];
-            for(int i = 0; i<detections.boxes.size(); i++){
-                cv::Rect_<float> bb_nrml = detections.boxes.at(i);
-                cv::Rect2d box((int)(bb_nrml.x*fw),
-                               (int)(bb_nrml.y*fh),
-                               (int)(bb_nrml.width*fw),
-                               (int)(bb_nrml.height*fh));
-                drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                         box, cv_image);
-            }
+        DetectionData detections = detectionsData[frame_number];
+        for(int i = 0; i<detections.boxes.size(); i++){
+            cv::Rect_<float> bb_nrml = detections.boxes.at(i);
+            cv::Rect2d box((int)(bb_nrml.x*fw),
+                           (int)(bb_nrml.y*fh),
+                           (int)(bb_nrml.width*fw),
+                           (int)(bb_nrml.height*fh));
+            drawPred(detections.classIds.at(i), detections.confidences.at(i),
+                     box, cv_image);
         }
     }
 

@@ -124,7 +124,7 @@ namespace openshot
 		int64_t max_audio_sample; ///< The max audio sample count added to this frame
 
 #ifdef USE_OPENCV
-		cv::Mat imagecv; ///< OpenCV image. It will be always on BGR format
+		cv::Mat imagecv; ///< OpenCV image. It will always be in BGR format
 #endif
 
 		/// Constrain a color value from 0 to 255
@@ -295,6 +295,8 @@ namespace openshot
 #ifdef USE_OPENCV
 		/// Convert Qimage to Mat
 		cv::Mat Qimage2mat( std::shared_ptr<QImage>& qimage);
+
+		/// Convert OpenCV Mat to QImage
 		std::shared_ptr<QImage> Mat2Qimage(cv::Mat img);
 
 		/// Get pointer to OpenCV Mat image object
