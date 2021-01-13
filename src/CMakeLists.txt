@@ -395,7 +395,7 @@ if(ENABLE_OPENCV)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
   else()
-    add_subdirectory(protobuf_messsages)
+    add_subdirectory(protobuf_messages)
     # Add OpenCV source files
     target_sources(openshot PRIVATE
       ${OPENSHOT_CV_SOURCES}
@@ -407,8 +407,10 @@ if(ENABLE_OPENCV)
       opencv_highgui
       opencv_dnn
       opencv_tracking
-      protobuf::libprotobuf
+      openshot_protobuf
     )
+  set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
+  mark_as_advanced(HAVE_OPENCV)
   endif()
 endif()
 add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")

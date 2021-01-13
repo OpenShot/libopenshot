@@ -40,7 +40,7 @@
 #undef uint64
 #undef int64
 #include <cmath>
-#include "stabilizedata.pb.h"
+#include "protobuf_messages/stabilizedata.pb.h"
 #include "ProcessingController.h"
 #include "Clip.h"
 #include "Json.h"

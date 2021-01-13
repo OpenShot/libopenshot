@@ -42,7 +42,7 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "trackerdata.pb.h"
+#include "protobuf_messages/trackerdata.pb.h"
 
 using namespace std;
 using google::protobuf::util::TimeUtil;
@@ -111,11 +111,11 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
 		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
-		
+
 		// Load protobuf data file
 		bool LoadTrackedData(std::string inputFilePath);
-        
-		// Get tracker info for the desired frame 
+
+		// Get tracker info for the desired frame
 		EffectFrameData GetTrackedData(size_t frameId);
 
 		/// Get and Set JSON methods

@@ -47,9 +47,9 @@
 #include "Frame.h"
 #include "Json.h"
 #include "ProcessingController.h"
-#include "trackerdata.pb.h"
+#include "protobuf_messages/trackerdata.pb.h"
 
-#include "../src/sort_filter/sort.hpp"
+#include "sort_filter/sort.hpp"
 
 using namespace std;
 using google::protobuf::util::TimeUtil;

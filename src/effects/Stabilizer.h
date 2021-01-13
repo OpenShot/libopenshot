@@ -41,7 +41,7 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
-#include "stabilizedata.pb.h"
+#include "protobuf_messages/stabilizedata.pb.h"
 
 using namespace std;
 using google::protobuf::util::TimeUtil;

@@ -42,9 +42,9 @@
 #include "Json.h"
 #include "ProcessingController.h"
 #include "Clip.h"
-#include "objdetectdata.pb.h"
+#include "protobuf_messages/objdetectdata.pb.h"
 
-#include "../src/sort_filter/sort.hpp"
+#include "sort_filter/sort.hpp"
 
 namespace openshot
 {

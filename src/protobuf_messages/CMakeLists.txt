@@ -26,8 +26,16 @@
 ################################################################################
 
 # Dependencies
-find_package(Protobuf 3)
-include_directories(${PROTOBUF_INCLUDE_DIRS})
+find_package(Protobuf 3 REQUIRED)
+
+# Create a target for libprotobuf, if necessary (CMake < 3.9)
+if(NOT TARGET protobuf::libprotobuf)
+  add_library(protobuf_TARGET INTERFACE)
+  target_include_directories(protobuf_TARGET
+    INTERFACE ${Protobuf_INCLUDE_DIRS})
+  target_link_libraries(protobuf_TARGET INTERFACE ${Protobuf_LIBRARIES})
+  add_library(protobuf::libprotobuf ALIAS protobuf_TARGET)
+endif()
 
 file(GLOB ProtoFiles "${CMAKE_CURRENT_SOURCE_DIR}/*.proto")
 PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${ProtoFiles})
@@ -36,7 +44,7 @@ add_library(openshot_protobuf SHARED ${ProtoSources} ${ProtoHeaders})
 set(ProtobufMessagePath ${CMAKE_CURRENT_BINARY_DIR}
     CACHE INTERNAL "Path to generated protobuf header files.")
 
-target_link_libraries(openshot_protobuf ${Boost_LIBRARIES} ${PROTOBUF_LIBRARY})
+target_link_libraries(openshot_protobuf protobuf::libprotobuf)
 
 # Set SONAME and other library properties
 set_target_properties(openshot_protobuf PROPERTIES
@@ -45,7 +53,13 @@ set_target_properties(openshot_protobuf PROPERTIES
         INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
         )
 
-# Install primary library
+# Install protobuf library and generated headers
 install(TARGETS openshot_protobuf
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-        
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
+  )
+install(FILES ${ProtoHeaders}
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/protobuf_messages
+)
