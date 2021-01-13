@@ -30,10 +30,11 @@
 
 #include "CVStabilization.h"
 
+using namespace std;
 using namespace openshot;
 
 
-// Set default smoothing window value to compute stabilization 
+// Set default smoothing window value to compute stabilization
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController){
     SetJson(processInfoJson);
@@ -52,7 +53,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
     avr_dx=0; avr_dy=0; avr_da=0; max_dx=0; max_dy=0; max_da=0;
 
     video.Open();
-    // Save original video width and height 
+    // Save original video width and height
     cv::Size readerDims(video.Reader()->info.width, video.Reader()->info.height);
 
     size_t frame_number;
@@ -71,7 +72,7 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
         }
 
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
-        
+
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
         // Resize frame to original video width and height if they differ
@@ -174,7 +175,7 @@ bool CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
         return false;
     }
 
-    // Keep computing average and max transformation parameters 
+    // Keep computing average and max transformation parameters
     avr_dx+=fabs(dx);
     avr_dy+=fabs(dy);
     avr_da+=fabs(da);
@@ -184,7 +185,7 @@ bool CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
         max_dy = dy;
     if(fabs(da) > max_da)
         max_da = da;
-    
+
     T.copyTo(last_T);
 
     prev_to_cur_transform.push_back(TransformParam(dx, dy, da));
@@ -204,8 +205,8 @@ std::vector<CamTrajectory> CVStabilization::ComputeFramesTrajectory(){
     double y = 0;
 
     vector <CamTrajectory> trajectory; // trajectory at all frames
-    
-    // Compute global camera trajectory. First frame is the origin 
+
+    // Compute global camera trajectory. First frame is the origin
     for(size_t i=0; i < prev_to_cur_transform.size(); i++) {
         x += prev_to_cur_transform[i].dx;
         y += prev_to_cur_transform[i].dy;
@@ -307,7 +308,7 @@ bool CVStabilization::SaveStabilizedData(){
 // Add frame stabilization data into protobuf message
 void CVStabilization::AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number){
 
-    // Save frame number 
+    // Save frame number
     pbFrameData->set_id(frame_number);
 
     // Save camera trajectory data
@@ -325,10 +326,10 @@ TransformParam CVStabilization::GetTransformParamData(size_t frameId){
 
     // Check if the stabilizer info for the requested frame exists
     if ( transformationData.find(frameId) == transformationData.end() ) {
-        
+
         return TransformParam();
     } else {
-        
+
         return transformationData[frameId];
     }
 }
@@ -337,10 +338,10 @@ CamTrajectory CVStabilization::GetCamTrajectoryTrackedData(size_t frameId){
 
     // Check if the stabilizer info for the requested frame exists
     if ( trajectoryData.find(frameId) == trajectoryData.end() ) {
-        
+
         return CamTrajectory();
     } else {
-        
+
         return trajectoryData[frameId];
     }
 }
@@ -395,11 +396,11 @@ bool CVStabilization::_LoadStabilizedData(){
     transformationData.clear();
     trajectoryData.clear();
 
-    // Iterate over all frames of the saved message and assign to the data maps 
+    // Iterate over all frames of the saved message and assign to the data maps
     for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
-    
-        // Load frame number  
+
+        // Load frame number
         size_t id = pbFrameData.id();
 
         // Load camera trajectory data
@@ -419,7 +420,7 @@ bool CVStabilization::_LoadStabilizedData(){
         transformationData[id] = TransformParam(dx,dy,da);
     }
 
-    // Show the time stamp from the last update in stabilization data file  
+    // Show the time stamp from the last update in stabilization data file
     if (stabilizationMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
     }

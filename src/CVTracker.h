@@ -47,16 +47,15 @@
 #include "Frame.h"
 #include "Json.h"
 #include "ProcessingController.h"
-#include "trackerdata.pb.h"
+#include "protobuf_messages/trackerdata.pb.h"
 
-#include "../src/sort_filter/sort.hpp"
+#include "sort_filter/sort.hpp"
 
-using namespace std;
 using google::protobuf::util::TimeUtil;
 
 namespace openshot
 {
-		
+
 	// Store the tracked object information for one frame
 	struct FrameData{
 		size_t frame_id = -1;
@@ -88,13 +87,13 @@ namespace openshot
 	 * @brief The tracker class will receive one bounding box provided by the user and then iterate over the clip frames
 	 * to return the object position in all the frames.
 	 */
-	class CVTracker { 
+	class CVTracker {
 		private:
-			std::map<size_t, FrameData> trackedDataById; // Save tracked data       
+			std::map<size_t, FrameData> trackedDataById; // Save tracked data
 			std::string trackerType; // Name of the chosen tracker
 			cv::Ptr<cv::Tracker> tracker; // Pointer of the selected tracker
 
-			cv::Rect2d bbox; // Bounding box coords 
+			cv::Rect2d bbox; // Bounding box coords
 			SortTracker sort;
 
 			std::string protobuf_data_path; // Path to protobuf data file
@@ -103,34 +102,34 @@ namespace openshot
 
 			/// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 			ProcessingController *processingController;
-			
+
 			bool json_interval;
 			size_t start;
 			size_t end;
 
 			bool error = false;
-		
+
 			// Initialize the tracker
 			bool initTracker(cv::Mat &frame, size_t frameId);
-			
-			// Update the object tracker according to frame 
+
+			// Update the object tracker according to frame
 			bool trackFrame(cv::Mat &frame, size_t frameId);
 
 		public:
 
 			// Constructor
 			CVTracker(std::string processInfoJson, ProcessingController &processingController);
-			
+
 			// Set desirable tracker method
 			cv::Ptr<cv::Tracker> selectTracker(std::string trackerType);
 
 			// Track object in the hole clip or in a given interval
-			// If start, end and process_interval are passed as argument, clip will be processed in [start,end) 
+			// If start, end and process_interval are passed as argument, clip will be processed in [start,end)
 			void trackClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
 
 			// Get tracked data for a given frame
 			FrameData GetTrackedData(size_t frameId);
-			
+
 			/// Protobuf Save and Load methods
 			// Save protobuf file
 			bool SaveTrackedData();

@@ -29,12 +29,15 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+#include <memory>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
-//#include "ProcessingController.h"
-#include <QImage>
+#include "Clip.h"
+#include "CVTracker.h"  // for FrameData, CVTracker
+#include "ProcessingController.h"
 
 using namespace openshot;
 
@@ -56,14 +59,14 @@ SUITE(CVTracker_Tests)
 
         std::string json_data = R"proto(
         {
-            "protobuf_data_path": "kcf_tracker.data", 
-            "tracker-type": "KCF", 
+            "protobuf_data_path": "kcf_tracker.data",
+            "tracker-type": "KCF",
             "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
         } )proto";
 
         // Create tracker
         CVTracker kcfTracker(json_data, processingController);
-        
+
         // Track clip for frames 0-20
         kcfTracker.trackClip(c1, 0, 20, true);
         // Get tracked data
@@ -94,8 +97,8 @@ SUITE(CVTracker_Tests)
 
         std::string json_data = R"proto(
         {
-            "protobuf_data_path": "kcf_tracker.data", 
-            "tracker-type": "KCF", 
+            "protobuf_data_path": "kcf_tracker.data",
+            "tracker-type": "KCF",
             "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
         } )proto";
 
@@ -119,8 +122,8 @@ SUITE(CVTracker_Tests)
 
         std::string proto_data_1 = R"proto(
         {
-            "protobuf_data_path": "kcf_tracker.data", 
-            "tracker_type": "", 
+            "protobuf_data_path": "kcf_tracker.data",
+            "tracker_type": "",
             "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 0}
         } )proto";
 
