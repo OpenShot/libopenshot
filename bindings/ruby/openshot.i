@@ -102,6 +102,7 @@
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
 #include "AudioDeviceInfo.h"
 
 /* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
@@ -191,6 +192,7 @@
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Timeline.h"
+%include "ZmqLogger.h"
 %include "AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK

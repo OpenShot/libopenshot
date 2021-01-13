@@ -426,11 +426,11 @@ find_package(cppzmq QUIET) # Creates cppzmq target
 
 # Link ZeroMQ library
 if (TARGET libzmq)
-  target_link_libraries(openshot PRIVATE libzmq)
+  target_link_libraries(openshot PUBLIC libzmq)
 endif()
 # Include cppzmq headers, if not bundled into libzmq
 if (TARGET cppzmq)
-  target_link_libraries(openshot PRIVATE cppzmq)
+  target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
 ###

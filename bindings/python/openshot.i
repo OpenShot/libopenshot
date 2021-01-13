@@ -94,6 +94,7 @@
 #include "Settings.h"
 #include "TimelineBase.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
 #include "AudioDeviceInfo.h"
 
 %}
@@ -205,6 +206,7 @@
 %include "Settings.h"
 %include "TimelineBase.h"
 %include "Timeline.h"
+%include "ZmqLogger.h"
 %include "AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK
