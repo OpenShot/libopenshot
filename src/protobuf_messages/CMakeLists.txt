@@ -31,9 +31,21 @@ include_directories(${PROTOBUF_INCLUDE_DIRS})
 
 file(GLOB ProtoFiles "${CMAKE_CURRENT_SOURCE_DIR}/*.proto")
 PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${ProtoFiles})
-add_library(ProtoMessages SHARED ${ProtoSources} ${ProtoHeaders})
+add_library(openshot_protobuf SHARED ${ProtoSources} ${ProtoHeaders})
 
 set(ProtobufMessagePath ${CMAKE_CURRENT_BINARY_DIR}
     CACHE INTERNAL "Path to generated protobuf header files.")
 
-target_link_libraries(ProtoMessages ${Boost_LIBRARIES} ${PROTOBUF_LIBRARY})
+target_link_libraries(openshot_protobuf ${Boost_LIBRARIES} ${PROTOBUF_LIBRARY})
+
+# Set SONAME and other library properties
+set_target_properties(openshot_protobuf PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_SO_VERSION}
+        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+        )
+
+# Install primary library
+install(TARGETS openshot_protobuf
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        

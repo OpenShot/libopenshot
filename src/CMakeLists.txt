@@ -395,21 +395,11 @@ if(ENABLE_OPENCV)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
   else()
-    find_package(Protobuf 3 REQUIRED)
-    find_package(Boost REQUIRED)
-    set(PROTOBUF_SOURCE_FILES
-      protobuf_messages/objdetectdata.proto
-      protobuf_messages/stabilizedata.proto
-      protobuf_messages/trackerdata.proto
-    )
-    protobuf_generate_cpp(ProtoSources ProtoHeaders ${PROTOBUF_SOURCE_FILES})
-    # Add OpenCV source files and generated protobuf sources
+    add_subdirectory(protobuf_messsages)
+    # Add OpenCV source files
     target_sources(openshot PRIVATE
       ${OPENSHOT_CV_SOURCES}
-      ${ProtoSources}
-      ${ProtoHeaders}
     )
-    list(APPEND CMAKE_SWIG_FLAGS -DUSE_OPENCV=1)
     target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
     target_link_libraries(openshot PUBLIC
       opencv_core
