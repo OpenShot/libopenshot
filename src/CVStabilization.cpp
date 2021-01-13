@@ -280,7 +280,7 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
 // Save stabilization data to protobuf file
 bool CVStabilization::SaveStabilizedData(){
     // Create stabilization message
-    libopenshotstabilize::Stabilization stabilizationMessage;
+    pb_stabilize::Stabilization stabilizationMessage;
 
     std::map<size_t,CamTrajectory>::iterator trajData = trajectoryData.begin();
     std::map<size_t,TransformParam>::iterator transData = transformationData.begin();
@@ -306,7 +306,7 @@ bool CVStabilization::SaveStabilizedData(){
 }
 
 // Add frame stabilization data into protobuf message
-void CVStabilization::AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number){
+void CVStabilization::AddFrameDataToProto(pb_stabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number){
 
     // Save frame number
     pbFrameData->set_id(frame_number);
@@ -384,7 +384,7 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 // Load protobuf data file
 bool CVStabilization::_LoadStabilizedData(){
     // Create stabilization message
-    libopenshotstabilize::Stabilization stabilizationMessage;
+    pb_stabilize::Stabilization stabilizationMessage;
     // Read the existing tracker message.
     fstream input(protobuf_data_path, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
@@ -398,7 +398,7 @@ bool CVStabilization::_LoadStabilizedData(){
 
     // Iterate over all frames of the saved message and assign to the data maps
     for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
-        const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
+        const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
 
         // Load frame number
         size_t id = pbFrameData.id();

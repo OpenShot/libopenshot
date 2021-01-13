@@ -129,7 +129,7 @@ class CVStabilization {
     // Save stabilization data to protobuf file
     bool SaveStabilizedData();
     // Add frame stabilization data into protobuf message
-    void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
+    void AddFrameDataToProto(pb_stabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
 
     // Return requested struct info for a given frame
     TransformParam GetTransformParamData(size_t frameId);

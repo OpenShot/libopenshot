@@ -132,7 +132,7 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
 // Load protobuf data file
 bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage;
+    pb_objdetect::ObjDetect objMessage;
 
     {
         // Read the existing tracker message.
@@ -158,13 +158,13 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < objMessage.frame_size(); i++) {
         // Create protobuf message reader
-        const libopenshotobjdetect::Frame& pbFrameData = objMessage.frame(i);
+        const pb_objdetect::Frame& pbFrameData = objMessage.frame(i);
 
         // Get frame Id
         size_t id = pbFrameData.id();
 
         // Load bounding box data
-        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
+        const google::protobuf::RepeatedPtrField<pb_objdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
 
         // Construct data vectors related to detections in the current frame
         std::vector<int> classIds;

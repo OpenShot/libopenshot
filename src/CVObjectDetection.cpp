@@ -304,7 +304,7 @@ CVDetectionData CVObjectDetection::GetDetectionData(size_t frameId){
 
 bool CVObjectDetection::SaveObjDetectedData(){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage;
+    pb_objdetect::ObjDetect objMessage;
 
     //Save class names in protobuf message
     for(int i = 0; i<classNames.size(); i++){
@@ -315,7 +315,7 @@ bool CVObjectDetection::SaveObjDetectedData(){
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,CVDetectionData>::iterator it=detectionsData.begin(); it!=detectionsData.end(); ++it){
         CVDetectionData dData = it->second;
-        libopenshotobjdetect::Frame* pbFrameData;
+        pb_objdetect::Frame* pbFrameData;
         AddFrameDataToProto(objMessage.add_frame(), dData);
     }
 
@@ -339,13 +339,13 @@ bool CVObjectDetection::SaveObjDetectedData(){
 }
 
 // Add frame object detection into protobuf message.
-void CVObjectDetection::AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData) {
+void CVObjectDetection::AddFrameDataToProto(pb_objdetect::Frame* pbFrameData, CVDetectionData& dData) {
 
     // Save frame number and rotation
     pbFrameData->set_id(dData.frameId);
 
     for(size_t i = 0; i < dData.boxes.size(); i++){
-        libopenshotobjdetect::Frame_Box* box = pbFrameData->add_bounding_box();
+        pb_objdetect::Frame_Box* box = pbFrameData->add_bounding_box();
 
         // Save bounding box data
         box->set_x(dData.boxes.at(i).x);
@@ -425,7 +425,7 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
 // Load protobuf data file
 bool CVObjectDetection::_LoadObjDetectdData(){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage;
+    pb_objdetect::ObjDetect objMessage;
 
     {
         // Read the existing tracker message.
@@ -447,13 +447,13 @@ bool CVObjectDetection::_LoadObjDetectdData(){
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < objMessage.frame_size(); i++) {
         // Create protobuf message reader
-        const libopenshotobjdetect::Frame& pbFrameData = objMessage.frame(i);
+        const pb_objdetect::Frame& pbFrameData = objMessage.frame(i);
 
         // Get frame Id
         size_t id = pbFrameData.id();
 
         // Load bounding box data
-        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
+        const google::protobuf::RepeatedPtrField<pb_objdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
 
         // Construct data vectors related to detections in the current frame
         std::vector<int> classIds; std::vector<float> confidences; std::vector<cv::Rect_<float>> boxes;

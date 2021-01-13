@@ -102,7 +102,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 // Load protobuf data file
 bool Tracker::LoadTrackedData(std::string inputFilePath){
     // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
+    pb_tracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
@@ -118,14 +118,14 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
 
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
+        const pb_tracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data
         size_t id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
         // Load bounding box data
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
+        const pb_tracker::Frame::Box& box = pbFrameData.bounding_box();
         float x1 = box.x1();
         float y1 = box.y1();
         float x2 = box.x2();
