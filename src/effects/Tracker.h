@@ -44,7 +44,6 @@
 #include "../KeyFrame.h"
 #include "protobuf_messages/trackerdata.pb.h"
 
-using namespace std;
 using google::protobuf::util::TimeUtil;
 
 

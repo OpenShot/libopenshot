@@ -67,13 +67,13 @@ namespace openshot
 
     /**
      * @brief This class runs trought a clip to detect objects and returns the bounding boxes and its properties.
-     * 
-     * Object detection is performed using YoloV3 model with OpenCV DNN module 
+     *
+     * Object detection is performed using YoloV3 model with OpenCV DNN module
      */
     class CVObjectDetection{
 
         private:
-        
+
         cv::dnn::Net net;
         std::vector<std::string> classNames;
         float confThreshold, nmsThreshold;
@@ -97,7 +97,7 @@ namespace openshot
         ProcessingController *processingController;
 
         void setProcessingDevice();
-        
+
         // Detect onbects on a single frame
         void DetectObjects(const cv::Mat &frame, size_t frame_number);
 

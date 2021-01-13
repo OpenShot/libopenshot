@@ -31,11 +31,12 @@
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
 
+using namespace std;
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
 ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
-{   
+{
     // Init effect properties
 	init_effect_details();
 
@@ -113,14 +114,14 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
         CV_Assert(classId < (int)classNames.size());
         label = classNames[classId] + ":" + label;
     }
-    
+
     //Display the label at the top of the bounding box
     int baseLine;
     cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
 
     double left = box.x;
     double top = std::max((int)box.y, labelSize.height);
-    
+
     cv::rectangle(frame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), classesColor[classId], cv::FILLED);
     putText(frame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
     std::cout<<"X1: "<<box.x<<" Y1: "<<box.y<<" X2: "<<box.width + box.x<<" Y2: "<<box.height + box.y<<"\n";
@@ -130,7 +131,7 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
 // Load protobuf data file
 bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage; 
+    libopenshotobjdetect::ObjDetect objMessage;
 
     {
         // Read the existing tracker message.
@@ -163,7 +164,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
         // Load bounding box data
         const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
-        
+
         // Construct data vectors related to detections in the current frame
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -193,8 +194,8 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         detectionsData[id] = DetectionData(classIds, confidences, boxes, id);
     }
 
-    // Show the time stamp from the last update in object detector data file 
-    if (objMessage.has_last_updated()) 
+    // Show the time stamp from the last update in object detector data file
+    if (objMessage.has_last_updated())
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
 
     // Delete all global objects allocated by libprotobuf.
@@ -203,7 +204,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     return true;
 }
 
-// Get tracker info for the desired frame 
+// Get tracker info for the desired frame
 DetectionData ObjectDetection::GetTrackedData(size_t frameId){
 
 	// Check if the tracker info for the requested frame exists
@@ -259,7 +260,7 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
-		
+
 		if(!LoadObjDetectdData(protobuf_data_path)){
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";

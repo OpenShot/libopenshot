@@ -30,11 +30,12 @@
 
 #include "effects/Stabilizer.h"
 
+using namespace std;
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
 Stabilizer::Stabilizer(std::string clipStabilizedDataPath):protobuf_data_path(clipStabilizedDataPath)
-{   
+{
     // Init effect properties
 	init_effect_details();
     // Tries to load the stabilization data from protobuf
@@ -80,7 +81,7 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 		if(transformationData.find(frame_number) != transformationData.end()){
 
 			float zoom_value = zoom.GetValue(frame_number);
-			
+
 			// Create empty rotation matrix
 			cv::Mat T(2,3,CV_64F);
 
@@ -98,8 +99,8 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 			cv::warpAffine(frame_image, frame_stabilized, T, frame_image.size());
 
 			// Scale up the image to remove black borders
-			cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, zoom_value); 
-			cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size()); 
+			cv::Mat T_scale = cv::getRotationMatrix2D(cv::Point2f(frame_stabilized.cols/2, frame_stabilized.rows/2), 0, zoom_value);
+			cv::warpAffine(frame_stabilized, frame_stabilized, T_scale, frame_stabilized.size());
 			frame_image = frame_stabilized;
 		}
 	}
@@ -126,13 +127,13 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
     transformationData.clear();
     trajectoryData.clear();
 
-    // Iterate over all frames of the saved message and assign to the data maps 
+    // Iterate over all frames of the saved message and assign to the data maps
     for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
 
 		// Create stabilization message
         const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
-    
-        // Load frame number  
+
+        // Load frame number
         size_t id = pbFrameData.id();
 
         // Load camera trajectory data
@@ -152,7 +153,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         transformationData[id] = EffectTransformParam(dx,dy,da);
     }
 
-    // Show the time stamp from the last update in stabilization data file  
+    // Show the time stamp from the last update in stabilization data file
     if (stabilizationMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
     }
@@ -211,7 +212,7 @@ void Stabilizer::SetJsonValue(const Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
-		
+
 		if(!LoadStabilizedData(protobuf_data_path)){
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";

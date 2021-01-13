@@ -30,11 +30,12 @@
 
 #include "effects/Tracker.h"
 
+using namespace std;
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
 Tracker::Tracker(std::string clipTrackerDataPath)
-{   
+{
     // Init effect properties
 	init_effect_details();
 
@@ -134,7 +135,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
         trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
     }
 
-    // Show the time stamp from the last update in tracker data file 
+    // Show the time stamp from the last update in tracker data file
     if (trackerMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
     }
@@ -145,7 +146,7 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
     return true;
 }
 
-// Get tracker info for the desired frame 
+// Get tracker info for the desired frame
 EffectFrameData Tracker::GetTrackedData(size_t frameId){
 
 	// Check if the tracker info for the requested frame exists
@@ -201,7 +202,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
-		
+
 		if(!LoadTrackedData(protobuf_data_path)){
 			std::cout<<"Invalid protobuf data path";
 			protobuf_data_path = "";
