@@ -114,7 +114,6 @@ set(OPENSHOT_PUBLIC_HEADERS
   Clip.h
   ClipBase.h
   Coordinate.h
-  CrashHandler.h
   DummyReader.h
   ReaderBase.h
   RendererBase.h
@@ -144,12 +143,13 @@ set(OPENSHOT_PUBLIC_HEADERS
   Settings.h
   TimelineBase.h
   Timeline.h
+  ZmqLogger.h
   ${CMAKE_CURRENT_BINARY_DIR}/OpenShotVersion.h
 )
 
 set(OPENSHOT_PRIVATE_HEADERS
+  CrashHandler.h
   OpenMPUtilities.h
-  ZmqLogger.h
 )
 
 # Video effects

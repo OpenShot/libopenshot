@@ -43,7 +43,6 @@
 #include "CacheMemory.h"
 #include "Color.h"
 #include "Clip.h"
-#include "CrashHandler.h"
 #include "Point.h"
 #include "EffectBase.h"
 #include "Effects.h"
