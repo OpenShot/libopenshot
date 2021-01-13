@@ -114,7 +114,7 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
 
     // Create stabilization message
-    libopenshotstabilize::Stabilization stabilizationMessage;
+    pb_stabilize::Stabilization stabilizationMessage;
 
     // Read the existing tracker message.
     fstream input(inputFilePath, ios::in | ios::binary);
@@ -131,7 +131,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
     for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
 
 		// Create stabilization message
-        const libopenshotstabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
+        const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
 
         // Load frame number
         size_t id = pbFrameData.id();

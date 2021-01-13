@@ -134,7 +134,7 @@ namespace openshot
 			// Save protobuf file
 			bool SaveTrackedData();
 			// Add frame tracked data into protobuf message.
-			void AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData);
+			void AddFrameDataToProto(pb_tracker::Frame* pbFrameData, FrameData& fData);
 
 			/// Get and Set JSON methods
 			void SetJson(const std::string value); ///< Load JSON string into this object

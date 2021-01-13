@@ -1,7 +1,7 @@
 
 // [START declaration]
 syntax = "proto3";
-package libopenshottracker;
+package pb_tracker;
 
 import "google/protobuf/timestamp.proto";
 // [END declaration]
@@ -23,7 +23,7 @@ message Frame {
 
 message Tracker {
   repeated Frame frame = 1;
-  
+
   google.protobuf.Timestamp last_updated = 2;
 }
 // [END messages]

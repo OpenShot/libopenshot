@@ -194,12 +194,12 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
 
 bool CVTracker::SaveTrackedData(){
     // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
+    pb_tracker::Tracker trackerMessage;
 
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
         FrameData fData = it->second;
-        libopenshottracker::Frame* pbFrameData;
+        pb_tracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
     }
 
@@ -223,13 +223,13 @@ bool CVTracker::SaveTrackedData(){
 }
 
 // Add frame tracked data into protobuf message.
-void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData) {
+void CVTracker::AddFrameDataToProto(pb_tracker::Frame* pbFrameData, FrameData& fData) {
 
     // Save frame number and rotation
     pbFrameData->set_id(fData.frame_id);
     pbFrameData->set_rotation(0);
 
-    libopenshottracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
+    pb_tracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
     // Save bounding box data
     box->set_x1(fData.x1);
     box->set_y1(fData.y1);
@@ -311,7 +311,7 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 // Load protobuf data file
 bool CVTracker::_LoadTrackedData(){
     // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
+    pb_tracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
@@ -327,14 +327,14 @@ bool CVTracker::_LoadTrackedData(){
 
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
+        const pb_tracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data
         size_t id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
         // Load bounding box data
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
+        const pb_tracker::Frame::Box& box = pbFrameData.bounding_box();
         float x1 = box.x1();
         float y1 = box.y1();
         float x2 = box.x2();

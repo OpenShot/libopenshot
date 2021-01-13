@@ -124,7 +124,7 @@ namespace openshot
         // Save protobuf file
         bool SaveObjDetectedData();
         // Add frame object detection data into protobuf message.
-        void AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData);
+        void AddFrameDataToProto(pb_objdetect::Frame* pbFrameData, CVDetectionData& dData);
 
         /// Get and Set JSON methods
         void SetJson(const std::string value); ///< Load JSON string into this object
