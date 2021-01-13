@@ -1,10 +1,8 @@
-codecov:
-  branch: default
 coverage:
   status:
     project:
       default:
-        base: pr # Only post a status to pull requests
+        only_pulls: true # Only post a status to pull requests
         informational: true # Don't block PRs based on coverage stats (yet?)
 ignore:
   - "examples"
