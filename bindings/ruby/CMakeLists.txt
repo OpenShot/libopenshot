@@ -76,9 +76,23 @@ set_property(SOURCE openshot.i PROPERTY SWIG_MODULE_NAME openshot)
 
 # Set the SWIG_FLAGS from the library target, IFF its
 # COMPILE_DEFINITIONS property is set (in practice, always true)
-set(defs $<TARGET_PROPERTY:openshot,COMPILE_DEFINITIONS>)
-set_property(SOURCE openshot.i PROPERTY
-  SWIG_FLAGS $<$<BOOL:${defs}>:-D$<JOIN:${defs}, -D>>)
+if(CMAKE_VERSION VERSION_GREATER 3.15)
+  set(_defs
+    $<REMOVE_DUPLICATES:$<TARGET_PROPERTY:openshot,COMPILE_DEFINITIONS>>)
+elseif(CMAKE_VERSION VERSION_GREATER 3.12)
+  set(_defs $<TARGET_PROPERTY:openshot,COMPILE_DEFINITIONS>)
+endif()
+if(DEFINED _defs)
+  set_property(SOURCE openshot.i PROPERTY
+    COMPILE_DEFINITIONS ${_defs})
+else()
+  get_property(_defs TARGET openshot PROPERTY COMPILE_DEFINITIONS)
+  foreach(_d ${_defs})
+    list(APPEND _flags -D${_d})
+  endforeach()
+  set_property(SOURCE openshot.i PROPERTY
+    SWIG_FLAGS ${_flags})
+endif()
 
 ### Suppress a ton of warnings in the generated SWIG C++ code
 set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \
@@ -87,13 +101,15 @@ set(SWIG_CXX_FLAGS "-Wno-unused-variable -Wno-unused-function \
 separate_arguments(sw_flags UNIX_COMMAND ${SWIG_CXX_FLAGS})
 set_property(SOURCE openshot.i PROPERTY GENERATED_COMPILE_OPTIONS ${sw_flags})
 
-### Take include dirs from target, automatically if possible
-if (CMAKE_VERSION VERSION_GREATER 3.13)
-  set_property(SOURCE openshot.i PROPERTY USE_TARGET_INCLUDE_DIRECTORIES True)
-elseif (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(SOURCE openshot.i PROPERTY
-    INCLUDE_DIRECTORIES $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
-endif ()
+### Take include dirs from target
+if(CMAKE_VERSION VERSION_GREATER 3.15)
+  set(_inc $<REMOVE_DUPLICATES:$<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>>)
+elseif(CMAKE_VERSION VERSION_GREATER 3.12)
+  set(_inc $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>)
+endif()
+if (DEFINED _inc)
+  set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES ${_inc})
+endif()
 
 ### Add the SWIG interface file (which defines all the SWIG methods)
 if (CMAKE_VERSION VERSION_LESS 3.8.0)
