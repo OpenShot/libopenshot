@@ -72,7 +72,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 {
     // Get the frame's image
 	cv::Mat cv_image = frame->GetImageCV();
-    std::cout<<"Frame number: "<<frame_number<<"\n\n";
+
     // Check if frame isn't NULL
     if(cv_image.empty()){
         return frame;
@@ -125,8 +125,6 @@ void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat&
 
     cv::rectangle(frame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), classesColor[classId], cv::FILLED);
     putText(frame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
-    std::cout<<"X1: "<<box.x<<" Y1: "<<box.y<<" X2: "<<box.width + box.x<<" Y2: "<<box.height + box.y<<"\n";
-    std::cout<<"Class: "<<label<<"\n\n";
 }
 
 // Load protobuf data file
@@ -194,10 +192,6 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         // Assign data to object detector map
         detectionsData[id] = DetectionData(classIds, confidences, boxes, id);
     }
-
-    // Show the time stamp from the last update in object detector data file
-    if (objMessage.has_last_updated())
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
 
     // Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();

@@ -29,10 +29,11 @@
  */
 
 #include "CVStabilization.h"
+#include <google/protobuf/util/time_util.h>
 
 using namespace std;
 using namespace openshot;
-
+using google::protobuf::util::TimeUtil;
 
 // Set default smoothing window value to compute stabilization
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)

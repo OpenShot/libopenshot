@@ -29,9 +29,11 @@
  */
 
 #include "CVTracker.h"
+#include <google/protobuf/util/time_util.h>
 
 using namespace std;
 using namespace openshot;
+using google::protobuf::util::TimeUtil;
 
 
 // Constructor

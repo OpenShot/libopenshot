@@ -29,9 +29,11 @@
  */
 
 #include "effects/Stabilizer.h"
+#include <google/protobuf/util/time_util.h>
 
 using namespace std;
 using namespace openshot;
+using google::protobuf::util::TimeUtil;
 
 /// Blank constructor, useful when using Json to load the effect properties
 Stabilizer::Stabilizer(std::string clipStabilizedDataPath):protobuf_data_path(clipStabilizedDataPath)

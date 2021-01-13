@@ -33,8 +33,6 @@
 
 #include "../EffectBase.h"
 
-#include <google/protobuf/util/time_util.h>
-
 #include <cmath>
 #include <fstream>
 #include <stdio.h>
@@ -43,9 +41,6 @@
 #include "../Json.h"
 #include "../KeyFrame.h"
 #include "protobuf_messages/trackerdata.pb.h"
-
-using google::protobuf::util::TimeUtil;
-
 
 // Tracking info struct
 struct EffectFrameData{

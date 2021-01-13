@@ -31,8 +31,6 @@
 #ifndef OPENSHOT_STABILIZATION_H
 #define OPENSHOT_STABILIZATION_H
 
-#include <google/protobuf/util/time_util.h>
-
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
@@ -44,8 +42,6 @@
 #include "ProcessingController.h"
 #include "Clip.h"
 #include "Json.h"
-
-using google::protobuf::util::TimeUtil;
 
 // Store the relative transformation parameters between consecutive frames
 struct TransformParam

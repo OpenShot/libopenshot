@@ -31,8 +31,6 @@
 #ifndef OPENSHOT_CVTRACKER_H
 #define OPENSHOT_CVTRACKER_H
 
-#include <google/protobuf/util/time_util.h>
-
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
@@ -50,8 +48,6 @@
 #include "protobuf_messages/trackerdata.pb.h"
 
 #include "sort_filter/sort.hpp"
-
-using google::protobuf::util::TimeUtil;
 
 namespace openshot
 {

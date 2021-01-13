@@ -33,8 +33,6 @@
 
 #include "../EffectBase.h"
 
-#include <google/protobuf/util/time_util.h>
-
 #include <cmath>
 #include <stdio.h>
 #include <memory>
@@ -42,8 +40,6 @@
 #include "../Json.h"
 #include "../KeyFrame.h"
 #include "protobuf_messages/stabilizedata.pb.h"
-
-using google::protobuf::util::TimeUtil;
 
 // Store the relative transformation parameters between consecutive frames
 struct EffectTransformParam

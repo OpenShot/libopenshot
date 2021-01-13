@@ -30,8 +30,6 @@
 
 #pragma once
 
-#include <google/protobuf/util/time_util.h>
-
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/dnn.hpp>
@@ -48,8 +46,6 @@
 
 namespace openshot
 {
-    using google::protobuf::util::TimeUtil;
-
     // Stores the detected object bounding boxes and its properties.
     struct CVDetectionData{
         CVDetectionData(){}
