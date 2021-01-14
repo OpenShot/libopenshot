@@ -41,7 +41,6 @@
 #include "Coordinate.h"
 #include "Point.h"
 #include "Json.h"
-#include "IKeyFrame.h"
 #include "KeyFrame.h"
 #include "KeyFrameBase.h"
 #include "protobuf_messages/trackerdata.pb.h"

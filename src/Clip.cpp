@@ -945,8 +945,10 @@ void Clip::SetJsonValue(const Json::Value root) {
 	// Set data from Json (if key is found)
 	if (!root["attached_id"].isNull())
 		attached_id = root["attached_id"].asString();
-		if (attached_id.size() > 0){
+		if (attached_id.size() > 0 && attached_id != "None"){
 			AttachToTracker(attached_id);
+		} else{
+			attachedObject = nullptr;
 		}
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
@@ -1265,7 +1267,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 
 	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
 	if (attachedObject){
-
 		// Access the KeyframeBBox properties
 		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(frame->number);
 
@@ -1275,7 +1276,6 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		scale_x.AddPoint(frame->number,  boxValues["w"]*boxValues["sx"]*2.0);
 		scale_y.AddPoint(frame->number, boxValues["h"]*boxValues["sy"]);
 		rotation.AddPoint(frame->number, boxValues["r"]);
-
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
