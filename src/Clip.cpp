@@ -1264,18 +1264,30 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 	}
+	
+	// Initialize bounding-box values
+	float box_cx = 0.0;
+	float box_cy = 0.0;
+	float box_sx = 0.0;
+	float box_sy = 0.0;
+	float box_r = 0.0;
 
 	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
 	if (attachedObject){
-		// Access the KeyframeBBox properties
-		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(frame->number);
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
-		// Set the bounding box keyframes to this clip keyframes
-		location_x.AddPoint(frame->number, (boxValues["cx"]-0.5));
-		location_y.AddPoint(frame->number, (boxValues["cy"]-0.5));
-		scale_x.AddPoint(frame->number,  boxValues["w"]*boxValues["sx"]*2.0);
-		scale_y.AddPoint(frame->number, boxValues["h"]*boxValues["sy"]);
-		rotation.AddPoint(frame->number, boxValues["r"]);
+		// Access the KeyframeBBox properties
+		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(timeline_frame_number);
+
+		// Get the bounding-box values and correct them by the clip's reference system
+		box_cx = boxValues["cx"] - 0.5;
+		box_cy = boxValues["cy"] - 0.5;
+		box_sx = boxValues["w"]*boxValues["sx"]*2.0;
+		box_sy = boxValues["h"]*boxValues["sy"];
+		box_r = boxValues["r"];
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
@@ -1285,9 +1297,14 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	// Adjust size for scale x and scale y
 	float sx = scale_x.GetValue(frame->number); // percentage X scale
 	float sy = scale_y.GetValue(frame->number); // percentage Y scale
+	// Change clip's scale to bounding-box scale
+	if(box_sx > 0.0 && box_sy > 0.0){
+		sx = box_sx;
+		sy = box_sy;
+	}
 	float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
-
+	
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
@@ -1329,9 +1346,9 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	QTransform transform;
 		
 	/* LOCATION, ROTATION, AND SCALE */
-	float r = rotation.GetValue(frame->number); // rotate in degrees
-	x += (width * location_x.GetValue(frame->number)); // move in percentage of final width
-	y += (height * location_y.GetValue(frame->number)); // move in percentage of final height
+	float r = rotation.GetValue(frame->number) + box_r; // rotate in degrees
+	x += (width * (location_x.GetValue(frame->number) + box_cx)); // move in percentage of final width
+	y += (height * (location_y.GetValue(frame->number) + box_cy)); // move in percentage of final height
 	float shear_x_value = shear_x.GetValue(frame->number);
 	float shear_y_value = shear_y.GetValue(frame->number);
 	float origin_x_value = origin_x.GetValue(frame->number);
