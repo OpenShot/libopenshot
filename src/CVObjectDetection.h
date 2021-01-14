@@ -30,8 +30,6 @@
 
 #pragma once
 
-#include <google/protobuf/util/time_util.h>
-
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/dnn.hpp>
@@ -42,14 +40,12 @@
 #include "Json.h"
 #include "ProcessingController.h"
 #include "Clip.h"
-#include "objdetectdata.pb.h"
+#include "protobuf_messages/objdetectdata.pb.h"
 
-#include "../src/sort_filter/sort.hpp"
+#include "sort_filter/sort.hpp"
 
 namespace openshot
 {
-    using google::protobuf::util::TimeUtil;
-
     // Stores the detected object bounding boxes and its properties.
     struct CVDetectionData{
         CVDetectionData(){}
@@ -67,13 +63,13 @@ namespace openshot
 
     /**
      * @brief This class runs trought a clip to detect objects and returns the bounding boxes and its properties.
-     * 
-     * Object detection is performed using YoloV3 model with OpenCV DNN module 
+     *
+     * Object detection is performed using YoloV3 model with OpenCV DNN module
      */
     class CVObjectDetection{
 
         private:
-        
+
         cv::dnn::Net net;
         std::vector<std::string> classNames;
         float confThreshold, nmsThreshold;
@@ -97,7 +93,7 @@ namespace openshot
         ProcessingController *processingController;
 
         void setProcessingDevice();
-        
+
         // Detect onbects on a single frame
         void DetectObjects(const cv::Mat &frame, size_t frame_number);
 
@@ -124,7 +120,7 @@ namespace openshot
         // Save protobuf file
         bool SaveObjDetectedData();
         // Add frame object detection data into protobuf message.
-        void AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData);
+        void AddFrameDataToProto(pb_objdetect::Frame* pbFrameData, CVDetectionData& dData);
 
         /// Get and Set JSON methods
         void SetJson(const std::string value); ///< Load JSON string into this object

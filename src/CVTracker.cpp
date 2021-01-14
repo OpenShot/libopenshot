@@ -29,13 +29,16 @@
  */
 
 #include "CVTracker.h"
+#include <google/protobuf/util/time_util.h>
 
+using namespace std;
 using namespace openshot;
+using google::protobuf::util::TimeUtil;
 
 
 // Constructor
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
-: processingController(&processingController), json_interval(false){   
+: processingController(&processingController), json_interval(false){
     SetJson(processInfoJson);
 }
 
@@ -78,11 +81,11 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         start = start + video.Start() * video.Reader()->info.fps.ToInt();
         end = video.End() * video.Reader()->info.fps.ToInt();
     }
-    
+
     if(error){
         return;
-    } 
-    
+    }
+
     processingController->SetError(false, "");
     bool trackerInit = false;
 
@@ -99,22 +102,22 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         size_t frame_number = frame;
         // Get current frame
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
-        
+
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
 
         // Pass the first frame to initialize the tracker
         if(!trackerInit){
-            
+
             // Initialize the tracker
             initTracker(cvimage, frame_number);
 
             trackerInit = true;
         }
         else{
-            // Update the object tracker according to frame 
+            // Update the object tracker according to frame
             trackerInit = trackFrame(cvimage, frame_number);
-            
+
             // Draw box on image
             FrameData fd = GetTrackedData(frame_number);
 
@@ -155,7 +158,7 @@ bool CVTracker::initTracker(cv::Mat &frame, size_t frameId){
     return true;
 }
 
-// Update the object tracker according to frame 
+// Update the object tracker according to frame
 bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
     // Update the tracking result
     bool ok = tracker->update(frame, bbox);
@@ -170,7 +173,7 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
         std::vector<cv::Rect> bboxes = {bbox};
         std::vector<float> confidence = {1.0};
         std::vector<int> classId = {1};
-        
+
         sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)), confidence, classId);
 
         for(auto TBox : sort.frameTrackingResult)
@@ -193,12 +196,12 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
 
 bool CVTracker::SaveTrackedData(){
     // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
+    pb_tracker::Tracker trackerMessage;
 
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
         FrameData fData = it->second;
-        libopenshottracker::Frame* pbFrameData;
+        pb_tracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
     }
 
@@ -222,13 +225,13 @@ bool CVTracker::SaveTrackedData(){
 }
 
 // Add frame tracked data into protobuf message.
-void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, FrameData& fData) {
+void CVTracker::AddFrameDataToProto(pb_tracker::Frame* pbFrameData, FrameData& fData) {
 
     // Save frame number and rotation
     pbFrameData->set_id(fData.frame_id);
     pbFrameData->set_rotation(0);
 
-    libopenshottracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
+    pb_tracker::Frame::Box* box = pbFrameData->mutable_bounding_box();
     // Save bounding box data
     box->set_x1(fData.x1);
     box->set_y1(fData.y1);
@@ -236,15 +239,15 @@ void CVTracker::AddFrameDataToProto(libopenshottracker::Frame* pbFrameData, Fram
     box->set_y2(fData.y2);
 }
 
-// Get tracker info for the desired frame 
+// Get tracker info for the desired frame
 FrameData CVTracker::GetTrackedData(size_t frameId){
 
     // Check if the tracker info for the requested frame exists
     if ( trackedDataById.find(frameId) == trackedDataById.end() ) {
-        
+
         return FrameData();
     } else {
-        
+
         return trackedDataById[frameId];
     }
 
@@ -269,7 +272,7 @@ void CVTracker::SetJson(const std::string value) {
 
 // Load Json::Value into this object
 void CVTracker::SetJsonValue(const Json::Value root) {
-    
+
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull()){
 		protobuf_data_path = (root["protobuf_data_path"].asString());
@@ -277,7 +280,7 @@ void CVTracker::SetJsonValue(const Json::Value root) {
     if (!root["tracker-type"].isNull()){
 		trackerType = (root["tracker-type"].asString());
 	}
-    
+
     if (!root["region"].isNull()){
         double x = root["region"]["x"].asDouble();
         double y = root["region"]["y"].asDouble();
@@ -310,7 +313,7 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 // Load protobuf data file
 bool CVTracker::_LoadTrackedData(){
     // Create tracker message
-    libopenshottracker::Tracker trackerMessage;
+    pb_tracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
@@ -326,14 +329,14 @@ bool CVTracker::_LoadTrackedData(){
 
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
-        const libopenshottracker::Frame& pbFrameData = trackerMessage.frame(i);
+        const pb_tracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data
         size_t id = pbFrameData.id();
         float rotation = pbFrameData.rotation();
 
         // Load bounding box data
-        const libopenshottracker::Frame::Box& box = pbFrameData.bounding_box();
+        const pb_tracker::Frame::Box& box = pbFrameData.bounding_box();
         float x1 = box.x1();
         float y1 = box.y1();
         float x2 = box.x2();
@@ -343,7 +346,7 @@ bool CVTracker::_LoadTrackedData(){
         trackedDataById[id] = FrameData(id, rotation, x1, y1, x2, y2);
     }
 
-    // Show the time stamp from the last update in tracker data file 
+    // Show the time stamp from the last update in tracker data file
     if (trackerMessage.has_last_updated()) {
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
     }

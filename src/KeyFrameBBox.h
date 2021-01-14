@@ -44,7 +44,7 @@
 #include "IKeyFrame.h"
 #include "KeyFrame.h"
 #include "KeyFrameBase.h"
-#include "trackerdata.pb.h"
+#include "protobuf_messages/trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
 

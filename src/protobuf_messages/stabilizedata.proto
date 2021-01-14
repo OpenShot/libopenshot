@@ -1,7 +1,7 @@
 
 // [START declaration]
 syntax = "proto3";
-package libopenshotstabilize;
+package pb_stabilize;
 
 import "google/protobuf/timestamp.proto";
 // [END declaration]
@@ -9,8 +9,8 @@ import "google/protobuf/timestamp.proto";
 // [START messages]
 message Frame {
   int32 id = 1;  // Frame ID.
-  
-  // TransformParam: frame smothed transformation 
+
+  // TransformParam: frame smothed transformation
   float dx = 2;
   float dy = 3;
   float da = 4;
@@ -25,7 +25,7 @@ message Frame {
 
 message Stabilization {
   repeated Frame frame = 1;
-  
+
   google.protobuf.Timestamp last_updated = 2;
 }
 // [END messages]

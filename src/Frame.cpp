@@ -943,7 +943,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 // Convert Qimage to Mat
 cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
 
-    cv::Mat mat = cv::Mat(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->bits(), qimage->bytesPerLine()).clone();
+    cv::Mat mat = cv::Mat(qimage->height(), qimage->width(), CV_8UC4, (uchar*)qimage->constBits(), qimage->bytesPerLine()).clone();
     cv::Mat mat2 = cv::Mat(mat.rows, mat.cols, CV_8UC3 );
     int from_to[] = { 0,0,  1,1,  2,2 };
     cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );

@@ -29,13 +29,16 @@
  */
 
 #include "effects/Tracker.h"
+#include <google/protobuf/util/time_util.h>
 #include "Timeline.h"
 
+using namespace std;
 using namespace openshot;
+using google::protobuf::util::TimeUtil;
 
 /// Blank constructor, useful when using Json to load the effect properties
 Tracker::Tracker(std::string clipTrackerDataPath)
-{   
+{
     // Init effect properties
 	init_effect_details();
     // Instantiate a keyframebbox object and point to it

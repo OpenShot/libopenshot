@@ -224,7 +224,7 @@ void KeyFrameBBox::ScalePoints(double time_scale){
 bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
 {
     // Variable to hold the loaded data
-    libopenshottracker::Tracker bboxMessage;
+    pb_tracker::Tracker bboxMessage;
 
     // Read the existing tracker message.
     fstream input(inputFilePath, ios::in | ios::binary);
@@ -242,13 +242,13 @@ bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
     for (size_t i = 0; i < bboxMessage.frame_size(); i++)
     {
         // Get data of the i-th frame
-        const libopenshottracker::Frame &pbFrameData = bboxMessage.frame(i);
+        const pb_tracker::Frame &pbFrameData = bboxMessage.frame(i);
 
         // Get frame number
         size_t frame_number = pbFrameData.id();
 
         // Get bounding box data from current frame
-        const libopenshottracker::Frame::Box &box = pbFrameData.bounding_box();
+        const pb_tracker::Frame::Box &box = pbFrameData.bounding_box();
 
         float width = box.x2() - box.x1();
         float height = box.y2() - box.y1();

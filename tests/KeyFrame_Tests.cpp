@@ -28,10 +28,20 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+#include <memory>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "OpenShot.h"
+#include "KeyFrame.h"
+#include "KeyFrameBBox.h"
+#include "Coordinate.h"
+#include "Fraction.h"
+#include "Clip.h"
+#include "Timeline.h"
+#include "effects/Tracker.h"
+#include "Point.h"
 
 using namespace std;
 using namespace openshot;
@@ -614,15 +624,19 @@ TEST(KeyFrameBBox_Scale_test){
 
 TEST(Attach_test){
 
+	std::stringstream path1, path2;
+	path1 << TEST_MEDIA_PATH << "test.avi";
+	path2 << TEST_MEDIA_PATH << "run.mp4";
+
 	// Create Timelime
 	Timeline t(1280, 720, Fraction(25,1), 44100, 2, ChannelLayout::LAYOUT_STEREO);
 
 	// Create Clip and add it to the Timeline
-	Clip clip(new ImageReader("../../examples/front.png"));
+	Clip clip(new FFmpegReader(path1.str()));
 	clip.Id("AAAA1234");
 
 	// Create a child clip and add it to the Timeline
-	Clip childClip(new ImageReader("../../examples/mask2.png"));
+	Clip childClip(new FFmpegReader(path2.str()));
 	childClip.Id("CHILD123");
 
 	// Add clips to timeline

@@ -29,8 +29,11 @@
  */
 
 #include "CVObjectDetection.h"
+#include <google/protobuf/util/time_util.h>
 
+using namespace std;
 using namespace openshot;
+using google::protobuf::util::TimeUtil;
 
 CVObjectDetection::CVObjectDetection(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), processingDevice("CPU"){
@@ -58,9 +61,9 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     if(error){
         return;
     }
-    
+
     processingController->SetError(false, "");
-    
+
     // Load names of classes
     std::ifstream ifs(classesFile.c_str());
     std::string line;
@@ -90,7 +93,7 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
         }
 
         std::shared_ptr<openshot::Frame> f = video.GetFrame(frame_number);
-        
+
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
 
@@ -104,7 +107,7 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
 }
 
 void CVObjectDetection::DetectObjects(const cv::Mat &frame, size_t frameId){
-    // Get frame as OpenCV Mat 
+    // Get frame as OpenCV Mat
     cv::Mat blob;
 
     // Create a 4D blob from the frame.
@@ -112,10 +115,10 @@ void CVObjectDetection::DetectObjects(const cv::Mat &frame, size_t frameId){
     inpWidth = inpHeight = 416;
 
     cv::dnn::blobFromImage(frame, blob, 1/255.0, cv::Size(inpWidth, inpHeight), cv::Scalar(0,0,0), true, false);
-    
+
     //Sets the input to the network
     net.setInput(blob);
-    
+
     // Runs the forward pass to get output of the output layers
     std::vector<cv::Mat> outs;
     net.forward(outs, getOutputsNames(net));
@@ -132,7 +135,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
-    
+
     for (size_t i = 0; i < outs.size(); ++i)
     {
         // Scan through all the bounding boxes output from the network and keep only the
@@ -154,14 +157,14 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
                 int height = (int)(data[3] * frameDims.height);
                 int left = centerX - width / 2;
                 int top = centerY - height / 2;
-                
+
                 classIds.push_back(classIdPoint.x);
                 confidences.push_back((float)confidence);
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
         }
     }
-    
+
     // Perform non maximum suppression to eliminate redundant overlapping boxes with
     // lower confidences
     std::vector<int> indices;
@@ -189,7 +192,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
         for(uint j = i+1; j<boxes.size(); j++){
             int xc_1 = boxes[i].x + (int)(boxes[i].width/2), yc_1 = boxes[i].y + (int)(boxes[i].width/2);
             int xc_2 = boxes[j].x + (int)(boxes[j].width/2), yc_2 = boxes[j].y + (int)(boxes[j].width/2);
-            
+
             if(fabs(xc_1 - xc_2) < 10 && fabs(yc_1 - yc_2) < 10){
                 if(classIds[i] == classIds[j]){
                     if(confidences[i] >= confidences[j]){
@@ -213,7 +216,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
     // Remove boxes based in IOU score
     for(uint i = 0; i<boxes.size(); i++){
         for(uint j = i+1; j<boxes.size(); j++){
-            
+
             if( iou(boxes[i], boxes[j])){
                 if(classIds[i] == classIds[j]){
                     if(confidences[i] >= confidences[j]){
@@ -233,7 +236,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
             }
         }
     }
-    
+
     // Normalize boxes coordinates
     std::vector<cv::Rect_<float>> normalized_boxes;
     for(auto box : boxes){
@@ -244,7 +247,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
         normalized_box.height = (box.height)/(float)frameDims.height;
         normalized_boxes.push_back(normalized_box);
     }
-    
+
     detectionsData[frameId] = CVDetectionData(classIds, confidences, normalized_boxes, frameId);
 }
 
@@ -276,13 +279,13 @@ bool CVObjectDetection::iou(cv::Rect pred_box, cv::Rect sort_box){
 std::vector<cv::String> CVObjectDetection::getOutputsNames(const cv::dnn::Net& net)
 {
     static std::vector<cv::String> names;
-    
+
     //Get the indices of the output layers, i.e. the layers with unconnected outputs
     std::vector<int> outLayers = net.getUnconnectedOutLayers();
-    
+
     //get the names of all the layers in the network
     std::vector<cv::String> layersNames = net.getLayerNames();
-    
+
     // Get the names of the output layers in names
     names.resize(outLayers.size());
     for (size_t i = 0; i < outLayers.size(); ++i)
@@ -293,17 +296,17 @@ std::vector<cv::String> CVObjectDetection::getOutputsNames(const cv::dnn::Net& n
 CVDetectionData CVObjectDetection::GetDetectionData(size_t frameId){
     // Check if the stabilizer info for the requested frame exists
     if ( detectionsData.find(frameId) == detectionsData.end() ) {
-        
+
         return CVDetectionData();
     } else {
-        
+
         return detectionsData[frameId];
     }
 }
 
 bool CVObjectDetection::SaveObjDetectedData(){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage;
+    pb_objdetect::ObjDetect objMessage;
 
     //Save class names in protobuf message
     for(int i = 0; i<classNames.size(); i++){
@@ -314,7 +317,7 @@ bool CVObjectDetection::SaveObjDetectedData(){
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,CVDetectionData>::iterator it=detectionsData.begin(); it!=detectionsData.end(); ++it){
         CVDetectionData dData = it->second;
-        libopenshotobjdetect::Frame* pbFrameData;
+        pb_objdetect::Frame* pbFrameData;
         AddFrameDataToProto(objMessage.add_frame(), dData);
     }
 
@@ -338,13 +341,13 @@ bool CVObjectDetection::SaveObjDetectedData(){
 }
 
 // Add frame object detection into protobuf message.
-void CVObjectDetection::AddFrameDataToProto(libopenshotobjdetect::Frame* pbFrameData, CVDetectionData& dData) {
+void CVObjectDetection::AddFrameDataToProto(pb_objdetect::Frame* pbFrameData, CVDetectionData& dData) {
 
     // Save frame number and rotation
     pbFrameData->set_id(dData.frameId);
 
     for(size_t i = 0; i < dData.boxes.size(); i++){
-        libopenshotobjdetect::Frame_Box* box = pbFrameData->add_bounding_box();
+        pb_objdetect::Frame_Box* box = pbFrameData->add_bounding_box();
 
         // Save bounding box data
         box->set_x(dData.boxes.at(i).x);
@@ -386,13 +389,13 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
 		processingDevice = (root["processing-device"].asString());
 	}
     if (!root["model-config"].isNull()){
-		modelConfiguration = (root["model-config"].asString()); 
+		modelConfiguration = (root["model-config"].asString());
         std::ifstream infile(modelConfiguration);
         if(!infile.good()){
             processingController->SetError(true, "Incorrect path to model config file");
             error = true;
         }
-    
+
 	}
     if (!root["model-weights"].isNull()){
 		modelWeights= (root["model-weights"].asString());
@@ -424,7 +427,7 @@ void CVObjectDetection::SetJsonValue(const Json::Value root) {
 // Load protobuf data file
 bool CVObjectDetection::_LoadObjDetectdData(){
     // Create tracker message
-    libopenshotobjdetect::ObjDetect objMessage; 
+    pb_objdetect::ObjDetect objMessage;
 
     {
         // Read the existing tracker message.
@@ -446,14 +449,14 @@ bool CVObjectDetection::_LoadObjDetectdData(){
     // Iterate over all frames of the saved message
     for (size_t i = 0; i < objMessage.frame_size(); i++) {
         // Create protobuf message reader
-        const libopenshotobjdetect::Frame& pbFrameData = objMessage.frame(i);
+        const pb_objdetect::Frame& pbFrameData = objMessage.frame(i);
 
         // Get frame Id
         size_t id = pbFrameData.id();
 
         // Load bounding box data
-        const google::protobuf::RepeatedPtrField<libopenshotobjdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
-        
+        const google::protobuf::RepeatedPtrField<pb_objdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
+
         // Construct data vectors related to detections in the current frame
         std::vector<int> classIds; std::vector<float> confidences; std::vector<cv::Rect_<float>> boxes;
 
@@ -475,8 +478,8 @@ bool CVObjectDetection::_LoadObjDetectdData(){
         detectionsData[id] = CVDetectionData(classIds, confidences, boxes, id);
     }
 
-    // Show the time stamp from the last update in object detector data file 
-    if (objMessage.has_last_updated()) 
+    // Show the time stamp from the last update in object detector data file
+    if (objMessage.has_last_updated())
         cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
 
     // Delete all global objects allocated by libprotobuf.

@@ -33,8 +33,6 @@
 
 #include "../EffectBase.h"
 
-#include <google/protobuf/util/time_util.h>
-
 #include <cmath>
 #include <fstream>
 #include <stdio.h>
@@ -42,13 +40,11 @@
 #include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+#include "protobuf_messages/trackerdata.pb.h"
 #include "../KeyFrameBBox.h"
 #include "../Clip.h"
-#include "trackerdata.pb.h"
 
 using namespace std;
-using google::protobuf::util::TimeUtil;
-
 namespace openshot
 {
 	/**

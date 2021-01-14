@@ -31,8 +31,6 @@
 #ifndef OPENSHOT_STABILIZATION_H
 #define OPENSHOT_STABILIZATION_H
 
-#include <google/protobuf/util/time_util.h>
-
 #define int64 opencv_broken_int
 #define uint64 opencv_broken_uint
 #include <opencv2/opencv.hpp>
@@ -40,13 +38,10 @@
 #undef uint64
 #undef int64
 #include <cmath>
-#include "stabilizedata.pb.h"
+#include "protobuf_messages/stabilizedata.pb.h"
 #include "ProcessingController.h"
 #include "Clip.h"
 #include "Json.h"
-
-using namespace std;
-using google::protobuf::util::TimeUtil;
 
 // Store the relative transformation parameters between consecutive frames
 struct TransformParam
@@ -82,22 +77,22 @@ struct CamTrajectory
 /**
  * @brief This class stabilizes a video frame using optical flow
  *
- * The relative motion between two consecutive frames is computed to obtain the global camera trajectory. 
+ * The relative motion between two consecutive frames is computed to obtain the global camera trajectory.
  * The camera trajectory is then smoothed to reduce jittering.
  */
-class CVStabilization {      
+class CVStabilization {
 
     private:
 
     int smoothingWindow; // In frames. The larger the more stable the video, but less reactive to sudden panning
-    
+
     size_t start;
     size_t end;
     double avr_dx, avr_dy, avr_da, max_dx, max_dy, max_da;
-    
+
     cv::Mat last_T;
     cv::Mat prev_grey;
-    std::vector <TransformParam> prev_to_cur_transform; // Previous to current 
+    std::vector <TransformParam> prev_to_cur_transform; // Previous to current
     std::string protobuf_data_path;
 
     uint progress;
@@ -108,7 +103,7 @@ class CVStabilization {
 
     // Track current frame features and find the relative transformation
     bool TrackFrameFeatures(cv::Mat frame, size_t frameNum);
-    
+
     std::vector<CamTrajectory> ComputeFramesTrajectory();
     std::map<size_t,CamTrajectory> SmoothTrajectory(std::vector <CamTrajectory> &trajectory);
 
@@ -120,17 +115,17 @@ class CVStabilization {
     std::map <size_t,CamTrajectory> trajectoryData; // Save camera trajectory data
     std::map <size_t,TransformParam> transformationData; // Save transormation data
 
-    // Set default smoothing window value to compute stabilization 
+    // Set default smoothing window value to compute stabilization
     CVStabilization(std::string processInfoJson, ProcessingController &processingController);
 
     // Process clip and store necessary stabilization data
     void stabilizeClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
-    
+
     /// Protobuf Save and Load methods
     // Save stabilization data to protobuf file
     bool SaveStabilizedData();
     // Add frame stabilization data into protobuf message
-    void AddFrameDataToProto(libopenshotstabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
+    void AddFrameDataToProto(pb_stabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
 
     // Return requested struct info for a given frame
     TransformParam GetTransformParamData(size_t frameId);

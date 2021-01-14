@@ -40,18 +40,6 @@
 
 namespace openshot
 {
-	struct SafeTimeSliceThread : juce::TimeSliceThread
-	{
-		SafeTimeSliceThread(const String & s) : juce::TimeSliceThread(s) {}
-		void run()
-		{
-			try {
-				juce::TimeSliceThread::run();
-			} catch (const TooManySeeks & e) {
-				// ...
-			}
-		}
-	};
 
 	/**
 	 *  @brief Singleton wrapper for AudioDeviceManager (to prevent multiple instances).
@@ -96,8 +84,7 @@ namespace openshot
 		juce::WaitableEvent played;
 		int buffer_size;
 		bool is_playing;
-		SafeTimeSliceThread time_thread;
-
+		juce::TimeSliceThread time_thread;
 		/// Constructor
 		AudioPlaybackThread();
 		/// Destructor
