@@ -787,23 +787,10 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
-	root["attached_id"] = add_property_json("Attached ID", 0.0, "string", GetAttachedId(), NULL, -1, -1, false, requested_frame);
-
-	// Add attached id choices (dropdown style)
-	if (timeline){
-		Timeline* parentTimeline = (Timeline *) timeline;
-		std::vector<std::string> tracked_ids = parentTimeline->GetTrackedObjectsIds();
-		Json::Value temp;
-		temp["name"] = "";
-		temp["value"] = "";
-		temp["selected"] = true;
-		root["attached_id"]["choices"].append(temp);
-		for (auto it = tracked_ids.begin(); it != tracked_ids.end(); ++it){
-			temp["name"] = *it;
-			temp["value"] = *it;
-			temp["selected"] = true;
-			root["attached_id"]["choices"].append(temp);
-		}
+	if (!attached_id.empty()) {
+		root["attached_id"] = add_property_json("Attached ID", 0.0, "string", attached_id, NULL, -1, -1, false, requested_frame);
+	} else {
+		root["attached_id"] = add_property_json("Attached ID", 0.0, "string", "None", NULL, -1, -1, false, requested_frame);
 	}
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));

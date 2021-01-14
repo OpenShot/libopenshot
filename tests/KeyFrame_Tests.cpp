@@ -620,8 +620,6 @@ TEST(KeyFrameBBox_Scale_test){
 	CHECK_EQUAL(30.0, bbox.height);
 }
 
-
-
 TEST(Attach_test){
 
 	std::stringstream path1, path2;
@@ -648,7 +646,7 @@ TEST(Attach_test){
 	clip.AddEffect(&tracker);
 
 	// Save a pointer to trackedData
-	std::shared_ptr<KeyFrameBBox>  trackedData = tracker.trackedData;
+	std::shared_ptr<KeyFrameBBox> trackedData = tracker.trackedData;
 
 	// Change trackedData scale
 	trackedData->scale_x.AddPoint(1, 2.0);
