@@ -1071,6 +1071,13 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			// Create Clip
 			Clip *c = new Clip();
 
+			// When a clip is attached to an object, it searches for the object
+			// on it's parent timeline. Setting the parent timeline of the clip here
+			// allows attaching it to an object when exporting the project (because)
+			// the exporter script initializes the clip and it's effects 
+			// before setting it's parent timeline.
+			c->ParentTimeline(this);
+
 			// Load Json into Clip
 			c->SetJsonValue(existing_clip);
 

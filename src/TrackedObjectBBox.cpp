@@ -475,7 +475,7 @@ std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t 
     // Calculate parentClip's frame number
     long parentClip_start_position = round( parentClip->Position() * parentClip->info.fps.ToDouble() ) + 1;
     long parentClip_start_frame = ( parentClip->Start() * parentClip->info.fps.ToDouble() ) + 1;
-    float parentClip_frame_number = frame_number - parentClip_start_position + parentClip_start_frame;
+    float parentClip_frame_number = round(frame_number - parentClip_start_position) + parentClip_start_frame;
 
     // Get parentClip's Keyframes
     float parentClip_location_x = parentClip->location_x.GetValue(parentClip_frame_number);

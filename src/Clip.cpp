@@ -248,19 +248,21 @@ Clip::~Clip()
 void Clip::AttachToTracker(std::string tracked_id)
 {
 	// Search for the tracked object on the timeline
-	Timeline *parentTimeline = (Timeline *) ParentTimeline();
+	Timeline* parentTimeline = (Timeline *) ParentTimeline();
 	
-	// Create a smart pointer to the tracked object from the timeline
-	std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
-	
-	// Check for valid tracked object
-	if (trackedObject){
-		SetAttachedObject(trackedObject);
-		return;
+	// Check if the clip has a parent timeline
+	if (parentTimeline){
+
+		// Create a smart pointer to the tracked object from the timeline
+		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
+		
+		// Check for valid tracked object
+		if (trackedObject){
+			SetAttachedObject(trackedObject);
+		}
+
 	}
-	else{
-		return;
-	}
+	return;
 }
 
 // Set the pointer to the trackedObject this clip is attached to
@@ -1138,17 +1140,22 @@ void Clip::AddEffect(EffectBase* effect)
 	
 		Timeline* parentTimeline = (Timeline *) ParentTimeline();
 
-		// Downcast effect as Tracker
-		Tracker* tracker = (Tracker *) effect;
+		// Check if this clip has a parent timeline
+		if (parentTimeline){
 
-		// Get tracked data from the Tracker effect
-		std::shared_ptr<openshot::TrackedObjectBBox> trackedData = tracker->trackedData;
+			// Downcast effect as Tracker
+			Tracker* tracker = (Tracker *) effect;
 
-		// Set tracked data parent clip to this
-		trackedData->ParentClip(this);
+			// Get tracked data from the Tracker effect
+			std::shared_ptr<openshot::TrackedObjectBBox> trackedData = tracker->trackedData;
 
-		// Add tracked data to the timeline
-		parentTimeline->AddTrackedObject(trackedData);
+			// Set tracked data parent clip to this
+			trackedData->ParentClip(this);
+
+			// Add tracked data to the timeline
+			parentTimeline->AddTrackedObject(trackedData);
+
+		}
 	}
 
 	// Clear cache
