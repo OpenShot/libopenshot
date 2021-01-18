@@ -1144,6 +1144,9 @@ void Clip::AddEffect(EffectBase* effect)
 		// Get tracked data from the Tracker effect
 		std::shared_ptr<openshot::TrackedObjectBBox> trackedData = tracker->trackedData;
 
+		// Set tracked data parent clip to this
+		trackedData->ParentClip(this);
+
 		// Add tracked data to the timeline
 		parentTimeline->AddTrackedObject(trackedData);
 	}
@@ -1228,6 +1231,12 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
+
+	// Apply stretch scale to correctly fit the bounding-box
+	if (attachedObject){
+		scale = SCALE_STRETCH;
+	}
+
 	switch (scale)
 	{
 		case (SCALE_FIT): {
@@ -1272,6 +1281,13 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	float box_sy = 0.0;
 	float box_r = 0.0;
 
+	// Initialize attached object's parent clip's properties
+	float attachedObjectParentClip_lx = 0.0;
+	float attachedObjectParentClip_ly = 0.0;
+	float attachedObjectParentClip_sx = 0.0;
+	float attachedObjectParentClip_sy = 0.0;
+	float attachedObjectParentClip_r = 0.0;
+
 	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
 	if (attachedObject){
 		// Convert Clip's frame position to Timeline's frame position
@@ -1279,17 +1295,28 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
-		// Get attachedObject's parent clip frame number
-		Timeline* parentTimeline = (Timeline *) ParentTimeline();
-		double attachedObjectParentClip_frame_number = timeline_frame_number - clip_start_position + clip_start_frame;
+		// Initialize attachedObject's properties
+		std::map<std::string, float> boxValues;
 
-		// Access the TrackedObjectBBox properties
-		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(attachedObjectParentClip_frame_number);
-
+		// Get attachedObject's properties and attachedObject's parent clip's properties
+		std::map<std::string, float> attachedObject_ClipProperties = attachedObject->GetParentClipProperties(timeline_frame_number);
+		if (!attachedObject_ClipProperties.empty()){
+			float attachedObjectParentClip_frame_number = attachedObject_ClipProperties["frame_number"];
+			attachedObjectParentClip_lx = attachedObject_ClipProperties["location_x"];
+			attachedObjectParentClip_ly = attachedObject_ClipProperties["location_y"];
+			attachedObjectParentClip_sx = attachedObject_ClipProperties["scale_x"];
+			attachedObjectParentClip_sy = attachedObject_ClipProperties["scale_y"];
+			attachedObjectParentClip_r = attachedObject_ClipProperties["rotation"];
+			// Access the attachedObject's properties
+			boxValues = attachedObject->GetBoxValues(attachedObjectParentClip_frame_number);	
+		} else {
+			// Access the attachedObject's properties
+			boxValues = attachedObject->GetBoxValues(timeline_frame_number);
+		}
+		
 		// Get the bounding-box values and correct them by the clip's reference system
 		box_cx = boxValues["cx"] - 0.5;
 		box_cy = boxValues["cy"] - 0.5;
-		// box_sx = boxValues["w"]*boxValues["sx"]*2.0;
 		box_sx = boxValues["w"]*boxValues["sx"];
 		box_sy = boxValues["h"]*boxValues["sy"];
 		box_r = boxValues["r"];
@@ -1351,9 +1378,9 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	QTransform transform;
 		
 	/* LOCATION, ROTATION, AND SCALE */
-	float r = rotation.GetValue(frame->number) + box_r; // rotate in degrees
-	x += (width * (location_x.GetValue(frame->number) + box_cx)); // move in percentage of final width
-	y += (height * (location_y.GetValue(frame->number) + box_cy)); // move in percentage of final height
+	float r = rotation.GetValue(frame->number) + box_r + attachedObjectParentClip_r; // rotate in degrees
+	x += (width * (location_x.GetValue(frame->number) + box_cx + attachedObjectParentClip_lx )); // move in percentage of final width
+	y += (height * (location_y.GetValue(frame->number) + box_cy + attachedObjectParentClip_ly )); // move in percentage of final height
 	float shear_x_value = shear_x.GetValue(frame->number);
 	float shear_y_value = shear_y.GetValue(frame->number);
 	float origin_x_value = origin_x.GetValue(frame->number);
