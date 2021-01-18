@@ -87,7 +87,8 @@ set(OPENSHOT_SOURCES
   Json.cpp
   KeyFrame.cpp
   KeyFrameBase.cpp
-  KeyFrameBBox.cpp
+  TrackedObjectBase.cpp
+  TrackedObjectBBox.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp
   PlayerBase.cpp

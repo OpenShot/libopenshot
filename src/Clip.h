@@ -54,7 +54,7 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
-#include "KeyFrameBase.h"
+#include "TrackedObjectBase.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
@@ -125,7 +125,7 @@ namespace openshot {
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
 		bool is_open;	///> Is Reader opened
 		std::string attached_id; ///< Id of the bounding box that this clip is attached to
-		std::shared_ptr<openshot::KeyframeBase> attachedObject;
+		std::shared_ptr<openshot::TrackedObjectBase> attachedObject;
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -206,9 +206,9 @@ namespace openshot {
 		void AttachToTracker(std::string tracked_id);
 
 		/// Set the pointer to the trackedObject this clip is attached to
-		void SetAttachedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject);
+		void SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
 		/// Return a pointer to the trackedObject this clip is attached to
-		std::shared_ptr<openshot::KeyframeBase> GetAttachedObject() const { return attachedObject; };
+		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return attachedObject; };
 		
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the KeyFrameBBox class
+ * @brief Header file for the TrackedObjectBBox class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_BBOXKEYFRAME_H
-#define OPENSHOT_BBOXKEYFRAME_H
+#ifndef OPENSHOT_TRACKEDOBJECTBBOX_H
+#define OPENSHOT_TRACKEDOBJECTBBOX_H
 
 #include <iostream>
 #include <iomanip>
@@ -42,7 +42,7 @@
 #include "Point.h"
 #include "Json.h"
 #include "KeyFrame.h"
-#include "KeyFrameBase.h"
+#include "TrackedObjectBase.h"
 #include "protobuf_messages/trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
@@ -154,7 +154,7 @@ namespace openshot
      * object of this class. 
 	 */    
 
-    class KeyFrameBBox : public KeyframeBase
+    class TrackedObjectBBox : public TrackedObjectBase
     {
     private:
         bool visible;
@@ -171,7 +171,7 @@ namespace openshot
         std::string protobufDataPath; ///< Path to the protobuf file that holds the bbox points across the frames
 
         /// Default Constructor
-        KeyFrameBBox();
+        TrackedObjectBBox();
 
         /// Add a BBox to the BoxVec map
         void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle);
@@ -197,7 +197,7 @@ namespace openshot
         /// Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
         BBox GetBox(int64_t frame_number) const
         {
-            return const_cast<KeyFrameBBox *>(this)->GetBox(frame_number);
+            return const_cast<TrackedObjectBBox *>(this)->GetBox(frame_number);
         }
         BBox GetBox(int64_t frame_number);
 
@@ -227,7 +227,9 @@ namespace openshot
         Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
 
         /// Return the bounding box properties and it's keyframes indexed by their names
-        std::map<std::string, float> GetBoxValues(int64_t frame_number) override; 
+        std::map<std::string, float> GetBoxValues(int64_t frame_number) override;
+        /// Return properties of this object's parent clip
+        std::map<std::string, float> GetParentClipProperties(int64_t frame_number);
     
     };
 } // namespace openshot

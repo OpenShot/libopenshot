@@ -41,11 +41,13 @@ Tracker::Tracker(std::string clipTrackerDataPath)
 {
     // Init effect properties
 	init_effect_details();
-    // Instantiate a keyframebbox object and point to it
-	KeyFrameBBox trackedDataObject;
-	trackedData = std::make_shared<KeyFrameBBox>(trackedDataObject);
+    // Instantiate a TrackedObjectBBox object and point to it
+	TrackedObjectBBox trackedDataObject;
+	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 	// Tries to load the tracked object's data from protobuf file
 	trackedData->LoadBoxData(clipTrackerDataPath);
+	ClipBase* parentClip = this->ParentClip();
+	trackedData->ParentClip(parentClip);
 }
 
 // Default constructor
@@ -53,9 +55,11 @@ Tracker::Tracker()
 {
 	// Init effect properties
 	init_effect_details();
-	// Instantiate a keyframebbox object and point to it
-	KeyFrameBBox trackedDataObject;
-	trackedData = std::make_shared<KeyFrameBBox>(trackedDataObject);
+	// Instantiate a TrackedObjectBBox object and point to it
+	TrackedObjectBBox trackedDataObject;
+	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
+	ClipBase* parentClip = this->ParentClip();
+	trackedData->ParentClip(parentClip);
 }
 
 

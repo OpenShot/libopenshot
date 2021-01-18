@@ -98,10 +98,6 @@ namespace openshot{
 	}
 
     KeyframeBase::KeyframeBase(){
-		id = "TESTBASEID";
+		
     }
-
-	KeyframeBase::KeyframeBase(std::string _id){
-		SetId(_id);
-	}
 }

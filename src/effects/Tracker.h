@@ -41,7 +41,7 @@
 #include "../Json.h"
 #include "../KeyFrame.h"
 #include "protobuf_messages/trackerdata.pb.h"
-#include "../KeyFrameBBox.h"
+#include "../TrackedObjectBBox.h"
 #include "../Clip.h"
 
 using namespace std;
@@ -63,7 +63,7 @@ namespace openshot
 
 	public:
 		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
-		std::shared_ptr<KeyFrameBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
+		std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);

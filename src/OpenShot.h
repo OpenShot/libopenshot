@@ -132,7 +132,7 @@
 	#include "TextReader.h"
 #endif
 #include "KeyFrame.h"
-#include "KeyFrameBBox.h"
+#include "TrackedObjectBBox.h"
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"

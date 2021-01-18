@@ -35,7 +35,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "KeyFrame.h"
-#include "KeyFrameBBox.h"
+#include "TrackedObjectBBox.h"
 #include "Coordinate.h"
 #include "Fraction.h"
 #include "Clip.h"
@@ -506,14 +506,14 @@ TEST(Keyframe_Handle_Large_Segment)
 }
 
 
-TEST(KeyFrameBBox_init_test) {
+TEST(TrackedObjectBBox_init_test) {
 	
-	KeyFrameBBox kfb;
+	TrackedObjectBBox kfb;
 
 }
 
-TEST(KeyFrameBBox_addBox_test) {
-	KeyFrameBBox kfb;
+TEST(TrackedObjectBBox_addBox_test) {
+	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 
@@ -527,8 +527,8 @@ TEST(KeyFrameBBox_addBox_test) {
 }
 
 
-TEST(KeyFrameBBox_GetVal_test) {
-	KeyFrameBBox kfb;
+TEST(TrackedObjectBBox_GetVal_test) {
+	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	
@@ -542,8 +542,8 @@ TEST(KeyFrameBBox_GetVal_test) {
 }
 
 
-TEST(KeyFrameBBox_GetVal_Interpolation) {
-	KeyFrameBBox kfb;
+TEST(TrackedObjectBBox_GetVal_Interpolation) {
+	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0, 0.0);
@@ -574,8 +574,8 @@ TEST(KeyFrameBBox_GetVal_Interpolation) {
 }
 
 
-TEST(KeyFrameBBox_Json_set) {
-	KeyFrameBBox kfb;
+TEST(TrackedObjectBBox_Json_set) {
+	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0, 0.0);
@@ -588,7 +588,7 @@ TEST(KeyFrameBBox_Json_set) {
 	kfb.SetBaseFPS(Fraction(24.0, 1.0));
 
 	auto dataJSON = kfb.Json();
-	KeyFrameBBox fromJSON_kfb;
+	TrackedObjectBBox fromJSON_kfb;
 	fromJSON_kfb.SetJson(dataJSON);
 
 	CHECK_EQUAL(kfb.GetBaseFPS().num, fromJSON_kfb.GetBaseFPS().num);
@@ -607,8 +607,8 @@ TEST(KeyFrameBBox_Json_set) {
 	CHECK_EQUAL(kfb_bbox.angle, fromJSON_bbox.angle);
 }
 
-TEST(KeyFrameBBox_Scale_test){
-	KeyFrameBBox kfb;
+TEST(TrackedObjectBBox_Scale_test){
+	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 10.0, 10.0, 0.0);
 	kfb.scale_x.AddPoint(1.0, 2.0);
@@ -646,7 +646,7 @@ TEST(Attach_test){
 	clip.AddEffect(&tracker);
 
 	// Save a pointer to trackedData
-	std::shared_ptr<KeyFrameBBox> trackedData = tracker.trackedData;
+	std::shared_ptr<TrackedObjectBBox> trackedData = tracker.trackedData;
 
 	// Change trackedData scale
 	trackedData->scale_x.AddPoint(1, 2.0);
@@ -656,8 +656,8 @@ TEST(Attach_test){
 	auto trackedDataJson = trackedData->JsonValue();
 
 	// Get and cast the trakcedObject
-	auto trackedObject_base = t.GetTrackedObject("TESTBASEID");
-	std::shared_ptr<KeyFrameBBox> trackedObject = std::static_pointer_cast<KeyFrameBBox>(trackedObject_base);
+	auto trackedObject_base = t.GetTrackedObject("None");
+	std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_base);
 	CHECK_EQUAL(trackedData, trackedObject);
 
 	// Set trackedObject Json Value
@@ -668,7 +668,7 @@ TEST(Attach_test){
 	childClip.Open();
 	childClip.AttachToTracker(tracked_id);
 	
-	std::shared_ptr<KeyFrameBBox> trackedTest = std::static_pointer_cast<KeyFrameBBox>(childClip.GetAttachedObject());
+	std::shared_ptr<TrackedObjectBBox> trackedTest = std::static_pointer_cast<TrackedObjectBBox>(childClip.GetAttachedObject());
 	
 	CHECK_EQUAL(trackedData->scale_x.GetValue(1), trackedTest->scale_x.GetValue(1));
 	
@@ -678,10 +678,10 @@ TEST(Attach_test){
 
 TEST(GetBoxValues_test){
 
-	KeyFrameBBox trackedDataObject;
+	TrackedObjectBBox trackedDataObject;
 	trackedDataObject.AddBox(1, 10.0, 10.0, 20.0, 20.0, 30.0);
 
-	std::shared_ptr<KeyframeBase> trackedData = std::make_shared<KeyFrameBBox>(trackedDataObject);
+	std::shared_ptr<TrackedObjectBase> trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 	
 	auto boxValues = trackedData->GetBoxValues(1);
 

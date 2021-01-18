@@ -240,8 +240,8 @@ Timeline::~Timeline() {
 	}
 }
 
-// Add to the tracked_objects map a pointer to a tracked object (KeyframeBBox) 
-void Timeline::AddTrackedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject){
+// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 
 	// Search for the tracked object on the map
 	auto iterator = tracked_objects.find(trackedObject->Id());
@@ -254,18 +254,19 @@ void Timeline::AddTrackedObject(std::shared_ptr<openshot::KeyframeBase> trackedO
 		// Tracked object's id not present -> insert it on the map
 		tracked_objects[trackedObject->Id()] = trackedObject;
 	}
+
 	return;
 }
 
 // Return tracked object pointer by it's id
-std::shared_ptr<openshot::KeyframeBase> Timeline::GetTrackedObject(std::string id) const{
+std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::string id) const{
 
 	// Search for the tracked object on the map
 	auto iterator = tracked_objects.find(id);
 
 	if (iterator != tracked_objects.end()){
 		// Id found, return the pointer to the tracked object
-		std::shared_ptr<openshot::KeyframeBase> trackedObject = iterator->second;
+		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = iterator->second;
 		return trackedObject;
 	}
 	else {
@@ -274,15 +275,15 @@ std::shared_ptr<openshot::KeyframeBase> Timeline::GetTrackedObject(std::string i
 	}	
 }
 
-// Return the ID's of the tracked objects as a vector of strings
-std::vector<std::string> Timeline::GetTrackedObjectsIds() const{
+// Return the ID's of the tracked objects as a list of strings
+std::list<std::string> Timeline::GetTrackedObjectsIds() const{
 
-	// Create a vector of strings
-	std::vector<std::string> trackedObjects_ids;
+	// Create a list of strings
+	std::list<std::string> trackedObjects_ids;
 
 	// Iterate through the tracked_objects map
 	for (auto const& it: tracked_objects){
-		// Add the IDs to the vector
+		// Add the IDs to the list
 		trackedObjects_ids.push_back(it.first);
 	}
 

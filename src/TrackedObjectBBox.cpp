@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "KeyFrameBBox.h"
+#include "TrackedObjectBBox.h"
+#include "Clip.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -39,14 +40,14 @@ using namespace openshot;
 
 
 // Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
-KeyFrameBBox::KeyFrameBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0)
+TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0)
 {
     this->TimeScale = 1.0;
     return;
 }
 
 // Add a BBox to the BoxVec map
-void KeyFrameBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle)
+void TrackedObjectBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle)
 {
     // Check if the given frame number is valid
     if (_frame_num < 0)
@@ -73,7 +74,7 @@ void KeyFrameBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _width
 }
 
 // Get the size of BoxVec map
-int64_t KeyFrameBBox::GetLength() const
+int64_t TrackedObjectBBox::GetLength() const
 {
     if (BoxVec.empty())
         return 0;
@@ -83,7 +84,7 @@ int64_t KeyFrameBBox::GetLength() const
 }
 
 // Check if there is a bounding-box in the given frame
-bool KeyFrameBBox::Contains(int64_t frame_num)
+bool TrackedObjectBBox::Contains(int64_t frame_num)
 {
     // Get the time of given frame
     double time = this->FrameNToTime(frame_num, 1.0);
@@ -96,7 +97,7 @@ bool KeyFrameBBox::Contains(int64_t frame_num)
 }
 
 // Remove a bounding-box from the BoxVec map
-void KeyFrameBBox::RemoveBox(int64_t frame_number)
+void TrackedObjectBBox::RemoveBox(int64_t frame_number)
 {
     // Get the time of given frame
     double time = this->FrameNToTime(frame_number, 1.0);
@@ -111,7 +112,7 @@ void KeyFrameBBox::RemoveBox(int64_t frame_number)
 }
 
 // Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
-BBox KeyFrameBBox::GetBox(int64_t frame_number)
+BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 {
     // Get the time position of the given frame.
     double time = this->FrameNToTime(frame_number, this->TimeScale);
@@ -164,7 +165,7 @@ BBox KeyFrameBBox::GetBox(int64_t frame_number)
 }
 
 // Interpolate the bouding-boxes properties
-BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target)
+BBox TrackedObjectBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target)
 {
     // Interpolate the x-coordinate of the center point
     Point cx_left(t1, left.cx, openshot::InterpolationType::LINEAR);
@@ -198,30 +199,30 @@ BBox KeyFrameBBox::InterpolateBoxes(double t1, double t2, BBox left, BBox right,
 }
 
 // Update object's BaseFps
-void KeyFrameBBox::SetBaseFPS(Fraction fps){
+void TrackedObjectBBox::SetBaseFPS(Fraction fps){
     this->BaseFps = fps;
     return;
 }
 
 // Return the object's BaseFps
-Fraction KeyFrameBBox::GetBaseFPS(){
+Fraction TrackedObjectBBox::GetBaseFPS(){
     return BaseFps;
 }
 
 // Get the time of the given frame
-double KeyFrameBBox::FrameNToTime(int64_t frame_number, double time_scale){
+double TrackedObjectBBox::FrameNToTime(int64_t frame_number, double time_scale){
     double time = ((double)frame_number) * this->BaseFps.Reciprocal().ToDouble() * (1.0 / time_scale);
 
     return time;
 }
 
 // Update the TimeScale member variable
-void KeyFrameBBox::ScalePoints(double time_scale){
+void TrackedObjectBBox::ScalePoints(double time_scale){
     this->TimeScale = time_scale;
 }
 
 // Load the bounding-boxes information from the protobuf file 
-bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
+bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 {
     // Variable to hold the loaded data
     pb_tracker::Tracker bboxMessage;
@@ -277,20 +278,20 @@ bool KeyFrameBBox::LoadBoxData(std::string inputFilePath)
 }
 
 // Clear the BoxVec map
-void KeyFrameBBox::clear()
+void TrackedObjectBBox::clear()
 {
     BoxVec.clear();
 }
 
 // Generate JSON string of this object
-std::string KeyFrameBBox::Json() const
+std::string TrackedObjectBBox::Json() const
 {
     // Return formatted string
     return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
-Json::Value KeyFrameBBox::JsonValue() const
+Json::Value TrackedObjectBBox::JsonValue() const
 {
     // Create root json object
     Json::Value root;
@@ -313,7 +314,7 @@ Json::Value KeyFrameBBox::JsonValue() const
 }
 
 // Load JSON string into this object
-void KeyFrameBBox::SetJson(const std::string value)
+void TrackedObjectBBox::SetJson(const std::string value)
 {
     // Parse JSON string into JSON objects
     try
@@ -331,12 +332,12 @@ void KeyFrameBBox::SetJson(const std::string value)
 }
 
 // Load Json::Value into this object
-void KeyFrameBBox::SetJsonValue(const Json::Value root)
+void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 {   
 
     // Set the Id
     if (!root["box_id"].isNull())
-        SetId(root["box_id"].asString());
+        Id(root["box_id"].asString());
 
     // Set the BaseFps by the given JSON object
     if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
@@ -374,7 +375,7 @@ void KeyFrameBBox::SetJsonValue(const Json::Value root)
 
 // Get all properties for a specific frame (perfect for a UI to display the current state
 // of all properties at any time)
-Json::Value KeyFrameBBox::PropertiesJSON(int64_t requested_frame) const
+Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 {
     Json::Value root;
 
@@ -402,7 +403,7 @@ Json::Value KeyFrameBBox::PropertiesJSON(int64_t requested_frame) const
 
 
 // Generate JSON for a property
-Json::Value KeyFrameBBox::add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const {
+Json::Value TrackedObjectBBox::add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const {
 
 	// Requested Point
 	const Point requested_point(requested_frame, requested_frame);
@@ -439,7 +440,7 @@ Json::Value KeyFrameBBox::add_property_json(std::string name, float value, std::
 }
 
 // Return the bounding box properties and it's keyframes indexed by their names
-std::map<std::string, float> KeyFrameBBox::GetBoxValues(int64_t frame_number){
+std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_number){
 
     // Create the map
     std::map<std::string, float> boxValues;
@@ -463,4 +464,35 @@ std::map<std::string, float> KeyFrameBBox::GetBoxValues(int64_t frame_number){
 
     
     return boxValues;
+}
+
+// Return properties of this object's parent clip
+std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number){
+    
+    // Get the parent clip of this object as a Clip pointer
+    Clip* parentClip = (Clip *) ParentClip();
+
+    // Calculate parentClip's frame number
+    long parentClip_start_position = round( parentClip->Position() * parentClip->info.fps.ToDouble() ) + 1;
+    long parentClip_start_frame = ( parentClip->Start() * parentClip->info.fps.ToDouble() ) + 1;
+    float parentClip_frame_number = frame_number - parentClip_start_position + parentClip_start_frame;
+
+    // Get parentClip's Keyframes
+    float parentClip_location_x = parentClip->location_x.GetValue(parentClip_frame_number);
+    float parentClip_location_y = parentClip->location_y.GetValue(parentClip_frame_number);
+    float parentClip_scale_x = parentClip->scale_x.GetValue(parentClip_frame_number);
+    float parentClip_scale_y = parentClip->scale_y.GetValue(parentClip_frame_number);
+    float parentClip_rotation = parentClip->rotation.GetValue(parentClip_frame_number);
+
+    std::map<std::string, float> parentClipProperties;
+
+    parentClipProperties["frame_number"] = parentClip_frame_number;
+    parentClipProperties["timeline_frame_number"] = frame_number;
+    parentClipProperties["location_x"] = parentClip_location_x;
+    parentClipProperties["location_y"] = parentClip_location_y;
+    parentClipProperties["scale_x"] = parentClip_scale_x;
+    parentClipProperties["scale_y"] = parentClip_scale_y;
+    parentClipProperties["rotation"] = parentClip_rotation;
+
+    return parentClipProperties;
 }

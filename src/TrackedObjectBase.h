@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the KeyframeBase class
+ * @brief Header file for the TrackedObjectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_KEYFRAMEBASE_H
-#define OPENSHOT_KEYFRAMEBASE_H
+#ifndef OPENSHOT_TRACKEDOBJECTBASE_H
+#define OPENSHOT_TRACKEDOBJECTBASE_H
 
 #include <iostream>
 #include <iomanip>
@@ -42,6 +42,7 @@
 #include "Coordinate.h"
 #include "Point.h"
 #include "Json.h"
+#include "ClipBase.h"
 
 
 namespace openshot {
@@ -56,33 +57,41 @@ namespace openshot {
 	 * frames the animation needs to last) from the value of 0 to 640.
 	 */
 
-	/// Check if the X coordinate of a given Point is lower than a given value
-	bool IsPointBeforeX(Point const & p, double const x);
-
-	/// Linear interpolation between two points
-	double InterpolateLinearCurve(Point const & left, Point const & right, double const target);
-
-	/// Bezier interpolation between two points
-	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error);
-
-	/// Interpolate two points using the right Point's interpolation method
-	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error);
-
-	// template<typename Check>
-	// int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check);
-
-    class KeyframeBase{
+    class TrackedObjectBase {
+	private:
+		std::string id;
+		ClipBase* parentClip;
 
     public:
 		
         /// Blank constructor
-        KeyframeBase();
+        TrackedObjectBase();
 
-		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
-		/// 1.0 = same size, 1.05 = 5% increase, etc...
-		virtual void ScalePoints(double scale) { return; };
+		/// Default constructor
+		TrackedObjectBase(std::string _id);
 
-    };
+        /// Get and set the id of this object
+		std::string Id() const { return id; }
+		void Id(std::string _id) { id = _id; }
+        /// Get and set the parentClip of this object
+		ClipBase* ParentClip() { return parentClip; }
+		void ParentClip(ClipBase* clip) { parentClip = clip; }
+
+        /// Scale a property
+        virtual void ScalePoints(double scale) { return; };
+		/// Return the main properties of a TrackedObjectBBox instance using a pointer to this base class
+		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) { std::map<std::string, float> ret; return ret; };
+        /// Return the main properties of the tracked object's parent clip
+        virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) { std::map<std::string, float> ret; return ret; }
+    
+		/// Get and Set JSON methods
+        virtual std::string Json() const = 0;                  ///< Generate JSON string of this object
+        virtual Json::Value JsonValue() const = 0;             ///< Generate Json::Value for this object
+        virtual void SetJson(const std::string value) = 0;     ///< Load JSON string into this object
+        virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
+
+	
+	};
 } // Namespace openshot
 
 #endif

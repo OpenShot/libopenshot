@@ -251,7 +251,7 @@ void Clip::AttachToTracker(std::string tracked_id)
 	Timeline *parentTimeline = (Timeline *) ParentTimeline();
 	
 	// Create a smart pointer to the tracked object from the timeline
-	std::shared_ptr<openshot::KeyframeBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
+	std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
 	
 	// Check for valid tracked object
 	if (trackedObject){
@@ -264,7 +264,7 @@ void Clip::AttachToTracker(std::string tracked_id)
 }
 
 // Set the pointer to the trackedObject this clip is attached to
-void Clip::SetAttachedObject(std::shared_ptr<openshot::KeyframeBase> trackedObject){
+void Clip::SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 	attachedObject = trackedObject;
 	return;
 }
@@ -1142,7 +1142,7 @@ void Clip::AddEffect(EffectBase* effect)
 		Tracker* tracker = (Tracker *) effect;
 
 		// Get tracked data from the Tracker effect
-		std::shared_ptr<openshot::KeyFrameBBox> trackedData = tracker->trackedData;
+		std::shared_ptr<openshot::TrackedObjectBBox> trackedData = tracker->trackedData;
 
 		// Add tracked data to the timeline
 		parentTimeline->AddTrackedObject(trackedData);
@@ -1279,13 +1279,18 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
-		// Access the KeyframeBBox properties
-		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(timeline_frame_number);
+		// Get attachedObject's parent clip frame number
+		Timeline* parentTimeline = (Timeline *) ParentTimeline();
+		double attachedObjectParentClip_frame_number = timeline_frame_number - clip_start_position + clip_start_frame;
+
+		// Access the TrackedObjectBBox properties
+		std::map<std::string, float> boxValues = attachedObject->GetBoxValues(attachedObjectParentClip_frame_number);
 
 		// Get the bounding-box values and correct them by the clip's reference system
 		box_cx = boxValues["cx"] - 0.5;
 		box_cy = boxValues["cy"] - 0.5;
-		box_sx = boxValues["w"]*boxValues["sx"]*2.0;
+		// box_sx = boxValues["w"]*boxValues["sx"]*2.0;
+		box_sx = boxValues["w"]*boxValues["sx"];
 		box_sy = boxValues["h"]*boxValues["sy"];
 		box_r = boxValues["r"];
 	}
