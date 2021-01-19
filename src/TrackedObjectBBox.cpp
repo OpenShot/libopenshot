@@ -440,7 +440,7 @@ Json::Value TrackedObjectBBox::add_property_json(std::string name, float value, 
 }
 
 // Return the bounding box properties and it's keyframes indexed by their names
-std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_number){
+std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_number) const {
 
     // Create the map
     std::map<std::string, float> boxValues;
@@ -467,7 +467,7 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
 }
 
 // Return properties of this object's parent clip
-std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number){
+std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number) const {
     
     // Get the parent clip of this object as a Clip pointer
     Clip* parentClip = (Clip *) ParentClip();

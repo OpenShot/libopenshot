@@ -825,16 +825,50 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
+	
+	if (attachedObject){
+
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
+
+		// Get attached object's parent clip properties
+		std::map< std::string, float > attached_clip_properties = attachedObject->GetParentClipProperties(timeline_frame_number);
+		double attached_frame_number = attached_clip_properties["frame_number"];
+
+		// Get attached object properties
+		std::map< std::string, float > attached_properties = attachedObject->GetBoxValues(attached_frame_number);
+
+		// Compose attachedObject's properties with it's parent clip's properties
+		float attached_location_x = attached_properties["cx"] - 0.5 + attached_clip_properties["cx"];
+		float attached_location_y = attached_properties["cy"] - 0.5 + attached_clip_properties["cy"];
+		float attached_scale_x = attached_properties["w"]*attached_properties["sx"];
+		float attached_scale_y = attached_properties["h"]*attached_properties["sy"];
+		float attached_rotation = attached_properties["r"] + attached_clip_properties["r"];
+
+		// Set JSON properties with composed attached object's properties
+		root["location_x"] = add_property_json("Location X", attached_location_x, "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+		root["location_y"] = add_property_json("Location Y", attached_location_y, "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+		root["scale_x"] = add_property_json("Scale X", attached_scale_x, "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+		root["scale_y"] = add_property_json("Scale Y", attached_scale_y, "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+		root["rotation"] = add_property_json("Rotation", attached_rotation, "float", "", &rotation, -360, 360, false, requested_frame);
+	
+	} else {
+		
+		// Set JSON properties with clip's properties
+		root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+		root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+		root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+		root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+		root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+
+	}
 
 	// Keyframes
-	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", &location_x, -1.0, 1.0, false, requested_frame);
-	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", &location_y, -1.0, 1.0, false, requested_frame);
-	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
-	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", &alpha, 0.0, 1.0, false, requested_frame);
 	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
 	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
 	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
 	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
@@ -1281,52 +1315,50 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		}
 	}
 	
-	// Initialize bounding-box values
-	float box_cx = 0.0;
-	float box_cy = 0.0;
-	float box_sx = 0.0;
-	float box_sy = 0.0;
-	float box_r = 0.0;
-
-	// Initialize attached object's parent clip's properties
-	float attachedObjectParentClip_lx = 0.0;
-	float attachedObjectParentClip_ly = 0.0;
-	float attachedObjectParentClip_sx = 0.0;
-	float attachedObjectParentClip_sy = 0.0;
-	float attachedObjectParentClip_r = 0.0;
+	// Initialize attached object's properties values
+	float attached_location_x = 0.0;
+	float attached_location_y = 0.0;
+	float attached_scale_x = 1.0;
+	float attached_scale_y = 1.0;
+	float attached_rotation = 0.0;
 
 	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
 	if (attachedObject){
+
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
-		// Initialize attachedObject's properties
-		std::map<std::string, float> boxValues;
+		// Get attached object's parent clip properties
+		std::map< std::string, float > attached_clip_properties = attachedObject->GetParentClipProperties(timeline_frame_number);
 
-		// Get attachedObject's properties and attachedObject's parent clip's properties
-		std::map<std::string, float> attachedObject_ClipProperties = attachedObject->GetParentClipProperties(timeline_frame_number);
-		if (!attachedObject_ClipProperties.empty()){
-			float attachedObjectParentClip_frame_number = attachedObject_ClipProperties["frame_number"];
-			attachedObjectParentClip_lx = attachedObject_ClipProperties["location_x"];
-			attachedObjectParentClip_ly = attachedObject_ClipProperties["location_y"];
-			attachedObjectParentClip_sx = attachedObject_ClipProperties["scale_x"];
-			attachedObjectParentClip_sy = attachedObject_ClipProperties["scale_y"];
-			attachedObjectParentClip_r = attachedObject_ClipProperties["rotation"];
-			// Access the attachedObject's properties
-			boxValues = attachedObject->GetBoxValues(attachedObjectParentClip_frame_number);	
+		// Get attachedObject's properties and compose with attachedObject's parent clip properties
+		if (!attached_clip_properties.empty()){
+			
+			// Get attachedObject's parent clip frame number
+			double attached_frame_number = attached_clip_properties["frame_number"];
+
+			// Get attachedObject's properties values
+			std::map< std::string, float > attached_properties = attachedObject->GetBoxValues(attached_frame_number);
+
+			attached_location_x = attached_properties["cx"] - 0.5 + attached_clip_properties["cx"];
+			attached_location_y = attached_properties["cy"] - 0.5 + attached_clip_properties["cy"];
+			attached_scale_x = attached_properties["w"]*attached_properties["sx"];
+			attached_scale_y = attached_properties["h"]*attached_properties["sy"];
+			attached_rotation = attached_properties["r"] + attached_clip_properties["r"];
+				
 		} else {
-			// Access the attachedObject's properties
-			boxValues = attachedObject->GetBoxValues(timeline_frame_number);
+			// Get attachedObject's properties values
+			std::map< std::string, float > attached_properties = attachedObject->GetBoxValues(timeline_frame_number);
+
+			attached_location_x = attached_properties["cx"] - 0.5;
+			attached_location_y = attached_properties["cy"] - 0.5;
+			attached_scale_x = attached_properties["w"]*attached_properties["sx"];
+			attached_scale_y = attached_properties["h"]*attached_properties["sy"];
+			attached_rotation = attached_properties["r"];
+
 		}
-		
-		// Get the bounding-box values and correct them by the clip's reference system
-		box_cx = boxValues["cx"] - 0.5;
-		box_cy = boxValues["cy"] - 0.5;
-		box_sx = boxValues["w"]*boxValues["sx"];
-		box_sy = boxValues["h"]*boxValues["sy"];
-		box_r = boxValues["r"];
 	}
 
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
@@ -1336,11 +1368,13 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	// Adjust size for scale x and scale y
 	float sx = scale_x.GetValue(frame->number); // percentage X scale
 	float sy = scale_y.GetValue(frame->number); // percentage Y scale
-	// Change clip's scale to bounding-box scale
-	if(box_sx > 0.0 && box_sy > 0.0){
-		sx = box_sx;
-		sy = box_sy;
+
+	// Compose clip's scale to attachedObject's scale
+	if(attached_scale_x > 0.0 && attached_scale_y > 0.0){
+		sx*= attached_scale_x;
+		sy*= attached_scale_y;
 	}
+
 	float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
 	
@@ -1385,9 +1419,9 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	QTransform transform;
 		
 	/* LOCATION, ROTATION, AND SCALE */
-	float r = rotation.GetValue(frame->number) + box_r + attachedObjectParentClip_r; // rotate in degrees
-	x += (width * (location_x.GetValue(frame->number) + box_cx + attachedObjectParentClip_lx )); // move in percentage of final width
-	y += (height * (location_y.GetValue(frame->number) + box_cy + attachedObjectParentClip_ly )); // move in percentage of final height
+	float r = rotation.GetValue(frame->number) + attached_rotation; // rotate in degrees
+	x += ( width * (location_x.GetValue(frame->number) + attached_location_x) ); // move in percentage of final width
+	y += ( height * (location_y.GetValue(frame->number) + attached_location_y) ); // move in percentage of final height
 	float shear_x_value = shear_x.GetValue(frame->number);
 	float shear_y_value = shear_y.GetValue(frame->number);
 	float origin_x_value = origin_x.GetValue(frame->number);

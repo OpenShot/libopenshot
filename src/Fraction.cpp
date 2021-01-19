@@ -46,7 +46,7 @@ float Fraction::ToFloat() {
 }
 
 // Return this fraction as a double (i.e. 1/2 = 0.5)
-double Fraction::ToDouble() {
+double Fraction::ToDouble() const {
 	return double(num) / double(den);
 }
 

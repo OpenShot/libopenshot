@@ -227,9 +227,9 @@ namespace openshot
         Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
 
         /// Return the bounding box properties and it's keyframes indexed by their names
-        std::map<std::string, float> GetBoxValues(int64_t frame_number) override;
+        std::map<std::string, float> GetBoxValues(int64_t frame_number) const override;
         /// Return properties of this object's parent clip
-        std::map<std::string, float> GetParentClipProperties(int64_t frame_number);
+        std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const override;
     
     };
 } // namespace openshot

@@ -74,15 +74,15 @@ namespace openshot {
 		std::string Id() const { return id; }
 		void Id(std::string _id) { id = _id; }
         /// Get and set the parentClip of this object
-		ClipBase* ParentClip() { return parentClip; }
+		ClipBase* ParentClip() const { return parentClip; }
 		void ParentClip(ClipBase* clip) { parentClip = clip; }
 
         /// Scale a property
         virtual void ScalePoints(double scale) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance using a pointer to this base class
-		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) { std::map<std::string, float> ret; return ret; };
+		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
         /// Return the main properties of the tracked object's parent clip
-        virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) { std::map<std::string, float> ret; return ret; }
+        virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
     
 		/// Get and Set JSON methods
         virtual std::string Json() const = 0;                  ///< Generate JSON string of this object
