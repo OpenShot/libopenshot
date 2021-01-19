@@ -192,10 +192,9 @@ void HungarianAlgorithm::buildassignmentvector(
 	int nOfRows,
 	int nOfColumns)
 {
-	int row, col;
 
-	for (row = 0; row < nOfRows; row++)
-		for (col = 0; col < nOfColumns; col++)
+	for (int row = 0; row < nOfRows; row++)
+		for (int col = 0; col < nOfColumns; col++)
 			if (starMatrix[row + nOfRows * col])
 			{
 #ifdef ONE_INDEXING

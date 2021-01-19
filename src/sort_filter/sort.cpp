@@ -7,6 +7,7 @@ SortTracker::SortTracker(int max_age, int min_hits)
 {
 	_min_hits = min_hits;
 	_max_age = max_age;
+	alive_tracker = true; 
 }
 
 // Computes IOU between two bounding boxes
@@ -154,11 +155,10 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 			matchedPairs.push_back(cv::Point(i, assignment[i]));
 	}
 
-	int detIdx, trkIdx;
 	for (unsigned int i = 0; i < matchedPairs.size(); i++)
 	{
-		trkIdx = matchedPairs[i].x;
-		detIdx = matchedPairs[i].y;
+		int trkIdx = matchedPairs[i].x;
+		int detIdx = matchedPairs[i].y;
 		trackers[trkIdx].update(detections[detIdx].box);
 		trackers[trkIdx].classId = detections[detIdx].classId;
 		trackers[trkIdx].confidence = detections[detIdx].confidence;

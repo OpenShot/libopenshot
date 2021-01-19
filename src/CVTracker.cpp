@@ -40,6 +40,8 @@ using google::protobuf::util::TimeUtil;
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), json_interval(false){
     SetJson(processInfoJson);
+    start = 0;
+    end = 0;
 }
 
 // Set desirable tracker method

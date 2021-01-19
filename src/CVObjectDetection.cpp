@@ -38,6 +38,8 @@ using google::protobuf::util::TimeUtil;
 CVObjectDetection::CVObjectDetection(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), processingDevice("CPU"){
     SetJson(processInfoJson);
+    confThreshold = 0.5;
+    nmsThreshold = 0.1;
 }
 
 void CVObjectDetection::setProcessingDevice(){
@@ -69,9 +71,6 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     std::string line;
     while (std::getline(ifs, line)) classNames.push_back(line);
 
-    confThreshold = 0.5;
-    nmsThreshold = 0.1;
-
     // Load the network
     if(classesFile == "" || modelConfiguration == "" || modelWeights == "")
         return;
@@ -79,7 +78,7 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     setProcessingDevice();
 
     size_t frame_number;
-    if(!process_interval || end == 0 || end-start <= 0){
+    if(!process_interval || end == 0 || end-start == 0){
         // Get total number of frames in video
         start = video.Start() * video.Reader()->info.fps.ToInt();
         end = video.End() * video.Reader()->info.fps.ToInt();
