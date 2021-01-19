@@ -75,7 +75,7 @@ SUITE(CVTracker_Tests)
         float y = fd.y1;
         float width = fd.x2 - x;
         float height = fd.y2 - y;
-        std::cout<<"\n\n Error: "<< processingController.GetErrorMessage() <<"\n";
+
         // Compare if tracked data is equal to pre-tested ones
         CHECK_EQUAL(259, (int)(x * 640));
         CHECK_EQUAL(131, (int)(y * 360));
@@ -140,7 +140,7 @@ SUITE(CVTracker_Tests)
         float y_2 = fd_2.y1;
         float width_2 = fd_2.x2 - x_2;
         float height_2 = fd_2.y2 - y_2;
-        std::cout<<"\n\n Error: "<< processingController.GetErrorMessage() <<"\n";
+
         // Compare first tracker data with second tracker data
         CHECK_EQUAL((int)(x_1 * 640), (int)(x_2 * 640));
         CHECK_EQUAL((int)(y_1 * 360), (int)(y_2 * 360));
