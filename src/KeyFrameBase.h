@@ -45,16 +45,6 @@
 
 
 namespace openshot {
-    /**
-	 * @brief This abstract class is the base class of all Keyframes.
-	 *
-	 * A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
-	 *
-	 * Keyframes are used to animate and interpolate values of properties over time.  For example, a single property
-	 * can use a Keyframe instead of a constant value.  Assume you want to slide an image (from left to right) over
-	 * a video.  You can create a Keyframe which will adjust the X value of the image over 100 frames (or however many
-	 * frames the animation needs to last) from the value of 0 to 640.
-	 */
 
 	/// Check if the X coordinate of a given Point is lower than a given value
 	bool IsPointBeforeX(Point const & p, double const x);
@@ -68,9 +58,16 @@ namespace openshot {
 	/// Interpolate two points using the right Point's interpolation method
 	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error);
 
-	// template<typename Check>
-	// int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check);
-
+	/**
+	 * @brief This abstract class is the base class of all Keyframes.
+	 * 
+	 * A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
+	 * 
+	 * Keyframes are used to animate and interpolate values of properties over time.  For example, a single property
+	 * can use a Keyframe instead of a constant value.  Assume you want to slide an image (from left to right) over
+	 * a video.  You can create a Keyframe which will adjust the X value of the image over 100 frames (or however many
+	 * frames the animation needs to last) from the value of 0 to 640.
+	 */
     class KeyframeBase{
 
     public:

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for the Keyframe class
+ * @brief Source file for the TrackedObjectBBox class
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -350,7 +350,7 @@ void TrackedObjectBBox::SetJson(const std::string value)
 void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 {   
 
-    // Set the Id
+    // Set the Id by the given JSON object
     if (!root["box_id"].isNull())
         Id(root["box_id"].asString());
 
@@ -370,6 +370,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
         this->ScalePoints(scale);
     }
 
+    // Set the protobuf data path by the given JSON object
     if (!root["protobuf_data_path"].isNull())
         protobufDataPath = root["protobuf_data_path"].asString();
 
@@ -396,7 +397,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 
     BBox box = GetBox(requested_frame);
 
-    // Id
+    // Add the ID of this object to the JSON object
     root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 
     // Add a boolean property to inform if the object has data for the requested frame
@@ -457,7 +458,7 @@ Json::Value TrackedObjectBBox::add_property_json(std::string name, float value, 
 	return prop;
 }
 
-// Return the bounding box properties and it's keyframes indexed by their names
+// Return a map that contains the bounding box properties and it's keyframes indexed by their names
 std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_number) const {
 
     // Create the map
@@ -484,7 +485,7 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
     return boxValues;
 }
 
-// Return properties of this object's parent clip
+// Return a map that contains the properties of this object's parent clip
 std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number) const {
     
     // Get the parent clip of this object as a Clip pointer
@@ -502,8 +503,10 @@ std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t 
     float parentClip_scale_y = parentClip->scale_y.GetValue(parentClip_frame_number);
     float parentClip_rotation = parentClip->rotation.GetValue(parentClip_frame_number);
 
+    // Initialize the parent clip properties map
     std::map<std::string, float> parentClipProperties;
 
+    // Set the map properties
     parentClipProperties["frame_number"] = parentClip_frame_number;
     parentClipProperties["timeline_frame_number"] = frame_number;
     parentClipProperties["location_x"] = parentClip_location_x;

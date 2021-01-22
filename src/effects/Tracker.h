@@ -48,9 +48,11 @@ using namespace std;
 namespace openshot
 {
 	/**
-	 * @brief This class track a given object through the clip and, when called, draws a box surrounding it.
+	 * @brief This class tracks a given object through the clip, draws a box around it and allow
+	 * the user to attach another clip (image or video) to the tracked object.
 	 *
-	 * Tracking is useful to better visualize and follow the movement of an object through video.
+	 * Tracking is useful to better visualize, follow the movement of an object through video
+	 * and attach an image or video to it.
 	 */
 	class Tracker : public EffectBase
 	{

@@ -36,10 +36,13 @@
 
 namespace openshot{
 
+	// Blank constructor
     TrackedObjectBase::TrackedObjectBase(){
+		// Initializes the id as "None"
 		id = "None";
     }
 
+	// Default constructor
 	TrackedObjectBase::TrackedObjectBase(std::string _id){
 		Id(_id);
 	}

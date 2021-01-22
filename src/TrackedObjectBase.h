@@ -47,16 +47,12 @@
 
 namespace openshot {
     /**
-	 * @brief This abstract class is the base class of all Keyframes.
+	 * @brief This abstract class is the base class of all Tracked Objects.
 	 *
-	 * A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
-	 *
-	 * Keyframes are used to animate and interpolate values of properties over time.  For example, a single property
-	 * can use a Keyframe instead of a constant value.  Assume you want to slide an image (from left to right) over
-	 * a video.  You can create a Keyframe which will adjust the X value of the image over 100 frames (or however many
-	 * frames the animation needs to last) from the value of 0 to 640.
+	 * A Tracked Object is an object or a desired set of pixels in a digital image
+	 * which properties (such as position, width and height) can be detected and 
+	 * predicted along the frames of a clip.
 	 */
-
     class TrackedObjectBase {
 	private:
 		std::string id;
@@ -70,18 +66,19 @@ namespace openshot {
 		/// Default constructor
 		TrackedObjectBase(std::string _id);
 
-        /// Get and set the id of this object
+        /// Get the id of this object
 		std::string Id() const { return id; }
+		/// Set the id of this object
 		void Id(std::string _id) { id = _id; }
         /// Get and set the parentClip of this object
 		ClipBase* ParentClip() const { return parentClip; }
 		void ParentClip(ClipBase* clip) { parentClip = clip; }
 
-        /// Scale a property
+        /// Scale an object's property
         virtual void ScalePoints(double scale) { return; };
-		/// Return the main properties of a TrackedObjectBBox instance using a pointer to this base class
+		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
-        /// Return the main properties of the tracked object's parent clip
+        /// Return the main properties of the tracked object's parent clip - such as position, size and rotation
         virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
 		/// Add a bounding box to the tracked object's BoxVec map
 		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };

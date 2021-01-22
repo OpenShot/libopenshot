@@ -52,13 +52,15 @@ using google::protobuf::util::TimeUtil;
 namespace openshot
 {
     /**
-	 * @brief This struct holds the information of a bounding-box: a rectangular shape that enclosures an object or a 
-     * desired set of pixels in a digital image.
-	 *
-	 * The bounding-box structure holds four floating-point properties: the x and y coordinates of the rectangle's
-     * top left corner (x1, y1), the rectangle's width and the rectangle's height.
-	 */
-
+     * @brief This struct holds the information of a bounding-box.
+     * 
+     * A bounding-box is a rectangular shape that enclosures an
+     * object or a desired set of pixels in a digital image.
+     * 
+     * The bounding-box structure holds five floating-point properties:
+     * the x and y coordinates of the rectangle's center point (cx, cy),
+     * the rectangle's width, height and rotation.
+     */
     struct BBox
     {
         float cx = -1; ///< x-coordinate of the bounding box center
@@ -68,10 +70,7 @@ namespace openshot
         float angle = -1; ///< bounding box rotation angle [degrees]
 
         /// Blank constructor
-        BBox()
-        {
-            return;
-        }
+        BBox() {}
 
         /// Default constructor, which takes the bounding box top-left corner coordinates, width and height.
         /// @param _cx X-coordinate of the bounding box center
@@ -144,16 +143,17 @@ namespace openshot
     };
 
     /**
-	 * @brief This class holds the information of a bounding-box (mapped by time) over the frames that contain
-     * the object enclosured by it.
-	 *
-     * The bounding-box displacement in X and Y directions and it's width and height variation over the frames
-     * are set as openshot::Keyframe objects
+     * @brief This class contains the properties of a tracked object
+     * and functions to manipulate it.
      * 
-	 * The bounding-box information over the clip's frames are saved into a protobuf file and loaded into an
-     * object of this class. 
-	 */    
-
+     * The bounding-box displacement in X and Y directions, it's width,
+     * height and rotation variation over the frames are set as
+     * openshot::Keyframe objects.
+     * 
+     * The bounding-box information over the clip's frames are
+     * saved into a protobuf file and loaded into an
+     * object of this class.
+     */
     class TrackedObjectBBox : public TrackedObjectBase
     {
     private:
@@ -168,7 +168,7 @@ namespace openshot
         Keyframe scale_x; ///< X-direction scale Keyframe
         Keyframe scale_y; ///< Y-direction scale Keyframe
         Keyframe rotation; ///< Rotation Keyframe
-        std::string protobufDataPath; ///< Path to the protobuf file that holds the bbox points across the frames
+        std::string protobufDataPath; ///< Path to the protobuf file that holds the bounding box points across the frames
 
         /// Default Constructor
         TrackedObjectBBox();
@@ -197,11 +197,12 @@ namespace openshot
         void RemoveBox(int64_t frame_number);
 
         /// Return a bounding-box from BoxVec with it's properties adjusted by the Keyframes
+        BBox GetBox(int64_t frame_number);
+        /// Const-cast of the GetBox function, so that it can be called inside other cont function
         BBox GetBox(int64_t frame_number) const
         {
             return const_cast<TrackedObjectBBox *>(this)->GetBox(frame_number);
         }
-        BBox GetBox(int64_t frame_number);
 
         /// Load the bounding-boxes information from the protobuf file 
         bool LoadBoxData(std::string inputFilePath);
@@ -228,9 +229,9 @@ namespace openshot
         // Generate JSON for a property
         Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
 
-        /// Return the bounding box properties and it's keyframes indexed by their names
+        /// Return a map that contains the bounding box properties and it's keyframes indexed by their names
         std::map<std::string, float> GetBoxValues(int64_t frame_number) const override;
-        /// Return properties of this object's parent clip
+        /// Return a map that contains the properties of this object's parent clip
         std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const override;
     
     };
