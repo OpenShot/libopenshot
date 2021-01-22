@@ -89,13 +89,30 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 
         DetectionData detections = detectionsData[frame_number];
         for(int i = 0; i<detections.boxes.size(); i++){
-            cv::Rect_<float> bb_nrml = detections.boxes.at(i);
-            cv::Rect2d box((int)(bb_nrml.x*fw),
-                           (int)(bb_nrml.y*fh),
-                           (int)(bb_nrml.width*fw),
-                           (int)(bb_nrml.height*fh));
-            drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                     box, cv_image, detections.objectIds.at(i));
+            
+            // Get the object id
+            int objectId = detections.objectIds.at(i);
+
+            // Search for the object in the trackedObjects map
+            auto trackedObject_it = trackedObjects.find(objectId);
+
+            // Cast the object as TrackedObjectBBox
+            std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
+
+            // Check if the tracked object has data for this frame
+            if (trackedObject->Contains(frame_number)){
+                
+                // Get the bounding-box of given frame
+                BBox trackedBox = trackedObject->GetBox(frame_number);
+                cv::Rect2d box(
+                    (int)( (trackedBox.cx-trackedBox.width/2)*fw),
+                    (int)( (trackedBox.cy-trackedBox.height/2)*fh),
+                    (int)(  trackedBox.width*fw),
+                    (int)(  trackedBox.height*fh)
+                    );
+                drawPred(detections.classIds.at(i), detections.confidences.at(i),
+                    box, cv_image, detections.objectIds.at(i));
+            } 
         }
     }
 
@@ -259,8 +276,14 @@ Json::Value ObjectDetection::JsonValue() const {
     
     // Add trackedObjects IDs to JSON
 	for (auto const& trackedObject : trackedObjects){
-		// Save the trackedObject Id on root
-        root["box_id"+to_string(trackedObject.first)] = trackedObject.second->Id();
+		Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
+		// Save the trackedObject JSON on root
+        root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+        root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
+        root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
+        root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
+        root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
+        root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
 	}
 
 	// return JsonValue
@@ -301,8 +324,14 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 
     for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON;
-        trackedObjectJSON["box_id"] = root["box_id"+to_string(trackedObject.first)];
-		trackedObject.second->SetJsonValue(trackedObjectJSON);
+        trackedObjectJSON["box_id"] = root["box_id-"+to_string(trackedObject.first)];
+        trackedObjectJSON["delta_x"] = root["delta_x-"+to_string(trackedObject.first)];
+        trackedObjectJSON["delta_y"] = root["delta_y-"+to_string(trackedObject.first)];
+        trackedObjectJSON["scale_x"] = root["scale_x-"+to_string(trackedObject.first)];
+        trackedObjectJSON["scale_y"] = root["scale_y-"+to_string(trackedObject.first)];
+        trackedObjectJSON["rotation"] = root["rotation-"+to_string(trackedObject.first)];
+		if (!trackedObjectJSON.isNull())
+			trackedObject.second->SetJsonValue(trackedObjectJSON);
 	}
 }
 
@@ -316,7 +345,16 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	for (auto const& trackedObject : trackedObjects){
 		// Save the trackedObject Id on root
         Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
-        root["box_id"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+        root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+        root["x1-"+to_string(trackedObject.first)] = trackedObjectJSON["x1"];
+        root["y1-"+to_string(trackedObject.first)] = trackedObjectJSON["y1"];
+        root["x2-"+to_string(trackedObject.first)] = trackedObjectJSON["x2"];
+        root["y2-"+to_string(trackedObject.first)] = trackedObjectJSON["y2"];
+        root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
+        root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
+        root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
+        root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
+        root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
 	}
 
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);

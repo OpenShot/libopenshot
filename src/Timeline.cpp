@@ -310,11 +310,13 @@ std::string Timeline::GetTrackedObjectValues(std::string id) const {
 		float y1 = firstBox.cy - (firstBox.height/2);
 		float x2 = firstBox.cx + (firstBox.width/2);
 		float y2 = firstBox.cy + (firstBox.height/2);
+		float r = firstBox.angle;
 
 		trackedObjectJson["x1"] = x1;
 		trackedObjectJson["y1"] = y1;
 		trackedObjectJson["x2"] = x2;
 		trackedObjectJson["y2"] = y2;
+		trackedObjectJson["r"] = r;
 
 	}
 	else {
@@ -323,6 +325,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id) const {
 		trackedObjectJson["y1"] = 0;
 		trackedObjectJson["x2"] = 0;
 		trackedObjectJson["y2"] = 0;
+		trackedObjectJson["r"] = 0;
 	}	
 
 	return trackedObjectJson.toStyledString();
