@@ -47,6 +47,7 @@ void EffectBase::InitEffectInfo()
 	info.has_audio = false;
 	info.name = "";
 	info.description = "";
+	info.has_tracked_object = false;
 }
 
 // Display file information

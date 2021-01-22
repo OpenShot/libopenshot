@@ -90,6 +90,9 @@ namespace openshot {
         virtual void SetJson(const std::string value) = 0;     ///< Load JSON string into this object
         virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
 
+		/// Get all properties for a specific frame (perfect for a UI to display the current state
+		/// of all properties at any time)
+		virtual Json::Value PropertiesJSON(int64_t requested_frame) const = 0;
 	
 	};
 } // Namespace openshot

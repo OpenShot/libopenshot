@@ -37,6 +37,7 @@
 #include "ClipBase.h"
 #include "Json.h"
 #include "Frame.h"
+#include "TrackedObjectBase.h"
 
 namespace openshot
 {
@@ -54,6 +55,7 @@ namespace openshot
 		std::string description; ///< The description of this effect and what it does
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
+		bool has_tracked_object; ///< Determines if this effect track objects through the clip
 	};
 
 	/**
@@ -72,6 +74,9 @@ namespace openshot
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
+
+		/// Map of Tracked Object's by their indices (used by Effects that track objects on clips)
+		std::map<int, std::shared_ptr<TrackedObjectBase> > trackedObjects;
 
 		/// Information about the current effect
 		EffectInfoStruct info;

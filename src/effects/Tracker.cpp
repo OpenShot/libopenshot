@@ -48,6 +48,8 @@ Tracker::Tracker(std::string clipTrackerDataPath)
 	trackedData->LoadBoxData(clipTrackerDataPath);
 	ClipBase* parentClip = this->ParentClip();
 	trackedData->ParentClip(parentClip);
+	// Insert TrackedObject with index 0 to the trackedObjects map
+	trackedObjects.insert({0, trackedData});
 }
 
 // Default constructor
@@ -60,6 +62,8 @@ Tracker::Tracker()
 	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 	ClipBase* parentClip = this->ParentClip();
 	trackedData->ParentClip(parentClip);
+	// Insert TrackedObject with index 0 to the trackedObjects map
+	trackedObjects.insert({0, trackedData});
 }
 
 
@@ -75,6 +79,7 @@ void Tracker::init_effect_details()
 	info.description = "Track the selected bounding box through the video.";
 	info.has_audio = false;
 	info.has_video = true;
+	info.has_tracked_object = true;
 
 	this->TimeScale = 1.0;
 }
@@ -207,7 +212,9 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		}
 	}
 
-	trackedData->SetJsonValue(root);
+	for (auto const& trackedObject : trackedObjects){
+		trackedObject.second->SetJsonValue(root);
+	}
 
 	return;
 }
@@ -218,7 +225,15 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	
 	// Generate JSON properties list
 	Json::Value root; 
-	root = trackedData->PropertiesJSON(requested_frame);
+	
+	// Add trackedObjects properties to JSON
+	for (auto const& trackedObject : trackedObjects){
+		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
+		// Save the trackedData properties on root
+		for (const auto& key : trackedObjectJSON.getMemberNames()){
+			root[key] = trackedObjectJSON[key];
+		}
+	}
 
 	// Append effect's properties
 	root["name"] = add_property_json("Tracker", 0.0, "string", "", NULL, -1, -1, true, requested_frame);

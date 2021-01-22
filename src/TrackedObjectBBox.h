@@ -221,7 +221,7 @@ namespace openshot
 
         /// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-        Json::Value PropertiesJSON(int64_t requested_frame) const;
+        Json::Value PropertiesJSON(int64_t requested_frame) const override;
 
         // Generate JSON for a property
         Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;

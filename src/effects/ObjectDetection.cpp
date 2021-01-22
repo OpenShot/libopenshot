@@ -64,6 +64,7 @@ void ObjectDetection::init_effect_details()
 	info.description = "Detect objects through the video.";
 	info.has_audio = false;
 	info.has_video = true;
+    info.has_tracked_object = false;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a

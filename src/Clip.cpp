@@ -1170,24 +1170,25 @@ void Clip::AddEffect(EffectBase* effect)
 	sort_effects();
 
 	// Add Tracker to Timeline
-	if (effect->info.class_name == "Tracker"){
+	if (effect->info.has_tracked_object){
 	
 		Timeline* parentTimeline = (Timeline *) ParentTimeline();
 
 		// Check if this clip has a parent timeline
 		if (parentTimeline){
 
-			// Downcast effect as Tracker
-			Tracker* tracker = (Tracker *) effect;
+			// Iterate through effect's vector of Tracked Objects
+			for (auto const& trackedObject : effect->trackedObjects){
+				
+				// Cast the Tracked Object as TrackedObjectBBox
+				std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
 
-			// Get tracked data from the Tracker effect
-			std::shared_ptr<openshot::TrackedObjectBBox> trackedData = tracker->trackedData;
+				// Set the Tracked Object's parent clip to this
+				trackedObjectBBox->ParentClip(this);
 
-			// Set tracked data parent clip to this
-			trackedData->ParentClip(this);
-
-			// Add tracked data to the timeline
-			parentTimeline->AddTrackedObject(trackedData);
+				// Add the Tracked Object to the timeline
+				parentTimeline->AddTrackedObject(trackedObjectBBox);
+			}	
 
 		}
 	}
