@@ -49,16 +49,24 @@ namespace openshot
     // Stores the detected object bounding boxes and its properties.
     struct CVDetectionData{
         CVDetectionData(){}
-        CVDetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
+        CVDetectionData(
+            std::vector<int> _classIds, 
+            std::vector<float> _confidences,
+            std::vector<cv::Rect_<float>> _boxes, 
+            size_t _frameId,
+            std::vector<int> _objectIds)
+        {
             classIds = _classIds;
             confidences = _confidences;
             boxes = _boxes;
             frameId = _frameId;
+            objectIds = _objectIds;
         }
         size_t frameId;
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
+        std::vector<int> objectIds;
     };
 
     /**

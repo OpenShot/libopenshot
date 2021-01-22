@@ -230,7 +230,7 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
     // Read the existing tracker message.
     fstream input(inputFilePath, ios::in | ios::binary);
 
-    //Check if it was able to read the protobuf data
+    // Check if it was able to read the protobuf data
     if (!bboxMessage.ParseFromIstream(&input))
     {
         cerr << "Failed to parse protobuf message." << endl;

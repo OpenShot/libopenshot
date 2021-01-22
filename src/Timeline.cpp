@@ -290,6 +290,44 @@ std::list<std::string> Timeline::GetTrackedObjectsIds() const{
 	return trackedObjects_ids;
 }
 
+std::string Timeline::GetTrackedObjectValues(std::string id) const {
+
+	// Initialize the JSON object
+	Json::Value trackedObjectJson;
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(id);
+
+	if (iterator != tracked_objects.end())
+	{
+		// Id found, Get the object pointer and cast it as a TrackedObjectBBox
+		std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(iterator->second);
+
+		// Get the trackedObject values for it's first frame
+		auto boxes = trackedObject->BoxVec;
+		auto firstBox = boxes.begin()->second;
+		float x1 = firstBox.cx - (firstBox.width/2);
+		float y1 = firstBox.cy - (firstBox.height/2);
+		float x2 = firstBox.cx + (firstBox.width/2);
+		float y2 = firstBox.cy + (firstBox.height/2);
+
+		trackedObjectJson["x1"] = x1;
+		trackedObjectJson["y1"] = y1;
+		trackedObjectJson["x2"] = x2;
+		trackedObjectJson["y2"] = y2;
+
+	}
+	else {
+		// Id not found, return all 0 values
+		trackedObjectJson["x1"] = 0;
+		trackedObjectJson["y1"] = 0;
+		trackedObjectJson["x2"] = 0;
+		trackedObjectJson["y2"] = 0;
+	}	
+
+	return trackedObjectJson.toStyledString();
+}
+
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {

@@ -83,7 +83,10 @@ namespace openshot {
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
         /// Return the main properties of the tracked object's parent clip
         virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
-    
+		/// Add a bounding box to the tracked object's BoxVec map
+		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };
+
+
 		/// Get and Set JSON methods
         virtual std::string Json() const = 0;                  ///< Generate JSON string of this object
         virtual Json::Value JsonValue() const = 0;             ///< Generate Json::Value for this object

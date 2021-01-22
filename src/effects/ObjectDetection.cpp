@@ -28,11 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
 
 using namespace std;
 using namespace openshot;
+
 
 /// Blank constructor, useful when using Json to load the effect properties
 ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
@@ -64,7 +67,7 @@ void ObjectDetection::init_effect_details()
 	info.description = "Detect objects through the video.";
 	info.has_audio = false;
 	info.has_video = true;
-    info.has_tracked_object = false;
+    info.has_tracked_object = true;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -92,7 +95,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                            (int)(bb_nrml.width*fw),
                            (int)(bb_nrml.height*fh));
             drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                     box, cv_image);
+                     box, cv_image, detections.objectIds.at(i));
         }
     }
 
@@ -103,7 +106,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 	return frame;
 }
 
-void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame)
+void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber)
 {
 
     //Draw a rectangle displaying the bounding box
@@ -133,29 +136,32 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     // Create tracker message
     pb_objdetect::ObjDetect objMessage;
 
-    {
-        // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
-        if (!objMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
-            return false;
-        }
+    
+    // Read the existing tracker message.
+    fstream input(inputFilePath, ios::in | ios::binary);
+    if (!objMessage.ParseFromIstream(&input)) {
+        cerr << "Failed to parse protobuf message." << endl;
+        return false;
     }
+    
 
-    // Make sure classNames and detectionsData are empty
+    // Make sure classNames, detectionsData and trackedObjects are empty
     classNames.clear();
     detectionsData.clear();
+    trackedObjects.clear();
 
     // Seed to generate same random numbers
     std::srand(1);
     // Get all classes names and assign a color to them
-    for(int i = 0; i < objMessage.classnames_size(); i++){
+    for(int i = 0; i < objMessage.classnames_size(); i++)
+    {
         classNames.push_back(objMessage.classnames(i));
         classesColor.push_back(cv::Scalar(std::rand()%205 + 50, std::rand()%205 + 50, std::rand()%205 + 50));
     }
 
     // Iterate over all frames of the saved message
-    for (size_t i = 0; i < objMessage.frame_size(); i++) {
+    for (size_t i = 0; i < objMessage.frame_size(); i++)
+    {
         // Create protobuf message reader
         const pb_objdetect::Frame& pbFrameData = objMessage.frame(i);
 
@@ -169,8 +175,11 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         std::vector<int> classIds;
         std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
+        std::vector<int> objectIds;
 
-        for(int i = 0; i < pbFrameData.bounding_box_size(); i++){
+        // Iterate through the detected objects
+        for(int i = 0; i < pbFrameData.bounding_box_size(); i++)
+        {
             // Get bounding box coordinates
             float x = pBox.Get(i).x();
             float y = pBox.Get(i).y();
@@ -180,6 +189,26 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
             int classId = pBox.Get(i).classid();
             // Get prediction confidence
             float confidence = pBox.Get(i).confidence();
+            
+            // Get the object Id
+            int objectId = pBox.Get(i).objectid();
+
+            // Search for the object id on trackedObjects map
+            auto trackedObject = trackedObjects.find(objectId);
+            // Check if object already exists on the map
+            if (trackedObject != trackedObjects.end())
+            {
+                // Add a new BBox to it
+                trackedObject->second->AddBox(id, x+(w/2), y+(h/2), w, h, 0.0);
+            } 
+            else
+            {
+                // There is no tracked object with that id, so insert a new one
+                TrackedObjectBBox trackedObj;
+                trackedObj.AddBox(id, x+(w/2), y+(h/2), w, h, 0.0);
+	            std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
+                trackedObjects.insert({objectId, trackedObjPtr});
+            }
 
             // Create OpenCV rectangle with the bouding box info
             cv::Rect_<float> box(x, y, w, h);
@@ -188,10 +217,11 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
             boxes.push_back(box);
             classIds.push_back(classId);
             confidences.push_back(confidence);
+            objectIds.push_back(objectId);
         }
 
         // Assign data to object detector map
-        detectionsData[id] = DetectionData(classIds, confidences, boxes, id);
+        detectionsData[id] = DetectionData(classIds, confidences, boxes, id, objectIds);
     }
 
     // Delete all global objects allocated by libprotobuf.
@@ -226,6 +256,12 @@ Json::Value ObjectDetection::JsonValue() const {
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
+    
+    // Add trackedObjects IDs to JSON
+	for (auto const& trackedObject : trackedObjects){
+		// Save the trackedObject Id on root
+        root["box_id"+to_string(trackedObject.first)] = trackedObject.second->Id();
+	}
 
 	// return JsonValue
 	return root;
@@ -262,6 +298,12 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 			protobuf_data_path = "";
 		}
 	}
+
+    for (auto const& trackedObject : trackedObjects){
+        Json::Value trackedObjectJSON;
+        trackedObjectJSON["box_id"] = root["box_id"+to_string(trackedObject.first)];
+		trackedObject.second->SetJsonValue(trackedObjectJSON);
+	}
 }
 
 // Get all properties for a specific frame
@@ -269,6 +311,14 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
+
+    // Add trackedObjects IDs to JSON
+	for (auto const& trackedObject : trackedObjects){
+		// Save the trackedObject Id on root
+        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
+        root["box_id"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+	}
+
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);

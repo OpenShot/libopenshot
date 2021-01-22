@@ -174,7 +174,7 @@ namespace openshot
         TrackedObjectBBox();
 
         /// Add a BBox to the BoxVec map
-        void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle);
+        void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) override;
         
         /// Update object's BaseFps
         void SetBaseFPS(Fraction fps);

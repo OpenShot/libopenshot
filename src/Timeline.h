@@ -250,6 +250,8 @@ namespace openshot {
 		std::shared_ptr<openshot::TrackedObjectBase> GetTrackedObject(std::string id) const;
 		/// Return the ID's of the tracked objects as a list of strings
 		std::list<std::string> GetTrackedObjectsIds() const;
+		/// Return the first trackedObject's properties as a JSON string
+		std::string GetTrackedObjectValues(std::string id) const;
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
