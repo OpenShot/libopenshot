@@ -245,6 +245,7 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	for (auto const& trackedObject : trackedObjects){
 		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
         root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+		root["visible-"+to_string(trackedObject.first)] = trackedObjectJSON["visible"];
         root["x1-"+to_string(trackedObject.first)] = trackedObjectJSON["x1"];
         root["y1-"+to_string(trackedObject.first)] = trackedObjectJSON["y1"];
         root["x2-"+to_string(trackedObject.first)] = trackedObjectJSON["x2"];

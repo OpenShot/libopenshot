@@ -68,7 +68,7 @@ namespace openshot {
 		int ToInt();
 
 		/// Return the reciprocal as a Fraction
-		Fraction Reciprocal();
+		Fraction Reciprocal() const;
 	};
 
 

@@ -186,7 +186,9 @@ namespace openshot
         void ScalePoints(double scale) override;
 
         /// Check if there is a bounding-box in the given frame
-        bool Contains(int64_t frame_number);
+        bool Contains(int64_t frame_number) const;
+        /// Check if there is a bounding-box in the exact frame number
+        bool ExactlyContains(int64_t frame_number) const;
 
         /// Get the size of BoxVec map
         int64_t GetLength() const;
@@ -205,7 +207,7 @@ namespace openshot
         bool LoadBoxData(std::string inputFilePath);
 
         /// Get the time of the given frame
-        double FrameNToTime(int64_t frame_number, double time_scale);
+        double FrameNToTime(int64_t frame_number, double time_scale) const;
 
         /// Interpolate the bouding-boxes properties
         BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);

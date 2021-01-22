@@ -81,7 +81,7 @@ void Fraction::Reduce() {
 }
 
 // Return the reciprocal as a new Fraction
-Fraction Fraction::Reciprocal()
+Fraction Fraction::Reciprocal() const
 {
 	// flip the fraction
 	return Fraction(den, num);

@@ -84,15 +84,30 @@ int64_t TrackedObjectBBox::GetLength() const
 }
 
 // Check if there is a bounding-box in the given frame
-bool TrackedObjectBBox::Contains(int64_t frame_num)
+bool TrackedObjectBBox::Contains(int64_t frame_num) const
 {
     // Get the time of given frame
     double time = this->FrameNToTime(frame_num, 1.0);
     // Create an iterator that points to the BoxVec pair indexed by the time of given frame (or the closest time)
     auto it = BoxVec.lower_bound(time);
-    if (it == BoxVec.end())
+    if (it == BoxVec.end()){
         // BoxVec pair not found
         return false;
+    }
+    return true;
+}
+
+// Check if there is a bounding-box in the exact frame number
+bool TrackedObjectBBox::ExactlyContains(int64_t frame_number) const
+{
+    // Get the time of given frame
+    double time = FrameNToTime(frame_number, 1.0);
+    // Create an iterator that points to the BoxVec pair indexed by the exact time of given frame
+    auto it = BoxVec.find(time);
+    if (it == BoxVec.end()){
+        // BoxVec pair not found
+        return false;
+    }
     return true;
 }
 
@@ -210,7 +225,7 @@ Fraction TrackedObjectBBox::GetBaseFPS(){
 }
 
 // Get the time of the given frame
-double TrackedObjectBBox::FrameNToTime(int64_t frame_number, double time_scale){
+double TrackedObjectBBox::FrameNToTime(int64_t frame_number, double time_scale) const{
     double time = ((double)frame_number) * this->BaseFps.Reciprocal().ToDouble() * (1.0 / time_scale);
 
     return time;
@@ -383,6 +398,9 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 
     // Id
     root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+
+    // Add a boolean property to inform if the object has data for the requested frame
+    root["visible"] = add_property_json("Visible", ExactlyContains(requested_frame), "bool", "", NULL, -1, -1, true, requested_frame);
 
     // Add the data of given frame bounding-box to the JSON object
 	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);

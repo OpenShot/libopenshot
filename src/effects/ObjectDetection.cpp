@@ -346,15 +346,20 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 		// Save the trackedObject Id on root
         Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
         root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
-        root["x1-"+to_string(trackedObject.first)] = trackedObjectJSON["x1"];
-        root["y1-"+to_string(trackedObject.first)] = trackedObjectJSON["y1"];
-        root["x2-"+to_string(trackedObject.first)] = trackedObjectJSON["x2"];
-        root["y2-"+to_string(trackedObject.first)] = trackedObjectJSON["y2"];
-        root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
-        root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
-        root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
-        root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
-        root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
+        root["visible-"+to_string(trackedObject.first)] = trackedObjectJSON["visible"];
+        
+        // Add trackedObject's properties only if it's visible in this frame (performance boost)
+        if (trackedObjectJSON["visible"]["value"].asBool()){
+            root["x1-"+to_string(trackedObject.first)] = trackedObjectJSON["x1"];
+            root["y1-"+to_string(trackedObject.first)] = trackedObjectJSON["y1"];
+            root["x2-"+to_string(trackedObject.first)] = trackedObjectJSON["x2"];
+            root["y2-"+to_string(trackedObject.first)] = trackedObjectJSON["y2"];
+            root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
+            root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
+            root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
+            root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
+            root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
+        }
 	}
 
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
