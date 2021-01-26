@@ -118,7 +118,7 @@
 #include "Effects.h"
 #include "EffectInfo.h"
 #include "Enums.h"
-#include "Exceptions.h"
+
 #include "ReaderBase.h"
 #include "WriterBase.h"
 #include "FFmpegReader.h"

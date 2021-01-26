@@ -32,6 +32,7 @@
  */
 
 #include "FFmpegWriter.h"
+#include "Exceptions.h"
 
 #include <iostream>
 

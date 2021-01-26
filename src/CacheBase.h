@@ -34,7 +34,6 @@
 #include <memory>
 #include <cstdlib>
 #include "Frame.h"
-#include "Exceptions.h"
 #include "Json.h"
 
 namespace openshot {

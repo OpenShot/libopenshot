@@ -36,7 +36,7 @@
 #include <cmath>
 #include <assert.h>
 #include <vector>
-#include "Exceptions.h"
+
 #include "Fraction.h"
 #include "Coordinate.h"
 #include "Point.h"

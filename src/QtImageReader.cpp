@@ -29,6 +29,7 @@
  */
 
 #include "QtImageReader.h"
+#include "Exceptions.h"
 #include "Settings.h"
 #include "Clip.h"
 #include "CacheMemory.h"

@@ -382,7 +382,9 @@ namespace openshot {
 		 * @param file_path (optional) The input file being processed
 		 */
 		TooManySeeks(std::string message, std::string file_path="")
+#ifndef SWIG
 		__attribute__ ((deprecated (TMS_DEP_MSG) ))
+#endif
 			: ExceptionBase(message), file_path(file_path) { }
 		virtual ~TooManySeeks() noexcept {}
 	};

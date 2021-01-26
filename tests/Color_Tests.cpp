@@ -35,6 +35,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "Color.h"
+#include "Exceptions.h"
 #include "KeyFrame.h"
 #include "Json.h"
 
