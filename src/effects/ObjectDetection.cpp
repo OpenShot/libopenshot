@@ -28,8 +28,6 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string>
-
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
 
@@ -264,6 +262,28 @@ DetectionData ObjectDetection::GetTrackedData(size_t frameId){
 
 }
 
+// Get the indexes and IDs of all visible objects in the given frame
+std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
+    
+    // Initialize the JSON objects
+    Json::Value root;
+    root["visible_objects_index"] = Json::Value(Json::arrayValue);
+    root["visible_objects_id"] = Json::Value(Json::arrayValue);
+
+    // Iterate through the tracked objects
+    for (const auto& trackedObject : trackedObjects){
+        // Get the tracked object JSON properties for this frame
+        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
+        if (trackedObjectJSON["visible"]["value"].asBool()){
+            // Save the object's index and ID if it's visible in this frame
+            root["visible_objects_index"].append(trackedObject.first);
+            root["visible_objects_id"].append(trackedObject.second->Id());
+        }
+    }
+
+    return root.toStyledString();
+}
+
 // Generate JSON string of this object
 std::string ObjectDetection::Json() const {
 
@@ -279,21 +299,22 @@ Json::Value ObjectDetection::JsonValue() const {
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
     root["selected_object_index"] = selectedObjectIndex;
-    
+    root["objects_id"] = Json::Value(Json::arrayValue);
+
     for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-        root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+        root["objects_id"].append(trackedObject.second->Id());
     }
 
     // Add the selected object Json to root
     auto selectedObject = trackedObjects.at(selectedObjectIndex);
     if (selectedObject){
         Json::Value selectedObjectJSON = selectedObject->JsonValue();
-        root["delta_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_x"];
-        root["delta_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_y"];
-        root["scale_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_x"];
-        root["scale_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_y"];
-        root["rotation-"+to_string(selectedObjectIndex)] = selectedObjectJSON["rotation"];
+        root["delta_x"] = selectedObjectJSON["delta_x"];
+        root["delta_y"] = selectedObjectJSON["delta_y"];
+        root["scale_x"] = selectedObjectJSON["scale_x"];
+        root["scale_y"] = selectedObjectJSON["scale_y"];
+        root["rotation"] = selectedObjectJSON["rotation"];
     }
 
 	// return JsonValue
@@ -336,26 +357,26 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
     if (!root["selected_object_index"].isNull())
         selectedObjectIndex = root["selected_object_index"].asInt();
 
-    for (auto const& trackedObject : trackedObjects){
+    // Set the object's ids
+    if (!root["objects_id"].isNull()){
+        for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON;
-        trackedObjectJSON["box_id"] = root["box_id-"+to_string(trackedObject.first)];
+        trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
         trackedObject.second->SetJsonValue(trackedObjectJSON);
+        }
     }
 
-    // Set the selectec object's properties
-    if (!root["box_id-"+to_string(selectedObjectIndex)].isNull()){
-        Json::Value selectedObjectJSON;
-        selectedObjectJSON["box_id"] = root["box_id-"+to_string(selectedObjectIndex)];
-        selectedObjectJSON["delta_x"] = root["delta_x-"+to_string(selectedObjectIndex)];
-        selectedObjectJSON["delta_y"] = root["delta_y-"+to_string(selectedObjectIndex)];
-        selectedObjectJSON["scale_x"] = root["scale_x-"+to_string(selectedObjectIndex)];
-        selectedObjectJSON["scale_y"] = root["scale_y-"+to_string(selectedObjectIndex)];
-        selectedObjectJSON["rotation"] = root["rotation-"+to_string(selectedObjectIndex)];
-        if (!selectedObjectJSON.isNull()){
-            auto selectedObject = trackedObjects.at(selectedObjectIndex);
-            if (selectedObject)
-                selectedObject->SetJsonValue(selectedObjectJSON);
-        }
+    // Set the selected object's properties
+    Json::Value selectedObjectJSON;
+    selectedObjectJSON["delta_x"] = root["delta_x"];
+    selectedObjectJSON["delta_y"] = root["delta_y"];
+    selectedObjectJSON["scale_x"] = root["scale_x"];
+    selectedObjectJSON["scale_y"] = root["scale_y"];
+    selectedObjectJSON["rotation"] = root["rotation"];
+    if (!selectedObjectJSON.isNull()){
+        auto selectedObject = trackedObjects.at(selectedObjectIndex);
+        if (selectedObject)
+            selectedObject->SetJsonValue(selectedObjectJSON);
     }
 }
 
@@ -365,30 +386,21 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	// Generate JSON properties list
 	Json::Value root;
 
-    // root["visible_objects"] = Json::Value(Json::arrayValue);
-
-    for (auto const& trackedObject : trackedObjects){
-        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
-        root["visible-"+to_string(trackedObject.first)] = trackedObjectJSON["visible"];
-        if (trackedObjectJSON["visible"]["value"].asBool())
-            root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
-    }
-
     // Add the selected object Json to root
     auto selectedObject = trackedObjects.at(selectedObjectIndex);
     if (selectedObject){
         Json::Value selectedObjectJSON = selectedObject->PropertiesJSON(requested_frame);
-        root["box_id-"+to_string(selectedObjectIndex)] = selectedObjectJSON["box_id"];
-        root["visible-"+to_string(selectedObjectIndex)] = selectedObjectJSON["visible"];
-        root["x1-"+to_string(selectedObjectIndex)] = selectedObjectJSON["x1"];
-        root["y1-"+to_string(selectedObjectIndex)] = selectedObjectJSON["y1"];
-        root["x2-"+to_string(selectedObjectIndex)] = selectedObjectJSON["x2"];
-        root["y2-"+to_string(selectedObjectIndex)] = selectedObjectJSON["y2"];
-        root["delta_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_x"];
-        root["delta_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_y"];
-        root["scale_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_x"];
-        root["scale_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_y"];
-        root["rotation-"+to_string(selectedObjectIndex)] = selectedObjectJSON["rotation"];
+        root["box_id"] = selectedObjectJSON["box_id"];
+        root["visible"] = selectedObjectJSON["visible"];
+        root["x1"] = selectedObjectJSON["x1"];
+        root["y1"] = selectedObjectJSON["y1"];
+        root["x2"] = selectedObjectJSON["x2"];
+        root["y2"] = selectedObjectJSON["y2"];
+        root["delta_x"] = selectedObjectJSON["delta_x"];
+        root["delta_y"] = selectedObjectJSON["delta_y"];
+        root["scale_x"] = selectedObjectJSON["scale_x"];
+        root["scale_y"] = selectedObjectJSON["scale_y"];
+        root["rotation"] = selectedObjectJSON["rotation"];
     }
 
     root["selected_object_index"] = add_property_json("Selected Object", selectedObjectIndex, "int", "", NULL, 0, 200, false, requested_frame);

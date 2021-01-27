@@ -108,10 +108,14 @@ namespace openshot
 
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
 
-		// Load protobuf data file
+		/// Load protobuf data file
         bool LoadObjDetectdData(std::string inputFilePath);
 
+		/// Get tracker info for the desired frame
 		DetectionData GetTrackedData(size_t frameId);
+
+		/// Get the indexes and IDs of all visible objects in the given frame
+		std::string GetVisibleObjects(int64_t frame_number) const override;
 
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

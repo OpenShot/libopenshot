@@ -97,6 +97,9 @@ namespace openshot
 		/// Set parent clip object of this effect
 		void ParentClip(openshot::ClipBase* new_clip);
 
+		/// Get the indexes and IDs of all visible objects in the given frame
+		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
+
 		/// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object
 		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object

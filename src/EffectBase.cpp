@@ -92,6 +92,7 @@ Json::Value EffectBase::JsonValue() const {
 	root["description"] = info.description;
 	root["has_video"] = info.has_video;
 	root["has_audio"] = info.has_audio;
+	root["has_tracked_object"] = info.has_tracked_object;
 	root["order"] = Order();
 
 	// return JsonValue
