@@ -32,6 +32,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "Coordinate.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
