@@ -50,6 +50,7 @@ endif()
 find_path(Resvg_INCLUDE_DIRS
   ResvgQt.h
   PATHS
+    ${Resvg_ROOT}
     ${RESVGDIR}
     ${RESVGDIR}/include
     $ENV{RESVGDIR}
@@ -65,6 +66,7 @@ find_path(Resvg_INCLUDE_DIRS
 find_library(Resvg_LIBRARIES
   NAMES resvg
   PATHS
+    ${Resvg_ROOT}
     ${RESVGDIR}
     ${RESVGDIR}/lib
     $ENV{RESVGDIR}

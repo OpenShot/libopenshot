@@ -29,6 +29,7 @@
  */
 
 #include "Deinterlace.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
@@ -62,7 +63,7 @@ void Deinterlace::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Deinterlace::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Deinterlace::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Get original size of frame's image
 	int original_width = frame->GetImage()->width();

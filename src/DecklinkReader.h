@@ -46,7 +46,6 @@
 #include <unistd.h>
 
 #include "CacheMemory.h"
-#include "Exceptions.h"
 #include "Frame.h"
 #include "DecklinkInput.h"
 

@@ -43,7 +43,7 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
-#include "Exceptions.h"
+
 #include "MagickUtilities.h"
 
 namespace openshot

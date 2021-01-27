@@ -35,6 +35,7 @@
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 
 #include "DummyReader.h"
+#include "Exceptions.h"
 #include "CacheMemory.h"
 #include "Fraction.h"
 #include "Frame.h"
