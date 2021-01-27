@@ -127,12 +127,19 @@
 
 /* Instantiate the required template specializations */
 %template() std::map<std::string, int>;
+%template() std::pair<int, int>;
+%template() std::vector<int>;
+%template() std::pair<double, double>;
+%template() std::pair<float, float>;
 
 /* Make openshot.Fraction more Pythonic */
 %extend openshot::Fraction {
 %{
 	#include <sstream>
 	#include <map>
+
+	static std::vector<std::string> _keys{"num", "den"};
+	static int fracError = 0;
 %}
 	double __float__() {
 		return $self->ToDouble();
@@ -140,17 +147,70 @@
 	int __int__() {
 		return $self->ToInt();
 	}
+	/* Dictionary-type methods */
+	int __len__() {
+		return _keys.size();
+	}
+	%exception __getitem__ {
+		$action
+		if (fracError == 1) {
+			fracError = 0;  // Clear flag for reuse
+			PyErr_SetString(PyExc_KeyError, "Key not found");
+			SWIG_fail;
+		}
+	}
+	const std::string __getitem__(int index) {
+		if (index < _keys.size()) {
+			return _keys[index];
+		}
+		/* Otherwise, raise an exception */
+		fracError = 1;
+		return "";
+	}
+	int __getitem__(const std::string& key) {
+		if (key == "num") {
+			return $self->num;
+		} else if (key == "den") {
+			return $self->den;
+		}
+		/* Otherwise, raise an exception */
+		fracError = 1;
+		return 0;
+	}
+	bool __contains__(const std::string& key) {
+		return bool(std::find(_keys.begin(), _keys.end(), key) != _keys.end());
+	}
 	std::map<std::string, int> GetMap() {
 		std::map<std::string, int> map1;
 		map1.insert({"num", $self->num});
 		map1.insert({"den", $self->den});
 		return map1;
 	}
-	std::string __repr__() {
+	/* Display methods */
+	const std::string __string__() {
 		std::ostringstream result;
 		result << $self->num << ":" << $self->den;
 		return result.str();
+	}
+	const std::string __repr__() {
+		std::ostringstream result;
+		result << "Fraction(" << $self->num << ", " << $self->den << ")";
+		return result.str();
   }
+	/* Implement dict methods in Python */
+	%pythoncode %{
+		def __iter__(self):
+			return iter(self.GetMap())
+		def keys(self):
+			_items = self.GetMap()
+			return _items.keys()
+		def items(self):
+			_items = self.GetMap()
+			return _items.items()
+		def values(self):
+			_items = self.GetMap()
+			return _items.values()
+	%}
 }
 
 %extend openshot::OpenShotVersion {

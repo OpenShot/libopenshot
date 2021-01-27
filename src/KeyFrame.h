@@ -31,14 +31,10 @@
 #ifndef OPENSHOT_KEYFRAME_H
 #define OPENSHOT_KEYFRAME_H
 
-#include <iostream>
-#include <iomanip>
 #include <cmath>
-#include <assert.h>
 #include <vector>
 
 #include "Fraction.h"
-#include "Coordinate.h"
 #include "Point.h"
 #include "Json.h"
 
@@ -66,6 +62,8 @@ namespace openshot {
 		std::vector<Point> Points;			///< Vector of all Points
 
 	public:
+		using CoordinateVector = std::vector<Coordinate>;
+		using PointsVector = std::vector<Point>;
 
 		/// Default constructor for the Keyframe class
 		Keyframe() = default;
@@ -73,14 +71,17 @@ namespace openshot {
 		/// Constructor which sets the default point & coordinate at X=1
 		Keyframe(double value);
 
+		/// Constructor which adds a supplied vector of Points
+		Keyframe(const PointsVector& points);
+
+		/// Constructor which takes a vector of std::pair tuples
+		Keyframe(const CoordinateVector& coordinates);
+
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 
-		/// Add a new point on the key-frame, with some defaults set (BEZIER)
-		void AddPoint(double x, double y);
-
-		/// Add a new point on the key-frame, with a specific interpolation type
-		void AddPoint(double x, double y, InterpolationType interpolate);
+		/// Add a new point on the key-frame, with optional interpolation type
+		void AddPoint(double x, double y, InterpolationType interpolate=BEZIER);
 
 		/// Does this keyframe contain a specific point
 		bool Contains(Point p) const;
