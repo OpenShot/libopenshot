@@ -666,7 +666,7 @@ TEST(Attach_test){
 	// Attach childClip to tracked object
 	std::string tracked_id = trackedData->Id();
 	childClip.Open();
-	childClip.AttachToTracker(tracked_id);
+	childClip.AttachToObject(tracked_id);
 	
 	std::shared_ptr<TrackedObjectBBox> trackedTest = std::static_pointer_cast<TrackedObjectBBox>(childClip.GetAttachedObject());
 	

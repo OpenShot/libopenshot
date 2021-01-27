@@ -126,6 +126,7 @@ namespace openshot {
 		bool is_open;	///> Is Reader opened
 		std::string attached_id; ///< Id of the bounding box that this clip is attached to
 		std::shared_ptr<openshot::TrackedObjectBase> attachedObject;
+		Clip* attachedClip; ///< Clip object this clip is attached to
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -203,12 +204,16 @@ namespace openshot {
 		void SetAttachedId(std::string value) { attached_id = value; };
 
 		/// Attach clip to bounding box
-		void AttachToTracker(std::string tracked_id);
+		void AttachToObject(std::string object_id);
 
 		/// Set the pointer to the trackedObject this clip is attached to
 		void SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
+		/// Set the pointer to the clip this clip is attached to
+		void SetAttachedClip(Clip* clipObject);
 		/// Return a pointer to the trackedObject this clip is attached to
 		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return attachedObject; };
+		/// Return a pointer to the clip this clip is attached to
+		Clip* GetAttachedClip() const { return attachedClip; };
 		
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };

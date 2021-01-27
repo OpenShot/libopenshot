@@ -100,6 +100,10 @@ void Clip::init_settings()
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
 
+	// Initialize the attached object and attached clip as null pointers
+	attachedObject = nullptr;
+	attachedClip = NULL;
+
 	// Init reader info struct and cache size
 	init_reader_settings();
 }
@@ -245,22 +249,23 @@ Clip::~Clip()
 }
 
 // Attach clip to bounding box
-void Clip::AttachToTracker(std::string tracked_id)
+void Clip::AttachToObject(std::string object_id)
 {
 	// Search for the tracked object on the timeline
 	Timeline* parentTimeline = (Timeline *) ParentTimeline();
-	
-	// Check if the clip has a parent timeline
-	if (parentTimeline){
 
+	if (parentTimeline) {
 		// Create a smart pointer to the tracked object from the timeline
-		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(tracked_id);
-		
+		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(object_id);
+		Clip* clipObject = parentTimeline->GetClip(object_id);
+
 		// Check for valid tracked object
 		if (trackedObject){
 			SetAttachedObject(trackedObject);
 		}
-
+		else if (clipObject) {
+			SetAttachedClip(clipObject);
+		}
 	}
 	return;
 }
@@ -268,6 +273,12 @@ void Clip::AttachToTracker(std::string tracked_id)
 // Set the pointer to the trackedObject this clip is attached to
 void Clip::SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 	attachedObject = trackedObject;
+	return;
+}
+
+// Set the pointer to the clip this clip is attached to
+void Clip::SetAttachedClip(Clip* clipObject){
+	attachedClip = clipObject;
 	return;
 }
 
@@ -979,13 +990,15 @@ void Clip::SetJsonValue(const Json::Value root) {
 	cache.Clear();
 
 	// Set data from Json (if key is found)
-	if (!root["attached_id"].isNull())
+	if (!root["attached_id"].isNull()){
 		attached_id = root["attached_id"].asString();
 		if (attached_id.size() > 0 && attached_id != "None"){
-			AttachToTracker(attached_id);
+			AttachToObject(attached_id);
 		} else{
 			attachedObject = nullptr;
+			attachedClip = NULL;
 		}
+	}
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 	if (!root["scale"].isNull())
@@ -1315,13 +1328,27 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			break;
 		}
 	}
-	
+
 	// Initialize attached object's properties values
 	float attached_location_x = 0.0;
 	float attached_location_y = 0.0;
 	float attached_scale_x = 1.0;
 	float attached_scale_y = 1.0;
 	float attached_rotation = 0.0;
+
+	if (attachedClip){
+
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
+
+		attached_location_x = attachedClip->location_x.GetValue(timeline_frame_number); 
+		attached_location_y = attachedClip->location_y.GetValue(timeline_frame_number);
+		attached_scale_x = attachedClip->scale_x.GetValue(timeline_frame_number);
+		attached_scale_y = attachedClip->scale_y.GetValue(timeline_frame_number);
+		attached_rotation = attachedClip->rotation.GetValue(timeline_frame_number);
+	}
 
 	/* TRANSFORM CLIP TO ATTACHED OBJECT'S POSITION AND DIMENSION */
 	if (attachedObject){
@@ -1371,7 +1398,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	float sy = scale_y.GetValue(frame->number); // percentage Y scale
 
 	// Compose clip's scale to attachedObject's scale
-	if(attached_scale_x > 0.0 && attached_scale_y > 0.0){
+	if(attached_scale_x != 0.0 && attached_scale_y != 0.0){
 		sx*= attached_scale_x;
 		sy*= attached_scale_y;
 	}
