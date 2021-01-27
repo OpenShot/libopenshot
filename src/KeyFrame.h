@@ -33,6 +33,7 @@
 
 #include <cmath>
 #include <vector>
+
 #include "Fraction.h"
 #include "Point.h"
 #include "Json.h"

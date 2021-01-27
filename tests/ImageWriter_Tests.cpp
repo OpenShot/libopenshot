@@ -37,6 +37,7 @@
 
 #ifdef USE_IMAGEMAGICK
 #include "ImageWriter.h"
+#include "Exceptions.h"
 #include "ImageReader.h"
 #include "FFmpegReader.h"
 #include "Frame.h"

@@ -36,7 +36,6 @@
 #include <memory>
 #include "CacheBase.h"
 #include "Frame.h"
-#include "Exceptions.h"
 
 namespace openshot {
 

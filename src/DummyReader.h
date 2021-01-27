@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
-#include "Exceptions.h"
 #include "Fraction.h"
 
 namespace openshot
