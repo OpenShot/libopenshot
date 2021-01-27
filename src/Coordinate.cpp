@@ -29,6 +29,7 @@
  */
 
 #include "Coordinate.h"
+#include "Exceptions.h"
 
 using namespace std;
 using namespace openshot;

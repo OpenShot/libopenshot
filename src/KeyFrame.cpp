@@ -29,6 +29,7 @@
  */
 
 #include "KeyFrame.h"
+#include "Exceptions.h"
 #include <algorithm>
 #include <functional>
 #include <utility>

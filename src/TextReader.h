@@ -44,7 +44,7 @@
 #include <memory>
 #include "CacheMemory.h"
 #include "Enums.h"
-#include "Exceptions.h"
+
 #include "MagickUtilities.h"
 
 namespace openshot

@@ -35,6 +35,7 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "FFmpegWriter.h"
+#include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "Frame.h"

@@ -32,7 +32,7 @@
 #define OPENSHOT_POINT_H
 
 #include "Coordinate.h"
-#include "Exceptions.h"
+
 #include "Json.h"
 
 namespace openshot

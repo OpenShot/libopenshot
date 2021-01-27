@@ -29,6 +29,7 @@
  */
 
 #include "Negate.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
@@ -48,7 +49,7 @@ Negate::Negate()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Negate::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Negate::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Make a negative of the images pixels
 	frame->GetImage()->invertPixels();
