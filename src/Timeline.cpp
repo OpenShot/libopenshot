@@ -290,7 +290,8 @@ std::list<std::string> Timeline::GetTrackedObjectsIds() const{
 	return trackedObjects_ids;
 }
 
-std::string Timeline::GetTrackedObjectValues(std::string id) const {
+// Return the trackedObject's properties as a JSON string
+std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_number) const {
 
 	// Initialize the JSON object
 	Json::Value trackedObjectJson;
@@ -304,19 +305,34 @@ std::string Timeline::GetTrackedObjectValues(std::string id) const {
 		std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(iterator->second);
 
 		// Get the trackedObject values for it's first frame
-		auto boxes = trackedObject->BoxVec;
-		auto firstBox = boxes.begin()->second;
-		float x1 = firstBox.cx - (firstBox.width/2);
-		float y1 = firstBox.cy - (firstBox.height/2);
-		float x2 = firstBox.cx + (firstBox.width/2);
-		float y2 = firstBox.cy + (firstBox.height/2);
-		float r = firstBox.angle;
+		if (trackedObject->ExactlyContains(frame_number)){
+			BBox box = trackedObject->GetBox(frame_number);
+			float x1 = box.cx - (box.width/2);
+			float y1 = box.cy - (box.height/2);
+			float x2 = box.cx + (box.width/2);
+			float y2 = box.cy + (box.height/2);
+			float rotation = box.angle;
 
-		trackedObjectJson["x1"] = x1;
-		trackedObjectJson["y1"] = y1;
-		trackedObjectJson["x2"] = x2;
-		trackedObjectJson["y2"] = y2;
-		trackedObjectJson["r"] = r;
+			trackedObjectJson["x1"] = x1;
+			trackedObjectJson["y1"] = y1;
+			trackedObjectJson["x2"] = x2;
+			trackedObjectJson["y2"] = y2;
+			trackedObjectJson["rotation"] = rotation;
+		
+		} else {
+			BBox box = trackedObject->BoxVec.begin()->second;
+			float x1 = box.cx - (box.width/2);
+			float y1 = box.cy - (box.height/2);
+			float x2 = box.cx + (box.width/2);
+			float y2 = box.cy + (box.height/2);
+			float rotation = box.angle;
+
+			trackedObjectJson["x1"] = x1;
+			trackedObjectJson["y1"] = y1;
+			trackedObjectJson["x2"] = x2;
+			trackedObjectJson["y2"] = y2;
+			trackedObjectJson["rotation"] = rotation;
+		}
 
 	}
 	else {
@@ -325,7 +341,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id) const {
 		trackedObjectJson["y1"] = 0;
 		trackedObjectJson["x2"] = 0;
 		trackedObjectJson["y2"] = 0;
-		trackedObjectJson["r"] = 0;
+		trackedObjectJson["rotation"] = 0;
 	}	
 
 	return trackedObjectJson.toStyledString();

@@ -45,6 +45,9 @@ ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
 
     // Tries to load the tracker data from protobuf
     LoadObjDetectdData(clipObDetectDataPath);
+
+    // Initialize the selected object index as the first object index
+    selectedObjectIndex = trackedObjects.begin()->first;
 }
 
 // Default constructor
@@ -53,6 +56,8 @@ ObjectDetection::ObjectDetection()
 	// Init effect properties
 	init_effect_details();
 
+    // Initialize the selected object index as the first object index
+    selectedObjectIndex = trackedObjects.begin()->first;
 }
 
 // Init effect settings
@@ -273,18 +278,23 @@ Json::Value ObjectDetection::JsonValue() const {
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
+    root["selected_object_index"] = selectedObjectIndex;
     
-    // Add trackedObjects IDs to JSON
-	for (auto const& trackedObject : trackedObjects){
-		Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-		// Save the trackedObject JSON on root
+    for (auto const& trackedObject : trackedObjects){
+        Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
         root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
-        root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
-        root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
-        root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
-        root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
-        root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
-	}
+    }
+
+    // Add the selected object Json to root
+    auto selectedObject = trackedObjects.at(selectedObjectIndex);
+    if (selectedObject){
+        Json::Value selectedObjectJSON = selectedObject->JsonValue();
+        root["delta_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_x"];
+        root["delta_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_y"];
+        root["scale_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_x"];
+        root["scale_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_y"];
+        root["rotation-"+to_string(selectedObjectIndex)] = selectedObjectJSON["rotation"];
+    }
 
 	// return JsonValue
 	return root;
@@ -322,17 +332,31 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 		}
 	}
 
+    // Set the selected object index
+    if (!root["selected_object_index"].isNull())
+        selectedObjectIndex = root["selected_object_index"].asInt();
+
     for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON;
         trackedObjectJSON["box_id"] = root["box_id-"+to_string(trackedObject.first)];
-        trackedObjectJSON["delta_x"] = root["delta_x-"+to_string(trackedObject.first)];
-        trackedObjectJSON["delta_y"] = root["delta_y-"+to_string(trackedObject.first)];
-        trackedObjectJSON["scale_x"] = root["scale_x-"+to_string(trackedObject.first)];
-        trackedObjectJSON["scale_y"] = root["scale_y-"+to_string(trackedObject.first)];
-        trackedObjectJSON["rotation"] = root["rotation-"+to_string(trackedObject.first)];
-		if (!trackedObjectJSON.isNull())
-			trackedObject.second->SetJsonValue(trackedObjectJSON);
-	}
+        trackedObject.second->SetJsonValue(trackedObjectJSON);
+    }
+
+    // Set the selectec object's properties
+    if (!root["box_id-"+to_string(selectedObjectIndex)].isNull()){
+        Json::Value selectedObjectJSON;
+        selectedObjectJSON["box_id"] = root["box_id-"+to_string(selectedObjectIndex)];
+        selectedObjectJSON["delta_x"] = root["delta_x-"+to_string(selectedObjectIndex)];
+        selectedObjectJSON["delta_y"] = root["delta_y-"+to_string(selectedObjectIndex)];
+        selectedObjectJSON["scale_x"] = root["scale_x-"+to_string(selectedObjectIndex)];
+        selectedObjectJSON["scale_y"] = root["scale_y-"+to_string(selectedObjectIndex)];
+        selectedObjectJSON["rotation"] = root["rotation-"+to_string(selectedObjectIndex)];
+        if (!selectedObjectJSON.isNull()){
+            auto selectedObject = trackedObjects.at(selectedObjectIndex);
+            if (selectedObject)
+                selectedObject->SetJsonValue(selectedObjectJSON);
+        }
+    }
 }
 
 // Get all properties for a specific frame
@@ -341,27 +365,33 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	// Generate JSON properties list
 	Json::Value root;
 
-    // Add trackedObjects IDs to JSON
-	for (auto const& trackedObject : trackedObjects){
-		// Save the trackedObject Id on root
-        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
-        root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
-        root["visible-"+to_string(trackedObject.first)] = trackedObjectJSON["visible"];
-        
-        // Add trackedObject's properties only if it's visible in this frame (performance boost)
-        if (trackedObjectJSON["visible"]["value"].asBool()){
-            root["x1-"+to_string(trackedObject.first)] = trackedObjectJSON["x1"];
-            root["y1-"+to_string(trackedObject.first)] = trackedObjectJSON["y1"];
-            root["x2-"+to_string(trackedObject.first)] = trackedObjectJSON["x2"];
-            root["y2-"+to_string(trackedObject.first)] = trackedObjectJSON["y2"];
-            root["delta_x-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_x"];
-            root["delta_y-"+to_string(trackedObject.first)] = trackedObjectJSON["delta_y"];
-            root["scale_x-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_x"];
-            root["scale_y-"+to_string(trackedObject.first)] = trackedObjectJSON["scale_y"];
-            root["rotation-"+to_string(trackedObject.first)] = trackedObjectJSON["rotation"];
-        }
-	}
+    // root["visible_objects"] = Json::Value(Json::arrayValue);
 
+    for (auto const& trackedObject : trackedObjects){
+        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
+        root["visible-"+to_string(trackedObject.first)] = trackedObjectJSON["visible"];
+        if (trackedObjectJSON["visible"]["value"].asBool())
+            root["box_id-"+to_string(trackedObject.first)] = trackedObjectJSON["box_id"];
+    }
+
+    // Add the selected object Json to root
+    auto selectedObject = trackedObjects.at(selectedObjectIndex);
+    if (selectedObject){
+        Json::Value selectedObjectJSON = selectedObject->PropertiesJSON(requested_frame);
+        root["box_id-"+to_string(selectedObjectIndex)] = selectedObjectJSON["box_id"];
+        root["visible-"+to_string(selectedObjectIndex)] = selectedObjectJSON["visible"];
+        root["x1-"+to_string(selectedObjectIndex)] = selectedObjectJSON["x1"];
+        root["y1-"+to_string(selectedObjectIndex)] = selectedObjectJSON["y1"];
+        root["x2-"+to_string(selectedObjectIndex)] = selectedObjectJSON["x2"];
+        root["y2-"+to_string(selectedObjectIndex)] = selectedObjectJSON["y2"];
+        root["delta_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_x"];
+        root["delta_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["delta_y"];
+        root["scale_x-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_x"];
+        root["scale_y-"+to_string(selectedObjectIndex)] = selectedObjectJSON["scale_y"];
+        root["rotation-"+to_string(selectedObjectIndex)] = selectedObjectJSON["rotation"];
+    }
+
+    root["selected_object_index"] = add_property_json("Selected Object", selectedObjectIndex, "int", "", NULL, 0, 200, false, requested_frame);
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);

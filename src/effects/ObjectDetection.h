@@ -86,6 +86,9 @@ namespace openshot
 
 	public:
 
+		/// Index of the Tracked Object that was selected to modify it's properties
+		int selectedObjectIndex;
+
 		/// Blank constructor, useful when using Json to load the effect properties
 		ObjectDetection(std::string clipTrackerDataPath);
 
