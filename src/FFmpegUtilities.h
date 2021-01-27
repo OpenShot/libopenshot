@@ -129,7 +129,25 @@
 	// Does ffmpeg pixel format contain an alpha channel?
 	inline static const bool ffmpeg_has_alpha(PixelFormat pix_fmt)
 	{
-		if (pix_fmt == AV_PIX_FMT_ARGB || pix_fmt == AV_PIX_FMT_RGBA || pix_fmt == AV_PIX_FMT_ABGR || pix_fmt == AV_PIX_FMT_BGRA || pix_fmt == AV_PIX_FMT_YUVA420P) {
+		if (pix_fmt == AV_PIX_FMT_ARGB ||
+		    pix_fmt == AV_PIX_FMT_RGBA ||
+		    pix_fmt == AV_PIX_FMT_ABGR ||
+		    pix_fmt == AV_PIX_FMT_BGRA ||
+		    pix_fmt == AV_PIX_FMT_YUVA420P ||
+		    pix_fmt == AV_PIX_FMT_YA16LE ||
+		    pix_fmt == AV_PIX_FMT_YA16BE ||
+		    pix_fmt == AV_PIX_FMT_YA8 ||
+		    pix_fmt == AV_PIX_FMT_GBRAP ||
+            pix_fmt == AV_PIX_FMT_GBRAP10BE ||
+            pix_fmt == AV_PIX_FMT_GBRAP10LE ||
+            pix_fmt == AV_PIX_FMT_GBRAP12BE ||
+            pix_fmt == AV_PIX_FMT_GBRAP12LE ||
+            pix_fmt == AV_PIX_FMT_GBRAP16BE ||
+            pix_fmt == AV_PIX_FMT_GBRAP16LE ||
+            pix_fmt == AV_PIX_FMT_GBRPF32BE ||
+            pix_fmt == AV_PIX_FMT_GBRPF32LE ||
+            pix_fmt == AV_PIX_FMT_GBRAPF32BE ||
+            pix_fmt == AV_PIX_FMT_GBRAPF32LE) {
 			return true;
 		} else {
 			return false;
