@@ -57,6 +57,13 @@
 %shared_ptr(juce::AudioSampleBuffer)
 %shared_ptr(openshot::Frame)
 
+/* Template specializations */
+%template() std::map<std::string, int>;
+%template() std::pair<int, int>;
+%template() std::vector<int>;
+%template() std::pair<double, double>;
+%template() std::pair<float, float>;
+
 %{
 /* Ruby and FFmpeg define competing RSHIFT macros,
  * so we move Ruby's out of the way for now. We'll
