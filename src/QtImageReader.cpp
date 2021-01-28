@@ -157,11 +157,9 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 
 	// Scale image smaller (or use a previous scaled image)
 	if (!cached_image || (max_size.width() != current_max_size.width() || max_size.height() != current_max_size.height())) {
-		bool loaded = false;
-
         // Check for SVG files and rasterize them to QImages
         if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
-            loaded = load_svg_path(path);
+            load_svg_path(path);
         }
 
         // We need to resize the original image to a smaller image (for performance reasons)
