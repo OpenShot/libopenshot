@@ -33,6 +33,11 @@
 #include <memory>
 
 #include "UnitTest++.h"
+// Work around older versions of UnitTest++ without REQUIRE
+#ifndef REQUIRE
+  #define REQUIRE
+#endif
+
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "Frame.h"
@@ -46,30 +51,105 @@ using namespace openshot;
 SUITE(Frame_Tests)
 {
 
+class FrameFixture
+{
+protected:
+    Clip* testClip;
+public:
+    Frame* testFrame;
+
+    FrameFixture() {
+        // Open our test video clip
+        std::stringstream path;
+        path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+        testClip = new Clip(path.str());
+        testClip->Open();
+    }
+
+    ~FrameFixture() {
+        testClip->Close();
+        delete testClip;
+        if (testFrame != nullptr) {
+            delete testFrame;
+        }
+    }
+
+    void LoadFrame() {
+        // Extract and return frame 125.
+        testFrame = testClip->GetFrame(125).get();
+    }
+};
+
 TEST(Default_Constructor)
 {
 	// Create a "blank" default Frame
-	std::shared_ptr<Frame> f1(new Frame());
-
-	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
+	Frame f1;
 
 	// Check basic default parameters
-	CHECK_EQUAL(1, f1->GetHeight());
-	CHECK_EQUAL(1, f1->GetWidth());
-	CHECK_EQUAL(44100, f1->SampleRate());
-	CHECK_EQUAL(2, f1->GetAudioChannelsCount());
+	CHECK_EQUAL(1, f1.GetHeight());
+	CHECK_EQUAL(1, f1.GetWidth());
+	CHECK_EQUAL(44100, f1.SampleRate());
+	CHECK_EQUAL(2, f1.GetAudioChannelsCount());
 
 	// Should be false until we load or create contents
-	CHECK_EQUAL(false, f1->has_image_data);
-	CHECK_EQUAL(false, f1->has_audio_data);
+	CHECK_EQUAL(false, f1.has_image_data);
+	CHECK_EQUAL(false, f1.has_audio_data);
+}
 
-	// Calling GetImage() paints a blank frame, by default
-	std::shared_ptr<QImage> i1 = f1->GetImage();
+TEST(ImageOnly_Constructor)
+{
+	Frame f(42, 100, 111, "#FAFBFC");
+
+	CHECK_EQUAL(100, f.GetWidth());
+	CHECK_EQUAL(111, f.GetHeight());
+	CHECK_EQUAL(44100, f.SampleRate());
+	CHECK_EQUAL(2, f.GetAudioChannelsCount());
+
+	CHECK_EQUAL(false, f.has_audio_data);
+	// CHECK_EQUAL(true, f.has_image_data); // TODO: This would be expected?
+	// CHECK(f.GetPixels(0)); // TODO: crashes
+	// CHECK(f.CheckPixel(0, 0, 0xFA, 0xFB, 0xFC, 0, 0));
+}
+
+TEST(AudioOnly_Constructor)
+{
+	Frame f(42, 100, 1);
+	CHECK_EQUAL(1, f.GetHeight());
+	CHECK_EQUAL(1, f.GetWidth());
+	CHECK_EQUAL(44100, f.SampleRate());
+	CHECK_EQUAL(1, f.GetAudioChannelsCount());
+
+	// CHECK_EQUAL(true, f.has_audio_data); // TODO: This would be expected?
+}
+
+TEST(SetFrameNumber)
+{
+	Frame f;
+	f.SetFrameNumber(42);
+	CHECK_EQUAL(42, f.number);
+	f.SetFrameNumber(21);
+	CHECK_EQUAL(21, f.number);
+}
+
+TEST(SampleRate_Change)
+{
+	Frame f;
+	f.SampleRate(44800);
+	CHECK_EQUAL(44800, f.SampleRate());
+	// TODO: Test how this affects audio data?
+}
+
+TEST(GetImage)
+{
+	Frame f1;
+	// Calling GetImage() paints a blank frame, by default.
+	// It also adds image data to the frame!
+	std::shared_ptr<QImage> i1 = f1.GetImage();
 
 	CHECK(i1 != nullptr);
 
-	CHECK_EQUAL(true,f1->has_image_data);
-	CHECK_EQUAL(false,f1->has_audio_data);
+	CHECK_EQUAL(true,f1.has_image_data);
+	CHECK_EQUAL(false,f1.has_audio_data);
 }
 
 
@@ -83,8 +163,7 @@ TEST(Data_Access)
 
 	// Get first frame
 	std::shared_ptr<Frame> f1 = c1.GetFrame(1);
-
-	CHECK(f1 != nullptr);
+	REQUIRE CHECK(f1 != nullptr);
 
 	CHECK_EQUAL(1, f1->number);
 	CHECK_EQUAL(1280, f1->GetWidth());
@@ -95,22 +174,21 @@ TEST(Data_Access)
 TEST(AddImage_QImage)
 {
 	// Create a "blank" default Frame
-	std::shared_ptr<Frame> f1(new Frame());
+	Frame f1;
 
 	// Load an image
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "front.png";
 	std::shared_ptr<QImage> i1(new QImage(QString::fromStdString(path.str()))) ;
 
-	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
 	CHECK_EQUAL(false, i1->isNull());
 
-	f1->AddImage(i1);
+	f1.AddImage(i1);
 
 	// Check loaded image parameters
-	CHECK_EQUAL(i1->height(), f1->GetHeight());
-	CHECK_EQUAL(i1->width(), f1->GetWidth());
-	CHECK_EQUAL(true, f1->has_image_data);
+	CHECK_EQUAL(i1->height(), f1.GetHeight());
+	CHECK_EQUAL(i1->width(), f1.GetWidth());
+	CHECK_EQUAL(true, f1.has_image_data);
 }
 
 
@@ -151,5 +229,21 @@ TEST(Copy_Constructor)
 	CHECK_EQUAL(f1.GetBytes(), f2.GetBytes());
 	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
 }
+
+#ifdef USE_IMAGEMAGICK
+
+TEST_FIXTURE(FrameFixture, GetMagickImage) {
+    LoadFrame();
+    Frame f = *testFrame;
+
+    REQUIRE CHECK_EQUAL(125, f.number);
+
+    auto magick = f.GetMagickImage();
+
+    CHECK_EQUAL(f.GetWidth(), magick->columns());
+    CHECK_EQUAL(f.GetHeight(), magick->rows());
+}
+
+#endif // USE_IMAGEMAGICK
 
 } // SUITE(Frame_Tests)
