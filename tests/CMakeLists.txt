@@ -57,6 +57,7 @@ if(ENABLE_BLACKMAGIC)
 endif()
 
 
+
 ###############  SET TEST SOURCE FILES  #################
 set(OPENSHOT_TEST_FILES
   Cache_Tests.cpp
@@ -77,6 +78,13 @@ set(OPENSHOT_TEST_FILES
   Settings_Tests.cpp
   Timeline_Tests.cpp )
 
+if(NOT DISABLE_EXTERNAL_EFFECTS)
+	list(APPEND OPENSHOT_TEST_FILES DynamicEffects_Tests.cpp)
+	add_definitions(-DTEST_PLUGIN_NAME="SuperBlur"
+    -DTEST_PLUGIN="${PROJECT_BINARY_DIR}/external-effects/super-blur/libeffect-superblur.so")
+endif()
+
+
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
@@ -86,6 +94,11 @@ add_executable(openshot-test
 
 # Link libraries to the new executable
 target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
+
+if(NOT DISABLE_EXTERNAL_EFFECTS)
+	add_dependencies(openshot-test effect-superblur)
+endif()
+
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable,

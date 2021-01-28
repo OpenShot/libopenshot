@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for the EffectInfo class
+ * @brief Unit tests for openshot::Timeline
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -28,46 +28,64 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_EFFECT_INFO_H
-#define OPENSHOT_EFFECT_INFO_H
+#include "UnitTest++.h"
+#include "../include/OpenShot.h"
 
-#include "Effects.h"
-#include <pthread.h>
-
+#ifdef TEST_PLUGIN
 #if defined(__linux__)
-#include <dlfcn.h>
-#endif
 
-namespace openshot
+using namespace openshot;
+
+
+TEST(DynamicEffect_Loader)
 {
+    auto effect_info = EffectInfo();
+    effect_info.UnloadDynamicEffects();
 
-	/**
-	 * @brief This class returns a listing of all effects supported by libopenshot
-	 *
-	 * Use this class to return a listing of all supported effects, and their
-	 * descriptions.
-	 */
-	class EffectInfo
-	{
-	public:
-		// Create an instance of an effect (factory style)
-		EffectBase* CreateEffect(std::string effect_type);
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
 
-		// Load effect built in shared library (factory style)
-		EffectBase* LoadEffect(std::string location);
+    CHECK(effect != nullptr);
 
-		// Unload all effect loaded dynamically
-		void UnloadDynamicEffects();
-
-		/// JSON methods
-		static std::string Json(); ///< Generate JSON string of this object
-		static Json::Value JsonValue(); ///< Generate Json::Value for this object
-
-    private:
-        pthread_mutex_t		m_mutex;
-
-	};
-
+    delete effect;
 }
 
+
+TEST(DynamicEffect_DoubleLoader)
+{
+    auto effect_info = EffectInfo();
+    effect_info.UnloadDynamicEffects();
+
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
+
+    CHECK(effect != nullptr);
+
+    delete effect;
+
+    effect = effect_info.LoadEffect(TEST_PLUGIN);
+
+    CHECK(effect != nullptr);
+
+    delete effect;
+}
+
+
+TEST(DynamicEffect_ReachByName)
+{
+    auto effect_info = EffectInfo();
+    effect_info.UnloadDynamicEffects();
+
+    auto effect = effect_info.LoadEffect(TEST_PLUGIN);
+
+    CHECK(effect != nullptr);
+
+    delete effect;
+
+    effect = effect_info.CreateEffect(TEST_PLUGIN_NAME);
+
+    CHECK(effect != nullptr);
+
+    delete effect;
+}
+
+#endif
 #endif

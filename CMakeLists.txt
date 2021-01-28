@@ -133,6 +133,10 @@ add_subdirectory(src)
 add_subdirectory(examples)
 add_subdirectory(bindings)
 
+IF (NOT DISABLE_EXTERNAL_EFFECTS)
+  add_subdirectory(external-effects)
+ENDIF (NOT DISABLE_EXTERNAL_EFFECTS)
+
 ###
 ### Configure Version.h header
 ###

@@ -31,6 +31,8 @@
 #ifndef OPENSHOT_EFFECT_BASE_H
 #define OPENSHOT_EFFECT_BASE_H
 
+#define OPENSHOT_PLUGIN_API_VERSION 0x0001
+
 #include <iostream>
 #include <iomanip>
 #include <memory>
