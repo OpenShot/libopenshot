@@ -272,6 +272,9 @@ namespace openshot {
 
 		/// Open File - which is called by the constructor automatically
 		void Open() override;
+
+		/// Return true if frame can be read with GetFrame()
+		bool GetIsDurationKnown();
 	};
 
 }
