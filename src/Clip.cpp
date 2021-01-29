@@ -983,11 +983,11 @@ void Clip::SetJsonValue(const Json::Value root) {
 		for (const auto existing_effect : root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
-			if (!existing_effect["type"].isNull()) {
 
+			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
-				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
-					
+				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
+
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 

@@ -99,19 +99,6 @@ set(OPENSHOT_SOURCES
   TimelineBase.cpp
   Timeline.cpp)
 
-# OpenCV related classes
-set(OPENSHOT_CV_SOURCES
-  CVTracker.cpp
-  CVStabilization.cpp
-  ClipProcessingJobs.cpp
-  CVObjectDetection.cpp
-  effects/Stabilizer.cpp
-  effects/Tracker.cpp
-  effects/ObjectDetection.cpp
-  ./sort_filter/sort.cpp
-  ./sort_filter/Hungarian.cpp
-  ./sort_filter/KalmanTracker.cpp)
-
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -388,33 +375,6 @@ if (ENABLE_BLACKMAGIC)
   endif()
 endif()
 
-################## OPENCV ###################
-if(ENABLE_OPENCV)
-  find_package(OpenCV 4)
-  if(NOT OpenCV_FOUND)
-    set(ENABLE_OPENCV FALSE CACHE BOOL
-      "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
-  else()
-    add_subdirectory(protobuf_messages)
-    # Add OpenCV source files
-    target_sources(openshot PRIVATE
-      ${OPENSHOT_CV_SOURCES}
-    )
-    target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
-    target_link_libraries(openshot PUBLIC
-      opencv_core
-      opencv_video
-      opencv_highgui
-      opencv_dnn
-      opencv_tracking
-      openshot_protobuf
-    )
-  set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
-  mark_as_advanced(HAVE_OPENCV)
-  endif()
-endif()
-add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
-
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
 if(DEFINED PROFILER)
@@ -441,9 +401,6 @@ install(
   DIRECTORY .
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   FILES_MATCHING PATTERN "*.h"
-)
-install(FILES ${ProtobufHeaders}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
 )
 
 ############### CPACK PACKAGING ##############

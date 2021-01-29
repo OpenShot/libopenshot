@@ -56,6 +56,7 @@ if(ENABLE_BLACKMAGIC)
 	endif()
 endif()
 
+
 ###############  SET TEST SOURCE FILES  #################
 set(OPENSHOT_TEST_FILES
   Cache_Tests.cpp
@@ -74,31 +75,17 @@ set(OPENSHOT_TEST_FILES
   Point_Tests.cpp
   QtImageReader_Tests.cpp
   Settings_Tests.cpp
-  Timeline_Tests.cpp)
-
-##########  SET OPENCV RELATED TEST FILES  ###############
-if(ENABLE_OPENCV)
-  list(APPEND OPENSHOT_TEST_FILES
-    CVTracker_Tests.cpp
-    CVStabilizer_Tests.cpp
-    # CVObjectDetection_Tests.cpp
-  )
-endif()
+  Timeline_Tests.cpp )
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
-
 add_executable(openshot-test
   tests.cpp
-  ${OPENSHOT_TEST_FILES}
-)
+  ${OPENSHOT_TEST_FILES} )
 
 # Link libraries to the new executable
-target_link_libraries(openshot-test
-  openshot
-  ${UnitTest++_LIBRARIES}
-)
+target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
 
 ##### RUNNING TESTS (make os_test / make test) #####
 # Hook up the 'make os_test' target to the 'openshot-test' executable,
@@ -106,3 +93,4 @@ target_link_libraries(openshot-test
 if(NOT ENABLE_COVERAGE)
   add_custom_target(os_test COMMAND openshot-test)
 endif()
+

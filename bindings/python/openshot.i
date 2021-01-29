@@ -114,15 +114,6 @@
 	%}
 #endif
 
-#ifdef USE_OPENCV
-	%{
-		#include "ClipProcessingJobs.h"
-		#include "effects/Stabilizer.h"
-		#include "effects/Tracker.h"
-		#include "effects/ObjectDetection.h"
-	%}
-#endif
-
 /* Generic language independent exception handler. */
 %include "exception.i"
 %exception {
@@ -278,10 +269,6 @@
 %include "ZmqLogger.h"
 %include "AudioDeviceInfo.h"
 
-#ifdef USE_OPENCV
-	%include "ClipProcessingJobs.h"
-#endif
-
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
 	%include "ImageWriter.h"
@@ -304,11 +291,6 @@
 %include "effects/Saturation.h"
 %include "effects/Shift.h"
 %include "effects/Wave.h"
-#ifdef USE_OPENCV
-	%include "effects/Stabilizer.h"
-	%include "effects/Tracker.h"
-	%include "effects/ObjectDetection.h"
-#endif
 
 
 /* Wrap std templates (list, vector, etc...) */

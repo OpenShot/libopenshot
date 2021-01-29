@@ -817,9 +817,6 @@ void FFmpegReader::UpdateVideoInfo() {
 	}
 }
 
-bool FFmpegReader::GetIsDurationKnown() {
-	return this->is_duration_known;
-}
 
 std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 	// Check for open reader (or throw exception)
