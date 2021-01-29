@@ -141,6 +141,16 @@
 %template() std::pair<double, double>;
 %template() std::pair<float, float>;
 
+/* Wrap std templates (list, vector, etc...) */
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MetadataMap) std::map<std::string, std::string>;
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;
+
 /* Make openshot.Fraction more Pythonic */
 %extend openshot::Fraction {
 %{
@@ -311,12 +321,3 @@
 #endif
 
 
-/* Wrap std templates (list, vector, etc...) */
-%template(ClipList) std::list<openshot::Clip *>;
-%template(EffectBaseList) std::list<openshot::EffectBase *>;
-%template(CoordinateVector) std::vector<openshot::Coordinate>;
-%template(PointsVector) std::vector<openshot::Point>;
-%template(FieldVector) std::vector<openshot::Field>;
-%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
-%template(MetadataMap) std::map<std::string, std::string>;
-%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;
