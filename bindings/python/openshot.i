@@ -156,6 +156,7 @@
 %{
 	#include <sstream>
 	#include <map>
+	#include <vector>
 
 	static std::vector<std::string> _keys{"num", "den"};
 	static int fracError = 0;
@@ -179,7 +180,7 @@
 		}
 	}
 	const std::string __getitem__(int index) {
-		if (index < _keys.size()) {
+		if (index < static_cast<int>(_keys.size())) {
 			return _keys[index];
 		}
 		/* Otherwise, raise an exception */
