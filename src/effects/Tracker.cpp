@@ -29,6 +29,7 @@
  */
 
 #include "effects/Tracker.h"
+#include "Exceptions.h"
 #include <google/protobuf/util/time_util.h>
 
 using namespace std;
