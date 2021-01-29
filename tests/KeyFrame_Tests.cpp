@@ -510,18 +510,4 @@ TEST(Point_Vector_Constructor)
 	CHECK_CLOSE(30.0f, k1.GetValue(10), 0.0001);
 }
 
-TEST(Coordinate_Vector_Constructor)
-{
-	std::vector<Coordinate> coordinates{
-		Coordinate(1, 100), Coordinate(10, 500), Coordinate(1000, 80000)
-	};
-	Keyframe k1(coordinates);
-
-	CHECK_EQUAL(1001, k1.GetLength());
-
-	auto p1 = k1.GetPoint(2);
-	CHECK_CLOSE(80000.0f, p1.co.Y, 0.00001);
-}
-
-
 };  // SUITE
