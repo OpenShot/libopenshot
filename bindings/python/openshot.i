@@ -156,6 +156,7 @@
 %{
 	#include <sstream>
 	#include <map>
+	#include <vector>
 
 	static std::vector<std::string> _keys{"num", "den"};
 	static int fracError = 0;
@@ -179,7 +180,7 @@
 		}
 	}
 	const std::string __getitem__(int index) {
-		if (index < _keys.size()) {
+		if (index < static_cast<int>(_keys.size())) {
 			return _keys[index];
 		}
 		/* Otherwise, raise an exception */
@@ -206,7 +207,7 @@
 		return map1;
 	}
 	/* Display methods */
-	const std::string __string__() {
+	const std::string __str__() {
 		std::ostringstream result;
 		result << $self->num << ":" << $self->den;
 		return result.str();

@@ -62,9 +62,6 @@ namespace openshot {
 		std::vector<Point> Points;			///< Vector of all Points
 
 	public:
-		using CoordinateVec = std::vector<Coordinate>;
-		using PointsVec = std::vector<Point>;
-
 		/// Default constructor for the Keyframe class
 		Keyframe() = default;
 
@@ -72,10 +69,7 @@ namespace openshot {
 		Keyframe(double value);
 
 		/// Constructor which adds a supplied vector of Points
-		Keyframe(const PointsVec& points);
-
-		/// Constructor which takes a vector of std::pair tuples
-		Keyframe(const CoordinateVec& coordinates);
+		Keyframe(const std::vector<openshot::Point>& points);
 
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
