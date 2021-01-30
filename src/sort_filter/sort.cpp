@@ -54,7 +54,7 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 			tb.confidence = confidences[i];
 			detections.push_back(tb);
 
-			KalmanTracker trk = KalmanTracker(detections[i].box, detections[i].confidence, detections[i].classId);
+			KalmanTracker trk = KalmanTracker(detections[i].box, detections[i].confidence, detections[i].classId, i);
 			trackers.push_back(trk);
 		}
 		return;
@@ -167,7 +167,7 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 	// create and initialise new trackers for unmatched detections
 	for (auto umd : unmatchedDetections)
 	{
-		KalmanTracker tracker = KalmanTracker(detections[umd].box, detections[umd].confidence, detections[umd].classId);
+		KalmanTracker tracker = KalmanTracker(detections[umd].box, detections[umd].confidence, detections[umd].classId, umd);
 		trackers.push_back(tracker);
 	}
 

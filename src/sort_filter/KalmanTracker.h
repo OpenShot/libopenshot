@@ -21,18 +21,16 @@ public:
 		m_hits = 0;
 		m_hit_streak = 0;
 		m_age = 0;
-		m_id = kf_count;
-		//kf_count++;
+		m_id = 0;
 	}
-	KalmanTracker(StateType initRect, float confidence, int classId) : confidence(confidence), classId(classId)
+	KalmanTracker(StateType initRect, float confidence, int classId, int objectId) : confidence(confidence), classId(classId)
 	{
 		init_kf(initRect);
 		m_time_since_update = 0;
 		m_hits = 0;
 		m_hit_streak = 0;
 		m_age = 0;
-		m_id = kf_count;
-		kf_count++;
+		m_id = objectId;
 	}
 
 	~KalmanTracker()
@@ -46,8 +44,6 @@ public:
 
 	StateType get_state();
 	StateType get_rect_xysr(float cx, float cy, float s, float r);
-
-	static int kf_count;
 
 	int m_time_since_update;
 	int m_hits;
