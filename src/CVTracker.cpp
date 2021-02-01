@@ -73,7 +73,7 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
     if(!json_interval){
         start = _start; end = _end;
 
-        if(!process_interval || end <= 0 || end-start <= 0){
+        if(!process_interval || end <= 0 || end-start == 0){
             // Get total number of frames in video
             start = video.Start() * video.Reader()->info.fps.ToInt();
             end = video.End() * video.Reader()->info.fps.ToInt();

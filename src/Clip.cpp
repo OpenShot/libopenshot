@@ -29,6 +29,7 @@
  */
 
 #include "Clip.h"
+#include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
 #ifdef USE_IMAGEMAGICK

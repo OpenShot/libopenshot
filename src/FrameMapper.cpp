@@ -29,6 +29,7 @@
  */
 
 #include "FrameMapper.h"
+#include "Exceptions.h"
 #include "Clip.h"
 
 using namespace std;

@@ -24,11 +24,13 @@ jobs:
       run: |
         sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
         sudo apt update
-        sudo apt install cmake swig doxygen graphviz curl lcov
-        sudo apt install libopenshot-audio-dev
-        sudo apt install qtbase5-dev qtbase5-dev-tools
-        sudo apt install libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev
-        sudo apt install libzmq3-dev libmagick++-dev libunittest++-dev
+        sudo apt install \
+          cmake swig doxygen graphviz curl lcov \
+          libopenshot-audio-dev \
+          qtbase5-dev qtbase5-dev-tools \
+          libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
+          libzmq3-dev libmagick++-dev libunittest++-dev \
+          libopencv-dev libprotobuf-dev protobuf-compiler
 
     - name: Build libopenshot
       shell: bash

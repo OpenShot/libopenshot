@@ -7,7 +7,7 @@ SortTracker::SortTracker(int max_age, int min_hits)
 {
 	_min_hits = min_hits;
 	_max_age = max_age;
-	alive_tracker = true; 
+	alive_tracker = true;
 }
 
 // Computes IOU between two bounding boxes

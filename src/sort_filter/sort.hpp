@@ -22,7 +22,7 @@ typedef struct TrackingBox
 	int classId = 0;
 	int id = 0;
 	cv::Rect_<float> box = cv::Rect_<float>(0.0, 0.0, 0.0, 0.0);
-	TrackingBox() {} 
+	TrackingBox() {}  
 	TrackingBox(int _frame, float _confidence, int _classId, int _id) : frame(_frame), confidence(_confidence), classId(_classId), id(_id) {}
 } TrackingBox;
 

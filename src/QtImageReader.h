@@ -37,7 +37,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Exceptions.h"
+
 #include "ReaderBase.h"
 
 namespace openshot
@@ -72,6 +72,15 @@ namespace openshot
 		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
 		bool is_open;	///> Is Reader opened
 		QSize max_size;	///> Current max_size as calculated with Clip properties
+
+		/// Load an SVG file with Resvg or fallback with Qt
+        ///
+        /// @returns Success as a boolean
+        /// @param path The file path of the SVG file
+		bool load_svg_path(QString path);
+
+		/// Calculate the max_size QSize, based on parent timeline and parent clip settings
+        QSize calculate_max_size();
 
 	public:
 		/// @brief Constructor for QtImageReader.

@@ -36,6 +36,7 @@
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "KeyFrame.h"
 #include "TrackedObjectBBox.h"
+#include "Exceptions.h"
 #include "Coordinate.h"
 #include "Fraction.h"
 #include "Clip.h"
@@ -46,7 +47,9 @@
 using namespace std;
 using namespace openshot;
 
-TEST(Keyframe_GetPoint_With_No_Points)
+SUITE(Keyframe) {
+
+TEST(GetPoint_With_No_Points)
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -54,7 +57,7 @@ TEST(Keyframe_GetPoint_With_No_Points)
 	CHECK_THROW(k1.GetPoint(0), OutOfBoundsPoint);
 }
 
-TEST(Keyframe_GetPoint_With_1_Points)
+TEST(GetPoint_With_1_Points)
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -68,7 +71,7 @@ TEST(Keyframe_GetPoint_With_1_Points)
 }
 
 
-TEST(Keyframe_AddPoint_With_1_Point)
+TEST(AddPoint_With_1_Point)
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -79,7 +82,7 @@ TEST(Keyframe_AddPoint_With_1_Point)
 	CHECK_THROW(k1.GetPoint(1), OutOfBoundsPoint);
 }
 
-TEST(Keyframe_AddPoint_With_2_Points)
+TEST(AddPoint_With_2_Points)
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -92,7 +95,7 @@ TEST(Keyframe_AddPoint_With_2_Points)
 	CHECK_THROW(k1.GetPoint(2), OutOfBoundsPoint);
 }
 
-TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
+TEST(GetValue_For_Bezier_Curve_2_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -111,7 +114,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_2_Points)
 	CHECK_EQUAL(51, kf.GetLength());
 }
 
-TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
+TEST(GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -134,7 +137,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle)
 	CHECK_EQUAL(201, kf.GetLength());
 }
 
-TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
+TEST(GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -157,7 +160,7 @@ TEST(Keyframe_GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle)
 	CHECK_EQUAL(201, kf.GetLength());
 }
 
-TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
+TEST(GetValue_For_Linear_Curve_3_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -177,7 +180,7 @@ TEST(Keyframe_GetValue_For_Linear_Curve_3_Points)
 	CHECK_EQUAL(51, kf.GetLength());
 }
 
-TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
+TEST(GetValue_For_Constant_Curve_3_Points)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -198,7 +201,7 @@ TEST(Keyframe_GetValue_For_Constant_Curve_3_Points)
 	CHECK_EQUAL(51, kf.GetLength());
 }
 
-TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
+TEST(Check_Direction_and_Repeat_Fractions)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -233,7 +236,7 @@ TEST(Keyframe_Check_Direction_and_Repeat_Fractions)
 }
 
 
-TEST(Keyframe_Get_Closest_Point)
+TEST(Get_Closest_Point)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -261,7 +264,7 @@ TEST(Keyframe_Get_Closest_Point)
 }
 
 
-TEST(Keyframe_Get_Previous_Point)
+TEST(Get_Previous_Point)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -280,7 +283,7 @@ TEST(Keyframe_Get_Previous_Point)
 
 }
 
-TEST(Keyframe_Get_Max_Point)
+TEST(Get_Max_Point)
 {
 	// Create a keyframe curve
 	Keyframe kf;
@@ -305,7 +308,7 @@ TEST(Keyframe_Get_Max_Point)
 	CHECK_EQUAL(2.0, kf.GetMaxPoint().co.Y);
 }
 
-TEST(Keyframe_Scale_Keyframe)
+TEST(Scale_Keyframe)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -347,7 +350,7 @@ TEST(Keyframe_Scale_Keyframe)
 
 }
 
-TEST(Keyframe_Flip_Keyframe)
+TEST(Flip_Keyframe)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -381,7 +384,7 @@ TEST(Keyframe_Flip_Keyframe)
 	CHECK_CLOSE(10.0f, kf.GetValue(100), 0.01);
 }
 
-TEST(Keyframe_Remove_Duplicate_Point)
+TEST(Remove_Duplicate_Point)
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -394,7 +397,7 @@ TEST(Keyframe_Remove_Duplicate_Point)
 	CHECK_CLOSE(2.0, kf.GetPoint(0).co.Y, 0.01);
 }
 
-TEST(Keyframe_Large_Number_Values)
+TEST(Large_Number_Values)
 {
 	// Large value
 	int64_t const large_value = 30 * 60 * 90;
@@ -410,7 +413,7 @@ TEST(Keyframe_Large_Number_Values)
 	CHECK_CLOSE(100.0, kf.GetPoint(1).co.Y, 0.01);
 }
 
-TEST(Keyframe_Remove_Point)
+TEST(Remove_Point)
 {
 	Keyframe kf;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), CONSTANT));
@@ -423,7 +426,7 @@ TEST(Keyframe_Remove_Point)
 	CHECK_THROW(kf.RemovePoint(100), OutOfBoundsPoint);
 }
 
-TEST(Keyframe_Constant_Interpolation_First_Segment)
+TEST(Constant_Interpolation_First_Segment)
 {
 	Keyframe kf;
 	kf.AddPoint(Point(Coordinate(1, 1), CONSTANT));
@@ -436,7 +439,7 @@ TEST(Keyframe_Constant_Interpolation_First_Segment)
 	CHECK_EQUAL(100, kf.GetInt(4));
 }
 
-TEST(Keyframe_isIncreasing)
+TEST(isIncreasing)
 {
 	// Which cases need to be tested to keep same behaviour as
 	// previously?
@@ -467,7 +470,7 @@ TEST(Keyframe_isIncreasing)
 	CHECK_EQUAL(true, kf.IsIncreasing(2));
 }
 
-TEST(Keyframe_GetLength)
+TEST(GetLength)
 {
 	Keyframe f;
 	CHECK_EQUAL(0, f.GetLength());
@@ -485,7 +488,7 @@ TEST(Keyframe_GetLength)
 	CHECK_EQUAL(201, g.GetLength());
 }
 
-TEST(Keyframe_Use_Interpolation_of_Segment_End_Point)
+TEST(Use_Interpolation_of_Segment_End_Point)
 {
 	Keyframe f;
 	f.AddPoint(1,0, CONSTANT);
@@ -493,7 +496,7 @@ TEST(Keyframe_Use_Interpolation_of_Segment_End_Point)
 	CHECK_CLOSE(75.9, f.GetValue(50), 0.1);
 }
 
-TEST(Keyframe_Handle_Large_Segment)
+TEST(Handle_Large_Segment)
 {
 	Keyframe kf;
 	kf.AddPoint(1, 0, CONSTANT);
@@ -504,6 +507,17 @@ TEST(Keyframe_Handle_Large_Segment)
 	Fraction fr = kf.GetRepeatFraction(250000);
 	CHECK_CLOSE(0.5, (double)fr.num / fr.den, 0.01);
 }
+
+TEST(Point_Vector_Constructor)
+{
+	std::vector<Point> points{Point(1, 10), Point(5, 20), Point(10, 30)};
+	Keyframe k1(points);
+
+	CHECK_EQUAL(11, k1.GetLength());
+	CHECK_CLOSE(30.0f, k1.GetValue(10), 0.0001);
+}
+
+};  // SUITE
 
 
 TEST(TrackedObjectBBox_init_test) {

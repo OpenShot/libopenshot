@@ -81,7 +81,7 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::make_shared<openshot::Frame>(), frame_number); }
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object

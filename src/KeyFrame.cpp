@@ -29,6 +29,11 @@
  */
 
 #include "KeyFrame.h"
+#include "Exceptions.h"
+
+#include <cassert>         // For assert()
+#include <iostream>        // For std::cout
+#include <iomanip>         // For std::setprecision
 #include <algorithm>
 #include <functional>
 #include <utility>
@@ -62,6 +67,9 @@ Keyframe::Keyframe(double value) {
 	AddPoint(Point(value));
 }
 
+// Constructor which takes a vector of Points
+Keyframe::Keyframe(const std::vector<openshot::Point>& points) : Points(points) {};
+
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {
@@ -88,17 +96,7 @@ void Keyframe::AddPoint(Point p) {
 	}
 }
 
-// Add a new point on the key-frame, with some defaults set (BEZIER)
-void Keyframe::AddPoint(double x, double y)
-{
-	// Create a point
-	Point new_point(x, y, BEZIER);
-
-	// Add the point
-	AddPoint(new_point);
-}
-
-// Add a new point on the key-frame, with a specific interpolation type
+// Add a new point on the key-frame, interpolate is optional (default: BEZIER)
 void Keyframe::AddPoint(double x, double y, InterpolationType interpolate)
 {
 	// Create a point

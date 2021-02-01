@@ -29,6 +29,7 @@
  */
 
 #include "Timeline.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

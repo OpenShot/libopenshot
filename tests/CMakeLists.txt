@@ -72,6 +72,7 @@ set(OPENSHOT_TEST_FILES
   FrameMapper_Tests.cpp
   KeyFrame_Tests.cpp
   Point_Tests.cpp
+  QtImageReader_Tests.cpp
   Settings_Tests.cpp
   Timeline_Tests.cpp)
 

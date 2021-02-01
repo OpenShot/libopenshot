@@ -34,7 +34,6 @@
 #include <memory>
 #include <sstream>
 #include "CacheMemory.h"
-#include "Exceptions.h"
 #include "Frame.h"
 #include "Point.h"
 #include "KeyFrame.h"
