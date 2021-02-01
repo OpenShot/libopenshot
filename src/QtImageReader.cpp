@@ -38,6 +38,7 @@
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include <QtGui/QIcon>
+#include <QtGui/QImageReader>
 
 #if USE_RESVG == 1
 	// If defined and found in CMake, utilize the libresvg for parsing
@@ -75,8 +76,12 @@ void QtImageReader::Open()
 
 		if (!loaded) {
 			// Attempt to open file using Qt's build in image processing capabilities
+			// AutoTransform enables exif data to be parsed and auto transform the image
+			// to the correct orientation
 			image = std::make_shared<QImage>();
-            loaded = image->load(path);
+            QImageReader imgReader( path );
+            imgReader.setAutoTransform( true );
+            loaded = imgReader.read(image.get());
 		}
 
 		if (!loaded) {
