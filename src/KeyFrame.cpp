@@ -31,35 +31,95 @@
 #include "KeyFrame.h"
 #include "Exceptions.h"
 
-#include <cassert>         // For assert()
-#include <iostream>        // For std::cout
-#include <iomanip>         // For std::setprecision
 #include <algorithm>
 #include <functional>
 #include <utility>
+#include <cassert>         // For assert()
+#include <iostream>        // For std::cout
+#include <iomanip>         // For std::setprecision
 
 using namespace std;
 using namespace openshot;
 
-namespace{
-	template<typename Check>
-	int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
-		int64_t start = left.co.X;
-		int64_t stop = right.co.X;
-		while (start < stop) {
-			int64_t const mid = (start + stop + 1) / 2;
-			double const value = InterpolateBetween(left, right, mid, 0.01);
-			if (check(round(value), current)) {
-				start = mid;
-			} else {
-				stop = mid - 1;
+namespace openshot{
+
+	// Check if the X coordinate of a given Point is lower than a given value
+	bool IsPointBeforeX(Point const & p, double const x) {
+		return p.co.X < x;
+	}
+
+	// Linear interpolation between two points
+	double InterpolateLinearCurve(Point const & left, Point const & right, double const target) {
+		double const diff_Y = right.co.Y - left.co.Y;
+		double const diff_X = right.co.X - left.co.X;
+		double const slope = diff_Y / diff_X;
+		return left.co.Y + slope * (target - left.co.X);
+	}
+
+	// Bezier interpolation between two points
+	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error) {
+		double const X_diff = right.co.X - left.co.X;
+		double const Y_diff = right.co.Y - left.co.Y;
+		Coordinate const p0 = left.co;
+		Coordinate const p1 = Coordinate(p0.X + left.handle_right.X * X_diff, p0.Y + left.handle_right.Y * Y_diff);
+		Coordinate const p2 = Coordinate(p0.X + right.handle_left.X * X_diff, p0.Y + right.handle_left.Y * Y_diff);
+		Coordinate const p3 = right.co;
+
+		double t = 0.5;
+		double t_step = 0.25;
+		do {
+			// Bernstein polynoms
+			double B[4] = {1, 3, 3, 1};
+			double oneMinTExp = 1;
+			double tExp = 1;
+			for (int i = 0; i < 4; ++i, tExp *= t) {
+				B[i] *= tExp;
 			}
+			for (int i = 0; i < 4; ++i, oneMinTExp *= 1 - t) {
+				B[4 - i - 1] *= oneMinTExp;
+			}
+			double const x = p0.X * B[0] + p1.X * B[1] + p2.X * B[2] + p3.X * B[3];
+			double const y = p0.Y * B[0] + p1.Y * B[1] + p2.Y * B[2] + p3.Y * B[3];
+			if (fabs(target - x) < allowed_error) {
+				return y;
+			}
+			if (x > target) {
+				t -= t_step;
+			}
+			else {
+				t += t_step;
+			}
+			t_step /= 2;
+		} while (true);
+	}
+
+	// Interpolate two points using the right Point's interpolation method
+	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
+		assert(left.co.X < target);
+		assert(target <= right.co.X);
+		switch (right.interpolation) {
+		case CONSTANT: return left.co.Y;
+		case LINEAR: return InterpolateLinearCurve(left, right, target);
+		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
 		}
-		return start;
 	}
 }
 
-
+template<typename Check>
+int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
+	int64_t start = left.co.X;
+	int64_t stop = right.co.X;
+	while (start < stop) {
+		int64_t const mid = (start + stop + 1) / 2;
+		double const value = InterpolateBetween(left, right, mid, 0.01);
+		if (check(round(value), current)) {
+			start = mid;
+		} else {
+			stop = mid - 1;
+		}
+	}
+	return start;
+}
 
 // Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) {

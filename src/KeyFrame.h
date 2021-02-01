@@ -37,9 +37,20 @@
 #include "Fraction.h"
 #include "Point.h"
 #include "Json.h"
-#include "KeyFrameBase.h"
 
 namespace openshot {
+
+	/// Check if the X coordinate of a given Point is lower than a given value
+	bool IsPointBeforeX(Point const & p, double const x);
+
+	/// Linear interpolation between two points
+	double InterpolateLinearCurve(Point const & left, Point const & right, double const target);
+
+	/// Bezier interpolation between two points
+	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error);
+
+	/// Interpolate two points using the right Point's interpolation method
+	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error);
 
 	/**
 	 * @brief A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
@@ -58,7 +69,7 @@ namespace openshot {
 	 * kf.PrintValues();
 	 * \endcode
 	 */
-	class Keyframe : public KeyframeBase {
+	class Keyframe {
 	
 
 	private:
@@ -143,7 +154,7 @@ namespace openshot {
 
 		/// Scale all points by a percentage (good for evenly lengthening or shortening an openshot::Keyframe)
 		/// 1.0 = same size, 1.05 = 5% increase, etc...
-		void ScalePoints(double scale) override;
+		void ScalePoints(double scale);
 
 		/// Replace an existing point with a new point
 		void UpdatePoint(int64_t index, Point p);

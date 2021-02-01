@@ -86,7 +86,6 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   Json.cpp
   KeyFrame.cpp
-  KeyFrameBase.cpp
   TrackedObjectBase.cpp
   TrackedObjectBBox.cpp
   OpenShotVersion.cpp

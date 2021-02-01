@@ -1210,7 +1210,7 @@ void Clip::AddEffect(EffectBase* effect)
 	// Sort effects
 	sort_effects();
 
-	// Add Tracker to Timeline
+	// Add Tracked Object to Timeline
 	if (effect->info.has_tracked_object){
 	
 		Timeline* parentTimeline = (Timeline *) ParentTimeline();
