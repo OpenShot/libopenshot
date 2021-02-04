@@ -157,7 +157,6 @@ namespace openshot
     class TrackedObjectBBox : public TrackedObjectBase
     {
     private:
-        bool visible;
         Fraction BaseFps;
         double TimeScale;  
 

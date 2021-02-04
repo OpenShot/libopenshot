@@ -323,6 +323,7 @@ Json::Value TrackedObjectBBox::JsonValue() const
     root["scale_x"] = scale_x.JsonValue();
     root["scale_y"] = scale_y.JsonValue(); 
     root["rotation"] = rotation.JsonValue();
+    root["visible"] = visible.JsonValue();
 
     // return JsonValue
     return root;
@@ -385,7 +386,9 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
         scale_y.SetJsonValue(root["scale_y"]);
     if (!root["rotation"].isNull())
         rotation.SetJsonValue(root["rotation"]);
-
+    if (!root["visible"].isNull())
+        visible.SetJsonValue(root["visible"]);
+    
     return;
 }
 
@@ -400,9 +403,6 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
     // Add the ID of this object to the JSON object
     root["box_id"] = add_property_json("Box ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 
-    // Add a boolean property to inform if the object has data for the requested frame
-    root["visible"] = add_property_json("Visible", ExactlyContains(requested_frame), "bool", "", NULL, -1, -1, true, requested_frame);
-
     // Add the data of given frame bounding-box to the JSON object
 	root["x1"] = add_property_json("X1", box.cx-(box.width/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
 	root["y1"] = add_property_json("Y1", box.cy-(box.height/2), "float", "", NULL, 0.0, 1.0, false, requested_frame);
@@ -415,6 +415,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, -1.0, 1.0, false, requested_frame);
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
+    root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
 
 	// Return formatted string
 	return root;

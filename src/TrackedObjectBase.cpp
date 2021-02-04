@@ -37,13 +37,15 @@
 namespace openshot{
 
 	// Blank constructor
-    TrackedObjectBase::TrackedObjectBase(){
+    TrackedObjectBase::TrackedObjectBase() : visible(1.0)
+	{
 		// Initializes the id as "None"
 		id = "None";
     }
 
 	// Default constructor
-	TrackedObjectBase::TrackedObjectBase(std::string _id){
+	TrackedObjectBase::TrackedObjectBase(std::string _id) : visible(1.0)
+	{
 		Id(_id);
 	}
 }

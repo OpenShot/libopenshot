@@ -96,7 +96,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     if(!frame_image.empty())
 	{
         // Check if track data exists for the requested frame
-        if (trackedData->Contains(frame_number)) 
+        if (trackedData->Contains(frame_number) && trackedData->visible.GetValue(frame_number) == 1) 
 		{
 			// Get the width and height of the image
 			float fw = frame_image.size().width;
@@ -181,6 +181,7 @@ Json::Value Tracker::JsonValue() const {
         root["scale_x"] = trackedObjectJSON["scale_x"];
         root["scale_y"] = trackedObjectJSON["scale_y"];
         root["rotation"] = trackedObjectJSON["rotation"];
+		root["visible"] = trackedObjectJSON["visible"];
 	}
 
 	// return JsonValue
@@ -256,6 +257,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
         trackedObjectJSON["scale_x"] = root["scale_x"];
         trackedObjectJSON["scale_y"] = root["scale_y"];
         trackedObjectJSON["rotation"] = root["rotation"];
+		trackedObjectJSON["visible"] = root["visible"];
 		if (!trackedObjectJSON.isNull())
 			trackedObject.second->SetJsonValue(trackedObjectJSON);
 	}
@@ -288,7 +290,6 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	}
 
 	// Append effect's properties
-	root["name"] = add_property_json("Tracker", 0.0, "string", "", NULL, -1, -1, true, requested_frame);
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);

@@ -104,8 +104,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
             std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
 
             // Check if the tracked object has data for this frame
-            if (trackedObject->Contains(frame_number)){
-                
+            if (trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1)
+            {
                 // Get the bounding-box of given frame
                 BBox trackedBox = trackedObject->GetBox(frame_number);
                 cv::Rect2d box(
@@ -316,6 +316,7 @@ Json::Value ObjectDetection::JsonValue() const {
         root["scale_x"] = selectedObjectJSON["scale_x"];
         root["scale_y"] = selectedObjectJSON["scale_y"];
         root["rotation"] = selectedObjectJSON["rotation"];
+        root["visible"] = selectedObjectJSON["visible"];
     }
 
 	// return JsonValue
@@ -374,6 +375,7 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
     selectedObjectJSON["scale_x"] = root["scale_x"];
     selectedObjectJSON["scale_y"] = root["scale_y"];
     selectedObjectJSON["rotation"] = root["rotation"];
+    selectedObjectJSON["visible"] = root["visible"];
     if (!selectedObjectJSON.isNull()){
         auto selectedObject = trackedObjects.at(selectedObjectIndex);
         if (selectedObject)

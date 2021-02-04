@@ -40,6 +40,7 @@
 #include "Exceptions.h"
 #include "Fraction.h"
 #include "Coordinate.h"
+#include "KeyFrame.h"
 #include "Point.h"
 #include "Json.h"
 #include "ClipBase.h"
@@ -57,9 +58,12 @@ namespace openshot {
 	private:
 		std::string id;
 		ClipBase* parentClip;
+		
 
     public:
 		
+		Keyframe visible;
+
         /// Blank constructor
         TrackedObjectBase();
 
