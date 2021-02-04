@@ -164,6 +164,9 @@ std::string Hue::PropertiesJSON(int64_t requested_frame) const {
 	// Keyframes
 	root["hue"] = add_property_json("Hue", hue.GetValue(requested_frame), "float", "", &hue, 0.0, 1.0, false, requested_frame);
 
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent Effect ID", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+
 	// Return formatted string
 	return root.toStyledString();
 }

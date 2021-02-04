@@ -432,6 +432,25 @@ openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
 	return nullptr;
 }
 
+// Return the list of effects on all clips
+std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
+
+	// Initialize the list
+	std::list<EffectBase*> ClipEffects;
+
+	// Loop through all clips
+	for (const auto& clip : clips) {
+		
+		// Get the clip's list of effects
+		std::list<EffectBase*> clipEffects = clip->Effects();
+
+		// Append the clip's effects to the list
+		ClipEffects.insert(ClipEffects.end(), clipEffects.begin(), clipEffects.end());
+	}
+
+	return ClipEffects;
+}
+
 // Compute the end time of the latest timeline element
 double Timeline::GetMaxTime() {
 	double last_clip = 0.0;

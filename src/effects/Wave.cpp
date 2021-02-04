@@ -187,6 +187,9 @@ std::string Wave::PropertiesJSON(int64_t requested_frame) const {
 	root["shift_x"] = add_property_json("X Shift", shift_x.GetValue(requested_frame), "float", "", &shift_x, 0.0, 1000.0, false, requested_frame);
 	root["speed_y"] = add_property_json("Vertical speed", speed_y.GetValue(requested_frame), "float", "", &speed_y, 0.0, 300.0, false, requested_frame);
 
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent Effect ID", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+
 	// Return formatted string
 	return root.toStyledString();
 }

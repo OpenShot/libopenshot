@@ -296,6 +296,9 @@ namespace openshot {
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
 
+		/// Return the list of effects on all clips
+		std::list<openshot::EffectBase*> ClipEffects() const;
+
 		/// Get the cache object used by this reader
 		openshot::CacheBase* GetCache() override { return final_cache; };
 
