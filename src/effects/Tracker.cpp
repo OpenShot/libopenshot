@@ -218,13 +218,8 @@ Json::Value Tracker::JsonValue() const {
 	    Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
 		root["objects_id"].append(trackedObject.second->Id());
 		// Save the trackedObject JSON on root
-        root["delta_x"] = trackedObjectJSON["delta_x"];
-        root["delta_y"] = trackedObjectJSON["delta_y"];
-        root["scale_x"] = trackedObjectJSON["scale_x"];
-        root["scale_y"] = trackedObjectJSON["scale_y"];
-        root["rotation"] = trackedObjectJSON["rotation"];
-		root["visible"] = trackedObjectJSON["visible"];
-		root["child_clip_id"] = trackedObjectJSON["child_clip_id"];
+        for (auto const& key : trackedObjectJSON.getMemberNames())
+			root[key] = trackedObjectJSON[key];
 	}
 
 	// return JsonValue
@@ -274,9 +269,9 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		TimeScale = (double) root["TimeScale"].asDouble();
 
 	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull())
+	if (!root["protobuf_data_path"].isNull() && protobuf_data_path.size() <= 1)
 	{
-		protobuf_data_path = (root["protobuf_data_path"].asString());
+		protobuf_data_path = root["protobuf_data_path"].asString();
 		if(!trackedData->LoadBoxData(protobuf_data_path))
 		{
 			std::cout<<"Invalid protobuf data path";
@@ -284,26 +279,12 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		}
 	}
 
-	// Set the object's ids
-    if (!root["objects_id"].isNull()){
-        for (auto const& trackedObject : trackedObjects){
-        Json::Value trackedObjectJSON;
-        trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
-        trackedObject.second->SetJsonValue(trackedObjectJSON);
-        }
-    }
-
+	// Set the tracked object's properties
 	for (auto const& trackedObject : trackedObjects){
-        Json::Value trackedObjectJSON;
-        trackedObjectJSON["delta_x"] = root["delta_x"];
-        trackedObjectJSON["delta_y"] = root["delta_y"];
-        trackedObjectJSON["scale_x"] = root["scale_x"];
-        trackedObjectJSON["scale_y"] = root["scale_y"];
-        trackedObjectJSON["rotation"] = root["rotation"];
-		trackedObjectJSON["visible"] = root["visible"];
-		trackedObjectJSON["child_clip_id"] = root["child_clip_id"];
-		if (!trackedObjectJSON.isNull())
-			trackedObject.second->SetJsonValue(trackedObjectJSON);
+		Json::Value trackedObjectJSON = root;
+		if (!root["objects_id"].isNull())
+			trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
+		trackedObject.second->SetJsonValue(trackedObjectJSON);
 	}
 
 	return;
@@ -316,23 +297,9 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	// Generate JSON properties list
 	Json::Value root;
 
-	// Add trackedObjects IDs to JSON
-	for (auto const& trackedObject : trackedObjects){
-		// Save the trackedObject Id on root
-        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
-        root["box_id"] = trackedObjectJSON["box_id"];
-		root["visible"] = trackedObjectJSON["visible"];
-        root["x1"] = trackedObjectJSON["x1"];
-        root["y1"] = trackedObjectJSON["y1"];
-        root["x2"] = trackedObjectJSON["x2"];
-        root["y2"] = trackedObjectJSON["y2"];
-        root["delta_x"] = trackedObjectJSON["delta_x"];
-        root["delta_y"] = trackedObjectJSON["delta_y"];
-        root["scale_x"] = trackedObjectJSON["scale_x"];
-        root["scale_y"] = trackedObjectJSON["scale_y"];
-        root["rotation"] = trackedObjectJSON["rotation"];
-		root["child_clip_id"] = trackedObjectJSON["child_clip_id"];
-	}
+	// Add trackedObject properties to JSON
+	for (auto const& trackedObject : trackedObjects)
+		root = trackedObject.second->PropertiesJSON(requested_frame);
 
 	// Append effect's properties
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);

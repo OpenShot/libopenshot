@@ -82,6 +82,9 @@ namespace openshot {
 		std::string ChildClipId() const { return childClipId; };
 		void ChildClipId(std::string _childClipId) { childClipId = _childClipId; };
 
+		/// Check if there is data for the exact frame number
+        virtual bool ExactlyContains(int64_t frame_number) const { return {}; };
+
         /// Scale an object's property
         virtual void ScalePoints(double scale) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation

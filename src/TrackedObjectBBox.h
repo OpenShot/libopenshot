@@ -187,7 +187,7 @@ namespace openshot
         /// Check if there is a bounding-box in the given frame
         bool Contains(int64_t frame_number) const;
         /// Check if there is a bounding-box in the exact frame number
-        bool ExactlyContains(int64_t frame_number) const;
+        bool ExactlyContains(int64_t frame_number) const override;
 
         /// Get the size of BoxVec map
         int64_t GetLength() const;

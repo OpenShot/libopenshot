@@ -354,7 +354,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 {   
 
     // Set the Id by the given JSON object
-    if (!root["box_id"].isNull())
+    if (!root["box_id"].isNull() && root["box_id"].asString() != "None")
         Id(root["box_id"].asString());
 
     // Set the BaseFps by the given JSON object
