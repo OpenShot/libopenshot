@@ -54,7 +54,7 @@ namespace openshot
 	bool is_playing;
 	int64_t current_display_frame;
 	ReaderBase *reader;
-	int max_frames;
+	int max_concurrent_frames;
 
 	/// Constructor
 	VideoCacheThread();

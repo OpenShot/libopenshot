@@ -93,11 +93,11 @@ FFmpegReader::FFmpegReader(const std::string& path, bool inspect_reader)
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
-		  packet(NULL) {
+		  packet(NULL), max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
 
 	// Configure OpenMP parallelism
 	// Default number of threads per section
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	omp_set_num_threads(max_concurrent_frames);
 	// Allow nested parallel sections as deeply as supported
 	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
@@ -106,9 +106,9 @@ FFmpegReader::FFmpegReader(const std::string& path, bool inspect_reader)
 	AVCODEC_REGISTER_ALL
 
 	// Init cache
-	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+	missing_frames.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
 
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -561,9 +561,9 @@ void FFmpegReader::Open() {
 		previous_packet_location.sample_start = 0;
 
 		// Adjust cache size based on size of frame and audio
-		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+		working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+		missing_frames.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+		final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
 
 		// Mark as "open"
 		is_open = true;
@@ -902,11 +902,11 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
+	int minimum_packets = max_concurrent_frames;
 	int max_packets = 4096;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "max_concurrent_frames", max_concurrent_frames);
 
 #pragma omp parallel
 	{
@@ -1763,7 +1763,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = std::max(OPEN_MP_NUM_PROCESSORS, 8);
+	int buffer_amount = std::max(max_concurrent_frames, 8);
 	if (requested_frame - buffer_amount < 20) {
 		// Close and re-open file (basically seeking to frame 1)
 		Close();
@@ -2208,7 +2208,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			break;
 
 		// Remove frames which are too old
-		if (f && f->number < (requested_frame - (OPEN_MP_NUM_PROCESSORS * 2))) {
+		if (f && f->number < (requested_frame - (max_concurrent_frames * 2))) {
 			working_cache.Remove(f->number);
 		}
 

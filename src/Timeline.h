@@ -177,6 +177,7 @@ namespace openshot {
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 		std::mutex get_frame_mutex; ///< Mutex to protect GetFrame method from different threads calling it
+		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);

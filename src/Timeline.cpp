@@ -35,7 +35,8 @@ using namespace openshot;
 
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
-		is_open(false), auto_map_clips(true), managed_cache(true), path("")
+		is_open(false), auto_map_clips(true), managed_cache(true), path(""),
+		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS)
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -70,23 +71,23 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.acodec = "openshot::timeline";
 	info.vcodec = "openshot::timeline";
 
+    // Init cache
+    final_cache = new CacheMemory();
+
 	// Configure OpenMP parallelism
 	// Default number of threads per block
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	omp_set_num_threads(max_concurrent_frames);
 	// Allow nested parallel sections as deeply as supported
 	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Init max image size
 	SetMaxSize(info.width, info.height);
-
-	// Init cache
-	final_cache = new CacheMemory();
-	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
-		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath) {
+		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath),
+        max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
 
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -203,18 +204,17 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 	info.has_video = true;
 	info.has_audio = true;
 
+    // Init cache
+    final_cache = new CacheMemory();
+
 	// Configure OpenMP parallelism
 	// Default number of threads per section
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	omp_set_num_threads(max_concurrent_frames);
 	// Allow nested parallel sections as deeply as supported
 	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Init max image size
 	SetMaxSize(info.width, info.height);
-
-	// Init cache
-	final_cache = new CacheMemory();
-	final_cache->SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 }
 
 Timeline::~Timeline() {
@@ -473,6 +473,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(Clip* clip, int64_t number)
 	new_frame = std::make_shared<Frame>(number, preview_width, preview_height, "#000000", samples_in_frame, info.channels);
 	#pragma omp critical (T_GetOtCreateFrame)
 	{
+        new_frame->AddAudioSilence(samples_in_frame);
 		new_frame->SampleRate(info.sample_rate);
 		new_frame->ChannelsLayout(info.channel_layout);
 	}
@@ -725,7 +726,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		}
 
 		// Minimum number of frames to process (for performance reasons)
-		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+		int minimum_frames = max_concurrent_frames;
 
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
@@ -734,7 +735,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		nearby_clips = find_intersecting_clips(requested_frame, minimum_frames, true);
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame", "requested_frame", requested_frame, "minimum_frames", minimum_frames, "max_concurrent_frames", max_concurrent_frames);
 
 		// GENERATE CACHE FOR CLIPS (IN FRAME # SEQUENCE)
 		// Determine all clip frames, and request them in order (to keep resampled audio in sequence)
@@ -1495,4 +1496,7 @@ void Timeline::SetMaxSize(int width, int height) {
 	// Update preview settings
 	preview_width = display_ratio_size.width();
 	preview_height = display_ratio_size.height();
+
+	// Update timeline cache size
+    final_cache->SetMaxBytesFromInfo(max_concurrent_frames * 4, preview_width, preview_height, info.sample_rate, info.channels);
 }
