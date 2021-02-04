@@ -33,6 +33,10 @@
 #include <google/protobuf/util/time_util.h>
 #include "Timeline.h"
 
+#include <QImage>
+#include <QPainter>
+#include <QRectF>
+
 using namespace std;
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
@@ -92,6 +96,11 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     // Get the frame's image
 	cv::Mat frame_image = frame->GetImageCV();
 
+	// Initialize the Qt rectangle that will hold the positions of the bounding-box
+	QRectF boxRect;
+	// Initialize the image of the TrackedObject child clip
+	std::shared_ptr<QImage> childClipImage = nullptr;
+
     // Check if frame isn't NULL
     if(!frame_image.empty())
 	{
@@ -117,12 +126,45 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			{
 				cv::line(frame_image, vertices[i], vertices[(i+1)%4], cv::Scalar(255,0,0), 2);
 			}
+
+			// Get the image of the Tracked Object' child clip
+			if (trackedData->ChildClipId() != "None"){
+				// Cast the parent timeline of this effect 
+				Timeline* parentTimeline = (Timeline *) ParentTimeline();
+				if (parentTimeline){
+					// Get the Tracked Object's child clip
+					Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
+					if (childClip){
+						// Get the image of the child clip for this frame
+						std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
+						childClipImage = childClipFrame->GetImage();
+
+						// Set the Qt rectangle with the bounding-box properties
+						boxRect.setRect( (int)((fd.cx-fd.width/2)*fw), (int)((fd.cy - fd.height/2)*fh), (int)(fd.width*fw), (int)(fd.height*fh) );
+					}
+				}
+			}
         }
     }
 
 	// Set image with drawn box to frame
     // If the input image is NULL or doesn't have tracking data, it's returned as it came
 	frame->SetImageCV(frame_image);
+
+	// Set the bounding-box image with the Tracked Object's child clip image
+	if (childClipImage){
+		// Get the frame image
+		QImage frameImage = *(frame->GetImage());
+
+		// Set a Qt painter to the frame image
+		QPainter painter(&frameImage);
+
+		// Draw the child clip image inside the bounding-box
+		painter.drawImage(boxRect, *childClipImage, QRectF(0, 0, frameImage.size().width(),  frameImage.size().height()));
+
+		// Set the frame image as the composed image
+		frame->AddImage(std::make_shared<QImage>(frameImage));
+	}
 
 	return frame;
 }
@@ -182,6 +224,7 @@ Json::Value Tracker::JsonValue() const {
         root["scale_y"] = trackedObjectJSON["scale_y"];
         root["rotation"] = trackedObjectJSON["rotation"];
 		root["visible"] = trackedObjectJSON["visible"];
+		root["child_clip_id"] = trackedObjectJSON["child_clip_id"];
 	}
 
 	// return JsonValue
@@ -258,6 +301,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
         trackedObjectJSON["scale_y"] = root["scale_y"];
         trackedObjectJSON["rotation"] = root["rotation"];
 		trackedObjectJSON["visible"] = root["visible"];
+		trackedObjectJSON["child_clip_id"] = root["child_clip_id"];
 		if (!trackedObjectJSON.isNull())
 			trackedObject.second->SetJsonValue(trackedObjectJSON);
 	}
@@ -287,6 +331,7 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
         root["scale_x"] = trackedObjectJSON["scale_x"];
         root["scale_y"] = trackedObjectJSON["scale_y"];
         root["rotation"] = trackedObjectJSON["rotation"];
+		root["child_clip_id"] = trackedObjectJSON["child_clip_id"];
 	}
 
 	// Append effect's properties

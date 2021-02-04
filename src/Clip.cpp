@@ -1218,6 +1218,8 @@ void Clip::AddEffect(EffectBase* effect)
 		// Check if this clip has a parent timeline
 		if (parentTimeline){
 
+			effect->ParentTimeline(parentTimeline);
+
 			// Iterate through effect's vector of Tracked Objects
 			for (auto const& trackedObject : effect->trackedObjects){
 				

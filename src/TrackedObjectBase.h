@@ -57,8 +57,9 @@ namespace openshot {
     class TrackedObjectBase {
 	private:
 		std::string id;
+		std::string childClipId;
+
 		ClipBase* parentClip;
-		
 
     public:
 		
@@ -77,6 +78,9 @@ namespace openshot {
         /// Get and set the parentClip of this object
 		ClipBase* ParentClip() const { return parentClip; }
 		void ParentClip(ClipBase* clip) { parentClip = clip; }
+		/// Get and set the Id of the childClip of this object
+		std::string ChildClipId() const { return childClipId; };
+		void ChildClipId(std::string _childClipId) { childClipId = _childClipId; };
 
         /// Scale an object's property
         virtual void ScalePoints(double scale) { return; };

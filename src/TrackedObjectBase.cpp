@@ -41,11 +41,13 @@ namespace openshot{
 	{
 		// Initializes the id as "None"
 		id = "None";
+		childClipId = "None";
     }
 
 	// Default constructor
 	TrackedObjectBase::TrackedObjectBase(std::string _id) : visible(1.0)
 	{
 		Id(_id);
+		childClipId = "None";
 	}
 }
