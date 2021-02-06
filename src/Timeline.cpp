@@ -726,7 +726,8 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		}
 
 		// Minimum number of frames to process (for performance reasons)
-		int minimum_frames = max_concurrent_frames;
+		// Too many causes stuttering, too few causes stuttering
+		int minimum_frames = std::min(max_concurrent_frames / 2, 4);
 
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
