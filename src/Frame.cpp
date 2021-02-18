@@ -203,16 +203,8 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 				float value = samples[sample] * 100.0;
 
 				// Append a line segment for each sample
-				if (value != 0.0) {
-					// LINE
-					lines.push_back(QPointF(X,Y));
-					lines.push_back(QPointF(X,Y-value));
-				}
-				else {
-					// DOT
-					lines.push_back(QPointF(X,Y));
-					lines.push_back(QPointF(X,Y));
-				}
+                lines.push_back(QPointF(X,Y+1.0));
+                lines.push_back(QPointF(X,(Y-value)+1.0));
 			}
 
 			// Add Channel Label Coordinate
@@ -235,7 +227,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
         QPen pen;
         pen.setColor(QColor(Red, Green, Blue, Alpha));
         pen.setWidthF(1.0);
-        pen.setStyle(Qt::NoPen);
+        pen.setStyle(Qt::SolidLine);
         painter.setPen(pen);
 
 		// Draw the waveform
@@ -244,7 +236,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 
 		// Resize Image (if requested)
 		if (width != total_width || height != total_height) {
-			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 			wave_image = std::make_shared<QImage>(scaled_wave_image);
 		}
 	}
