@@ -189,10 +189,10 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		int total_width = 0;
 
 		// Loop through each audio channel
-		int Y = 100;
+		float Y = 100.0;
 		for (int channel = 0; channel < audio->getNumChannels(); channel++)
 		{
-			int X = 0;
+			float X = 0.0;
 
 			// Get audio for this channel
 			const float *samples = audio->getReadPointer(channel);
@@ -200,7 +200,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 			for (int sample = 0; sample < GetAudioSamplesCount(); sample++, X++)
 			{
 				// Sample value (scaled to -100 to 100)
-				float value = samples[sample] * 100;
+				float value = samples[sample] * 100.0;
 
 				// Append a line segment for each sample
 				if (value != 0.0) {
@@ -216,7 +216,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 			}
 
 			// Add Channel Label Coordinate
-			labels.push_back(QPointF(5, Y - 5));
+			labels.push_back(QPointF(5.0, Y - 5.0));
 
 			// Increment Y
 			Y += (200 + height_padding);
@@ -232,20 +232,15 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		QPainter painter(wave_image.get());
 
 		// Set pen color
-		painter.setPen(QColor(Red, Green, Blue, Alpha));
+        QPen pen;
+        pen.setColor(QColor(Red, Green, Blue, Alpha));
+        pen.setWidthF(1.0);
+        pen.setStyle(Qt::NoPen);
+        painter.setPen(pen);
 
 		// Draw the waveform
 		painter.drawLines(lines);
 		painter.end();
-
-		// Loop through the channels labels (and draw the text)
-		// TODO: Configure Fonts in Qt5 correctly, so the drawText method does not crash
-//		painter.setFont(QFont(QString("Arial"), 16, 1, false));
-//		for (int channel = 0; channel < labels.size(); channel++) {
-//			stringstream label;
-//			label << "Channel " << channel;
-//		    painter.drawText(labels.at(channel), QString::fromStdString(label.str()));
-//		}
 
 		// Resize Image (if requested)
 		if (width != total_width || height != total_height) {

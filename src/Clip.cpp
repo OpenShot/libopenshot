@@ -412,7 +412,9 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		apply_keyframes(original_frame, background_frame->GetImage());
 
         // Cache frame
-        cache.Add(original_frame);
+        // TODO: disable clip cache temporarily for testing
+        // with this enabled, black frames appear when seeking to previous frames
+        //cache.Add(original_frame);
 
 		// Return processed 'frame'
 		return original_frame;
@@ -1123,6 +1125,22 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
 
+    /* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
+    if (Waveform())
+    {
+        // Debug output
+        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+
+        // Get the color of the waveform
+        int red = wave_color.red.GetInt(frame->number);
+        int green = wave_color.green.GetInt(frame->number);
+        int blue = wave_color.blue.GetInt(frame->number);
+        int alpha = wave_color.alpha.GetInt(frame->number);
+
+        // Generate Waveform Dynamically (the size of the timeline)
+        source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+    }
+
     // Size of final image
     int width = background_canvas->width();
     int height = background_canvas->height();
@@ -1184,23 +1202,6 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 {
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
-
-	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
-	if (Waveform())
-	{
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
-
-		// Get the color of the waveform
-		int red = wave_color.red.GetInt(frame->number);
-		int green = wave_color.green.GetInt(frame->number);
-		int blue = wave_color.blue.GetInt(frame->number);
-		int alpha = wave_color.alpha.GetInt(frame->number);
-
-		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = frame->GetWaveform(width, height, red, green, blue, alpha);
-		frame->AddImage(std::shared_ptr<QImage>(source_image));
-	}
 
 	/* ALPHA & OPACITY */
 	if (alpha.GetValue(frame->number) != 1.0)
