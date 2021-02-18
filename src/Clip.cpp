@@ -99,7 +99,7 @@ void Clip::init_settings()
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
 
-	// Init reader info struct and cache size
+	// Init reader info struct
 	init_reader_settings();
 }
 
@@ -111,9 +111,6 @@ void Clip::init_reader_settings() {
 
 		// Initialize info struct
 		info = reader->info;
-
-		// Initialize Clip cache
-		cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	}
 }
 
@@ -162,7 +159,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	if (reader) {
 		End(reader->info.duration);
 		reader->ParentClip(this);
-		// Init reader info struct and cache size
+		// Init reader info struct
 		init_reader_settings();
 	}
 }
@@ -222,7 +219,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		End(reader->info.duration);
 		reader->ParentClip(this);
 		allocated_reader = reader;
-		// Init reader info struct and cache size
+		// Init reader info struct
 		init_reader_settings();
 	}
 }
@@ -252,7 +249,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	// set parent
 	reader->ParentClip(this);
 
-	// Init reader info struct and cache size
+	// Init reader info struct
 	init_reader_settings();
 }
 
@@ -357,16 +354,6 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Adjust out of bounds frame number
 		frame_number = adjust_frame_number_minimum(frame_number);
 
-		// Check the cache for this frame
-		std::shared_ptr<Frame> cached_frame = cache.GetFrame(frame_number);
-		if (cached_frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::GetFrame", "returned cached frame", frame_number);
-
-			// Return the cached frame
-			return cached_frame;
-		}
-
 		// Adjust has_video and has_audio overrides
 		int enabled_audio = has_audio.GetInt(frame_number);
 		if (enabled_audio == -1 && reader && reader->info.has_audio)
@@ -410,11 +397,6 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 		// Apply keyframe / transforms
 		apply_keyframes(original_frame, background_frame->GetImage());
-
-        // Cache frame
-        // TODO: disable clip cache temporarily for testing
-        // with this enabled, black frames appear when seeking to previous frames
-        //cache.Add(original_frame);
 
 		// Return processed 'frame'
 		return original_frame;
@@ -896,9 +878,6 @@ void Clip::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	ClipBase::SetJsonValue(root);
 
-	// Clear cache
-	cache.Clear();
-
 	// Set data from Json (if key is found)
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
@@ -1082,18 +1061,12 @@ void Clip::AddEffect(EffectBase* effect)
 
 	// Sort effects
 	sort_effects();
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Apply effects to the source frame (if any)

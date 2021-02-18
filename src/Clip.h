@@ -192,8 +192,8 @@ namespace openshot {
 		/// Destructor
 		virtual ~Clip();
 
-		/// Get the cache object used by this clip
-		CacheMemory* GetCache() override { return &cache; };
+        /// Get the cache object (always return NULL for this reader)
+        openshot::CacheMemory* GetCache() override { return NULL; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };

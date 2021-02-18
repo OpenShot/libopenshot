@@ -1176,12 +1176,6 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 			// Add Effect to Timeline
 			AddEffect(e);
-
-			// Clear cache on parent clip (if any)
-			Clip* parent_clip = (Clip*) e->ParentClip();
-			if (parent_clip && parent_clip->GetCache()) {
-				parent_clip->GetCache()->Clear();
-			}
 		}
 
 	} else if (change_type == "update") {
@@ -1193,12 +1187,6 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
-
-			// Clear cache on parent clip (if any)
-			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
-			if (parent_clip && parent_clip->GetCache()) {
-				parent_clip->GetCache()->Clear();
-			}
 
 			// Update effect properties from JSON
 			existing_effect->SetJsonValue(change["value"]);
@@ -1213,12 +1201,6 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 			int64_t old_starting_frame = (existing_effect->Position() * info.fps.ToDouble()) + 1;
 			int64_t old_ending_frame = ((existing_effect->Position() + existing_effect->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
-
-			// Clear cache on parent clip (if any)
-			Clip* parent_clip = (Clip*) existing_effect->ParentClip();
-			if (parent_clip && parent_clip->GetCache()) {
-				parent_clip->GetCache()->Clear();
-			}
 
 			// Remove effect from timeline
 			RemoveEffect(existing_effect);
@@ -1363,7 +1345,6 @@ void Timeline::ClearAllCache() {
     for (auto clip : clips)
     {
         // Clear cache on clip
-		clip->GetCache()->Clear();
         clip->Reader()->GetCache()->Clear();
 
         // Clear nested Reader (if any)
