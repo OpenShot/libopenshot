@@ -32,6 +32,8 @@
  */
 
 #include "FFmpegReader.h"
+#include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
 #include "Exceptions.h"
 
 #include <thread>    // for std::this_thread::sleep_for

@@ -31,13 +31,14 @@
 #ifndef OPENSHOT_VIDEO_RENDERER_H
 #define OPENSHOT_VIDEO_RENDERER_H
 
-#include "../RendererBase.h"
-#include <QtCore/QObject>
-#include <QtGui/QImage>
 #include <memory>
 
+#include <QObject>
+#include <QImage>
 
-class QPainter;
+#include "../RendererBase.h"
+
+class QWidget;
 
 class VideoRenderer : public QObject, public openshot::RendererBase
 {

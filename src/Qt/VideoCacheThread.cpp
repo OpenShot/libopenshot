@@ -28,18 +28,21 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "VideoCacheThread.h"
-#include "Exceptions.h"
 #include <algorithm>
-
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
+
+#include "VideoCacheThread.h"
+#include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
+#include "ReaderBase.h"
+#include "Exceptions.h"
 
 namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
-	: Thread("video-cache"), speed(1), is_playing(false), position(1)
+	: juce::Thread("video-cache"), speed(1), is_playing(false), position(1)
 	, reader(NULL), max_frames(std::min(OPEN_MP_NUM_PROCESSORS * 8, 64)), current_display_frame(1)
     {
     }

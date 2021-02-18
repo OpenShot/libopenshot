@@ -32,11 +32,13 @@
 #ifndef OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 #define OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
+#include "JuceHeader.h"
+#include "Frame.h"
 
 namespace openshot
 {
+    class RendererBase;
+
     using juce::Thread;
     using juce::WaitableEvent;
 

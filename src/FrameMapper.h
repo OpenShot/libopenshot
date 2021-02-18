@@ -45,7 +45,6 @@
 
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
-#include "OpenMPUtilities.h"
 
 
 namespace openshot

@@ -32,6 +32,8 @@
  */
 
 #include "FFmpegWriter.h"
+#include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
 #include "Exceptions.h"
 
 #include <iostream>

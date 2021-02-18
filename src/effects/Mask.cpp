@@ -29,12 +29,15 @@
  */
 
 #include "Mask.h"
+#include "ReaderBase.h"
+#include "OpenMPUtilities.h"
+#include "ChunkReader.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
+#include "QtImageReader.h"
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
 #endif
-#include "ReaderBase.h"
 
 using namespace openshot;
 

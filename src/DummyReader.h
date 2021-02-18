@@ -36,7 +36,6 @@
 #include <cmath>
 #include <ctime>
 #include <iostream>
-#include <omp.h>
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"

@@ -67,7 +67,6 @@
 #include "DeckLinkAPI.h"
 #include "Frame.h"
 #include "CacheMemory.h"
-#include "OpenMPUtilities.h"
 
 /// Implementation of the Blackmagic Decklink API (used by the DecklinkReader)
 class DeckLinkInputDelegate : public IDeckLinkInputCallback

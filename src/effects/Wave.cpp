@@ -29,6 +29,7 @@
  */
 
 #include "Wave.h"
+#include "OpenMPUtilities.h"
 #include "Exceptions.h"
 
 using namespace openshot;

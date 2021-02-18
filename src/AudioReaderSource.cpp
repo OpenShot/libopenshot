@@ -29,6 +29,7 @@
  */
 
 #include "AudioReaderSource.h"
+#include "ZmqLogger.h"
 #include "Exceptions.h"
 
 using namespace std;

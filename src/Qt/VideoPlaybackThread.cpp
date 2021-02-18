@@ -30,6 +30,8 @@
  */
 
 #include "VideoPlaybackThread.h"
+#include "RendererBase.h"
+#include "ZmqLogger.h"
 
 namespace openshot
 {

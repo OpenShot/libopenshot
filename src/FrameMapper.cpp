@@ -31,6 +31,8 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
+#include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 using namespace openshot;
