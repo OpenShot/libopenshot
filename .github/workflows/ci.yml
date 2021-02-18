@@ -9,6 +9,8 @@ jobs:
         compiler: [gcc, clang]
     env:
       CC: ${{ matrix.compiler }}
+      CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
+
     steps:
     - uses: actions/checkout@v2
 
