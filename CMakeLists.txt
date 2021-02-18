@@ -197,14 +197,12 @@ endif()
 if (TARGET ${PROJECT_NAME}-doc)
 	set(CAN_BUILD_LIB_DOCS TRUE)
 
-  # Install docs, if the user builds them with `make doc`
+  # Install docs, if the user builds them
   install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-    install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
-
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-          DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-          MESSAGE_NEVER # Don't spew about file copies
-          OPTIONAL )    # No error if the docs aren't found
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+    MESSAGE_NEVER # Don't spew about file copies
+    OPTIONAL )    # No error if the docs aren't found
 
   if(NOT TARGET doc)
     add_custom_target(doc)
