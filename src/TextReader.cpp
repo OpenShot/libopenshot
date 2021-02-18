@@ -32,6 +32,7 @@
 #ifdef USE_IMAGEMAGICK
 
 #include "TextReader.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

@@ -365,6 +365,31 @@ namespace openshot {
 		virtual ~ResampleError() noexcept {}
 	};
 
+#define TMS_DEP_MSG "The library no longer throws this exception. It will be removed in a future release."
+
+#ifndef SWIG
+	/// Exception when too many seek attempts happen
+	class
+	__attribute__ ((deprecated (TMS_DEP_MSG) ))
+	TooManySeeks : public ExceptionBase
+	{
+	public:
+		std::string file_path;
+		/**
+		 * @brief Constructor
+		 *
+		 * @param message A message to accompany the exception
+		 * @param file_path (optional) The input file being processed
+		 */
+		TooManySeeks(std::string message, std::string file_path="")
+#ifndef SWIG
+		__attribute__ ((deprecated (TMS_DEP_MSG) ))
+#endif
+			: ExceptionBase(message), file_path(file_path) { }
+		virtual ~TooManySeeks() noexcept {}
+	};
+#endif
+
 	/// Exception when a writer is closed, and a frame is requested
 	class WriterClosed : public ExceptionBase
 	{

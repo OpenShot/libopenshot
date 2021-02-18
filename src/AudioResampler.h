@@ -32,7 +32,6 @@
 #define OPENSHOT_RESAMPLER_H
 
 #include "AudioBufferSource.h"
-#include "Exceptions.h"
 #include "JuceHeader.h"
 
 namespace openshot {

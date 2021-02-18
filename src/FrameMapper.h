@@ -40,7 +40,6 @@
 #include "ReaderBase.h"
 #include "Frame.h"
 #include "Fraction.h"
-#include "Exceptions.h"
 #include "KeyFrame.h"
 
 

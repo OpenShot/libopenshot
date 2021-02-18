@@ -41,7 +41,6 @@
 #include <QTextStream>
 #include <cstdio>
 #include <cstdlib>
-#include "Exceptions.h"
 #include "Fraction.h"
 #include "Json.h"
 

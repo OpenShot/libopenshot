@@ -29,6 +29,7 @@
  */
 
 #include "CacheDisk.h"
+#include "Exceptions.h"
 #include "QtUtilities.h"
 #include <Qt>
 #include <QString>

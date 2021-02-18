@@ -31,8 +31,15 @@
 #include <QPainter>
 
 #include "Caption.h"
+#include "Exceptions.h"
 #include "../Clip.h"
 #include "../Timeline.h"
+
+#include <QString>
+#include <QPoint>
+#include <QRect>
+#include <QPen>
+#include <QBrush>
 
 using namespace openshot;
 

@@ -34,6 +34,7 @@
 #include "FFmpegReader.h"
 #include "OpenMPUtilities.h"
 #include "ZmqLogger.h"
+#include "Exceptions.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
@@ -424,6 +425,14 @@ void FFmpegReader::Open() {
 				}
 #endif // HAVE_HW_ACCEL
 
+				// Disable per-frame threading for album arts
+				// Using FF_THREAD_FRAME adds one frame decoding delay per thread,
+				// but there's only one frame in this case.
+				if (HasAlbumArt())
+				{
+					pCodecCtx->thread_type &= ~FF_THREAD_FRAME;
+				}
+
 				// Open video codec
 				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 					throw InvalidCodec("A video codec was found, but could not be opened.", path);
@@ -630,6 +639,14 @@ void FFmpegReader::Close() {
 	}
 }
 
+bool FFmpegReader::HasAlbumArt() {
+	// Check if the video stream we use is an attached picture
+	// This won't return true if the file has a cover image as a secondary stream
+	// like an MKV file with an attached image file
+	return pFormatCtx && videoStream >= 0 && pFormatCtx->streams[videoStream]
+		&& (pFormatCtx->streams[videoStream]->disposition & AV_DISPOSITION_ATTACHED_PIC);
+}
+
 void FFmpegReader::UpdateAudioInfo() {
 	// Set values of FileInfo struct
 	info.has_audio = true;
@@ -802,6 +819,9 @@ void FFmpegReader::UpdateVideoInfo() {
 	}
 }
 
+bool FFmpegReader::GetIsDurationKnown() {
+	return this->is_duration_known;
+}
 
 std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 	// Check for open reader (or throw exception)
@@ -1770,8 +1790,8 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 		bool seek_worked = false;
 		int64_t seek_target = 0;
 
-		// Seek video stream (if any)
-		if (!seek_worked && info.has_video) {
+		// Seek video stream (if any), except album arts
+		if (!seek_worked && info.has_video && !HasAlbumArt()) {
 			seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->AV_FILENAME);
@@ -2102,14 +2122,12 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 
 	// Special MP3 Handling (ignore more than 1 video frame)
 	if (info.has_audio and info.has_video) {
-		AVCodecID aCodecId = AV_FIND_DECODER_CODEC_ID(aStream);
-		AVCodecID vCodecId = AV_FIND_DECODER_CODEC_ID(pStream);
 		// If MP3 with single video frame, handle this special case by copying the previously
 		// decoded image to the new frame. Otherwise, it will spend a huge amount of
 		// CPU time looking for missing images for all the audio-only frames.
 		if (checked_frames[requested_frame] > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
-			last_frame && last_video_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
+			last_video_frame && last_video_frame->has_image_data && HasAlbumArt()) {
 			missing_video_frames.insert(std::pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
 			missing_video_frames_source.insert(std::pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
 			missing_frames.Add(last_video_frame);

@@ -32,6 +32,7 @@
 #include "OpenMPUtilities.h"
 #include "CrashHandler.h"
 #include "ZmqLogger.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

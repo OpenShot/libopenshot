@@ -31,6 +31,16 @@
 #ifndef OPENSHOT_CLIP_H
 #define OPENSHOT_CLIP_H
 
+#ifdef USE_OPENCV
+	#define int64 opencv_broken_int
+	#define uint64 opencv_broken_uint
+	#include <opencv2/opencv.hpp>
+	#include <opencv2/core.hpp>
+	#undef uint64
+	#undef int64	
+	
+#endif
+
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
@@ -41,13 +51,14 @@
 #include "EffectBase.h"
 #include "Effects.h"
 #include "EffectInfo.h"
-#include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
 #include "JuceHeader.h"
 
+
 namespace openshot {
+	class EffectInfo;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -149,12 +160,20 @@ namespace openshot {
 		/// Reverse an audio buffer
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
+
+
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
 		openshot::AnchorType anchor;     ///< The anchor determines what parent a clip should snap to
 		openshot::FrameDisplayType display; ///< The format to display the frame number (if any)
 		openshot::VolumeMixType mixing;  ///< What strategy should be followed when mixing audio with other clips
+
+		#ifdef USE_OPENCV
+			bool COMPILED_WITH_CV = true;
+		#else
+			bool COMPILED_WITH_CV = false;
+		#endif
 
 		/// Default Constructor
 		Clip();
@@ -178,8 +197,6 @@ namespace openshot {
 
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
-
-
 
 		/// @brief Add an effect to the clip
 		/// @param effect Add an effect to the clip. An effect can modify the audio or video of an openshot::Frame.

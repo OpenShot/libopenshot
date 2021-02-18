@@ -42,7 +42,7 @@
 #include <memory>
 #include "CacheMemory.h"
 #include "Enums.h"
-#include "Exceptions.h"
+
 
 class QImage;
 

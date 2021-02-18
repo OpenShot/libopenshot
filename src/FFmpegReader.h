@@ -47,6 +47,7 @@
 #include "CacheMemory.h"
 #include "Clip.h"
 #include "Exceptions.h"
+#include "OpenMPUtilities.h"
 #include "Settings.h"
 
 
@@ -194,6 +195,9 @@ namespace openshot {
 		/// Get the PTS for the current video packet
 		int64_t GetVideoPTS();
 
+		/// Check if there's an album art
+		bool HasAlbumArt();
+
 		/// Remove partial frames due to seek
 		bool IsPartialFrame(int64_t requested_frame);
 
@@ -269,6 +273,9 @@ namespace openshot {
 
 		/// Open File - which is called by the constructor automatically
 		void Open() override;
+
+		/// Return true if frame can be read with GetFrame()
+		bool GetIsDurationKnown();
 	};
 
 }

@@ -29,12 +29,16 @@
  */
 
 #include "QtImageReader.h"
+#include "Exceptions.h"
 #include "Settings.h"
 #include "Clip.h"
 #include "CacheMemory.h"
+#include "Timeline.h"
 #include <QtCore/QString>
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
+#include <QtGui/QIcon>
+#include <QtGui/QImageReader>
 
 #if USE_RESVG == 1
 	// If defined and found in CMake, utilize the libresvg for parsing
@@ -63,37 +67,24 @@ void QtImageReader::Open()
 	// Open reader if not already open
 	if (!is_open)
 	{
-		bool success = true;
 		bool loaded = false;
 
-#if USE_RESVG == 1
-		// If defined and found in CMake, utilize the libresvg for parsing
-		// SVG files and rasterizing them to QImages.
-		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
-
-			ResvgRenderer renderer(path);
-			if (renderer.isValid()) {
-
-				image = std::make_shared<QImage>(
-					renderer.defaultSize(), QImage::Format_RGBA8888_Premultiplied);
-				image->fill(Qt::transparent);
-
-				QPainter p(image.get());
-				renderer.render(&p);
-				p.end();
-				loaded = true;
-			}
-		}
-#endif
+        // Check for SVG files and rasterizing them to QImages
+        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+            loaded = load_svg_path(path);
+        }
 
 		if (!loaded) {
 			// Attempt to open file using Qt's build in image processing capabilities
+			// AutoTransform enables exif data to be parsed and auto transform the image
+			// to the correct orientation
 			image = std::make_shared<QImage>();
-			success = image->load(path);
+            QImageReader imgReader( path );
+            imgReader.setAutoTransform( true );
+            loaded = imgReader.read(image.get());
 		}
 
-		if (!success) {
+		if (!loaded) {
 			// raise exception
 			throw InvalidFile("File could not be opened.", path.toStdString());
 		}
@@ -166,94 +157,24 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
-	// Determine the max size of this source image (based on the timeline's size, the scaling mode,
-	// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-	// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
-	// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
-	// the future.
-	int max_width = info.width;
-	int max_height = info.height;
-
-	Clip* parent = (Clip*) ParentClip();
-	if (parent) {
-		if (parent->ParentTimeline()) {
-			// Set max width/height based on parent clip's timeline (if attached to a timeline)
-			max_width = parent->ParentTimeline()->preview_width;
-			max_height = parent->ParentTimeline()->preview_height;
-		}
-		if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
-			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
-			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-			max_width = std::max(float(max_width), max_width * max_scale_x);
-			max_height = std::max(float(max_height), max_height * max_scale_y);
-
-		} else if (parent->scale == SCALE_CROP) {
-			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
-			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
-			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-			QSize width_size(max_width * max_scale_x,
-							 round(max_width / (float(info.width) / float(info.height))));
-			QSize height_size(round(max_height / (float(info.height) / float(info.width))),
-							  max_height * max_scale_y);
-			// respect aspect ratio
-			if (width_size.width() >= max_width && width_size.height() >= max_height) {
-				max_width = std::max(max_width, width_size.width());
-				max_height = std::max(max_height, width_size.height());
-			}
-			else {
-				max_width = std::max(max_width, height_size.width());
-				max_height = std::max(max_height, height_size.height());
-			}
-
-		} else {
-			// No scaling, use original image size (slower)
-			max_width = info.width;
-			max_height = info.height;
-		}
-	}
+    // Calculate max image size
+    QSize current_max_size = calculate_max_size();
 
 	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (max_size.width() != max_width || max_size.height() != max_height)) {
+	if (!cached_image || (max_size.width() != current_max_size.width() || max_size.height() != current_max_size.height())) {
+        // Check for SVG files and rasterize them to QImages
+        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+            load_svg_path(path);
+        }
 
-		bool rendered = false;
-#if USE_RESVG == 1
-		// If defined and found in CMake, utilize the libresvg for parsing
-		// SVG files and rasterizing them to QImages.
-		// Only use resvg for files ending in '.svg' or '.svgz'
-		if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
-
-			ResvgRenderer renderer(path);
-			if (renderer.isValid()) {
-				// Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
-				QSize svg_size(renderer.defaultSize().width(), renderer.defaultSize().height());
-				svg_size.scale(max_width, max_height, Qt::KeepAspectRatio);
-
-				// Create empty QImage
-				cached_image = std::make_shared<QImage>(
-					QSize(svg_size.width(), svg_size.height()),
-					QImage::Format_RGBA8888_Premultiplied);
-				cached_image->fill(Qt::transparent);
-
-				// Render SVG into QImage
-				QPainter p(cached_image.get());
-				renderer.render(&p);
-				p.end();
-				rendered = true;
-			}
-		}
-#endif
-
-		if (!rendered) {
-			// We need to resize the original image to a smaller image (for performance reasons)
-			// Only do this once, to prevent tons of unneeded scaling operations
-			cached_image = std::make_shared<QImage>(image->scaled(
-				max_width, max_height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-		}
+        // We need to resize the original image to a smaller image (for performance reasons)
+        // Only do this once, to prevent tons of unneeded scaling operations
+        cached_image = std::make_shared<QImage>(image->scaled(
+                current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
 		// Set max size (to later determine if max_size is changed)
-		max_size.setWidth(max_width);
-		max_size.setHeight(max_height);
+		max_size.setWidth(current_max_size.width());
+		max_size.setHeight(current_max_size.height());
 	}
 
 	// Create or get frame object
@@ -267,6 +188,103 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
 
 	// return frame object
 	return image_frame;
+}
+
+// Calculate the max_size QSize, based on parent timeline and parent clip settings
+QSize QtImageReader::calculate_max_size() {
+    // Get max project size
+    int max_width = info.width;
+    int max_height = info.height;
+    if (max_width == 0 || max_height == 0) {
+        // If no size determined yet, default to 4K
+        max_width = 1920;
+        max_height = 1080;
+    }
+
+    Clip* parent = (Clip*) ParentClip();
+    if (parent) {
+        if (parent->ParentTimeline()) {
+            // Set max width/height based on parent clip's timeline (if attached to a timeline)
+            max_width = parent->ParentTimeline()->preview_width;
+            max_height = parent->ParentTimeline()->preview_height;
+        }
+        if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
+            // Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
+            float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+            float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+            max_width = std::max(float(max_width), max_width * max_scale_x);
+            max_height = std::max(float(max_height), max_height * max_scale_y);
+
+        } else if (parent->scale == SCALE_CROP) {
+            // Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
+            float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+            float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+            QSize width_size(max_width * max_scale_x,
+                             round(max_width / (float(info.width) / float(info.height))));
+            QSize height_size(round(max_height / (float(info.height) / float(info.width))),
+                              max_height * max_scale_y);
+            // respect aspect ratio
+            if (width_size.width() >= max_width && width_size.height() >= max_height) {
+                max_width = std::max(max_width, width_size.width());
+                max_height = std::max(max_height, width_size.height());
+            }
+            else {
+                max_width = std::max(max_width, height_size.width());
+                max_height = std::max(max_height, height_size.height());
+            }
+        }
+    }
+
+    // Return new QSize of the current max size
+    return QSize(max_width, max_height);
+}
+
+// Load an SVG file with Resvg or fallback with Qt
+bool QtImageReader::load_svg_path(QString) {
+    bool loaded = false;
+
+    // Calculate max image size
+    QSize current_max_size = calculate_max_size();
+
+#if USE_RESVG == 1
+    // Use libresvg for parsing/rasterizing SVG
+    ResvgRenderer renderer(path);
+    if (renderer.isValid()) {
+        // Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
+        QSize svg_size(renderer.defaultSize().width(), renderer.defaultSize().height());
+        svg_size.scale(current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio);
+
+        // Load SVG at max size
+        image = std::make_shared<QImage>(svg_size, QImage::Format_RGBA8888_Premultiplied);
+        image->fill(Qt::transparent);
+        QPainter p(image.get());
+        renderer.render(&p);
+        p.end();
+        loaded = true;
+    }
+#endif
+
+    if (!loaded) {
+        // Use Qt for parsing/rasterizing SVG
+        image = std::make_shared<QImage>();
+        loaded = image->load(path);
+
+        if (loaded && (image->width() < current_max_size.width() || image->height() < current_max_size.height())) {
+            // Load SVG into larger/project size (so image is not blurry)
+            QSize svg_size = image->size().scaled(current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio);
+            if (QCoreApplication::instance()) {
+                // Requires QApplication to be running (for QPixmap support)
+                // Re-rasterize SVG image to max size
+                image = std::make_shared<QImage>(QIcon(path).pixmap(svg_size).toImage());
+            } else {
+                // Scale image without re-rasterizing it (due to lack of QApplication)
+                image = std::make_shared<QImage>(image->scaled(
+                        svg_size.width(), svg_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            }
+        }
+    }
+
+    return loaded;
 }
 
 // Generate JSON string of this object

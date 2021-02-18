@@ -152,6 +152,20 @@ set(OPENSHOT_PRIVATE_HEADERS
   OpenMPUtilities.h
 )
 
+# OpenCV related classes
+set(OPENSHOT_CV_SOURCES
+  CVTracker.cpp
+  CVStabilization.cpp
+  ClipProcessingJobs.cpp
+  CVObjectDetection.cpp
+  effects/Stabilizer.cpp
+  effects/Tracker.cpp
+  effects/ObjectDetection.cpp
+  ./sort_filter/sort.cpp
+  ./sort_filter/Hungarian.cpp
+  ./sort_filter/KalmanTracker.cpp)
+
+
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -301,7 +315,6 @@ if(ImageMagick_FOUND)
 
   # define a preprocessor macro (used in the C++ source)
   target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
 
   # Link with ImageMagick library
   target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
@@ -453,8 +466,7 @@ if (TARGET Resvg::Resvg)
   #include_directories(${Resvg_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC Resvg::Resvg)
 
-  target_compile_definitions(openshot PUBLIC -DUSE_RESVG=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_RESVG=1)
+  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
 
   set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
   mark_as_advanced(HAVE_RESVG)
@@ -487,10 +499,36 @@ if (ENABLE_BLACKMAGIC)
     target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 
     # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC -DUSE_BLACKMAGIC=1)
-    list(APPEND CMAKE_SWIG_FLAGS -DUSE_BLACKMAGIC=1)
+    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
   endif()
 endif()
+
+################## OPENCV ###################
+if(ENABLE_OPENCV)
+  find_package(OpenCV 4)
+  if(NOT OpenCV_FOUND)
+    set(ENABLE_OPENCV FALSE CACHE BOOL
+      "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
+  else()
+    add_subdirectory(protobuf_messages)
+    # Add OpenCV source files
+    target_sources(openshot PRIVATE
+      ${OPENSHOT_CV_SOURCES}
+    )
+    target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
+    target_link_libraries(openshot PUBLIC
+      opencv_core
+      opencv_video
+      opencv_highgui
+      opencv_dnn
+      opencv_tracking
+      openshot_protobuf
+    )
+  set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
+  mark_as_advanced(HAVE_OPENCV)
+  endif()
+endif()
+add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
@@ -530,6 +568,10 @@ if(DEFINED JSONCPP_BUNDLED_HEADERS)
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/json
   )
 endif()
+if(DEFINED ProtobufHeaders)
+  install(FILES ${ProtobufHeaders}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
+  )
 
 ############### CPACK PACKAGING ##############
 if(MINGW)

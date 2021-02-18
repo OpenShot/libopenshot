@@ -29,6 +29,7 @@
  */
 
 #include "DummyReader.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

@@ -9,6 +9,8 @@ jobs:
         compiler: [gcc, clang]
     env:
       CC: ${{ matrix.compiler }}
+      CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
+
     steps:
     - uses: actions/checkout@v2
 
@@ -24,11 +26,13 @@ jobs:
       run: |
         sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
         sudo apt update
-        sudo apt install cmake swig doxygen graphviz curl lcov
-        sudo apt install libopenshot-audio-dev
-        sudo apt install qtbase5-dev qtbase5-dev-tools
-        sudo apt install libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev
-        sudo apt install libzmq3-dev libmagick++-dev libunittest++-dev
+        sudo apt install \
+          cmake swig doxygen graphviz curl lcov \
+          libopenshot-audio-dev \
+          qtbase5-dev qtbase5-dev-tools \
+          libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
+          libzmq3-dev libmagick++-dev libunittest++-dev \
+          libopencv-dev libprotobuf-dev protobuf-compiler
 
     - name: Build libopenshot
       shell: bash
