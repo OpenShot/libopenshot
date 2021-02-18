@@ -64,7 +64,7 @@ option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(VERBOSE_TESTS "Run CTest with maximum verbosity" OFF)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 
-option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
+option(ENABLE_LIB_DOCS "Build API documentation (requires Doxygen)" ON)
 
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
 
@@ -145,11 +145,15 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/src/OpenShotVersion.h
 
 
 ################### DOCUMENTATION ###################
-# Find Doxygen (used for documentation)
-set(LIB_DOCS_ENABLED FALSE) # Only set true if Doxygen is found and configured
-if(NOT DEFINED ENABLE_LIB_DOCS)
-  set(ENABLE_LIB_DOCS ${ENABLE_DOCS})
+# Legacy option support
+if(DEFINED CACHE{ENABLE_DOCS})
+  set(ENABLE_LIB_DOCS ${ENABLE_DOCS} CACHE BOOL "Build API documentation (requires Doxygen)")
+  unset(ENABLE_DOCS CACHE)
+  message(WARNING "The ENABLE_DOCS option is deprecated, please use ENABLE_LIB_DOCS")
 endif()
+
+# Find Doxygen (used for documentation)
+set(CAN_BUILD_LIB_DOCS FALSE) # Only set true if Doxygen is found and configured
 if (ENABLE_LIB_DOCS AND CMAKE_VERSION VERSION_GREATER 3.11)
   find_package(Doxygen)
   if(Doxygen_FOUND)
@@ -191,7 +195,7 @@ if (ENABLE_LIB_DOCS AND CMAKE_VERSION VERSION_GREATER 3.11)
   endif()
 endif()
 if (TARGET ${PROJECT_NAME}-doc)
-	set(LIB_DOCS_ENABLED TRUE)
+	set(CAN_BUILD_LIB_DOCS TRUE)
 
   # Install docs, if the user builds them with `make doc`
   install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
