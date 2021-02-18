@@ -769,13 +769,14 @@ void Frame::AddColor(int new_width, int new_height, std::string new_color)
 
 // Add (or replace) pixel data to the frame
 void Frame::AddImage(
-	int new_width, int new_height, int bytes_per_pixel,
+	int new_width, int new_height,
+	int bytes_per_pixel, int bytes_per_line,
 	QImage::Format type, const unsigned char *pixels_)
 {
 	// Create new buffer
 	{
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-		int buffer_size = new_width * new_height * bytes_per_pixel;
+		int buffer_size = bytes_per_line * new_height;
 		qbuffer = new unsigned char[buffer_size]();
 
 		// Copy buffer data

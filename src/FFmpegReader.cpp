@@ -1160,7 +1160,7 @@ bool FFmpegReader::GetAVFrame() {
 				// Use only the first frame like avcodec_decode_video2
 				if (frameFinished == 0 ) {
 					frameFinished = 1;
-					av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
+					av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 32);
 					av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
 												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
 				}
@@ -1374,10 +1374,10 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		// Add Image data to frame
 		if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
 			// Add image with no alpha channel, Speed optimization
-			f->AddImage(width, height, 4, QImage::Format_RGBA8888_Premultiplied, buffer);
+			f->AddImage(width, height, 4, pFrameRGB->linesize[0], QImage::Format_RGBA8888_Premultiplied, buffer);
 		} else {
 			// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
-			f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
+			f->AddImage(width, height, 4, pFrameRGB->linesize[0], QImage::Format_RGBA8888, buffer);
 		}
 
 		// Update working cache
