@@ -202,8 +202,8 @@ namespace openshot {
 		/// @param include Include or Exclude intersecting clips
 		std::vector<openshot::Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
 
-		/// Get or generate a blank frame
-		std::shared_ptr<openshot::Frame> GetOrCreateFrame(openshot::Clip* clip, int64_t number);
+		/// Get a clip's frame or generate a blank frame
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(std::shared_ptr<Frame> background_frame, openshot::Clip* clip, int64_t number);
 
 		/// Apply effects to the source frame (if any)
 		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer);

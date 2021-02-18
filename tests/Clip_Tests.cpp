@@ -258,7 +258,7 @@ TEST(Verify_Parent_Timeline)
 
 	// Check size of frame image (with an associated timeline)
 	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->width(), 640);
-	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 480);
+	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 360);
 }
 
 } // SUITE
