@@ -987,7 +987,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
-					
+
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 
@@ -1131,7 +1131,7 @@ bool Clip::isEqual(double a, double b)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 {
 	// Get actual frame image data
-	std::shared_ptr<QImage> source_image = frame->GetImage();
+	auto source_image = frame->GetImage();
 
 	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
 	if (Waveform())
@@ -1146,8 +1146,9 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		int alpha = wave_color.alpha.GetInt(frame->number);
 
 		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = frame->GetWaveform(width, height, red, green, blue, alpha);
-		frame->AddImage(std::shared_ptr<QImage>(source_image));
+		auto wave_image = frame->GetWaveform(width, height, red, green, blue, alpha);
+		frame->AddImage(wave_image);
+		source_image.swap(wave_image);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
