@@ -28,21 +28,20 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Coordinate.h"
+#include "Coordinate.h"
+#include "Exceptions.h"
 
-using namespace std;
 using namespace openshot;
 
-// Default constructor for a coordinate, which defaults the X and Y to zero (0,0)
-Coordinate::Coordinate() :
-	X(0), Y(0) {
-}
+// Default constructor for a coordinate, delegating to the full signature
+Coordinate::Coordinate() : Coordinate::Coordinate(0, 0) {};
 
 // Constructor which also allows the user to set the X and Y
-Coordinate::Coordinate(double x, double y) :
-	X(x), Y(y) {
-}
+Coordinate::Coordinate(double x, double y) : X(x), Y(y) {};
 
+// Constructor which accepts a std::pair for (X, Y)
+Coordinate::Coordinate(const std::pair<double, double>& co)
+	: X(co.first), Y(co.second) {};
 
 // Generate JSON string of this object
 std::string Coordinate::Json() const {

@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/ChromaKey.h"
+#include "ChromaKey.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
@@ -66,7 +67,7 @@ void ChromaKey::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> ChromaKey::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Determine the current HSL (Hue, Saturation, Lightness) for the Chrome
 	int threshold = fuzz.GetInt(frame_number);

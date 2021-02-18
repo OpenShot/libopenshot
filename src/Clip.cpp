@@ -28,17 +28,18 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/FrameMapper.h"
+#include "Clip.h"
+#include "Exceptions.h"
+#include "FFmpegReader.h"
+#include "FrameMapper.h"
 #ifdef USE_IMAGEMAGICK
-	#include "../include/ImageReader.h"
-	#include "../include/TextReader.h"
+	#include "ImageReader.h"
+	#include "TextReader.h"
 #endif
-#include "../include/QtImageReader.h"
-#include "../include/ChunkReader.h"
-#include "../include/DummyReader.h"
-#include "../include/Timeline.h"
+#include "QtImageReader.h"
+#include "ChunkReader.h"
+#include "DummyReader.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -69,22 +70,12 @@ void Clip::init_settings()
 	// Init alpha
 	alpha = Keyframe(1.0);
 
-	// Init rotation
-	init_reader_rotation();
-
 	// Init time & volume
 	time = Keyframe(1.0);
 	volume = Keyframe(1.0);
 
 	// Init audio waveform color
 	wave_color = Color((unsigned char)0, (unsigned char)123, (unsigned char)255, (unsigned char)255);
-
-	// Init crop settings
-	crop_gravity = GRAVITY_TOP_LEFT;
-	crop_width = Keyframe(1.0);
-	crop_height = Keyframe(1.0);
-	crop_x = Keyframe(0.0);
-	crop_y = Keyframe(0.0);
 
 	// Init shear and perspective curves
 	shear_x = Keyframe(0.0);
@@ -107,6 +98,23 @@ void Clip::init_settings()
 	// Init audio and video overrides
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
+
+	// Init reader info struct and cache size
+	init_reader_settings();
+}
+
+// Init reader info details
+void Clip::init_reader_settings() {
+	if (reader) {
+		// Init rotation (if any)
+		init_reader_rotation();
+
+		// Initialize info struct
+		info = reader->info;
+
+		// Initialize Clip cache
+		cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	}
 }
 
 // Init reader's rotation (if any)
@@ -134,14 +142,14 @@ void Clip::init_reader_rotation() {
 }
 
 // Default Constructor for a clip
-Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip() : resampler(NULL), reader(NULL), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
 }
 
 // Constructor with reader
-Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL)
+Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
@@ -153,12 +161,14 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetParentClip(this);
+		reader->ParentClip(this);
+		// Init reader info struct and cache size
+		init_reader_settings();
 	}
 }
 
 // Constructor with filepath
-Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL)
+Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(NULL), is_open(false)
 {
 	// Init all default settings
 	init_settings();
@@ -174,7 +184,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		try
 		{
 			// Open common video format
-			reader = new FFmpegReader(path);
+			reader = new openshot::FFmpegReader(path);
 
 		} catch(...) { }
 	}
@@ -183,7 +193,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		try
 		{
 			// Open common video format
-			reader = new Timeline(path, true);
+			reader = new openshot::Timeline(path, true);
 
 		} catch(...) { }
 	}
@@ -195,13 +205,13 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		try
 		{
 			// Try an image reader
-			reader = new QtImageReader(path);
+			reader = new openshot::QtImageReader(path);
 
 		} catch(...) {
 			try
 			{
 				// Try a video reader
-				reader = new FFmpegReader(path);
+				reader = new openshot::FFmpegReader(path);
 
 			} catch(...) { }
 		}
@@ -210,9 +220,10 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 	// Update duration and set parent
 	if (reader) {
 		End(reader->info.duration);
-		reader->SetParentClip(this);
+		reader->ParentClip(this);
 		allocated_reader = reader;
-		init_reader_rotation();
+		// Init reader info struct and cache size
+		init_reader_settings();
 	}
 }
 
@@ -239,10 +250,10 @@ void Clip::Reader(ReaderBase* new_reader)
 	reader = new_reader;
 
 	// set parent
-	reader->SetParentClip(this);
+	reader->ParentClip(this);
 
-	// Init rotation (if any)
-	init_reader_rotation();
+	// Init reader info struct and cache size
+	init_reader_settings();
 }
 
 /// Get the current reader
@@ -262,6 +273,10 @@ void Clip::Open()
 	{
 		// Open the reader
 		reader->Open();
+		is_open = true;
+
+		// Copy Reader info to Clip
+		info = reader->info;
 
 		// Set some clip properties from the file reader
 		if (end == 0.0)
@@ -275,6 +290,7 @@ void Clip::Open()
 // Close the internal reader
 void Clip::Close()
 {
+	is_open = false;
 	if (reader) {
 		ZmqLogger::Instance()->AppendDebugMethod("Clip::Close");
 
@@ -308,29 +324,64 @@ float Clip::End() const
 		return end;
 }
 
-// Get an openshot::Frame object for a specific frame number of this reader.
-std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
+// Create an openshot::Frame object for a specific frame number of this reader.
+std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
 {
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
+
 	if (reader)
 	{
 		// Adjust out of bounds frame number
-		requested_frame = adjust_frame_number_minimum(requested_frame);
+		frame_number = adjust_frame_number_minimum(frame_number);
+
+		// Get the original frame and pass it to GetFrame overload
+		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
+		return GetFrame(original_frame, frame_number);
+	}
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+// Use an existing openshot::Frame object and draw this Clip's frame onto it
+std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+{
+	// Check for open reader (or throw exception)
+	if (!is_open)
+		throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
+
+	if (reader)
+	{
+		// Adjust out of bounds frame number
+		frame_number = adjust_frame_number_minimum(frame_number);
+
+		// Check the cache for this frame
+		std::shared_ptr<Frame> cached_frame = cache.GetFrame(frame_number);
+		if (cached_frame) {
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::GetFrame", "returned cached frame", frame_number);
+
+			// Return the cached frame
+			return cached_frame;
+		}
 
 		// Adjust has_video and has_audio overrides
-		int enabled_audio = has_audio.GetInt(requested_frame);
+		int enabled_audio = has_audio.GetInt(frame_number);
 		if (enabled_audio == -1 && reader && reader->info.has_audio)
 			enabled_audio = 1;
 		else if (enabled_audio == -1 && reader && !reader->info.has_audio)
 			enabled_audio = 0;
-		int enabled_video = has_video.GetInt(requested_frame);
+		int enabled_video = has_video.GetInt(frame_number);
 		if (enabled_video == -1 && reader && reader->info.has_video)
 			enabled_video = 1;
 		else if (enabled_video == -1 && reader && !reader->info.has_audio)
 			enabled_video = 0;
 
 		// Is a time map detected
-		int64_t new_frame_number = requested_frame;
-		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(requested_frame));
+		int64_t new_frame_number = frame_number;
+		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(frame_number));
 		if (time.GetLength() > 1)
 			new_frame_number = time_mapped_number;
 
@@ -338,16 +389,9 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 		std::shared_ptr<Frame> original_frame;
 		original_frame = GetOrCreateFrame(new_frame_number);
 
-		// Create a new frame
-		std::shared_ptr<Frame> frame(new Frame(new_frame_number, 1, 1, "#000000", original_frame->GetAudioSamplesCount(), original_frame->GetAudioChannelsCount()));
-		{
-			frame->SampleRate(original_frame->SampleRate());
-			frame->ChannelsLayout(original_frame->ChannelsLayout());
-		}
-
 		// Copy the image from the odd field
 		if (enabled_video)
-			frame->AddImage(std::shared_ptr<QImage>(new QImage(*original_frame->GetImage())));
+			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
 
 		// Loop through each channel, add audio
 		if (enabled_audio && reader->info.has_audio)
@@ -355,10 +399,33 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t requested_frame)
 				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
-		get_time_mapped_frame(frame, requested_frame);
+		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
+		get_time_mapped_frame(frame, new_frame_number);
+
+		// Adjust # of samples to match requested (the interaction with time curves will make this tricky)
+		// TODO: Implement move samples to/from next frame
 
 		// Apply effects to the frame (if any)
 		apply_effects(frame);
+
+		// Determine size of image (from Timeline or Reader)
+		int width = 0;
+		int height = 0;
+		if (timeline) {
+			// Use timeline size (if available)
+			width = timeline->preview_width;
+			height = timeline->preview_height;
+		} else {
+			// Fallback to clip size
+			width = reader->info.width;
+			height = reader->info.height;
+		}
+
+		// Apply keyframe / transforms
+		apply_keyframes(frame, width, height);
+
+		// Cache frame
+		cache.Add(frame);
 
 		// Return processed 'frame'
 		return frame;
@@ -630,38 +697,44 @@ int64_t Clip::adjust_frame_number_minimum(int64_t frame_number)
 // Get or generate a blank frame
 std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 {
-	std::shared_ptr<Frame> new_frame;
-
-	// Init some basic properties about this frame
-	int samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
-
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		new_frame = reader->GetFrame(number);
+		auto reader_frame = reader->GetFrame(number);
 
 		// Return real frame
-		if (new_frame)
-			return new_frame;
+		if (reader_frame) {
+			// Create a new copy of reader frame
+			// This allows a clip to modify the pixels and audio of this frame without
+			// changing the underlying reader's frame data
+			//std::shared_ptr<Frame> reader_copy(new Frame(number, 1, 1, "#000000", reader_frame->GetAudioSamplesCount(), reader_frame->GetAudioChannelsCount()));
+			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
+			reader_copy->SampleRate(reader_frame->SampleRate());
+			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
+			return reader_copy;
+		}
 
 	} catch (const ReaderClosed & e) {
-		// ...
-	} catch (const TooManySeeks & e) {
 		// ...
 	} catch (const OutOfBoundsFrame & e) {
 		// ...
 	}
 
+	// Estimate # of samples needed for this frame
+	int estimated_samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
+
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "estimated_samples_in_frame", estimated_samples_in_frame);
 
 	// Create blank frame
-	new_frame = std::make_shared<Frame>(number, reader->info.width, reader->info.height, "#000000", samples_in_frame, reader->info.channels);
+	auto new_frame = std::make_shared<Frame>(
+		number, reader->info.width, reader->info.height,
+		"#000000", estimated_samples_in_frame, reader->info.channels);
 	new_frame->SampleRate(reader->info.sample_rate);
 	new_frame->ChannelsLayout(reader->info.channel_layout);
-	new_frame->AddAudioSilence(samples_in_frame);
+	new_frame->AddAudioSilence(estimated_samples_in_frame);
 	return new_frame;
 }
 
@@ -747,11 +820,6 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["has_video"]["choices"].append(add_property_choice_json("Off", 0, has_video.GetValue(requested_frame)));
 	root["has_video"]["choices"].append(add_property_choice_json("On", 1, has_video.GetValue(requested_frame)));
 
-	root["crop_x"] = add_property_json("Crop X", crop_x.GetValue(requested_frame), "float", "", &crop_x, -1.0, 1.0, false, requested_frame);
-	root["crop_y"] = add_property_json("Crop Y", crop_y.GetValue(requested_frame), "float", "", &crop_y, -1.0, 1.0, false, requested_frame);
-	root["crop_width"] = add_property_json("Crop Width", crop_width.GetValue(requested_frame), "float", "", &crop_width, 0.0, 1.0, false, requested_frame);
-	root["crop_height"] = add_property_json("Crop Height", crop_height.GetValue(requested_frame), "float", "", &crop_height, 0.0, 1.0, false, requested_frame);
-
 	root["wave_color"] = add_property_json("Wave Color", 0.0, "color", "", &wave_color.red, 0, 255, false, requested_frame);
 	root["wave_color"]["red"] = add_property_json("Red", wave_color.red.GetValue(requested_frame), "float", "", &wave_color.red, 0, 255, false, requested_frame);
 	root["wave_color"]["blue"] = add_property_json("Blue", wave_color.blue.GetValue(requested_frame), "float", "", &wave_color.blue, 0, 255, false, requested_frame);
@@ -782,10 +850,6 @@ Json::Value Clip::JsonValue() const {
 	root["time"] = time.JsonValue();
 	root["volume"] = volume.JsonValue();
 	root["wave_color"] = wave_color.JsonValue();
-	root["crop_width"] = crop_width.JsonValue();
-	root["crop_height"] = crop_height.JsonValue();
-	root["crop_x"] = crop_x.JsonValue();
-	root["crop_y"] = crop_y.JsonValue();
 	root["shear_x"] = shear_x.JsonValue();
 	root["shear_y"] = shear_y.JsonValue();
 	root["origin_x"] = origin_x.JsonValue();
@@ -844,6 +908,9 @@ void Clip::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	ClipBase::SetJsonValue(root);
 
+	// Clear cache
+	cache.Clear();
+
 	// Set data from Json (if key is found)
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
@@ -875,14 +942,6 @@ void Clip::SetJsonValue(const Json::Value root) {
 		volume.SetJsonValue(root["volume"]);
 	if (!root["wave_color"].isNull())
 		wave_color.SetJsonValue(root["wave_color"]);
-	if (!root["crop_width"].isNull())
-		crop_width.SetJsonValue(root["crop_width"]);
-	if (!root["crop_height"].isNull())
-		crop_height.SetJsonValue(root["crop_height"]);
-	if (!root["crop_x"].isNull())
-		crop_x.SetJsonValue(root["crop_x"]);
-	if (!root["crop_y"].isNull())
-		crop_y.SetJsonValue(root["crop_y"]);
 	if (!root["shear_x"].isNull())
 		shear_x.SetJsonValue(root["shear_x"]);
 	if (!root["shear_y"].isNull())
@@ -924,11 +983,11 @@ void Clip::SetJsonValue(const Json::Value root) {
 		for (const auto existing_effect : root["effects"]) {
 			// Create Effect
 			EffectBase *e = NULL;
-
 			if (!existing_effect["type"].isNull()) {
-				// Create instance of effect
-				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
 
+				// Create instance of effect
+				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
+					
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 
@@ -961,13 +1020,13 @@ void Clip::SetJsonValue(const Json::Value root) {
 			if (type == "FFmpegReader") {
 
 				// Create new reader
-				reader = new FFmpegReader(root["reader"]["path"].asString(), false);
+				reader = new openshot::FFmpegReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "QtImageReader") {
 
 				// Create new reader
-				reader = new QtImageReader(root["reader"]["path"].asString(), false);
+				reader = new openshot::QtImageReader(root["reader"]["path"].asString(), false);
 				reader->SetJsonValue(root["reader"]);
 
 #ifdef USE_IMAGEMAGICK
@@ -987,25 +1046,25 @@ void Clip::SetJsonValue(const Json::Value root) {
 			} else if (type == "ChunkReader") {
 
 				// Create new reader
-				reader = new ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
+				reader = new openshot::ChunkReader(root["reader"]["path"].asString(), (ChunkVersion) root["reader"]["chunk_version"].asInt());
 				reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "DummyReader") {
 
 				// Create new reader
-				reader = new DummyReader();
+				reader = new openshot::DummyReader();
 				reader->SetJsonValue(root["reader"]);
 
 			} else if (type == "Timeline") {
 
 				// Create new reader (always load from file again)
 				// This prevents FrameMappers from being loaded on accident
-				reader = new Timeline(root["reader"]["path"].asString(), true);
+				reader = new openshot::Timeline(root["reader"]["path"].asString(), true);
 			}
 
 			// mark as managed reader and set parent
 			if (reader) {
-				reader->SetParentClip(this);
+				reader->ParentClip(this);
 				allocated_reader = reader;
 			}
 
@@ -1027,21 +1086,30 @@ void Clip::sort_effects()
 // Add an effect to the clip
 void Clip::AddEffect(EffectBase* effect)
 {
+	// Set parent clip pointer
+	effect->ParentClip(this);
+
 	// Add effect to list
 	effects.push_back(effect);
 
 	// Sort effects
 	sort_effects();
+
+	// Clear cache
+	cache.Clear();
 }
 
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
+
+	// Clear cache
+	cache.Clear();
 }
 
 // Apply effects to the source frame (if any)
-std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
+void Clip::apply_effects(std::shared_ptr<Frame> frame)
 {
 	// Find Effects at this position and layer
 	for (auto effect : effects)
@@ -1050,7 +1118,235 @@ std::shared_ptr<Frame> Clip::apply_effects(std::shared_ptr<Frame> frame)
 		frame = effect->GetFrame(frame, frame->number);
 
 	} // end effect loop
+}
 
-	// Return modified frame
-	return frame;
+// Compare 2 floating point numbers for equality
+bool Clip::isEqual(double a, double b)
+{
+	return fabs(a - b) < 0.000001;
+}
+
+
+// Apply keyframes to the source frame (if any)
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
+{
+	// Get actual frame image data
+	std::shared_ptr<QImage> source_image = frame->GetImage();
+
+	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
+	if (Waveform())
+	{
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+
+		// Get the color of the waveform
+		int red = wave_color.red.GetInt(frame->number);
+		int green = wave_color.green.GetInt(frame->number);
+		int blue = wave_color.blue.GetInt(frame->number);
+		int alpha = wave_color.alpha.GetInt(frame->number);
+
+		// Generate Waveform Dynamically (the size of the timeline)
+		source_image = frame->GetWaveform(width, height, red, green, blue, alpha);
+		frame->AddImage(std::shared_ptr<QImage>(source_image));
+	}
+
+	/* ALPHA & OPACITY */
+	if (alpha.GetValue(frame->number) != 1.0)
+	{
+		float alpha_value = alpha.GetValue(frame->number);
+
+		// Get source image's pixels
+		unsigned char *pixels = source_image->bits();
+
+		// Loop through pixels
+		for (int pixel = 0, byte_index=0; pixel < source_image->width() * source_image->height(); pixel++, byte_index+=4)
+		{
+			// Apply alpha to pixel values (since we use a premultiplied value, we must
+			// multiply the alpha with all colors).
+			pixels[byte_index + 0] *= alpha_value;
+			pixels[byte_index + 1] *= alpha_value;
+			pixels[byte_index + 2] *= alpha_value;
+			pixels[byte_index + 3] *= alpha_value;
+		}
+
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
+	}
+
+	/* RESIZE SOURCE IMAGE - based on scale type */
+	QSize source_size = source_image->size();
+	switch (scale)
+	{
+		case (SCALE_FIT): {
+			source_size.scale(width, height, Qt::KeepAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_STRETCH): {
+			source_size.scale(width, height, Qt::IgnoreAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_CROP): {
+			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+		case (SCALE_NONE): {
+			// Calculate ratio of source size to project size
+			// Even with no scaling, previews need to be adjusted correctly
+			// (otherwise NONE scaling draws the frame image outside of the preview)
+			float source_width_ratio = source_size.width() / float(width);
+			float source_height_ratio = source_size.height() / float(height);
+			source_size.scale(width * source_width_ratio, height * source_height_ratio, Qt::KeepAspectRatio);
+
+			// Debug output
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			break;
+		}
+	}
+
+	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
+	float x = 0.0; // left
+	float y = 0.0; // top
+
+	// Adjust size for scale x and scale y
+	float sx = scale_x.GetValue(frame->number); // percentage X scale
+	float sy = scale_y.GetValue(frame->number); // percentage Y scale
+	float scaled_source_width = source_size.width() * sx;
+	float scaled_source_height = source_size.height() * sy;
+
+	switch (gravity)
+	{
+		case (GRAVITY_TOP_LEFT):
+			// This is only here to prevent unused-enum warnings
+			break;
+		case (GRAVITY_TOP):
+			x = (width - scaled_source_width) / 2.0; // center
+			break;
+		case (GRAVITY_TOP_RIGHT):
+			x = width - scaled_source_width; // right
+			break;
+		case (GRAVITY_LEFT):
+			y = (height - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_CENTER):
+			x = (width - scaled_source_width) / 2.0; // center
+			y = (height - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_RIGHT):
+			x = width - scaled_source_width; // right
+			y = (height - scaled_source_height) / 2.0; // center
+			break;
+		case (GRAVITY_BOTTOM_LEFT):
+			y = (height - scaled_source_height); // bottom
+			break;
+		case (GRAVITY_BOTTOM):
+			x = (width - scaled_source_width) / 2.0; // center
+			y = (height - scaled_source_height); // bottom
+			break;
+		case (GRAVITY_BOTTOM_RIGHT):
+			x = width - scaled_source_width; // right
+			y = (height - scaled_source_height); // bottom
+			break;
+	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
+
+	/* LOCATION, ROTATION, AND SCALE */
+	float r = rotation.GetValue(frame->number); // rotate in degrees
+	x += (width * location_x.GetValue(frame->number)); // move in percentage of final width
+	y += (height * location_y.GetValue(frame->number)); // move in percentage of final height
+	float shear_x_value = shear_x.GetValue(frame->number);
+	float shear_y_value = shear_y.GetValue(frame->number);
+	float origin_x_value = origin_x.GetValue(frame->number);
+	float origin_y_value = origin_y.GetValue(frame->number);
+
+	QTransform transform;
+
+	// Transform source image (if needed)
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+
+	if (!isEqual(x, 0) || !isEqual(y, 0)) {
+		// TRANSLATE/MOVE CLIP
+		transform.translate(x, y);
+	}
+
+	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
+		// ROTATE CLIP (around origin_x, origin_y)
+		float origin_x_offset = (scaled_source_width * origin_x_value);
+		float origin_y_offset = (scaled_source_height * origin_y_value);
+		transform.translate(origin_x_offset, origin_y_offset);
+		transform.rotate(r);
+		transform.shear(shear_x_value, shear_y_value);
+		transform.translate(-origin_x_offset,-origin_y_offset);
+	}
+
+	// SCALE CLIP (if needed)
+	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
+	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
+
+	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
+		transform.scale(source_width_scale, source_height_scale);
+	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
+
+	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
+	auto new_image = std::make_shared<QImage>(QSize(width, height), source_image->format());
+	new_image->fill(QColor(QString::fromStdString("#00000000")));
+
+	// Load timeline's new frame image into a QPainter
+	QPainter painter(new_image.get());
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+
+	// Apply transform (translate, rotate, scale)
+	painter.setTransform(transform);
+
+	// Composite a new layer onto the image
+	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+	painter.drawImage(0, 0, *source_image);
+
+	if (timeline) {
+		Timeline *t = (Timeline *) timeline;
+
+		// Draw frame #'s on top of image (if needed)
+		if (display != FRAME_DISPLAY_NONE) {
+			std::stringstream frame_number_str;
+			switch (display) {
+				case (FRAME_DISPLAY_NONE):
+					// This is only here to prevent unused-enum warnings
+					break;
+
+				case (FRAME_DISPLAY_CLIP):
+					frame_number_str << frame->number;
+					break;
+
+				case (FRAME_DISPLAY_TIMELINE):
+					frame_number_str << (position * t->info.fps.ToFloat()) + frame->number;
+					break;
+
+				case (FRAME_DISPLAY_BOTH):
+					frame_number_str << (position * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
+					break;
+			}
+
+			// Draw frame number on top of image
+			painter.setPen(QColor("#ffffff"));
+			painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
+		}
+	}
+
+	painter.end();
+
+	// Add new QImage to frame
+	frame->AddImage(new_image);
 }

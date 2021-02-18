@@ -28,14 +28,24 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Fraction.h"
+#include "Fraction.h"
+#include <cmath>
 
 using namespace openshot;
 
-// Constructor
-Fraction::Fraction() :
-	num(1), den(1) {
-}
+// Delegating constructors
+Fraction::Fraction() : Fraction::Fraction(1, 1) {};
+
+Fraction::Fraction(std::pair<int, int> pair)
+	: Fraction::Fraction(pair.first, pair.second) {};
+
+Fraction::Fraction(std::map<std::string, int> mapping)
+	: Fraction::Fraction(mapping["num"], mapping["den"]) {};
+
+Fraction::Fraction(std::vector<int> vector)
+	: Fraction::Fraction(vector[0], vector[1]) {};
+
+// Full constructor
 Fraction::Fraction(int num, int den) :
 	num(num), den(den) {
 }

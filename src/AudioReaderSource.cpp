@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/AudioReaderSource.h"
+#include "AudioReaderSource.h"
+#include "Exceptions.h"
 
 using namespace std;
 using namespace openshot;
@@ -96,8 +97,6 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 				frame_number = frame_number + speed;
 
 			} catch (const ReaderClosed & e) {
-			break;
-			} catch (const TooManySeeks & e) {
 			break;
 			} catch (const OutOfBoundsFrame & e) {
 			break;

@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Wave.h"
+#include "Wave.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
@@ -63,7 +64,7 @@ void Wave::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Wave::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Wave::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();

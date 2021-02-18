@@ -25,21 +25,8 @@
 ################################################################################
 
 # Test media path, used by unit tests for input data
-file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/src/examples/" TEST_MEDIA_PATH)
+file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-################ WINDOWS ##################
-# Set some compiler options for Windows
-# required for libopenshot-audio headers
-if(WIN32)
-	add_definitions( -DIGNORE_JUCE_HYPOT=1 )
-	set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} -include cmath")
-endif()
-
-if (APPLE)
-	# Prevent compiling with __cxx11
-	add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-endif()
 
 ################### UNITTEST++ #####################
 # Find UnitTest++ libraries (used for unit testing)
@@ -57,44 +44,6 @@ set_package_properties(UnitTest++ PROPERTIES
   TYPE RECOMMENDED
   PURPOSE "Unit testing framework")
 
-################ IMAGE MAGICK ##################
-if(ENABLE_MAGICK)
-  # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-  if(MAGICKCORE_QUANTUM_DEPTH)
-  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH} )
-  else()
-  	add_definitions( -DMAGICKCORE_QUANTUM_DEPTH=16 )
-  endif()
-
-  if(MAGICKCORE_HDRI_ENABLE)
-  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE} )
-  else()
-  	add_definitions( -DMAGICKCORE_HDRI_ENABLE=0 )
-  endif()
-
-  if(OPENSHOT_IMAGEMAGICK_COMPATIBILITY)
-  	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=${OPENSHOT_IMAGEMAGICK_COMPATIBILITY} )
-  else()
-  	add_definitions( -DOPENSHOT_IMAGEMAGICK_COMPATIBILITY=0 )
-  endif()
-
-  # Find the ImageMagick++ library
-  find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
-  if(ImageMagick_FOUND)
-  	# Include ImageMagick++ headers (needed for compile)
-  	include_directories(${ImageMagick_INCLUDE_DIRS})
-
-  	# define a global var (used in the C++)
-  	add_definitions( -DUSE_IMAGEMAGICK=1 )
-  endif()
-endif()
-################# LIBOPENSHOT-AUDIO ###################
-# Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
-
-# Include Juce headers (needed for compile)
-include_directories(${LIBOPENSHOT_AUDIO_INCLUDE_DIRS})
-
 
 ################# BLACKMAGIC DECKLINK ###################
 if(ENABLE_BLACKMAGIC)
@@ -106,7 +55,6 @@ if(ENABLE_BLACKMAGIC)
 		include_directories(${BLACKMAGIC_INCLUDE_DIR})
 	endif()
 endif()
-
 
 ###############  SET TEST SOURCE FILES  #################
 set(OPENSHOT_TEST_FILES
@@ -124,35 +72,37 @@ set(OPENSHOT_TEST_FILES
   FrameMapper_Tests.cpp
   KeyFrame_Tests.cpp
   Point_Tests.cpp
+  QtImageReader_Tests.cpp
   Settings_Tests.cpp
-  Timeline_Tests.cpp )
+  Timeline_Tests.cpp)
+
+##########  SET OPENCV RELATED TEST FILES  ###############
+if(ENABLE_OPENCV)
+  list(APPEND OPENSHOT_TEST_FILES
+    CVTracker_Tests.cpp
+    CVStabilizer_Tests.cpp
+    # CVObjectDetection_Tests.cpp
+  )
+endif()
 
 ################ TESTER EXECUTABLE #################
 # Create unit test executable (openshot-test)
 message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
+
 add_executable(openshot-test
   tests.cpp
-  ${OPENSHOT_TEST_FILES} )
+  ${OPENSHOT_TEST_FILES}
+)
 
 # Link libraries to the new executable
-target_link_libraries(openshot-test openshot ${UnitTest++_LIBRARIES})
+target_link_libraries(openshot-test
+  openshot
+  ${UnitTest++_LIBRARIES}
+)
 
 ##### RUNNING TESTS (make os_test / make test) #####
-# Hook up the 'make os_test' target to the 'openshot-test' executable
-add_custom_target(os_test COMMAND openshot-test)
-
-# Also hook up 'make test', if possible
-# This requires CMake 3.11+, where the CMP0037 policy
-# configured to 'NEW' mode will not reserve target names
-# unless the corresponding feature is actually used
-if (POLICY CMP0037)
-	cmake_policy(SET CMP0037 NEW)
+# Hook up the 'make os_test' target to the 'openshot-test' executable,
+# if we aren't defining it as the coverage target
+if(NOT ENABLE_COVERAGE)
+  add_custom_target(os_test COMMAND openshot-test)
 endif()
-if (CMAKE_VERSION VERSION_GREATER 3.11)
-	message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
-	add_custom_target(test COMMAND openshot-test)
-	set(TEST_TARGET_NAME "test")
-else()
-  set(TEST_TARGET_NAME "os_test")
-endif()
-add_feature_info("Testrunner" ENABLE_TESTS "Run unit tests with 'make ${TEST_TARGET_NAME}'")

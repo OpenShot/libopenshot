@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/Qt/VideoCacheThread.h"
+#include "VideoCacheThread.h"
+#include "Exceptions.h"
 #include <algorithm>
 
 #include <thread>    // for std::this_thread::sleep_for
@@ -93,39 +94,43 @@ namespace openshot
 
 		while (!threadShouldExit() && is_playing) {
 
-	    // Cache frames before the other threads need them
-	    // Cache frames up to the max frames
-	    while (speed == 1 && (position - current_display_frame) < max_frames)
-	    {
-	    	// Only cache up till the max_frames amount... then sleep
-			try
+			// Cache frames before the other threads need them
+			// Cache frames up to the max frames. Reset to current position
+			// if cache gets too far away from display frame. Cache frames
+			// even when player is paused (i.e. speed 0).
+			while (((position - current_display_frame) < max_frames) && is_playing)
 			{
-				if (reader) {
-					ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
+				// Only cache up till the max_frames amount... then sleep
+				try
+				{
+					if (reader) {
+						ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_frames", max_frames, "needed_frames", (position - current_display_frame));
 
-					// Force the frame to be generated
-					reader->GetFrame(position);
+						// Force the frame to be generated
+						if (reader->GetCache()->GetSmallestFrame()) {
+							int64_t smallest_cached_frame = reader->GetCache()->GetSmallestFrame()->number;
+							if (smallest_cached_frame > current_display_frame) {
+								// Cache position has gotten too far away from current display frame.
+								// Reset the position to the current display frame.
+								position = current_display_frame;
+							}
+						}
+						reader->GetFrame(position);
+					}
+
+				}
+				catch (const OutOfBoundsFrame & e)
+				{
+					// Ignore out of bounds frame exceptions
 				}
 
-			}
-			catch (const OutOfBoundsFrame & e)
-			{
-				// Ignore out of bounds frame exceptions
+				// Increment frame number
+				position++;
 			}
 
-			// Is cache position behind current display frame?
-			if (position < current_display_frame) {
-				// Jump ahead
-				position = current_display_frame;
-			}
-
-	    	// Increment frame number
-	    	position++;
-	    }
-
-		// Sleep for 1 frame length
-		std::this_thread::sleep_for(frame_duration);
-	}
+			// Sleep for 1 frame length
+			std::this_thread::sleep_for(frame_duration);
+		}
 
 	return;
     }

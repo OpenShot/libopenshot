@@ -28,11 +28,16 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <memory>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
-#include "../include/Json.h"
+#include "CacheDisk.h"
+#include "CacheMemory.h"
+#include "Json.h"
+
+#include <QDir>
 
 using namespace openshot;
 

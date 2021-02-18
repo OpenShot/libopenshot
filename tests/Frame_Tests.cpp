@@ -29,12 +29,21 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+#include <memory>
+
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "Frame.h"
+#include "Clip.h"
+#include "Fraction.h"
 
 #include <QImage>
+
+#ifdef USE_OPENCV
+#include <opencv2/core.hpp>
+#endif
 
 using namespace openshot;
 
@@ -146,5 +155,29 @@ TEST(Copy_Constructor)
 	CHECK_EQUAL(f1.GetBytes(), f2.GetBytes());
 	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
 }
+
+#ifdef USE_OPENCV
+TEST(Convert_Image)
+{
+	// Create a video clip
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	Clip c1(path.str());
+	c1.Open();
+
+	// Get first frame
+	auto f1 = c1.GetFrame(1);
+
+	// Get first Mat image
+	cv::Mat cvimage = f1->GetImageCV();
+
+	CHECK(!cvimage.empty());
+
+	CHECK_EQUAL(1, f1->number);
+	CHECK_EQUAL(f1->GetWidth(), cvimage.cols);
+	CHECK_EQUAL(f1->GetHeight(), cvimage.rows);
+	CHECK_EQUAL(3, cvimage.channels());
+}
+#endif
 
 } // SUITE(Frame_Tests)

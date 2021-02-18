@@ -31,12 +31,15 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "../include/OpenShot.h"
+#include "Fraction.h"
 
 using namespace std;
 using namespace openshot;
 
-TEST(Fraction_Default_Constructor)
+SUITE(Fraction)
+{
+
+TEST(Constructors)
 {
 	// Create a default fraction (should be 1/1)
 	Fraction f1;
@@ -57,7 +60,31 @@ TEST(Fraction_Default_Constructor)
 	CHECK_CLOSE(1.0f, f1.ToDouble(), 0.00001);
 }
 
-TEST(Fraction_640_480)
+TEST(Alt_Constructors)
+{
+	// Use the delegating constructor for std::pair
+	std::pair<int, int> args{24, 1};
+	Fraction f1(args);
+	CHECK_EQUAL(24, f1.num);
+	CHECK_EQUAL(1, f1.den);
+	CHECK_CLOSE(24.0f, f1.ToFloat(), 0.00001);
+
+	// Use the delegating constructor for std::vector
+	std::vector<int> v{30000, 1001};
+	Fraction f2(v);
+	CHECK_CLOSE(30000.0/1001.0, f2.ToFloat(), 0.00001);
+
+	// Use the delegating constructor for std::map<std::string, int>
+	std::map<std::string, int> dict;
+	dict.insert({"num", 24000});
+	dict.insert({"den", 1001});
+	Fraction f3(dict);
+	CHECK_EQUAL(1001, f3.den);
+	CHECK_EQUAL(24000, f3.num);
+	CHECK_CLOSE(1001.0/24000.0, f3.Reciprocal().ToFloat(), 0.00001);
+}
+
+TEST(WxH_640_480)
 {
 	// Create fraction
 	Fraction f1(640, 480);
@@ -78,7 +105,7 @@ TEST(Fraction_640_480)
 	CHECK_CLOSE(1.33333f, f1.ToDouble(), 0.00001);
 }
 
-TEST(Fraction_1280_720)
+TEST(WxH_1280_720)
 {
 	// Create fraction
 	Fraction f1(1280, 720);
@@ -99,7 +126,7 @@ TEST(Fraction_1280_720)
 	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
 }
 
-TEST(Fraction_reciprocal)
+TEST(Reciprocal)
 {
 	// Create fraction
 	Fraction f1(1280, 720);
@@ -125,3 +152,5 @@ TEST(Fraction_reciprocal)
 	CHECK_CLOSE(1.77777f, f1.ToFloat(), 0.00001);
 	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
 }
+
+}  // SUITE

@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Bars.h"
+#include "Bars.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
@@ -62,13 +63,14 @@ void Bars::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Bars::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Bars::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get bar color (and create small color image)
-	std::shared_ptr<QImage> tempColor = std::shared_ptr<QImage>(new QImage(frame_image->width(), 1, QImage::Format_RGBA8888));
+	auto tempColor = std::make_shared<QImage>(
+		frame_image->width(), 1, QImage::Format_RGBA8888_Premultiplied);
 	tempColor->fill(QColor(QString::fromStdString(color.GetColorHex(frame_number))));
 
 	// Get current keyframe values

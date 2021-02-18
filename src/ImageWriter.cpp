@@ -34,7 +34,8 @@
 //Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/ImageWriter.h"
+#include "ImageWriter.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

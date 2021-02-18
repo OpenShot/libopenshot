@@ -31,7 +31,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/FFmpegReader.h"
+#include "FFmpegReader.h"
+#include "Exceptions.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
@@ -86,7 +87,7 @@ int hw_de_on = 0;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
 
-FFmpegReader::FFmpegReader(std::string path)
+FFmpegReader::FFmpegReader(const std::string& path, bool inspect_reader)
 		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
 		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
@@ -94,27 +95,11 @@ FFmpegReader::FFmpegReader(std::string path)
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
 		  packet(NULL) {
 
-	// Initialize FFMpeg, and register all formats and codecs
-	AV_REGISTER_ALL
-	AVCODEC_REGISTER_ALL
-
-	// Init cache
-	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-
-	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
-	Open();
-	Close();
-}
-
-FFmpegReader::FFmpegReader(std::string path, bool inspect_reader)
-		: last_frame(0), is_seeking(0), seeking_pts(0), seeking_frame(0), seek_count(0),
-		  audio_pts_offset(99999), video_pts_offset(99999), path(path), is_video_seek(true), check_interlace(false),
-		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
-		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
-		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
-		  packet(NULL) {
+	// Configure OpenMP parallelism
+	// Default number of threads per section
+	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
+	// Allow nested parallel sections as deeply as supported
+	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -438,6 +423,14 @@ void FFmpegReader::Open() {
 				}
 #endif // HAVE_HW_ACCEL
 
+				// Disable per-frame threading for album arts
+				// Using FF_THREAD_FRAME adds one frame decoding delay per thread,
+				// but there's only one frame in this case.
+				if (HasAlbumArt())
+				{
+					pCodecCtx->thread_type &= ~FF_THREAD_FRAME;
+				}
+
 				// Open video codec
 				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 					throw InvalidCodec("A video codec was found, but could not be opened.", path);
@@ -644,6 +637,14 @@ void FFmpegReader::Close() {
 	}
 }
 
+bool FFmpegReader::HasAlbumArt() {
+	// Check if the video stream we use is an attached picture
+	// This won't return true if the file has a cover image as a secondary stream
+	// like an MKV file with an attached image file
+	return pFormatCtx && videoStream >= 0 && pFormatCtx->streams[videoStream]
+		&& (pFormatCtx->streams[videoStream]->disposition & AV_DISPOSITION_ATTACHED_PIC);
+}
+
 void FFmpegReader::UpdateAudioInfo() {
 	// Set values of FileInfo struct
 	info.has_audio = true;
@@ -816,6 +817,9 @@ void FFmpegReader::UpdateVideoInfo() {
 	}
 }
 
+bool FFmpegReader::GetIsDurationKnown() {
+	return this->is_duration_known;
+}
 
 std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 	// Check for open reader (or throw exception)
@@ -900,11 +904,6 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 	int packets_processed = 0;
 	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
 	int max_packets = 4096;
-
-	// Set the number of threads in OpenMP
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested OpenMP sections
-	omp_set_nested(true);
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
@@ -1289,15 +1288,16 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
 		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
 		// the future.
-		int max_width = openshot::Settings::Instance()->MAX_WIDTH;
-		if (max_width <= 0)
-			max_width = info.width;
-		int max_height = openshot::Settings::Instance()->MAX_HEIGHT;
-		if (max_height <= 0)
-			max_height = info.height;
+		int max_width = info.width;
+		int max_height = info.height;
 
-		Clip *parent = (Clip *) GetParentClip();
+		Clip *parent = (Clip *) ParentClip();
 		if (parent) {
+			if (parent->ParentTimeline()) {
+				// Set max width/height based on parent clip's timeline (if attached to a timeline)
+				max_width = parent->ParentTimeline()->preview_width;
+				max_height = parent->ParentTimeline()->preview_height;
+			}
 			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
 				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
 				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
@@ -1372,7 +1372,13 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 		std::shared_ptr<Frame> f = CreateFrame(current_frame);
 
 		// Add Image data to frame
-		f->AddImage(width, height, 4, pFrameRGB->linesize[0], QImage::Format_RGBA8888, buffer);
+		if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
+			// Add image with no alpha channel, Speed optimization
+			f->AddImage(width, height, 4, pFrameRGB->linesize[0], QImage::Format_RGBA8888_Premultiplied, buffer);
+		} else {
+			// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
+			f->AddImage(width, height, 4, pFrameRGB->linesize[0], QImage::Format_RGBA8888, buffer);
+		}
 
 		// Update working cache
 		working_cache.Add(f);
@@ -1782,8 +1788,8 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 		bool seek_worked = false;
 		int64_t seek_target = 0;
 
-		// Seek video stream (if any)
-		if (!seek_worked && info.has_video) {
+		// Seek video stream (if any), except album arts
+		if (!seek_worked && info.has_video && !HasAlbumArt()) {
 			seek_target = ConvertFrameToVideoPTS(requested_frame - buffer_amount);
 			if (av_seek_frame(pFormatCtx, info.video_stream_index, seek_target, AVSEEK_FLAG_BACKWARD) < 0) {
 				fprintf(stderr, "%s: error while seeking video stream\n", pFormatCtx->AV_FILENAME);
@@ -2114,14 +2120,12 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 
 	// Special MP3 Handling (ignore more than 1 video frame)
 	if (info.has_audio and info.has_video) {
-		AVCodecID aCodecId = AV_FIND_DECODER_CODEC_ID(aStream);
-		AVCodecID vCodecId = AV_FIND_DECODER_CODEC_ID(pStream);
 		// If MP3 with single video frame, handle this special case by copying the previously
 		// decoded image to the new frame. Otherwise, it will spend a huge amount of
 		// CPU time looking for missing images for all the audio-only frames.
 		if (checked_frames[requested_frame] > 8 && !missing_video_frames.count(requested_frame) &&
 			!processing_audio_frames.count(requested_frame) && processed_audio_frames.count(requested_frame) &&
-			last_frame && last_video_frame && last_video_frame->has_image_data && aCodecId == AV_CODEC_ID_MP3 && (vCodecId == AV_CODEC_ID_MJPEGB || vCodecId == AV_CODEC_ID_MJPEG)) {
+			last_video_frame && last_video_frame->has_image_data && HasAlbumArt()) {
 			missing_video_frames.insert(std::pair<int64_t, int64_t>(requested_frame, last_video_frame->number));
 			missing_video_frames_source.insert(std::pair<int64_t, int64_t>(last_video_frame->number, requested_frame));
 			missing_frames.Add(last_video_frame);
@@ -2159,7 +2163,7 @@ bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 			// Add this frame to the processed map (since it's already done)
 			std::shared_ptr<QImage> parent_image = parent_frame->GetImage();
 			if (parent_image) {
-				missing_frame->AddImage(std::shared_ptr<QImage>(new QImage(*parent_image)));
+				missing_frame->AddImage(std::make_shared<QImage>(*parent_image));
 				processed_video_frames[missing_frame->number] = missing_frame->number;
 			}
 		}
@@ -2249,7 +2253,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 
 			if (info.has_video && !is_video_ready && last_video_frame) {
 				// Copy image from last frame
-				f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+				f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 				is_video_ready = true;
 			}
 
@@ -2271,7 +2275,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 				// Add missing image (if needed - sometimes end_of_stream causes frames with only audio)
 				if (info.has_video && !is_video_ready && last_video_frame)
 					// Copy image from last frame
-					f->AddImage(std::shared_ptr<QImage>(new QImage(*last_video_frame->GetImage())));
+					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
 
 				// Reset counter since last 'final' frame
 				num_checks_since_final = 0;
