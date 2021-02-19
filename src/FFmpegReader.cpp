@@ -1244,7 +1244,6 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
 	AVFrame *pFrameRGB = NULL;
-	int numBytes;
 	uint8_t *buffer = NULL;
 
 	// Allocate an AVFrame structure
@@ -1318,7 +1317,6 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	}
 
 	// Determine required buffer size and allocate buffer
-	numBytes = AV_GET_IMAGE_SIZE(PIX_FMT_RGBA, width, height);
 	const int bytes_per_pixel = 4;
 	int buffer_size = width * height * bytes_per_pixel;
 	buffer = new unsigned char[buffer_size]();
@@ -2169,7 +2167,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			break;
 
 		// Remove frames which are too old
-		if (f && f->number < (requested_frame - (max_concurrent_frames * 2))) {
+		if (f->number < (requested_frame - (max_concurrent_frames * 2))) {
 			working_cache.Remove(f->number);
 		}
 

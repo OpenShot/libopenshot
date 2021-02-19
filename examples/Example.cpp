@@ -44,9 +44,6 @@ int main(int argc, char* argv[]) {
     using s = std::chrono::seconds;
     using double_ms = std::chrono::duration<double, ms::period>;
 
-    // Track total time
-    const auto total_time = double_ms(0.0);
-
     // FFmpeg Reader performance test
     const auto total_1 = std::chrono::high_resolution_clock::now();
     FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-1080p.mp4");
@@ -62,7 +59,6 @@ int main(int argc, char* argv[]) {
     auto total_sec = std::chrono::duration_cast<ms>(total_2 - total_1);
     std::cout << "FFmpegReader TOTAL: " << total_sec.count() << " ms" << std::endl;
     r9.Close();
-
 
 
     // Timeline Reader performance test

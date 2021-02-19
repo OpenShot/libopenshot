@@ -354,18 +354,6 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Adjust out of bounds frame number
 		frame_number = adjust_frame_number_minimum(frame_number);
 
-		// Adjust has_video and has_audio overrides
-		int enabled_audio = has_audio.GetInt(frame_number);
-		if (enabled_audio == -1 && reader && reader->info.has_audio)
-			enabled_audio = 1;
-		else if (enabled_audio == -1 && reader && !reader->info.has_audio)
-			enabled_audio = 0;
-		int enabled_video = has_video.GetInt(frame_number);
-		if (enabled_video == -1 && reader && reader->info.has_video)
-			enabled_video = 1;
-		else if (enabled_video == -1 && reader && !reader->info.has_video)
-			enabled_video = 0;
-
 		// Is a time map detected
 		int64_t new_frame_number = frame_number;
 		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(frame_number));
@@ -381,19 +369,6 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 		// Apply effects to the frame (if any)
 		apply_effects(original_frame);
-
-		// Determine size of image (from Timeline or Reader)
-		int width = 0;
-		int height = 0;
-		if (timeline) {
-			// Use timeline size (if available)
-			width = timeline->preview_width;
-			height = timeline->preview_height;
-		} else {
-			// Fallback to clip size
-			width = reader->info.width;
-			height = reader->info.height;
-		}
 
 		// Apply keyframe / transforms
 		apply_keyframes(original_frame, background_frame->GetImage());
