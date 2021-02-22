@@ -31,8 +31,13 @@
 #include "UnitTest++.h"
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "QGuiApplication"
-#include "OpenShot.h"
+#include <QGuiApplication>
+
+#include "QtImageReader.h"
+#include "Clip.h"
+#include "Frame.h"
+#include "Fraction.h"
+#include "Timeline.h"
 
 using namespace std;
 using namespace openshot;
@@ -104,4 +109,3 @@ TEST(Check_SVG_Loading)
 }
 
 } // SUITE(QtImageReader)
-
