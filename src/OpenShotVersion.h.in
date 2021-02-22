@@ -52,7 +52,6 @@
 #cmakedefine01 HAVE_RESVG
 #cmakedefine01 HAVE_OPENCV
 #cmakedefine01 APPIMAGE_BUILD
-#cmakedefine01 USE_LEGACY_TRACKER
 
 #include <sstream>
 
