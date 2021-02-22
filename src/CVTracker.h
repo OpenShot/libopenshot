@@ -39,7 +39,6 @@
 #undef uint64
 #undef int64
 
-#include <fstream>
 #include "Clip.h"
 #include "KeyFrame.h"
 #include "Frame.h"

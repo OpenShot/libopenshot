@@ -31,15 +31,15 @@
 #ifndef OPENSHOT_TRACKER_EFFECT_H
 #define OPENSHOT_TRACKER_EFFECT_H
 
+#include <string>
+#include <memory>
+#include <map>
+
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <fstream>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
 #include "protobuf_messages/trackerdata.pb.h"
 
 // Tracking info struct

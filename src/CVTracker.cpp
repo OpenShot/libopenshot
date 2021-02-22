@@ -197,6 +197,8 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
 }
 
 bool CVTracker::SaveTrackedData(){
+    using std::ios;
+
     // Create tracker message
     pb_tracker::Tracker trackerMessage;
 
@@ -214,7 +216,7 @@ bool CVTracker::SaveTrackedData(){
         // Write the new message to disk.
         std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
         if (!trackerMessage.SerializeToOstream(&output)) {
-        cerr << "Failed to write protobuf message." << endl;
+        std::cerr << "Failed to write protobuf message." << std::endl;
         return false;
         }
     }
@@ -314,6 +316,8 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 
 // Load protobuf data file
 bool CVTracker::_LoadTrackedData(){
+    using std::ios;
+
     // Create tracker message
     pb_tracker::Tracker trackerMessage;
 
@@ -321,7 +325,7 @@ bool CVTracker::_LoadTrackedData(){
         // Read the existing tracker message.
         fstream input(protobuf_data_path, ios::in | ios::binary);
         if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
+            std::cerr << "Failed to parse protobuf message." << std::endl;
             return false;
         }
     }
@@ -350,7 +354,7 @@ bool CVTracker::_LoadTrackedData(){
 
     // Show the time stamp from the last update in tracker data file
     if (trackerMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
+        std::cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << std::endl;
     }
 
     // Delete all global objects allocated by libprotobuf.
