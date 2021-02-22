@@ -32,14 +32,19 @@
 #ifndef OPENSHOT_OPENCV_UTILITIES_H
 #define OPENSHOT_OPENCV_UTILITIES_H
 
-#include "OpenShotVersion.h"
-
+#define int64 int64_t
+#define uint64 uint64_t
 #if USE_LEGACY_TRACKER
+    #include <opencv2/tracking.hpp>
+    #include <opencv2/tracking/tracking_legacy.hpp>
     #define OPENCV_TRACKER_TYPE cv::legacy::Tracker
     #define OPENCV_TRACKER_NS cv::legacy
 #else
+    #include <opencv2/tracking.hpp>
     #define OPENCV_TRACKER_TYPE cv::Tracker
     #define OPENCV_TRACKER_NS cv
-#endif  // USE_LEGACY_TRACKER
+#endif
+#undef int64
+#undef uint64
 
 #endif  // OPENSHOT_OPENCV_UTILITIES_H

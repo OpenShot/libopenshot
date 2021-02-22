@@ -33,8 +33,8 @@
 
 #include "OpenCVUtilities.h"
 
-#define int64 opencv_broken_int
-#define uint64 opencv_broken_uint
+#define int64 int64_t
+#define uint64 uint64_t
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/core.hpp>
