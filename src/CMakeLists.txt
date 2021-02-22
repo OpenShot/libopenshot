@@ -409,8 +409,18 @@ if(ENABLE_OPENCV)
       opencv_tracking
       openshot_protobuf
     )
-  set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
-  mark_as_advanced(HAVE_OPENCV)
+    set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
+    mark_as_advanced(HAVE_OPENCV)
+
+    # Keep track of OpenCV version, to embed in our version header
+    set(OPENCV_VERSION_STR "${OpenCV_VERSION}" CACHE STRING "OpenCV version linked with" FORCE)
+    mark_as_advanced(OPENCV_VERSION_STR)
+
+    # We may need to use Tracker as opencv::legacy::Tracker
+    if(OpenCV_VERSION VERSION_GREATER 4.5.0)
+      target_compile_definitions(openshot PUBLIC USE_LEGACY_TRACKER=1)
+    endif()
+
   endif()
 endif()
 add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
