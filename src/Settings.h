@@ -94,15 +94,6 @@ namespace openshot {
 		/// Scale mode used in FFmpeg decoding and encoding (used as an optimization for faster previews)
 		bool HIGH_QUALITY_SCALING = false;
 
-		/// Maximum width for image data (useful for optimzing for a smaller preview or render)
-		int MAX_WIDTH = 0;
-
-		/// Maximum height for image data (useful for optimzing for a smaller preview or render)
-		int MAX_HEIGHT = 0;
-
-		/// Wait for OpenMP task to finish before continuing (used to limit threads on slower systems)
-		bool WAIT_FOR_VIDEO_PROCESSING_TASK = false;
-
 		/// Number of threads of OpenMP
 		int OMP_THREADS = 12;
 

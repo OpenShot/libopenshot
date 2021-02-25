@@ -93,22 +93,16 @@ FFmpegReader::FFmpegReader(const std::string& path, bool inspect_reader)
 		  check_fps(false), enable_seek(true), is_open(false), seek_audio_frame_found(0), seek_video_frame_found(0),
 		  prev_samples(0), prev_pts(0), pts_total(0), pts_counter(0), is_duration_known(false), largest_frame_processed(0),
 		  current_video_frame(0), has_missing_frames(false), num_packets_since_video_frame(0), num_checks_since_final(0),
-		  packet(NULL) {
-
-	// Configure OpenMP parallelism
-	// Default number of threads per section
-	omp_set_num_threads(OPEN_MP_NUM_PROCESSORS);
-	// Allow nested parallel sections as deeply as supported
-	omp_set_max_active_levels(OPEN_MP_MAX_ACTIVE);
+		  packet(NULL), max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
 	AVCODEC_REGISTER_ALL
 
 	// Init cache
-	working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-	missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-	final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+	working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+	missing_frames.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+	final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
 
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
@@ -561,9 +555,9 @@ void FFmpegReader::Open() {
 		previous_packet_location.sample_start = 0;
 
 		// Adjust cache size based on size of frame and audio
-		working_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
-		missing_frames.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
-		final_cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
+		working_cache.SetMaxBytesFromInfo(max_concurrent_frames * info.fps.ToDouble() * 2, info.width, info.height, info.sample_rate, info.channels);
+		missing_frames.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
+		final_cache.SetMaxBytesFromInfo(max_concurrent_frames * 2, info.width, info.height, info.sample_rate, info.channels);
 
 		// Mark as "open"
 		is_open = true;
@@ -847,47 +841,44 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 		// Return the cached frame
 		return frame;
 	} else {
-#pragma omp critical (ReadStream)
-		{
-			// Check the cache a 2nd time (due to a potential previous lock)
-			frame = final_cache.GetFrame(requested_frame);
-			if (frame) {
-				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame);
+        // Check the cache a 2nd time (due to a potential previous lock)
+        frame = final_cache.GetFrame(requested_frame);
+        if (frame) {
+            // Debug output
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame);
 
-				// Return the cached frame
-			} else {
-				// Frame is not in cache
-				// Reset seek count
-				seek_count = 0;
+            // Return the cached frame
+        } else {
+            // Frame is not in cache
+            // Reset seek count
+            seek_count = 0;
 
-				// Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
-				if (last_frame == 0 && requested_frame != 1)
-					// Get first frame
-					ReadStream(1);
+            // Check for first frame (always need to get frame 1 before other frames, to correctly calculate offsets)
+            if (last_frame == 0 && requested_frame != 1)
+                // Get first frame
+                ReadStream(1);
 
-				// Are we within X frames of the requested frame?
-				int64_t diff = requested_frame - last_frame;
-				if (diff >= 1 && diff <= 20) {
-					// Continue walking the stream
-					frame = ReadStream(requested_frame);
-				} else {
-					// Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
-					if (enable_seek)
-						// Only seek if enabled
-						Seek(requested_frame);
+            // Are we within X frames of the requested frame?
+            int64_t diff = requested_frame - last_frame;
+            if (diff >= 1 && diff <= 20) {
+                // Continue walking the stream
+                frame = ReadStream(requested_frame);
+            } else {
+                // Greater than 30 frames away, or backwards, we need to seek to the nearest key frame
+                if (enable_seek)
+                    // Only seek if enabled
+                    Seek(requested_frame);
 
-					else if (!enable_seek && diff < 0) {
-						// Start over, since we can't seek, and the requested frame is smaller than our position
-						Close();
-						Open();
-					}
+                else if (!enable_seek && diff < 0) {
+                    // Start over, since we can't seek, and the requested frame is smaller than our position
+                    Close();
+                    Open();
+                }
 
-					// Then continue walking the stream
-					frame = ReadStream(requested_frame);
-				}
-			}
-		} //omp critical
+                // Then continue walking the stream
+                frame = ReadStream(requested_frame);
+            }
+        }
 		return frame;
 	}
 }
@@ -902,141 +893,129 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 	// Minimum number of packets to process (for performance reasons)
 	int packets_processed = 0;
-	int minimum_packets = OPEN_MP_NUM_PROCESSORS;
+	int minimum_packets = 1;
 	int max_packets = 4096;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "OPEN_MP_NUM_PROCESSORS", OPEN_MP_NUM_PROCESSORS);
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "max_concurrent_frames", max_concurrent_frames);
 
-#pragma omp parallel
-	{
-#pragma omp single
+	// Loop through the stream until the correct frame is found
+	while (true) {
+		// Get the next packet into a local variable called packet
+		packet_error = GetNextPacket();
+
+		int processing_video_frames_size = 0;
+		int processing_audio_frames_size = 0;
 		{
-			// Loop through the stream until the correct frame is found
-			while (true) {
-				// Get the next packet into a local variable called packet
-				packet_error = GetNextPacket();
+			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			processing_video_frames_size = processing_video_frames.size();
+			processing_audio_frames_size = processing_audio_frames.size();
+		}
 
-				int processing_video_frames_size = 0;
-				int processing_audio_frames_size = 0;
-				{
-					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
-					processing_video_frames_size = processing_video_frames.size();
-					processing_audio_frames_size = processing_audio_frames.size();
-				}
+		// Wait if too many frames are being processed
+		while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			processing_video_frames_size = processing_video_frames.size();
+			processing_audio_frames_size = processing_audio_frames.size();
+		}
 
-				// Wait if too many frames are being processed
-				while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(3));
-					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
-					processing_video_frames_size = processing_video_frames.size();
-					processing_audio_frames_size = processing_audio_frames.size();
-				}
+		// Get the next packet (if any)
+		if (packet_error < 0) {
+			// Break loop when no more packets found
+			end_of_stream = true;
+			break;
+		}
 
-				// Get the next packet (if any)
-				if (packet_error < 0) {
-					// Break loop when no more packets found
-					end_of_stream = true;
-					break;
-				}
+		// Debug output
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "minimum_packets", minimum_packets, "packets_processed", packets_processed, "is_seeking", is_seeking);
 
-				// Debug output
-				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (GetNextPacket)", "requested_frame", requested_frame, "processing_video_frames_size", processing_video_frames_size, "processing_audio_frames_size", processing_audio_frames_size, "minimum_packets", minimum_packets, "packets_processed", packets_processed, "is_seeking", is_seeking);
+		// Video packet
+		if (info.has_video && packet->stream_index == videoStream) {
+			// Reset this counter, since we have a video packet
+			num_packets_since_video_frame = 0;
 
-				// Video packet
-				if (info.has_video && packet->stream_index == videoStream) {
-					// Reset this counter, since we have a video packet
-					num_packets_since_video_frame = 0;
+			// Check the status of a seek (if any)
+			if (is_seeking) {
+				check_seek = CheckSeek(true);
+			} else {
+				check_seek = false;
+			}
 
-					// Check the status of a seek (if any)
-					if (is_seeking)
-#pragma omp critical (openshot_seek)
-						check_seek = CheckSeek(true);
-					else
-						check_seek = false;
+			if (check_seek) {
+				// Jump to the next iteration of this loop
+				continue;
+			}
 
-					if (check_seek) {
-						// Jump to the next iteration of this loop
-						continue;
-					}
+			// Packet may become NULL on Close inside Seek if CheckSeek returns false
+			if (!packet) {
+				// Jump to the next iteration of this loop
+				continue;
+			}
 
-					// Packet may become NULL on Close inside Seek if CheckSeek returns false
-					if (!packet)
-						// Jump to the next iteration of this loop
-						continue;
+			// Get the AVFrame from the current packet
+			frame_finished = GetAVFrame();
 
-					// Get the AVFrame from the current packet
-					frame_finished = GetAVFrame();
+			// Check if the AVFrame is finished and set it
+			if (frame_finished) {
+				// Update PTS / Frame Offset (if any)
+				UpdatePTSOffset(true);
 
-					// Check if the AVFrame is finished and set it
-					if (frame_finished) {
-						// Update PTS / Frame Offset (if any)
-						UpdatePTSOffset(true);
+				// Process Video Packet
+				ProcessVideoPacket(requested_frame);
+			}
 
-						// Process Video Packet
-						ProcessVideoPacket(requested_frame);
+		}
+			// Audio packet
+		else if (info.has_audio && packet->stream_index == audioStream) {
+			// Increment this (to track # of packets since the last video packet)
+			num_packets_since_video_frame++;
 
-						if (openshot::Settings::Instance()->WAIT_FOR_VIDEO_PROCESSING_TASK) {
-							// Wait on each OMP task to complete before moving on to the next one. This slows
-							// down processing considerably, but might be more stable on some systems.
-#pragma omp taskwait
-						}
-					}
+			// Check the status of a seek (if any)
+			if (is_seeking) {
+				check_seek = CheckSeek(false);
+			} else {
+				check_seek = false;
+			}
 
-				}
-				// Audio packet
-				else if (info.has_audio && packet->stream_index == audioStream) {
-					// Increment this (to track # of packets since the last video packet)
-					num_packets_since_video_frame++;
+			if (check_seek) {
+				// Jump to the next iteration of this loop
+				continue;
+			}
 
-					// Check the status of a seek (if any)
-					if (is_seeking)
-#pragma omp critical (openshot_seek)
-						check_seek = CheckSeek(false);
-					else
-						check_seek = false;
+			// Packet may become NULL on Close inside Seek if CheckSeek returns false
+			if (!packet) {
+				// Jump to the next iteration of this loop
+				continue;
+			}
 
-					if (check_seek) {
-						// Jump to the next iteration of this loop
-						continue;
-					}
+			// Update PTS / Frame Offset (if any)
+			UpdatePTSOffset(false);
 
-					// Packet may become NULL on Close inside Seek if CheckSeek returns false
-					if (!packet)
-						// Jump to the next iteration of this loop
-						continue;
+			// Determine related video frame and starting sample # from audio PTS
+			AudioLocation location = GetAudioPTSLocation(packet->pts);
 
-					// Update PTS / Frame Offset (if any)
-					UpdatePTSOffset(false);
+			// Process Audio Packet
+			ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
+		}
 
-					// Determine related video frame and starting sample # from audio PTS
-					AudioLocation location = GetAudioPTSLocation(packet->pts);
+		// Check if working frames are 'finished'
+		if (!is_seeking) {
+			// Check for final frames
+			CheckWorkingFrames(false, requested_frame);
+		}
 
-					// Process Audio Packet
-					ProcessAudioPacket(requested_frame, location.frame, location.sample_start);
-				}
+		// Check if requested 'final' frame is available
+		bool is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
 
-				// Check if working frames are 'finished'
-				if (!is_seeking) {
-					// Check for final frames
-					CheckWorkingFrames(false, requested_frame);
-				}
+		// Increment frames processed
+		packets_processed++;
 
-				// Check if requested 'final' frame is available
-				bool is_cache_found = (final_cache.GetFrame(requested_frame) != NULL);
+		// Break once the frame is found
+		if ((is_cache_found && packets_processed >= minimum_packets) || packets_processed > max_packets)
+			break;
 
-				// Increment frames processed
-				packets_processed++;
-
-				// Break once the frame is found
-				if ((is_cache_found && packets_processed >= minimum_packets) || packets_processed > max_packets)
-					break;
-
-			} // end while
-
-		} // end omp single
-
-	} // end omp parallel
+	} // end while
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream (Completed)", "packets_processed", packets_processed, "end_of_stream", end_of_stream, "largest_frame_processed", largest_frame_processed, "Working Cache Count", working_cache.Count());
@@ -1072,24 +1051,19 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 int FFmpegReader::GetNextPacket() {
 	int found_packet = 0;
 	AVPacket *next_packet;
-#pragma omp critical(getnextpacket)
-	{
-		next_packet = new AVPacket();
-		found_packet = av_read_frame(pFormatCtx, next_packet);
+	next_packet = new AVPacket();
+	found_packet = av_read_frame(pFormatCtx, next_packet);
 
-
-		if (packet) {
-			// Remove previous packet before getting next one
-			RemoveAVPacket(packet);
-			packet = NULL;
-		}
-
-		if (found_packet >= 0) {
-			// Update current packet pointer
-			packet = next_packet;
-		}
-        else
-            delete next_packet;
+	if (packet) {
+		// Remove previous packet before getting next one
+		RemoveAVPacket(packet);
+		packet = NULL;
+	}
+	if (found_packet >= 0) {
+		// Update current packet pointer
+		packet = next_packet;
+	} else {
+		delete next_packet;
 	}
 	// Return if packet was found (or error number)
 	return found_packet;
@@ -1102,12 +1076,10 @@ bool FFmpegReader::GetAVFrame() {
 
 	// Decode video frame
 	AVFrame *next_frame = AV_ALLOCATE_FRAME();
-#pragma omp critical (packet_cache)
-	{
-#if IS_FFMPEG_3_2
-		frameFinished = 0;
 
-		ret = avcodec_send_packet(pCodecCtx, packet);
+#if IS_FFMPEG_3_2
+	frameFinished = 0;
+	ret = avcodec_send_packet(pCodecCtx, packet);
 
 	#if HAVE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
@@ -1186,7 +1158,6 @@ bool FFmpegReader::GetAVFrame() {
 							info.height);
 		}
 #endif // IS_FFMPEG_3_2
-	}
 
 	// deallocate the frame
 	AV_FREE_FRAME(&next_frame);
@@ -1271,142 +1242,133 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
 	processing_video_frames[current_frame] = current_frame;
 
-#pragma omp task firstprivate(current_frame, my_frame, height, width, video_length, pix_fmt)
-	{
-		// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
-		AVFrame *pFrameRGB = NULL;
-		int numBytes;
-		uint8_t *buffer = NULL;
+	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
+	AVFrame *pFrameRGB = NULL;
+	uint8_t *buffer = NULL;
 
-		// Allocate an AVFrame structure
-		pFrameRGB = AV_ALLOCATE_FRAME();
-		if (pFrameRGB == NULL)
-			throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
+	// Allocate an AVFrame structure
+	pFrameRGB = AV_ALLOCATE_FRAME();
+	if (pFrameRGB == NULL)
+		throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
 
-		// Determine the max size of this source image (based on the timeline's size, the scaling mode,
-		// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
-		// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
-		// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
-		// the future.
-		int max_width = info.width;
-		int max_height = info.height;
+	// Determine the max size of this source image (based on the timeline's size, the scaling mode,
+	// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
+	// without losing quality. NOTE: We cannot go smaller than the timeline itself, or the add_layer timeline
+	// method will scale it back to timeline size before scaling it smaller again. This needs to be fixed in
+	// the future.
+	int max_width = info.width;
+	int max_height = info.height;
 
-		Clip *parent = (Clip *) ParentClip();
-		if (parent) {
-			if (parent->ParentTimeline()) {
-				// Set max width/height based on parent clip's timeline (if attached to a timeline)
-				max_width = parent->ParentTimeline()->preview_width;
-				max_height = parent->ParentTimeline()->preview_height;
-			}
-			if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
-				// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
-				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
-				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-				max_width = std::max(float(max_width), max_width * max_scale_x);
-				max_height = std::max(float(max_height), max_height * max_scale_y);
+	Clip *parent = (Clip *) ParentClip();
+	if (parent) {
+		if (parent->ParentTimeline()) {
+			// Set max width/height based on parent clip's timeline (if attached to a timeline)
+			max_width = parent->ParentTimeline()->preview_width;
+			max_height = parent->ParentTimeline()->preview_height;
+		}
+		if (parent->scale == SCALE_FIT || parent->scale == SCALE_STRETCH) {
+			// Best fit or Stretch scaling (based on max timeline size * scaling keyframes)
+			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+			max_width = std::max(float(max_width), max_width * max_scale_x);
+			max_height = std::max(float(max_height), max_height * max_scale_y);
 
-			} else if (parent->scale == SCALE_CROP) {
-				// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
-				float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
-				float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
-				QSize width_size(max_width * max_scale_x,
-								 round(max_width / (float(info.width) / float(info.height))));
-				QSize height_size(round(max_height / (float(info.height) / float(info.width))),
-								  max_height * max_scale_y);
-				// respect aspect ratio
-				if (width_size.width() >= max_width && width_size.height() >= max_height) {
-					max_width = std::max(max_width, width_size.width());
-					max_height = std::max(max_height, width_size.height());
-				} else {
-					max_width = std::max(max_width, height_size.width());
-					max_height = std::max(max_height, height_size.height());
-				}
-
+		} else if (parent->scale == SCALE_CROP) {
+			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
+			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+			QSize width_size(max_width * max_scale_x,
+							 round(max_width / (float(info.width) / float(info.height))));
+			QSize height_size(round(max_height / (float(info.height) / float(info.width))),
+							  max_height * max_scale_y);
+			// respect aspect ratio
+			if (width_size.width() >= max_width && width_size.height() >= max_height) {
+				max_width = std::max(max_width, width_size.width());
+				max_height = std::max(max_height, width_size.height());
 			} else {
-				// No scaling, use original image size (slower)
-				max_width = info.width;
-				max_height = info.height;
+				max_width = std::max(max_width, height_size.width());
+				max_height = std::max(max_height, height_size.height());
 			}
-		}
 
-		// Determine if image needs to be scaled (for performance reasons)
-		int original_height = height;
-		if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
-			// Override width and height (but maintain aspect ratio)
-			float ratio = float(width) / float(height);
-			int possible_width = round(max_height * ratio);
-			int possible_height = round(max_width / ratio);
-
-			if (possible_width <= max_width) {
-				// use calculated width, and max_height
-				width = possible_width;
-				height = max_height;
-			} else {
-				// use max_width, and calculated height
-				width = max_width;
-				height = possible_height;
-			}
-		}
-
-		// Determine required buffer size and allocate buffer
-		numBytes = AV_GET_IMAGE_SIZE(PIX_FMT_RGBA, width, height);
-
-#pragma omp critical (video_buffer)
-		buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
-
-		// Copy picture data from one AVFrame (or AVPicture) to another one.
-		AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
-
-		int scale_mode = SWS_FAST_BILINEAR;
-		if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
-			scale_mode = SWS_BICUBIC;
-		}
-		SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
-															  height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
-
-		// Resize / Convert to RGB
-		sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
-				  original_height, pFrameRGB->data, pFrameRGB->linesize);
-
-		// Create or get the existing frame object
-		std::shared_ptr<Frame> f = CreateFrame(current_frame);
-
-		// Add Image data to frame
-		if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
-			// Add image with no alpha channel, Speed optimization
-			f->AddImage(width, height, 4, QImage::Format_RGBA8888_Premultiplied, buffer);
 		} else {
-			// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
-			f->AddImage(width, height, 4, QImage::Format_RGBA8888, buffer);
+			// No scaling, use original image size (slower)
+			max_width = info.width;
+			max_height = info.height;
 		}
+	}
 
-		// Update working cache
-		working_cache.Add(f);
+	// Determine if image needs to be scaled (for performance reasons)
+	int original_height = height;
+	if (max_width != 0 && max_height != 0 && max_width < width && max_height < height) {
+		// Override width and height (but maintain aspect ratio)
+		float ratio = float(width) / float(height);
+		int possible_width = round(max_height * ratio);
+		int possible_height = round(max_width / ratio);
 
-		// Keep track of last last_video_frame
-#pragma omp critical (video_buffer)
-		last_video_frame = f;
-
-		// Free the RGB image
-		av_free(buffer);
-		AV_FREE_FRAME(&pFrameRGB);
-
-		// Remove frame and packet
-		RemoveAVFrame(my_frame);
-		sws_freeContext(img_convert_ctx);
-
-		// Remove video frame from list of processing video frames
-		{
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
-			processing_video_frames.erase(current_frame);
-			processed_video_frames[current_frame] = current_frame;
+		if (possible_width <= max_width) {
+			// use calculated width, and max_height
+			width = possible_width;
+			height = max_height;
+		} else {
+			// use max_width, and calculated height
+			width = max_width;
+			height = possible_height;
 		}
+	}
 
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number);
+	// Determine required buffer size and allocate buffer
+	const int bytes_per_pixel = 4;
+	int buffer_size = width * height * bytes_per_pixel;
+	buffer = new unsigned char[buffer_size]();
 
-	} // end omp task
+	// Copy picture data from one AVFrame (or AVPicture) to another one.
+	AV_COPY_PICTURE_DATA(pFrameRGB, buffer, PIX_FMT_RGBA, width, height);
 
+	int scale_mode = SWS_FAST_BILINEAR;
+	if (openshot::Settings::Instance()->HIGH_QUALITY_SCALING) {
+		scale_mode = SWS_BICUBIC;
+	}
+	SwsContext *img_convert_ctx = sws_getContext(info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx), width,
+												 height, PIX_FMT_RGBA, scale_mode, NULL, NULL, NULL);
+
+	// Resize / Convert to RGB
+	sws_scale(img_convert_ctx, my_frame->data, my_frame->linesize, 0,
+			  original_height, pFrameRGB->data, pFrameRGB->linesize);
+
+	// Create or get the existing frame object
+	std::shared_ptr<Frame> f = CreateFrame(current_frame);
+
+	// Add Image data to frame
+	if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
+		// Add image with no alpha channel, Speed optimization
+		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888_Premultiplied, buffer);
+	} else {
+		// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
+		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888, buffer);
+	}
+
+	// Update working cache
+	working_cache.Add(f);
+
+	// Keep track of last last_video_frame
+	last_video_frame = f;
+
+	// Free the RGB image
+	AV_FREE_FRAME(&pFrameRGB);
+
+	// Remove frame and packet
+	RemoveAVFrame(my_frame);
+	sws_freeContext(img_convert_ctx);
+
+	// Remove video frame from list of processing video frames
+	{
+		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		processing_video_frames.erase(current_frame);
+		processed_video_frames[current_frame] = current_frame;
+	}
+
+	// Debug output
+	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (After)", "requested_frame", requested_frame, "current_frame", current_frame, "f->number", f->number);
 }
 
 // Process an audio packet
@@ -1435,8 +1397,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	int packet_samples = 0;
 	int data_size = 0;
 
-#pragma omp critical (ProcessAudioPacket)
-	{
 #if IS_FFMPEG_3_2
 		int ret = 0;
 		frame_finished = 1;
@@ -1467,7 +1427,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 #else
 		int used = avcodec_decode_audio4(aCodecCtx, audio_frame, &frame_finished, packet);
 #endif
-	}
 
 	if (frame_finished) {
 
@@ -1763,7 +1722,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	seek_count++;
 
 	// If seeking near frame 1, we need to close and re-open the file (this is more reliable than seeking)
-	int buffer_amount = std::max(OPEN_MP_NUM_PROCESSORS, 8);
+	int buffer_amount = std::max(max_concurrent_frames, 8);
 	if (requested_frame - buffer_amount < 20) {
 		// Close and re-open file (basically seeking to frame 1)
 		Close();
@@ -2208,7 +2167,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 			break;
 
 		// Remove frames which are too old
-		if (f && f->number < (requested_frame - (OPEN_MP_NUM_PROCESSORS * 2))) {
+		if (f->number < (requested_frame - (max_concurrent_frames * 2))) {
 			working_cache.Remove(f->number);
 		}
 
@@ -2416,13 +2375,10 @@ void FFmpegReader::RemoveAVFrame(AVFrame *remove_frame) {
 	// Remove pFrame (if exists)
 	if (remove_frame) {
 		// Free memory
-#pragma omp critical (packet_cache)
-		{
-			av_freep(&remove_frame->data[0]);
+		av_freep(&remove_frame->data[0]);
 #ifndef WIN32
-			AV_FREE_FRAME(&remove_frame);
+		AV_FREE_FRAME(&remove_frame);
 #endif
-		}
 	}
 }
 

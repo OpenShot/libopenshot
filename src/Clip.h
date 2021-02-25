@@ -139,8 +139,11 @@ namespace openshot {
 		/// Apply effects to the source frame (if any)
 		void apply_effects(std::shared_ptr<openshot::Frame> frame);
 
-		/// Apply keyframes to the source frame (if any)
-		void apply_keyframes(std::shared_ptr<openshot::Frame> frame, int width, int height);
+        /// Apply keyframes to an openshot::Frame and use an existing QImage as a background image (if any)
+        void apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas);
+
+        /// Get QTransform from keyframes
+        QTransform get_transform(std::shared_ptr<Frame> frame, int width, int height);
 
 		/// Get file extension
 		std::string get_file_extension(std::string path);
@@ -189,8 +192,8 @@ namespace openshot {
 		/// Destructor
 		virtual ~Clip();
 
-		/// Get the cache object used by this clip
-		CacheMemory* GetCache() override { return &cache; };
+        /// Get the cache object (always return NULL for this reader)
+        openshot::CacheMemory* GetCache() override { return NULL; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -226,9 +229,9 @@ namespace openshot {
 		/// rendered.
 		///
 		/// @returns The modified openshot::Frame object
-		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
+		/// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
+		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number);
 
 		/// Open the internal reader
 		void Open() override;

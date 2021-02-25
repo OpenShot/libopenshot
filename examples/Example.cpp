@@ -39,51 +39,48 @@ using namespace openshot;
 
 int main(int argc, char* argv[]) {
 
-    Settings *s = Settings::Instance();
-    s->HARDWARE_DECODER = 2; // 1 VA-API, 2 NVDEC, 6 VDPAU
-    s->HW_DE_DEVICE_SET = 0;
+    // Types for storing time durations in whole and fractional milliseconds
+    using ms = std::chrono::milliseconds;
+    using s = std::chrono::seconds;
+    using double_ms = std::chrono::duration<double, ms::period>;
 
-    std::string input_filepath = TEST_MEDIA_PATH;
-    input_filepath += "sintel_trailer-720p.mp4";
-
-    FFmpegReader r9(input_filepath);
+    // FFmpeg Reader performance test
+    const auto total_1 = std::chrono::high_resolution_clock::now();
+    FFmpegReader r9("/home/jonathan/Videos/sintel_trailer-1080p.mp4");
     r9.Open();
-    r9.DisplayInfo();
-
-    /* WRITER ---------------- */
-    FFmpegWriter w9("metadata.mp4");
-
-    // Set options
-    w9.SetAudioOptions(true, "libmp3lame", r9.info.sample_rate, r9.info.channels, r9.info.channel_layout, 128000);
-    w9.SetVideoOptions(true, "libx264", r9.info.fps, 1024, 576, Fraction(1,1), false, false, 3000000);
-
-    w9.info.metadata["title"] = "testtest";
-	w9.info.metadata["artist"] = "aaa";
-	w9.info.metadata["album"] = "bbb";
-	w9.info.metadata["year"] = "2015";
-	w9.info.metadata["description"] = "ddd";
-	w9.info.metadata["comment"] = "eee";
-	w9.info.metadata["comment"] = "comment";
-    w9.info.metadata["copyright"] = "copyright OpenShot!";
-
-    // Open writer
-    w9.Open();
-
-    for (long int frame = 1; frame <= 100; frame++)
+    for (long int frame = 1; frame <= 1000; frame++)
     {
-        //int frame_number = (rand() % 750) + 1;
-        int frame_number = frame;
-        std::shared_ptr<Frame> f = r9.GetFrame(frame_number);
-        w9.WriteFrame(f);
+        const auto time1 = std::chrono::high_resolution_clock::now();
+        std::shared_ptr<Frame> f = r9.GetFrame(frame);
+        const auto time2 = std::chrono::high_resolution_clock::now();
+        std::cout << "FFmpegReader: " << frame << " (" << double_ms(time2 - time1).count() << " ms)" << std::endl;
     }
-
-    // Close writer & reader
-    w9.Close();
-
-    // Close timeline
+    const auto total_2 = std::chrono::high_resolution_clock::now();
+    auto total_sec = std::chrono::duration_cast<ms>(total_2 - total_1);
+    std::cout << "FFmpegReader TOTAL: " << total_sec.count() << " ms" << std::endl;
     r9.Close();
 
-	std::cout << "Completed successfully!" << std::endl;
+
+    // Timeline Reader performance test
+    Timeline tm(r9.info.width, r9.info.height, r9.info.fps, r9.info.sample_rate, r9.info.channels, r9.info.channel_layout);
+    Clip *c = new Clip(&r9);
+    tm.AddClip(c);
+    tm.Open();
+
+    const auto total_3 = std::chrono::high_resolution_clock::now();
+    for (long int frame = 1; frame <= 1000; frame++)
+    {
+        const auto time1 = std::chrono::high_resolution_clock::now();
+        std::shared_ptr<Frame> f = tm.GetFrame(frame);
+        const auto time2 = std::chrono::high_resolution_clock::now();
+        std::cout << "Timeline: " << frame << " (" << double_ms(time2 - time1).count() << " ms)" << std::endl;
+    }
+    const auto total_4 = std::chrono::high_resolution_clock::now();
+    total_sec = std::chrono::duration_cast<ms>(total_4 - total_3);
+    std::cout << "Timeline TOTAL: " << total_sec.count() << " ms" << std::endl;
+    tm.Close();
+
+    std::cout << "Completed successfully!" << std::endl;
 
     return 0;
 }

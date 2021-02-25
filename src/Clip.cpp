@@ -99,7 +99,7 @@ void Clip::init_settings()
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
 
-	// Init reader info struct and cache size
+	// Init reader info struct
 	init_reader_settings();
 }
 
@@ -111,9 +111,6 @@ void Clip::init_reader_settings() {
 
 		// Initialize info struct
 		info = reader->info;
-
-		// Initialize Clip cache
-		cache.SetMaxBytesFromInfo(OPEN_MP_NUM_PROCESSORS * 2, info.width, info.height, info.sample_rate, info.channels);
 	}
 }
 
@@ -162,7 +159,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 	if (reader) {
 		End(reader->info.duration);
 		reader->ParentClip(this);
-		// Init reader info struct and cache size
+		// Init reader info struct
 		init_reader_settings();
 	}
 }
@@ -222,7 +219,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 		End(reader->info.duration);
 		reader->ParentClip(this);
 		allocated_reader = reader;
-		// Init reader info struct and cache size
+		// Init reader info struct
 		init_reader_settings();
 	}
 }
@@ -252,7 +249,7 @@ void Clip::Reader(ReaderBase* new_reader)
 	// set parent
 	reader->ParentClip(this);
 
-	// Init reader info struct and cache size
+	// Init reader info struct
 	init_reader_settings();
 }
 
@@ -346,7 +343,7 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
 }
 
 // Use an existing openshot::Frame object and draw this Clip's frame onto it
-std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -357,28 +354,6 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 		// Adjust out of bounds frame number
 		frame_number = adjust_frame_number_minimum(frame_number);
 
-		// Check the cache for this frame
-		std::shared_ptr<Frame> cached_frame = cache.GetFrame(frame_number);
-		if (cached_frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::GetFrame", "returned cached frame", frame_number);
-
-			// Return the cached frame
-			return cached_frame;
-		}
-
-		// Adjust has_video and has_audio overrides
-		int enabled_audio = has_audio.GetInt(frame_number);
-		if (enabled_audio == -1 && reader && reader->info.has_audio)
-			enabled_audio = 1;
-		else if (enabled_audio == -1 && reader && !reader->info.has_audio)
-			enabled_audio = 0;
-		int enabled_video = has_video.GetInt(frame_number);
-		if (enabled_video == -1 && reader && reader->info.has_video)
-			enabled_video = 1;
-		else if (enabled_video == -1 && reader && !reader->info.has_audio)
-			enabled_video = 0;
-
 		// Is a time map detected
 		int64_t new_frame_number = frame_number;
 		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(frame_number));
@@ -386,49 +361,20 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> frame, in
 			new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
-		std::shared_ptr<Frame> original_frame;
-		original_frame = GetOrCreateFrame(new_frame_number);
-
-		// Copy the image from the odd field
-		if (enabled_video)
-			frame->AddImage(std::make_shared<QImage>(*original_frame->GetImage()));
-
-		// Loop through each channel, add audio
-		if (enabled_audio && reader->info.has_audio)
-			for (int channel = 0; channel < original_frame->GetAudioChannelsCount(); channel++)
-				frame->AddAudio(true, channel, 0, original_frame->GetAudioSamples(channel), original_frame->GetAudioSamplesCount(), 1.0);
+		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
-		get_time_mapped_frame(frame, new_frame_number);
-
-		// Adjust # of samples to match requested (the interaction with time curves will make this tricky)
-		// TODO: Implement move samples to/from next frame
+		get_time_mapped_frame(original_frame, new_frame_number);
 
 		// Apply effects to the frame (if any)
-		apply_effects(frame);
-
-		// Determine size of image (from Timeline or Reader)
-		int width = 0;
-		int height = 0;
-		if (timeline) {
-			// Use timeline size (if available)
-			width = timeline->preview_width;
-			height = timeline->preview_height;
-		} else {
-			// Fallback to clip size
-			width = reader->info.width;
-			height = reader->info.height;
-		}
+		apply_effects(original_frame);
 
 		// Apply keyframe / transforms
-		apply_keyframes(frame, width, height);
-
-		// Cache frame
-		cache.Add(frame);
+		apply_keyframes(original_frame, background_frame->GetImage());
 
 		// Return processed 'frame'
-		return frame;
+		return original_frame;
 	}
 	else
 		// Throw error if reader not initialized
@@ -709,7 +655,6 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// Create a new copy of reader frame
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
-			//std::shared_ptr<Frame> reader_copy(new Frame(number, 1, 1, "#000000", reader_frame->GetAudioSamplesCount(), reader_frame->GetAudioChannelsCount()));
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
 			reader_copy->SampleRate(reader_frame->SampleRate());
 			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
@@ -908,9 +853,6 @@ void Clip::SetJsonValue(const Json::Value root) {
 	// Set parent data
 	ClipBase::SetJsonValue(root);
 
-	// Clear cache
-	cache.Clear();
-
 	// Set data from Json (if key is found)
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
@@ -1094,18 +1036,12 @@ void Clip::AddEffect(EffectBase* effect)
 
 	// Sort effects
 	sort_effects();
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Remove an effect from the clip
 void Clip::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Apply effects to the source frame (if any)
@@ -1126,29 +1062,94 @@ bool Clip::isEqual(double a, double b)
 	return fabs(a - b) < 0.000001;
 }
 
+// Apply keyframes to the source frame (if any)
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
+    // Skip out if video was disabled or only an audio frame (no visualisation in use)
+    if (has_video.GetInt(frame->number) == 0 ||
+        (!Waveform() && !Reader()->info.has_video))
+        // Skip the rest of the image processing for performance reasons
+        return;
+
+    // Get image from clip
+    std::shared_ptr<QImage> source_image = frame->GetImage();
+
+    /* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
+    if (Waveform())
+    {
+        // Debug output
+        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+
+        // Get the color of the waveform
+        int red = wave_color.red.GetInt(frame->number);
+        int green = wave_color.green.GetInt(frame->number);
+        int blue = wave_color.blue.GetInt(frame->number);
+        int alpha = wave_color.alpha.GetInt(frame->number);
+
+        // Generate Waveform Dynamically (the size of the timeline)
+        source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+    }
+
+    // Size of final image
+    int width = background_canvas->width();
+    int height = background_canvas->height();
+
+    // Get transform from clip's keyframes
+    QTransform transform = get_transform(frame, width, height);
+
+    // Debug output
+    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
+
+    // Load timeline's new frame image into a QPainter
+    QPainter painter(background_canvas.get());
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
+
+    // Apply transform (translate, rotate, scale)
+    painter.setTransform(transform);
+
+    // Composite a new layer onto the image
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    painter.drawImage(0, 0, *source_image);
+
+    if (timeline) {
+        Timeline *t = (Timeline *) timeline;
+
+        // Draw frame #'s on top of image (if needed)
+        if (display != FRAME_DISPLAY_NONE) {
+            std::stringstream frame_number_str;
+            switch (display) {
+                case (FRAME_DISPLAY_NONE):
+                    // This is only here to prevent unused-enum warnings
+                    break;
+
+                case (FRAME_DISPLAY_CLIP):
+                    frame_number_str << frame->number;
+                    break;
+
+                case (FRAME_DISPLAY_TIMELINE):
+                    frame_number_str << (position * t->info.fps.ToFloat()) + frame->number;
+                    break;
+
+                case (FRAME_DISPLAY_BOTH):
+                    frame_number_str << (position * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
+                    break;
+            }
+
+            // Draw frame number on top of image
+            painter.setPen(QColor("#ffffff"));
+            painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
+        }
+    }
+    painter.end();
+
+    // Add new QImage to frame
+    frame->AddImage(background_canvas);
+}
 
 // Apply keyframes to the source frame (if any)
-void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
+QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int height)
 {
-	// Get actual frame image data
-	std::shared_ptr<QImage> source_image = frame->GetImage();
-
-	/* REPLACE IMAGE WITH WAVEFORM IMAGE (IF NEEDED) */
-	if (Waveform())
-	{
-		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
-
-		// Get the color of the waveform
-		int red = wave_color.red.GetInt(frame->number);
-		int green = wave_color.green.GetInt(frame->number);
-		int blue = wave_color.blue.GetInt(frame->number);
-		int alpha = wave_color.alpha.GetInt(frame->number);
-
-		// Generate Waveform Dynamically (the size of the timeline)
-		source_image = frame->GetWaveform(width, height, red, green, blue, alpha);
-		frame->AddImage(std::shared_ptr<QImage>(source_image));
-	}
+    // Get image from clip
+    std::shared_ptr<QImage> source_image = frame->GetImage();
 
 	/* ALPHA & OPACITY */
 	if (alpha.GetValue(frame->number) != 1.0)
@@ -1170,7 +1171,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
+		ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -1181,21 +1182,21 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			source_size.scale(width, height, Qt::KeepAspectRatio);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;
 		}
 		case (SCALE_STRETCH): {
 			source_size.scale(width, height, Qt::IgnoreAspectRatio);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;
 		}
 		case (SCALE_CROP): {
 			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;
 		}
 		case (SCALE_NONE): {
@@ -1207,7 +1208,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 			source_size.scale(width * source_width_ratio, height * source_height_ratio, Qt::KeepAspectRatio);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;
 		}
 	}
@@ -1258,7 +1259,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number); // rotate in degrees
@@ -1272,7 +1273,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 	QTransform transform;
 
 	// Transform source image (if needed)
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
 
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
@@ -1297,56 +1298,5 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, int width, int height)
 		transform.scale(source_width_scale, source_height_scale);
 	}
 
-	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::apply_keyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
-
-	/* COMPOSITE SOURCE IMAGE (LAYER) ONTO FINAL IMAGE */
-	auto new_image = std::make_shared<QImage>(QSize(width, height), source_image->format());
-	new_image->fill(QColor(QString::fromStdString("#00000000")));
-
-	// Load timeline's new frame image into a QPainter
-	QPainter painter(new_image.get());
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing, true);
-
-	// Apply transform (translate, rotate, scale)
-	painter.setTransform(transform);
-
-	// Composite a new layer onto the image
-	painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-	painter.drawImage(0, 0, *source_image);
-
-	if (timeline) {
-		Timeline *t = (Timeline *) timeline;
-
-		// Draw frame #'s on top of image (if needed)
-		if (display != FRAME_DISPLAY_NONE) {
-			std::stringstream frame_number_str;
-			switch (display) {
-				case (FRAME_DISPLAY_NONE):
-					// This is only here to prevent unused-enum warnings
-					break;
-
-				case (FRAME_DISPLAY_CLIP):
-					frame_number_str << frame->number;
-					break;
-
-				case (FRAME_DISPLAY_TIMELINE):
-					frame_number_str << (position * t->info.fps.ToFloat()) + frame->number;
-					break;
-
-				case (FRAME_DISPLAY_BOTH):
-					frame_number_str << (position * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
-					break;
-			}
-
-			// Draw frame number on top of image
-			painter.setPen(QColor("#ffffff"));
-			painter.drawText(20, 20, QString(frame_number_str.str().c_str()));
-		}
-	}
-
-	painter.end();
-
-	// Add new QImage to frame
-	frame->AddImage(new_image);
+    return transform;
 }
