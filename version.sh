@@ -45,6 +45,8 @@ do_output() {
     fi
 }
 
+PATH_TO_CMAKELISTS="$(dirname $(realpath \"$0\"))/CMakeLists.txt"
+
 ARGS=$(getopt --long 'name,p,pa,pr,package,project,version,soname,all,export,help' -n "$0" == "$@")
 
 if [ $? -ne 0 ]; then
@@ -108,7 +110,7 @@ fi
 
 if [ "x${output_project_version}" = "x1" ]; then
     project_version=$(\
-        grep 'set.*(.*PROJECT_VERSION_FULL' CMakeLists.txt\
+        grep 'set.*(.*PROJECT_VERSION_FULL' "${PATH_TO_CMAKELISTS}"\
         |sed -e 's#set(PROJECT_VERSION_FULL\s*\"*\([^\")]*\)\"*\s*)#\1#;q'\
         )
     do_output "PROJECT_VERSION" "${project_version}"
@@ -116,7 +118,7 @@ fi
 
 if [ "x${output_project_name}" = "x1" ]; then
     project_name=$(\
-        grep '^\s*project\s*(' CMakeLists.txt\
+        grep '^\s*project\s*(' "${PATH_TO_CMAKELISTS}"\
         |sed -e 's#project(\(\S*\)[^)]*)#\1#;q'\
         )
     do_output "PROJECT_NAME" "${project_name}"
@@ -124,7 +126,7 @@ fi
 
 if [ "x${output_soname}" = "x1" ]; then
     project_soname=$(\
-        grep 'set.*(.*PROJECT_SO_VERSION' CMakeLists.txt\
+        grep 'set.*(.*PROJECT_SO_VERSION' "${PATH_TO_CMAKELISTS}"\
         |sed -e 's#set(PROJECT_SO_VERSION\s*\"*\([^\")]*\)\"*\s*)#\1#;q'\
         )
     do_output "PROJECT_SO" "${project_soname}"
