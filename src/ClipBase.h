@@ -95,11 +95,11 @@ namespace openshot {
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
 		///
-		/// The frame object is passed into this method and used as a starting point (pixels and audio).
+		/// The frame object is passed into this method and used as a starting point / background (pixels).
 		/// All Clip keyframes and effects are resolved into pixels.
 		///
 		/// @returns The modified openshot::Frame object
-		/// @param frame The frame object that needs the clip or effect applied to it
+		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		virtual std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) = 0;
 

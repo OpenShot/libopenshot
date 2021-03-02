@@ -101,6 +101,7 @@ namespace openshot{
 		case CONSTANT: return left.co.Y;
 		case LINEAR: return InterpolateLinearCurve(left, right, target);
 		case BEZIER: return InterpolateBezierCurve(left, right, target, allowed_error);
+		default: return InterpolateLinearCurve(left, right, target);
 		}
 	}
 }

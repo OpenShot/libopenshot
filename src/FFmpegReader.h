@@ -108,6 +108,7 @@ namespace openshot {
 		bool check_interlace;
 		bool check_fps;
 		bool has_missing_frames;
+		int max_concurrent_frames;
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
