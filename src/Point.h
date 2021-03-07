@@ -118,7 +118,7 @@ namespace openshot
 		/// Set the right handle to a percent of the primary coordinate (0 to 1)
 		void Initialize_RightHandle(float x, float y);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

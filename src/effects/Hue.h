@@ -60,10 +60,10 @@ namespace openshot
 	public:
 		Keyframe hue;	///< Shift the hue coordinates (left or right)
 
-		/// Blank constructor, useful when using Json to load the effect properties
+		/// Default constructor, useful when using Json to load the effect properties
 		Hue();
 
-		/// Default constructor, which takes 1 curve. The curves will shift the hue of the image.
+		/// Constructor which takes 1 curve. The curves will shift the hue of the image.
 		///
 		/// @param hue The curve to adjust the hue shift (between 0 and 1)
 		Hue(Keyframe hue);
@@ -87,7 +87,7 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

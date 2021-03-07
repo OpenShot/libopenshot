@@ -94,11 +94,9 @@ namespace openshot
 		std::map <size_t,EffectCamTrajectory> trajectoryData; // Save camera trajectory data
 		std::map <size_t,EffectTransformParam> transformationData; // Save transormation data
 
-		/// Blank constructor, useful when using Json to load the effect properties
-		Stabilizer(std::string clipTrackerDataPath);
+        Stabilizer();
 
-		/// Default constructor
-		Stabilizer();
+		Stabilizer(std::string clipTrackerDataPath);
 
 		/// @brief This method is required for all derived classes of EffectBase, and returns a
 		/// modified openshot::Frame object
@@ -115,10 +113,10 @@ namespace openshot
 			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		};
 
-		// Load protobuf data file
+		/// Load protobuf data file
 		bool LoadStabilizedData(std::string inputFilePath);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

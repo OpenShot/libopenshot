@@ -41,7 +41,7 @@ namespace openshot {
 	 * A std::exception-derived exception class with custom message.
 	 * All OpenShot exception classes inherit from this class.
 	 */
-	class ExceptionBase : public std::exception //: public exception
+	class ExceptionBase : public std::exception
 	{
 	protected:
 		std::string m_message;
