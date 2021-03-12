@@ -174,7 +174,7 @@ std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
 	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", &color.blue, 0, 255, false, requested_frame);
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
-	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", &fuzz, 0, 25, false, requested_frame);
+	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", &fuzz, 0, 125, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
