@@ -83,18 +83,24 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 	for (int pixel = 0, byte_index=0; pixel < image->width() * image->height(); pixel++, byte_index+=4)
 	{
 		// Get the RGB values from the pixel
-		unsigned char R = pixels[byte_index];
-		unsigned char G = pixels[byte_index + 1];
-		unsigned char B = pixels[byte_index + 2];
-		unsigned char A = pixels[byte_index + 3];
+		// Remove the premultiplied alpha values from R,G,B
+		float A = float(pixels[byte_index + 3]);
+		unsigned char R = (pixels[byte_index] / A) * 255.0;
+		unsigned char G = (pixels[byte_index + 1] / A) * 255.0;
+		unsigned char B = (pixels[byte_index + 2] / A) * 255.0;
 
-		// Get distance between mask color and pixel color
-		long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
+        // Get distance between mask color and pixel color
+        long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
 
-		// Alpha out the pixel (if color similar)
-		if (distance <= threshold)
-			// MATCHED - Make pixel transparent
-			pixels[byte_index + 3] = 0;
+        if (distance <= threshold) {
+            // MATCHED - Make pixel transparent
+            // Due to premultiplied alpha, we must also zero out
+            // the individual color channels (or else artifacts are left behind)
+            pixels[byte_index] = 0;
+            pixels[byte_index + 1] = 0;
+            pixels[byte_index + 2] = 0;
+            pixels[byte_index + 3] = 0;
+        }
 	}
 
 	// return the modified frame
