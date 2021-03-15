@@ -299,8 +299,30 @@ foreach(ff_comp IN LISTS all_comps)
       mark_as_advanced(${v_name}_VERSION_STR)
     endif()
   endif()
-
 endforeach()
+
+# Version check for hardware-acceleration code
+if(TARGET FFmpeg::avcodec AND USE_HW_ACCEL)
+  if(${avcodec_VERSION} VERSION_GREATER 57.107.100)
+    set(HAVE_HW_ACCEL TRUE)
+  endif()
+endif()
+
+# Hwaccel preprocessor define (for source #ifdefs)
+if (NOT USE_HW_ACCEL)
+  target_compile_definitions(openshot PUBLIC USE_HW_ACCEL=0)
+elseif (HAVE_HW_ACCEL)
+  target_compile_definitions(openshot PUBLIC USE_HW_ACCEL=1)
+endif()
+
+# Include in feature summary
+if(USE_HW_ACCEL AND HAVE_HW_ACCEL)
+  set(FFMPEG_HARDWARE_ACCELERATION TRUE)
+else()
+  set(FFMPEG_HARDWARE_ACCELERATION FALSE)
+endif()
+set(_hwaccel_help "GPU-accelerated routines available (FFmpeg 3.4+)")
+add_feature_info("FFmpeg hwaccel" FFMPEG_HARDWARE_ACCELERATION ${_hwaccel_help})
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
