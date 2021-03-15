@@ -13,6 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      # Work around a codecov issue detecting commit SHAs
+      # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
+      with:
+        fetch-depth: 0
 
     - uses: haya14busa/action-cond@v1
       id: coverage
