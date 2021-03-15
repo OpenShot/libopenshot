@@ -38,16 +38,10 @@
 
 using namespace openshot;
 
-#if HAVE_HW_ACCEL
-#pragma message "You are compiling with experimental hardware encode"
-#else
-#pragma message "You are compiling only with software encode"
-#endif
-
 // Multiplexer parameters temporary storage
 AVDictionary *mux_dict = NULL;
 
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 int hw_en_on = 1;					// Is set in UI
 int hw_en_supported = 0;	// Is set by FFmpegWriter
 AVPixelFormat hw_en_av_pix_fmt = AV_PIX_FMT_NONE;
@@ -84,7 +78,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 	av_buffer_unref(&hw_frames_ref);
 	return err;
 }
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 FFmpegWriter::FFmpegWriter(const std::string& path) :
 		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
@@ -174,7 +168,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 	if (codec.length() > 0) {
 		AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 #if defined(__linux__)
 		if (strstr(codec.c_str(), "_vaapi") != NULL) {
 			new_codec = avcodec_find_encoder_by_name(codec.c_str());
@@ -226,9 +220,9 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 #else  // unknown OS
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
 #endif //__linux__/_WIN32/__APPLE__
-#else // HAVE_HW_ACCEL
+#else // USE_HW_ACCEL
 		new_codec = avcodec_find_encoder_by_name(codec.c_str());
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 		if (new_codec == NULL)
 			throw InvalidCodec("A valid video codec could not be found for this file.", path);
 		else {
@@ -427,11 +421,11 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 			if (hw_en_on) {
 				av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0); // 0-63
 			} else
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 			{
 				switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -477,7 +471,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// encode quality and special settings like lossless
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 			if (hw_en_on) {
 				double mbs = 15000000.0;
 				if (info.video_bit_rate > 0) {
@@ -490,7 +484,7 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 				}
 				c->bit_rate = (int)(mbs);
 			} else
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 			{
 				switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -976,14 +970,14 @@ void FFmpegWriter::flush_encoders() {
 // Close the video codec
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		if (hw_device_ctx) {
 			av_buffer_unref(&hw_device_ctx);
 			hw_device_ctx = NULL;
 		}
 	}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 }
 
 // Close the audio codec
@@ -1409,7 +1403,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	// Set number of threads equal to number of processors (not to exceed 16)
 	video_codec_ctx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		//char *dev_hw = NULL;
 		char adapter[256];
@@ -1448,7 +1442,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 				throw InvalidCodec("Could not create hwdevice", path);
 		}
 	}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 	/* find the video encoder */
 	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
@@ -1465,7 +1459,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 	AVDictionary *opts = NULL;
 	av_dict_set(&opts, "strict", "experimental", 0);
 
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		video_codec_ctx->pix_fmt   = hw_en_av_pix_fmt;
 
@@ -1514,7 +1508,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 					"width", info.width, "height", info.height, av_err2str(err), -1);
 		}
 	}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 	/* open the codec */
 	if (avcodec_open2(video_codec_ctx, codec, &opts) < 0)
@@ -1996,11 +1990,11 @@ void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
     frame_source = allocate_avframe(PIX_FMT_RGBA, source_image_width, source_image_height, &bytes_source, (uint8_t *) pixels);
 #if IS_FFMPEG_3_2
     AVFrame *frame_final;
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
     if (hw_en_on && hw_en_supported) {
         frame_final = allocate_avframe(AV_PIX_FMT_NV12, info.width, info.height, &bytes_final, NULL);
     } else
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
     {
         frame_final = allocate_avframe(
             (AVPixelFormat)(video_st->codecpar->format),
@@ -2078,7 +2072,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = write_video_count;
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (!(hw_frame = av_frame_alloc())) {
 				std::clog << "Error code: av_hwframe_alloc\n";
@@ -2095,7 +2089,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			}
 			av_frame_copy_props(hw_frame, frame_final);
 		}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 		/* encode the image */
 		int got_packet_ptr = 0;
 		int error_code = 0;
@@ -2103,11 +2097,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Write video packet (latest version of FFmpeg)
 		int ret;
 
-	#if HAVE_HW_ACCEL
+	#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			ret = avcodec_send_frame(video_codec_ctx, hw_frame); //hw_frame!!!
 		} else
-	#endif // HAVE_HW_ACCEL
+	#endif // USE_HW_ACCEL
 		{
 			ret = avcodec_send_frame(video_codec_ctx, frame_final);
 		}
@@ -2174,14 +2168,14 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (hw_frame) {
 				av_frame_free(&hw_frame);
 				hw_frame = NULL;
 			}
 		}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 	}
 
 	// Success
@@ -2204,12 +2198,12 @@ void FFmpegWriter::InitScalers(int source_width, int source_height) {
 	// Init software rescalers vector (many of them, one for each thread)
 	for (int x = 0; x < num_of_rescalers; x++) {
 		// Init the software scaler from FFMpeg
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
 				info.width, info.height, AV_PIX_FMT_NV12, scale_mode, NULL, NULL, NULL);
 		} else
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 		{
 			img_convert_ctx = sws_getContext(source_width, source_height, PIX_FMT_RGBA,
 				info.width, info.height, AV_GET_CODEC_PIXEL_FORMAT(video_st, video_st->codec),
