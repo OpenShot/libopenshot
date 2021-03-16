@@ -108,6 +108,12 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
 
+        if(frame == start){
+            // Take the normalized inital bounding box and multiply to the current video shape
+            bbox = cv::Rect2d(bbox.x*cvimage.cols,bbox.y*cvimage.rows,bbox.width*cvimage.cols,
+                                        bbox.height*cvimage.rows);
+        }
+
         // Pass the first frame to initialize the tracker
         if(!trackerInit){
 
@@ -284,10 +290,10 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 	}
 
     if (!root["region"].isNull()){
-        double x = root["region"]["x"].asDouble();
-        double y = root["region"]["y"].asDouble();
-        double w = root["region"]["width"].asDouble();
-        double h = root["region"]["height"].asDouble();
+        double x = root["region"]["normalized_x"].asDouble();
+        double y = root["region"]["normalized_y"].asDouble();
+        double w = root["region"]["normalized_width"].asDouble();
+        double h = root["region"]["normalized_height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
 	}
