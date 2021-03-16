@@ -178,28 +178,40 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
         float fw = frame.size().width;
         float fh = frame.size().height;
 
-        std::vector<cv::Rect> bboxes = {bbox};
-        std::vector<float> confidence = {1.0};
-        std::vector<int> classId = {1};
-
-        sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)), confidence, classId);
-
-        for(auto TBox : sort.frameTrackingResult)
-            bbox = TBox.box;
-
+        cv::Rect2d filtered_box = filter_box_jitter(frameId);
         // Add new frame data
-        trackedDataById[frameId] = FrameData(frameId, 0, (bbox.x)/fw,
-                                                         (bbox.y)/fh,
-                                                         (bbox.x+bbox.width)/fw,
-                                                         (bbox.y+bbox.height)/fh);
+        trackedDataById[frameId] = FrameData(frameId, 0, (filtered_box.x)/fw,
+                                                         (filtered_box.y)/fh,
+                                                         (filtered_box.x+filtered_box.width)/fw,
+                                                         (filtered_box.y+filtered_box.height)/fh);
     }
     else
     {
-        // Add new frame data
-        trackedDataById[frameId] = FrameData(frameId);
+        // Copy the last frame data if the tracker get lost
+        trackedDataById[frameId] = trackedDataById[frameId-1];
     }
 
     return ok;
+}
+
+cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
+    // get tracked data for the previous frame
+    float last_box_width = trackedDataById[frameId-1].x2 - trackedDataById[frameId-1].x1;
+    float last_box_height = trackedDataById[frameId-1].y2 - trackedDataById[frameId-1].y1;
+
+    float curr_box_width  = bbox.width;
+    float curr_box_height  = bbox.height;
+    // keep the last width and height if the difference is less than 1%
+    float threshold = 0.01;
+    
+    cv::Rect2d filtered_box = bbox;
+    if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
+        filtered_box.width = last_box_width;
+    }
+    if(std::abs(1-(curr_box_height/last_box_height)) <= threshold){
+        filtered_box.height = last_box_height;
+    }
+    return filtered_box;
 }
 
 bool CVTracker::SaveTrackedData(){
