@@ -64,6 +64,7 @@ namespace openshot {
     public:
 		
 		Keyframe visible;
+		Keyframe draw_box;
 
         /// Blank constructor
         TrackedObjectBase();
@@ -104,6 +105,9 @@ namespace openshot {
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		virtual Json::Value PropertiesJSON(int64_t requested_frame) const = 0;
+		/// Generate JSON choice for a property (dropdown properties)
+		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
+
 	
 	};
 } // Namespace openshot

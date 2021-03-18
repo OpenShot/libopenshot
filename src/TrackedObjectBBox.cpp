@@ -326,6 +326,7 @@ Json::Value TrackedObjectBBox::JsonValue() const
     root["scale_y"] = scale_y.JsonValue(); 
     root["rotation"] = rotation.JsonValue();
     root["visible"] = visible.JsonValue();
+    root["draw_box"] = draw_box.JsonValue();
 
     // return JsonValue
     return root;
@@ -394,6 +395,8 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
         rotation.SetJsonValue(root["rotation"]);
     if (!root["visible"].isNull())
         visible.SetJsonValue(root["visible"]);
+    if (!root["draw_box"].isNull())
+		draw_box.SetJsonValue(root["draw_box"]);
     
     return;
 }
@@ -425,6 +428,10 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
     root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
+	
+    root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, -1, 1.0, false, requested_frame);
+    root["draw_box"]["choices"].append(add_property_choice_json("Off", 0, draw_box.GetValue(requested_frame)));
+	root["draw_box"]["choices"].append(add_property_choice_json("On", 1, draw_box.GetValue(requested_frame)));
 
 	// Return formatted string
 	return root;

@@ -105,7 +105,9 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
     if(!frame_image.empty())
 	{
         // Check if track data exists for the requested frame
-        if (trackedData->Contains(frame_number) && trackedData->visible.GetValue(frame_number) == 1) 
+        if (trackedData->Contains(frame_number) && 
+			trackedData->visible.GetValue(frame_number) == 1 &&
+			trackedData->draw_box.GetValue(frame_number) == 1) 
 		{
 			// Get the width and height of the image
 			float fw = frame_image.size().width;

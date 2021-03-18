@@ -37,7 +37,7 @@
 namespace openshot{
 
 	// Blank constructor
-    TrackedObjectBase::TrackedObjectBase() : visible(1.0)
+    TrackedObjectBase::TrackedObjectBase() : visible(1.0), draw_box(1)
 	{
 		// Initializes the id as "None"
 		id = "None";
@@ -49,5 +49,16 @@ namespace openshot{
 	{
 		Id(_id);
 		childClipId = "None";
+	}
+
+	Json::Value TrackedObjectBase::add_property_choice_json(std::string name, int value, int selected_value) const {
+		// Create choice
+		Json::Value new_choice = Json::Value(Json::objectValue);
+		new_choice["name"] = name;
+		new_choice["value"] = value;
+		new_choice["selected"] = (value == selected_value);
+
+		// return JsonValue
+		return new_choice;
 	}
 }
