@@ -378,9 +378,15 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
     if (!root["protobuf_data_path"].isNull())
         protobufDataPath = root["protobuf_data_path"].asString();
 
-    // Set the id of the child clio
-    if (!root["child_clip_id"].isNull())
-        ChildClipId(root["child_clip_id"].asString());
+    // Set the id of the child clip
+    // Does not allow to link to the parent clip
+    if (!root["child_clip_id"].isNull()){
+        Clip* parentClip = (Clip *) ParentClip();
+        
+        if(parentClip && (root["child_clip_id"].asString() != parentClip->Id())){
+            ChildClipId(root["child_clip_id"].asString());
+        }
+    }
     
     // Set the Keyframes by the given JSON object
     if (!root["delta_x"].isNull())

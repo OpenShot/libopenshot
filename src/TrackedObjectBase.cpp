@@ -33,16 +33,16 @@
 #include <functional>
 #include <utility>
 
-
-namespace openshot{
+namespace openshot
+{
 
 	// Blank constructor
-    TrackedObjectBase::TrackedObjectBase() : visible(1.0), draw_box(1)
+	TrackedObjectBase::TrackedObjectBase() : visible(1.0), draw_box(1)
 	{
 		// Initializes the id as "None"
 		id = "None";
 		childClipId = "None";
-    }
+	}
 
 	// Default constructor
 	TrackedObjectBase::TrackedObjectBase(std::string _id) : visible(1.0)
@@ -51,7 +51,8 @@ namespace openshot{
 		childClipId = "None";
 	}
 
-	Json::Value TrackedObjectBase::add_property_choice_json(std::string name, int value, int selected_value) const {
+	Json::Value TrackedObjectBase::add_property_choice_json(std::string name, int value, int selected_value) const
+	{
 		// Create choice
 		Json::Value new_choice = Json::Value(Json::objectValue);
 		new_choice["name"] = name;
@@ -61,4 +62,4 @@ namespace openshot{
 		// return JsonValue
 		return new_choice;
 	}
-}
+} // namespace openshot

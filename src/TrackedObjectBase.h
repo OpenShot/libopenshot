@@ -55,7 +55,7 @@ namespace openshot {
 	 * predicted along the frames of a clip.
 	 */
     class TrackedObjectBase {
-	private:
+	protected:
 		std::string id;
 		std::string childClipId;
 
