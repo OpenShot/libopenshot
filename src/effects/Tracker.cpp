@@ -102,20 +102,20 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	std::shared_ptr<QImage> childClipImage = nullptr;
 
     // Check if frame isn't NULL
-    if(!frame_image.empty())
+    if(!frame_image.empty() && 
+		trackedData->Contains(frame_number) &&
+		trackedData->visible.GetValue(frame_number) == 1)
 	{
+		// Get the width and height of the image
+		float fw = frame_image.size().width;
+		float fh = frame_image.size().height;
+
+		// Get the bounding-box of given frame
+		BBox fd = trackedData->GetBox(frame_number);
+
         // Check if track data exists for the requested frame
-        if (trackedData->Contains(frame_number) && 
-			trackedData->visible.GetValue(frame_number) == 1 &&
-			trackedData->draw_box.GetValue(frame_number) == 1) 
+        if (trackedData->draw_box.GetValue(frame_number) == 1) 
 		{
-			// Get the width and height of the image
-			float fw = frame_image.size().width;
-        	float fh = frame_image.size().height;
-
-			// Get the bounding-box of given frame
-			BBox fd = trackedData->GetBox(frame_number);
-
 			// Create a rotated rectangle object that holds the bounding box
 			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ), 
 								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ), 
@@ -128,25 +128,26 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			{
 				cv::line(frame_image, vertices[i], vertices[(i+1)%4], cv::Scalar(255,0,0), 2);
 			}
+		}
+		
+		// Get the image of the Tracked Object' child clip
+		if (trackedData->ChildClipId() != "None"){
+			// Cast the parent timeline of this effect 
+			Timeline* parentTimeline = (Timeline *) ParentTimeline();
+			if (parentTimeline){
+				// Get the Tracked Object's child clip
+				Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
+				if (childClip){
+					// Get the image of the child clip for this frame
+					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
+					childClipImage = childClipFrame->GetImage();
 
-			// Get the image of the Tracked Object' child clip
-			if (trackedData->ChildClipId() != "None"){
-				// Cast the parent timeline of this effect 
-				Timeline* parentTimeline = (Timeline *) ParentTimeline();
-				if (parentTimeline){
-					// Get the Tracked Object's child clip
-					Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
-					if (childClip){
-						// Get the image of the child clip for this frame
-						std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
-						childClipImage = childClipFrame->GetImage();
-
-						// Set the Qt rectangle with the bounding-box properties
-						boxRect.setRect( (int)((fd.cx-fd.width/2)*fw), (int)((fd.cy - fd.height/2)*fh), (int)(fd.width*fw), (int)(fd.height*fh) );
-					}
+					// Set the Qt rectangle with the bounding-box properties
+					boxRect.setRect( (int)((fd.cx-fd.width/2)*fw), (int)((fd.cy - fd.height/2)*fh), (int)(fd.width*fw), (int)(fd.height*fh) );
 				}
 			}
-        }
+		}
+	
     }
 
 	// Set image with drawn box to frame
