@@ -40,43 +40,48 @@
 #include "Fraction.h"
 #include "Frame.h"
 
-using namespace std;
-using namespace openshot;
+SUITE (DummyReader) {
 
-TEST (DummyReader_Basic_Constructor) {
-	// Create a default fraction (should be 1/1)
+TEST (Default_Constructor) {
 	openshot::DummyReader r;
-	r.Open(); // Open the reader
 
-	// Check values
-			CHECK_EQUAL(1280, r.info.width);
-			CHECK_EQUAL(768, r.info.height);
-			CHECK_EQUAL(24, r.info.fps.num);
-			CHECK_EQUAL(1, r.info.fps.den);
-			CHECK_EQUAL(44100, r.info.sample_rate);
-			CHECK_EQUAL(2, r.info.channels);
-			CHECK_EQUAL(30.0, r.info.duration);
+	CHECK_EQUAL(false, r.IsOpen());
+	CHECK_THROW(r.GetFrame(1), openshot::ReaderClosed);
+
+	r.Open();
+
+	// Default values
+	CHECK_EQUAL(1280, r.info.width);
+	CHECK_EQUAL(768, r.info.height);
+	CHECK_EQUAL(24, r.info.fps.num);
+	CHECK_EQUAL(1, r.info.fps.den);
+	CHECK_EQUAL(44100, r.info.sample_rate);
+	CHECK_EQUAL(2, r.info.channels);
+	CHECK_EQUAL(30.0, r.info.duration);
+
+	CHECK_EQUAL("DummyReader", r.Name());
+
+	auto cache = r.GetCache();
+	CHECK_EQUAL(true, cache == nullptr);
 }
 
-TEST (DummyReader_Constructor) {
-	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 60.0);
-	r.Open(); // Open the reader
+TEST (Constructor) {
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 48000, 2, 60.0);
+	r.Open();
 
 	// Check values
 	CHECK_EQUAL(1920, r.info.width);
 	CHECK_EQUAL(1080, r.info.height);
 	CHECK_EQUAL(30, r.info.fps.num);
 	CHECK_EQUAL(1, r.info.fps.den);
-	CHECK_EQUAL(44100, r.info.sample_rate);
+	CHECK_EQUAL(48000, r.info.sample_rate);
 	CHECK_EQUAL(2, r.info.channels);
 	CHECK_EQUAL(60.0, r.info.duration);
 }
 
-TEST (DummyReader_Blank_Frame) {
-	// Create a default fraction (should be 1/1)
+TEST (Blank_Frame) {
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
-	r.Open(); // Open the reader
+	r.Open();
 
 	// Get a blank frame (because we have not passed a Cache object (full of Frame objects) to the constructor
 	// Check values
@@ -85,17 +90,17 @@ TEST (DummyReader_Blank_Frame) {
 	CHECK_EQUAL(1, r.GetFrame(1)->GetPixels(701)[701] == 0); // black pixel
 }
 
-TEST (DummyReader_Fake_Frame) {
+TEST (Fake_Frame) {
 
 	// Create cache object to hold test frames
-	CacheMemory cache;
+	openshot::CacheMemory cache;
 
 	// Let's create some test frames
 	for (int64_t frame_number = 1; frame_number <= 30; frame_number++) {
 		// Create blank frame (with specific frame #, samples, and channels)
 		// Sample count should be 44100 / 30 fps = 1470 samples per frame
 		int sample_count = 1470;
-		std::shared_ptr<openshot::Frame> f(new openshot::Frame(frame_number, sample_count, 2));
+		auto f = std::make_shared<openshot::Frame>(frame_number, sample_count, 2);
 
 		// Create test samples with incrementing value
 		float *audio_buffer = new float[sample_count];
@@ -112,9 +117,8 @@ TEST (DummyReader_Fake_Frame) {
 		cache.Add(f);
 	}
 
-	// Create a default fraction (should be 1/1)
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
-	r.Open(); // Open the reader
+	r.Open();
 
 	// Verify our artificial audio sample data is correct
 	CHECK_EQUAL(1, r.GetFrame(1)->number);
@@ -130,26 +134,59 @@ TEST (DummyReader_Fake_Frame) {
 	r.Close();
 }
 
-TEST (DummyReader_Invalid_Fake_Frame) {
+TEST (Invalid_Fake_Frame) {
 	// Create fake frames (with specific frame #, samples, and channels)
-	std::shared_ptr<openshot::Frame> f1(new openshot::Frame(1, 1470, 2));
-	std::shared_ptr<openshot::Frame> f2(new openshot::Frame(2, 1470, 2));
+	auto f1 = std::make_shared<openshot::Frame>(1, 1470, 2);
+	auto f2 = std::make_shared<openshot::Frame>(2, 1470, 2);
 
 	// Add test frames to cache object
-	CacheMemory cache;
+	openshot::CacheMemory cache;
 	cache.Add(f1);
 	cache.Add(f2);
 
-	// Create a default fraction (should be 1/1)
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
 	r.Open();
 
 	// Verify exception
 	CHECK_EQUAL(1, r.GetFrame(1)->number);
 	CHECK_EQUAL(2, r.GetFrame(2)->number);
-	CHECK_THROW(r.GetFrame(3)->number, InvalidFile);
+	CHECK_THROW(r.GetFrame(3)->number, openshot::InvalidFile);
 
 	// Clean up
 	cache.Clear();
 	r.Close();
 }
+
+
+TEST(Json)
+{
+	openshot::DummyReader r1;
+	openshot::DummyReader r2(openshot::Fraction(24, 1), 1280, 768, 44100, 2, 30.0);
+	auto json1 = r1.Json();
+	auto json2 = r2.JsonValue();
+	auto json_string2 = json2.toStyledString();
+	CHECK_EQUAL(json1, json_string2);
+}
+
+TEST(SetJson)
+{
+	openshot::DummyReader r1;
+	std::stringstream json_stream;
+	json_stream << R"json(
+		{
+			"width": 1920,
+			"height": 1080,
+			"fps": { "num": 15, "den": 1 },
+			"duration": 15.0
+		}
+		)json";
+
+	r1.SetJson(json_stream.str());
+	CHECK_EQUAL(1920, r1.info.width);
+	CHECK_EQUAL(1080, r1.info.height);
+	CHECK_EQUAL(15, r1.info.fps.num);
+	CHECK_EQUAL(1, r1.info.fps.den);
+	CHECK_EQUAL(15.0, r1.info.duration);
+}
+
+}  // SUITE
