@@ -747,9 +747,9 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
 	if (!parentObjectId.empty()) {
-		root["parentObjectId"] = add_property_json("Parent Object ID", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
+		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
 	} else {
-		root["parentObjectId"] = add_property_json("Parent Object ID", 0.0, "string", "None", NULL, -1, -1, false, requested_frame);
+		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", "None", NULL, -1, -1, false, requested_frame);
 	}
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
