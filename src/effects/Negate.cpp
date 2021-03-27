@@ -114,7 +114,7 @@ std::string Negate::PropertiesJSON(int64_t requested_frame) const {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 30 * 60 * 60 * 48, true, requested_frame);
 
 	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent Effect ID", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

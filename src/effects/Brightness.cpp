@@ -164,7 +164,7 @@ std::string Brightness::PropertiesJSON(int64_t requested_frame) const {
 	root["contrast"] = add_property_json("Contrast", contrast.GetValue(requested_frame), "float", "", &contrast, 0.0, 100.0, false, requested_frame);
 
 	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent Effect ID", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

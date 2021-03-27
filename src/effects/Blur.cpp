@@ -244,7 +244,7 @@ std::string Blur::PropertiesJSON(int64_t requested_frame) const {
 	root["iterations"] = add_property_json("Iterations", iterations.GetValue(requested_frame), "float", "", &iterations, 0, 100, false, requested_frame);
 
 	// Set the parent effect which properties this effect will inherit
-	root["parent_effect_id"] = add_property_json("Parent Effect ID", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();
