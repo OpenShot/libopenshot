@@ -88,6 +88,8 @@ namespace openshot
 		/// Get the indexes and IDs of all visible objects in the given frame
 		std::string GetVisibleObjects(int64_t frame_number) const override; 
 
+		void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
+
 		/// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object

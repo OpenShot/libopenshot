@@ -41,8 +41,8 @@ using namespace openshot;
 
 // Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
 TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
-                                          stroke_width(2) , background_alpha(1), background_corner(0), stroke(0,0,255,0),
-                                          background(0,0,255,0)
+                                          stroke_width(2) , background_alpha(1.0), stroke_alpha(0.0), background_corner(0), 
+                                          stroke(0,0,255,0), background(0,0,255,0)
 {
     this->TimeScale = 1.0;
     return;
@@ -334,6 +334,7 @@ Json::Value TrackedObjectBBox::JsonValue() const
     root["background_corner"] = background_corner.JsonValue();
     root["background"] = background.JsonValue();
     root["stroke_width"] = stroke_width.JsonValue();
+    root["stroke_alpha"] = stroke_alpha.JsonValue();
 
     // return JsonValue
     return root;
@@ -420,6 +421,8 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 		background.SetJsonValue(root["background"]);
     if (!root["stroke_width"].isNull())
 		stroke_width.SetJsonValue(root["stroke_width"]);
+    if (!root["stroke_alpha"].isNull())
+		stroke_alpha.SetJsonValue(root["stroke_alpha"]);
     return;
 }
 
@@ -446,8 +449,8 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	// Add the bounding-box Keyframes to the JSON object
 	root["delta_x"] = add_property_json("Displacement X-axis", delta_x.GetValue(requested_frame), "float", "", &delta_x, -1.0, 1.0, false, requested_frame);
 	root["delta_y"] = add_property_json("Displacement Y-axis", delta_y.GetValue(requested_frame), "float", "", &delta_y, -1.0, 1.0, false, requested_frame);
-	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, -1.0, 1.0, false, requested_frame);
-	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
+	root["scale_x"] = add_property_json("Scale (Width)", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
     root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
 
@@ -460,7 +463,8 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
     root["stroke"]["blue"] = add_property_json("Blue", stroke.blue.GetValue(requested_frame), "float", "", &stroke.blue, 0, 255, false, requested_frame);
     root["stroke"]["green"] = add_property_json("Green", stroke.green.GetValue(requested_frame), "float", "", &stroke.green, 0, 255, false, requested_frame);
     root["stroke_width"] = add_property_json("Stroke Width", stroke_width.GetValue(requested_frame), "int", "", &stroke_width, 1, 10, false, requested_frame);
-    
+    root["stroke_alpha"] = add_property_json("Stroke alpha", stroke_alpha.GetValue(requested_frame), "float", "", &stroke_alpha, 0.0, 1.0, false, requested_frame);
+
     root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
     root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 60.0, false, requested_frame);
     

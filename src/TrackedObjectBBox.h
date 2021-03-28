@@ -171,6 +171,7 @@ namespace openshot
         Keyframe background_alpha; ///< Background box opacity
         Keyframe background_corner; ///< Radius of rounded corners
         Keyframe stroke_width; ///< Thickness of border line
+        Keyframe stroke_alpha; ///< Stroke box opacity
         Color stroke; ///< Border line color
         Color background; ///< Background fill color
 

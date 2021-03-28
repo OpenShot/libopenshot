@@ -117,32 +117,18 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
         if (trackedData->draw_box.GetValue(frame_number) == 1) 
 		{
 			std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
+			int stroke_width = trackedData->stroke_width.GetValue(frame_number);
+			float stroke_alpha = trackedData->stroke_alpha.GetValue(frame_number);
 			std::vector<int> bg_rgba = trackedData->background.GetColorRGBA(frame_number);
+			float bg_alpha = trackedData->background_alpha.GetValue(frame_number);
 
 			// Create a rotated rectangle object that holds the bounding box
 			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ), 
 								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ), 
 								  (int) (fd.angle) );
-			// Get the bouding box vertices
-			cv::Point2f vertices2f[4];
-			box.points(vertices2f);
 
-			cv::Point vertices[4];
-			for(int i = 0; i < 4; ++i){
-				vertices[i] = vertices2f[i];
-			}
-
-			cv::fillConvexPoly(frame_image, vertices, 4, cv::Scalar(bg_rgba[2],bg_rgba[1],bg_rgba[0]), cv::LINE_AA);
-			
-			// const Point *pts = (const cv::Point*) cv::Mat(vertices).data;
-			// cv::polylines(frame_image, &pts, 4, 1, true, (255, 0, 255), cv::Scalar(stroke_rgba[2],stroke_rgba[1],stroke_rgba[0]), cv::LINE_AA);
-
-			// Draw the bounding-box on the image
-			for (int i = 0; i < 4; i++)
-			{
-				cv::line(frame_image, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(stroke_rgba[2],stroke_rgba[1],stroke_rgba[0]),
-							 trackedData->stroke_width.GetValue(frame_number));
-			}
+			DrawRectangleRGBA(frame_image, box, bg_rgba, bg_alpha, 1, true);
+			DrawRectangleRGBA(frame_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
 		}
 		
 		// Get the image of the Tracked Object' child clip
@@ -185,6 +171,47 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	}
 
 	return frame;
+}
+
+
+void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background){
+	// Get the bouding box vertices
+	cv::Point2f vertices2f[4];
+	box.points(vertices2f);
+
+	// TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
+	// select min enclosing rectangle to draw on a small portion of the image
+	// cv::Rect rect  = box.boundingRect();
+	// cv::Mat image = frame_image(rect)
+
+	if(is_background){
+		cv::Mat overlayFrame;
+		frame_image.copyTo(overlayFrame);
+
+		// draw bounding box background
+		cv::Point vertices[4];
+		for(int i = 0; i < 4; ++i){
+			vertices[i] = vertices2f[i];}
+
+		cv::Rect rect  = box.boundingRect();
+		cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
+		// add opacity
+		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+	}
+	else{
+		cv::Mat overlayFrame;
+		frame_image.copyTo(overlayFrame);
+
+		// Draw bounding box 
+		for (int i = 0; i < 4; i++)
+		{
+			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
+						thickness, cv::LINE_AA);
+		}
+
+		// add opacity
+		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+	}
 }
 
 // Get the indexes and IDs of all visible objects in the given frame
