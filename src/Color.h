@@ -65,6 +65,9 @@ namespace openshot {
 		/// Get the HEX value of a color at a specific frame
 		std::string GetColorHex(int64_t frame_number);
 
+		// Get the RGBA values of a color at a specific frame
+		std::vector<int> GetColorRGBA(int64_t frame_number);
+		
 		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
 		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);
 

@@ -40,7 +40,9 @@ using namespace openshot;
 
 
 // Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
-TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0)
+TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
+                                          stroke_width(2) , background_alpha(1), background_corner(0), stroke(0,0,255,0),
+                                          background(0,0,255,0)
 {
     this->TimeScale = 1.0;
     return;
@@ -327,6 +329,11 @@ Json::Value TrackedObjectBBox::JsonValue() const
     root["rotation"] = rotation.JsonValue();
     root["visible"] = visible.JsonValue();
     root["draw_box"] = draw_box.JsonValue();
+    root["stroke"] = stroke.JsonValue();
+    root["background_alpha"] = background_alpha.JsonValue();
+    root["background_corner"] = background_corner.JsonValue();
+    root["background"] = background.JsonValue();
+    root["stroke_width"] = stroke_width.JsonValue();
 
     // return JsonValue
     return root;
@@ -403,7 +410,16 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
         visible.SetJsonValue(root["visible"]);
     if (!root["draw_box"].isNull())
 		draw_box.SetJsonValue(root["draw_box"]);
-    
+    if (!root["stroke"].isNull())
+		stroke.SetJsonValue(root["stroke"]);
+    if (!root["background_alpha"].isNull())
+		background_alpha.SetJsonValue(root["background_alpha"]);
+    if (!root["background_corner"].isNull())
+		background_corner.SetJsonValue(root["background_corner"]);
+    if (!root["background"].isNull())
+		background.SetJsonValue(root["background"]);
+    if (!root["stroke_width"].isNull())
+		stroke_width.SetJsonValue(root["stroke_width"]);
     return;
 }
 
@@ -434,10 +450,24 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["scale_y"] = add_property_json("Scale (Height)", scale_y.GetValue(requested_frame), "float", "", &scale_y, -1.0, 1.0, false, requested_frame);
 	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, 0, 360, false, requested_frame);
     root["visible"] = add_property_json("Visible", visible.GetValue(requested_frame), "int", "", &visible, 0, 1, false, requested_frame);
-	
+
     root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, -1, 1.0, false, requested_frame);
     root["draw_box"]["choices"].append(add_property_choice_json("Off", 0, draw_box.GetValue(requested_frame)));
 	root["draw_box"]["choices"].append(add_property_choice_json("On", 1, draw_box.GetValue(requested_frame)));
+    
+    root["stroke"] = add_property_json("Border", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
+    root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
+    root["stroke"]["blue"] = add_property_json("Blue", stroke.blue.GetValue(requested_frame), "float", "", &stroke.blue, 0, 255, false, requested_frame);
+    root["stroke"]["green"] = add_property_json("Green", stroke.green.GetValue(requested_frame), "float", "", &stroke.green, 0, 255, false, requested_frame);
+    root["stroke_width"] = add_property_json("Stroke Width", stroke_width.GetValue(requested_frame), "int", "", &stroke_width, 1, 10, false, requested_frame);
+    
+    root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
+    root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 60.0, false, requested_frame);
+    
+    root["background"] = add_property_json("Background", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
+    root["background"]["red"] = add_property_json("Red", background.red.GetValue(requested_frame), "float", "", &background.red, 0, 255, false, requested_frame);
+    root["background"]["blue"] = add_property_json("Blue", background.blue.GetValue(requested_frame), "float", "", &background.blue, 0, 255, false, requested_frame);
+    root["background"]["green"] = add_property_json("Green", background.green.GetValue(requested_frame), "float", "", &background.green, 0, 255, false, requested_frame);
 
 	// Return formatted string
 	return root;

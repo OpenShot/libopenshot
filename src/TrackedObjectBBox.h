@@ -43,6 +43,7 @@
 #include "Json.h"
 #include "KeyFrame.h"
 #include "TrackedObjectBase.h"
+#include "Color.h"
 #include "protobuf_messages/trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
@@ -167,6 +168,12 @@ namespace openshot
         Keyframe scale_x; ///< X-direction scale Keyframe
         Keyframe scale_y; ///< Y-direction scale Keyframe
         Keyframe rotation; ///< Rotation Keyframe
+        Keyframe background_alpha; ///< Background box opacity
+        Keyframe background_corner; ///< Radius of rounded corners
+        Keyframe stroke_width; ///< Thickness of border line
+        Color stroke; ///< Border line color
+        Color background; ///< Background fill color
+
         std::string protobufDataPath; ///< Path to the protobuf file that holds the bounding box points across the frames
 
         /// Default Constructor

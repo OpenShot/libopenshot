@@ -116,17 +116,32 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
         // Check if track data exists for the requested frame
         if (trackedData->draw_box.GetValue(frame_number) == 1) 
 		{
+			std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
+			std::vector<int> bg_rgba = trackedData->background.GetColorRGBA(frame_number);
+
 			// Create a rotated rectangle object that holds the bounding box
 			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ), 
 								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ), 
 								  (int) (fd.angle) );
 			// Get the bouding box vertices
-			cv::Point2f vertices[4];
-			box.points(vertices);
+			cv::Point2f vertices2f[4];
+			box.points(vertices2f);
+
+			cv::Point vertices[4];
+			for(int i = 0; i < 4; ++i){
+				vertices[i] = vertices2f[i];
+			}
+
+			cv::fillConvexPoly(frame_image, vertices, 4, cv::Scalar(bg_rgba[2],bg_rgba[1],bg_rgba[0]), cv::LINE_AA);
+			
+			// const Point *pts = (const cv::Point*) cv::Mat(vertices).data;
+			// cv::polylines(frame_image, &pts, 4, 1, true, (255, 0, 255), cv::Scalar(stroke_rgba[2],stroke_rgba[1],stroke_rgba[0]), cv::LINE_AA);
+
 			// Draw the bounding-box on the image
 			for (int i = 0; i < 4; i++)
 			{
-				cv::line(frame_image, vertices[i], vertices[(i+1)%4], cv::Scalar(255,0,0), 2);
+				cv::line(frame_image, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(stroke_rgba[2],stroke_rgba[1],stroke_rgba[0]),
+							 trackedData->stroke_width.GetValue(frame_number));
 			}
 		}
 		
