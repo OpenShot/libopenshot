@@ -1,4 +1,4 @@
-name: CI Build
+name: libopenshot CI Build
 on: [push, pull_request]
 jobs:
   build:
