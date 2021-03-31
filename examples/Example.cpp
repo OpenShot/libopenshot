@@ -31,8 +31,10 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include "OpenShot.h"
-#include "CrashHandler.h"
+#include "Clip.h"
+#include "Frame.h"
+#include "FFmpegReader.h"
+#include "Timeline.h"
 
 using namespace openshot;
 
@@ -53,16 +55,17 @@ int main(int argc, char* argv[]) {
         const auto time1 = std::chrono::high_resolution_clock::now();
         std::shared_ptr<Frame> f = r9.GetFrame(frame);
         const auto time2 = std::chrono::high_resolution_clock::now();
-        std::cout << "FFmpegReader: " << frame << " (" << double_ms(time2 - time1).count() << " ms)" << std::endl;
+        std::cout << "FFmpegReader: " << frame
+                  << " (" << double_ms(time2 - time1).count() << " ms)\n";
     }
     const auto total_2 = std::chrono::high_resolution_clock::now();
     auto total_sec = std::chrono::duration_cast<ms>(total_2 - total_1);
-    std::cout << "FFmpegReader TOTAL: " << total_sec.count() << " ms" << std::endl;
+    std::cout << "FFmpegReader TOTAL: " << total_sec.count() << " ms\n";
     r9.Close();
 
 
     // Timeline Reader performance test
-    Timeline tm(r9.info.width, r9.info.height, r9.info.fps, r9.info.sample_rate, r9.info.channels, r9.info.channel_layout);
+    Timeline tm(r9.info);
     Clip *c = new Clip(&r9);
     tm.AddClip(c);
     tm.Open();
@@ -73,14 +76,15 @@ int main(int argc, char* argv[]) {
         const auto time1 = std::chrono::high_resolution_clock::now();
         std::shared_ptr<Frame> f = tm.GetFrame(frame);
         const auto time2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Timeline: " << frame << " (" << double_ms(time2 - time1).count() << " ms)" << std::endl;
+        std::cout << "Timeline: " << frame
+                  << " (" << double_ms(time2 - time1).count() << " ms)\n";
     }
     const auto total_4 = std::chrono::high_resolution_clock::now();
     total_sec = std::chrono::duration_cast<ms>(total_4 - total_3);
-    std::cout << "Timeline TOTAL: " << total_sec.count() << " ms" << std::endl;
+    std::cout << "Timeline TOTAL: " << total_sec.count() << " ms\n";
     tm.Close();
 
-    std::cout << "Completed successfully!" << std::endl;
+    std::cout << "Completed successfully!\n";
 
     return 0;
 }

@@ -50,7 +50,6 @@ SUITE(Timeline)
 
 TEST(Constructor)
 {
-	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
@@ -58,7 +57,6 @@ TEST(Constructor)
 	CHECK_EQUAL(640, t1.info.width);
 	CHECK_EQUAL(480, t1.info.height);
 
-	// Create a default fraction (should be 1/1)
 	Timeline t2(300, 240, fps, 44100, 2, LAYOUT_STEREO);
 
 	// Check values
@@ -66,9 +64,29 @@ TEST(Constructor)
 	CHECK_EQUAL(240, t2.info.height);
 }
 
+TEST(ReaderInfo_Constructor)
+{
+	// Create a reader
+	stringstream path;
+	path << TEST_MEDIA_PATH << "test.mp4";
+	Clip clip_video(path.str());
+	clip_video.Open();
+	const auto r1 = clip_video.Reader();
+
+	// Configure a Timeline with the same parameters
+	Timeline t1(r1->info);
+
+	CHECK_EQUAL(r1->info.width, t1.info.width);
+	CHECK_EQUAL(r1->info.height, t1.info.height);
+	CHECK_EQUAL(r1->info.fps.num, t1.info.fps.num);
+	CHECK_EQUAL(r1->info.fps.den, t1.info.fps.den);
+	CHECK_EQUAL(r1->info.sample_rate, t1.info.sample_rate);
+	CHECK_EQUAL(r1->info.channels, t1.info.channels);
+	CHECK_EQUAL(r1->info.channel_layout, t1.info.channel_layout);
+}
+
 TEST(Width_and_Height_Functions)
 {
-	// Create a default fraction (should be 1/1)
 	Fraction fps(30000,1000);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
@@ -93,7 +111,6 @@ TEST(Width_and_Height_Functions)
 
 TEST(Framerate)
 {
-	// Create a default fraction (should be 1/1)
 	Fraction fps(24,1);
 	Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
 
