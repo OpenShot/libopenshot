@@ -1243,13 +1243,13 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	processing_video_frames[current_frame] = current_frame;
 
 	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
-	AVFrame *pFrameRGB = NULL;
-	uint8_t *buffer = NULL;
+	AVFrame *pFrameRGB = nullptr;
+	uint8_t *buffer = nullptr;
 
 	// Allocate an AVFrame structure
 	pFrameRGB = AV_ALLOCATE_FRAME();
-	if (pFrameRGB == NULL)
-		throw OutOfBoundsFrame("Convert Image Broke!", current_frame, video_length);
+	if (pFrameRGB == nullptr)
+		throw OutOfMemory("Failed to allocate frame buffer", path);
 
 	// Determine the max size of this source image (based on the timeline's size, the scaling mode,
 	// and the scaling keyframes). This is a performance improvement, to keep the images as small as possible,
