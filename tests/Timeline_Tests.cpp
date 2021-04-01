@@ -57,6 +57,7 @@ TEST(Constructor)
 	// Check values
 	CHECK_EQUAL(640, t1.info.width);
 	CHECK_EQUAL(480, t1.info.height);
+	CHECK_EQUAL("Timeline", t1.Name());
 
 	// Create a default fraction (should be 1/1)
 	Timeline t2(300, 240, fps, 44100, 2, LAYOUT_STEREO);

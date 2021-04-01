@@ -185,7 +185,7 @@ namespace openshot {
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(openshot::Clip* clip);
 
-		/// Apply JSON Diffs to various objects contained in this timeline
+		// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change); ///<Apply JSON diff to clips
 		void apply_json_to_effects(Json::Value change); ///< Apply JSON diff to effects
 		void apply_json_to_effects(Json::Value change, openshot::EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
@@ -312,7 +312,7 @@ namespace openshot {
 		/// Return the type name of the class
 		std::string Name() override { return "Timeline"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

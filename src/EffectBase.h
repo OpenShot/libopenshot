@@ -92,7 +92,7 @@ namespace openshot
 		/// Set parent clip object of this effect
 		void ParentClip(openshot::ClipBase* new_clip);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object
 		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object

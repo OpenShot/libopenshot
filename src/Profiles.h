@@ -88,7 +88,7 @@ namespace openshot
 		/// @param path 	The folder path / location of a profile file
 		Profile(std::string path);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

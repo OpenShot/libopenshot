@@ -126,7 +126,7 @@ namespace openshot {
 		/// Get the direction of the curve at a specific index (increasing or decreasing)
 		bool IsIncreasing(int index) const;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object
