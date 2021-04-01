@@ -95,15 +95,15 @@ namespace openshot {
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
 		///
-		/// The frame object is passed into this method and used as a starting point (pixels and audio).
+		/// The frame object is passed into this method and used as a starting point / background (pixels).
 		/// All Clip keyframes and effects are resolved into pixels.
 		///
 		/// @returns The modified openshot::Frame object
-		/// @param frame The frame object that needs the clip or effect applied to it
+		/// @param frame This is ignored on Clip, due to caching optimizations. This frame instance is clobbered with the source frame.
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		virtual std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) = 0;
 
-		/// Get basic properties
+		// Get basic properties
 		std::string Id() const { return id; } ///< Get the Id of this clip object
 		float Position() const { return position; } ///< Get position on timeline (in seconds)
 		int Layer() const { return layer; } ///< Get layer of clip on timeline (lower number is covered by higher numbers)
@@ -112,7 +112,7 @@ namespace openshot {
 		float Duration() const { return end - start; } ///< Get the length of this clip (in seconds)
 		openshot::TimelineBase* ParentTimeline() { return timeline; } ///< Get the associated Timeline pointer (if any)
 
-		/// Set basic properties
+		// Set basic properties
 		void Id(std::string value) { id = value; } ///> Set the Id of this clip object
 		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
@@ -120,7 +120,7 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 		void ParentTimeline(openshot::TimelineBase* new_timeline) { timeline = new_timeline; } ///< Set associated Timeline pointer
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object
 		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object

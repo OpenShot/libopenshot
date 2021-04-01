@@ -124,7 +124,7 @@ namespace openshot {
 		/// @param end_frame_number The ending frame number of the cached frame
 		void Remove(int64_t start_frame_number, int64_t end_frame_number);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json(); ///< Generate JSON string of this object
 		void SetJson(const std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue(); ///< Generate Json::Value for this object

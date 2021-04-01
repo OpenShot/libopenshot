@@ -101,13 +101,13 @@ class CVStabilization {
     /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
 	ProcessingController *processingController;
 
-    // Track current frame features and find the relative transformation
+    /// Track current frame features and find the relative transformation
     bool TrackFrameFeatures(cv::Mat frame, size_t frameNum);
 
     std::vector<CamTrajectory> ComputeFramesTrajectory();
     std::map<size_t,CamTrajectory> SmoothTrajectory(std::vector <CamTrajectory> &trajectory);
 
-    // Generate new transformations parameters for each frame to follow the smoothed trajectory
+    /// Generate new transformations parameters for each frame to follow the smoothed trajectory
     std::map<size_t,TransformParam> GenNewCamPosition(std::map <size_t,CamTrajectory> &smoothed_trajectory);
 
     public:
@@ -115,23 +115,23 @@ class CVStabilization {
     std::map <size_t,CamTrajectory> trajectoryData; // Save camera trajectory data
     std::map <size_t,TransformParam> transformationData; // Save transormation data
 
-    // Set default smoothing window value to compute stabilization
+    /// Set default smoothing window value to compute stabilization
     CVStabilization(std::string processInfoJson, ProcessingController &processingController);
 
-    // Process clip and store necessary stabilization data
+    /// Process clip and store necessary stabilization data
     void stabilizeClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
 
     /// Protobuf Save and Load methods
-    // Save stabilization data to protobuf file
+    /// Save stabilization data to protobuf file
     bool SaveStabilizedData();
-    // Add frame stabilization data into protobuf message
+    /// Add frame stabilization data into protobuf message
     void AddFrameDataToProto(pb_stabilize::Frame* pbFrameData, CamTrajectory& trajData, TransformParam& transData, size_t frame_number);
 
     // Return requested struct info for a given frame
     TransformParam GetTransformParamData(size_t frameId);
     CamTrajectory GetCamTrajectoryTrackedData(size_t frameId);
 
-    /// Get and Set JSON methods
+    // Get and Set JSON methods
     void SetJson(const std::string value); ///< Load JSON string into this object
     void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 

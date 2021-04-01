@@ -6,6 +6,6 @@
 .project
 .cproject
 /.metadata/
+cmake-build-debug/*
 tags
 *~
-

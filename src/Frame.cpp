@@ -189,10 +189,10 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		int total_width = 0;
 
 		// Loop through each audio channel
-		int Y = 100;
+		float Y = 100.0;
 		for (int channel = 0; channel < audio->getNumChannels(); channel++)
 		{
-			int X = 0;
+			float X = 0.0;
 
 			// Get audio for this channel
 			const float *samples = audio->getReadPointer(channel);
@@ -200,23 +200,15 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 			for (int sample = 0; sample < GetAudioSamplesCount(); sample++, X++)
 			{
 				// Sample value (scaled to -100 to 100)
-				float value = samples[sample] * 100;
+				float value = samples[sample] * 100.0;
 
 				// Append a line segment for each sample
-				if (value != 0.0) {
-					// LINE
-					lines.push_back(QPointF(X,Y));
-					lines.push_back(QPointF(X,Y-value));
-				}
-				else {
-					// DOT
-					lines.push_back(QPointF(X,Y));
-					lines.push_back(QPointF(X,Y));
-				}
+                lines.push_back(QPointF(X,Y+1.0));
+                lines.push_back(QPointF(X,(Y-value)+1.0));
 			}
 
 			// Add Channel Label Coordinate
-			labels.push_back(QPointF(5, Y - 5));
+			labels.push_back(QPointF(5.0, Y - 5.0));
 
 			// Increment Y
 			Y += (200 + height_padding);
@@ -232,24 +224,19 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		QPainter painter(wave_image.get());
 
 		// Set pen color
-		painter.setPen(QColor(Red, Green, Blue, Alpha));
+        QPen pen;
+        pen.setColor(QColor(Red, Green, Blue, Alpha));
+        pen.setWidthF(1.0);
+        pen.setStyle(Qt::SolidLine);
+        painter.setPen(pen);
 
 		// Draw the waveform
 		painter.drawLines(lines);
 		painter.end();
 
-		// Loop through the channels labels (and draw the text)
-		// TODO: Configure Fonts in Qt5 correctly, so the drawText method does not crash
-//		painter.setFont(QFont(QString("Arial"), 16, 1, false));
-//		for (int channel = 0; channel < labels.size(); channel++) {
-//			stringstream label;
-//			label << "Channel " << channel;
-//		    painter.drawText(labels.at(channel), QString::fromStdString(label.str()));
-//		}
-
 		// Resize Image (if requested)
 		if (width != total_width || height != total_height) {
-			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 			wave_image = std::make_shared<QImage>(scaled_wave_image);
 		}
 	}
@@ -754,13 +741,11 @@ void Frame::AddColor(int new_width, int new_height, std::string new_color)
 
 	// Create new image object, and fill with pixel data
 	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	#pragma omp critical (AddImage)
-	{
-		image = std::make_shared<QImage>(new_width, new_height, QImage::Format_RGBA8888_Premultiplied);
+	image = std::make_shared<QImage>(new_width, new_height, QImage::Format_RGBA8888_Premultiplied);
 
-		// Fill with solid color
-		image->fill(QColor(QString::fromStdString(color)));
-	}
+	// Fill with solid color
+	image->fill(QColor(QString::fromStdString(color)));
+
 	// Update height and width
 	width = image->width();
 	height = image->height();
@@ -775,12 +760,7 @@ void Frame::AddImage(
 	// Create new buffer
 	{
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-		int buffer_size = new_width * new_height * bytes_per_pixel;
-		qbuffer = new unsigned char[buffer_size]();
-
-		// Copy buffer data
-		memcpy((unsigned char*)qbuffer, pixels_, buffer_size);
-
+		qbuffer = pixels_;
 	}  // Release addingImageSection lock
 
 	// Create new image object from pixel data
@@ -804,19 +784,16 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 
 	// assign image data
 	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	#pragma omp critical (AddImage)
-	{
-		image = new_image;
+	image = new_image;
 
-		// Always convert to Format_RGBA8888_Premultiplied (if different)
-		if (image->format() != QImage::Format_RGBA8888_Premultiplied)
-			*image = image->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
+	// Always convert to Format_RGBA8888_Premultiplied (if different)
+	if (image->format() != QImage::Format_RGBA8888_Premultiplied)
+		*image = image->convertToFormat(QImage::Format_RGBA8888_Premultiplied);
 
-		// Update height and width
-		width = image->width();
-		height = image->height();
-		has_image_data = true;
-	}
+	// Update height and width
+	width = image->width();
+	height = image->height();
+	has_image_data = true;
 }
 
 // Add (or replace) pixel data to the frame (for only the odd or even lines)
@@ -834,15 +811,12 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 	} else {
 		// Ignore image of different sizes or formats
 		bool ret=false;
-		#pragma omp critical (AddImage)
-		{
-			if (image == new_image || image->size() != new_image->size()) {
-				ret = true;
-			}
-			else if (new_image->format() != QImage::Format_RGBA8888_Premultiplied) {
-				new_image = std::make_shared<QImage>(
+		if (image == new_image || image->size() != new_image->size()) {
+			ret = true;
+		}
+		else if (new_image->format() != QImage::Format_RGBA8888_Premultiplied) {
+			new_image = std::make_shared<QImage>(
 					new_image->convertToFormat(QImage::Format_RGBA8888_Premultiplied));
-			}
 		}
 		if (ret) {
 			return;
@@ -850,26 +824,23 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 
 		// Get the frame's image
 		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-		#pragma omp critical (AddImage)
-		{
-			unsigned char *pixels = image->bits();
-			const unsigned char *new_pixels = new_image->constBits();
+		unsigned char *pixels = image->bits();
+		const unsigned char *new_pixels = new_image->constBits();
 
-			// Loop through the scanlines of the image (even or odd)
-			int start = 0;
-			if (only_odd_lines)
-				start = 1;
+		// Loop through the scanlines of the image (even or odd)
+		int start = 0;
+		if (only_odd_lines)
+			start = 1;
 
-			for (int row = start; row < image->height(); row += 2) {
-				int offset = row * image->bytesPerLine();
-				memcpy(pixels + offset, new_pixels + offset, image->bytesPerLine());
-			}
-
-			// Update height and width
-			height = image->height();
-			width = image->width();
-			has_image_data = true;
+		for (int row = start; row < image->height(); row += 2) {
+			int offset = row * image->bytesPerLine();
+			memcpy(pixels + offset, new_pixels + offset, image->bytesPerLine());
 		}
+
+		// Update height and width
+		height = image->height();
+		width = image->width();
+		has_image_data = true;
 	}
 }
 
@@ -891,31 +862,29 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
 	const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
-	#pragma omp critical (adding_audio)
-    {
-		// Clamp starting sample to 0
-		int destStartSampleAdjusted = max(destStartSample, 0);
 
-		// Extend audio container to hold more (or less) samples and channels.. if needed
-		int new_length = destStartSampleAdjusted + numSamples;
-		int new_channel_length = audio->getNumChannels();
-		if (destChannel >= new_channel_length)
-			new_channel_length = destChannel + 1;
-		if (new_length > audio->getNumSamples() || new_channel_length > audio->getNumChannels())
-			audio->setSize(new_channel_length, new_length, true, true, false);
+	// Clamp starting sample to 0
+	int destStartSampleAdjusted = max(destStartSample, 0);
 
-		// Clear the range of samples first (if needed)
-		if (replaceSamples)
-			audio->clear(destChannel, destStartSampleAdjusted, numSamples);
+	// Extend audio container to hold more (or less) samples and channels.. if needed
+	int new_length = destStartSampleAdjusted + numSamples;
+	int new_channel_length = audio->getNumChannels();
+	if (destChannel >= new_channel_length)
+		new_channel_length = destChannel + 1;
+	if (new_length > audio->getNumSamples() || new_channel_length > audio->getNumChannels())
+		audio->setSize(new_channel_length, new_length, true, true, false);
 
-		// Add samples to frame's audio buffer
-		audio->addFrom(destChannel, destStartSampleAdjusted, source, numSamples, gainToApplyToSource);
-		has_audio_data = true;
+	// Clear the range of samples first (if needed)
+	if (replaceSamples)
+		audio->clear(destChannel, destStartSampleAdjusted, numSamples);
 
-		// Calculate max audio sample added
-		if (new_length > max_audio_sample)
-			max_audio_sample = new_length;
-	}
+	// Add samples to frame's audio buffer
+	audio->addFrom(destChannel, destStartSampleAdjusted, source, numSamples, gainToApplyToSource);
+	has_audio_data = true;
+
+	// Calculate max audio sample added
+	if (new_length > max_audio_sample)
+		max_audio_sample = new_length;
 }
 
 // Apply gain ramp (i.e. fading volume)
@@ -958,7 +927,7 @@ cv::Mat Frame::GetImageCV()
 	if (!image)
 		// Fill with black
 		AddColor(width, height, color);
-	
+
 	// if (imagecv.empty())
 	// Convert Qimage to Mat
 	imagecv = Qimage2mat(image);

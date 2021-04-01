@@ -35,8 +35,8 @@ if (POLICY CMP0057)
 endif()
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib//usr/lib/libprofiler.so.0.4.5")
-#set(PROFILER "/usr/lib/libtcmalloc.so.4")
+#set(PROFILER "/usr/lib/x86_64-linux-gnu/libprofiler.so.0")
+#set(PROFILER "/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4")
 
 if(CMAKE_VERSION VERSION_LESS 3.3)
   # IWYU wasn't supported internally in 3.2
@@ -463,9 +463,6 @@ endif()
 if(UNIX AND NOT APPLE)
   set(CPACK_GENERATOR "DEB")
 endif()
-#if(UNIX AND APPLE)
-#  set(CPACK_GENERATOR "DragNDrop")
-#endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)

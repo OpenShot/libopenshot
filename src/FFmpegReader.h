@@ -108,6 +108,7 @@ namespace openshot {
 		bool check_interlace;
 		bool check_fps;
 		bool has_missing_frames;
+		int max_concurrent_frames;
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
@@ -264,7 +265,7 @@ namespace openshot {
 		/// Return the type name of the class
 		std::string Name() override { return "FFmpegReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

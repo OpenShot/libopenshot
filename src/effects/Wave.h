@@ -65,10 +65,10 @@ namespace openshot
 		Keyframe shift_x;		///< Amount to shift X-axis
 		Keyframe speed_y;		///< Speed of the wave on the Y-axis
 
-		/// Blank constructor, useful when using Json to load the effect properties
+		/// Default constructor, useful when using Json to load the effect properties
 		Wave();
 
-		/// Default constructor, which takes 5 curves. The curves will distort the image.
+		/// Constructor which takes 5 curves. The curves will distort the image.
 		///
 		/// @param wavelength The curve to adjust the wavelength (0.0 to 3.0)
 		/// @param amplitude The curve to adjust the amplitude (0.0 to 5.0)
@@ -96,7 +96,7 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
