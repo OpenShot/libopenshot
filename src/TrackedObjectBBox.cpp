@@ -388,7 +388,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 
     // Set the id of the child clip
     // Does not allow to link to the parent clip
-    if (!root["child_clip_id"].isNull()){
+    if (!root["child_clip_id"].isNull() && root["box_id"].asString() != "None"){
         Clip* parentClip = (Clip *) ParentClip();
         
         if(parentClip && (root["child_clip_id"].asString() != parentClip->Id())){

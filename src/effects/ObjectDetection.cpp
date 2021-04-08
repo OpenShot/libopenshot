@@ -309,11 +309,13 @@ Json::Value ObjectDetection::JsonValue() const {
     }
 
     // Add the selected object Json to root
-    auto selectedObject = trackedObjects.at(selectedObjectIndex);
-    if (selectedObject){
-        Json::Value selectedObjectJSON = selectedObject->JsonValue();
-        for (auto const& key : selectedObjectJSON.getMemberNames())
-            root[key] = selectedObjectJSON[key];
+    if(trackedObjects.count(selectedObjectIndex) != 0){
+        auto selectedObject = trackedObjects.at(selectedObjectIndex);
+        if (selectedObject){
+            Json::Value selectedObjectJSON = selectedObject->JsonValue();
+            for (auto const& key : selectedObjectJSON.getMemberNames())
+                root[key] = selectedObjectJSON[key];
+        }
     }
 
 	// return JsonValue
@@ -366,9 +368,11 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
     }
 
     // Set the selected object's properties
-    auto selectedObject = trackedObjects.at(selectedObjectIndex);
-    if (selectedObject)
-        selectedObject->SetJsonValue(root);
+    if(trackedObjects.count(selectedObjectIndex) != 0){
+        auto selectedObject = trackedObjects.at(selectedObjectIndex);
+        if (selectedObject)
+            selectedObject->SetJsonValue(root);
+    }
 }
 
 // Get all properties for a specific frame
@@ -378,9 +382,11 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	Json::Value root;
 
     // Add the selected object Json to root
-    auto selectedObject = trackedObjects.at(selectedObjectIndex);
-    if (selectedObject)
-        root = selectedObject->PropertiesJSON(requested_frame);
+    if(trackedObjects.count(selectedObjectIndex) != 0){
+        auto selectedObject = trackedObjects.at(selectedObjectIndex);
+        if (selectedObject)
+            root = selectedObject->PropertiesJSON(requested_frame);
+    }
 
     root["selected_object_index"] = add_property_json("Selected Object", selectedObjectIndex, "int", "", NULL, 0, 200, false, requested_frame);
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
