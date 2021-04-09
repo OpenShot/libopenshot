@@ -132,12 +132,16 @@ void EffectBase::SetJsonValue(Json::Value root) {
 		// Get the list of effects on the timeline
 		std::list<EffectBase*> effects = parentTimeline->ClipEffects();
 
-		// Loop through the effects
-		for (auto const& effect : effects){
-			// Set the properties of all effects which parentEffect points to this
-			if (effect->info.parent_effect_id == this->Id())
-				effect->SetJsonValue(root);	
-		}
+		// TODO: Fix recursive call for Object Detection
+		
+		// // Loop through the effects and check if we have a child effect linked to this effect
+		// for (auto const& effect : effects){
+		// 	// Set the properties of all effects which parentEffect points to this
+		// 	if ((effect->info.parent_effect_id == this->Id()) && (effect->Id() != this->Id()))
+		// 		std::cout<<"passou3 \n";
+
+		// 		effect->SetJsonValue(root);	
+		// }
 	}
 
 	// Set this effect properties with the parent effect properties (except the id and parent_effect_id)
@@ -218,5 +222,5 @@ std::string EffectBase::ParentClipId() const{
 	if(clip)
 		return clip->Id();
 	else
-		return "None";
+		return "";
 }
