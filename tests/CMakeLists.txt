@@ -42,6 +42,8 @@ endif()
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
+  CacheDisk
+  CacheMemory
   Clip
   Color
   Coordinate
@@ -60,16 +62,6 @@ set(OPENSHOT_TESTS
   Timeline
 )
 
-# Handle differences in test sets
-if(USE_CATCH2)
-  list(APPEND OPENSHOT_TESTS
-    CacheDisk
-    CacheMemory
-  )
-else()
-  list(APPEND OPENSHOT_TESTS Cache)
-endif()
-
 ###
 ### OPENCV RELATED TEST FILES
 ###
@@ -82,9 +74,9 @@ if(ENABLE_OPENCV)
 endif()
 
 ###
-### Catch2 (new) unit tests
+### Catch2 unit tests
 ###
-if (TESTS_ENABLED AND USE_CATCH2)
+if (TESTS_ENABLED)
   message (STATUS "Tests enabled, test executables will be compiled")
   include(Catch)
 
@@ -108,47 +100,6 @@ if (TESTS_ENABLED AND USE_CATCH2)
     list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
 	endforeach()
   # Export target list for coverage use
-  set(CATCH2_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
+  set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
 endif()
 
-###
-### UNITTEST++ (old) unit tests
-###
-if (TESTS_ENABLED AND NOT USE_CATCH2)
-  # Find UnitTest++ libraries (used for unit testing)
-  find_package(UnitTest++)
-
-  if (NOT UnitTest++_FOUND)
-    set(TESTS_ENABLED OFF PARENT_SCOPE)
-    return()
-  endif()
-
-  # Include UnitTest++ headers (needed for compile)
-  include_directories(${UnitTest++_INCLUDE_DIRS})
-
-  set_package_properties(UnitTest++ PROPERTIES
-    TYPE RECOMMENDED
-    PURPOSE "Unit testing framework")
-
-  ################ TESTER EXECUTABLE #################
-  # Create unit test executable (openshot-test)
-  message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
-
-  foreach(tname ${OPENSHOT_TESTS})
-    list(APPEND TEST_SOURCES cppunittest/${tname}_Tests.cpp)
-  endforeach()
-
-  add_executable(openshot-test
-    cppunittest/tests.cpp
-    ${TEST_SOURCES}
-  )
-  target_compile_definitions(openshot-test PRIVATE
-    TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
-  )
-  # Link libraries to the new executable
-  target_link_libraries(openshot-test
-    openshot
-    ${UnitTest++_LIBRARIES}
-  )
-  set(UNIT_TEST_TARGETS openshot-test PARENT_SCOPE)
-endif()
