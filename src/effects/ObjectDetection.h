@@ -83,6 +83,9 @@ namespace openshot
 		void init_effect_details();
 
 		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber);
+		/// Draw rotated rectangle with alpha channel
+		void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
+
 
 	public:
 

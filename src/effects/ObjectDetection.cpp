@@ -104,18 +104,34 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
             std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_it->second);
 
             // Check if the tracked object has data for this frame
-            if (trackedObject->Contains(frame_number) && trackedObject->visible.GetValue(frame_number) == 1)
+            if (trackedObject->Contains(frame_number) && 
+                trackedObject->visible.GetValue(frame_number) == 1)
             {
                 // Get the bounding-box of given frame
                 BBox trackedBox = trackedObject->GetBox(frame_number);
-                cv::Rect2d box(
-                    (int)( (trackedBox.cx-trackedBox.width/2)*fw),
-                    (int)( (trackedBox.cy-trackedBox.height/2)*fh),
-                    (int)(  trackedBox.width*fw),
-                    (int)(  trackedBox.height*fh)
-                    );
-                drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                    box, cv_image, detections.objectIds.at(i));
+                
+                std::vector<int> stroke_rgba = trackedObject->stroke.GetColorRGBA(frame_number);
+                int stroke_width = trackedObject->stroke_width.GetValue(frame_number);
+                float stroke_alpha = trackedObject->stroke_alpha.GetValue(frame_number);
+                std::vector<int> bg_rgba = trackedObject->background.GetColorRGBA(frame_number);
+                float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
+
+                // Create a rotated rectangle object that holds the bounding box
+                cv::RotatedRect box ( cv::Point2f( (int)(trackedBox.cx*fw), (int)(trackedBox.cy*fh) ), 
+                                    cv::Size2f( (int)(trackedBox.width*fw), (int)(trackedBox.height*fh) ), 
+                                    (int) (trackedBox.angle) );
+
+                DrawRectangleRGBA(cv_image, box, bg_rgba, bg_alpha, 1, true);
+                DrawRectangleRGBA(cv_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
+                            
+                // cv::Rect2d box(
+                //     (int)( (trackedBox.cx-trackedBox.width/2)*fw),
+                //     (int)( (trackedBox.cy-trackedBox.height/2)*fh),
+                //     (int)(  trackedBox.width*fw),
+                //     (int)(  trackedBox.height*fh)
+                //     );
+                // drawPred(detections.classIds.at(i), detections.confidences.at(i),
+                //     box, cv_image, detections.objectIds.at(i));
             } 
         }
     }
@@ -125,6 +141,46 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
 	frame->SetImageCV(cv_image);
 
 	return frame;
+}
+
+void ObjectDetection::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background){
+	// Get the bouding box vertices
+	cv::Point2f vertices2f[4];
+	box.points(vertices2f);
+
+	// TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
+	// select min enclosing rectangle to draw on a small portion of the image
+	// cv::Rect rect  = box.boundingRect();
+	// cv::Mat image = frame_image(rect)
+
+	if(is_background){
+		cv::Mat overlayFrame;
+		frame_image.copyTo(overlayFrame);
+
+		// draw bounding box background
+		cv::Point vertices[4];
+		for(int i = 0; i < 4; ++i){
+			vertices[i] = vertices2f[i];}
+
+		cv::Rect rect  = box.boundingRect();
+		cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
+		// add opacity
+		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+	}
+	else{
+		cv::Mat overlayFrame;
+		frame_image.copyTo(overlayFrame);
+
+		// Draw bounding box 
+		for (int i = 0; i < 4; i++)
+		{
+			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
+						thickness, cv::LINE_AA);
+		}
+
+		// add opacity
+		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+	}
 }
 
 void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber)
@@ -328,6 +384,7 @@ void ObjectDetection::SetJson(const std::string value) {
 	// Parse JSON string into JSON objects
 	try
 	{
+        std::cout<<"entrou no objectDetection SetJson \n"<<value<<"\n\n";
 		const Json::Value root = openshot::stringToJson(value);
 		// Set all values that match
 		SetJsonValue(root);
@@ -335,15 +392,17 @@ void ObjectDetection::SetJson(const std::string value) {
 	catch (const std::exception& e)
 	{
 		// Error parsing JSON (or missing keys)
+		std::cout<< "\n\n"<<e.what()<<"\n\n";
 		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
 	}
 }
 
 // Load Json::Value into this object
 void ObjectDetection::SetJsonValue(const Json::Value root) {
-
+    std::cout<<"entrou no objectDetection SetJasonValue \n"<<root<<"\n\n";
 	// Set parent data
 	EffectBase::SetJsonValue(root);
+
 	// Set data from Json (if key is found)
 	if (!root["protobuf_data_path"].isNull() && protobuf_data_path.size() <= 1){
 		protobuf_data_path = root["protobuf_data_path"].asString();
