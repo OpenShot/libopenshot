@@ -42,8 +42,6 @@ endif()
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
-  CacheDisk
-  CacheMemory
   Clip
   Color
   Coordinate
@@ -59,7 +57,18 @@ set(OPENSHOT_TESTS
   Point
   QtImageReader
   Settings
-  Timeline)
+  Timeline
+)
+
+# Handle differences in test sets
+if(USE_CATCH2)
+  list(APPEND OPENSHOT_TESTS
+    CacheDisk
+    CacheMemory
+  )
+else()
+  list(APPEND OPENSHOT_TESTS Cache)
+endif()
 
 ###
 ### OPENCV RELATED TEST FILES
@@ -134,7 +143,7 @@ if (TESTS_ENABLED AND NOT USE_CATCH2)
     ${TEST_SOURCES}
   )
   target_compile_definitions(openshot-test PRIVATE
-    TEST_MEDIA_PATH=${TEST_MEDIA_PATH}
+    TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
   )
   # Link libraries to the new executable
   target_link_libraries(openshot-test
