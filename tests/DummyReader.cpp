@@ -110,6 +110,8 @@ TEST_CASE( "Fake_Frame", "[libopenshot][dummyreader]" ) {
 
 		// Add test frame to dummy reader
 		cache.Add(f);
+
+		delete[] audio_buffer;
 	}
 
 	// Create a default fraction (should be 1/1)
