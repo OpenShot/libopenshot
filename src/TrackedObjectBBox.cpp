@@ -48,6 +48,13 @@ TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0
     return;
 }
 
+TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa) : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
+                                          stroke_width(2) , background_alpha(1.0), stroke_alpha(0.0), background_corner(0), 
+                                          stroke(Red,Green,Blue,Alfa), background(0,0,255,0)
+{
+    this->TimeScale = 1.0;
+    return;
+}
 
 // Add a BBox to the BoxVec map
 void TrackedObjectBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle)

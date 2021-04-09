@@ -179,6 +179,7 @@ namespace openshot
 
         /// Default Constructor
         TrackedObjectBBox();
+        TrackedObjectBBox(int Red, int Green, int Blue, int Alfa);
 
         /// Add a BBox to the BoxVec map
         void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) override;
