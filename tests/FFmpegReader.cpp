@@ -31,9 +31,8 @@
 #include <sstream>
 #include <memory>
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "FFmpegReader.h"
 #include "Exceptions.h"
 #include "Frame.h"
@@ -43,16 +42,13 @@
 using namespace std;
 using namespace openshot;
 
-SUITE(FFmpegReader)
-{
-
-TEST(Invalid_Path)
+TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
 {
 	// Check invalid path
-	CHECK_THROW(FFmpegReader(""), InvalidFile);
+	CHECK_THROWS_AS(FFmpegReader(""), InvalidFile);
 }
 
-TEST(GetFrame_Before_Opening)
+TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -60,10 +56,10 @@ TEST(GetFrame_Before_Opening)
 	FFmpegReader r(path.str());
 
 	// Check invalid path
-	CHECK_THROW(r.GetFrame(1), ReaderClosed);
+	CHECK_THROWS_AS(r.GetFrame(1), ReaderClosed);
 }
 
-TEST(Check_Audio_File)
+TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -78,22 +74,22 @@ TEST(Check_Audio_File)
 	float *samples = f->GetAudioSamples(0);
 
 	// Check audio properties
-	CHECK_EQUAL(2, f->GetAudioChannelsCount());
-	CHECK_EQUAL(332, f->GetAudioSamplesCount());
+	CHECK(f->GetAudioChannelsCount() == 2);
+	CHECK(f->GetAudioSamplesCount() == 332);
 
 	// Check actual sample values (to be sure the waveform is correct)
-	CHECK_CLOSE(0.0f, samples[0], 0.00001);
-	CHECK_CLOSE(0.0f, samples[50], 0.00001);
-	CHECK_CLOSE(0.0f, samples[100], 0.00001);
-	CHECK_CLOSE(0.0f, samples[200], 0.00001);
-	CHECK_CLOSE(0.16406f, samples[230], 0.00001);
-	CHECK_CLOSE(-0.06250f, samples[300], 0.00001);
+	CHECK(samples[0] == Approx(0.0f).margin(0.00001));
+	CHECK(samples[50] == Approx(0.0f).margin(0.00001));
+	CHECK(samples[100] == Approx(0.0f).margin(0.00001));
+	CHECK(samples[200] == Approx(0.0f).margin(0.00001));
+	CHECK(samples[230] == Approx(0.16406f).margin(0.00001));
+	CHECK(samples[300] == Approx(-0.06250f).margin(0.00001));
 
 	// Close reader
 	r.Close();
 }
 
-TEST(Check_Video_File)
+TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -109,14 +105,14 @@ TEST(Check_Video_File)
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_CLOSE(21, (int)pixels[pixel_index], 5);
-	CHECK_CLOSE(191, (int)pixels[pixel_index + 1], 5);
-	CHECK_CLOSE(0, (int)pixels[pixel_index + 2], 5);
-	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+	CHECK((int)pixels[pixel_index] == Approx(21).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(191).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
 	// Check pixel function
-	CHECK_EQUAL(true, f->CheckPixel(10, 112, 21, 191, 0, 255, 5));
-	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
+	CHECK(f->CheckPixel(10, 112, 21, 191, 0, 255, 5) == true);
+	CHECK_FALSE(f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Get frame 1
 	f = r.GetFrame(2);
@@ -126,20 +122,20 @@ TEST(Check_Video_File)
 	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_CLOSE(0, (int)pixels[pixel_index], 5);
-	CHECK_CLOSE(96, (int)pixels[pixel_index + 1], 5);
-	CHECK_CLOSE(188, (int)pixels[pixel_index + 2], 5);
-	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+	CHECK((int)pixels[pixel_index] == Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(96).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(188).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
 	// Check pixel function
-	CHECK_EQUAL(true, f->CheckPixel(10, 112, 0, 96, 188, 255, 5));
-	CHECK_EQUAL(false, f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
+	CHECK(f->CheckPixel(10, 112, 0, 96, 188, 255, 5) == true);
+	CHECK_FALSE(f->CheckPixel(10, 112, 0, 0, 0, 0, 5));
 
 	// Close reader
 	r.Close();
 }
 
-TEST(Seek)
+TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -149,54 +145,54 @@ TEST(Seek)
 
 	// Get frame
 	std::shared_ptr<Frame> f = r.GetFrame(1);
-	CHECK_EQUAL(1, f->number);
+	CHECK(f->number == 1);
 
 	// Get frame
 	f = r.GetFrame(300);
-	CHECK_EQUAL(300, f->number);
+	CHECK(f->number == 300);
 
 	// Get frame
 	f = r.GetFrame(301);
-	CHECK_EQUAL(301, f->number);
+	CHECK(f->number == 301);
 
 	// Get frame
 	f = r.GetFrame(315);
-	CHECK_EQUAL(315, f->number);
+	CHECK(f->number == 315);
 
 	// Get frame
 	f = r.GetFrame(275);
-	CHECK_EQUAL(275, f->number);
+	CHECK(f->number == 275);
 
 	// Get frame
 	f = r.GetFrame(270);
-	CHECK_EQUAL(270, f->number);
+	CHECK(f->number == 270);
 
 	// Get frame
 	f = r.GetFrame(500);
-	CHECK_EQUAL(500, f->number);
+	CHECK(f->number == 500);
 
 	// Get frame
 	f = r.GetFrame(100);
-	CHECK_EQUAL(100, f->number);
+	CHECK(f->number == 100);
 
 	// Get frame
 	f = r.GetFrame(600);
-	CHECK_EQUAL(600, f->number);
+	CHECK(f->number == 600);
 
 	// Get frame
 	f = r.GetFrame(1);
-	CHECK_EQUAL(1, f->number);
+	CHECK(f->number == 1);
 
 	// Get frame
 	f = r.GetFrame(700);
-	CHECK_EQUAL(700, f->number);
+	CHECK(f->number == 700);
 
 	// Close reader
 	r.Close();
 
 }
 
-TEST(Frame_Rate)
+TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -206,13 +202,13 @@ TEST(Frame_Rate)
 
 	// Verify detected frame rate
 	openshot::Fraction rate = r.info.fps;
-	CHECK_EQUAL(24, rate.num);
-	CHECK_EQUAL(1, rate.den);
+	CHECK(rate.num == 24);
+	CHECK(rate.den == 1);
 
 	r.Close();
 }
 
-TEST(Multiple_Open_and_Close)
+TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -222,7 +218,7 @@ TEST(Multiple_Open_and_Close)
 
 	// Get frame that requires a seek
 	std::shared_ptr<Frame> f = r.GetFrame(1200);
-	CHECK_EQUAL(1200, f->number);
+	CHECK(f->number == 1200);
 
 	// Close and Re-open the reader
 	r.Close();
@@ -230,9 +226,9 @@ TEST(Multiple_Open_and_Close)
 
 	// Get frame
 	f = r.GetFrame(1);
-	CHECK_EQUAL(1, f->number);
+	CHECK(f->number == 1);
 	f = r.GetFrame(250);
-	CHECK_EQUAL(250, f->number);
+	CHECK(f->number == 250);
 
 	// Close and Re-open the reader
 	r.Close();
@@ -240,15 +236,15 @@ TEST(Multiple_Open_and_Close)
 
 	// Get frame
 	f = r.GetFrame(750);
-	CHECK_EQUAL(750, f->number);
+	CHECK(f->number == 750);
 	f = r.GetFrame(1000);
-	CHECK_EQUAL(1000, f->number);
+	CHECK(f->number == 1000);
 
 	// Close reader
 	r.Close();
 }
 
-TEST(Verify_Parent_Timeline)
+TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	stringstream path;
@@ -257,8 +253,8 @@ TEST(Verify_Parent_Timeline)
 	r.Open();
 
 	// Check size of frame image
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 1280);
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 720);
+	CHECK(r.GetFrame(1)->GetImage()->width() == 1280);
+	CHECK(r.GetFrame(1)->GetImage()->height() == 720);
 	r.GetFrame(1)->GetImage()->save("reader-1.png", "PNG");
 
 	// Create a Clip associated with this reader
@@ -266,16 +262,14 @@ TEST(Verify_Parent_Timeline)
 	c1.Open();
 
 	// Check size of frame image (should still be the same)
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 1280);
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 720);
+	CHECK(r.GetFrame(1)->GetImage()->width() == 1280);
+	CHECK(r.GetFrame(1)->GetImage()->height() == 720);
 
 	// Create Timeline
 	Timeline t1(640, 480, Fraction(30,1), 44100, 2, LAYOUT_STEREO);
 	t1.AddClip(&c1);
 
 	// Check size of frame image (it should now match the parent timeline)
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->width(), 640);
-	CHECK_EQUAL(r.GetFrame(1)->GetImage()->height(), 360);
+	CHECK(r.GetFrame(1)->GetImage()->width() == 640);
+	CHECK(r.GetFrame(1)->GetImage()->height() == 360);
 }
-
-} // SUITE(FFmpegReader)
