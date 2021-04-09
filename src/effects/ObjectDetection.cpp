@@ -94,6 +94,11 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
         DetectionData detections = detectionsData[frame_number];
         for(int i = 0; i<detections.boxes.size(); i++){
             
+            // Does not show boxes with confidence below the threshold
+            if(detections.confidences.at(i) < confidence_threshold){
+                continue;
+            }
+            
             // Get the object id
             int objectId = detections.objectIds.at(i);
 
@@ -117,21 +122,21 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                 float bg_alpha = trackedObject->background_alpha.GetValue(frame_number);
 
                 // Create a rotated rectangle object that holds the bounding box
-                cv::RotatedRect box ( cv::Point2f( (int)(trackedBox.cx*fw), (int)(trackedBox.cy*fh) ), 
-                                    cv::Size2f( (int)(trackedBox.width*fw), (int)(trackedBox.height*fh) ), 
-                                    (int) (trackedBox.angle) );
+                // cv::RotatedRect box ( cv::Point2f( (int)(trackedBox.cx*fw), (int)(trackedBox.cy*fh) ), 
+                //                     cv::Size2f( (int)(trackedBox.width*fw), (int)(trackedBox.height*fh) ), 
+                //                     (int) (trackedBox.angle) );
 
-                DrawRectangleRGBA(cv_image, box, bg_rgba, bg_alpha, 1, true);
-                DrawRectangleRGBA(cv_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
+                // DrawRectangleRGBA(cv_image, box, bg_rgba, bg_alpha, 1, true);
+                // DrawRectangleRGBA(cv_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
                             
-                // cv::Rect2d box(
-                //     (int)( (trackedBox.cx-trackedBox.width/2)*fw),
-                //     (int)( (trackedBox.cy-trackedBox.height/2)*fh),
-                //     (int)(  trackedBox.width*fw),
-                //     (int)(  trackedBox.height*fh)
-                //     );
-                // drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                //     box, cv_image, detections.objectIds.at(i));
+                cv::Rect2d box(
+                    (int)( (trackedBox.cx-trackedBox.width/2)*fw),
+                    (int)( (trackedBox.cy-trackedBox.height/2)*fh),
+                    (int)(  trackedBox.width*fw),
+                    (int)(  trackedBox.height*fh)
+                    );
+                drawPred(detections.classIds.at(i), detections.confidences.at(i),
+                    box, cv_image, detections.objectIds.at(i));
             } 
         }
     }
@@ -327,15 +332,30 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
     root["visible_objects_index"] = Json::Value(Json::arrayValue);
     root["visible_objects_id"] = Json::Value(Json::arrayValue);
 
+    // Check if track data exists for the requested frame
+    if (detectionsData.find(frame_number) == detectionsData.end()){
+        return root.toStyledString();
+    }
+    DetectionData detections = detectionsData.at(frame_number);
+
     // Iterate through the tracked objects
+    int idx = 0;
     for (const auto& trackedObject : trackedObjects){
+        // Does not show boxes with confidence below the threshold
+        if(detections.confidences.at(idx) < confidence_threshold){
+            continue;
+        }
+
         // Get the tracked object JSON properties for this frame
         Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
-        if (trackedObjectJSON["visible"]["value"].asBool() && trackedObject.second->ExactlyContains(frame_number)){
+        
+        if (trackedObjectJSON["visible"]["value"].asBool() && 
+            trackedObject.second->ExactlyContains(frame_number)){
             // Save the object's index and ID if it's visible in this frame
             root["visible_objects_index"].append(trackedObject.first);
             root["visible_objects_id"].append(trackedObject.second->Id());
         }
+        idx++;
     }
 
     return root.toStyledString();
@@ -356,6 +376,7 @@ Json::Value ObjectDetection::JsonValue() const {
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
     root["selected_object_index"] = selectedObjectIndex;
+    root["confidence_threshold"] = confidence_threshold;
     
     // Add tracked object's IDs to root
     root["objects_id"] = Json::Value(Json::arrayValue);
@@ -416,6 +437,10 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
     // Set the selected object index
     if (!root["selected_object_index"].isNull())
         selectedObjectIndex = root["selected_object_index"].asInt();
+    
+    // Set the selected object index
+    if (!root["confidence_threshold"].isNull())
+        confidence_threshold = root["confidence_threshold"].asFloat();
 
     // Set the tracked object's ids
     if (!root["objects_id"].isNull()){
@@ -454,6 +479,7 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+    root["confidence_threshold"] = add_property_json("Confidence Theshold", confidence_threshold, "float", "", NULL, 0, 1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

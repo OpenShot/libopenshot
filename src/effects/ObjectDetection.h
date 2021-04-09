@@ -79,6 +79,11 @@ namespace openshot
 
 		std::vector<cv::Scalar> classesColor;
 
+		/// Minimum confidence value to display the detected objects
+		float confidence_threshold = 0.5; 
+		/// Contain the user selected classes for visualization
+		std::vector<std::string> display_classes;
+
 		/// Init effect settings
 		void init_effect_details();
 
