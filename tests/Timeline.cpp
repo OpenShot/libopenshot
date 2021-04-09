@@ -60,6 +60,27 @@ TEST_CASE( "constructor", "[libopenshot][timeline]" )
 	CHECK(t2.info.height == 240);
 }
 
+TEST_CASE("ReaderInfo constructor", "[libopenshot][timeline]")
+{
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "test.mp4";
+	Clip clip_video(path.str());
+	clip_video.Open();
+	const auto r1 = clip_video.Reader();
+
+	// Configure a Timeline with the same parameters
+	Timeline t1(r1->info);
+
+	CHECK(r1->info.width == t1.info.width);
+	CHECK(r1->info.height == t1.info.height);
+	CHECK(r1->info.fps.num == t1.info.fps.num);
+	CHECK(r1->info.fps.den == t1.info.fps.den);
+	CHECK(r1->info.sample_rate == t1.info.sample_rate);
+	CHECK(r1->info.channels == t1.info.channels);
+	CHECK(r1->info.channel_layout == t1.info.channel_layout);
+}
+
 TEST_CASE( "width and height functions", "[libopenshot][timeline]" )
 {
 	Fraction fps(30000,1000);
