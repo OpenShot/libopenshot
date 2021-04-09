@@ -145,7 +145,7 @@ namespace openshot
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
 		float parent_position;  // Position of parent clip (which is used to generate the audio mapping)
-        float parent_start;     // Start of parent clip (which is used to generate the audio mapping)
+		float parent_start;     // Start of parent clip (which is used to generate the audio mapping)
 		SWRCONTEXT *avr;	// Audio resampling context object
 
 		// Internal methods used by init
