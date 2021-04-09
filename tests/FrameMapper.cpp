@@ -28,9 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "CacheMemory.h"
 #include "Clip.h"
 #include "DummyReader.h"
@@ -40,36 +39,33 @@
 #include "FrameMapper.h"
 #include "Timeline.h"
 
-using namespace std;
 using namespace openshot;
 
-SUITE(FrameMapper) {
-
-TEST(NoOp_GetMappedFrame)
+TEST_CASE( "NoOp_GetMappedFrame", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
 
 	// Create mapping between 24 fps and 24 fps without pulldown
 	FrameMapper mapping(&r, Fraction(24, 1), PULLDOWN_NONE, 22000, 2, LAYOUT_STEREO);
-	CHECK_EQUAL("FrameMapper", mapping.Name());
+	CHECK(mapping.Name() == "FrameMapper");
 
 	// Should find this frame
 	MappedFrame f = mapping.GetMappedFrame(100);
-	CHECK_EQUAL(100, f.Odd.Frame);
-	CHECK_EQUAL(100, f.Even.Frame);
+	CHECK(f.Odd.Frame == 100);
+	CHECK(f.Even.Frame == 100);
 
 	// Should return end frame
 	f = mapping.GetMappedFrame(150);
-	CHECK_EQUAL(120, f.Odd.Frame);
-	CHECK_EQUAL(120, f.Even.Frame);
+	CHECK(f.Odd.Frame == 120);
+	CHECK(f.Even.Frame == 120);
 
 	mapping.Close();
 	mapping.Reader(nullptr);
-	CHECK_THROW(mapping.Reader(), ReaderClosed);
+	CHECK_THROWS_AS(mapping.Reader(), ReaderClosed);
 }
 
-TEST(Invalid_Frame_Too_Small)
+TEST_CASE( "Invalid_Frame_Too_Small", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -78,11 +74,11 @@ TEST(Invalid_Frame_Too_Small)
 	FrameMapper mapping(&r, Fraction(30000, 1001), PULLDOWN_CLASSIC, 22000, 2, LAYOUT_STEREO);
 
 	// Check invalid frame number
-	CHECK_THROW(mapping.GetMappedFrame(0), OutOfBoundsFrame);
+	CHECK_THROWS_AS(mapping.GetMappedFrame(0), OutOfBoundsFrame);
 
 }
 
-TEST(24_fps_to_30_fps_Pulldown_Classic)
+TEST_CASE( "24_fps_to_30_fps_Pulldown_Classic", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -93,13 +89,13 @@ TEST(24_fps_to_30_fps_Pulldown_Classic)
 	MappedFrame frame3 = mapping.GetMappedFrame(3);
 
 	// Check for 3 fields of frame 2
-	CHECK_EQUAL(2, frame2.Odd.Frame);
-	CHECK_EQUAL(2, frame2.Even.Frame);
-	CHECK_EQUAL(2, frame3.Odd.Frame);
-	CHECK_EQUAL(3, frame3.Even.Frame);
+	CHECK(frame2.Odd.Frame == 2);
+	CHECK(frame2.Even.Frame == 2);
+	CHECK(frame3.Odd.Frame == 2);
+	CHECK(frame3.Even.Frame == 3);
 }
 
-TEST(24_fps_to_30_fps_Pulldown_Advanced)
+TEST_CASE( "24_fps_to_30_fps_Pulldown_Advanced", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -111,15 +107,15 @@ TEST(24_fps_to_30_fps_Pulldown_Advanced)
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 
 	// Check for advanced pulldown (only 1 fake frame)
-	CHECK_EQUAL(2, frame2.Odd.Frame);
-	CHECK_EQUAL(2, frame2.Even.Frame);
-	CHECK_EQUAL(2, frame3.Odd.Frame);
-	CHECK_EQUAL(3, frame3.Even.Frame);
-	CHECK_EQUAL(3, frame4.Odd.Frame);
-	CHECK_EQUAL(3, frame4.Even.Frame);
+	CHECK(frame2.Odd.Frame == 2);
+	CHECK(frame2.Even.Frame == 2);
+	CHECK(frame3.Odd.Frame == 2);
+	CHECK(frame3.Even.Frame == 3);
+	CHECK(frame4.Odd.Frame == 3);
+	CHECK(frame4.Even.Frame == 3);
 }
 
-TEST(24_fps_to_30_fps_Pulldown_None)
+TEST_CASE( "24_fps_to_30_fps_Pulldown_None", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(24,1), 720, 480, 22000, 2, 5.0);
@@ -130,13 +126,13 @@ TEST(24_fps_to_30_fps_Pulldown_None)
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 
 	// Check for advanced pulldown (only 1 fake frame)
-	CHECK_EQUAL(4, frame4.Odd.Frame);
-	CHECK_EQUAL(4, frame4.Even.Frame);
-	CHECK_EQUAL(4, frame5.Odd.Frame);
-	CHECK_EQUAL(4, frame5.Even.Frame);
+	CHECK(frame4.Odd.Frame == 4);
+	CHECK(frame4.Even.Frame == 4);
+	CHECK(frame5.Odd.Frame == 4);
+	CHECK(frame5.Even.Frame == 4);
 }
 
-TEST(30_fps_to_24_fps_Pulldown_Classic)
+TEST_CASE( "30_fps_to_24_fps_Pulldown_Classic", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -148,15 +144,15 @@ TEST(30_fps_to_24_fps_Pulldown_Classic)
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 
 	// Check for advanced pulldown (only 1 fake frame)
-	CHECK_EQUAL(4, frame3.Odd.Frame);
-	CHECK_EQUAL(3, frame3.Even.Frame);
-	CHECK_EQUAL(5, frame4.Odd.Frame);
-	CHECK_EQUAL(4, frame4.Even.Frame);
-	CHECK_EQUAL(6, frame5.Odd.Frame);
-	CHECK_EQUAL(6, frame5.Even.Frame);
+	CHECK(frame3.Odd.Frame == 4);
+	CHECK(frame3.Even.Frame == 3);
+	CHECK(frame4.Odd.Frame == 5);
+	CHECK(frame4.Even.Frame == 4);
+	CHECK(frame5.Odd.Frame == 6);
+	CHECK(frame5.Even.Frame == 6);
 }
 
-TEST(30_fps_to_24_fps_Pulldown_Advanced)
+TEST_CASE( "30_fps_to_24_fps_Pulldown_Advanced", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -168,15 +164,15 @@ TEST(30_fps_to_24_fps_Pulldown_Advanced)
 	MappedFrame frame4 = mapping.GetMappedFrame(4);
 
 	// Check for advanced pulldown (only 1 fake frame)
-	CHECK_EQUAL(2, frame2.Odd.Frame);
-	CHECK_EQUAL(2, frame2.Even.Frame);
-	CHECK_EQUAL(4, frame3.Odd.Frame);
-	CHECK_EQUAL(4, frame3.Even.Frame);
-	CHECK_EQUAL(5, frame4.Odd.Frame);
-	CHECK_EQUAL(5, frame4.Even.Frame);
+	CHECK(frame2.Odd.Frame == 2);
+	CHECK(frame2.Even.Frame == 2);
+	CHECK(frame3.Odd.Frame == 4);
+	CHECK(frame3.Even.Frame == 4);
+	CHECK(frame4.Odd.Frame == 5);
+	CHECK(frame4.Even.Frame == 5);
 }
 
-TEST(30_fps_to_24_fps_Pulldown_None)
+TEST_CASE( "30_fps_to_24_fps_Pulldown_None", "[libopenshot][framemapper]" )
 {
 	// Create a reader
 	DummyReader r(Fraction(30, 1), 720, 480, 22000, 2, 5.0);
@@ -187,16 +183,16 @@ TEST(30_fps_to_24_fps_Pulldown_None)
 	MappedFrame frame5 = mapping.GetMappedFrame(5);
 
 	// Check for advanced pulldown (only 1 fake frame)
-	CHECK_EQUAL(4, frame4.Odd.Frame);
-	CHECK_EQUAL(4, frame4.Even.Frame);
-	CHECK_EQUAL(6, frame5.Odd.Frame);
-	CHECK_EQUAL(6, frame5.Even.Frame);
+	CHECK(frame4.Odd.Frame == 4);
+	CHECK(frame4.Even.Frame == 4);
+	CHECK(frame5.Odd.Frame == 6);
+	CHECK(frame5.Even.Frame == 6);
 }
 
-TEST(resample_audio_48000_to_41000)
+TEST_CASE( "resample_audio_48000_to_41000", "[libopenshot][framemapper]" )
 {
 	// Create a reader: 24 fps, 2 channels, 48000 sample rate
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 
@@ -205,25 +201,25 @@ TEST(resample_audio_48000_to_41000)
 	map.Open();
 
 	// Check details
-	CHECK_EQUAL(3, map.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(1470, map.GetFrame(1)->GetAudioSamplesCount());
-	CHECK_EQUAL(1470, map.GetFrame(2)->GetAudioSamplesCount());
-	CHECK_EQUAL(1470, map.GetFrame(50)->GetAudioSamplesCount());
+	CHECK(map.GetFrame(1)->GetAudioChannelsCount() == 3);
+	CHECK(map.GetFrame(1)->GetAudioSamplesCount() == 1470);
+	CHECK(map.GetFrame(2)->GetAudioSamplesCount() == 1470);
+	CHECK(map.GetFrame(50)->GetAudioSamplesCount() == 1470);
 
 	// Change mapping data
 	map.ChangeMapping(Fraction(25,1), PULLDOWN_NONE, 22050, 1, LAYOUT_MONO);
 
 	// Check details
-	CHECK_EQUAL(1, map.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_CLOSE(882, map.GetFrame(1)->GetAudioSamplesCount(), 10.0);
-	CHECK_CLOSE(882, map.GetFrame(2)->GetAudioSamplesCount(), 10.0);
-	CHECK_CLOSE(882, map.GetFrame(50)->GetAudioSamplesCount(), 10.0);
+	CHECK(map.GetFrame(1)->GetAudioChannelsCount() == 1);
+	CHECK(map.GetFrame(1)->GetAudioSamplesCount() == Approx(882).margin(10.0));
+	CHECK(map.GetFrame(2)->GetAudioSamplesCount() == Approx(882).margin(10.0));
+	CHECK(map.GetFrame(50)->GetAudioSamplesCount() == Approx(882).margin(10.0));
 
 	// Close mapper
 	map.Close();
 }
 
-TEST(resample_audio_mapper) {
+TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 	// This test verifies that audio data can be resampled on FrameMapper
 	// instances, even on frame rates that do not divide evenly, and that no audio data is misplaced
 	// or duplicated. We verify this by creating a SIN wave, add those data points to a DummyReader,
@@ -263,11 +259,11 @@ TEST(resample_audio_mapper) {
 	}
 
 	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
+	openshot::DummyReader r(openshot::Fraction(30, 1), 1, 1, 44100, 2, 30.0, &cache);
 	r.Open(); // Open the reader
 
 	// Sample rates
-	vector<int> arr = { 44100, 16000 };
+	std::vector<int> arr = { 44100, 16000 };
 	for (auto& rate : arr) {
 		// Reset SIN wave
 		ANGLE = 0.0;
@@ -294,14 +290,14 @@ TEST(resample_audio_mapper) {
 				float resampled_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
 
 				// TODO: 0.1 is much to broad to accurately test this, but without this, all the resampled values are too far away from expected
-				CHECK_CLOSE(sample_value, resampled_value, 0.1);
+				CHECK(resampled_value == Approx(sample_value).margin(0.1));
 			}
 			// Increment sample value
 			num_samples += map.GetFrame(frame_index)->GetAudioSamplesCount();
 		}
 
 		// Verify samples per second is correct (i.e. 44100)
-		CHECK_EQUAL(num_samples, map.info.sample_rate);
+		CHECK(map.info.sample_rate == num_samples);
 
 		// Create Timeline (same specs as reader)
 		Timeline t1(map.info.width, map.info.height, map.info.fps, rate, map.info.channels, map.info.channel_layout);
@@ -334,19 +330,20 @@ TEST(resample_audio_mapper) {
 		ANGLE = 0.0;
 
 		for (int frame_index = 1; frame_index < 24; frame_index++) {
-			t1.GetFrame(frame_index);
-			for (int sample_index = 0; sample_index < t1.GetFrame(frame_index)->GetAudioSamplesCount(); sample_index++) {
+			auto f = t1.GetFrame(frame_index);
+			auto sample_count = f->GetAudioSamplesCount();
+			for (int i = 0; i < sample_count; i++) {
 
 				// Calculate sin wave
 				float sample_value = abs(float(AMPLITUDE * sin(ANGLE) + OFFSET));
 				ANGLE += (2 * M_PI) / (NUM_SAMPLES * resample_multiplier);
 
 				// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
-				float resampled_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
+				float resampled_value = f->GetAudioSample(0, i, 1.0);
 
 				// TODO: 0.1 is much to broad to accurately test this, but without this, all the resampled values are too far away from expected
 				// Testing wave value X 2, since we have 2 overlapping clips
-				CHECK_CLOSE(sample_value * 2.0, resampled_value, 0.1);
+				CHECK(resampled_value == Approx(sample_value * 2.0).margin(0.1));
 
 			}
 		}
@@ -362,7 +359,7 @@ TEST(resample_audio_mapper) {
 	r.Close();
 }
 
-TEST(redistribute_samples_per_frame) {
+TEST_CASE( "redistribute_samples_per_frame", "[libopenshot][framemapper]" ) {
 	// This test verifies that audio data is correctly aligned on
 	// FrameMapper instances. We do this by creating 2 Clips based on the same parent reader
 	// (i.e. same exact audio sample data). We use a Timeline to overlap these clips
@@ -404,7 +401,7 @@ TEST(redistribute_samples_per_frame) {
 	r.Open(); // Open the reader
 
 	// Sample rates
-	vector<int> arr = { 24, 30, 60 };
+	std::vector<int> arr = { 24, 30, 60 };
 	for (auto& fps : arr) {
 		// Map to 24 fps, which should create a variable # of samples per frame
 		FrameMapper map(&r, Fraction(fps,1), PULLDOWN_NONE, 44100, 2, LAYOUT_STEREO);
@@ -414,16 +411,16 @@ TEST(redistribute_samples_per_frame) {
 		// Loop through samples, and verify FrameMapper didn't mess up individual sample values
 		sample_value = 0;
 		for (int frame_index = 1; frame_index <= map.info.fps.ToInt(); frame_index++) {
-			for (int sample_index = 0; sample_index < map.GetFrame(frame_index)->GetAudioSamplesCount(); sample_index++) {
+			for (int i = 0; i < map.GetFrame(frame_index)->GetAudioSamplesCount(); i++) {
 				// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
-				CHECK_EQUAL(sample_value + sample_index, map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0));
+				CHECK(map.GetFrame(frame_index)->GetAudioSample(0, i, 1.0) == sample_value + i);
 			}
 			// Increment sample value
 			sample_value += map.GetFrame(frame_index)->GetAudioSamplesCount();
 		}
 
 		// Verify samples per second is correct (i.e. 44100)
-		CHECK_EQUAL(sample_value, map.info.sample_rate);
+		CHECK(map.info.sample_rate == sample_value);
 
 		// Create Timeline (same specs as reader)
 		Timeline t1(map.info.width, map.info.height, map.info.fps, 44100, map.info.channels, map.info.channel_layout);
@@ -467,7 +464,7 @@ TEST(redistribute_samples_per_frame) {
 				// Check if sample_value - previous_value == 2
 				// This should be true, because the DummyReader is added twice to the Timeline, and is overlapping
 				// This should be an ever increasing linear curve, increasing by 2 each sample on the Timeline
-				CHECK_EQUAL(2, sample_diff);
+				CHECK(sample_diff == 2);
 
 				// Set previous sample value
 				previous_sample_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
@@ -485,7 +482,7 @@ TEST(redistribute_samples_per_frame) {
 	r.Close();
 }
 
-TEST(Json)
+TEST_CASE( "Json", "[libopenshot][framemapper]" )
 {
 	DummyReader r(Fraction(30,1), 1280, 720, 48000, 2, 5.0);
 	FrameMapper map(&r, Fraction(30, 1), PULLDOWN_NONE, 48000, 2, LAYOUT_STEREO);
@@ -494,8 +491,6 @@ TEST(Json)
 	const std::string map_config = map.Json();
 	map.SetJson(map_config);
 
-	CHECK_EQUAL(48000, map.info.sample_rate);
-	CHECK_EQUAL(30, map.info.fps.num);
+	CHECK(map.info.sample_rate == 48000);
+	CHECK(map.info.fps.num == 30);
 }
-
-}  // SUITE

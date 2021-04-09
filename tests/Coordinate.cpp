@@ -28,43 +28,39 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "Coordinate.h"
 #include "Exceptions.h"
 
 using namespace openshot;
 
-SUITE(Coordinate)
-{
-
-TEST(Default_Constructor)
+TEST_CASE( "default constructor", "[libopenshot][coordinate]" )
 {
 	// Create an empty coordinate
 	Coordinate c1;
 
-	CHECK_CLOSE(0.0f, c1.X, 0.00001);
-	CHECK_CLOSE(0.0f, c1.Y, 0.00001);
+	CHECK(c1.X == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Y == Approx(0.0f).margin(0.00001));
 }
 
-TEST(X_Y_Constructor)
+TEST_CASE( "XY constructor", "[libopenshot][coordinate]" )
 {
 	// Create an empty coordinate
 	Coordinate c1(2,8);
 
-	CHECK_CLOSE(2.0f, c1.X, 0.00001);
-	CHECK_CLOSE(8.0f, c1.Y, 0.00001);
+	CHECK(c1.X == Approx(2.0f).margin(0.00001));
+	CHECK(c1.Y == Approx(8.0f).margin(0.00001));
 }
 
-TEST(Pair_Constructor)
+TEST_CASE( "std::pair constructor", "[libopenshot][coordinate]" )
 {
 	Coordinate c1(std::pair<double,double>(12, 10));
-	CHECK_CLOSE(12.0f, c1.X, 0.00001);
-	CHECK_CLOSE(10.0f, c1.Y, 0.00001);
+	CHECK(c1.X == Approx(12.0f).margin(0.00001));
+	CHECK(c1.Y == Approx(10.0f).margin(0.00001));
 }
 
-TEST(Json)
+TEST_CASE( "Json", "[libopenshot][coordinate]" )
 {
 	openshot::Coordinate c(100, 200);
 	openshot::Coordinate c1;
@@ -73,14 +69,14 @@ TEST(Json)
 	// Check that JSON produced is identical
 	auto j = c.Json();
 	auto j1 = c1.Json();
-	CHECK_EQUAL(j, j1);
+	CHECK(j1 == j);
 	// Check Json::Value representation
 	auto jv = c.JsonValue();
 	auto jv_string = jv.toStyledString();
-	CHECK_EQUAL(jv_string, j1);
+	CHECK(j1 == jv_string);
 }
 
-TEST(SetJson) {
+TEST_CASE( "SetJson", "[libopenshot][coordinate]" ) {
 	// Construct our input Json representation
 	const std::string json_input = R"json(
 	{
@@ -89,11 +85,9 @@ TEST(SetJson) {
 	}
 		)json";
 	openshot::Coordinate c;
-	CHECK_THROW(c.SetJson("}{"), openshot::InvalidJSON);
+	CHECK_THROWS_AS(c.SetJson("}{"), openshot::InvalidJSON);
 	// Check that values set via SetJson() are correct
 	c.SetJson(json_input);
-	CHECK_CLOSE(100.0, c.X, 0.01);
-	CHECK_CLOSE(50.0, c.Y, 0.01);
+	CHECK(c.X == Approx(100.0).margin(0.01));
+	CHECK(c.Y == Approx(50.0).margin(0.01));
 }
-
-}  // SUITE
