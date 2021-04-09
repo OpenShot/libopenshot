@@ -36,7 +36,7 @@ using namespace std;
 using namespace openshot;
 
 FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType target_pulldown, int target_sample_rate, int target_channels, ChannelLayout target_channel_layout) :
-		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL)
+		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), parent_position(0.0)
 {
 	// Set the original frame rate from the reader
 	original = Fraction(reader->info.fps.num, reader->info.fps.den);
@@ -111,6 +111,16 @@ void FrameMapper::Init()
 	// Clear the fields & frames lists
 	fields.clear();
 	frames.clear();
+
+	// Find parent position (if any)
+    Clip *parent = (Clip *) ParentClip();
+    if (parent) {
+        parent_position = parent->Position();
+        parent_start = parent->Start();
+    } else {
+        parent_position = 0.0;
+        parent_start = 0.0;
+    }
 
 	// Mark as not dirty
 	is_dirty = false;
@@ -263,8 +273,9 @@ void FrameMapper::Init()
 
 			while (remaining_samples > 0)
 			{
-				// get original samples
-				int original_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(end_samples_frame), original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
+				// Get original samples (with NO framerate adjustments)
+				// This is the original reader's frame numbers
+				int original_samples = Frame::GetSamplesPerFrame(end_samples_frame, original, reader->info.sample_rate, reader->info.channels) - end_samples_position;
 
 				// Enough samples
 				if (original_samples >= remaining_samples)
@@ -395,9 +406,20 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
 
-	// Check if mappings are dirty (and need to be recalculated)
+    // Find parent properties (if any)
+    Clip *parent = (Clip *) ParentClip();
+    if (parent) {
+        float position = parent->Position();
+        float start = parent->Start();
+        if (parent_position != position || parent_start != start) {
+            // Force dirty if parent clip has moved or been trimmed
+            // since this heavily affects frame #s and audio mappings
+            is_dirty = true;
+        }
+    }
+
+    // Check if mappings are dirty (and need to be recalculated)
 	if (is_dirty)
-		// Recalculate mappings
 		Init();
 
 	// Check final cache a 2nd time (due to potential lock already generating this frame)

@@ -90,9 +90,6 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
         // Update progress
         processingController->SetProgress(uint(100*(frame_number-start)/(end-start)));
     }
-    // Show average and max transformation parameters
-    std::cout<<"\nAVERAGE DX: "<<avr_dx/(frame_number-1)<<" AVERAGE DY: "<<avr_dy/(frame_number-1)<<" AVERAGE A: "<<avr_da/(frame_number-1)<<"\n";
-    std::cout<<"MAX X: "<<max_dx<<" MAX Y: "<<max_dy<<" MAX A: "<<max_da<<"\n\n";
 
     // Calculate trajectory data
     std::vector <CamTrajectory> trajectory = ComputeFramesTrajectory();
@@ -193,9 +190,6 @@ bool CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
 
     prev_to_cur_transform.push_back(TransformParam(dx, dy, da));
     frame.copyTo(prev_grey);
-
-    // Show processing info
-    cout << "Frame: " << frameNum << " - good optical flow: " << prev_corner2.size() << endl;
 
     return true;
 }
