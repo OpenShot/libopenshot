@@ -246,6 +246,7 @@ namespace openshot {
 		/// write all queued frames
 		void write_queued_frames();
 
+		void free_resources();
 	public:
 
 		/// @brief Constructor for FFmpegWriter.
@@ -253,6 +254,8 @@ namespace openshot {
 		///
 		/// @param path The file path of the video file you want to open and read
 		FFmpegWriter(const std::string& path);
+
+		~FFmpegWriter();
 
 		/// Close the writer
 		void Close();
