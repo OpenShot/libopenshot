@@ -228,10 +228,10 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 	// Create cache object to hold test frames
 	CacheMemory cache;
 
-	int OFFSET = 0;
-	float AMPLITUDE = 0.75;
-	double ANGLE = 0.0;
-	int NUM_SAMPLES = 100;
+	const int OFFSET = 0;
+	const float AMPLITUDE = 0.75;
+	const int NUM_SAMPLES = 100;
+	double angle = 0.0;
 
 	// Let's create some test frames
 	for (int64_t frame_number = 1; frame_number <= 90; frame_number++) {
@@ -245,9 +245,9 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 		for (int sample_number = 0; sample_number < sample_count; sample_number++)
 		{
 			// Calculate sin wave
-			float sample_value = float(AMPLITUDE * sin(ANGLE) + OFFSET);
+			float sample_value = float(AMPLITUDE * sin(angle) + OFFSET);
 			audio_buffer[sample_number] = abs(sample_value);
-			ANGLE += (2 * M_PI) / NUM_SAMPLES;
+			angle += (2 * M_PI) / NUM_SAMPLES;
 		}
 
 		// Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
@@ -268,7 +268,7 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 	std::vector<int> arr = { 44100, 16000 };
 	for (auto& rate : arr) {
 		// Reset SIN wave
-		ANGLE = 0.0;
+		angle = 0.0;
 
 		// Map to 24 fps, which should create a variable # of samples per frame
 		FrameMapper map(&r, Fraction(24,1), PULLDOWN_NONE, rate, 2, LAYOUT_STEREO);
@@ -285,8 +285,8 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 			for (int sample_index = 0; sample_index < sample_count; sample_index++) {
 
 				// Calculate sin wave
-				float sample_value = abs(float(AMPLITUDE * sin(ANGLE) + OFFSET));
-				ANGLE += (2 * M_PI) / (NUM_SAMPLES * resample_multiplier);
+				float sample_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
+				angle += (2 * M_PI) / (NUM_SAMPLES * resample_multiplier);
 
 				// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
 				float resampled_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
@@ -329,7 +329,7 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 		t1.Open();
 
 		// Reset SIN wave
-		ANGLE = 0.0;
+		angle = 0.0;
 
 		for (int frame_index = 1; frame_index < 24; frame_index++) {
 			auto f = t1.GetFrame(frame_index);
@@ -337,8 +337,8 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 			for (int i = 0; i < sample_count; i++) {
 
 				// Calculate sin wave
-				float sample_value = abs(float(AMPLITUDE * sin(ANGLE) + OFFSET));
-				ANGLE += (2 * M_PI) / (NUM_SAMPLES * resample_multiplier);
+				float sample_value = abs(float(AMPLITUDE * sin(angle) + OFFSET));
+				angle += (2 * M_PI) / (NUM_SAMPLES * resample_multiplier);
 
 				// Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
 				float resampled_value = f->GetAudioSample(0, i, 1.0);
@@ -503,9 +503,9 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
 
     for (auto& frame_rate : rates) {
         // Init sin wave variables
-        int OFFSET = 0;
-        float AMPLITUDE = 0.75;
-        int NUM_SAMPLES = 100;
+        const int OFFSET = 0;
+        const float AMPLITUDE = 0.75;
+        const int NUM_SAMPLES = 100;
         double angle = 0.0;
 
         // Create cache object to hold test frames
