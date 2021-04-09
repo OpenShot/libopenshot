@@ -368,7 +368,7 @@ TEST(redistribute_samples_per_frame) {
 	// (i.e. same exact audio sample data). We use a Timeline to overlap these clips
 	// (and offset 1 clip by 1 frame), and we verify that the correct # of samples is returned by each
 	// Clip Frame instance. In the past, FrameMappers would sometimes generate the wrong # of samples
-	// in a frame, and the Timeline recieve mismatching # of audio samples from 2 or more clips...
+	// in a frame, and the Timeline receive mismatching # of audio samples from 2 or more clips...
 	// causing audio data to be truncated and lost (i.e. creating a pop).
 
 	// Create cache object to hold test frames
@@ -483,6 +483,135 @@ TEST(redistribute_samples_per_frame) {
 	// Clean up
 	cache.Clear();
 	r.Close();
+}
+
+TEST(distribute_samples) {
+    // This test verifies that audio data can be redistributed correctly
+    // between common and uncommon frame rates
+    int sample_rate = 48000;
+    int channels = 2;
+    int num_seconds = 1;
+
+    // Source frame rates (varies the # of samples per frame)
+    vector<openshot::Fraction> rates = { openshot::Fraction(30,1),
+                                         openshot::Fraction(24,1) ,
+                                         openshot::Fraction(119,4),
+                                         openshot::Fraction(30000,1001) };
+    for (auto& frame_rate : rates) {
+        // Init sin wave variables
+        int OFFSET = 0;
+        float AMPLITUDE = 0.75;
+        double ANGLE = 0.0;
+        int NUM_SAMPLES = 100;
+
+        // Create cache object to hold test frames
+        CacheMemory cache;
+
+        // Let's create some test frames
+        for (int64_t frame_number = 1; frame_number <= (frame_rate.ToFloat() * num_seconds * 2); frame_number++) {
+            // Create blank frame (with specific frame #, samples, and channels)
+            int sample_count = openshot::Frame::GetSamplesPerFrame(frame_number, frame_rate, sample_rate, channels);
+            std::shared_ptr<openshot::Frame> f(new openshot::Frame(frame_number, sample_count, channels));
+            f->SampleRate(sample_rate);
+
+            // Create test samples with sin wave (predictable values)
+            float *audio_buffer = new float[sample_count * 2];
+            for (int sample_number = 0; sample_number < sample_count; sample_number++) {
+                // Calculate sin wave
+                float sample_value = float(AMPLITUDE * sin(ANGLE) + OFFSET);
+                audio_buffer[sample_number] = abs(sample_value);
+                ANGLE += (2 * M_PI) / NUM_SAMPLES;
+            }
+
+            // Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
+            f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
+            f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
+
+            // Add test frame to dummy reader
+            cache.Add(f);
+        }
+
+        // Create a default fraction (should be 1/1)
+        openshot::DummyReader r(frame_rate, 1920, 1080, sample_rate, channels, 30.0, &cache);
+        r.Open(); // Open the reader
+
+        // Target frame rates
+        vector<openshot::Fraction> mapped_rates = { openshot::Fraction(30,1),
+                                     openshot::Fraction(24,1) ,
+                                     openshot::Fraction(119,4),
+                                     openshot::Fraction(30000,1001) };
+        for (auto &mapped_rate : mapped_rates) {
+            // Reset SIN wave
+            ANGLE = 0.0;
+
+            // Map to different fps
+            FrameMapper map(&r, mapped_rate, PULLDOWN_NONE, sample_rate, channels, LAYOUT_STEREO);
+            map.info.has_audio = true;
+            map.Open();
+
+            // Loop through samples, and verify FrameMapper didn't mess up individual sample values
+            int num_samples = 0;
+            for (int frame_index = 1; frame_index <= (map.info.fps.ToInt() * num_seconds); frame_index++) {
+                int sample_count = map.GetFrame(frame_index)->GetAudioSamplesCount();
+                for (int sample_index = 0; sample_index < sample_count; sample_index++) {
+
+                    // Calculate sin wave
+                    float predicted_value = abs(float(AMPLITUDE * sin(ANGLE) + OFFSET));
+                    ANGLE += (2 * M_PI) / NUM_SAMPLES;
+
+                    // Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
+                    float mapped_value = map.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
+                    CHECK_CLOSE(predicted_value, mapped_value, 0.001);
+                }
+                // Increment sample value
+                num_samples += map.GetFrame(frame_index)->GetAudioSamplesCount();
+            }
+
+            float clip_position = 3.77;
+            int starting_clip_frame = round(clip_position * map.info.fps.ToFloat()) + 1;
+
+            // Create Timeline (same specs as reader)
+            Timeline t1(map.info.width, map.info.height, map.info.fps, map.info.sample_rate, map.info.channels,
+                        map.info.channel_layout);
+
+            Clip c1;
+            c1.Reader(&map);
+            c1.Layer(1);
+            c1.Position(clip_position);
+            c1.Start(0.0);
+            c1.End(10.0);
+
+            // Add clips
+            t1.AddClip(&c1);
+            t1.Open();
+
+            // Reset SIN wave
+            ANGLE = 0.0;
+
+            for (int frame_index = starting_clip_frame; frame_index < (starting_clip_frame + (t1.info.fps.ToFloat() * num_seconds)); frame_index++) {
+                for (int sample_index = 0; sample_index < t1.GetFrame(frame_index)->GetAudioSamplesCount(); sample_index++) {
+                    // Calculate sin wave
+                    float predicted_value = abs(float(AMPLITUDE * sin(ANGLE) + OFFSET));
+                    ANGLE += (2 * M_PI) / NUM_SAMPLES;
+
+                    // Verify each mapped sample value is correct (after being redistributed by the FrameMapper)
+                    float timeline_value = t1.GetFrame(frame_index)->GetAudioSample(0, sample_index, 1.0);
+
+                    // Testing wave value X 2, since we have 2 overlapping clips
+                    CHECK_CLOSE(predicted_value, timeline_value, 0.001);
+                }
+            }
+
+            // Close mapper
+            map.Close();
+            t1.Close();
+        }
+
+        // Clean up reader
+        r.Close();
+        cache.Clear();
+
+    } // for rates
 }
 
 TEST(Json)
