@@ -183,8 +183,8 @@ TEST_CASE( "freshen frames", "[libopensoht][cachedisk]" )
 
 TEST_CASE( "multiple remove", "[libopenshot][cachedisk]" )
 {
-	// Create cache object in default temp_path()/preview-cache location
-	CacheDisk c("", "PPM", 1.0, 0.25);
+	QDir temp_path = QDir::tempPath() + QString("/multiple-remove/");
+	CacheDisk c(temp_path.path().toStdString(), "PPM", 1.0, 0.25);
 
 	// Add frames to disk cache
 	for (int i = 1; i <= 20; i++)
@@ -214,7 +214,6 @@ TEST_CASE( "multiple remove", "[libopenshot][cachedisk]" )
 	CHECK(c.Count() == 0);
 
 	// Delete cache directory
-	QDir temp_path = QDir::tempPath() + "/preview-cache/";
 	temp_path.removeRecursively();
 }
 
