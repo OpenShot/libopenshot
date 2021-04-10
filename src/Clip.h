@@ -37,13 +37,14 @@
 	#include <opencv2/opencv.hpp>
 	#include <opencv2/core.hpp>
 	#undef uint64
-	#undef int64	
-	
+	#undef int64
+
 #endif
 
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
+
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
@@ -121,11 +122,12 @@ namespace openshot {
 
 	private:
 		bool waveform; ///< Should a waveform be used instead of the clip's image
-		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
-		bool is_open;	///> Is Reader opened
+		std::list<openshot::EffectBase*> effects; ///< List of clips on this timeline
+		bool is_open;	///< Is Reader opened
 		std::string parentObjectId; ///< Id of the bounding box that this clip is attached to
 		std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
 		openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
+
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -262,11 +264,11 @@ namespace openshot {
 		/// Get the current reader
 		openshot::ReaderBase* Reader();
 
-		/// Override End() method
+		// Override End() method
 		float End() const; ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
@@ -280,7 +282,7 @@ namespace openshot {
 		/// @param effect Remove an effect from the clip.
 		void RemoveEffect(openshot::EffectBase* effect);
 
-		/// Waveform property
+		// Waveform property
 		bool Waveform() { return waveform; } ///< Get the waveform property of this clip
 		void Waveform(bool value) { waveform = value; } ///< Set the waveform property of this clip
 
@@ -315,11 +317,11 @@ namespace openshot {
 		openshot::Keyframe perspective_c4_x; ///< Curves representing X for coordinate 4
 		openshot::Keyframe perspective_c4_y; ///< Curves representing Y for coordinate 4
 
-		/// Audio channel filter and mappings
+		// Audio channel filter and mappings
 		openshot::Keyframe channel_filter; ///< A number representing an audio channel to filter (clears all other channels)
 		openshot::Keyframe channel_mapping; ///< A number representing an audio channel to output (only works when filtering a channel)
 
-		/// Override has_video and has_audio properties of clip (and their readers)
+		// Override has_video and has_audio properties of clip (and their readers)
 		openshot::Keyframe has_audio; ///< An optional override to determine if this clip has audio (-1=undefined, 0=no, 1=yes)
 		openshot::Keyframe has_video; ///< An optional override to determine if this clip has video (-1=undefined, 0=no, 1=yes)
 	};

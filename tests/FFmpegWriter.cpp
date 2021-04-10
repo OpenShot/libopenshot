@@ -31,9 +31,8 @@
 #include <sstream>
 #include <memory>
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
@@ -43,8 +42,7 @@
 using namespace std;
 using namespace openshot;
 
-SUITE(FFMpegWriter) {
-TEST(Webm)
+TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
 {
 	// Reader
 	stringstream path;
@@ -73,9 +71,9 @@ TEST(Webm)
 	r1.Open();
 
 	// Verify various settings on new MP4
-	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(24, r1.info.fps.num);
-	CHECK_EQUAL(1, r1.info.fps.den);
+	CHECK(r1.GetFrame(1)->GetAudioChannelsCount() == 2);
+	CHECK(r1.info.fps.num == 24);
+	CHECK(r1.info.fps.den == 1);
 
 	// Get a specific frame
 	std::shared_ptr<Frame> f = r1.GetFrame(8);
@@ -85,13 +83,13 @@ TEST(Webm)
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_CLOSE(23, (int)pixels[pixel_index], 5);
-	CHECK_CLOSE(23, (int)pixels[pixel_index + 1], 5);
-	CHECK_CLOSE(23, (int)pixels[pixel_index + 2], 5);
-	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+	CHECK((int)pixels[pixel_index] == Approx(23).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(23).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(23).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 }
 
-TEST(Options_Overloads)
+TEST_CASE( "Options_Overloads", "[libopenshot][ffmpegwriter]" )
 {
 	// Reader
 	stringstream path;
@@ -120,16 +118,14 @@ TEST(Options_Overloads)
 	r1.Open();
 
 	// Verify implied settings
-	CHECK_EQUAL(true, r1.info.has_audio);
-	CHECK_EQUAL(true, r1.info.has_video);
+	CHECK(r1.info.has_audio == true);
+	CHECK(r1.info.has_video == true);
 
-	CHECK_EQUAL(2, r1.GetFrame(1)->GetAudioChannelsCount());
-	CHECK_EQUAL(LAYOUT_STEREO, r1.info.channel_layout);
+	CHECK(r1.GetFrame(1)->GetAudioChannelsCount() == 2);
+	CHECK(r1.info.channel_layout == LAYOUT_STEREO);
 
-	CHECK_EQUAL(1, r1.info.pixel_ratio.num);
-	CHECK_EQUAL(1, r1.info.pixel_ratio.den);
-	CHECK_EQUAL(false, r1.info.interlaced_frame);
-	CHECK_EQUAL(true, r1.info.top_field_first);
+	CHECK(r1.info.pixel_ratio.num == 1);
+	CHECK(r1.info.pixel_ratio.den == 1);
+	CHECK_FALSE(r1.info.interlaced_frame);
+	CHECK(r1.info.top_field_first == true);
 }
-
-} // SUITE()

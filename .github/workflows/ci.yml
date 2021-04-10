@@ -1,4 +1,4 @@
-name: CI Build
+name: libopenshot CI Build
 on: [push, pull_request]
 jobs:
   build:
@@ -13,6 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      # Work around a codecov issue detecting commit SHAs
+      # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
+      with:
+        fetch-depth: 0
 
     - uses: haya14busa/action-cond@v1
       id: coverage
@@ -31,8 +35,13 @@ jobs:
           libopenshot-audio-dev \
           qtbase5-dev qtbase5-dev-tools \
           libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
-          libzmq3-dev libmagick++-dev libunittest++-dev \
+          libzmq3-dev libmagick++-dev \
           libopencv-dev libprotobuf-dev protobuf-compiler
+        # Install catch2 package from Ubuntu 20.10, since for some reason
+        # even 20.04 only has Catch 1.12.1 available.
+        wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
+        sudo dpkg -i catch2_2.13.0-1_all.deb
+
 
     - name: Build libopenshot
       shell: bash
@@ -47,7 +56,7 @@ jobs:
       shell: bash
       run: |
         pushd build
-        cmake --build . --target os_test -- VERBOSE=1
+        cmake --build . --target coverage -- VERBOSE=1
         popd
 
     - name: Install libopenshot
@@ -61,4 +70,3 @@ jobs:
       if: ${{ matrix.compiler == 'clang' }}
       with:
         file: build/coverage.info
-

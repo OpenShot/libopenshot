@@ -28,51 +28,46 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef USE_IMAGEMAGICK
+
 #include <sstream>
 #include <memory>
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
 
-#ifdef USE_IMAGEMAGICK
 #include "ImageWriter.h"
 #include "Exceptions.h"
 #include "ImageReader.h"
 #include "FFmpegReader.h"
 #include "Frame.h"
 
-using namespace std;
 using namespace openshot;
 
-SUITE(ImageWriter)
-{
-
-TEST(Gif)
+TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 {
 	// Reader ---------------
 
 	// Bad path
 	FFmpegReader bad_r("/tmp/bleeblorp.xls", false);
-	CHECK_THROW(bad_r.Open(), InvalidFile);
+	CHECK_THROWS_AS(bad_r.Open(), InvalidFile);
 
 	// Good path
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 
 	// Read-before-open error
-	CHECK_THROW(r.GetFrame(1), ReaderClosed);
+	CHECK_THROWS_AS(r.GetFrame(1), ReaderClosed);
 
 	r.Open();
 
 	/* WRITER ---------------- */
 	ImageWriter w("output1.gif");
 
-	CHECK_EQUAL(false, w.IsOpen());
+	CHECK_FALSE(w.IsOpen());
 
 	// Check for exception on write-before-open
-	CHECK_THROW(w.WriteFrame(&r, 500, 504), WriterClosed);
+	CHECK_THROWS_AS(w.WriteFrame(&r, 500, 504), WriterClosed);
 
 	// Set the image output settings (format, fps, width, height, quality, loops, combine)
 	w.SetVideoOptions("GIF", r.info.fps, r.info.width, r.info.height, 70, 1, true);
@@ -91,18 +86,18 @@ TEST(Gif)
 	ImageReader r1("output1.gif[4]");
 
 	// Basic Reader state queries
-	CHECK_EQUAL("ImageReader", r1.Name());
+	CHECK(r1.Name() == "ImageReader");
 
 	CacheBase* c = r1.GetCache();
-	CHECK_EQUAL(true, c == nullptr);
+	CHECK(c == nullptr);
 
-	CHECK_EQUAL(false, r1.IsOpen());
+	CHECK_FALSE(r1.IsOpen());
 	r1.Open();
-	CHECK_EQUAL(true, r1.IsOpen());
+	CHECK(r1.IsOpen() == true);
 
 	// Verify various settings
-	CHECK_EQUAL(r.info.width, r1.info.width);
-	CHECK_EQUAL(r.info.height, r1.info.height);
+	CHECK(r1.info.width == r.info.width);
+	CHECK(r1.info.height == r.info.height);
 
 	// Get a specific frame
 	std::shared_ptr<Frame> f = r1.GetFrame(8);
@@ -112,11 +107,9 @@ TEST(Gif)
 	int pixel_index = 230 * 4; // pixel 230 (4 bytes per pixel)
 
 	// Check image properties
-	CHECK_CLOSE(20, (int)pixels[pixel_index], 5);
-	CHECK_CLOSE(18, (int)pixels[pixel_index + 1], 5);
-	CHECK_CLOSE(11, (int)pixels[pixel_index + 2], 5);
-	CHECK_CLOSE(255, (int)pixels[pixel_index + 3], 5);
+	CHECK((int)pixels[pixel_index] == Approx(20).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(18).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(11).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 }
-
-} // SUITE
-#endif
+#endif  // USE_IMAGEMAGICK

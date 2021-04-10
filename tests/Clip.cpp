@@ -31,15 +31,8 @@
 #include <sstream>
 #include <memory>
 
-#include "UnitTest++.h"
+#include <catch2/catch.hpp>
 
-// Work around older versions of UnitTest++ without REQUIRE
-#ifndef REQUIRE
-  #define REQUIRE
-#endif
-
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "Clip.h"
 #include "Frame.h"
 #include "Fraction.h"
@@ -48,25 +41,22 @@
 
 using namespace openshot;
 
-SUITE(Clip)
-{
-
-TEST(Default_Constructor)
+TEST_CASE( "default constructor", "[libopenshot][clip]" )
 {
 	// Create a empty clip
 	Clip c1;
 
 	// Check basic settings
-	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);
-	CHECK_EQUAL(GRAVITY_CENTER, c1.gravity);
-	CHECK_EQUAL(SCALE_FIT, c1.scale);
-	CHECK_EQUAL(0, c1.Layer());
-	CHECK_CLOSE(0.0f, c1.Position(), 0.00001);
-	CHECK_CLOSE(0.0f, c1.Start(), 0.00001);
-	CHECK_CLOSE(0.0f, c1.End(), 0.00001);
+	CHECK(c1.anchor == ANCHOR_CANVAS);
+	CHECK(c1.gravity == GRAVITY_CENTER);
+	CHECK(c1.scale == SCALE_FIT);
+	CHECK(c1.Layer() == 0);
+	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Approx(0.0f).margin(0.00001));
 }
 
-TEST(Clip_Constructor)
+TEST_CASE( "path string constructor", "[libopenshot][clip]" )
 {
 	// Create a empty clip
 	std::stringstream path;
@@ -75,29 +65,29 @@ TEST(Clip_Constructor)
 	c1.Open();
 
 	// Check basic settings
-	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);
-	CHECK_EQUAL(GRAVITY_CENTER, c1.gravity);
-	CHECK_EQUAL(SCALE_FIT, c1.scale);
-	CHECK_EQUAL(0, c1.Layer());
-	CHECK_CLOSE(0.0f, c1.Position(), 0.00001);
-	CHECK_CLOSE(0.0f, c1.Start(), 0.00001);
-	CHECK_CLOSE(4.39937f, c1.End(), 0.00001);
+	CHECK(c1.anchor == ANCHOR_CANVAS);
+	CHECK(c1.gravity == GRAVITY_CENTER);
+	CHECK(c1.scale == SCALE_FIT);
+	CHECK(c1.Layer() == 0);
+	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Approx(4.39937f).margin(0.00001));
 }
 
-TEST(Basic_Gettings_and_Setters)
+TEST_CASE( "basic getters and setters", "[libopenshot][clip]" )
 {
 	// Create a empty clip
 	Clip c1;
 
 	// Check basic settings
-	CHECK_THROW(c1.Open(), ReaderClosed);
-	CHECK_EQUAL(ANCHOR_CANVAS, c1.anchor);
-	CHECK_EQUAL(GRAVITY_CENTER, c1.gravity);
-	CHECK_EQUAL(SCALE_FIT, c1.scale);
-	CHECK_EQUAL(0, c1.Layer());
-	CHECK_CLOSE(0.0f, c1.Position(), 0.00001);
-	CHECK_CLOSE(0.0f, c1.Start(), 0.00001);
-	CHECK_CLOSE(0.0f, c1.End(), 0.00001);
+	CHECK_THROWS_AS(c1.Open(), ReaderClosed);
+	CHECK(c1.anchor == ANCHOR_CANVAS);
+	CHECK(c1.gravity == GRAVITY_CENTER);
+	CHECK(c1.scale == SCALE_FIT);
+	CHECK(c1.Layer() == 0);
+	CHECK(c1.Position() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.Start() == Approx(0.0f).margin(0.00001));
+	CHECK(c1.End() == Approx(0.0f).margin(0.00001));
 
 	// Change some properties
 	c1.Layer(1);
@@ -105,13 +95,13 @@ TEST(Basic_Gettings_and_Setters)
 	c1.Start(3.5);
 	c1.End(10.5);
 
-	CHECK_EQUAL(1, c1.Layer());
-	CHECK_CLOSE(5.0f, c1.Position(), 0.00001);
-	CHECK_CLOSE(3.5f, c1.Start(), 0.00001);
-	CHECK_CLOSE(10.5f, c1.End(), 0.00001);
+	CHECK(c1.Layer() == 1);
+	CHECK(c1.Position() == Approx(5.0f).margin(0.00001));
+	CHECK(c1.Start() == Approx(3.5f).margin(0.00001));
+	CHECK(c1.End() == Approx(10.5f).margin(0.00001));
 }
 
-TEST(Properties)
+TEST_CASE( "properties", "[libopenshot][clip]" )
 {
 	// Create a empty clip
 	Clip c1;
@@ -136,11 +126,11 @@ TEST(Properties)
 		properties.c_str(),
 		properties.c_str() + properties.size(),
 		&root, &errors );
-	CHECK_EQUAL(true, success);
+	CHECK(success == true);
 
 	// Check for specific things
-	CHECK_CLOSE(1.0f, root["alpha"]["value"].asDouble(), 0.01);
-	CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
+	CHECK(root["alpha"]["value"].asDouble() == Approx(1.0f).margin(0.01));
+	CHECK(root["alpha"]["keyframe"].asBool() == true);
 
 	// Get properties JSON string at frame 250
 	properties = c1.PropertiesJSON(250);
@@ -151,11 +141,11 @@ TEST(Properties)
 		properties.c_str(),
 		properties.c_str() + properties.size(),
 		&root, &errors );
-	REQUIRE CHECK_EQUAL(true, success);
+	CHECK(success == true);
 
 	// Check for specific things
-	CHECK_CLOSE(0.5f, root["alpha"]["value"].asDouble(), 0.01);
-	CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
+	CHECK(root["alpha"]["value"].asDouble() == Approx(0.5f).margin(0.01));
+	CHECK_FALSE(root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 250 (again)
 	properties = c1.PropertiesJSON(250);
@@ -166,10 +156,10 @@ TEST(Properties)
 		properties.c_str(),
 		properties.c_str() + properties.size(),
 		&root, &errors );
-	REQUIRE CHECK_EQUAL(true, success);
+	CHECK(success == true);
 
 	// Check for specific things
-	CHECK_EQUAL(false, root["alpha"]["keyframe"].asBool());
+	CHECK_FALSE(root["alpha"]["keyframe"].asBool());
 
 	// Get properties JSON string at frame 500
 	properties = c1.PropertiesJSON(500);
@@ -180,17 +170,17 @@ TEST(Properties)
 		properties.c_str(),
 		properties.c_str() + properties.size(),
 		&root, &errors );
-	REQUIRE CHECK_EQUAL(true, success);
+	CHECK(success == true);
 
 	// Check for specific things
-	CHECK_CLOSE(0.0f, root["alpha"]["value"].asDouble(), 0.00001);
-	CHECK_EQUAL(true, root["alpha"]["keyframe"].asBool());
+	CHECK(root["alpha"]["value"].asDouble() == Approx(0.0f).margin(0.00001));
+	CHECK(root["alpha"]["keyframe"].asBool() == true);
 
 	// Free up the reader we allocated
 	delete reader;
 }
 
-TEST(Effects)
+TEST_CASE( "effects", "[libopenshot][clip]" )
 {
 	// Load clip with video
 	std::stringstream path;
@@ -209,13 +199,13 @@ TEST(Effects)
 	int pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(255, (int)pixels[pixel_index]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK((int)pixels[pixel_index] == 255);
+	CHECK((int)pixels[pixel_index + 1] == 255);
+	CHECK((int)pixels[pixel_index + 2] == 255);
+	CHECK((int)pixels[pixel_index + 3] == 255);
 
 	// Check the # of Effects
-	CHECK_EQUAL(1, (int)c10.Effects().size());
+	CHECK((int)c10.Effects().size() == 1);
 
 
 	// Add a 2nd negate effect
@@ -230,16 +220,16 @@ TEST(Effects)
 	pixel_index = 112 * 4; // pixel 112 (4 bytes per pixel)
 
 	// Check image properties on scanline 10, pixel 112
-	CHECK_EQUAL(0, (int)pixels[pixel_index]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 1]);
-	CHECK_EQUAL(0, (int)pixels[pixel_index + 2]);
-	CHECK_EQUAL(255, (int)pixels[pixel_index + 3]);
+	CHECK((int)pixels[pixel_index] == 0);
+	CHECK((int)pixels[pixel_index + 1] == 0);
+	CHECK((int)pixels[pixel_index + 2] == 0);
+	CHECK((int)pixels[pixel_index + 3] == 255);
 
 	// Check the # of Effects
-	CHECK_EQUAL(2, (int)c10.Effects().size());
+	CHECK((int)c10.Effects().size() == 2);
 }
 
-TEST(Verify_Parent_Timeline)
+TEST_CASE( "verify parent Timeline", "[libopenshot][clip]" )
 {
 	Timeline t1(640, 480, Fraction(30,1), 44100, 2, LAYOUT_STEREO);
 
@@ -250,15 +240,13 @@ TEST(Verify_Parent_Timeline)
 	c1.Open();
 
 	// Check size of frame image
-	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->width(), 1280);
-	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 720);
+	CHECK(1280 == c1.GetFrame(1)->GetImage()->width());
+	CHECK(720 == c1.GetFrame(1)->GetImage()->height());
 
 	// Add clip to timeline
 	t1.AddClip(&c1);
 
 	// Check size of frame image (with an associated timeline)
-	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->width(), 640);
-	CHECK_EQUAL(c1.GetFrame(1)->GetImage()->height(), 360);
+	CHECK(640 == c1.GetFrame(1)->GetImage()->width());
+	CHECK(360 == c1.GetFrame(1)->GetImage()->height());
 }
-
-} // SUITE
