@@ -521,7 +521,7 @@ TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 	//      like confirming some default values in the new object.
 }
 
-TEST_CASE( "TrackedObjectBBox AddBox and RemoveBox" "[libopenshot][keyframe]" )
+TEST_CASE( "TrackedObjectBBox AddBox and RemoveBox", "[libopenshot][keyframe]" )
 {
 	TrackedObjectBBox kfb;
 
