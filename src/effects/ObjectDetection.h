@@ -83,11 +83,13 @@ namespace openshot
 		float confidence_threshold = 0.5; 
 		/// Contain the user selected classes for visualization
 		std::vector<std::string> display_classes;
+		std::string class_filter;
 
 		/// Init effect settings
 		void init_effect_details();
-
-		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber);
+		/// Draw bounding box with class and score text 
+		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, float alpha, 
+                    	int thickness, bool is_background);
 		/// Draw rotated rectangle with alpha channel
 		void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
 

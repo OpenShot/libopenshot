@@ -40,7 +40,7 @@ using namespace openshot;
 ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
 {
     // Init effect properties
-	init_effect_details();
+    init_effect_details();
 
     // Tries to load the tracker data from protobuf
     LoadObjDetectdData(clipObDetectDataPath);
@@ -52,8 +52,8 @@ ObjectDetection::ObjectDetection(std::string clipObDetectDataPath)
 // Default constructor
 ObjectDetection::ObjectDetection()
 {
-	// Init effect properties
-	init_effect_details();
+    // Init effect properties
+    init_effect_details();
 
     // Initialize the selected object index as the first object index
     selectedObjectIndex = trackedObjects.begin()->first;
@@ -62,15 +62,15 @@ ObjectDetection::ObjectDetection()
 // Init effect settings
 void ObjectDetection::init_effect_details()
 {
-	/// Initialize the values of the EffectInfo struct.
-	InitEffectInfo();
+    /// Initialize the values of the EffectInfo struct.
+    InitEffectInfo();
 
-	/// Set the effect info
-	info.class_name = "Object Detector";
-	info.name = "Object Detector";
-	info.description = "Detect objects through the video.";
-	info.has_audio = false;
-	info.has_video = true;
+    /// Set the effect info
+    info.class_name = "Object Detector";
+    info.name = "Object Detector";
+    info.description = "Detect objects through the video.";
+    info.has_audio = false;
+    info.has_video = true;
     info.has_tracked_object = true;
 }
 
@@ -79,7 +79,7 @@ void ObjectDetection::init_effect_details()
 std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
 {
     // Get the frame's image
-	cv::Mat cv_image = frame->GetImageCV();
+    cv::Mat cv_image = frame->GetImageCV();
 
     // Check if frame isn't NULL
     if(cv_image.empty()){
@@ -96,6 +96,11 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
             
             // Does not show boxes with confidence below the threshold
             if(detections.confidences.at(i) < confidence_threshold){
+                continue;
+            }
+            // Just display selected classes
+            if( display_classes.size() > 0 &&
+                std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end()){
                 continue;
             }
             
@@ -136,81 +141,103 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                     (int)(  trackedBox.height*fh)
                     );
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
-                    box, cv_image, detections.objectIds.at(i));
+                    box, cv_image, detections.objectIds.at(i), bg_rgba, bg_alpha, 1, true);
+                drawPred(detections.classIds.at(i), detections.confidences.at(i),
+                    box, cv_image, detections.objectIds.at(i), stroke_rgba, stroke_alpha, stroke_width, false);
             } 
         }
     }
 
-	// Set image with drawn box to frame
-    // If the input image is NULL or doesn't have tracking data, it's returned as it came
-	frame->SetImageCV(cv_image);
+    // Update Qt image with new Opencv frame
+    frame->SetImageCV(cv_image);
 
-	return frame;
+    return frame;
 }
 
-void ObjectDetection::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background){
-	// Get the bouding box vertices
-	cv::Point2f vertices2f[4];
-	box.points(vertices2f);
+void ObjectDetection::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, 
+                                        int thickness, bool is_background){
+    // Get the bouding box vertices
+    cv::Point2f vertices2f[4];
+    box.points(vertices2f);
 
-	// TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
-	// select min enclosing rectangle to draw on a small portion of the image
-	// cv::Rect rect  = box.boundingRect();
-	// cv::Mat image = frame_image(rect)
+    // TODO: take a rectangle of frame_image by refencence and draw on top of that to improve speed
+    // select min enclosing rectangle to draw on a small portion of the image
+    // cv::Rect rect  = box.boundingRect();
+    // cv::Mat image = frame_image(rect)
 
-	if(is_background){
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
+    if(is_background){
+        cv::Mat overlayFrame;
+        frame_image.copyTo(overlayFrame);
 
-		// draw bounding box background
-		cv::Point vertices[4];
-		for(int i = 0; i < 4; ++i){
-			vertices[i] = vertices2f[i];}
+        // draw bounding box background
+        cv::Point vertices[4];
+        for(int i = 0; i < 4; ++i){
+            vertices[i] = vertices2f[i];}
 
-		cv::Rect rect  = box.boundingRect();
-		cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
-	else{
-		cv::Mat overlayFrame;
-		frame_image.copyTo(overlayFrame);
+        cv::Rect rect  = box.boundingRect();
+        cv::fillConvexPoly(overlayFrame, vertices, 4, cv::Scalar(color[2],color[1],color[0]), cv::LINE_AA);
+        // add opacity
+        cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+    }
+    else{
+        cv::Mat overlayFrame;
+        frame_image.copyTo(overlayFrame);
 
-		// Draw bounding box 
-		for (int i = 0; i < 4; i++)
-		{
-			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
-						thickness, cv::LINE_AA);
-		}
+        // Draw bounding box 
+        for (int i = 0; i < 4; i++)
+        {
+            cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
+                        thickness, cv::LINE_AA);
+        }
 
-		// add opacity
-		cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
-	}
+        // add opacity
+        cv::addWeighted(overlayFrame, 1-alpha, frame_image, alpha, 0, frame_image);
+    }
 }
 
-void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber)
+void ObjectDetection::drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, 
+                                float alpha, int thickness, bool is_background)
 {
 
-    //Draw a rectangle displaying the bounding box
-    cv::rectangle(frame, box, classesColor[classId], 2);
+    if(is_background){
+        cv::Mat overlayFrame;
+        frame.copyTo(overlayFrame);
 
-    //Get the label for the class name and its confidence
-    std::string label = cv::format("%.2f", conf);
-    if (!classNames.empty())
-    {
-        CV_Assert(classId < (int)classNames.size());
-        label = classNames[classId] + ":" + label;
+        //Draw a rectangle displaying the bounding box
+        cv::rectangle(overlayFrame, box, cv::Scalar(color[2],color[1],color[0]), cv::FILLED);
+
+       // add opacity
+        cv::addWeighted(overlayFrame, 1-alpha, frame, alpha, 0, frame);
     }
+    else{
+        cv::Mat overlayFrame;
+        frame.copyTo(overlayFrame);
 
-    //Display the label at the top of the bounding box
-    int baseLine;
-    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+        //Draw a rectangle displaying the bounding box
+        cv::rectangle(overlayFrame, box, cv::Scalar(color[2],color[1],color[0]), thickness);
 
-    double left = box.x;
-    double top = std::max((int)box.y, labelSize.height);
+        //Get the label for the class name and its confidence
+        std::string label = cv::format("%.2f", conf);
+        if (!classNames.empty())
+        {
+            CV_Assert(classId < (int)classNames.size());
+            label = classNames[classId] + ":" + label;
+        }
 
-    cv::rectangle(frame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), classesColor[classId], cv::FILLED);
-    putText(frame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
+        //Display the label at the top of the bounding box
+        int baseLine;
+        cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+
+        double left = box.x;
+        double top = std::max((int)box.y, labelSize.height);
+
+        cv::rectangle(overlayFrame, cv::Point(left, top - round(1.025*labelSize.height)), cv::Point(left + round(1.025*labelSize.width), top + baseLine), 
+                        cv::Scalar(color[2],color[1],color[0]), cv::FILLED);
+        putText(overlayFrame, label, cv::Point(left+1, top), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0,0,0),1);
+
+        // add opacity
+        cv::addWeighted(overlayFrame, 1-alpha, frame, alpha, 0, frame);
+    }
 }
 
 // Load protobuf data file
@@ -288,7 +315,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
                 // There is no tracked object with that id, so insert a new one
                 TrackedObjectBBox trackedObj((int)classesColor[classId](0), (int)classesColor[classId](1), (int)classesColor[classId](2), (int)0);
                 trackedObj.AddBox(id, x+(w/2), y+(h/2), w, h, 0.0);
-	            std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
+                std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
                 trackedObjects.insert({objectId, trackedObjPtr});
             }
 
@@ -315,7 +342,7 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 // Get tracker info for the desired frame
 DetectionData ObjectDetection::GetTrackedData(size_t frameId){
 
-	// Check if the tracker info for the requested frame exists
+    // Check if the tracker info for the requested frame exists
     if ( detectionsData.find(frameId) == detectionsData.end() ) {
         return DetectionData();
     } else {
@@ -339,23 +366,31 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
     DetectionData detections = detectionsData.at(frame_number);
 
     // Iterate through the tracked objects
-    int idx = 0;
-    for (const auto& trackedObject : trackedObjects){
+    for(int i = 0; i<detections.boxes.size(); i++){
         // Does not show boxes with confidence below the threshold
-        if(detections.confidences.at(idx) < confidence_threshold){
+        if(detections.confidences.at(i) < confidence_threshold){
             continue;
         }
 
+        // Just display selected classes
+        if( display_classes.size() > 0 &&
+            std::find(display_classes.begin(), display_classes.end(), classNames[detections.classIds.at(i)]) == display_classes.end()){
+            continue;
+        }
+
+        int objectId = detections.objectIds.at(i);
+        // Search for the object in the trackedObjects map
+        auto trackedObject = trackedObjects.find(objectId);
+
         // Get the tracked object JSON properties for this frame
-        Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(frame_number);
+        Json::Value trackedObjectJSON = trackedObject->second->PropertiesJSON(frame_number);
         
         if (trackedObjectJSON["visible"]["value"].asBool() && 
-            trackedObject.second->ExactlyContains(frame_number)){
+            trackedObject->second->ExactlyContains(frame_number)){
             // Save the object's index and ID if it's visible in this frame
-            root["visible_objects_index"].append(trackedObject.first);
-            root["visible_objects_id"].append(trackedObject.second->Id());
+            root["visible_objects_index"].append(trackedObject->first);
+            root["visible_objects_id"].append(trackedObject->second->Id());
         }
-        idx++;
     }
 
     return root.toStyledString();
@@ -364,17 +399,17 @@ std::string ObjectDetection::GetVisibleObjects(int64_t frame_number) const{
 // Generate JSON string of this object
 std::string ObjectDetection::Json() const {
 
-	// Return formatted string
-	return JsonValue().toStyledString();
+    // Return formatted string
+    return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
 Json::Value ObjectDetection::JsonValue() const {
 
-	// Create root json object
-	Json::Value root = EffectBase::JsonValue(); // get parent properties
-	root["type"] = info.class_name;
-	root["protobuf_data_path"] = protobuf_data_path;
+    // Create root json object
+    Json::Value root = EffectBase::JsonValue(); // get parent properties
+    root["type"] = info.class_name;
+    root["protobuf_data_path"] = protobuf_data_path;
     root["selected_object_index"] = selectedObjectIndex;
     root["confidence_threshold"] = confidence_threshold;
     
@@ -395,52 +430,64 @@ Json::Value ObjectDetection::JsonValue() const {
         }
     }
 
-	// return JsonValue
-	return root;
+    // return JsonValue
+    return root;
 }
 
 // Load JSON string into this object
 void ObjectDetection::SetJson(const std::string value) {
 
-	// Parse JSON string into JSON objects
-	try
-	{
+    // Parse JSON string into JSON objects
+    try
+    {
         std::cout<<"entrou no objectDetection SetJson \n"<<value<<"\n\n";
-		const Json::Value root = openshot::stringToJson(value);
-		// Set all values that match
-		SetJsonValue(root);
-	}
-	catch (const std::exception& e)
-	{
-		// Error parsing JSON (or missing keys)
-		std::cout<< "\n\n"<<e.what()<<"\n\n";
-		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
-	}
+        const Json::Value root = openshot::stringToJson(value);
+        // Set all values that match
+        SetJsonValue(root);
+    }
+    catch (const std::exception& e)
+    {
+        // Error parsing JSON (or missing keys)
+        std::cout<< "\n\n"<<e.what()<<"\n\n";
+        throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+    }
 }
 
 // Load Json::Value into this object
 void ObjectDetection::SetJsonValue(const Json::Value root) {
     std::cout<<"entrou no objectDetection SetJasonValue \n"<<root<<"\n\n";
-	// Set parent data
-	EffectBase::SetJsonValue(root);
+    // Set parent data
+    EffectBase::SetJsonValue(root);
 
-	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull() && protobuf_data_path.size() <= 1){
-		protobuf_data_path = root["protobuf_data_path"].asString();
+    // Set data from Json (if key is found)
+    if (!root["protobuf_data_path"].isNull() && protobuf_data_path.size() <= 1){
+        protobuf_data_path = root["protobuf_data_path"].asString();
 
-		if(!LoadObjDetectdData(protobuf_data_path)){
-			std::cout<<"Invalid protobuf data path";
-			protobuf_data_path = "";
-		}
-	}
+        if(!LoadObjDetectdData(protobuf_data_path)){
+            std::cout<<"Invalid protobuf data path";
+            protobuf_data_path = "";
+        }
+    }
 
     // Set the selected object index
     if (!root["selected_object_index"].isNull())
         selectedObjectIndex = root["selected_object_index"].asInt();
     
-    // Set the selected object index
     if (!root["confidence_threshold"].isNull())
         confidence_threshold = root["confidence_threshold"].asFloat();
+
+    if (!root["class_filter"].isNull()){
+        class_filter = root["class_filter"].asString();
+        std::stringstream ss(class_filter);
+        display_classes.clear();
+        while( ss.good() )
+        {
+            // Parse comma separated string
+            std::string substr;
+            std::getline( ss, substr, ',' );
+            display_classes.push_back( substr );
+        }
+    }
 
     // Set the tracked object's ids
     if (!root["objects_id"].isNull()){
@@ -462,8 +509,8 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
 // Get all properties for a specific frame
 std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
 
-	// Generate JSON properties list
-	Json::Value root;
+    // Generate JSON properties list
+    Json::Value root;
 
     // Add the selected object Json to root
     if(trackedObjects.count(selectedObjectIndex) != 0){
@@ -473,14 +520,14 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
     }
 
     root["selected_object_index"] = add_property_json("Selected Object", selectedObjectIndex, "int", "", NULL, 0, 200, false, requested_frame);
-	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
-	root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
-	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
-	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+    root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+    root["position"] = add_property_json("Position", Position(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+    root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+    root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+    root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+    root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
     root["confidence_threshold"] = add_property_json("Confidence Theshold", confidence_threshold, "float", "", NULL, 0, 1, false, requested_frame);
-
-	// Return formatted string
-	return root.toStyledString();
+    root["class_filter"] = add_property_json("Class Filter", 0.0, "string", class_filter, NULL, -1, -1, false, requested_frame);
+    // Return formatted string
+    return root.toStyledString();
 }
