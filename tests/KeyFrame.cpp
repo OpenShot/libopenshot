@@ -536,7 +536,7 @@ TEST_CASE( "TrackedObjectBBox AddBox and RemoveBox" "[libopenshot][keyframe]" )
 	CHECK(kfb.GetLength() == 0);
 }
 
-TEST_CASE( "TrackedObjectBBox GetVal" "[libopenshot][keyframe]" )
+TEST_CASE( "TrackedObjectBBox GetVal", "[libopenshot][keyframe]" )
 {
 	TrackedObjectBBox kfb;
 
@@ -704,4 +704,3 @@ TEST_CASE( "GetBoxValues", "[libopenshot][keyframe]" )
 	CHECK(boxValues["h"] == 20.0);
 	CHECK(boxValues["ang"] == 30.0);
 }
-
