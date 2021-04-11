@@ -64,13 +64,11 @@ namespace openshot
         double TimeScale;
 
     public:
-        std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
-        std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
+		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
+		std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
-        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
-
-        /// Blank constructor, useful when using Json to load the effect properties
-        Tracker(std::string clipTrackerDataPath);
+		/// Blank constructor, useful when using Json to load the effect properties
+		Tracker(std::string clipTrackerDataPath);
 
         /// Default constructor
         Tracker();
