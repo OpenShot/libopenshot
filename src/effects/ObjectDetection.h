@@ -80,9 +80,9 @@ namespace openshot
         std::vector<cv::Scalar> classesColor;
 
         /// Init effect settings
-        void init_effect_details();
+		void init_effect_details();
 
-        void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame);
+		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber);
 
     public:
         /// Index of the Tracked Object that was selected to modify it's properties
