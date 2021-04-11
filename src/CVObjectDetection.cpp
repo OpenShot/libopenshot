@@ -488,10 +488,6 @@ bool CVObjectDetection::_LoadObjDetectdData(){
         detectionsData[id] = CVDetectionData(classIds, confidences, boxes, id, objectIds);
     }
 
-    // Show the time stamp from the last update in object detector data file
-    if (objMessage.has_last_updated())
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(objMessage.last_updated()) << endl;
-
     // Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 

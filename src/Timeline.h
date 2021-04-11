@@ -38,29 +38,26 @@
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include <QtCore/QRegularExpression>
-#include "CacheBase.h"
-#include "CacheDisk.h"
-#include "CacheMemory.h"
+
+#include "TimelineBase.h"
+#include "ReaderBase.h"
+
 #include "Color.h"
 #include "Clip.h"
-#include "CrashHandler.h"
-#include "Point.h"
 #include "EffectBase.h"
-#include "Effects.h"
-#include "EffectInfo.h"
 #include "Fraction.h"
 #include "Frame.h"
-#include "FrameMapper.h"
 #include "KeyFrame.h"
 #include "TrackedObjectBBox.h"
 #include "TrackedObjectBase.h"
-#include "OpenMPUtilities.h"
-#include "ReaderBase.h"
-#include "Settings.h"
-#include "TimelineBase.h"
+
 
 
 namespace openshot {
+
+	// Forward decls
+	class FrameMapper;
+	class CacheBase;
 
 	/// Comparison method for sorting clip pointers (by Layer and then Position). Clips are sorted
 	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
@@ -189,7 +186,7 @@ namespace openshot {
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(openshot::Clip* clip);
 
-		/// Apply JSON Diffs to various objects contained in this timeline
+		// Apply JSON Diffs to various objects contained in this timeline
 		void apply_json_to_clips(Json::Value change); ///<Apply JSON diff to clips
 		void apply_json_to_effects(Json::Value change); ///< Apply JSON diff to effects
 		void apply_json_to_effects(Json::Value change, openshot::EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
@@ -226,7 +223,7 @@ namespace openshot {
 
 	public:
 
-		/// @brief Default Constructor for the timeline (which configures the default frame properties)
+		/// @brief Constructor for the timeline (which configures the default frame properties)
 		/// @param width The image width of generated openshot::Frame objects
 		/// @param height The image height of generated openshot::Frame objects
 		/// @param fps The frame rate of the generated video
@@ -234,6 +231,10 @@ namespace openshot {
 		/// @param channels The number of audio channels
 		/// @param channel_layout The channel layout (i.e. mono, stereo, 3 point surround, etc...)
 		Timeline(int width, int height, openshot::Fraction fps, int sample_rate, int channels, openshot::ChannelLayout channel_layout);
+
+		/// @brief Constructor which takes a ReaderInfo struct to configure parameters
+		/// @param info The reader parameters to configure the new timeline with
+		Timeline(ReaderInfo info);
 
 		/// @brief Project-file constructor for the timeline
 		///
@@ -328,7 +329,7 @@ namespace openshot {
 		/// Return the type name of the class
 		std::string Name() override { return "Timeline"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

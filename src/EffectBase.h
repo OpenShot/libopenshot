@@ -80,7 +80,7 @@ namespace openshot
 		EffectBase* parentEffect;
 
 		/// Map of Tracked Object's by their indices (used by Effects that track objects on clips)
-		std::map<int, std::shared_ptr<TrackedObjectBase> > trackedObjects;
+		std::map<int, std::shared_ptr<openshot::TrackedObjectBase> > trackedObjects;
 
 		/// Information about the current effect
 		EffectInfoStruct info;
@@ -100,7 +100,7 @@ namespace openshot
 
 		/// Set parent clip object of this effect
 		void ParentClip(openshot::ClipBase* new_clip);
-		
+
 		/// Set the parent effect from which this properties will be set to
 		void SetParentEffect(std::string parentEffect_id);
 
@@ -110,7 +110,7 @@ namespace openshot
 		/// Get the indexes and IDs of all visible objects in the given frame
 		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		virtual std::string Json() const = 0; ///< Generate JSON string of this object
 		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
@@ -122,7 +122,7 @@ namespace openshot
 		virtual void SetJson(int64_t requested_frame, const std::string value) {
 			return;
 		};
-		
+
 		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
 
 		/// Get the order that this effect should be executed.

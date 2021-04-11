@@ -32,52 +32,52 @@
 #include <sstream>
 #include <memory>
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
-#include "Frame.h"
-#include "Clip.h"
-#include "Fraction.h"
-
 #include <QImage>
 
 #ifdef USE_OPENCV
-#include <opencv2/core.hpp>
+#define int64 opencv_broken_int
+#define uint64 opencv_broken_uint
+#include <opencv2/opencv.hpp>
+#undef int64
+#undef uint64
 #endif
+
+#include <catch2/catch.hpp>
+
+#include "Clip.h"
+#include "Fraction.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-SUITE(Frame_Tests)
-{
-
-TEST(Default_Constructor)
+TEST_CASE( "Default_Constructor", "[libopenshot][frame]" )
 {
 	// Create a "blank" default Frame
 	std::shared_ptr<Frame> f1(new Frame());
 
-	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
+	REQUIRE(f1 != nullptr);  // Test aborts here if we didn't get a Frame
 
 	// Check basic default parameters
-	CHECK_EQUAL(1, f1->GetHeight());
-	CHECK_EQUAL(1, f1->GetWidth());
-	CHECK_EQUAL(44100, f1->SampleRate());
-	CHECK_EQUAL(2, f1->GetAudioChannelsCount());
+	CHECK(f1->GetHeight() == 1);
+	CHECK(f1->GetWidth() == 1);
+	CHECK(f1->SampleRate() == 44100);
+	CHECK(f1->GetAudioChannelsCount() == 2);
 
 	// Should be false until we load or create contents
-	CHECK_EQUAL(false, f1->has_image_data);
-	CHECK_EQUAL(false, f1->has_audio_data);
+	CHECK(f1->has_image_data == false);
+	CHECK(f1->has_audio_data == false);
 
 	// Calling GetImage() paints a blank frame, by default
 	std::shared_ptr<QImage> i1 = f1->GetImage();
 
-	CHECK(i1 != nullptr);
+	REQUIRE(i1 != nullptr);
 
-	CHECK_EQUAL(true,f1->has_image_data);
-	CHECK_EQUAL(false,f1->has_audio_data);
+	CHECK(f1->has_image_data == true);
+	CHECK(f1->has_audio_data == false);
 }
 
 
-TEST(Data_Access)
+TEST_CASE( "Data_Access", "[libopenshot][frame]" )
 {
 	// Create a video clip
 	std::stringstream path;
@@ -88,15 +88,15 @@ TEST(Data_Access)
 	// Get first frame
 	std::shared_ptr<Frame> f1 = c1.GetFrame(1);
 
-	CHECK(f1 != nullptr);
+	REQUIRE(f1 != nullptr);
 
-	CHECK_EQUAL(1, f1->number);
-	CHECK_EQUAL(1280, f1->GetWidth());
-	CHECK_EQUAL(720, f1->GetHeight());
+	CHECK(f1->number == 1);
+	CHECK(f1->GetWidth() == 1280);
+	CHECK(f1->GetHeight() == 720);
 }
 
 
-TEST(AddImage_QImage)
+TEST_CASE( "AddImage_QImage", "[libopenshot][frame]" )
 {
 	// Create a "blank" default Frame
 	std::shared_ptr<Frame> f1(new Frame());
@@ -104,21 +104,21 @@ TEST(AddImage_QImage)
 	// Load an image
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "front.png";
-	std::shared_ptr<QImage> i1(new QImage(QString::fromStdString(path.str()))) ;
+	auto i1 = std::make_shared<QImage>(QString::fromStdString(path.str()));
 
-	CHECK(f1 != nullptr);  // Test aborts here if we didn't get a Frame
-	CHECK_EQUAL(false, i1->isNull());
+	REQUIRE(f1 != nullptr);  // Test aborts here if we didn't get a Frame
+	CHECK(i1->isNull() == false);
 
 	f1->AddImage(i1);
 
 	// Check loaded image parameters
-	CHECK_EQUAL(i1->height(), f1->GetHeight());
-	CHECK_EQUAL(i1->width(), f1->GetWidth());
-	CHECK_EQUAL(true, f1->has_image_data);
+	CHECK(f1->GetHeight() == i1->height());
+	CHECK(f1->GetWidth() == i1->width());
+	CHECK(f1->has_image_data == true);
 }
 
 
-TEST(Copy_Constructor)
+TEST_CASE( "Copy_Constructor", "[libopenshot][frame]" )
 {
 	// Create a dummy Frame
 	openshot::Frame f1(1, 800, 600, "#000000");
@@ -126,38 +126,38 @@ TEST(Copy_Constructor)
 	// Load an image
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "front.png";
-	std::shared_ptr<QImage> i1( new QImage(QString::fromStdString(path.str())) );
+	auto i1 = std::make_shared<QImage>(QString::fromStdString(path.str()));
 
-	CHECK_EQUAL(false, i1->isNull());
+	CHECK(i1->isNull() == false);
 
 	// Add image to f1, then copy f1 to f2
 	f1.AddImage(i1);
 
 	Frame f2 = f1;
 
-	CHECK_EQUAL(f1.GetHeight(), f2.GetHeight());
-	CHECK_EQUAL(f1.GetWidth(), f2.GetWidth());
+	CHECK(f1.GetHeight() == f2.GetHeight());
+	CHECK(f1.GetWidth() == f2.GetWidth());
 
-	CHECK_EQUAL(f1.has_image_data, f2.has_image_data);
-	CHECK_EQUAL(f1.has_audio_data, f2.has_audio_data);
+	CHECK(f1.has_image_data == f2.has_image_data);
+	CHECK(f1.has_audio_data == f2.has_audio_data);
 
 	Fraction par1 = f1.GetPixelRatio();
 	Fraction par2 = f2.GetPixelRatio();
 
-	CHECK_EQUAL(par1.num, par2.num);
-	CHECK_EQUAL(par1.den, par2.den);
+	CHECK(par1.num == par2.num);
+	CHECK(par1.den == par2.den);
 
 
-	CHECK_EQUAL(f1.SampleRate(), f2.SampleRate());
-	CHECK_EQUAL(f1.GetAudioChannelsCount(), f2.GetAudioChannelsCount());
-	CHECK_EQUAL(f1.ChannelsLayout(), f2.ChannelsLayout());
+	CHECK(f1.SampleRate() == f2.SampleRate());
+	CHECK(f1.GetAudioChannelsCount() == f2.GetAudioChannelsCount());
+	CHECK(f1.ChannelsLayout() == f2.ChannelsLayout());
 
-	CHECK_EQUAL(f1.GetBytes(), f2.GetBytes());
-	CHECK_EQUAL(f1.GetAudioSamplesCount(), f2.GetAudioSamplesCount());
+	CHECK(f1.GetBytes() == f2.GetBytes());
+	CHECK(f1.GetAudioSamplesCount() == f2.GetAudioSamplesCount());
 }
 
 #ifdef USE_OPENCV
-TEST(Convert_Image)
+TEST_CASE( "Convert_Image", "[libopenshot][opencv][frame]" )
 {
 	// Create a video clip
 	std::stringstream path;
@@ -171,13 +171,11 @@ TEST(Convert_Image)
 	// Get first Mat image
 	cv::Mat cvimage = f1->GetImageCV();
 
-	CHECK(!cvimage.empty());
+	CHECK_FALSE(cvimage.empty());
 
-	CHECK_EQUAL(1, f1->number);
-	CHECK_EQUAL(f1->GetWidth(), cvimage.cols);
-	CHECK_EQUAL(f1->GetHeight(), cvimage.rows);
-	CHECK_EQUAL(3, cvimage.channels());
+	CHECK(f1->number == 1);
+	CHECK(f1->GetWidth() == cvimage.cols);
+	CHECK(f1->GetHeight() == cvimage.rows);
+	CHECK(cvimage.channels() == 3);
 }
 #endif
-
-} // SUITE(Frame_Tests)

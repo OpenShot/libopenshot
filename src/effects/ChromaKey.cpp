@@ -83,18 +83,24 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 	for (int pixel = 0, byte_index=0; pixel < image->width() * image->height(); pixel++, byte_index+=4)
 	{
 		// Get the RGB values from the pixel
-		unsigned char R = pixels[byte_index];
-		unsigned char G = pixels[byte_index + 1];
-		unsigned char B = pixels[byte_index + 2];
-		unsigned char A = pixels[byte_index + 3];
+		// Remove the premultiplied alpha values from R,G,B
+		float A = float(pixels[byte_index + 3]);
+		unsigned char R = (pixels[byte_index] / A) * 255.0;
+		unsigned char G = (pixels[byte_index + 1] / A) * 255.0;
+		unsigned char B = (pixels[byte_index + 2] / A) * 255.0;
 
-		// Get distance between mask color and pixel color
-		long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
+        // Get distance between mask color and pixel color
+        long distance = Color::GetDistance((long)R, (long)G, (long)B, mask_R, mask_G, mask_B);
 
-		// Alpha out the pixel (if color similar)
-		if (distance <= threshold)
-			// MATCHED - Make pixel transparent
-			pixels[byte_index + 3] = 0;
+        if (distance <= threshold) {
+            // MATCHED - Make pixel transparent
+            // Due to premultiplied alpha, we must also zero out
+            // the individual color channels (or else artifacts are left behind)
+            pixels[byte_index] = 0;
+            pixels[byte_index + 1] = 0;
+            pixels[byte_index + 2] = 0;
+            pixels[byte_index + 3] = 0;
+        }
 	}
 
 	// return the modified frame
@@ -168,7 +174,7 @@ std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 	root["color"]["red"] = add_property_json("Red", color.red.GetValue(requested_frame), "float", "", &color.red, 0, 255, false, requested_frame);
 	root["color"]["blue"] = add_property_json("Blue", color.blue.GetValue(requested_frame), "float", "", &color.blue, 0, 255, false, requested_frame);
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
-	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", &fuzz, 0, 25, false, requested_frame);
+	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", &fuzz, 0, 125, false, requested_frame);
 
 	// Set the parent effect which properties this effect will inherit
 	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);

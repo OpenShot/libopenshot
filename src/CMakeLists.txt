@@ -455,9 +455,6 @@ endif()
 if(UNIX AND NOT APPLE)
   set(CPACK_GENERATOR "DEB")
 endif()
-#if(UNIX AND APPLE)
-#  set(CPACK_GENERATOR "DragNDrop")
-#endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)

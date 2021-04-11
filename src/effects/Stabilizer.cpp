@@ -156,11 +156,6 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
         transformationData[id] = EffectTransformParam(dx,dy,da);
     }
 
-    // Show the time stamp from the last update in stabilization data file
-    if (stabilizationMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(stabilizationMessage.last_updated()) << endl;
-    }
-
     // Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 

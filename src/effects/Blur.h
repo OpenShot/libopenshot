@@ -57,7 +57,7 @@ namespace openshot
 		/// Init effect settings
 		void init_effect_details();
 
-		/// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
+		// Internal blur methods (inspired and credited to http://blog.ivank.net/fastest-gaussian-blur.html)
 		void boxBlurH(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
 		void boxBlurT(unsigned char *scl, unsigned char *tcl, int w, int h, int r);
 
@@ -99,7 +99,7 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

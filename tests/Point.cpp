@@ -28,98 +28,96 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "Point.h"
 #include "Enums.h"
+#include "Exceptions.h"
 #include "Coordinate.h"
 #include "Json.h"
 
-SUITE(POINT) {
-
-TEST(Default_Constructor)
+TEST_CASE( "Default_Constructor", "[libopenshot][point]" )
 {
 	openshot::Point p;
 
 	// Default values
-	CHECK_EQUAL(1, p.co.X);
-	CHECK_EQUAL(0, p.co.Y);
-	CHECK_EQUAL(0.5, p.handle_left.X);
-	CHECK_EQUAL(1.0, p.handle_left.Y);
-	CHECK_EQUAL(0.5, p.handle_right.X);
-	CHECK_EQUAL(0.0, p.handle_right.Y);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p.interpolation);
-	CHECK_EQUAL(openshot::HandleType::AUTO, p.handle_type);
+	CHECK(p.co.X == 1);
+	CHECK(p.co.Y == 0);
+	CHECK(p.handle_left.X == 0.5);
+	CHECK(p.handle_left.Y == 1.0);
+	CHECK(p.handle_right.X == 0.5);
+	CHECK(p.handle_right.Y == 0.0);
+	CHECK(p.interpolation == openshot::InterpolationType::BEZIER);
+	CHECK(p.handle_type == openshot::HandleType::AUTO);
 }
-TEST(XY_Constructor)
+TEST_CASE( "XY_Constructor", "[libopenshot][point]" )
 {
 	// Create a point with X and Y values
 	openshot::Point p1(2,9);
 
-	CHECK_EQUAL(2, p1.co.X);
-	CHECK_EQUAL(9, p1.co.Y);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
+	CHECK(p1.co.X == 2);
+	CHECK(p1.co.Y == 9);
+	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST(Pair_Constructor)
+TEST_CASE( "Pair_Constructor", "[libopenshot][point]" )
 {
 	// Create a point from a std::pair
 	std::pair<double, double> coordinates(22, 5);
 	openshot::Point p1(coordinates);
 
-	CHECK_CLOSE(22.0f, p1.co.X, 0.00001);
-	CHECK_CLOSE(5.0f, p1.co.Y, 0.00001);
+	CHECK(p1.co.X == Approx(22.0f).margin(0.00001));
+	CHECK(p1.co.Y == Approx(5.0f).margin(0.00001));
 }
 
-TEST(Constructor_With_Coordinate)
+TEST_CASE( "Constructor_With_Coordinate", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate
 	openshot::Coordinate c1(3,7);
 	openshot::Point p1(c1);
 
-	CHECK_CLOSE(3.0f, p1.co.X, 0.00001);
-	CHECK_CLOSE(7.0f, p1.co.Y, 0.00001);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
+	CHECK(p1.co.X == Approx(3.0f).margin(0.00001));
+	CHECK(p1.co.Y == Approx(7.0f).margin(0.00001));
+	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST(Constructor_With_Coordinate_And_LINEAR_Interpolation)
+TEST_CASE( "Constructor_With_Coordinate_And_LINEAR_Interpolation", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
 	auto interp = openshot::InterpolationType::LINEAR;
 	openshot::Point p1(c1, interp);
 
-	CHECK_EQUAL(3, c1.X);
-	CHECK_EQUAL(9, c1.Y);
-	CHECK_EQUAL(openshot::InterpolationType::LINEAR, p1.interpolation);
+	CHECK(c1.X == 3);
+	CHECK(c1.Y == 9);
+	CHECK(p1.interpolation == openshot::InterpolationType::LINEAR);
 }
 
-TEST(Constructor_With_Coordinate_And_BEZIER_Interpolation)
+TEST_CASE( "Constructor_With_Coordinate_And_BEZIER_Interpolation", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
 	auto interp = openshot::InterpolationType::BEZIER;
 	openshot::Point p1(c1, interp);
 
-	CHECK_EQUAL(3, p1.co.X);
-	CHECK_EQUAL(9, p1.co.Y);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
+	CHECK(p1.co.X == 3);
+	CHECK(p1.co.Y == 9);
+	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST(Constructor_With_Coordinate_And_CONSTANT_Interpolation)
+TEST_CASE( "Constructor_With_Coordinate_And_CONSTANT_Interpolation", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(2,8);
 	auto interp = openshot::InterpolationType::CONSTANT;
 	openshot::Point p1(c1, interp);
 
-	CHECK_EQUAL(2, p1.co.X);
-	CHECK_EQUAL(8, p1.co.Y);
-	CHECK_EQUAL(openshot::InterpolationType::CONSTANT, p1.interpolation);
+	CHECK(p1.co.X == 2);
+	CHECK(p1.co.Y == 8);
+	CHECK(p1.interpolation == openshot::InterpolationType::CONSTANT);
 }
 
-TEST(Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle)
+TEST_CASE( "Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -127,13 +125,13 @@ TEST(Constructor_With_Coordinate_And_BEZIER_And_AUTO_Handle)
 		openshot::InterpolationType::BEZIER,
 		openshot::HandleType::AUTO);
 
-	CHECK_EQUAL(3, p1.co.X);
-	CHECK_EQUAL(9, p1.co.Y);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
-	CHECK_EQUAL(openshot::HandleType::AUTO, p1.handle_type);
+	CHECK(p1.co.X == 3);
+	CHECK(p1.co.Y == 9);
+	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
+	CHECK(p1.handle_type == openshot::HandleType::AUTO);
 }
 
-TEST(Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle)
+TEST_CASE( "Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -141,26 +139,31 @@ TEST(Constructor_With_Coordinate_And_BEZIER_And_MANUAL_Handle)
 		openshot::InterpolationType::BEZIER,
 		openshot::HandleType::MANUAL);
 
-	CHECK_EQUAL(3, p1.co.X);
-	CHECK_EQUAL(9, p1.co.Y);
-	CHECK_EQUAL(openshot::InterpolationType::BEZIER, p1.interpolation);
-	CHECK_EQUAL(openshot::HandleType::MANUAL, p1.handle_type);
+	CHECK(p1.co.X == 3);
+	CHECK(p1.co.Y == 9);
+	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
+	CHECK(p1.handle_type == openshot::HandleType::MANUAL);
 }
 
-TEST(Json)
+TEST_CASE( "Json", "[libopenshot][point]" )
 {
 	openshot::Point p1;
 	openshot::Point p2(1, 0);
 	auto json1 = p1.Json();
 	auto json2 = p2.JsonValue();
 	auto json_string2 = json2.toStyledString();
-	CHECK_EQUAL(json1, json_string2);
+	CHECK(json_string2 == json1);
 }
 
-TEST(SetJson)
+TEST_CASE( "SetJson", "[libopenshot][point]" )
 {
 	openshot::Point p1;
 	std::stringstream json_stream;
+
+	// A string that's not JSON should cause an exception
+	CHECK_THROWS_AS(p1.SetJson("}{"), openshot::InvalidJSON);
+
+	// Build a valid JSON string for Point settings
 	json_stream << R"json(
 		{
 			"co": { "X": 1.0, "Y": 0.0 },
@@ -174,13 +177,12 @@ TEST(SetJson)
 	json_stream << R"json(
 		}
 		)json";
-	p1.SetJson(json_stream.str());
-	CHECK_EQUAL(2.0, p1.handle_left.X);
-	CHECK_EQUAL(3.0, p1.handle_left.Y);
-	CHECK_EQUAL(4.0, p1.handle_right.X);
-	CHECK_EQUAL(-2.0, p1.handle_right.Y);
-	CHECK_EQUAL(openshot::HandleType::MANUAL, p1.handle_type);
-	CHECK_EQUAL(openshot::InterpolationType::CONSTANT, p1.interpolation);
-}
 
-}  // SUITE
+	p1.SetJson(json_stream.str());
+	CHECK(p1.handle_left.X == 2.0);
+	CHECK(p1.handle_left.Y == 3.0);
+	CHECK(p1.handle_right.X == 4.0);
+	CHECK(p1.handle_right.Y == -2.0);
+	CHECK(p1.handle_type == openshot::HandleType::MANUAL);
+	CHECK(p1.interpolation == openshot::InterpolationType::CONSTANT);
+}

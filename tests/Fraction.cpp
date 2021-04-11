@@ -28,129 +28,123 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "UnitTest++.h"
-// Prevent name clashes with juce::UnitTest
-#define DONT_SET_USING_JUCE_NAMESPACE 1
+#include <catch2/catch.hpp>
+
 #include "Fraction.h"
 
 using namespace std;
 using namespace openshot;
 
-SUITE(Fraction)
-{
-
-TEST(Constructors)
+TEST_CASE( "Constructors", "[libopenshot][fraction]" )
 {
 	// Create a default fraction (should be 1/1)
 	Fraction f1;
 
 	// Check default fraction
-	CHECK_EQUAL(1, f1.num);
-	CHECK_EQUAL(1, f1.den);
-	CHECK_CLOSE(1.0f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.0f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 1);
+	CHECK(f1.den == 1);
+	CHECK(f1.ToFloat() == Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.0f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
 
 	// Check the reduced fraction
-	CHECK_EQUAL(1, f1.num);
-	CHECK_EQUAL(1, f1.den);
-	CHECK_CLOSE(1.0f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.0f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 1);
+	CHECK(f1.den == 1);
+	CHECK(f1.ToFloat() == Approx(1.0f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.0f).margin(0.00001));
 }
 
-TEST(Alt_Constructors)
+TEST_CASE( "Alt_Constructors", "[libopenshot][fraction]" )
 {
 	// Use the delegating constructor for std::pair
 	std::pair<int, int> args{24, 1};
 	Fraction f1(args);
-	CHECK_EQUAL(24, f1.num);
-	CHECK_EQUAL(1, f1.den);
-	CHECK_CLOSE(24.0f, f1.ToFloat(), 0.00001);
+	CHECK(f1.num == 24);
+	CHECK(f1.den == 1);
+	CHECK(f1.ToFloat() == Approx(24.0f).margin(0.00001));
 
 	// Use the delegating constructor for std::vector
 	std::vector<int> v{30000, 1001};
 	Fraction f2(v);
-	CHECK_CLOSE(30000.0/1001.0, f2.ToFloat(), 0.00001);
+	CHECK(f2.ToFloat() == Approx(30000.0/1001.0).margin(0.00001));
 
 	// Use the delegating constructor for std::map<std::string, int>
 	std::map<std::string, int> dict;
 	dict.insert({"num", 24000});
 	dict.insert({"den", 1001});
 	Fraction f3(dict);
-	CHECK_EQUAL(1001, f3.den);
-	CHECK_EQUAL(24000, f3.num);
-	CHECK_CLOSE(1001.0/24000.0, f3.Reciprocal().ToFloat(), 0.00001);
+	CHECK(f3.den == 1001);
+	CHECK(f3.num == 24000);
+	CHECK(f3.Reciprocal().ToFloat() == Approx(1001.0/24000.0).margin(0.00001));
 }
 
-TEST(WxH_640_480)
+TEST_CASE( "WxH_640_480", "[libopenshot][fraction]" )
 {
 	// Create fraction
 	Fraction f1(640, 480);
 
 	// Check fraction
-	CHECK_EQUAL(640, f1.num);
-	CHECK_EQUAL(480, f1.den);
-	CHECK_CLOSE(1.33333f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.33333f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 640);
+	CHECK(f1.den == 480);
+	CHECK(f1.ToFloat() == Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.33333f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
 
 	// Check the reduced fraction
-	CHECK_EQUAL(4, f1.num);
-	CHECK_EQUAL(3, f1.den);
-	CHECK_CLOSE(1.33333f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.33333f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 4);
+	CHECK(f1.den == 3);
+	CHECK(f1.ToFloat() == Approx(1.33333f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.33333f).margin(0.00001));
 }
 
-TEST(WxH_1280_720)
+TEST_CASE( "WxH_1280_720", "[libopenshot][fraction]" )
 {
 	// Create fraction
 	Fraction f1(1280, 720);
 
 	// Check fraction
-	CHECK_EQUAL(1280, f1.num);
-	CHECK_EQUAL(720, f1.den);
-	CHECK_CLOSE(1.77777f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 1280);
+	CHECK(f1.den == 720);
+	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 
 	// reduce fraction
 	f1.Reduce();
 
 	// Check the reduced fraction
-	CHECK_EQUAL(16, f1.num);
-	CHECK_EQUAL(9, f1.den);
-	CHECK_CLOSE(1.77777f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 16);
+	CHECK(f1.den == 9);
+	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 }
 
-TEST(Reciprocal)
+TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 {
 	// Create fraction
 	Fraction f1(1280, 720);
 
 	// Check fraction
-	CHECK_EQUAL(1280, f1.num);
-	CHECK_EQUAL(720, f1.den);
-	CHECK_CLOSE(1.77777f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 1280);
+	CHECK(f1.den == 720);
+	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 
 	// Get the reciprocal of the fraction (i.e. flip the fraction)
 	Fraction f2 = f1.Reciprocal();
 
 	// Check the reduced fraction
-	CHECK_EQUAL(720, f2.num);
-	CHECK_EQUAL(1280, f2.den);
-	CHECK_CLOSE(0.5625f, f2.ToFloat(), 0.00001);
-	CHECK_CLOSE(0.5625f, f2.ToDouble(), 0.00001);
+	CHECK(f2.num == 720);
+	CHECK(f2.den == 1280);
+	CHECK(f2.ToFloat() == Approx(0.5625f).margin(0.00001));
+	CHECK(f2.ToDouble() == Approx(0.5625f).margin(0.00001));
 
 	// Re-Check the original fraction (to be sure it hasn't changed)
-	CHECK_EQUAL(1280, f1.num);
-	CHECK_EQUAL(720, f1.den);
-	CHECK_CLOSE(1.77777f, f1.ToFloat(), 0.00001);
-	CHECK_CLOSE(1.77777f, f1.ToDouble(), 0.00001);
+	CHECK(f1.num == 1280);
+	CHECK(f1.den == 720);
+	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
+	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 }
-
-}  // SUITE

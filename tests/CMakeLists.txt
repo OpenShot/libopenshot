@@ -26,24 +26,6 @@
 
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
-add_definitions( -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
-################### UNITTEST++ #####################
-# Find UnitTest++ libraries (used for unit testing)
-find_package(UnitTest++)
-
-if (NOT UnitTest++_FOUND)
-  set(TESTS_ENABLED OFF PARENT_SCOPE)
-  return()
-endif()
-
-# Include UnitTest++ headers (needed for compile)
-include_directories(${UnitTest++_INCLUDE_DIRS})
-
-set_package_properties(UnitTest++ PROPERTIES
-  TYPE RECOMMENDED
-  PURPOSE "Unit testing framework")
-
 
 ################# BLACKMAGIC DECKLINK ###################
 if(ENABLE_BLACKMAGIC)
@@ -56,53 +38,68 @@ if(ENABLE_BLACKMAGIC)
 	endif()
 endif()
 
-###############  SET TEST SOURCE FILES  #################
-set(OPENSHOT_TEST_FILES
-  Cache_Tests.cpp
-  Clip_Tests.cpp
-  Color_Tests.cpp
-  Coordinate_Tests.cpp
-  DummyReader_Tests.cpp
-  ReaderBase_Tests.cpp
-  ImageWriter_Tests.cpp
-  FFmpegReader_Tests.cpp
-  FFmpegWriter_Tests.cpp
-  Fraction_Tests.cpp
-  Frame_Tests.cpp
-  FrameMapper_Tests.cpp
-  KeyFrame_Tests.cpp
-  Point_Tests.cpp
-  QtImageReader_Tests.cpp
-  Settings_Tests.cpp
-  Timeline_Tests.cpp)
+###
+###  TEST SOURCE FILES
+###
+set(OPENSHOT_TESTS
+  CacheDisk
+  CacheMemory
+  Clip
+  Color
+  Coordinate
+  DummyReader
+  ReaderBase
+  ImageWriter
+  FFmpegReader
+  FFmpegWriter
+  Fraction
+  Frame
+  FrameMapper
+  KeyFrame
+  Point
+  QtImageReader
+  Settings
+  Timeline
+)
 
-##########  SET OPENCV RELATED TEST FILES  ###############
+###
+### OPENCV RELATED TEST FILES
+###
 if(ENABLE_OPENCV)
-  list(APPEND OPENSHOT_TEST_FILES
-    CVTracker_Tests.cpp
-    CVStabilizer_Tests.cpp
-    # CVObjectDetection_Tests.cpp
+  list(APPEND OPENSHOT_TESTS
+    CVTracker
+    CVStabilizer
+    # CVObjectDetection
   )
 endif()
 
-################ TESTER EXECUTABLE #################
-# Create unit test executable (openshot-test)
-message (STATUS "Tests enabled, test executable will be built as tests/openshot-test")
+###
+### Catch2 unit tests
+###
+if (TESTS_ENABLED)
+  message (STATUS "Tests enabled, test executables will be compiled")
+  include(Catch)
 
-add_executable(openshot-test
-  tests.cpp
-  ${OPENSHOT_TEST_FILES}
-)
+  include(CTest)
 
-# Link libraries to the new executable
-target_link_libraries(openshot-test
-  openshot
-  ${UnitTest++_LIBRARIES}
-)
+  # Create object library for test executable main(),
+  # to avoid recompiling for every test
+  add_library(catch-main OBJECT catch_main.cpp)
 
-##### RUNNING TESTS (make os_test / make test) #####
-# Hook up the 'make os_test' target to the 'openshot-test' executable,
-# if we aren't defining it as the coverage target
-if(NOT ENABLE_COVERAGE)
-  add_custom_target(os_test COMMAND openshot-test)
+  foreach(tname ${OPENSHOT_TESTS})
+    add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
+    target_compile_definitions(openshot-${tname}-test PRIVATE
+      TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
+    )
+  	target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
+		# Automatically configure CTest targets from Catch2 test cases
+		catch_discover_tests(
+      openshot-${tname}-test
+      TEST_PREFIX ${tname}:
+    )
+    list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
+	endforeach()
+  # Export target list for coverage use
+  set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
 endif()
+

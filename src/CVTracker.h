@@ -116,24 +116,27 @@ namespace openshot
 			// Constructor
 			CVTracker(std::string processInfoJson, ProcessingController &processingController);
 
-			// Set desirable tracker method
+			/// Set desirable tracker method
 			cv::Ptr<cv::Tracker> selectTracker(std::string trackerType);
 
-			// Track object in the hole clip or in a given interval
-			// If start, end and process_interval are passed as argument, clip will be processed in [start,end)
+			/// Track object in the hole clip or in a given interval
+			///
+			/// If start, end and process_interval are passed as argument, clip will be processed in [start,end)
 			void trackClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
-			// Filter current bounding box jitter
+
+			/// Filter current bounding box jitter
 			cv::Rect2d filter_box_jitter(size_t frameId);
-			// Get tracked data for a given frame
+
+			/// Get tracked data for a given frame
 			FrameData GetTrackedData(size_t frameId);
 
-			/// Protobuf Save and Load methods
-			// Save protobuf file
+			// Protobuf Save and Load methods
+			/// Save protobuf file
 			bool SaveTrackedData();
-			// Add frame tracked data into protobuf message.
+			/// Add frame tracked data into protobuf message.
 			void AddFrameDataToProto(pb_tracker::Frame* pbFrameData, FrameData& fData);
 
-			/// Get and Set JSON methods
+			// Get and Set JSON methods
 			void SetJson(const std::string value); ///< Load JSON string into this object
 			void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 

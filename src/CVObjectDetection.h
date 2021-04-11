@@ -130,7 +130,7 @@ namespace openshot
         // Add frame object detection data into protobuf message.
         void AddFrameDataToProto(pb_objdetect::Frame* pbFrameData, CVDetectionData& dData);
 
-        /// Get and Set JSON methods
+        // Get and Set JSON methods
         void SetJson(const std::string value); ///< Load JSON string into this object
         void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 

@@ -47,59 +47,60 @@
 using namespace std;
 namespace openshot
 {
-	/**
-	 * @brief This class tracks a given object through the clip, draws a box around it and allow
-	 * the user to attach another clip (image or video) to the tracked object.
-	 *
-	 * Tracking is useful to better visualize, follow the movement of an object through video
-	 * and attach an image or video to it.
-	 */
-	class Tracker : public EffectBase
-	{
-	private:
-		/// Init effect settings
-		void init_effect_details();
-		
-		Fraction BaseFPS;
-		double TimeScale;
+    /**
+     * @brief This class tracks a given object through the clip, draws a box around it and allow
+     * the user to attach another clip (image or video) to the tracked object.
+     *
+     * Tracking is useful to better visualize, follow the movement of an object through video
+     * and attach an image or video to it.
+     */
+    class Tracker : public EffectBase
+    {
+    private:
+        /// Init effect settings
+        void init_effect_details();
 
-	public:
+        Fraction BaseFPS;
+        double TimeScale;
+
+    public:
 		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
 		std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Tracker(std::string clipTrackerDataPath);
 
-		/// Default constructor
-		Tracker();
+        /// Default constructor
+        Tracker();
 
-		/// @brief This method is required for all derived classes of EffectBase, and returns a
-		/// modified openshot::Frame object
-		///
-		/// The frame object is passed into this method, and a frame_number is passed in which
-		/// tells the effect which settings to use from its keyframes (starting at 1).
-		///
-		/// @returns The modified openshot::Frame object
-		/// @param frame The frame object that needs the effect applied to it
-		/// @param frame_number The frame number (starting at 1) of the effect on the timeline.
-		std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+        /// @brief This method is required for all derived classes of EffectBase, and returns a
+        /// modified openshot::Frame object
+        ///
+        /// The frame object is passed into this method, and a frame_number is passed in which
+        /// tells the effect which settings to use from its keyframes (starting at 1).
+        ///
+        /// @returns The modified openshot::Frame object
+        /// @param frame The frame object that needs the effect applied to it
+        /// @param frame_number The frame number (starting at 1) of the effect on the timeline.
+        std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
+        std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
 
-		/// Get the indexes and IDs of all visible objects in the given frame
-		std::string GetVisibleObjects(int64_t frame_number) const override; 
+        /// Get the indexes and IDs of all visible objects in the given frame
+        std::string GetVisibleObjects(int64_t frame_number) const override;
 
-		void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
+        void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
 
-		/// Get and Set JSON methods
-		std::string Json() const override; ///< Generate JSON string of this object
-		void SetJson(const std::string value) override; ///< Load JSON string into this object
-		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
-		void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
+        // Get and Set JSON methods
+        std::string Json() const override; ///< Generate JSON string of this object
+        void SetJson(const std::string value) override; ///< Load JSON string into this object
+        Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+        void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
-		/// Get all properties for a specific frame (perfect for a UI to display the current state
-		/// of all properties at any time)
-		std::string PropertiesJSON(int64_t requested_frame) const override;
-	};
+        /// Get all properties for a specific frame (perfect for a UI to display the current state
+        /// of all properties at any time)
+        std::string PropertiesJSON(int64_t requested_frame) const override;
+        };
+
 }
 
 #endif
