@@ -541,12 +541,12 @@ TEST_CASE( "TrackedObjectBBox GetVal", "[libopenshot][keyframe]" )
 	TrackedObjectBBox kfb;
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
-	
+
 	BBox val = kfb.GetBox(1);
-	
+
 	CHECK(val.cx == 10.0);
 	CHECK(val.cy == 10.0);
-	CHECK(val.width) == 100.0;
+	CHECK(val.width == 100.0);
 	CHECK(val.height == 100.0);
 	CHECK(val.angle == 0.0);
 }
@@ -557,9 +557,9 @@ TEST_CASE( "TrackedObjectBBox GetVal interpolation", "[libopenshot][keyframe]" )
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(11, 20.0, 20.0, 100.0, 100.0, 0.0);
-	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0, 0.0);	
+	kfb.AddBox(21, 30.0, 30.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(31, 40.0, 40.0, 100.0, 100.0, 0.0);
-	
+
 	BBox val = kfb.GetBox(5);
 
 	CHECK(val.cx == 14.0);
@@ -568,14 +568,14 @@ TEST_CASE( "TrackedObjectBBox GetVal interpolation", "[libopenshot][keyframe]" )
 	CHECK(val.height == 100.0);
 
 	val = kfb.GetBox(15);
-	
+
 	CHECK(val.cx == 24.0);
 	CHECK(val.cy == 24.0);
 	CHECK(val.width == 100.0);
 	CHECK(val.height == 100.0);
 
 	val = kfb.GetBox(25);
-	
+
 	CHECK(val.cx == 34.0);
 	CHECK(val.cy == 34.0);
 	CHECK(val.width == 100.0);
@@ -590,7 +590,7 @@ TEST_CASE( "TrackedObjectBBox SetJson", "[libopenshot][keyframe]" )
 
 	kfb.AddBox(1, 10.0, 10.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(10, 20.0, 20.0, 100.0, 100.0, 0.0);
-	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0, 0.0);	
+	kfb.AddBox(20, 30.0, 30.0, 100.0, 100.0, 0.0);
 	kfb.AddBox(30, 40.0, 40.0, 100.0, 100.0, 0.0);
 
 	kfb.scale_x.AddPoint(1, 2.0);
@@ -602,8 +602,10 @@ TEST_CASE( "TrackedObjectBBox SetJson", "[libopenshot][keyframe]" )
 	TrackedObjectBBox fromJSON_kfb;
 	fromJSON_kfb.SetJson(dataJSON);
 
-	CHECK(kfb.GetBaseFPS().num == fromJSON_kfb.GetBaseFPS().num);
-	
+	int num_kfb = kfb.GetBaseFPS().num;
+	int num_fromJSON_kfb = fromJSON_kfb.GetBaseFPS().num;
+	CHECK(num_kfb == num_fromJSON_kfb);
+
 	double time_kfb = kfb.FrameNToTime(1, 1.0);
 	double time_fromJSON_kfb = fromJSON_kfb.FrameNToTime(1, 1.0);
 	CHECK(time_kfb == time_fromJSON_kfb);
@@ -625,9 +627,9 @@ TEST_CASE( "TrackedObjectBBox scaling", "[libopenshot][keyframe]" )
 	kfb.AddBox(1, 10.0, 10.0, 10.0, 10.0, 0.0);
 	kfb.scale_x.AddPoint(1.0, 2.0);
 	kfb.scale_y.AddPoint(1.0, 3.0);
-	
+
 	BBox bbox = kfb.GetBox(1);
-	
+
 	CHECK(bbox.width == 20.0);
 	CHECK(bbox.height == 30.0);
 }
@@ -679,11 +681,11 @@ TEST_CASE( "AttachToObject", "[libopenshot][keyframe]" )
 	std::string tracked_id = trackedData->Id();
 	childClip.Open();
 	childClip.AttachToObject(tracked_id);
-	
+
 	std::shared_ptr<TrackedObjectBBox> trackedTest = std::static_pointer_cast<TrackedObjectBBox>(childClip.GetAttachedObject());
-	
+
 	CHECK(trackedData->scale_x.GetValue(1) == trackedTest->scale_x.GetValue(1));
-	
+
 	auto frameTest = childClip.GetFrame(1);
 	childClip.Close();
 	// XXX: Here, too, there needs to be some sort of actual _testing_ of the results
@@ -695,7 +697,7 @@ TEST_CASE( "GetBoxValues", "[libopenshot][keyframe]" )
 	trackedDataObject.AddBox(1, 10.0, 10.0, 20.0, 20.0, 30.0);
 
 	std::shared_ptr<TrackedObjectBase> trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
-	
+
 	auto boxValues = trackedData->GetBoxValues(1);
 
 	CHECK(boxValues["cx"] == 10.0);
