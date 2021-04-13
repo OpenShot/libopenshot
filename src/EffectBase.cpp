@@ -52,7 +52,7 @@ void EffectBase::InitEffectInfo()
 	info.has_tracked_object = false;
 	info.name = "";
 	info.description = "";
-	info.parent_effect_id = "None";
+	info.parent_effect_id = "";
 }
 
 // Display file information
@@ -160,7 +160,7 @@ void EffectBase::SetJsonValue(Json::Value root) {
 
 	if (!root["parent_effect_id"].isNull()){
 		info.parent_effect_id = root["parent_effect_id"].asString();
-		if (info.parent_effect_id.size() > 0 && info.parent_effect_id != "None" && parentEffect == NULL)
+		if (info.parent_effect_id.size() > 0 && info.parent_effect_id != "" && parentEffect == NULL)
 			SetParentEffect(info.parent_effect_id);
 		else 
 			parentEffect = NULL;

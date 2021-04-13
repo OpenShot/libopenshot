@@ -34,9 +34,9 @@
 #include <algorithm>
 #include <functional>
 #include <utility>
-#include <cassert>         // For assert()
-#include <iostream>        // For std::cout
-#include <iomanip>         // For std::setprecision
+#include <cassert>		 // For assert()
+#include <iostream>		 // For std::cout
+#include <iomanip>		 // For std::setprecision
 
 using namespace std;
 using namespace openshot;
@@ -92,7 +92,6 @@ namespace openshot{
 			t_step /= 2;
 		} while (true);
 	}
-
 	// Interpolate two points using the right Point's interpolation method
 	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
 		assert(left.co.X < target);

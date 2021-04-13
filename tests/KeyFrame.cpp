@@ -693,8 +693,9 @@ TEST_CASE( "AttachToObject", "[libopenshot][keyframe]" )
 	auto trackedDataJson = trackedData->JsonValue();
 
 	// Get and cast the trakcedObject
-	auto trackedObject_base = t.GetTrackedObject("None");
-	std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_base);
+	auto trackedObject_base = t.GetTrackedObject("");
+	auto trackedObject = std::make_shared<TrackedObjectBBox>();
+	trackedObject = std::dynamic_pointer_cast<TrackedObjectBBox>(trackedObject_base);
 	CHECK(trackedObject == trackedData);
 
 	// Set trackedObject Json Value
@@ -705,7 +706,8 @@ TEST_CASE( "AttachToObject", "[libopenshot][keyframe]" )
 	childClip.Open();
 	childClip.AttachToObject(tracked_id);
 
-	std::shared_ptr<TrackedObjectBBox> trackedTest = std::static_pointer_cast<TrackedObjectBBox>(childClip.GetAttachedObject());
+	auto trackedTest = std::make_shared<TrackedObjectBBox>();
+	trackedTest = std::dynamic_pointer_cast<TrackedObjectBBox>(childClip.GetAttachedObject());
 
 	CHECK(trackedData->scale_x.GetValue(1) == trackedTest->scale_x.GetValue(1));
 
@@ -719,7 +721,7 @@ TEST_CASE( "GetBoxValues", "[libopenshot][keyframe]" )
 	TrackedObjectBBox trackedDataObject;
 	trackedDataObject.AddBox(1, 10.0, 10.0, 20.0, 20.0, 30.0);
 
-	std::shared_ptr<TrackedObjectBase> trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
+	auto trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 
 	auto boxValues = trackedData->GetBoxValues(1);
 

@@ -670,7 +670,7 @@ TEST(Attach_test){
 	auto trackedDataJson = trackedData->JsonValue();
 
 	// Get and cast the trakcedObject
-	auto trackedObject_base = t.GetTrackedObject("None");
+	auto trackedObject_base = t.GetTrackedObject("");
 	std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(trackedObject_base);
 	CHECK_EQUAL(trackedData, trackedObject);
 

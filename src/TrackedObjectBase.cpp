@@ -39,16 +39,16 @@ namespace openshot
 	// Blank constructor
 	TrackedObjectBase::TrackedObjectBase() : visible(1.0), draw_box(1)
 	{
-		// Initializes the id as "None"
-		id = "None";
-		childClipId = "None";
+		// Initializes the id as ""
+		id = "";
+		childClipId = "";
 	}
 
 	// Default constructor
 	TrackedObjectBase::TrackedObjectBase(std::string _id) : visible(1.0)
 	{
 		Id(_id);
-		childClipId = "None";
+		childClipId = "";
 	}
 
 	Json::Value TrackedObjectBase::add_property_choice_json(std::string name, int value, int selected_value) const
