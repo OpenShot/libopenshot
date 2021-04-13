@@ -65,16 +65,13 @@ if (BLACKMAGIC_FOUND)
 endif()
 
 ############### OPENCV EXAMPLE ################
-find_package( OpenCV 4 )
-if (OpenCV_FOUND)
+if (DEFINED CACHE{HAVE_OPENCV})
 	# Create test executable
 	add_executable(openshot-example-opencv
 			Example_opencv.cpp)
 	
 	target_compile_definitions(openshot-example-opencv PRIVATE
-	-DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
-
+	                           -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 	# Link test executable to the new library
 	target_link_libraries(openshot-example-opencv openshot)
-
 endif()

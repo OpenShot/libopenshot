@@ -66,10 +66,10 @@ namespace openshot {
 		Keyframe visible;
 		Keyframe draw_box;
 
-        /// Blank constructor
+        /// Default constructor
         TrackedObjectBase();
 
-		/// Default constructor
+		/// Constructor which takes an object ID
 		TrackedObjectBase(std::string _id);
 
         /// Get the id of this object
