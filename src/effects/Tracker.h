@@ -44,7 +44,6 @@
 #include "../TrackedObjectBBox.h"
 #include "../Clip.h"
 
-using namespace std;
 namespace openshot
 {
     /**

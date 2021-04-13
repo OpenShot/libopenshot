@@ -30,7 +30,6 @@
 
 #ifndef OPENSHOT_TIMELINE_BASE_H
 #define OPENSHOT_TIMELINE_BASE_H
-#include <iostream>
 
 namespace openshot {
 	/**

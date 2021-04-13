@@ -516,9 +516,32 @@ TEST_CASE( "Point_Vector_Constructor", "[libopenshot][keyframe]" )
 
 TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 {
-	TrackedObjectBBox kfb;
-	// XXX: This really needs to perform some sort of _test_ here,
-	//      like confirming some default values in the new object.
+	TrackedObjectBBox kfb(62,143,0,212);
+
+    CHECK(kfb.delta_x.GetInt(1) == 0);
+    CHECK(kfb.delta_y.GetInt(1) == 0);
+
+    CHECK(kfb.scale_x.GetInt(1) == 1);
+    CHECK(kfb.scale_y.GetInt(1) == 1);
+
+    CHECK(kfb.rotation.GetInt(1) == 0);
+
+    CHECK(kfb.stroke_width.GetInt(1) == 2);
+    CHECK(kfb.stroke_alpha.GetInt(1) == 0);
+
+    CHECK(kfb.background_alpha .GetInt(1)== 1);
+    CHECK(kfb.background_corner.GetInt(1) == 0);
+
+    CHECK(kfb.stroke.red.GetInt(1) == 62);
+    CHECK(kfb.stroke.green.GetInt(1) == 143);
+    CHECK(kfb.stroke.blue.GetInt(1) == 0);
+    CHECK(kfb.stroke.alpha.GetInt(1) == 212);
+
+    CHECK(kfb.background.red.GetInt(1) == 0);
+    CHECK(kfb.background.green.GetInt(1) == 0);
+    CHECK(kfb.background.blue.GetInt(1) == 255);
+    CHECK(kfb.background.alpha.GetInt(1) == 0);
+
 }
 
 TEST_CASE( "TrackedObjectBBox AddBox and RemoveBox", "[libopenshot][keyframe]" )
