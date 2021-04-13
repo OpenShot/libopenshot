@@ -46,23 +46,23 @@
 struct DetectionData{
     DetectionData(){}
     DetectionData(
-		std::vector<int> _classIds,
-		std::vector<float> _confidences,
-		std::vector<cv::Rect_<float>> _boxes,
-		size_t _frameId,
-		std::vector<int> _objectIds)
-	{
+        std::vector<int> _classIds,
+        std::vector<float> _confidences,
+        std::vector<cv::Rect_<float>> _boxes,
+        size_t _frameId,
+        std::vector<int> _objectIds)
+    {
         classIds = _classIds;
         confidences = _confidences;
         boxes = _boxes;
         frameId = _frameId;
-		objectIds = _objectIds;
+        objectIds = _objectIds;
     }
     size_t frameId;
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<cv::Rect_<float>> boxes;
-	std::vector<int> objectIds;
+    std::vector<int> objectIds;
 };
 
 namespace openshot
@@ -78,20 +78,22 @@ namespace openshot
         std::vector<std::string> classNames;
 
         std::vector<cv::Scalar> classesColor;
+        
+        /// Draw class name and confidence score on top of the bounding box
+        Keyframe display_box_text;
+        /// Minimum confidence value to display the detected objects
+        float confidence_threshold = 0.5; 
+        /// Contain the user selected classes for visualization
+        std::vector<std::string> display_classes;
+        std::string class_filter;
 
-		/// Minimum confidence value to display the detected objects
-		float confidence_threshold = 0.5; 
-		/// Contain the user selected classes for visualization
-		std::vector<std::string> display_classes;
-		std::string class_filter;
-
-		/// Init effect settings
-		void init_effect_details();
-		/// Draw bounding box with class and score text 
-		void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, float alpha, 
-                    	int thickness, bool is_background);
-		/// Draw rotated rectangle with alpha channel
-		void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
+        /// Init effect settings
+        void init_effect_details();
+        /// Draw bounding box with class and score text 
+        void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, float alpha, 
+                        int thickness, bool is_background, bool draw_text);
+        /// Draw rotated rectangle with alpha channel
+        void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
 
 
     public:
