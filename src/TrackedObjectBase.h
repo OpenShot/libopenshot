@@ -47,36 +47,36 @@
 
 
 namespace openshot {
-    /**
+	/**
 	 * @brief This abstract class is the base class of all Tracked Objects.
 	 *
 	 * A Tracked Object is an object or a desired set of pixels in a digital image
 	 * which properties (such as position, width and height) can be detected and 
 	 * predicted along the frames of a clip.
 	 */
-    class TrackedObjectBase {
+	class TrackedObjectBase {
 	protected:
 		std::string id;
 		std::string childClipId;
 
 		ClipBase* parentClip;
 
-    public:
+	public:
 		
 		Keyframe visible;
 		Keyframe draw_box;
 
-        /// Default constructor
-        TrackedObjectBase();
+		/// Default constructor
+		TrackedObjectBase();
 
 		/// Constructor which takes an object ID
 		TrackedObjectBase(std::string _id);
 
-        /// Get the id of this object
+		/// Get the id of this object
 		std::string Id() const { return id; }
 		/// Set the id of this object
 		void Id(std::string _id) { id = _id; }
-        /// Get and set the parentClip of this object
+		/// Get and set the parentClip of this object
 		ClipBase* ParentClip() const { return parentClip; }
 		void ParentClip(ClipBase* clip) { parentClip = clip; }
 		/// Get and set the Id of the childClip of this object
@@ -84,23 +84,23 @@ namespace openshot {
 		void ChildClipId(std::string _childClipId) { childClipId = _childClipId; };
 
 		/// Check if there is data for the exact frame number
-        virtual bool ExactlyContains(int64_t frame_number) const { return {}; };
+		virtual bool ExactlyContains(int64_t frame_number) const { return {}; };
 
-        /// Scale an object's property
-        virtual void ScalePoints(double scale) { return; };
+		/// Scale an object's property
+		virtual void ScalePoints(double scale) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
 		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
-        /// Return the main properties of the tracked object's parent clip - such as position, size and rotation
-        virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
+		/// Return the main properties of the tracked object's parent clip - such as position, size and rotation
+		virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
 		/// Add a bounding box to the tracked object's BoxVec map
 		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };
 
 
 		/// Get and Set JSON methods
-        virtual std::string Json() const = 0;                  ///< Generate JSON string of this object
-        virtual Json::Value JsonValue() const = 0;             ///< Generate Json::Value for this object
-        virtual void SetJson(const std::string value) = 0;     ///< Load JSON string into this object
-        virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
+		virtual std::string Json() const = 0;				  ///< Generate JSON string of this object
+		virtual Json::Value JsonValue() const = 0;			 ///< Generate Json::Value for this object
+		virtual void SetJson(const std::string value) = 0;	 ///< Load JSON string into this object
+		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
