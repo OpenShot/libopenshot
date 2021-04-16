@@ -35,7 +35,9 @@
 // Prevent name clashes with juce::UnitTest
 #define DONT_SET_USING_JUCE_NAMESPACE 1
 #include "KeyFrame.h"
+#ifdef USE_OPENCV
 #include "TrackedObjectBBox.h"
+#endif
 #include "Exceptions.h"
 #include "Coordinate.h"
 #include "Fraction.h"
@@ -519,7 +521,7 @@ TEST(Point_Vector_Constructor)
 
 };  // SUITE
 
-
+#ifdef USE_OPENCV
 TEST(TrackedObjectBBox_init_test) {
 	
 	TrackedObjectBBox kfb;
@@ -705,3 +707,4 @@ TEST(GetBoxValues_test){
 	CHECK_EQUAL(20.0, boxValues["h"]);
 	CHECK_EQUAL(30.0, boxValues["ang"]);
 }
+#endif

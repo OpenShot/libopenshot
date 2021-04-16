@@ -40,7 +40,6 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
-#include "effects/Tracker.h"
 
 using namespace openshot;
 
@@ -1158,6 +1157,7 @@ void Clip::AddEffect(EffectBase* effect)
 	if (parentTimeline)
 		effect->ParentTimeline(parentTimeline);
 
+    #ifdef USE_OPENCV
 	// Add Tracked Object to Timeline
 	if (effect->info.has_tracked_object){
 
@@ -1178,9 +1178,9 @@ void Clip::AddEffect(EffectBase* effect)
 				// Add the Tracked Object to the timeline
 				parentTimeline->AddTrackedObject(trackedObjectBBox);
 			}	
-
 		}
 	}
+    #endif
 
 	// Clear cache
 	cache.Clear();

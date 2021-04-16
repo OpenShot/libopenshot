@@ -34,13 +34,15 @@
 #include <memory>
 
 #include "KeyFrame.h"
-#include "TrackedObjectBBox.h"
 #include "Exceptions.h"
 #include "Coordinate.h"
 #include "Fraction.h"
 #include "Clip.h"
 #include "Timeline.h"
+#ifdef USE_OPENCV
 #include "effects/Tracker.h"
+#include "TrackedObjectBBox.h"
+#endif
 #include "Point.h"
 
 using namespace openshot;
@@ -514,6 +516,7 @@ TEST_CASE( "Point_Vector_Constructor", "[libopenshot][keyframe]" )
 	CHECK(k1.GetValue(10) == Approx(30.0f).margin(0.0001));
 }
 
+#ifdef USE_OPENCV
 TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 {
 	TrackedObjectBBox kfb(62,143,0,212);
@@ -731,3 +734,4 @@ TEST_CASE( "GetBoxValues", "[libopenshot][keyframe]" )
 	CHECK(boxValues["h"] == 20.0);
 	CHECK(boxValues["ang"] == 30.0);
 }
+#endif

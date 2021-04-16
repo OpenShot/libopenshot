@@ -132,7 +132,6 @@
 	#include "TextReader.h"
 #endif
 #include "KeyFrame.h"
-#include "TrackedObjectBBox.h"
 #include "PlayerBase.h"
 #include "Point.h"
 #include "Profiles.h"
@@ -147,6 +146,7 @@
 	#include "CVStabilization.h"
 	#include "CVTracker.h"
 	#include "CVObjectDetection.h"
+	#include "TrackedObjectBBox.h"
 #endif
 
 #endif

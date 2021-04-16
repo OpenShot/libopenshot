@@ -87,7 +87,6 @@ set(OPENSHOT_SOURCES
   Json.cpp
   KeyFrame.cpp
   TrackedObjectBase.cpp
-  TrackedObjectBBox.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp
   PlayerBase.cpp
@@ -107,6 +106,7 @@ set(OPENSHOT_CV_SOURCES
   CVStabilization.cpp
   ClipProcessingJobs.cpp
   CVObjectDetection.cpp
+  TrackedObjectBBox.cpp
   effects/Stabilizer.cpp
   effects/Tracker.cpp
   effects/ObjectDetection.cpp

@@ -293,6 +293,7 @@ std::list<std::string> Timeline::GetTrackedObjectsIds() const{
 	return trackedObjects_ids;
 }
 
+#ifdef USE_OPENCV
 // Return the trackedObject's properties as a JSON string
 std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_number) const {
 
@@ -349,6 +350,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 
 	return trackedObjectJson.toStyledString();
 }
+#endif
 
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)

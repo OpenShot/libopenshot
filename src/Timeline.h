@@ -48,7 +48,9 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
+#ifdef USE_OPENCV
 #include "TrackedObjectBBox.h"
+#endif
 #include "TrackedObjectBase.h"
 
 
@@ -254,7 +256,9 @@ namespace openshot {
 		/// Return the ID's of the tracked objects as a list of strings
 		std::list<std::string> GetTrackedObjectsIds() const;
 		/// Return the trackedObject's properties as a JSON string
+        #ifdef USE_OPENCV
 		std::string GetTrackedObjectValues(std::string id, int64_t frame_number) const;
+        #endif
 
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
