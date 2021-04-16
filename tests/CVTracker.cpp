@@ -56,14 +56,14 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
+        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 1}
     } )proto";
 
     // Create tracker
     CVTracker kcfTracker(json_data, tracker_pc);
 
     // Track clip for frames 0-20
-    kcfTracker.trackClip(c1, 0, 20, true);
+    kcfTracker.trackClip(c1, 1, 20, true);
     // Get tracked data
     FrameData fd = kcfTracker.GetTrackedData(20);
     float x = fd.x1;
@@ -94,7 +94,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
+        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 1}
     } )proto";
 
 
@@ -102,7 +102,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     CVTracker kcfTracker_1(json_data, tracker_pc);
 
     // Track clip for frames 0-20
-    kcfTracker_1.trackClip(c1, 0, 20, true);
+    kcfTracker_1.trackClip(c1, 1, 20, true);
 
     // Get tracked data
     FrameData fd_1 = kcfTracker_1.GetTrackedData(20);
@@ -119,7 +119,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker_type": "",
-        "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 0}
+        "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 1}
     } )proto";
 
     // Create second tracker

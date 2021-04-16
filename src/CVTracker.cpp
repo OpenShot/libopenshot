@@ -40,8 +40,8 @@ using google::protobuf::util::TimeUtil;
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), json_interval(false){
     SetJson(processInfoJson);
-    start = 0;
-    end = 0;
+    start = 1;
+    end = 1;
 }
 
 // Set desirable tracker method
@@ -73,15 +73,15 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
     if(!json_interval){
         start = _start; end = _end;
 
-        if(!process_interval || end <= 0 || end-start == 0){
+        if(!process_interval || end <= 1 || end-start == 0){
             // Get total number of frames in video
-            start = video.Start() * video.Reader()->info.fps.ToInt();
-            end = video.End() * video.Reader()->info.fps.ToInt();
+            start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+            end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
         }
     }
     else{
-        start = start + video.Start() * video.Reader()->info.fps.ToInt();
-        end = video.End() * video.Reader()->info.fps.ToInt();
+        start = (int)(start + video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
     }
 
     if(error){

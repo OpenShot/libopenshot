@@ -62,7 +62,7 @@ TEST_CASE( "DetectObject_Video", "[libopenshot][opencv][objectdetection]" )
     //TODO remove hardcoded path
     CVObjectDetection objectDetector(effectInfo, processingController);
 
-    objectDetector.detectObjectsClip(c1, 0, 20, true);
+    objectDetector.detectObjectsClip(c1, 1, 20, true);
 
     CVDetectionData dd = objectDetector.GetDetectionData(20);
 
@@ -97,7 +97,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][objectdetection]" )
     //TODO remove hardcoded path
     CVObjectDetection objectDetector_1(effectInfo ,processingController);
 
-    objectDetector_1.detectObjectsClip(c1, 0, 20, true);
+    objectDetector_1.detectObjectsClip(c1, 1, 20, true);
 
     CVDetectionData dd_1 = objectDetector_1.GetDetectionData(20);
 

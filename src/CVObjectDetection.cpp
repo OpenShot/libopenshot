@@ -78,10 +78,10 @@ void CVObjectDetection::detectObjectsClip(openshot::Clip &video, size_t _start, 
     setProcessingDevice();
 
     size_t frame_number;
-    if(!process_interval || end == 0 || end-start == 0){
+    if(!process_interval || end <= 1 || end-start == 0){
         // Get total number of frames in video
-        start = video.Start() * video.Reader()->info.fps.ToInt();
-        end = video.End() * video.Reader()->info.fps.ToInt();
+        start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
     }
 
     for (frame_number = start; frame_number <= end; frame_number++)
