@@ -77,9 +77,7 @@ endif()
 ### Catch2 unit tests
 ###
 if (TESTS_ENABLED)
-  message (STATUS "Tests enabled, test executables will be compiled")
   include(Catch)
-
   include(CTest)
 
   # Create object library for test executable main(),
