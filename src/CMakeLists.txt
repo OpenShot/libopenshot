@@ -321,7 +321,7 @@ if(USE_HW_ACCEL AND HAVE_HW_ACCEL)
 else()
   set(FFMPEG_HARDWARE_ACCELERATION FALSE)
 endif()
-set(_hwaccel_help "GPU-accelerated routines available (FFmpeg 3.4+)")
+set(_hwaccel_help "GPU-accelerated routines (FFmpeg 3.4+)")
 add_feature_info("FFmpeg hwaccel" FFMPEG_HARDWARE_ACCELERATION ${_hwaccel_help})
 
 ################### OPENMP #####################
