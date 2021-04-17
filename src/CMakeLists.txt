@@ -432,19 +432,37 @@ endif()
 
 # Install primary library
 install(TARGETS openshot
+  COMPONENT runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
-install(
-  DIRECTORY .
+install(DIRECTORY .
+  COMPONENT devel
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   FILES_MATCHING PATTERN "*.h"
 )
-install(FILES ${ProtobufHeaders}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
-)
+
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+  # Install libopenshot-audio in unit test directory
+  get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION_RELEASE)
+  install(FILES
+    "${AUDIO_LIB_PATH}"
+    COMPONENT testing
+    DESTINATION "."
+    EXCLUDE_FROM_ALL
+  )
+  set(test_dependencies openshot)
+  if(TARGET openshot_protobuf)
+    list(APPEND test_dependencies openshot_protobuf)
+  endif()
+  install(TARGETS ${test_dependencies}
+    COMPONENT testing
+    RUNTIME DESTINATION "."
+    EXCLUDE_FROM_ALL
+  )
+endif()
 
 ############### CPACK PACKAGING ##############
 if(MINGW)

@@ -76,28 +76,29 @@ endif()
 ###
 ### Catch2 unit tests
 ###
-if (TESTS_ENABLED)
-  include(Catch)
-  include(CTest)
-
-  # Create object library for test executable main(),
-  # to avoid recompiling for every test
-  add_library(catch-main OBJECT catch_main.cpp)
-
-  foreach(tname ${OPENSHOT_TESTS})
-    add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
-    target_compile_definitions(openshot-${tname}-test PRIVATE
-      TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
-    )
-  	target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
-		# Automatically configure CTest targets from Catch2 test cases
-		catch_discover_tests(
-      openshot-${tname}-test
-      TEST_PREFIX ${tname}:
-    )
-    list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
-	endforeach()
-  # Export target list for coverage use
-  set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
+if (NOT CAN_BUILD_TESTS)
+  return()
 endif()
 
+include(CTest)
+include(Catch)
+
+# Create object library for test executable main(),
+# to avoid recompiling for every test
+add_library(catch-main OBJECT catch_main.cpp)
+
+foreach(tname ${OPENSHOT_TESTS})
+  add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
+  target_compile_definitions(openshot-${tname}-test PRIVATE
+    TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
+  )
+	target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
+	# Automatically configure CTest targets from Catch2 test cases
+	catch_discover_tests(
+    openshot-${tname}-test
+    TEST_PREFIX ${tname}:
+  )
+  list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
+endforeach()
+# Export target list for coverage use
+set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)

@@ -55,11 +55,13 @@ set_target_properties(openshot_protobuf PROPERTIES
 
 # Install protobuf library and generated headers
 install(TARGETS openshot_protobuf
+  COMPONENT runtime
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   )
 install(FILES ${ProtoHeaders}
+  COMPONENT devel
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/protobuf_messages
 )
