@@ -117,7 +117,7 @@ public:
 	std::string CaptionText(); ///< Set the caption string to use (see VTT format)
 	void CaptionText(std::string new_caption_text); ///< Get the caption string
 
-	/// Get and Set JSON methods
+	// Get and Set JSON methods
 	std::string Json() const override; ///< Generate JSON string of this object
 	void SetJson(const std::string value) override; ///< Load JSON string into this object
 	Json::Value JsonValue() const override; ///< Generate Json::Value for this object

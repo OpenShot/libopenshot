@@ -138,11 +138,6 @@ bool Tracker::LoadTrackedData(std::string inputFilePath){
         trackedDataById[id] = EffectFrameData(id, rotation, x1, y1, x2, y2);
     }
 
-    // Show the time stamp from the last update in tracker data file
-    if (trackerMessage.has_last_updated()) {
-        cout << "  Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(trackerMessage.last_updated()) << endl;
-    }
-
     // Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
 

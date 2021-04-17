@@ -144,6 +144,8 @@ namespace openshot
 		ReaderBase *reader;		// The source video reader
 		CacheMemory final_cache; 		// Cache of actual Frame objects
 		bool is_dirty; 			// When this is true, the next call to GetFrame will re-init the mapping
+		float parent_position;  // Position of parent clip (which is used to generate the audio mapping)
+		float parent_start;     // Start of parent clip (which is used to generate the audio mapping)
 		SWRCONTEXT *avr;	// Audio resampling context object
 
 		// Internal methods used by init
@@ -199,7 +201,7 @@ namespace openshot
 		/// Return the type name of the class
 		std::string Name() override { return "FrameMapper"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

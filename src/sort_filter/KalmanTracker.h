@@ -10,7 +10,7 @@
 
 #define StateType cv::Rect_<float>
 
-// This class represents the internel state of individual tracked objects observed as bounding box.
+/// This class represents the internel state of individual tracked objects observed as bounding box.
 class KalmanTracker
 {
 public:
