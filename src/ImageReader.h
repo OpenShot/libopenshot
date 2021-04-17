@@ -43,7 +43,7 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
-#include "Exceptions.h"
+
 #include "MagickUtilities.h"
 
 namespace openshot
@@ -107,7 +107,7 @@ namespace openshot
 		/// Return the type name of the class
 		std::string Name() override { return "ImageReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

@@ -31,7 +31,10 @@
 #ifndef OPENSHOT_FRACTION_H
 #define OPENSHOT_FRACTION_H
 
-#include <cmath>
+#include <string>    // for std::string
+#include <utility>   // for std::pair
+#include <map>       // for std::map
+#include <vector>    // for std::vector
 
 namespace openshot {
 
@@ -49,8 +52,18 @@ namespace openshot {
 
 		/// Default Constructor
 		Fraction();
+
 		/// Constructor with numerator and denominator
 		Fraction(int num, int den);
+
+		/// Constructor that accepts a (num, den) pair
+		Fraction(std::pair<int, int> pair);
+
+		/// Constructor that takes a vector of length 2 (containing {num, den})
+		Fraction(std::vector<int> vector);
+
+		/// Constructor that takes a key-value mapping (keys: 'num'. 'den')
+		Fraction(std::map<std::string, int> mapping);
 
 		/// Calculate the greatest common denominator
 		int GreatestCommonDenominator();

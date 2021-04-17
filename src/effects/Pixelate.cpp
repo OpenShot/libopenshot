@@ -29,6 +29,7 @@
  */
 
 #include "Pixelate.h"
+#include "Exceptions.h"
 #include "Json.h"
 
 #include <QImage>

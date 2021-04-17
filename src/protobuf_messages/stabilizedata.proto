@@ -1,0 +1,31 @@
+
+// [START declaration]
+syntax = "proto3";
+package pb_stabilize;
+
+import "google/protobuf/timestamp.proto";
+// [END declaration]
+
+// [START messages]
+message Frame {
+  int32 id = 1;  // Frame ID.
+
+  // TransformParam: frame smothed transformation
+  float dx = 2;
+  float dy = 3;
+  float da = 4;
+
+  // CamTrajectory: Shaky camera trajectory.
+  // Can be used to run different smoothing techniques.
+  float x = 5;
+  float y = 6;
+  float a = 7;
+
+}
+
+message Stabilization {
+  repeated Frame frame = 1;
+
+  google.protobuf.Timestamp last_updated = 2;
+}
+// [END messages]

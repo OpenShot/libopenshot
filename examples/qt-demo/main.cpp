@@ -29,11 +29,16 @@
  */
 
 #include "Qt/PlayerDemo.h"
-
+#include "ZmqLogger.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
+    // Enable logging for openshot-player since this is primarily used for
+    // profiling and debugging video playback issues.
+    openshot::ZmqLogger::Instance()->Enable(true);
+    openshot::ZmqLogger::Instance()->Path("./player.log");
+
     QApplication app(argc, argv);
     PlayerDemo demo;
     demo.show();

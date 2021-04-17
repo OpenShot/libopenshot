@@ -29,6 +29,7 @@
  */
 
 #include "Json.h"
+#include "Exceptions.h"
 
 const Json::Value openshot::stringToJson(const std::string value) {
 

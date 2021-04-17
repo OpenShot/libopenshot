@@ -45,7 +45,6 @@ Settings *Settings::Instance()
 		m_pInstance = new Settings;
 		m_pInstance->HARDWARE_DECODER = 0;
 		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->WAIT_FOR_VIDEO_PROCESSING_TASK = false;
 		m_pInstance->OMP_THREADS = 12;
 		m_pInstance->FF_THREADS = 8;
 		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;

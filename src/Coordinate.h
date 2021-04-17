@@ -32,7 +32,6 @@
 #define OPENSHOT_COORDINATE_H
 
 #include <iostream>
-#include "Exceptions.h"
 #include "Fraction.h"
 #include "Json.h"
 
@@ -65,7 +64,11 @@ namespace openshot {
 		/// @param y The Y coordinate (usually representing the value of the property being animated)
 		Coordinate(double x, double y);
 
-		/// Get and Set JSON methods
+		/// @brief Constructor which accepts a std::pair tuple for {X, Y}
+		/// @param co A std::pair<double, double> tuple containing (X, Y)
+		Coordinate(const std::pair<double, double>& co);
+
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

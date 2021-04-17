@@ -40,7 +40,7 @@ For more information, please visit <http://www.openshot.org/>.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
-set(PROJECT_VERSION_FULL "0.2.5-dev2")
+set(PROJECT_VERSION_FULL "0.2.5-dev3")
 set(PROJECT_SO_VERSION 19)
 
 # Remove the dash and anything following, to get the #.#.# version for project()
@@ -73,12 +73,18 @@ include(FeatureSummary)
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
 option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
+
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
-option(ENABLE_TESTS "Build unit tests (requires UnitTest++)" ON)
+
+option(ENABLE_TESTS "Build unit tests (requires Catch2)" ON)
+option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
+
 option(ENABLE_LIB_DOCS "Build API documentation (requires Doxygen)" ON)
+
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
+option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
@@ -86,7 +92,7 @@ if (DISABLE_TESTS)
 endif()
 
 if(DEFINED ENABLE_TESTS)
-  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires UnitTest++)" FORCE)
+  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires Catch2)" FORCE)
 endif()
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
@@ -101,14 +107,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-IF (WIN32)
-	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
-ENDIF(WIN32)
-
 ############## Code Coverage #########################
 if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
   message(WARNING "ENABLE_COVERAGE requires unit tests, forcing ENABLE_TESTS")
-  set(ENABLE_TESTS ON CACHE BOOL "Don't build unit tests" FORCE)
+  set(ENABLE_TESTS ON CACHE BOOL "Build unit tests (requires Catch2)" FORCE)
 endif()
 
 if (ENABLE_COVERAGE)
@@ -214,49 +216,85 @@ endif()
 add_feature_info("${PROJECT_NAME} docs" CAN_BUILD_LIB_DOCS "Build ${PROJECT_NAME} API documentation")
 
 ############# PROCESS tests/ DIRECTORY ##############
-if(ENABLE_TESTS)
-  set(CAN_RUN_UNIT_TESTS TRUE) # May be overridden by tests/CMakeLists.txt
+set(CAN_BUILD_TESTS ${ENABLE_TESTS})
+find_package(Catch2 QUIET)
+if(NOT Catch2_FOUND)
+  set(CAN_BUILD_TESTS FALSE)
+endif()
+if(CAN_BUILD_TESTS)
+  if(ENABLE_PARALLEL_CTEST)
+    # Figure out the amount of parallelism for CTest
+    include(ProcessorCount)
+    ProcessorCount(CPU_COUNT)
+    if(NOT CPU_COUNT EQUAL 0)
+      message(STATUS "Setting up unit tests to use ${CPU_COUNT} processors")
+      set(CTEST_OPTIONS "-j${CPU_COUNT}")
+    endif()
+  endif()
+  include(CTest)
+  include(Catch)
   add_subdirectory(tests)
 endif()
-add_feature_info("Unit tests" CAN_RUN_UNIT_TESTS "Compile unit tests for library functions")
+add_feature_info("Unit tests" CAN_BUILD_TESTS "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
-if (ENABLE_COVERAGE)
+if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
   setup_target_for_coverage_lcov(
     NAME coverage
     LCOV_ARGS "--no-external"
-    EXECUTABLE openshot-test
-    DEPENDENCIES openshot openshot-test
+    EXECUTABLE ctest
+    EXECUTABLE_ARGS ${CTEST_OPTIONS}
+    DEPENDENCIES openshot ${UNIT_TEST_TARGETS}
     EXCLUDE
       "bindings/*"
       "examples/*"
       "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
       "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
   )
-  if(NOT TARGET os_test)
-    add_custom_target(os_test)
-    add_dependencies(os_test coverage)
-  endif()
 endif()
 
-# Also hook up 'test' as an alias for the 'os_test' target, if possible
-# This requires CMake 3.11+, where the CMP0037 policy
-# configured to 'NEW' mode will not reserve target names
-# unless the corresponding feature is actually used
-if (POLICY CMP0037)
-	cmake_policy(SET CMP0037 NEW)
+if(CAN_BUILD_TESTS AND NOT TARGET coverage)
+  add_custom_target(coverage
+    COMMAND ctest ${CTEST_OPTIONS}
+    DEPENDS openshot ${UNIT_TEST_TARGETS}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running unit tests (coverage disabled)"
+  )
 endif()
-if(TARGET os_test)
-  if (CMAKE_VERSION VERSION_GREATER 3.11)
-    message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
-    add_custom_target(test)
-    add_dependencies(test os_test)
-    set(TEST_TARGET_NAME "test")
-  else()
-    set(TEST_TARGET_NAME "os_test")
+
+if(TARGET test AND NOT TARGET os_test)
+  add_custom_target(os_test)
+  add_dependencies(os_test coverage)
+endif()
+
+if(TARGET os_test AND NOT TARGET test AND CMAKE_VERSION VERSION_GREATER 3.11)
+  # Also hook up 'test' as an alias for the 'os_test' target, if possible
+  # This requires CMake 3.11+, where the CMP0037 policy
+  # configured to 'NEW' mode will not reserve target names
+  # unless the corresponding feature is actually used
+  if (POLICY CMP0037)
+  	cmake_policy(SET CMP0037 NEW)
   endif()
-  add_feature_info("Testrunner" ENABLE_TESTS "Run unit tests with 'make ${TEST_TARGET_NAME}'")
+  message(STATUS "Cmake 3.11+ detected, enabling 'test' target")
+  add_custom_target(test)
+  add_dependencies(test os_test)
 endif()
+
+###
+### Add feature-summary details on non-default built targets
+###
+set(optional_targets test os_test coverage doc)
+set(target_test_description "Build and execute unit tests")
+set(target_os_test_description "Build and execute unit tests (legacy target)")
+set(target_coverage_description "Run unit tests and (if enabled) collect coverage data")
+set(target_doc_description "Build formatted API documentation (HTML+SVG)")
+foreach(_tname IN LISTS optional_targets)
+  if(TARGET ${_tname})
+    add_feature_info("Non-default target '${_tname}'" TRUE ${target_${_tname}_description})
+  else()
+    message(DEBUG "No target ${_tname}")
+  endif()
+endforeach()
 
 ###
 ### PRINT FEATURE SUMMARY

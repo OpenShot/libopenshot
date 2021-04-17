@@ -32,7 +32,7 @@
 #define OPENSHOT_POINT_H
 
 #include "Coordinate.h"
-#include "Exceptions.h"
+
 #include "Json.h"
 
 namespace openshot
@@ -100,13 +100,13 @@ namespace openshot
 		Point(float x, float y, InterpolationType interpolation);
 
 		/// Constructor which takes a coordinate
-		Point(Coordinate co);
+		Point(const Coordinate& co);
 
 		/// Constructor which takes a coordinate and interpolation mode
-		Point(Coordinate co, InterpolationType interpolation);
+		Point(const Coordinate& co, InterpolationType interpolation);
 
 		/// Constructor which takes a coordinate, interpolation mode, and handle type
-		Point(Coordinate co, InterpolationType interpolation, HandleType handle_type);
+		Point(const Coordinate& co, InterpolationType interpolation, HandleType handle_type);
 
 		/// Set the left and right handles to a percent of the primary coordinate (0 to 1)
 		/// Defaults to a smooth curve (Ease in and out)
@@ -118,7 +118,7 @@ namespace openshot
 		/// Set the right handle to a percent of the primary coordinate (0 to 1)
 		void Initialize_RightHandle(float x, float y);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

@@ -29,6 +29,7 @@
  */
 
 #include "WriterBase.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

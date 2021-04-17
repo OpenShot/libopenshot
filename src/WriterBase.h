@@ -106,7 +106,7 @@ namespace openshot
 		/// This method is required for all derived classes of WriterBase.  Write a block of frames from a reader.
 		virtual void WriteFrame(openshot::ReaderBase* reader, int64_t start, int64_t length) = 0;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

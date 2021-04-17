@@ -46,7 +46,6 @@
 #include <memory>
 #include "CacheMemory.h"
 #include "Clip.h"
-#include "Exceptions.h"
 #include "OpenMPUtilities.h"
 #include "Settings.h"
 
@@ -109,6 +108,7 @@ namespace openshot {
 		bool check_interlace;
 		bool check_fps;
 		bool has_missing_frames;
+		int max_concurrent_frames;
 
 		CacheMemory working_cache;
 		CacheMemory missing_frames;
@@ -195,6 +195,9 @@ namespace openshot {
 		/// Get the PTS for the current video packet
 		int64_t GetVideoPTS();
 
+		/// Check if there's an album art
+		bool HasAlbumArt();
+
 		/// Remove partial frames due to seek
 		bool IsPartialFrame(int64_t requested_frame);
 
@@ -262,7 +265,7 @@ namespace openshot {
 		/// Return the type name of the class
 		std::string Name() override { return "FFmpegReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object
@@ -270,6 +273,9 @@ namespace openshot {
 
 		/// Open File - which is called by the constructor automatically
 		void Open() override;
+
+		/// Return true if frame can be read with GetFrame()
+		bool GetIsDurationKnown();
 	};
 
 }

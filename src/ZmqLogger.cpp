@@ -29,6 +29,7 @@
  */
 
 #include "ZmqLogger.h"
+#include "Exceptions.h"
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"

@@ -29,6 +29,7 @@
  */
 
 #include "EffectBase.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

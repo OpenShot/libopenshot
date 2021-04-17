@@ -1,0 +1,4174 @@
+error: no such file or directory: '/home/ferd/devel/libopenshot/build/src/openshot_autogen/mocs_compilation.cpp'
+error: no input files
+error: unable to handle compilation, expected exactly one compiler job in ''
+
+
+/home/ferd/devel/libopenshot/src/AudioResampler.h should add these lines:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_audio_basics/sources/juce_AudioSource.h>        // for AudioS...
+namespace juce { class ResamplingAudioSource; }
+namespace openshot { class AudioBufferSource; }
+
+/home/ferd/devel/libopenshot/src/AudioResampler.h should remove these lines:
+- #include "AudioBufferSource.h"  // lines 34-34
+- #include "Exceptions.h"  // lines 35-35
+- #include "JuceHeader.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioResampler.h:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_audio_basics/sources/juce_AudioSource.h>        // for AudioS...
+namespace juce { class ResamplingAudioSource; }
+namespace openshot { class AudioBufferSource; }
+---
+
+/home/ferd/devel/libopenshot/src/AudioResampler.cpp should add these lines:
+#include <juce_audio_basics/sources/juce_ResamplingAudioSource.h>
+#include <math.h>                                                  // for round
+#include <cstddef>                                                 // for NULL
+#include "AudioBufferSource.h"
+
+/home/ferd/devel/libopenshot/src/AudioResampler.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioResampler.cpp:
+#include "AudioResampler.h"
+#include <juce_audio_basics/sources/juce_ResamplingAudioSource.h>
+#include <math.h>                                                  // for round
+#include <cstddef>                                                 // for NULL
+#include "AudioBufferSource.h"
+---
+
+
+/home/ferd/devel/libopenshot/src/AudioBufferSource.h should add these lines:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>
+#include <juce_audio_basics/sources/juce_PositionableAudioSource.h>
+#include <juce_core/maths/juce_MathsFunctions.h>
+namespace juce { struct AudioSourceChannelInfo; }
+
+/home/ferd/devel/libopenshot/src/AudioBufferSource.h should remove these lines:
+- #include <iomanip>  // lines 34-34
+- #include "JuceHeader.h"  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioBufferSource.h:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>
+#include <juce_audio_basics/sources/juce_PositionableAudioSource.h>
+#include <juce_core/maths/juce_MathsFunctions.h>
+namespace juce { struct AudioSourceChannelInfo; }
+---
+
+/home/ferd/devel/libopenshot/src/AudioBufferSource.cpp should add these lines:
+#include <juce_audio_basics/sources/juce_AudioSource.h>  // for AudioSourceC...
+#include <cstddef>                                       // for NULL, std
+
+/home/ferd/devel/libopenshot/src/AudioBufferSource.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioBufferSource.cpp:
+#include "AudioBufferSource.h"
+#include <juce_audio_basics/sources/juce_AudioSource.h>  // for AudioSourceC...
+#include <cstddef>                                       // for NULL, std
+---
+
+
+/home/ferd/devel/libopenshot/src/AudioReaderSource.h should add these lines:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>
+#include <juce_audio_basics/sources/juce_PositionableAudioSource.h>
+#include <juce_core/maths/juce_MathsFunctions.h>
+#include <stdint.h>
+#include <memory>
+namespace juce { struct AudioSourceChannelInfo; }
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/AudioReaderSource.h should remove these lines:
+- #include <iomanip>  // lines 34-34
+- #include "JuceHeader.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioReaderSource.h:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>
+#include <juce_audio_basics/sources/juce_PositionableAudioSource.h>
+#include <juce_core/maths/juce_MathsFunctions.h>
+#include <stdint.h>
+#include <memory>
+#include "ReaderBase.h"
+namespace juce { struct AudioSourceChannelInfo; }
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/AudioReaderSource.cpp should add these lines:
+#include <juce_audio_basics/sources/juce_AudioSource.h>  // for AudioSourceC...
+#include <cstddef>                                       // for NULL, std
+#include "Exceptions.h"                                  // for OutOfBoundsF...
+#include "Frame.h"                                       // for Frame
+#include "Settings.h"                                    // for openshot
+#include "ZmqLogger.h"                                   // for ZmqLogger
+
+/home/ferd/devel/libopenshot/src/AudioReaderSource.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/AudioReaderSource.cpp:
+#include "AudioReaderSource.h"
+#include <juce_audio_basics/sources/juce_AudioSource.h>  // for AudioSourceC...
+#include <cstddef>                                       // for NULL, std
+#include "Exceptions.h"                                  // for OutOfBoundsF...
+#include "Frame.h"                                       // for Frame
+#include "Settings.h"                                    // for openshot
+#include "ZmqLogger.h"                                   // for ZmqLogger
+---
+
+
+/home/ferd/devel/libopenshot/src/CacheBase.h should add these lines:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include "json/json.h"  // for Value
+namespace juce { class CriticalSection; }
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/CacheBase.h should remove these lines:
+- #include <cstdlib>  // lines 35-35
+- #include "Exceptions.h"  // lines 37-37
+- #include "Frame.h"  // lines 36-36
+- #include "Json.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheBase.h:
+#include <stdint.h>     // for int64_t
+#include <memory>       // for shared_ptr
+#include <string>       // for string
+#include "json/json.h"  // for Value
+namespace juce { class CriticalSection; }
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/CacheBase.cpp should add these lines:
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <ostream>                                   // for stringstream
+#include "Settings.h"                                // for openshot
+
+/home/ferd/devel/libopenshot/src/CacheBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheBase.cpp:
+#include "CacheBase.h"
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <ostream>                                   // for stringstream
+#include "Settings.h"                                // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/CacheDisk.h should add these lines:
+#include <qdir.h>       // for QDir
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include <vector>       // for vector
+#include "json/json.h"  // for Value
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/CacheDisk.h should remove these lines:
+- #include <QDir>  // lines 40-40
+- #include "Exceptions.h"  // lines 39-39
+- #include "Frame.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheDisk.h:
+#include <qdir.h>       // for QDir
+#include <stdint.h>     // for int64_t
+#include <deque>        // for deque
+#include <map>          // for map
+#include <memory>       // for shared_ptr
+#include <string>       // for string
+#include <vector>       // for vector
+#include "CacheBase.h"  // for CacheBase
+#include "json/json.h"  // for Value
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/CacheDisk.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <qfile.h>                                   // for QFile
+#include <qimage.h>                                  // for QImage, QImage::...
+#include <qiodevice.h>                               // for QIODevice, QIODe...
+#include <qstring.h>                                 // for QString, operator+
+#include <qtextstream.h>                             // for QTextStream, ope...
+#include <stddef.h>                                  // for NULL
+#include <algorithm>                                 // for sort
+#include <cstdint>                                   // for int64_t
+#include <iterator>                                  // for operator!=
+#include <ostream>                                   // for stringstream
+#include "ChannelLayouts.h"                          // for ChannelLayout
+#include "Exceptions.h"                              // for InvalidJSON
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "Settings.h"                                // for openshot
+
+/home/ferd/devel/libopenshot/src/CacheDisk.cpp should remove these lines:
+- #include <QString>  // lines 34-34
+- #include <QTextStream>  // lines 35-35
+- #include <Qt>  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheDisk.cpp:
+#include "CacheDisk.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <qfile.h>                                   // for QFile
+#include <qimage.h>                                  // for QImage, QImage::...
+#include <qiodevice.h>                               // for QIODevice, QIODe...
+#include <qstring.h>                                 // for QString, operator+
+#include <qtextstream.h>                             // for QTextStream, ope...
+#include <stddef.h>                                  // for NULL
+#include <algorithm>                                 // for sort
+#include <cstdint>                                   // for int64_t
+#include <iterator>                                  // for operator!=
+#include <ostream>                                   // for stringstream
+#include "ChannelLayouts.h"                          // for ChannelLayout
+#include "Exceptions.h"                              // for InvalidJSON
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "QtUtilities.h"                             // for endl
+#include "Settings.h"                                // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/CacheMemory.h should add these lines:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include <vector>       // for vector
+#include "json/json.h"  // for Value
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/CacheMemory.h should remove these lines:
+- #include "Exceptions.h"  // lines 39-39
+- #include "Frame.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheMemory.h:
+#include <stdint.h>     // for int64_t
+#include <deque>        // for deque
+#include <map>          // for map
+#include <memory>       // for shared_ptr
+#include <string>       // for string
+#include <vector>       // for vector
+#include "CacheBase.h"  // for CacheBase
+#include "json/json.h"  // for Value
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/CacheMemory.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <algorithm>                                 // for sort
+#include <cstddef>                                   // for NULL, std
+#include <cstdint>                                   // for int64_t
+#include <iterator>                                  // for operator!=, reve...
+#include "Exceptions.h"                              // for InvalidJSON
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "Settings.h"                                // for openshot
+
+/home/ferd/devel/libopenshot/src/CacheMemory.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/CacheMemory.cpp:
+#include "CacheMemory.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <algorithm>                                 // for sort
+#include <cstddef>                                   // for NULL, std
+#include <cstdint>                                   // for int64_t
+#include <iterator>                                  // for operator!=, reve...
+#include "Exceptions.h"                              // for InvalidJSON
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "Settings.h"                                // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/Color.h should add these lines:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include "json/json.h"  // for Value
+
+/home/ferd/devel/libopenshot/src/Color.h should remove these lines:
+- #include <QtGui/QColor>  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/src/Color.h:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include "KeyFrame.h"   // for Keyframe
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/Color.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <math.h>            // for sqrt
+#include <qcolor.h>          // for QColor
+#include <qstring.h>         // for QString
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+
+/home/ferd/devel/libopenshot/src/Color.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Color.cpp:
+#include "Color.h"
+#include <bits/exception.h>  // for exception
+#include <math.h>            // for sqrt
+#include <qcolor.h>          // for QColor
+#include <qstring.h>         // for QString
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/ChunkWriter.h should add these lines:
+#include <stdint.h>      // for int64_t
+#include <memory>        // for shared_ptr
+#include <string>        // for string
+namespace openshot { class FFmpegWriter; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/ChunkWriter.h should remove these lines:
+- #include <omp.h>  // lines 48-48
+- #include <unistd.h>  // lines 47-47
+- #include <QtCore/QDir>  // lines 49-49
+- #include <cmath>  // lines 41-41
+- #include <cstdio>  // lines 45-45
+- #include <ctime>  // lines 42-42
+- #include <fstream>  // lines 44-44
+- #include <iostream>  // lines 43-43
+- #include <sstream>  // lines 46-46
+- #include "CacheMemory.h"  // lines 37-37
+- #include "Exceptions.h"  // lines 38-38
+- #include "FFmpegWriter.h"  // lines 36-36
+- #include "Json.h"  // lines 39-39
+- #include "ReaderBase.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/src/ChunkWriter.h:
+#include <stdint.h>      // for int64_t
+#include <memory>        // for shared_ptr
+#include <string>        // for string
+#include "WriterBase.h"  // for WriterBase
+namespace openshot { class FFmpegWriter; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+---
+
+/home/ferd/devel/libopenshot/src/ChunkWriter.cpp should add these lines:
+#include <qdir.h>          // for QDir
+#include <qstring.h>       // for operator+, QString
+#include <fstream>         // for ofstream, basic_ostream, stringstream, endl
+#include "Exceptions.h"    // for WriterClosed
+#include "FFmpegWriter.h"  // for FFmpegWriter
+#include "Frame.h"         // for Frame
+#include "ReaderBase.h"    // for ReaderBase
+#include "Settings.h"      // for openshot
+
+/home/ferd/devel/libopenshot/src/ChunkWriter.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/ChunkWriter.cpp:
+#include "ChunkWriter.h"
+#include <qdir.h>          // for QDir
+#include <qstring.h>       // for operator+, QString
+#include <fstream>         // for ofstream, basic_ostream, stringstream, endl
+#include "Exceptions.h"    // for WriterClosed
+#include "FFmpegWriter.h"  // for FFmpegWriter
+#include "Frame.h"         // for Frame
+#include "ReaderBase.h"    // for ReaderBase
+#include "Settings.h"      // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/../ChunkReader.h should add these lines:
+#include <stddef.h>  // for NULL
+
+/home/ferd/devel/libopenshot/src/effects/../ChunkReader.h should remove these lines:
+- #include <memory>  // lines 36-36
+- #include <string>  // lines 35-35
+- #include "CacheMemory.h"  // lines 40-40
+- #include "Frame.h"  // lines 38-38
+- #include "Json.h"  // lines 39-39
+- #include "ReaderBase.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/../ChunkReader.h:
+#include <stddef.h>  // for NULL
+---
+
+/home/ferd/devel/libopenshot/src/ChunkReader.cpp should add these lines:
+#include <bits/exception.h>           // for exception
+#include <qdir.h>                     // for QDir
+#include <qstring.h>                  // for operator+, QString
+#include <stdint.h>                   // for int64_t
+#include <memory>                     // for shared_ptr, __shared_ptr_access
+#include <ostream>                    // for stringstream, ifstream, basic_o...
+#include <string>                     // for string, stoll, getline, operator<<
+#include "Settings.h"                 // for openshot
+#include "effects/../ChunkReader.h"   // for ChunkReader, ChunkLocation, Chu...
+#include "effects/../Exceptions.h"    // for InvalidJSON, InvalidFile, Chunk...
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../Fraction.h"      // for Fraction
+#include "effects/../Frame.h"         // for Frame
+#include "effects/../Json.h"          // for stringToJson
+#include "effects/../ReaderBase.h"    // for ReaderInfo, ReaderBase
+#include "json/json.h"                // for Value, parseFromStream, CharRea...
+
+/home/ferd/devel/libopenshot/src/ChunkReader.cpp should remove these lines:
+- #include <QDir>  // lines 34-34
+- #include "FFmpegReader.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/ChunkReader.cpp:
+#include "ChunkReader.h"
+#include <bits/exception.h>           // for exception
+#include <qdir.h>                     // for QDir
+#include <qstring.h>                  // for operator+, QString
+#include <stdint.h>                   // for int64_t
+#include <memory>                     // for shared_ptr, __shared_ptr_access
+#include <ostream>                    // for stringstream, ifstream, basic_o...
+#include <string>                     // for string, stoll, getline, operator<<
+#include "Settings.h"                 // for openshot
+#include "effects/../ChunkReader.h"   // for ChunkReader, ChunkLocation, Chu...
+#include "effects/../Exceptions.h"    // for InvalidJSON, InvalidFile, Chunk...
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../Fraction.h"      // for Fraction
+#include "effects/../Frame.h"         // for Frame
+#include "effects/../Json.h"          // for stringToJson
+#include "effects/../ReaderBase.h"    // for ReaderInfo, ReaderBase
+#include "json/json.h"                // for Value, parseFromStream, CharRea...
+---
+
+
+/home/ferd/devel/libopenshot/src/Coordinate.h should add these lines:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+
+/home/ferd/devel/libopenshot/src/Coordinate.h should remove these lines:
+- #include <iostream>  // lines 34-34
+- #include "Exceptions.h"  // lines 35-35
+- #include "Fraction.h"  // lines 36-36
+- #include "Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/Coordinate.h:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/Coordinate.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <iostream>          // for std
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+
+/home/ferd/devel/libopenshot/src/Coordinate.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Coordinate.cpp:
+#include "Coordinate.h"
+#include <bits/exception.h>  // for exception
+#include <iostream>          // for std
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/ClipBase.h should add these lines:
+#include <stddef.h>       // for NULL
+#include <stdint.h>       // for int64_t
+#include <string>         // for string
+#include "json/json.h"    // for Value
+namespace openshot { class Frame; }
+namespace openshot { class Keyframe; }
+namespace openshot { class TimelineBase; }
+
+/home/ferd/devel/libopenshot/src/ClipBase.h should remove these lines:
+- #include <sstream>  // lines 35-35
+- #include "Exceptions.h"  // lines 37-37
+- #include "Frame.h"  // lines 38-38
+- #include "Json.h"  // lines 41-41
+- #include "KeyFrame.h"  // lines 40-40
+- #include "Point.h"  // lines 39-39
+- #include "TimelineBase.h"  // lines 42-42
+
+The full include-list for /home/ferd/devel/libopenshot/src/ClipBase.h:
+#include <stddef.h>       // for NULL
+#include <stdint.h>       // for int64_t
+#include <memory>         // for shared_ptr
+#include <string>         // for string
+#include "CacheMemory.h"  // for CacheMemory
+#include "json/json.h"    // for Value
+namespace openshot { class Frame; }
+namespace openshot { class Keyframe; }
+namespace openshot { class TimelineBase; }
+---
+
+/home/ferd/devel/libopenshot/src/ClipBase.cpp should add these lines:
+#include "Coordinate.h"  // for Coordinate
+#include "KeyFrame.h"    // for Keyframe
+#include "Point.h"       // for Point, CONSTANT
+#include "Settings.h"    // for openshot
+
+/home/ferd/devel/libopenshot/src/ClipBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/ClipBase.cpp:
+#include "ClipBase.h"
+#include "Coordinate.h"  // for Coordinate
+#include "KeyFrame.h"    // for Keyframe
+#include "Point.h"       // for Point, CONSTANT
+#include "Settings.h"    // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/CrashHandler.h should add these lines:
+#include <bits/types/siginfo_t.h>  // for siginfo_t
+
+/home/ferd/devel/libopenshot/src/CrashHandler.h should remove these lines:
+- #include <cxxabi.h>  // lines 45-45
+- #include <errno.h>  // lines 44-44
+- #include <execinfo.h>  // lines 42-42
+- #include <signal.h>  // lines 36-36
+- #include <cstdlib>  // lines 34-34
+- #include "ZmqLogger.h"  // lines 46-46
+
+The full include-list for /home/ferd/devel/libopenshot/src/CrashHandler.h:
+#include <bits/types/siginfo_t.h>  // for siginfo_t
+#include <stdio.h>                 // for FILE
+---
+
+/home/ferd/devel/libopenshot/src/CrashHandler.cpp should add these lines:
+#include <cxxabi.h>     // for __cxa_demangle
+#include <execinfo.h>   // for backtrace, backtrace_symbols
+#include <signal.h>     // for sigaction, sigemptyset, SIGABRT, SIGBUS, SIGFPE
+#include <cstdlib>      // for NULL, exit, free
+#include <iomanip>      // for operator<<, setw, left
+#include <ostream>      // for operator<<, basic_ostream, char_traits, endl
+#include "Settings.h"   // for openshot
+#include "ZmqLogger.h"  // for ZmqLogger
+
+/home/ferd/devel/libopenshot/src/CrashHandler.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/CrashHandler.cpp:
+#include "CrashHandler.h"
+#include <cxxabi.h>     // for __cxa_demangle
+#include <execinfo.h>   // for backtrace, backtrace_symbols
+#include <signal.h>     // for sigaction, sigemptyset, SIGABRT, SIGBUS, SIGFPE
+#include <cstdlib>      // for NULL, exit, free
+#include <iomanip>      // for operator<<, setw, left
+#include <ostream>      // for operator<<, basic_ostream, char_traits, endl
+#include "Settings.h"   // for openshot
+#include "ZmqLogger.h"  // for ZmqLogger
+---
+
+
+/home/ferd/devel/libopenshot/src/Clip.h should add these lines:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_core/threads/juce_CriticalSection.h>            // for Critic...
+#include <stdint.h>                                            // for int64_t
+#include <list>                                                // for list
+#include "CacheMemory.h"                                       // for CacheM...
+#include "effects/../Color.h"                                  // for Color
+#include "effects/../EffectBase.h"                             // for Effect...
+#include "json/json.h"                                         // for Value
+namespace openshot { class AudioResampler; }
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/Clip.h should remove these lines:
+- #include <QtGui/QImage>  // lines 36-36
+- #include "AudioResampler.h"  // lines 37-37
+- #include "Color.h"  // lines 39-39
+- #include "EffectBase.h"  // lines 41-41
+- #include "EffectInfo.h"  // lines 43-43
+- #include "Effects.h"  // lines 42-42
+- #include "Fraction.h"  // lines 44-44
+- #include "Frame.h"  // lines 45-45
+- #include "JuceHeader.h"  // lines 48-48
+
+The full include-list for /home/ferd/devel/libopenshot/src/Clip.h:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_core/threads/juce_CriticalSection.h>            // for Critic...
+#include <stdint.h>                                            // for int64_t
+#include <list>                                                // for list
+#include <memory>                                              // for shared...
+#include <string>                                              // for string
+#include "CacheMemory.h"                                       // for CacheM...
+#include "ClipBase.h"                                          // for ClipBase
+#include "Enums.h"                                             // for Anchor...
+#include "KeyFrame.h"                                          // for Keyframe
+#include "ReaderBase.h"                                        // for Reader...
+#include "effects/../Color.h"                                  // for Color
+#include "effects/../EffectBase.h"                             // for Effect...
+#include "json/json.h"                                         // for Value
+namespace openshot { class AudioResampler; }
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/Clip.cpp should add these lines:
+#include <QtCore/qglobal.h>                     // for QFlags
+#include <bits/exception.h>                     // for exception
+#include <ctype.h>                              // for tolower
+#include <juce_core/threads/juce_ScopedLock.h>  // for GenericScopedLock
+#include <math.h>                               // for fabs, round, abs
+#include <qcolor.h>                             // for QColor
+#include <qimage.h>                             // for QImage
+#include <qnamespace.h>                         // for KeepAspectRatio, Igno...
+#include <qpainter.h>                           // for QPainter, operator|
+#include <qsize.h>                              // for QSize
+#include <qstring.h>                            // for QString
+#include <qtransform.h>                         // for QTransform
+#include <stdlib.h>                             // for NULL, abs, strtof
+#include <algorithm>                            // for transform
+#include <map>                                  // for map
+#include <ostream>                              // for operator<<, stringstream
+#include "AudioBufferSource.h"                  // for openshot
+#include "AudioResampler.h"                     // for AudioResampler
+#include "EffectInfo.h"                         // for EffectInfo
+#include "OpenMPUtilities.h"                    // for OPEN_MP_NUM_PROCESSORS
+#include "TimelineBase.h"                       // for TimelineBase
+#include "ZmqLogger.h"                          // for ZmqLogger
+#include "effects/../Exceptions.h"              // for ReaderClosed, Invalid...
+#include "effects/../Fraction.h"                // for Fraction
+#include "effects/../Frame.h"                   // for Frame
+#include "effects/../Json.h"                    // for stringToJson
+#include "effects/../KeyFrame.h"                // for Keyframe
+
+/home/ferd/devel/libopenshot/src/Clip.cpp should remove these lines:
+- #include "FrameMapper.h"  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/src/Clip.cpp:
+#include "Clip.h"
+#include <QtCore/qglobal.h>                     // for QFlags
+#include <bits/exception.h>                     // for exception
+#include <ctype.h>                              // for tolower
+#include <juce_core/threads/juce_ScopedLock.h>  // for GenericScopedLock
+#include <math.h>                               // for fabs, round, abs
+#include <qcolor.h>                             // for QColor
+#include <qimage.h>                             // for QImage
+#include <qnamespace.h>                         // for KeepAspectRatio, Igno...
+#include <qpainter.h>                           // for QPainter, operator|
+#include <qsize.h>                              // for QSize
+#include <qstring.h>                            // for QString
+#include <qtransform.h>                         // for QTransform
+#include <stdlib.h>                             // for NULL, abs, strtof
+#include <algorithm>                            // for transform
+#include <map>                                  // for map
+#include <ostream>                              // for operator<<, stringstream
+#include "AudioBufferSource.h"                  // for openshot
+#include "AudioResampler.h"                     // for AudioResampler
+#include "ChunkReader.h"                        // for ChunkReader, ChunkVer...
+#include "DummyReader.h"                        // for DummyReader
+#include "EffectInfo.h"                         // for EffectInfo
+#include "FFmpegReader.h"                       // for FFmpegReader
+#include "OpenMPUtilities.h"                    // for OPEN_MP_NUM_PROCESSORS
+#include "QtImageReader.h"                      // for QtImageReader
+#include "Timeline.h"                           // for Timeline
+#include "TimelineBase.h"                       // for TimelineBase
+#include "ZmqLogger.h"                          // for ZmqLogger
+#include "effects/../Exceptions.h"              // for ReaderClosed, Invalid...
+#include "effects/../Fraction.h"                // for Fraction
+#include "effects/../Frame.h"                   // for Frame
+#include "effects/../Json.h"                    // for stringToJson
+#include "effects/../KeyFrame.h"                // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/RendererBase.h should add these lines:
+#include <stdint.h>  // for int64_t
+class QImage;
+
+/home/ferd/devel/libopenshot/src/RendererBase.h should remove these lines:
+- #include <cstdlib>  // lines 35-35
+- #include "Frame.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/src/RendererBase.h:
+#include <stdint.h>  // for int64_t
+#include <memory>    // for shared_ptr
+class QImage;
+namespace openshot { class Frame; }  // lines 40-40
+---
+
+/home/ferd/devel/libopenshot/src/RendererBase.cpp should add these lines:
+#include "Frame.h"     // for Frame
+#include "Settings.h"  // for openshot
+
+/home/ferd/devel/libopenshot/src/RendererBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/RendererBase.cpp:
+#include "RendererBase.h"
+#include "Frame.h"     // for Frame
+#include "Settings.h"  // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/DummyReader.h should add these lines:
+#include <stdint.h>       // for int64_t
+#include <string>         // for string
+#include "json/json.h"    // for Value
+namespace openshot { class CacheBase; }
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/DummyReader.h should remove these lines:
+- #include <omp.h>  // lines 39-39
+- #include <stdio.h>  // lines 40-40
+- #include <cmath>  // lines 36-36
+- #include <iostream>  // lines 38-38
+- #include "Exceptions.h"  // lines 43-43
+- #include "Fraction.h"  // lines 44-44
+
+The full include-list for /home/ferd/devel/libopenshot/src/DummyReader.h:
+#include <stdint.h>       // for int64_t
+#include <ctime>          // for NULL
+#include <memory>         // for shared_ptr
+#include <string>         // for string
+#include "CacheMemory.h"  // for CacheMemory
+#include "ReaderBase.h"   // for ReaderBase
+#include "json/json.h"    // for Value
+namespace openshot { class CacheBase; }
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/DummyReader.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include "CacheBase.h"                               // for CacheBase
+#include "Exceptions.h"                              // for InvalidFile, Inv...
+#include "Fraction.h"                                // for Fraction
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "Settings.h"                                // for openshot
+
+/home/ferd/devel/libopenshot/src/DummyReader.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/DummyReader.cpp:
+#include "DummyReader.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include "CacheBase.h"                               // for CacheBase
+#include "Exceptions.h"                              // for InvalidFile, Inv...
+#include "Fraction.h"                                // for Fraction
+#include "Frame.h"                                   // for Frame
+#include "Json.h"                                    // for stringToJson
+#include "Settings.h"                                // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/ReaderBase.h should add these lines:
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <stdint.h>                                  // for int64_t
+#include <map>                                       // for map
+#include <string>                                    // for string
+#include "json/json.h"                               // for Value
+namespace openshot { class CacheBase; }
+namespace openshot { class ClipBase; }
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/ReaderBase.h should remove these lines:
+- #include <QGraphicsItem>  // lines 47-47
+- #include <QGraphicsPixmapItem>  // lines 49-49
+- #include <QGraphicsScene>  // lines 48-48
+- #include <QPixmap>  // lines 50-50
+- #include <QString>  // lines 46-46
+- #include <cstdlib>  // lines 37-37
+- #include <iomanip>  // lines 35-35
+- #include <iostream>  // lines 34-34
+- #include <sstream>  // lines 38-38
+- #include "CacheMemory.h"  // lines 39-39
+- #include "ClipBase.h"  // lines 41-41
+- #include "Frame.h"  // lines 43-43
+- #include "Json.h"  // lines 44-44
+- #include "ZmqLogger.h"  // lines 45-45
+
+The full include-list for /home/ferd/devel/libopenshot/src/ReaderBase.h:
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <stdint.h>                                  // for int64_t
+#include <map>                                       // for map
+#include <memory>                                    // for shared_ptr
+#include <string>                                    // for string
+#include "ChannelLayouts.h"                          // for ChannelLayout
+#include "Fraction.h"                                // for Fraction
+#include "json/json.h"                               // for Value
+namespace openshot { class CacheBase; }
+namespace openshot { class ClipBase; }
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/ReaderBase.cpp should add these lines:
+#include <cstdlib>     // for NULL
+#include <iomanip>     // for operator<<, setprecision
+#include <iostream>    // for operator<<, endl, basic_ostream, basic_ostream...
+#include <utility>     // for pair
+#include "Settings.h"  // for openshot
+namespace openshot { class ClipBase; }
+
+/home/ferd/devel/libopenshot/src/ReaderBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/ReaderBase.cpp:
+#include "ReaderBase.h"
+#include <cstdlib>     // for NULL
+#include <iomanip>     // for operator<<, setprecision
+#include <iostream>    // for operator<<, endl, basic_ostream, basic_ostream...
+#include <utility>     // for pair
+#include "Settings.h"  // for openshot
+namespace openshot { class ClipBase; }
+---
+
+
+/home/ferd/devel/libopenshot/src/EffectBase.h should add these lines:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+
+/home/ferd/devel/libopenshot/src/EffectBase.h should remove these lines:
+- #include <iomanip>  // lines 35-35
+- #include <iostream>  // lines 34-34
+- #include <memory>  // lines 36-36
+- #include "Frame.h"  // lines 39-39
+- #include "Json.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/EffectBase.h:
+#include <string>       // for string
+#include "ClipBase.h"   // for ClipBase
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/EffectBase.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <stddef.h>          // for NULL
+#include <iomanip>           // for operator<<, setprecision
+#include <iostream>          // for operator<<, endl, basic_ostream, cout
+#include "Exceptions.h"      // for InvalidJSON
+#include "Json.h"            // for stringToJson
+#include "Settings.h"        // for openshot
+
+/home/ferd/devel/libopenshot/src/EffectBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/EffectBase.cpp:
+#include "EffectBase.h"
+#include <bits/exception.h>  // for exception
+#include <stddef.h>          // for NULL
+#include <iomanip>           // for operator<<, setprecision
+#include <iostream>          // for operator<<, endl, basic_ostream, cout
+#include "Exceptions.h"      // for InvalidJSON
+#include "Json.h"            // for stringToJson
+#include "Settings.h"        // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/WriterBase.h should add these lines:
+#include <stdint.h>          // for int64_t
+#include <map>               // for map
+#include <memory>            // for shared_ptr
+#include <string>            // for string
+#include "json/json.h"       // for Value
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/WriterBase.h should remove these lines:
+- #include <iomanip>  // lines 35-35
+- #include <iostream>  // lines 34-34
+- #include "Frame.h"  // lines 38-38
+- #include "ReaderBase.h"  // lines 39-39
+- #include "ZmqLogger.h"  // lines 40-40
+
+The full include-list for /home/ferd/devel/libopenshot/src/WriterBase.h:
+#include <stdint.h>          // for int64_t
+#include <map>               // for map
+#include <memory>            // for shared_ptr
+#include <string>            // for string
+#include "ChannelLayouts.h"  // for ChannelLayout
+#include "Fraction.h"        // for Fraction
+#include "json/json.h"       // for Value
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+---
+
+/home/ferd/devel/libopenshot/src/WriterBase.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <iomanip>           // for operator<<, setprecision
+#include <iostream>          // for operator<<, endl, basic_ostream, basic_o...
+#include "Exceptions.h"      // for InvalidJSON
+#include "Json.h"            // for stringToJson
+#include "ReaderBase.h"      // for ReaderBase, ReaderInfo
+
+/home/ferd/devel/libopenshot/src/WriterBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/WriterBase.cpp:
+#include "WriterBase.h"
+#include <bits/exception.h>  // for exception
+#include <iomanip>           // for operator<<, setprecision
+#include <iostream>          // for operator<<, endl, basic_ostream, basic_o...
+#include "Exceptions.h"      // for InvalidJSON
+#include "Json.h"            // for stringToJson
+#include "ReaderBase.h"      // for ReaderBase, ReaderInfo
+---
+
+
+/home/ferd/devel/libopenshot/src/EffectInfo.h should add these lines:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+namespace openshot { class EffectBase; }
+
+/home/ferd/devel/libopenshot/src/EffectInfo.h should remove these lines:
+- #include "Effects.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/src/EffectInfo.h:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+namespace openshot { class EffectBase; }
+---
+
+/home/ferd/devel/libopenshot/src/EffectInfo.cpp should add these lines:
+#include <stddef.h>               // for NULL
+#include "Settings.h"             // for openshot
+#include "effects/Bars.h"         // for Bars
+#include "effects/Blur.h"         // for Blur
+#include "effects/Brightness.h"   // for Brightness
+#include "effects/Caption.h"      // for Caption
+#include "effects/ChromaKey.h"    // for ChromaKey
+#include "effects/ColorShift.h"   // for ColorShift
+#include "effects/Crop.h"         // for Crop
+#include "effects/Deinterlace.h"  // for Deinterlace
+#include "effects/Hue.h"          // for Hue
+#include "effects/Mask.h"         // for Mask
+#include "effects/Negate.h"       // for Negate
+#include "effects/Pixelate.h"     // for Pixelate
+#include "effects/Saturation.h"   // for Saturation
+#include "effects/Shift.h"        // for Shift
+#include "effects/Wave.h"         // for Wave
+namespace openshot { class EffectBase; }
+
+/home/ferd/devel/libopenshot/src/EffectInfo.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/EffectInfo.cpp:
+#include "EffectInfo.h"
+#include <stddef.h>               // for NULL
+#include "Settings.h"             // for openshot
+#include "effects/Bars.h"         // for Bars
+#include "effects/Blur.h"         // for Blur
+#include "effects/Brightness.h"   // for Brightness
+#include "effects/Caption.h"      // for Caption
+#include "effects/ChromaKey.h"    // for ChromaKey
+#include "effects/ColorShift.h"   // for ColorShift
+#include "effects/Crop.h"         // for Crop
+#include "effects/Deinterlace.h"  // for Deinterlace
+#include "effects/Hue.h"          // for Hue
+#include "effects/Mask.h"         // for Mask
+#include "effects/Negate.h"       // for Negate
+#include "effects/Pixelate.h"     // for Pixelate
+#include "effects/Saturation.h"   // for Saturation
+#include "effects/Shift.h"        // for Shift
+#include "effects/Wave.h"         // for Wave
+namespace openshot { class EffectBase; }
+---
+
+
+/home/ferd/devel/libopenshot/src/Fraction.h should add these lines:
+
+/home/ferd/devel/libopenshot/src/Fraction.h should remove these lines:
+- #include <cmath>  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/src/Fraction.h:
+---
+
+/home/ferd/devel/libopenshot/src/Fraction.cpp should add these lines:
+#include <cmath>  // for round
+
+/home/ferd/devel/libopenshot/src/Fraction.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Fraction.cpp:
+#include "Fraction.h"
+#include <cmath>  // for round
+---
+
+/home/ferd/devel/libopenshot/src/FFmpegReader.cpp:42:9: warning: You are compiling with experimental hardware decode [-W#pragma-messages]
+#pragma message "You are compiling with experimental hardware decode"
+        ^
+
+/home/ferd/devel/libopenshot/src/effects/../FFmpegReader.h should add these lines:
+
+/home/ferd/devel/libopenshot/src/effects/../FFmpegReader.h should remove these lines:
+- #include <stdio.h>  // lines 45-45
+- #include <cmath>  // lines 42-42
+- #include <ctime>  // lines 43-43
+- #include <iostream>  // lines 44-44
+- #include <memory>  // lines 46-46
+- #include "CacheMemory.h"  // lines 47-47
+- #include "Clip.h"  // lines 48-48
+- #include "Exceptions.h"  // lines 49-49
+- #include "FFmpegUtilities.h"  // lines 40-40
+- #include "OpenMPUtilities.h"  // lines 50-50
+- #include "ReaderBase.h"  // lines 37-37
+- #include "Settings.h"  // lines 51-51
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/../FFmpegReader.h:
+---
+
+/home/ferd/devel/libopenshot/src/FFmpegReader.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <errno.h>                                   // for EAGAIN, EINVAL
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <libavcodec/avcodec.h>                      // for AVCodecContext
+#include <libavformat/avformat.h>                    // for AVStream, AVForm...
+#include <libavformat/avio.h>                        // for avio_size
+#include <libavutil/avutil.h>                        // for AVMEDIA_TYPE_AUDIO
+#include <libavutil/buffer.h>                        // for av_buffer_unref
+#include <libavutil/channel_layout.h>                // for av_get_default_c...
+#include <libavutil/dict.h>                          // for AVDictionaryEntry
+#include <libavutil/error.h>                         // for AVERROR, AVERROR...
+#include <libavutil/frame.h>                         // for AVFrame, av_fram...
+#include <libavutil/hwcontext.h>                     // for AVHWFramesConstr...
+#include <libavutil/imgutils.h>                      // for av_image_alloc
+#include <libavutil/mem.h>                           // for av_freep, av_free
+#include <libavutil/opt.h>                           // for av_opt_set_int
+#include <libavutil/pixfmt.h>                        // for AVPixelFormat
+#include <libavutil/rational.h>                      // for AVRational
+#include <libavutil/samplefmt.h>                     // for AV_SAMPLE_FMT_S16
+#include <libswscale/swscale.h>                      // for sws_freeContext
+#include <omp.h>                                     // for omp_set_max_acti...
+#include <qimage.h>                                  // for QImage, QImage::...
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString
+#include <stdio.h>                                   // for fprintf, snprintf
+#include <stdlib.h>                                  // for abs
+#include <string.h>                                  // for memcpy
+#include <unistd.h>                                  // for access, W_OK
+#include <algorithm>                                 // for max, min
+#include <cmath>                                     // for round, abs
+#include <cstdint>                                   // for int64_t, uint8_t
+#include <ctime>                                     // for NULL
+#include <map>                                       // for multimap, map
+#include <memory>                                    // for shared_ptr, __sh...
+#include <string>                                    // for string
+#include <utility>                                   // for pair
+#include "CacheMemory.h"                             // for CacheMemory
+#include "ChannelLayouts.h"                          // for ChannelLayout
+#include "Clip.h"                                    // for Clip
+#include "Coordinate.h"                              // for Coordinate
+#include "Enums.h"                                   // for SCALE_CROP, SCAL...
+#include "FFmpegUtilities.h"                         // for AV_GET_CODEC_ATT...
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Point.h"                                   // for Point
+#include "Settings.h"                                // for Settings, openshot
+#include "TimelineBase.h"                            // for TimelineBase
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../Exceptions.h"                   // for InvalidCodec
+#include "effects/../FFmpegReader.h"                 // for FFmpegReader
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+#include "effects/../ReaderBase.h"                   // for ReaderInfo, Read...
+#include "json/json.h"                               // for Value
+struct SwsContext;
+
+/home/ferd/devel/libopenshot/src/FFmpegReader.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/FFmpegReader.cpp:
+#include "FFmpegReader.h"
+#include <bits/exception.h>                          // for exception
+#include <errno.h>                                   // for EAGAIN, EINVAL
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <libavcodec/avcodec.h>                      // for AVCodecContext
+#include <libavformat/avformat.h>                    // for AVStream, AVForm...
+#include <libavformat/avio.h>                        // for avio_size
+#include <libavutil/avutil.h>                        // for AVMEDIA_TYPE_AUDIO
+#include <libavutil/buffer.h>                        // for av_buffer_unref
+#include <libavutil/channel_layout.h>                // for av_get_default_c...
+#include <libavutil/dict.h>                          // for AVDictionaryEntry
+#include <libavutil/error.h>                         // for AVERROR, AVERROR...
+#include <libavutil/frame.h>                         // for AVFrame, av_fram...
+#include <libavutil/hwcontext.h>                     // for AVHWFramesConstr...
+#include <libavutil/imgutils.h>                      // for av_image_alloc
+#include <libavutil/mem.h>                           // for av_freep, av_free
+#include <libavutil/opt.h>                           // for av_opt_set_int
+#include <libavutil/pixfmt.h>                        // for AVPixelFormat
+#include <libavutil/rational.h>                      // for AVRational
+#include <libavutil/samplefmt.h>                     // for AV_SAMPLE_FMT_S16
+#include <libswscale/swscale.h>                      // for sws_freeContext
+#include <omp.h>                                     // for omp_set_max_acti...
+#include <qimage.h>                                  // for QImage, QImage::...
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString
+#include <stdio.h>                                   // for fprintf, snprintf
+#include <stdlib.h>                                  // for abs
+#include <string.h>                                  // for memcpy
+#include <unistd.h>                                  // for access, W_OK
+#include <algorithm>                                 // for max, min
+#include <chrono>                                    // for milliseconds
+#include <cmath>                                     // for round, abs
+#include <cstdint>                                   // for int64_t, uint8_t
+#include <ctime>                                     // for NULL
+#include <map>                                       // for multimap, map
+#include <memory>                                    // for shared_ptr, __sh...
+#include <string>                                    // for string
+#include <thread>                                    // for sleep_for
+#include <utility>                                   // for pair
+#include "CacheMemory.h"                             // for CacheMemory
+#include "ChannelLayouts.h"                          // for ChannelLayout
+#include "Clip.h"                                    // for Clip
+#include "Coordinate.h"                              // for Coordinate
+#include "Enums.h"                                   // for SCALE_CROP, SCAL...
+#include "FFmpegUtilities.h"                         // for AV_GET_CODEC_ATT...
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Point.h"                                   // for Point
+#include "Settings.h"                                // for Settings, openshot
+#include "TimelineBase.h"                            // for TimelineBase
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../Exceptions.h"                   // for InvalidCodec
+#include "effects/../FFmpegReader.h"                 // for FFmpegReader
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+#include "effects/../ReaderBase.h"                   // for ReaderInfo, Read...
+#include "json/json.h"                               // for Value
+struct SwsContext;
+---
+
+
+/home/ferd/devel/libopenshot/src/Frame.h should add these lines:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_core/threads/juce_CriticalSection.h>            // for Critic...
+#include <qimage.h>                                            // for QImage
+#include <stdint.h>                                            // for int64_t
+#include <string>                                              // for string
+class QApplication;
+namespace openshot { class AudioResampler; }
+
+/home/ferd/devel/libopenshot/src/Frame.h should remove these lines:
+- #include <unistd.h>  // lines 40-40
+- #include <QApplication>  // lines 37-37
+- #include <QImage>  // lines 38-38
+- #include <iomanip>  // lines 34-34
+- #include <queue>  // lines 36-36
+- #include <sstream>  // lines 35-35
+- #include "AudioBufferSource.h"  // lines 43-43
+- #include "AudioResampler.h"  // lines 44-44
+- #include "JuceHeader.h"  // lines 46-46
+- #include "ZmqLogger.h"  // lines 41-41
+
+The full include-list for /home/ferd/devel/libopenshot/src/Frame.h:
+#include <juce_audio_basics/buffers/juce_AudioSampleBuffer.h>  // for AudioS...
+#include <juce_core/threads/juce_CriticalSection.h>            // for Critic...
+#include <qimage.h>                                            // for QImage
+#include <stdint.h>                                            // for int64_t
+#include <memory>                                              // for shared...
+#include <string>                                              // for string
+#include "ChannelLayouts.h"                                    // for Channe...
+#include "Fraction.h"                                          // for Fraction
+class QApplication;
+namespace openshot { class AudioResampler; }
+---
+
+/home/ferd/devel/libopenshot/src/Frame.cpp should add these lines:
+#include <QtCore/qglobal.h>
+#include <juce_audio_basics/sources/juce_MixerAudioSource.h>
+#include <juce_audio_devices/audio_io/juce_AudioDeviceManager.h>
+#include <juce_audio_devices/sources/juce_AudioSourcePlayer.h>
+#include <juce_audio_devices/sources/juce_AudioTransportSource.h>
+#include <juce_core/juce_core.h>
+#include <juce_core/threads/juce_ScopedLock.h>
+#include <juce_core/threads/juce_TimeSliceThread.h>
+#include <math.h>                                                  // for fmod
+#include <qapplication.h>
+#include <qboxlayout.h>
+#include <qcolor.h>
+#include <qlabel.h>
+#include <qnamespace.h>
+#include <qpainter.h>
+#include <qpixmap.h>
+#include <qpoint.h>
+#include <qrgb.h>                                                  // for qGray
+#include <qsize.h>                                                 // for QSize
+#include <qstring.h>
+#include <qtransform.h>
+#include <qvector.h>
+#include <qwidget.h>
+#include <string.h>
+#include <algorithm>                                               // for max
+#include <iostream>                                                // for cout
+#include <sstream>
+#include "AudioBufferSource.h"
+#include "AudioResampler.h"
+#include "Settings.h"
+
+/home/ferd/devel/libopenshot/src/Frame.cpp should remove these lines:
+- #include <QApplication>  // lines 34-34
+- #include <QBitmap>  // lines 37-37
+- #include <QColor>  // lines 38-38
+- #include <QHBoxLayout>  // lines 42-42
+- #include <QImage>  // lines 35-35
+- #include <QLabel>  // lines 44-44
+- #include <QPainter>  // lines 41-41
+- #include <QPixmap>  // lines 36-36
+- #include <QPointF>  // lines 45-45
+- #include <QString>  // lines 39-39
+- #include <QVector>  // lines 40-40
+- #include <QWidget>  // lines 43-43
+- #include <QWidget>  // lines 46-46
+- #include "JuceHeader.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/Frame.cpp:
+#include "Frame.h"
+#include <QtCore/qglobal.h>
+#include <juce_audio_basics/sources/juce_MixerAudioSource.h>
+#include <juce_audio_devices/audio_io/juce_AudioDeviceManager.h>
+#include <juce_audio_devices/sources/juce_AudioSourcePlayer.h>
+#include <juce_audio_devices/sources/juce_AudioTransportSource.h>
+#include <juce_core/juce_core.h>
+#include <juce_core/threads/juce_ScopedLock.h>
+#include <juce_core/threads/juce_TimeSliceThread.h>
+#include <math.h>                                                  // for fmod
+#include <qapplication.h>
+#include <qboxlayout.h>
+#include <qcolor.h>
+#include <qlabel.h>
+#include <qnamespace.h>
+#include <qpainter.h>
+#include <qpixmap.h>
+#include <qpoint.h>
+#include <qrgb.h>                                                  // for qGray
+#include <qsize.h>                                                 // for QSize
+#include <qstring.h>
+#include <qtransform.h>
+#include <qvector.h>
+#include <qwidget.h>
+#include <string.h>
+#include <algorithm>                                               // for max
+#include <chrono>
+#include <iostream>                                                // for cout
+#include <sstream>
+#include <thread>
+#include "AudioBufferSource.h"
+#include "AudioResampler.h"
+#include "Settings.h"
+---
+
+/home/ferd/devel/libopenshot/src/FFmpegWriter.cpp:41:9: warning: You are compiling with experimental hardware encode [-W#pragma-messages]
+#pragma message "You are compiling with experimental hardware encode"
+        ^
+/home/ferd/devel/libopenshot/src/FFmpegWriter.cpp:562:13: warning: 456 enumeration values not handled in switch: 'AV_CODEC_ID_NONE', 'AV_CODEC_ID_MPEG1VIDEO', 'AV_CODEC_ID_MPEG2VIDEO'... [-Wswitch]
+                                switch (c->codec_id) {
+                                        ^
+
+/home/ferd/devel/libopenshot/src/FFmpegWriter.h should add these lines:
+#include <libavcodec/avcodec.h>    // for AVCodecContext
+#include <libavformat/avformat.h>  // for AVStream, AVFormatContext, AVOutpu...
+#include <libavutil/frame.h>       // for AVFrame
+#include <stdint.h>                // for int64_t, uint8_t, int16_t
+#include <deque>                   // for deque
+#include <map>                     // for map
+#include <memory>                  // for shared_ptr
+#include <string>                  // for string
+#include <vector>                  // for vector
+#include "ChannelLayouts.h"        // for ChannelLayout
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+struct SwsContext;
+
+/home/ferd/devel/libopenshot/src/FFmpegWriter.h should remove these lines:
+- #include <unistd.h>  // lines 50-50
+- #include <cmath>  // lines 48-48
+- #include <ctime>  // lines 49-49
+- #include "CacheMemory.h"  // lines 51-51
+- #include "Exceptions.h"  // lines 52-52
+- #include "OpenMPUtilities.h"  // lines 53-53
+- #include "ReaderBase.h"  // lines 42-42
+- #include "Settings.h"  // lines 55-55
+- #include "ZmqLogger.h"  // lines 54-54
+
+The full include-list for /home/ferd/devel/libopenshot/src/FFmpegWriter.h:
+#include <libavcodec/avcodec.h>    // for AVCodecContext
+#include <libavformat/avformat.h>  // for AVStream, AVFormatContext, AVOutpu...
+#include <libavutil/frame.h>       // for AVFrame
+#include <stdint.h>                // for int64_t, uint8_t, int16_t
+#include <deque>                   // for deque
+#include <map>                     // for map
+#include <memory>                  // for shared_ptr
+#include <string>                  // for string
+#include <vector>                  // for vector
+#include "ChannelLayouts.h"        // for ChannelLayout
+#include "FFmpegUtilities.h"       // for SWRCONTEXT, PixelFormat
+#include "WriterBase.h"            // for WriterBase
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+struct SwsContext;
+---
+
+/home/ferd/devel/libopenshot/src/FFmpegWriter.cpp should add these lines:
+#include <errno.h>                  // for EAGAIN, EINVAL, ENOMEM
+#include <libavcodec/version.h>     // for LIBAVCODEC_VERSION_MAJOR, LIBAVCO...
+#include <libavformat/avio.h>       // for avio_close, avio_open, AVIO_FLAG_...
+#include <libavformat/version.h>    // for LIBAVFORMAT_VERSION_MAJOR
+#include <libavutil/avutil.h>       // for AV_NOPTS_VALUE, AVMEDIA_TYPE_VIDEO
+#include <libavutil/buffer.h>       // for av_buffer_unref, AVBufferRef, av_...
+#include <libavutil/dict.h>         // for av_dict_set, av_dict_free, AVDict...
+#include <libavutil/error.h>        // for AVERROR, AVERROR_EOF
+#include <libavutil/hwcontext.h>    // for AVHWFramesContext, av_hwdevice_ct...
+#include <libavutil/mathematics.h>  // for av_rescale_q
+#include <libavutil/mem.h>          // for av_freep, av_malloc
+#include <libavutil/opt.h>          // for av_opt_set_int, av_opt_set, av_op...
+#include <libavutil/pixdesc.h>      // for av_get_pix_fmt_name
+#include <libavutil/pixfmt.h>       // for AV_PIX_FMT_NV12, AVPixelFormat
+#include <libavutil/rational.h>     // for av_make_q, AVRational, av_inv_q
+#include <libavutil/samplefmt.h>    // for av_get_bytes_per_sample, AV_SAMPL...
+#include <libavutil/version.h>      // for AV_VERSION_INT
+#include <libswscale/swscale.h>     // for sws_getContext, sws_freeContext
+#include <omp.h>                    // for omp_set_max_active_levels, omp_se...
+#include <qglobal.h>                // for uchar
+#include <stdio.h>                  // for snprintf
+#include <string.h>                 // for strstr, memcpy, strcmp
+#include <unistd.h>                 // for access, W_OK
+#include <algorithm>                // for min, max
+#include <ctime>                    // for NULL
+#include <utility>                  // for pair
+#include "Exceptions.h"             // for InvalidCodec, InvalidOptions, Inv...
+#include "Fraction.h"               // for Fraction
+#include "Frame.h"                  // for Frame
+#include "OpenMPUtilities.h"        // for FF_NUM_PROCESSORS, OPEN_MP_MAX_AC...
+#include "ReaderBase.h"             // for ReaderBase
+#include "Settings.h"               // for Settings, openshot
+#include "ZmqLogger.h"              // for ZmqLogger
+#include "common.h"                 // for FFMIN
+struct SwsContext;
+
+/home/ferd/devel/libopenshot/src/FFmpegWriter.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/FFmpegWriter.cpp:
+#include "FFmpegWriter.h"
+#include <errno.h>                  // for EAGAIN, EINVAL, ENOMEM
+#include <libavcodec/version.h>     // for LIBAVCODEC_VERSION_MAJOR, LIBAVCO...
+#include <libavformat/avio.h>       // for avio_close, avio_open, AVIO_FLAG_...
+#include <libavformat/version.h>    // for LIBAVFORMAT_VERSION_MAJOR
+#include <libavutil/avutil.h>       // for AV_NOPTS_VALUE, AVMEDIA_TYPE_VIDEO
+#include <libavutil/buffer.h>       // for av_buffer_unref, AVBufferRef, av_...
+#include <libavutil/dict.h>         // for av_dict_set, av_dict_free, AVDict...
+#include <libavutil/error.h>        // for AVERROR, AVERROR_EOF
+#include <libavutil/hwcontext.h>    // for AVHWFramesContext, av_hwdevice_ct...
+#include <libavutil/mathematics.h>  // for av_rescale_q
+#include <libavutil/mem.h>          // for av_freep, av_malloc
+#include <libavutil/opt.h>          // for av_opt_set_int, av_opt_set, av_op...
+#include <libavutil/pixdesc.h>      // for av_get_pix_fmt_name
+#include <libavutil/pixfmt.h>       // for AV_PIX_FMT_NV12, AVPixelFormat
+#include <libavutil/rational.h>     // for av_make_q, AVRational, av_inv_q
+#include <libavutil/samplefmt.h>    // for av_get_bytes_per_sample, AV_SAMPL...
+#include <libavutil/version.h>      // for AV_VERSION_INT
+#include <libswscale/swscale.h>     // for sws_getContext, sws_freeContext
+#include <omp.h>                    // for omp_set_max_active_levels, omp_se...
+#include <qglobal.h>                // for uchar
+#include <stdio.h>                  // for snprintf
+#include <string.h>                 // for strstr, memcpy, strcmp
+#include <unistd.h>                 // for access, W_OK
+#include <algorithm>                // for min, max
+#include <ctime>                    // for NULL
+#include <iostream>                 // for operator<<, basic_istream::operat...
+#include <utility>                  // for pair
+#include "Exceptions.h"             // for InvalidCodec, InvalidOptions, Inv...
+#include "Fraction.h"               // for Fraction
+#include "Frame.h"                  // for Frame
+#include "OpenMPUtilities.h"        // for FF_NUM_PROCESSORS, OPEN_MP_MAX_AC...
+#include "ReaderBase.h"             // for ReaderBase
+#include "Settings.h"               // for Settings, openshot
+#include "ZmqLogger.h"              // for ZmqLogger
+#include "common.h"                 // for FFMIN
+struct SwsContext;
+---
+
+
+/home/ferd/devel/libopenshot/src/Json.h should add these lines:
+
+/home/ferd/devel/libopenshot/src/Json.h should remove these lines:
+- #include "Exceptions.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/Json.h:
+#include <string>       // for string
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/Json.cpp should add these lines:
+#include "Exceptions.h"  // for InvalidJSON
+
+/home/ferd/devel/libopenshot/src/Json.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Json.cpp:
+#include "Json.h"
+#include "Exceptions.h"  // for InvalidJSON
+---
+
+
+/home/ferd/devel/libopenshot/build/src/OpenShotVersion.h should add these lines:
+#include <string>   // for string
+
+/home/ferd/devel/libopenshot/build/src/OpenShotVersion.h should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/build/src/OpenShotVersion.h:
+#include <sstream>  // for basic_ostream::operator<<, operator<<, basic_ostream
+#include <string>   // for string
+---
+
+(/home/ferd/devel/libopenshot/src/OpenShotVersion.cpp has correct #includes/fwd-decls)
+
+
+/home/ferd/devel/libopenshot/src/KeyFrame.h should add these lines:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include "json/json.h"  // for Value
+
+/home/ferd/devel/libopenshot/src/KeyFrame.h should remove these lines:
+- #include <assert.h>  // lines 37-37
+- #include <cmath>  // lines 36-36
+- #include <iomanip>  // lines 35-35
+- #include <iostream>  // lines 34-34
+- #include "Coordinate.h"  // lines 41-41
+- #include "Exceptions.h"  // lines 39-39
+- #include "Json.h"  // lines 43-43
+
+The full include-list for /home/ferd/devel/libopenshot/src/KeyFrame.h:
+#include <stdint.h>     // for int64_t
+#include <string>       // for string
+#include <vector>       // for vector
+#include "Fraction.h"   // for Fraction
+#include "Point.h"      // for Point, InterpolationType
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/KeyFrame.cpp should add these lines:
+#include <assert.h>            // for assert
+#include <bits/exception.h>    // for exception
+#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
+#include <stddef.h>            // for size_t
+#include <cmath>               // for round, fabs
+#include <iomanip>             // for operator<<, setprecision
+#include <iostream>            // for operator<<, basic_ostream<>::__ostream...
+#include <iterator>            // for end, begin
+#include <memory>              // for allocator_traits<>::value_type
+#include "Coordinate.h"        // for Coordinate
+#include "Exceptions.h"        // for OutOfBoundsPoint, InvalidJSON, openshot
+#include "Json.h"              // for stringToJson
+
+/home/ferd/devel/libopenshot/src/KeyFrame.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/KeyFrame.cpp:
+#include "KeyFrame.h"
+#include <assert.h>            // for assert
+#include <bits/exception.h>    // for exception
+#include <ext/alloc_traits.h>  // for __alloc_traits<>::value_type
+#include <stddef.h>            // for size_t
+#include <algorithm>           // for lower_bound, move_backward
+#include <cmath>               // for round, fabs
+#include <functional>          // for greater, greater_equal, less, less_equal
+#include <iomanip>             // for operator<<, setprecision
+#include <iostream>            // for operator<<, basic_ostream<>::__ostream...
+#include <iterator>            // for end, begin
+#include <memory>              // for allocator_traits<>::value_type
+#include <utility>             // for swap
+#include "Coordinate.h"        // for Coordinate
+#include "Exceptions.h"        // for OutOfBoundsPoint, InvalidJSON, openshot
+#include "Json.h"              // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/ZmqLogger.h should add these lines:
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+namespace zmq { class context_t; }
+namespace zmq { class socket_t; }
+
+/home/ferd/devel/libopenshot/src/ZmqLogger.h should remove these lines:
+- #include <unistd.h>  // lines 44-44
+- #include <cstdio>  // lines 41-41
+- #include <cstdlib>  // lines 38-38
+- #include <ctime>  // lines 42-42
+- #include <iomanip>  // lines 36-36
+- #include <iostream>  // lines 35-35
+- #include <sstream>  // lines 40-40
+- #include <zmq.hpp>  // lines 43-43
+- #include "JuceHeader.h"  // lines 45-45
+- #include "Settings.h"  // lines 46-46
+
+The full include-list for /home/ferd/devel/libopenshot/src/ZmqLogger.h:
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <fstream>                                   // for ofstream
+#include <string>                                    // for string
+namespace zmq { class context_t; }
+namespace zmq { class socket_t; }
+---
+
+/home/ferd/devel/libopenshot/src/ZmqLogger.cpp should add these lines:
+#include <juce_core/threads/juce_ScopedLock.h>  // for GenericScopedLock
+#include <string.h>                             // for memcpy
+#include <zmq.h>                                // for ZMQ_MAKE_VERSION, ZMQ...
+#include <cstdio>                               // for NULL
+#include <zmq.hpp>                              // for socket_t, message_t
+#include "Settings.h"                           // for Settings, openshot
+struct tm;
+
+/home/ferd/devel/libopenshot/src/ZmqLogger.cpp should remove these lines:
+- #include <sstream>  // lines 39-39
+
+The full include-list for /home/ferd/devel/libopenshot/src/ZmqLogger.cpp:
+#include "ZmqLogger.h"
+#include <juce_core/threads/juce_ScopedLock.h>  // for GenericScopedLock
+#include <string.h>                             // for memcpy
+#include <zmq.h>                                // for ZMQ_MAKE_VERSION, ZMQ...
+#include <chrono>                               // for milliseconds
+#include <cstdio>                               // for NULL
+#include <ctime>                                // for asctime, localtime, time
+#include <iomanip>                              // for operator<<, setprecision
+#include <iostream>                             // for cout
+#include <thread>                               // for sleep_for
+#include <zmq.hpp>                              // for socket_t, message_t
+#include "Settings.h"                           // for Settings, openshot
+struct tm;
+---
+
+
+/home/ferd/devel/libopenshot/src/FrameMapper.h should add these lines:
+#include <stdint.h>                 // for int64_t
+#include <string>                   // for string
+#include "ChannelLayouts.h"         // for ChannelLayout
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../ReaderBase.h"  // for ReaderBase
+#include "json/json.h"              // for Value
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/FrameMapper.h should remove these lines:
+- #include <assert.h>  // lines 34-34
+- #include <cmath>  // lines 36-36
+- #include <iostream>  // lines 35-35
+- #include "Exceptions.h"  // lines 43-43
+- #include "Fraction.h"  // lines 42-42
+- #include "Frame.h"  // lines 41-41
+- #include "KeyFrame.h"  // lines 44-44
+- #include "OpenMPUtilities.h"  // lines 49-49
+- #include "ReaderBase.h"  // lines 40-40
+
+The full include-list for /home/ferd/devel/libopenshot/src/FrameMapper.h:
+#include <stdint.h>                 // for int64_t
+#include <memory>                   // for shared_ptr
+#include <string>                   // for string
+#include <vector>                   // for vector
+#include "CacheMemory.h"            // for CacheMemory
+#include "ChannelLayouts.h"         // for ChannelLayout
+#include "FFmpegUtilities.h"        // for SWRCONTEXT
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../ReaderBase.h"  // for ReaderBase
+#include "json/json.h"              // for Value
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/FrameMapper.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <libavcodec/avcodec.h>                      // for avcodec_fill_aud...
+#include <libavutil/frame.h>                         // for AVFrame
+#include <libavutil/mem.h>                           // for av_freep, av_malloc
+#include <libavutil/opt.h>                           // for av_opt_set_int
+#include <libavutil/samplefmt.h>                     // for AV_SAMPLE_FMT_S16
+#include <qimage.h>                                  // for QImage
+#include <string.h>                                  // for NULL, memcpy
+#include <cmath>                                     // for fabs, round
+#include <iostream>                                  // for operator<<, basi...
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Settings.h"                                // for openshot
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../Exceptions.h"                   // for ReaderClosed
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+
+/home/ferd/devel/libopenshot/src/FrameMapper.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/FrameMapper.cpp:
+#include "FrameMapper.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <libavcodec/avcodec.h>                      // for avcodec_fill_aud...
+#include <libavutil/frame.h>                         // for AVFrame
+#include <libavutil/mem.h>                           // for av_freep, av_malloc
+#include <libavutil/opt.h>                           // for av_opt_set_int
+#include <libavutil/samplefmt.h>                     // for AV_SAMPLE_FMT_S16
+#include <qimage.h>                                  // for QImage
+#include <string.h>                                  // for NULL, memcpy
+#include <cmath>                                     // for fabs, round
+#include <iostream>                                  // for operator<<, basi...
+#include "Clip.h"                                    // for Clip
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Settings.h"                                // for openshot
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../Exceptions.h"                   // for ReaderClosed
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/Point.h should add these lines:
+#include <string>        // for string
+#include "json/json.h"   // for Value
+
+/home/ferd/devel/libopenshot/src/Point.h should remove these lines:
+- #include "Exceptions.h"  // lines 35-35
+- #include "Json.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/Point.h:
+#include <string>        // for string
+#include "Coordinate.h"  // for Coordinate
+#include "json/json.h"   // for Value
+---
+
+/home/ferd/devel/libopenshot/src/Point.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <iosfwd>            // for std
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+
+/home/ferd/devel/libopenshot/src/Point.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Point.cpp:
+#include "Point.h"
+#include <bits/exception.h>  // for exception
+#include <iosfwd>            // for std
+#include "Exceptions.h"      // for InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/PlayerBase.h should add these lines:
+#include <stdint.h>  // for int64_t
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/PlayerBase.h should remove these lines:
+- #include <iostream>  // lines 34-34
+- #include "ReaderBase.h"  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/src/PlayerBase.h:
+#include <stdint.h>  // for int64_t
+namespace openshot { class ReaderBase; }
+---
+
+/home/ferd/devel/libopenshot/src/PlayerBase.cpp should add these lines:
+#include "Settings.h"  // for openshot
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/PlayerBase.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/PlayerBase.cpp:
+#include "PlayerBase.h"
+#include "Settings.h"  // for openshot
+namespace openshot { class ReaderBase; }
+---
+
+
+/home/ferd/devel/libopenshot/src/Profiles.h should add these lines:
+#include "json/json.h"  // for Value
+
+/home/ferd/devel/libopenshot/src/Profiles.h should remove these lines:
+- #include <QTextStream>  // lines 41-41
+- #include <QtCore/QFile>  // lines 40-40
+- #include <QtCore/QString>  // lines 38-38
+- #include <QtCore/QStringList>  // lines 39-39
+- #include <cstdio>  // lines 42-42
+- #include <cstdlib>  // lines 43-43
+- #include <fstream>  // lines 37-37
+- #include <iostream>  // lines 34-34
+- #include <sstream>  // lines 36-36
+- #include "Exceptions.h"  // lines 44-44
+- #include "Json.h"  // lines 46-46
+
+The full include-list for /home/ferd/devel/libopenshot/src/Profiles.h:
+#include <string>       // for string
+#include "Fraction.h"   // for Fraction
+#include "json/json.h"  // for Value
+---
+
+/home/ferd/devel/libopenshot/src/Profiles.cpp should add these lines:
+#include <bits/exception.h>  // for exception
+#include <qfile.h>           // for QFile
+#include <qiodevice.h>       // for QIODevice, QIODevice::ReadOnly
+#include <qlist.h>           // for QList
+#include <qstring.h>         // for QString
+#include <qstringlist.h>     // for QStringList
+#include <qtextstream.h>     // for QTextStream
+#include <fstream>           // for operator>>, stringstream
+#include "Exceptions.h"      // for InvalidFile, InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+
+/home/ferd/devel/libopenshot/src/Profiles.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Profiles.cpp:
+#include "Profiles.h"
+#include <bits/exception.h>  // for exception
+#include <qfile.h>           // for QFile
+#include <qiodevice.h>       // for QIODevice, QIODevice::ReadOnly
+#include <qlist.h>           // for QList
+#include <qstring.h>         // for QString
+#include <qstringlist.h>     // for QStringList
+#include <qtextstream.h>     // for QTextStream
+#include <fstream>           // for operator>>, stringstream
+#include "Exceptions.h"      // for InvalidFile, InvalidJSON, openshot
+#include "Json.h"            // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/QtHtmlReader.h should add these lines:
+#include <stdint.h>      // for int64_t
+#include <string>        // for string
+#include "CacheBase.h"   // for CacheBase
+#include "json/json.h"   // for Value
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/QtHtmlReader.h should remove these lines:
+- #include <omp.h>  // lines 41-41
+- #include <stdio.h>  // lines 42-42
+- #include <cmath>  // lines 38-38
+- #include <iostream>  // lines 40-40
+- #include "CacheMemory.h"  // lines 44-44
+- #include "Exceptions.h"  // lines 46-46
+- namespace openshot { class CacheBase; }  // lines 53-53
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtHtmlReader.h:
+#include <stdint.h>      // for int64_t
+#include <ctime>         // for NULL
+#include <memory>        // for shared_ptr
+#include <string>        // for string
+#include "CacheBase.h"   // for CacheBase
+#include "Enums.h"       // for GravityType
+#include "ReaderBase.h"  // for ReaderBase
+#include "json/json.h"   // for Value
+class QImage;  // lines 48-48
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/QtHtmlReader.cpp should add these lines:
+#include <bits/exception.h>               // for exception
+#include <qabstracttextdocumentlayout.h>  // for QAbstractTextDocumentLayout
+#include <qbrush.h>                       // for QBrush
+#include <qcolor.h>                       // for QColor
+#include <qimage.h>                       // for QImage, QImage::Format_RGBA...
+#include <qnamespace.h>                   // for AlignHCenter, AlignLeft
+#include <qpainter.h>                     // for QPainter
+#include <qsize.h>                        // for QSize, QSizeF
+#include <qtextdocument.h>                // for QTextDocument
+#include <qtextoption.h>                  // for QTextOption
+#include <cmath>                          // for round
+#include "Exceptions.h"                   // for InvalidJSON
+#include "Fraction.h"                     // for Fraction
+#include "Frame.h"                        // for Frame
+#include "Json.h"                         // for stringToJson
+#include "Settings.h"                     // for openshot
+
+/home/ferd/devel/libopenshot/src/QtHtmlReader.cpp should remove these lines:
+- #include <QAbstractTextDocumentLayout>  // lines 38-38
+- #include <QGuiApplication>  // lines 37-37
+- #include <QImage>  // lines 34-34
+- #include <QPainter>  // lines 35-35
+- #include <QTextDocument>  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtHtmlReader.cpp:
+#include "QtHtmlReader.h"
+#include <bits/exception.h>               // for exception
+#include <qabstracttextdocumentlayout.h>  // for QAbstractTextDocumentLayout
+#include <qbrush.h>                       // for QBrush
+#include <qcolor.h>                       // for QColor
+#include <qimage.h>                       // for QImage, QImage::Format_RGBA...
+#include <qnamespace.h>                   // for AlignHCenter, AlignLeft
+#include <qpainter.h>                     // for QPainter
+#include <qsize.h>                        // for QSize, QSizeF
+#include <qtextdocument.h>                // for QTextDocument
+#include <qtextoption.h>                  // for QTextOption
+#include <cmath>                          // for round
+#include "Exceptions.h"                   // for InvalidJSON
+#include "Fraction.h"                     // for Fraction
+#include "Frame.h"                        // for Frame
+#include "Json.h"                         // for stringToJson
+#include "Settings.h"                     // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/../QtImageReader.h should add these lines:
+
+/home/ferd/devel/libopenshot/src/effects/../QtImageReader.h should remove these lines:
+- #include <omp.h>  // lines 37-37
+- #include <stdio.h>  // lines 38-38
+- #include <cmath>  // lines 34-34
+- #include <iostream>  // lines 36-36
+- #include <memory>  // lines 39-39
+- #include "Exceptions.h"  // lines 40-40
+- #include "ReaderBase.h"  // lines 41-41
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/../QtImageReader.h:
+#include <ctime>  // for NULL
+---
+
+/home/ferd/devel/libopenshot/src/QtImageReader.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <qglobal.h>                                 // for QT_VERSION, QT_V...
+#include <qimage.h>                                  // for QImage
+#include <qnamespace.h>                              // for KeepAspectRatio
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString
+#include <stdint.h>                                  // for int64_t
+#include <algorithm>                                 // for max
+#include <cmath>                                     // for round
+#include <memory>                                    // for shared_ptr, make...
+#include <string>                                    // for string
+#include "Coordinate.h"                              // for Coordinate
+#include "Enums.h"                                   // for SCALE_CROP, SCAL...
+#include "Point.h"                                   // for Point
+#include "TimelineBase.h"                            // for TimelineBase
+#include "effects/../Exceptions.h"                   // for InvalidJSON, Inv...
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+#include "effects/../QtImageReader.h"                // for QtImageReader
+#include "effects/../ReaderBase.h"                   // for ReaderInfo, Read...
+#include "json/json.h"                               // for Value
+
+/home/ferd/devel/libopenshot/src/QtImageReader.cpp should remove these lines:
+- #include <QtCore/QString>  // lines 35-35
+- #include <QtGui/QImage>  // lines 36-36
+- #include <QtGui/QPainter>  // lines 37-37
+- #include "CacheMemory.h"  // lines 34-34
+- #include "Settings.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtImageReader.cpp:
+#include "QtImageReader.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <qglobal.h>                                 // for QT_VERSION, QT_V...
+#include <qimage.h>                                  // for QImage
+#include <qnamespace.h>                              // for KeepAspectRatio
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString
+#include <stdint.h>                                  // for int64_t
+#include <algorithm>                                 // for max
+#include <cmath>                                     // for round
+#include <memory>                                    // for shared_ptr, make...
+#include <string>                                    // for string
+#include "Clip.h"                                    // for Clip
+#include "Coordinate.h"                              // for Coordinate
+#include "Enums.h"                                   // for SCALE_CROP, SCAL...
+#include "Point.h"                                   // for Point
+#include "TimelineBase.h"                            // for TimelineBase
+#include "effects/../Exceptions.h"                   // for InvalidJSON, Inv...
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+#include "effects/../QtImageReader.h"                // for QtImageReader
+#include "effects/../ReaderBase.h"                   // for ReaderInfo, Read...
+#include "json/json.h"                               // for Value
+---
+
+
+/home/ferd/devel/libopenshot/src/QtPlayer.h should add these lines:
+#include <stdint.h>            // for int64_t
+#include <string>              // for string
+#include "Qt/../ReaderBase.h"  // for ReaderBase
+namespace openshot { class PlayerPrivate; }
+namespace openshot { class RendererBase; }
+namespace openshot { struct AudioDeviceInfo; }
+
+/home/ferd/devel/libopenshot/src/QtPlayer.h should remove these lines:
+- #include <iostream>  // lines 35-35
+- #include "Qt/PlayerPrivate.h"  // lines 38-38
+- #include "RendererBase.h"  // lines 39-39
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtPlayer.h:
+#include <stdint.h>            // for int64_t
+#include <string>              // for string
+#include <vector>              // for vector
+#include "PlayerBase.h"        // for PlaybackMode, PlayerBase
+#include "Qt/../ReaderBase.h"  // for ReaderBase
+namespace openshot { class PlayerPrivate; }
+namespace openshot { class RendererBase; }
+namespace openshot { struct AudioDeviceInfo; }
+---
+
+/home/ferd/devel/libopenshot/src/QtPlayer.cpp should add these lines:
+#include <stddef.h>                        // for NULL
+#include "Qt/../AudioDeviceInfo.h"         // for AudioDeviceInfo
+#include "Qt/../Qt/AudioPlaybackThread.h"  // for AudioPlaybackThread, Audio...
+#include "Qt/../Qt/VideoCacheThread.h"     // for VideoCacheThread
+#include "RendererBase.h"                  // for RendererBase
+
+/home/ferd/devel/libopenshot/src/QtPlayer.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtPlayer.cpp:
+#include "QtPlayer.h"
+#include <stddef.h>                        // for NULL
+#include "Clip.h"                          // for Clip
+#include "FFmpegReader.h"                  // for FFmpegReader
+#include "Qt/../AudioDeviceInfo.h"         // for AudioDeviceInfo
+#include "Qt/../Qt/AudioPlaybackThread.h"  // for AudioPlaybackThread, Audio...
+#include "Qt/../Qt/VideoCacheThread.h"     // for VideoCacheThread
+#include "Qt/PlayerPrivate.h"              // for PlayerPrivate
+#include "Qt/VideoRenderer.h"              // for VideoRenderer
+#include "RendererBase.h"                  // for RendererBase
+#include "Timeline.h"                      // for Timeline
+---
+
+
+(/home/ferd/devel/libopenshot/src/TimelineBase.h has correct #includes/fwd-decls)
+
+(/home/ferd/devel/libopenshot/src/TimelineBase.cpp has correct #includes/fwd-decls)
+
+
+/home/ferd/devel/libopenshot/src/Settings.h should add these lines:
+
+/home/ferd/devel/libopenshot/src/Settings.h should remove these lines:
+- #include <unistd.h>  // lines 44-44
+- #include <cstdio>  // lines 41-41
+- #include <cstdlib>  // lines 38-38
+- #include <ctime>  // lines 42-42
+- #include <fstream>  // lines 37-37
+- #include <iomanip>  // lines 36-36
+- #include <iostream>  // lines 35-35
+- #include <sstream>  // lines 40-40
+- #include <zmq.hpp>  // lines 43-43
+- #include "JuceHeader.h"  // lines 45-45
+
+The full include-list for /home/ferd/devel/libopenshot/src/Settings.h:
+#include <string>  // for string
+---
+
+/home/ferd/devel/libopenshot/src/Settings.cpp should add these lines:
+#include <cstdio>   // for NULL
+#include <fstream>  // for std
+
+/home/ferd/devel/libopenshot/src/Settings.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Settings.cpp:
+#include "Settings.h"
+#include <cstdio>   // for NULL
+#include <fstream>  // for std
+---
+
+
+/home/ferd/devel/libopenshot/src/QtTextReader.h should add these lines:
+#include <qfont.h>       // for QFont
+#include <stdint.h>      // for int64_t
+#include <string>        // for string
+#include "CacheBase.h"   // for CacheBase
+#include "json/json.h"   // for Value
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/QtTextReader.h should remove these lines:
+- #include <omp.h>  // lines 41-41
+- #include <stdio.h>  // lines 42-42
+- #include <cmath>  // lines 38-38
+- #include <iostream>  // lines 40-40
+- #include "CacheMemory.h"  // lines 44-44
+- #include "Exceptions.h"  // lines 46-46
+- namespace openshot { class CacheBase; }  // lines 53-53
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtTextReader.h:
+#include <qfont.h>       // for QFont
+#include <stdint.h>      // for int64_t
+#include <ctime>         // for NULL
+#include <memory>        // for shared_ptr
+#include <string>        // for string
+#include "CacheBase.h"   // for CacheBase
+#include "Enums.h"       // for GravityType
+#include "ReaderBase.h"  // for ReaderBase
+#include "json/json.h"   // for Value
+class QImage;  // lines 48-48
+namespace openshot { class Frame; }
+---
+
+/home/ferd/devel/libopenshot/src/QtTextReader.cpp should add these lines:
+#include <QtCore/qglobal.h>  // for QFlags
+#include <bits/exception.h>  // for exception
+#include <qbrush.h>          // for QBrush
+#include <qcolor.h>          // for QColor
+#include <qimage.h>          // for QImage, QImage::Format_RGBA8888_Premulti...
+#include <qnamespace.h>      // for operator|, AlignBottom, AlignLeft, Align...
+#include <qpainter.h>        // for QPainter
+#include <qpen.h>            // for QPen
+#include <qsize.h>           // for QSize
+#include <qstring.h>         // for QString
+#include <cmath>             // for round
+#include "Exceptions.h"      // for InvalidJSON
+#include "Fraction.h"        // for Fraction
+#include "Frame.h"           // for Frame
+#include "Json.h"            // for stringToJson
+#include "Settings.h"        // for openshot
+
+/home/ferd/devel/libopenshot/src/QtTextReader.cpp should remove these lines:
+- #include <QImage>  // lines 34-34
+- #include <QPainter>  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/src/QtTextReader.cpp:
+#include "QtTextReader.h"
+#include <QtCore/qglobal.h>  // for QFlags
+#include <bits/exception.h>  // for exception
+#include <qbrush.h>          // for QBrush
+#include <qcolor.h>          // for QColor
+#include <qimage.h>          // for QImage, QImage::Format_RGBA8888_Premulti...
+#include <qnamespace.h>      // for operator|, AlignBottom, AlignLeft, Align...
+#include <qpainter.h>        // for QPainter
+#include <qpen.h>            // for QPen
+#include <qsize.h>           // for QSize
+#include <qstring.h>         // for QString
+#include <cmath>             // for round
+#include "Exceptions.h"      // for InvalidJSON
+#include "Fraction.h"        // for Fraction
+#include "Frame.h"           // for Frame
+#include "Json.h"            // for stringToJson
+#include "Settings.h"        // for openshot
+---
+
+
+/home/ferd/devel/libopenshot/src/Timeline.h should add these lines:
+#include <stdint.h>            // for int64_t
+#include <map>                 // for map
+#include <string>              // for string
+#include <vector>              // for vector
+#include "ChannelLayouts.h"    // for ChannelLayout
+#include "effects/../Color.h"  // for Color
+#include "json/json.h"         // for Value
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+namespace openshot { class FrameMapper; }
+
+/home/ferd/devel/libopenshot/src/Timeline.h should remove these lines:
+- #include <QtCore/QRegularExpression>  // lines 40-40
+- #include <QtGui/QImage>  // lines 38-38
+- #include <QtGui/QPainter>  // lines 39-39
+- #include "CacheDisk.h"  // lines 42-42
+- #include "CacheMemory.h"  // lines 43-43
+- #include "Color.h"  // lines 44-44
+- #include "CrashHandler.h"  // lines 46-46
+- #include "EffectInfo.h"  // lines 50-50
+- #include "Effects.h"  // lines 49-49
+- #include "Fraction.h"  // lines 51-51
+- #include "Frame.h"  // lines 52-52
+- #include "FrameMapper.h"  // lines 53-53
+- #include "OpenMPUtilities.h"  // lines 55-55
+- #include "Point.h"  // lines 47-47
+- #include "Settings.h"  // lines 57-57
+
+The full include-list for /home/ferd/devel/libopenshot/src/Timeline.h:
+#include <stdint.h>            // for int64_t
+#include <list>                // for list
+#include <map>                 // for map
+#include <memory>              // for shared_ptr
+#include <mutex>               // for mutex
+#include <set>                 // for set
+#include <string>              // for string
+#include <vector>              // for vector
+#include "CacheBase.h"         // for CacheBase
+#include "ChannelLayouts.h"    // for ChannelLayout
+#include "Clip.h"              // for Clip
+#include "EffectBase.h"        // for EffectBase
+#include "KeyFrame.h"          // for Keyframe
+#include "ReaderBase.h"        // for ReaderBase
+#include "TimelineBase.h"      // for TimelineBase
+#include "effects/../Color.h"  // for Color
+#include "json/json.h"         // for Value
+namespace openshot { class Fraction; }
+namespace openshot { class Frame; }
+namespace openshot { class FrameMapper; }
+---
+
+/home/ferd/devel/libopenshot/src/Timeline.cpp should add these lines:
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <math.h>                                    // for round, fabs
+#include <omp.h>                                     // for omp_get_thread_num
+#include <qbytearray.h>                              // for QByteArray
+#include <qdir.h>                                    // for QDir
+#include <qfile.h>                                   // for QFile
+#include <qfileinfo.h>                               // for QFileInfo
+#include <qglobal.h>                                 // for uint
+#include <qimage.h>                                  // for QImage
+#include <qiodevice.h>                               // for QIODevice::ReadOnly
+#include <qnamespace.h>                              // for KeepAspectRatio
+#include <qpainter.h>                                // for QPainter, QPaint...
+#include <qregularexpression.h>                      // for QRegularExpressi...
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString, operator+
+#include <qstringliteral.h>                          // for QStaticStringData
+#include <stddef.h>                                  // for NULL
+#include <algorithm>                                 // for max, max_element
+#include "CacheMemory.h"                             // for CacheMemory
+#include "CrashHandler.h"                            // for CrashHandler
+#include "EffectInfo.h"                              // for EffectInfo
+#include "Enums.h"                                   // for VOLUME_MIX_AVERAGE
+#include "FrameMapper.h"                             // for FrameMapper, PUL...
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Settings.h"                                // for Settings, openshot
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../EffectBase.h"                   // for EffectBase
+#include "effects/../Exceptions.h"                   // for InvalidFile, Inv...
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+
+/home/ferd/devel/libopenshot/src/Timeline.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Timeline.cpp:
+#include "Timeline.h"
+#include <bits/exception.h>                          // for exception
+#include <juce_core/threads/juce_CriticalSection.h>  // for CriticalSection
+#include <juce_core/threads/juce_ScopedLock.h>       // for GenericScopedLock
+#include <math.h>                                    // for round, fabs
+#include <omp.h>                                     // for omp_get_thread_num
+#include <qbytearray.h>                              // for QByteArray
+#include <qdir.h>                                    // for QDir
+#include <qfile.h>                                   // for QFile
+#include <qfileinfo.h>                               // for QFileInfo
+#include <qglobal.h>                                 // for uint
+#include <qimage.h>                                  // for QImage
+#include <qiodevice.h>                               // for QIODevice::ReadOnly
+#include <qnamespace.h>                              // for KeepAspectRatio
+#include <qpainter.h>                                // for QPainter, QPaint...
+#include <qregularexpression.h>                      // for QRegularExpressi...
+#include <qsize.h>                                   // for QSize
+#include <qstring.h>                                 // for QString, operator+
+#include <qstringliteral.h>                          // for QStaticStringData
+#include <stddef.h>                                  // for NULL
+#include <algorithm>                                 // for max, max_element
+#include "CacheMemory.h"                             // for CacheMemory
+#include "CrashHandler.h"                            // for CrashHandler
+#include "EffectInfo.h"                              // for EffectInfo
+#include "Enums.h"                                   // for VOLUME_MIX_AVERAGE
+#include "FrameMapper.h"                             // for FrameMapper, PUL...
+#include "OpenMPUtilities.h"                         // for OPEN_MP_NUM_PROC...
+#include "Settings.h"                                // for Settings, openshot
+#include "ZmqLogger.h"                               // for ZmqLogger
+#include "effects/../EffectBase.h"                   // for EffectBase
+#include "effects/../Exceptions.h"                   // for InvalidFile, Inv...
+#include "effects/../Fraction.h"                     // for Fraction
+#include "effects/../Frame.h"                        // for Frame
+#include "effects/../Json.h"                         // for stringToJson
+#include "effects/../KeyFrame.h"                     // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Bars.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Bars.h should remove these lines:
+- #include "../Json.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Bars.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../Color.h"       // for Color
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Bars.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qcolor.h>                 // for QColor
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qstring.h>                // for QString
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../Color.h"       // for Color
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Bars.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Bars.cpp:
+#include "Bars.h"
+#include <bits/exception.h>         // for exception
+#include <qcolor.h>                 // for QColor
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qstring.h>                // for QString
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../Color.h"       // for Color
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Blur.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Blur.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Blur.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Blur.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for round
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Blur.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Blur.cpp:
+#include "Blur.h"
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for round
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Brightness.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Brightness.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Brightness.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Brightness.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Brightness.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Brightness.cpp:
+#include "Brightness.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/ChromaKey.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/ChromaKey.h should remove these lines:
+- #include "../Exceptions.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/ChromaKey.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../Color.h"       // for Color
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/ChromaKey.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Json.h"                   // for stringToJson
+#include "Settings.h"               // for openshot
+#include "effects/../Color.h"       // for Color
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Exceptions.h"  // for InvalidJSON
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/ChromaKey.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/ChromaKey.cpp:
+#include "ChromaKey.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Json.h"                   // for stringToJson
+#include "Settings.h"               // for openshot
+#include "effects/../Color.h"       // for Color
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Exceptions.h"  // for InvalidJSON
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Caption.h should add these lines:
+#include <qregularexpression.h>  // for QRegularExpressionMatch
+#include <stdint.h>              // for int64_t
+#include <string>                // for string
+#include <vector>                // for vector
+#include "Color.h"               // for Color
+#include "EffectBase.h"          // for EffectBase
+#include "effects/../Frame.h"    // for Frame
+#include "json/json.h"           // for Value
+class QFont;
+class QFontMetrics;
+
+/home/ferd/devel/libopenshot/src/effects/Caption.h should remove these lines:
+- #include <stdio.h>  // lines 35-35
+- #include <QtCore/QRegularExpression>  // lines 37-37
+- #include <cmath>  // lines 34-34
+- #include "../Color.h"  // lines 38-38
+- #include "../EffectBase.h"  // lines 39-39
+- #include "../Fraction.h"  // lines 40-40
+- #include "../Json.h"  // lines 41-41
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Caption.h:
+#include <qregularexpression.h>  // for QRegularExpressionMatch
+#include <stdint.h>              // for int64_t
+#include <memory>                // for shared_ptr
+#include <string>                // for string
+#include <vector>                // for vector
+#include "../KeyFrame.h"         // for Keyframe
+#include "Color.h"               // for Color
+#include "EffectBase.h"          // for EffectBase
+#include "effects/../Frame.h"    // for Frame
+#include "json/json.h"           // for Value
+class QFont;
+class QFontMetrics;
+---
+
+/home/ferd/devel/libopenshot/src/effects/Caption.cpp should add these lines:
+#include <QtCore/qglobal.h>         // for QFlags
+#include <bits/exception.h>         // for exception
+#include <qbrush.h>                 // for QBrush
+#include <qcolor.h>                 // for QColor
+#include <qfont.h>                  // for QFont
+#include <qfontmetrics.h>           // for QFontMetricsF
+#include <qimage.h>                 // for QImage
+#include <qlist.h>                  // for QList
+#include <qnamespace.h>             // for NoPen, SolidPattern, TextSingleLine
+#include <qpainter.h>               // for QPainter, operator|, QPainter::An...
+#include <qpainterpath.h>           // for QPainterPath
+#include <qpen.h>                   // for QPen
+#include <qpoint.h>                 // for QPoint
+#include <qrect.h>                  // for QRectF
+#include <qstring.h>                // for QString
+#include <qstringlist.h>            // for QStringList
+#include <qstringliteral.h>         // for QStaticStringData, QStringLiteral
+#include <stdio.h>                  // for NULL
+#include <algorithm>                // for max
+#include "Clip.h"                   // for Clip
+#include "ReaderBase.h"             // for ReaderInfo, ReaderBase
+#include "effects/../Exceptions.h"  // for InvalidJSON, openshot
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Caption.cpp should remove these lines:
+- #include "../Clip.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Caption.cpp:
+#include "Caption.h"
+#include <QtCore/qglobal.h>         // for QFlags
+#include <bits/exception.h>         // for exception
+#include <qbrush.h>                 // for QBrush
+#include <qcolor.h>                 // for QColor
+#include <qfont.h>                  // for QFont
+#include <qfontmetrics.h>           // for QFontMetricsF
+#include <qimage.h>                 // for QImage
+#include <qlist.h>                  // for QList
+#include <qnamespace.h>             // for NoPen, SolidPattern, TextSingleLine
+#include <qpainter.h>               // for QPainter, operator|, QPainter::An...
+#include <qpainterpath.h>           // for QPainterPath
+#include <qpen.h>                   // for QPen
+#include <qpoint.h>                 // for QPoint
+#include <qrect.h>                  // for QRectF
+#include <qstring.h>                // for QString
+#include <qstringlist.h>            // for QStringList
+#include <qstringliteral.h>         // for QStaticStringData, QStringLiteral
+#include <stdio.h>                  // for NULL
+#include <algorithm>                // for max
+#include "../Timeline.h"            // for Timeline
+#include "Clip.h"                   // for Clip
+#include "ReaderBase.h"             // for ReaderInfo, ReaderBase
+#include "effects/../Exceptions.h"  // for InvalidJSON, openshot
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/ColorShift.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include <string>           // for string
+#include "Frame.h"          // for Frame
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/ColorShift.h should remove these lines:
+- #include <stdio.h>  // lines 37-37
+- #include <cmath>  // lines 36-36
+- #include "../Json.h"  // lines 39-39
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/ColorShift.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../KeyFrame.h"    // for Keyframe
+#include "Frame.h"          // for Frame
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/ColorShift.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stdio.h>                  // for NULL
+#include <string.h>                 // for memcpy
+#include <cmath>                    // for round, fabs, fmod
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/ColorShift.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/ColorShift.cpp:
+#include "ColorShift.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stdio.h>                  // for NULL
+#include <string.h>                 // for memcpy
+#include <cmath>                    // for round, fabs, fmod
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Deinterlace.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Deinterlace.h should remove these lines:
+- #include "../Json.h"  // lines 39-39
+- #include "../KeyFrame.h"  // lines 40-40
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Deinterlace.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Deinterlace.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qnamespace.h>             // for FastTransformation, IgnoreAspectR...
+#include <string.h>                 // for NULL, memcpy
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+
+/home/ferd/devel/libopenshot/src/effects/Deinterlace.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Deinterlace.cpp:
+#include "Deinterlace.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qnamespace.h>             // for FastTransformation, IgnoreAspectR...
+#include <string.h>                 // for NULL, memcpy
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Crop.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Crop.h should remove these lines:
+- #include "../Json.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Crop.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../Color.h"       // for Color
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Crop.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qcolor.h>                 // for QColor
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qstring.h>                // for QString
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Crop.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Crop.cpp:
+#include "Crop.h"
+#include <bits/exception.h>         // for exception
+#include <qcolor.h>                 // for QColor
+#include <qimage.h>                 // for QImage, QImage::Format_RGBA8888_P...
+#include <qstring.h>                // for QString
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Hue.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Hue.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Hue.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Hue.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for sqrtf, cos, sin
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Hue.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Hue.cpp:
+#include "Hue.h"
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for sqrtf, cos, sin
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Mask.h should add these lines:
+#include <stdint.h>            // for int64_t
+#include "EffectBase.h"        // for EffectBase
+#include "effects/../Frame.h"  // for Frame
+#include "json/json.h"         // for Value
+class QImage;
+
+/home/ferd/devel/libopenshot/src/effects/Mask.h should remove these lines:
+- #include "../EffectBase.h"  // lines 34-34
+- #include "../Json.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Mask.h:
+#include <stdint.h>            // for int64_t
+#include <memory>              // for shared_ptr
+#include <string>              // for string
+#include "../KeyFrame.h"       // for Keyframe
+#include "EffectBase.h"        // for EffectBase
+#include "effects/../Frame.h"  // for Frame
+#include "json/json.h"         // for Value
+class QImage;
+namespace openshot { class ReaderBase; }  // lines 45-45
+---
+
+/home/ferd/devel/libopenshot/src/effects/Mask.cpp should add these lines:
+#include <bits/exception.h>            // for exception
+#include <qimage.h>                    // for QImage
+#include <qnamespace.h>                // for IgnoreAspectRatio, SmoothTrans...
+#include <qrgb.h>                      // for qGray
+#include <qsize.h>                     // for operator!=, QSize
+#include <stddef.h>                    // for NULL
+#include "Settings.h"                  // for openshot
+#include "effects/../ChunkReader.h"    // for ChunkReader, ChunkVersion
+#include "effects/../Exceptions.h"     // for InvalidJSON
+#include "effects/../FFmpegReader.h"   // for FFmpegReader
+#include "effects/../Json.h"           // for stringToJson
+#include "effects/../KeyFrame.h"       // for Keyframe
+#include "effects/../QtImageReader.h"  // for QtImageReader
+
+/home/ferd/devel/libopenshot/src/effects/Mask.cpp should remove these lines:
+- #include "FFmpegReader.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Mask.cpp:
+#include "Mask.h"
+#include <bits/exception.h>            // for exception
+#include <qimage.h>                    // for QImage
+#include <qnamespace.h>                // for IgnoreAspectRatio, SmoothTrans...
+#include <qrgb.h>                      // for qGray
+#include <qsize.h>                     // for operator!=, QSize
+#include <stddef.h>                    // for NULL
+#include "ReaderBase.h"                // for ReaderBase, ReaderInfo
+#include "Settings.h"                  // for openshot
+#include "effects/../ChunkReader.h"    // for ChunkReader, ChunkVersion
+#include "effects/../Exceptions.h"     // for InvalidJSON
+#include "effects/../FFmpegReader.h"   // for FFmpegReader
+#include "effects/../Json.h"           // for stringToJson
+#include "effects/../KeyFrame.h"       // for Keyframe
+#include "effects/../QtImageReader.h"  // for QtImageReader
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Negate.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Negate.h should remove these lines:
+- #include <QImage>  // lines 42-42
+- #include "../KeyFrame.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Negate.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Negate.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Json.h"                   // for stringToJson
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+
+/home/ferd/devel/libopenshot/src/effects/Negate.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Negate.cpp:
+#include "Negate.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <stddef.h>                 // for NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Json.h"                   // for stringToJson
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Pixelate.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Pixelate.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Pixelate.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Pixelate.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for fabs, pow
+#include <qimage.h>                 // for QImage
+#include <qnamespace.h>             // for SmoothTransformation
+#include <qpainter.h>               // for QPainter
+#include <qpoint.h>                 // for QPoint
+#include <qrect.h>                  // for QRect
+#include <stddef.h>                 // for NULL
+#include <algorithm>                // for min
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Pixelate.cpp should remove these lines:
+- #include <QImage>  // lines 34-34
+- #include <QPainter>  // lines 35-35
+- #include <QPoint>  // lines 37-37
+- #include <QRect>  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Pixelate.cpp:
+#include "Pixelate.h"
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for fabs, pow
+#include <qimage.h>                 // for QImage
+#include <qnamespace.h>             // for SmoothTransformation
+#include <qpainter.h>               // for QPainter
+#include <qpoint.h>                 // for QPoint
+#include <qrect.h>                  // for QRect
+#include <stddef.h>                 // for NULL
+#include <algorithm>                // for min
+#include "Exceptions.h"             // for InvalidJSON
+#include "Json.h"                   // for stringToJson
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Saturation.h should add these lines:
+#include <stdint.h>            // for int64_t
+#include <string>              // for string
+#include "EffectBase.h"        // for EffectBase
+#include "effects/../Frame.h"  // for Frame
+#include "json/json.h"         // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Saturation.h should remove these lines:
+- #include <omp.h>  // lines 39-39
+- #include <stdio.h>  // lines 40-40
+- #include <cmath>  // lines 36-36
+- #include <ctime>  // lines 37-37
+- #include <iostream>  // lines 38-38
+- #include "../ChunkReader.h"  // lines 49-49
+- #include "../Color.h"  // lines 42-42
+- #include "../EffectBase.h"  // lines 34-34
+- #include "../Exceptions.h"  // lines 43-43
+- #include "../FFmpegReader.h"  // lines 47-47
+- #include "../Json.h"  // lines 44-44
+- #include "../QtImageReader.h"  // lines 48-48
+- #include "../ReaderBase.h"  // lines 46-46
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Saturation.h:
+#include <stdint.h>            // for int64_t
+#include <memory>              // for shared_ptr
+#include <string>              // for string
+#include "../KeyFrame.h"       // for Keyframe
+#include "EffectBase.h"        // for EffectBase
+#include "effects/../Frame.h"  // for Frame
+#include "json/json.h"         // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Saturation.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <cmath>                    // for sqrt
+#include <ctime>                    // for NULL
+#include "Settings.h"               // for openshot
+#include "effects/../Exceptions.h"  // for InvalidJSON
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Saturation.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Saturation.cpp:
+#include "Saturation.h"
+#include <bits/exception.h>         // for exception
+#include <qimage.h>                 // for QImage
+#include <cmath>                    // for sqrt
+#include <ctime>                    // for NULL
+#include "Settings.h"               // for openshot
+#include "effects/../Exceptions.h"  // for InvalidJSON
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Shift.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Shift.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Shift.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Shift.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for round, fabs, fmod
+#include <qimage.h>                 // for QImage
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Shift.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Shift.cpp:
+#include "Shift.h"
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for round, fabs, fmod
+#include <qimage.h>                 // for QImage
+#include <string.h>                 // for memcpy, NULL
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/effects/Wave.h should add these lines:
+#include <stdint.h>         // for int64_t
+#include "json/json.h"      // for Value
+
+/home/ferd/devel/libopenshot/src/effects/Wave.h should remove these lines:
+- #include "../Json.h"  // lines 37-37
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Wave.h:
+#include <stdint.h>         // for int64_t
+#include <memory>           // for shared_ptr
+#include <string>           // for string
+#include "../EffectBase.h"  // for EffectBase
+#include "../Frame.h"       // for Frame
+#include "../KeyFrame.h"    // for Keyframe
+#include "json/json.h"      // for Value
+---
+
+/home/ferd/devel/libopenshot/src/effects/Wave.cpp should add these lines:
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for sin, round
+#include <qimage.h>                 // for QImage
+#include <string.h>                 // for NULL, memcpy
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/src/effects/Wave.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/effects/Wave.cpp:
+#include "Wave.h"
+#include <bits/exception.h>         // for exception
+#include <math.h>                   // for sin, round
+#include <qimage.h>                 // for QImage
+#include <string.h>                 // for NULL, memcpy
+#include "Exceptions.h"             // for InvalidJSON
+#include "Settings.h"               // for openshot
+#include "effects/../EffectBase.h"  // for EffectInfoStruct, EffectBase
+#include "effects/../Frame.h"       // for Frame
+#include "effects/../Json.h"        // for stringToJson
+#include "effects/../KeyFrame.h"    // for Keyframe
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.h should add these lines:
+#include <juce_audio_basics/sources/juce_MixerAudioSource.h>
+#include <juce_audio_devices/audio_io/juce_AudioDeviceManager.h>
+#include <juce_audio_devices/sources/juce_AudioSourcePlayer.h>
+#include <juce_audio_devices/sources/juce_AudioTransportSource.h>
+#include <juce_core/threads/juce_Thread.h>
+#include <juce_core/threads/juce_TimeSliceThread.h>
+#include <juce_core/threads/juce_WaitableEvent.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.h should remove these lines:
+- #include "../ReaderBase.h"  // lines 35-35
+- #include "../RendererBase.h"  // lines 36-36
+- #include "../Settings.h"  // lines 39-39
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.h:
+#include <juce_audio_basics/sources/juce_MixerAudioSource.h>
+#include <juce_audio_devices/audio_io/juce_AudioDeviceManager.h>
+#include <juce_audio_devices/sources/juce_AudioSourcePlayer.h>
+#include <juce_audio_devices/sources/juce_AudioTransportSource.h>
+#include <juce_core/threads/juce_Thread.h>
+#include <juce_core/threads/juce_TimeSliceThread.h>
+#include <juce_core/threads/juce_WaitableEvent.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
+#include "../AudioDeviceInfo.h"
+#include "../AudioReaderSource.h"
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+---
+
+/home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.cpp should add these lines:
+#include <juce_audio_devices/audio_io/juce_AudioIODeviceType.h>  // for Audi...
+#include <juce_core/containers/juce_OwnedArray.h>                // for Owne...
+#include <juce_core/juce_core.h>                                 // for String
+#include <juce_core/text/juce_StringArray.h>                     // for Stri...
+#include <stddef.h>                                              // for NULL
+#include "Qt/../AudioDeviceInfo.h"                               // for Audi...
+#include "Qt/../AudioReaderSource.h"                             // for Audi...
+#include "Qt/../Settings.h"                                      // for Sett...
+#include "ReaderBase.h"                                          // for Read...
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/AudioPlaybackThread.cpp:
+#include "AudioPlaybackThread.h"
+#include <juce_audio_devices/audio_io/juce_AudioIODeviceType.h>  // for Audi...
+#include <juce_core/containers/juce_OwnedArray.h>                // for Owne...
+#include <juce_core/juce_core.h>                                 // for String
+#include <juce_core/text/juce_StringArray.h>                     // for Stri...
+#include <stddef.h>                                              // for NULL
+#include <chrono>                                                // for mill...
+#include <thread>                                                // for slee...
+#include "Qt/../AudioDeviceInfo.h"                               // for Audi...
+#include "Qt/../AudioReaderSource.h"                             // for Audi...
+#include "Qt/../Settings.h"                                      // for Sett...
+#include "ReaderBase.h"                                          // for Read...
+namespace openshot { class Frame; }
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerDemo.h should add these lines:
+#include <QtCore/qglobal.h>  // for Q_DECL_OVERRIDE
+#include <qobjectdefs.h>     // for Q_OBJECT, slots
+#include <qstring.h>         // for QString
+#include <qwidget.h>         // for QWidget
+class QCloseEvent;
+class QKeyEvent;
+class QMenuBar;
+class QObject;
+class QVBoxLayout;
+class VideoRenderWidget;
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerDemo.h should remove these lines:
+- #include <QCloseEvent>  // lines 37-37
+- #include <QKeyEvent>  // lines 36-36
+- #include <QMenuBar>  // lines 39-39
+- #include <QObject>  // lines 34-34
+- #include <QVBoxLayout>  // lines 38-38
+- #include <QWidget>  // lines 35-35
+- #include "VideoRenderWidget.h"  // lines 41-41
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/PlayerDemo.h:
+#include <QtCore/qglobal.h>  // for Q_DECL_OVERRIDE
+#include <qobjectdefs.h>     // for Q_OBJECT, slots
+#include <qstring.h>         // for QString
+#include <qwidget.h>         // for QWidget
+class QCloseEvent;
+class QKeyEvent;
+class QMenuBar;
+class QObject;
+class QVBoxLayout;
+class VideoRenderWidget;
+namespace openshot { class QtPlayer; }  // lines 46-46
+---
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerDemo.cpp should add these lines:
+#include <qaction.h>               // for QAction
+#include <qapplication.h>          // for QApplication
+#include <qboxlayout.h>            // for QVBoxLayout
+#include <qevent.h>                // for QKeyEvent, QCloseEvent (ptr only)
+#include <qfiledialog.h>           // for QFileDialog
+#include <qmenubar.h>              // for QMenuBar
+#include <qnamespace.h>            // for Key_Escape, Key_J, Key_K, Key_L
+#include <stddef.h>                // for NULL
+#include "PlayerBase.h"            // for PLAYBACK_PAUSED, PLAYBACK_PLAY
+#include "Qt/../ReaderBase.h"      // for ReaderBase, ReaderInfo
+#include "Qt/VideoRenderWidget.h"  // for VideoRenderWidget
+#include "Qt/VideoRenderer.h"      // for VideoRenderer
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerDemo.cpp should remove these lines:
+- #include <QApplication>  // lines 44-44
+- #include <QBoxLayout>  // lines 39-39
+- #include <QCloseEvent>  // lines 43-43
+- #include <QFileDialog>  // lines 37-37
+- #include <QKeyEvent>  // lines 42-42
+- #include <QMenu>  // lines 41-41
+- #include <QMenuBar>  // lines 40-40
+- #include <QMessageBox>  // lines 36-36
+- #include <QWidget>  // lines 38-38
+- #include <string>  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/PlayerDemo.cpp:
+#include "PlayerDemo.h"
+#include <qaction.h>               // for QAction
+#include <qapplication.h>          // for QApplication
+#include <qboxlayout.h>            // for QVBoxLayout
+#include <qevent.h>                // for QKeyEvent, QCloseEvent (ptr only)
+#include <qfiledialog.h>           // for QFileDialog
+#include <qmenubar.h>              // for QMenuBar
+#include <qnamespace.h>            // for Key_Escape, Key_J, Key_K, Key_L
+#include <stddef.h>                // for NULL
+#include "../QtPlayer.h"           // for QtPlayer
+#include "PlayerBase.h"            // for PLAYBACK_PAUSED, PLAYBACK_PLAY
+#include "Qt/../ReaderBase.h"      // for ReaderBase, ReaderInfo
+#include "Qt/VideoRenderWidget.h"  // for VideoRenderWidget
+#include "Qt/VideoRenderer.h"      // for VideoRenderer
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.h should add these lines:
+#include <juce_core/threads/juce_Thread.h>  // for Thread
+#include <stdint.h>                         // for int64_t
+#include <memory>                           // for shared_ptr
+namespace openshot { class AudioPlaybackThread; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+namespace openshot { class RendererBase; }
+namespace openshot { class VideoCacheThread; }
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.h should remove these lines:
+- #include "../AudioReaderSource.h"  // lines 37-37
+- #include "../Qt/AudioPlaybackThread.h"  // lines 38-38
+- #include "../Qt/VideoCacheThread.h"  // lines 40-40
+- #include "../ReaderBase.h"  // lines 35-35
+- #include "../RendererBase.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.h:
+#include <juce_core/threads/juce_Thread.h>  // for Thread
+#include <stdint.h>                         // for int64_t
+#include <memory>                           // for shared_ptr
+#include "../Qt/VideoPlaybackThread.h"      // for Thread
+namespace openshot { class AudioPlaybackThread; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+namespace openshot { class RendererBase; }
+namespace openshot { class VideoCacheThread; }
+---
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.cpp should add these lines:
+#include <juce_core/threads/juce_WaitableEvent.h>  // for WaitableEvent
+#include <stddef.h>                                // for NULL
+#include <cstdint>                                 // for int64_t
+#include "Exceptions.h"                            // for OutOfBoundsFrame
+#include "Fraction.h"                              // for Fraction
+#include "Frame.h"                                 // for Frame
+#include "Qt/../Qt/AudioPlaybackThread.h"          // for AudioPlaybackThread
+#include "Qt/../Qt/VideoCacheThread.h"             // for VideoCacheThread
+#include "Qt/../Qt/VideoPlaybackThread.h"          // for VideoPlaybackThread
+#include "ReaderBase.h"                            // for ReaderBase, Reader...
+#include "ZmqLogger.h"                             // for ZmqLogger
+namespace openshot { class RendererBase; }
+
+/home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/PlayerPrivate.cpp:
+#include "PlayerPrivate.h"
+#include <juce_core/threads/juce_WaitableEvent.h>  // for WaitableEvent
+#include <stddef.h>                                // for NULL
+#include <chrono>                                  // for duration, duration...
+#include <cstdint>                                 // for int64_t
+#include <thread>                                  // for sleep_for
+#include "Exceptions.h"                            // for OutOfBoundsFrame
+#include "Fraction.h"                              // for Fraction
+#include "Frame.h"                                 // for Frame
+#include "Qt/../Qt/AudioPlaybackThread.h"          // for AudioPlaybackThread
+#include "Qt/../Qt/VideoCacheThread.h"             // for VideoCacheThread
+#include "Qt/../Qt/VideoPlaybackThread.h"          // for VideoPlaybackThread
+#include "ReaderBase.h"                            // for ReaderBase, Reader...
+#include "ZmqLogger.h"                             // for ZmqLogger
+namespace openshot { class RendererBase; }
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.h should add these lines:
+#include <juce_core/threads/juce_Thread.h>  // for Thread
+#include <stdint.h>                         // for int64_t
+#include <atomic>                           // for atomic_int
+#include <memory>                           // for shared_ptr
+namespace juce { class WaitableEvent; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+
+/home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.h should remove these lines:
+- #include "../OpenMPUtilities.h"  // lines 34-34
+- #include "../ReaderBase.h"  // lines 35-35
+- #include "../RendererBase.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.h:
+#include <juce_core/threads/juce_Thread.h>  // for Thread
+#include <stdint.h>                         // for int64_t
+#include <atomic>                           // for atomic_int
+#include <memory>                           // for shared_ptr
+namespace juce { class WaitableEvent; }
+namespace openshot { class Frame; }
+namespace openshot { class ReaderBase; }
+---
+
+/home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.cpp should add these lines:
+#include <stddef.h>                 // for NULL
+#include "CacheBase.h"              // for CacheBase
+#include "Exceptions.h"             // for OutOfBoundsFrame
+#include "Fraction.h"               // for Fraction
+#include "Frame.h"                  // for Frame
+#include "Qt/../OpenMPUtilities.h"  // for OPEN_MP_NUM_PROCESSORS
+#include "Qt/../ReaderBase.h"       // for ReaderBase, ReaderInfo
+#include "ZmqLogger.h"              // for ZmqLogger
+
+/home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoCacheThread.cpp:
+#include "VideoCacheThread.h"
+#include <stddef.h>                 // for NULL
+#include <algorithm>                // for min
+#include <chrono>                   // for duration, duration<>::period, mil...
+#include <thread>                   // for sleep_for
+#include "CacheBase.h"              // for CacheBase
+#include "Exceptions.h"             // for OutOfBoundsFrame
+#include "Fraction.h"               // for Fraction
+#include "Frame.h"                  // for Frame
+#include "Qt/../OpenMPUtilities.h"  // for OPEN_MP_NUM_PROCESSORS
+#include "Qt/../ReaderBase.h"       // for ReaderBase, ReaderInfo
+#include "ZmqLogger.h"              // for ZmqLogger
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.h should add these lines:
+#include <juce_core/threads/juce_Thread.h>         // for Thread
+#include <juce_core/threads/juce_WaitableEvent.h>  // for WaitableEvent
+#include <stdint.h>                                // for int64_t
+#include <memory>                                  // for shared_ptr
+namespace openshot { class Frame; }
+namespace openshot { class RendererBase; }
+
+/home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.h should remove these lines:
+- #include "../ReaderBase.h"  // lines 35-35
+- #include "../RendererBase.h"  // lines 36-36
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.h:
+#include <juce_core/threads/juce_Thread.h>         // for Thread
+#include <juce_core/threads/juce_WaitableEvent.h>  // for WaitableEvent
+#include <stdint.h>                                // for int64_t
+#include <memory>                                  // for shared_ptr
+namespace openshot { class Frame; }
+namespace openshot { class RendererBase; }
+---
+
+/home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.cpp should add these lines:
+#include "Frame.h"               // for Frame
+#include "Qt/../RendererBase.h"  // for RendererBase
+#include "ZmqLogger.h"           // for ZmqLogger
+
+/home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoPlaybackThread.cpp:
+#include "VideoPlaybackThread.h"
+#include "Frame.h"               // for Frame
+#include "Qt/../RendererBase.h"  // for RendererBase
+#include "ZmqLogger.h"           // for ZmqLogger
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderer.h should add these lines:
+#include <qobject.h>          // for QObject
+#include <qobjectdefs.h>      // for Q_OBJECT, signals, slots
+#include <qstring.h>          // for QString
+#include <stdint.h>           // for int64_t
+class QImage;
+class QWidget;
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderer.h should remove these lines:
+- #include <QtCore/QObject>  // lines 35-35
+- #include <QtGui/QImage>  // lines 36-36
+- class QPainter;  // lines 40-40
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoRenderer.h:
+#include <qobject.h>          // for QObject
+#include <qobjectdefs.h>      // for Q_OBJECT, signals, slots
+#include <qstring.h>          // for QString
+#include <stdint.h>           // for int64_t
+#include <memory>             // for shared_ptr
+#include "../RendererBase.h"  // for RendererBase
+class QImage;
+class QWidget;
+---
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderer.cpp should add these lines:
+class QImage;
+class QWidget;
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderer.cpp should remove these lines:
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoRenderer.cpp:
+#include "VideoRenderer.h"
+class QImage;
+class QWidget;
+---
+
+error: no such file or directory: '/home/ferd/devel/libopenshot/build/examples/openshot-player_autogen/mocs_compilation.cpp'
+error: no input files
+error: unable to handle compilation, expected exactly one compiler job in ''
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.h should add these lines:
+#include <qimage.h>       // for QImage
+#include <qobjectdefs.h>  // for Q_OBJECT, slots
+#include <qrect.h>        // for QRect
+#include <qstring.h>      // for QString
+#include <qwidget.h>      // for QWidget
+#include "Fraction.h"     // for Fraction
+class QObject;
+class QPaintEvent;
+class VideoRenderer;
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.h should remove these lines:
+- #include <QImage>  // lines 38-38
+- #include <QPaintEvent>  // lines 39-39
+- #include <QRect>  // lines 40-40
+- #include <QWidget>  // lines 37-37
+- #include "../Fraction.h"  // lines 34-34
+- #include "VideoRenderer.h"  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.h:
+#include <qimage.h>       // for QImage
+#include <qobjectdefs.h>  // for Q_OBJECT, slots
+#include <qrect.h>        // for QRect
+#include <qstring.h>      // for QString
+#include <qwidget.h>      // for QWidget
+#include "Fraction.h"     // for Fraction
+class QObject;
+class QPaintEvent;
+class VideoRenderer;
+---
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.cpp should add these lines:
+#include <qevent.h>            // for QPaintEvent
+#include <qnamespace.h>        // for WA_OpaquePaintEvent, black
+#include <qpainter.h>          // for QPainter
+#include <qpalette.h>          // for QPalette, QPalette::Window
+#include <qsizepolicy.h>       // for QSizePolicy, QSizePolicy::Preferred
+#include "Qt/VideoRenderer.h"  // for VideoRenderer
+
+/home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.cpp should remove these lines:
+- #include <QImage>  // lines 33-33
+- #include <QPaintEvent>  // lines 35-35
+- #include <QPainter>  // lines 34-34
+- #include <QPalette>  // lines 37-37
+- #include <QSizePolicy>  // lines 36-36
+- #include <QWidget>  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/src/Qt/VideoRenderWidget.cpp:
+#include "VideoRenderWidget.h"
+#include <qevent.h>            // for QPaintEvent
+#include <qnamespace.h>        // for WA_OpaquePaintEvent, black
+#include <qpainter.h>          // for QPainter
+#include <qpalette.h>          // for QPalette, QPalette::Window
+#include <qsizepolicy.h>       // for QSizePolicy, QSizePolicy::Preferred
+#include "Qt/VideoRenderer.h"  // for VideoRenderer
+---
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/examples/qt-demo/main.cpp should add these lines:
+#include <qapplication.h>   // for QApplication
+
+/home/ferd/devel/libopenshot/examples/qt-demo/main.cpp should remove these lines:
+- #include <QApplication>  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/examples/qt-demo/main.cpp:
+#include <qapplication.h>   // for QApplication
+#include "Qt/PlayerDemo.h"  // for PlayerDemo
+---
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/examples/ExampleHtml.cpp should add these lines:
+#include <qguiapplication.h>      // for QGuiApplication
+#include <qobjectdefs.h>          // for SLOT
+#include <qtimer.h>               // for QTimer
+#include <map>                    // for map, map<>::mapped_type
+#include <string>                 // for string
+#include "Enums.h"                // for GRAVITY_BOTTOM_RIGHT
+#include "FFmpegWriter.h"         // for FFmpegWriter
+#include "OpenShotVersion.h"      // for openshot
+#include "QtHtmlReader.h"         // for QtHtmlReader
+#include "WriterBase.h"           // for WriterInfo
+#include "effects/../Fraction.h"  // for Fraction
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/examples/ExampleHtml.cpp should remove these lines:
+- #include <QGuiApplication>  // lines 35-35
+- #include <QTimer>  // lines 36-36
+- #include <fstream>  // lines 32-32
+- #include <iostream>  // lines 33-33
+- #include "CrashHandler.h"  // lines 39-39
+- #include "OpenShot.h"  // lines 38-38
+
+The full include-list for /home/ferd/devel/libopenshot/examples/ExampleHtml.cpp:
+#include <qguiapplication.h>      // for QGuiApplication
+#include <qobjectdefs.h>          // for SLOT
+#include <qtimer.h>               // for QTimer
+#include <map>                    // for map, map<>::mapped_type
+#include <memory>                 // for shared_ptr
+#include <string>                 // for string
+#include "Enums.h"                // for GRAVITY_BOTTOM_RIGHT
+#include "FFmpegWriter.h"         // for FFmpegWriter
+#include "OpenShotVersion.h"      // for openshot
+#include "QtHtmlReader.h"         // for QtHtmlReader
+#include "WriterBase.h"           // for WriterInfo
+#include "effects/../Fraction.h"  // for Fraction
+namespace openshot { class Frame; }
+---
+
+error: no such file or directory: '/home/ferd/devel/libopenshot/build/bindings/python/CMakeFiles/pyopenshot.dir/openshotPYTHON_wrap.cxx'
+error: no input files
+error: unable to handle compilation, expected exactly one compiler job in ''
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/tests/tests.cpp should add these lines:
+#include "TestDetails.h"  // for UnitTest
+#include "TestRunner.h"   // for RunAllTests
+
+/home/ferd/devel/libopenshot/tests/tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 32-32
+
+The full include-list for /home/ferd/devel/libopenshot/tests/tests.cpp:
+#include <iostream>       // for operator<<, endl, basic_ostream, cout, ostream
+#include "TestDetails.h"  // for UnitTest
+#include "TestRunner.h"   // for RunAllTests
+---
+
+
+/home/ferd/devel/libopenshot/examples/Example.cpp should add these lines:
+#include <map>                      // for map, map<>::mapped_type
+#include <string>                   // for string
+#include "FFmpegReader.h"           // for FFmpegReader
+#include "FFmpegWriter.h"           // for FFmpegWriter
+#include "OpenShotVersion.h"        // for openshot
+#include "Settings.h"               // for Settings
+#include "WriterBase.h"             // for WriterInfo
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../ReaderBase.h"  // for ReaderInfo
+namespace openshot { class Frame; }
+
+/home/ferd/devel/libopenshot/examples/Example.cpp should remove these lines:
+- #include <fstream>  // lines 31-31
+- #include "CrashHandler.h"  // lines 35-35
+- #include "OpenShot.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/examples/Example.cpp:
+#include <iostream>                 // for operator<<, endl, basic_ostream
+#include <map>                      // for map, map<>::mapped_type
+#include <memory>                   // for shared_ptr
+#include <string>                   // for string
+#include "FFmpegReader.h"           // for FFmpegReader
+#include "FFmpegWriter.h"           // for FFmpegWriter
+#include "OpenShotVersion.h"        // for openshot
+#include "Settings.h"               // for Settings
+#include "WriterBase.h"             // for WriterInfo
+#include "effects/../Fraction.h"    // for Fraction
+#include "effects/../ReaderBase.h"  // for ReaderInfo
+namespace openshot { class Frame; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/Color_Tests.cpp should add these lines:
+#include <stdint.h>       // for int64_t
+#include "CheckMacros.h"  // for CHECK_CLOSE, CHECK_EQUAL, CHECK_THROW
+#include "TestMacros.h"   // for TEST, SUITE
+#include "json/json.h"    // for Value
+namespace openshot { class InvalidJSON; }
+
+/home/ferd/devel/libopenshot/tests/Color_Tests.cpp should remove these lines:
+- #include "Json.h"  // lines 39-39
+- #include "UnitTest++.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Color_Tests.cpp:
+#include <stdint.h>       // for int64_t
+#include <string>         // for string
+#include <vector>         // for vector
+#include "CheckMacros.h"  // for CHECK_CLOSE, CHECK_EQUAL, CHECK_THROW
+#include "Color.h"        // for Color
+#include "KeyFrame.h"     // for Keyframe
+#include "TestMacros.h"   // for TEST, SUITE
+#include "json/json.h"    // for Value
+namespace openshot { class InvalidJSON; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/Clip_Tests.cpp should add these lines:
+#include <qimage.h>               // for QImage
+#include <list>                   // for list
+#include <string>                 // for string
+#include "AudioBufferSource.h"    // for openshot
+#include "ChannelLayouts.h"       // for LAYOUT_STEREO
+#include "CheckMacros.h"          // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "Enums.h"                // for ANCHOR_CANVAS, GRAVITY_CENTER, SCAL...
+#include "RequireMacros.h"        // for REQUIRE
+#include "TestMacros.h"           // for TEST, SUITE
+#include "effects/../KeyFrame.h"  // for Keyframe
+#include "effects/Negate.h"       // for Negate
+#include "json/json.h"            // for Value, CharReader, CharReaderBuilder
+namespace openshot { class ReaderClosed; }
+
+/home/ferd/devel/libopenshot/tests/Clip_Tests.cpp should remove these lines:
+- #include "Json.h"  // lines 47-47
+- #include "UnitTest++.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Clip_Tests.cpp:
+#include <qimage.h>               // for QImage
+#include <list>                   // for list
+#include <memory>                 // for shared_ptr, __shared_ptr_access
+#include <sstream>                // for operator<<, stringstream, basic_ost...
+#include <string>                 // for string
+#include "AudioBufferSource.h"    // for openshot
+#include "ChannelLayouts.h"       // for LAYOUT_STEREO
+#include "CheckMacros.h"          // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "Clip.h"                 // for Clip
+#include "Enums.h"                // for ANCHOR_CANVAS, GRAVITY_CENTER, SCAL...
+#include "Fraction.h"             // for Fraction
+#include "Frame.h"                // for Frame
+#include "RequireMacros.h"        // for REQUIRE
+#include "TestMacros.h"           // for TEST, SUITE
+#include "Timeline.h"             // for Timeline
+#include "effects/../KeyFrame.h"  // for Keyframe
+#include "effects/Negate.h"       // for Negate
+#include "json/json.h"            // for Value, CharReader, CharReaderBuilder
+namespace openshot { class ReaderClosed; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/Coordinate_Tests.cpp should add these lines:
+#include "CheckMacros.h"  // for CHECK_CLOSE
+#include "Exceptions.h"   // for openshot
+#include "TestMacros.h"   // for TEST
+
+/home/ferd/devel/libopenshot/tests/Coordinate_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Coordinate_Tests.cpp:
+#include "CheckMacros.h"  // for CHECK_CLOSE
+#include "Coordinate.h"   // for Coordinate
+#include "Exceptions.h"   // for openshot
+#include "TestMacros.h"   // for TEST
+---
+
+
+/home/ferd/devel/libopenshot/tests/Cache_Tests.cpp should add these lines:
+#include <qdir.h>            // for QDir
+#include <qstring.h>         // for operator+, QString
+#include <stddef.h>          // for NULL
+#include <string>            // for string
+#include "ChannelLayouts.h"  // for LAYOUT_STEREO
+#include "CheckMacros.h"     // for CHECK_EQUAL
+#include "Frame.h"           // for Frame
+#include "Settings.h"        // for openshot
+#include "TestMacros.h"      // for TEST
+#include "json/json.h"       // for Value
+
+/home/ferd/devel/libopenshot/tests/Cache_Tests.cpp should remove these lines:
+- #include <QDir>  // lines 40-40
+- #include "Json.h"  // lines 38-38
+- #include "UnitTest++.h"  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Cache_Tests.cpp:
+#include <qdir.h>            // for QDir
+#include <qstring.h>         // for operator+, QString
+#include <stddef.h>          // for NULL
+#include <memory>            // for shared_ptr, operator!=, __shared_ptr_access
+#include <string>            // for string
+#include "CacheDisk.h"       // for CacheDisk
+#include "CacheMemory.h"     // for CacheMemory
+#include "ChannelLayouts.h"  // for LAYOUT_STEREO
+#include "CheckMacros.h"     // for CHECK_EQUAL
+#include "Frame.h"           // for Frame
+#include "Settings.h"        // for openshot
+#include "TestMacros.h"      // for TEST
+#include "json/json.h"       // for Value
+---
+
+
+/home/ferd/devel/libopenshot/tests/ImageWriter_Tests.cpp should add these lines:
+
+/home/ferd/devel/libopenshot/tests/ImageWriter_Tests.cpp should remove these lines:
+- #include <memory>  // lines 32-32
+- #include <sstream>  // lines 31-31
+- #include "UnitTest++.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/tests/ImageWriter_Tests.cpp:
+---
+
+/home/ferd/devel/libopenshot/tests/DummyReader_Tests.cpp:149:29: warning: expression result unused [-Wunused-value]
+        CHECK_THROW(r.GetFrame(3)->number, InvalidFile);
+                    ~~~~~~~~~~~~~  ^~~~~~
+/usr/include/UnitTest++/CheckMacros.h:205:27: note: expanded from macro 'CHECK_THROW'
+      #define CHECK_THROW UNITTEST_CHECK_THROW
+                          ^
+/usr/include/UnitTest++/CheckMacros.h:185:10: note: expanded from macro 'UNITTEST_CHECK_THROW'
+   try { expression; }                                                                                                                                                                      \
+         ^~~~~~~~~~
+
+/home/ferd/devel/libopenshot/tests/DummyReader_Tests.cpp should add these lines:
+#include <stdint.h>       // for int64_t
+#include <iosfwd>         // for std
+#include "CheckMacros.h"  // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "ReaderBase.h"   // for ReaderInfo
+#include "Settings.h"     // for openshot
+#include "TestMacros.h"   // for TEST
+namespace openshot { class InvalidFile; }
+
+/home/ferd/devel/libopenshot/tests/DummyReader_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/tests/DummyReader_Tests.cpp:
+#include <stdint.h>       // for int64_t
+#include <iosfwd>         // for std
+#include <memory>         // for shared_ptr, __shared_ptr_access
+#include "CacheMemory.h"  // for CacheMemory
+#include "CheckMacros.h"  // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "DummyReader.h"  // for DummyReader
+#include "Fraction.h"     // for Fraction
+#include "Frame.h"        // for Frame
+#include "ReaderBase.h"   // for ReaderInfo
+#include "Settings.h"     // for openshot
+#include "TestMacros.h"   // for TEST
+namespace openshot { class InvalidFile; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/ReaderBase_Tests.cpp should add these lines:
+#include <stdint.h>       // for int64_t
+#include <cstddef>        // for NULL, std
+#include <string>         // for string
+#include "CheckMacros.h"  // for CHECK_EQUAL, CHECK_CLOSE
+#include "Fraction.h"     // for Fraction
+#include "Settings.h"     // for openshot
+#include "TestMacros.h"   // for TEST
+#include "json/json.h"    // for Value
+
+/home/ferd/devel/libopenshot/tests/ReaderBase_Tests.cpp should remove these lines:
+- #include "Json.h"  // lines 39-39
+- #include "UnitTest++.h"  // lines 33-33
+
+The full include-list for /home/ferd/devel/libopenshot/tests/ReaderBase_Tests.cpp:
+#include <stdint.h>       // for int64_t
+#include <cstddef>        // for NULL, std
+#include <memory>         // for shared_ptr
+#include <string>         // for string
+#include "CacheBase.h"    // for CacheBase
+#include "CheckMacros.h"  // for CHECK_EQUAL, CHECK_CLOSE
+#include "Fraction.h"     // for Fraction
+#include "Frame.h"        // for Frame
+#include "ReaderBase.h"   // for ReaderInfo, ReaderBase
+#include "Settings.h"     // for openshot
+#include "TestMacros.h"   // for TEST
+#include "json/json.h"    // for Value
+---
+
+
+/home/ferd/devel/libopenshot/tests/FFmpegReader_Tests.cpp should add these lines:
+#include <qimage.h>                   // for QImage
+#include "ChannelLayouts.h"           // for LAYOUT_STEREO
+#include "CheckMacros.h"              // for CHECK_EQUAL, CHECK_CLOSE, CHECK...
+#include "Clip.h"                     // for Clip
+#include "Settings.h"                 // for openshot
+#include "TestMacros.h"               // for TEST, SUITE
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../Fraction.h"      // for Fraction
+#include "effects/../ReaderBase.h"    // for ReaderInfo
+namespace openshot { class InvalidFile; }
+namespace openshot { class ReaderClosed; }
+
+/home/ferd/devel/libopenshot/tests/FFmpegReader_Tests.cpp should remove these lines:
+- #include "FFmpegReader.h"  // lines 37-37
+- #include "Json.h"  // lines 40-40
+- #include "UnitTest++.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/tests/FFmpegReader_Tests.cpp:
+#include <qimage.h>                   // for QImage
+#include <memory>                     // for shared_ptr, __shared_ptr_access
+#include <sstream>                    // for operator<<, stringstream, basic...
+#include "ChannelLayouts.h"           // for LAYOUT_STEREO
+#include "CheckMacros.h"              // for CHECK_EQUAL, CHECK_CLOSE, CHECK...
+#include "Clip.h"                     // for Clip
+#include "Frame.h"                    // for Frame
+#include "Settings.h"                 // for openshot
+#include "TestMacros.h"               // for TEST, SUITE
+#include "Timeline.h"                 // for Timeline
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../Fraction.h"      // for Fraction
+#include "effects/../ReaderBase.h"    // for ReaderInfo
+namespace openshot { class InvalidFile; }
+namespace openshot { class ReaderClosed; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/Fraction_Tests.cpp should add these lines:
+#include <iosfwd>         // for std
+#include "CheckMacros.h"  // for CHECK_CLOSE, CHECK_EQUAL
+#include "TestMacros.h"   // for TEST
+
+/home/ferd/devel/libopenshot/tests/Fraction_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Fraction_Tests.cpp:
+#include <iosfwd>         // for std
+#include "CheckMacros.h"  // for CHECK_CLOSE, CHECK_EQUAL
+#include "Fraction.h"     // for Fraction, openshot
+#include "TestMacros.h"   // for TEST
+---
+
+
+/home/ferd/devel/libopenshot/tests/FFmpegWriter_Tests.cpp should add these lines:
+#include "ChannelLayouts.h"           // for LAYOUT_STEREO
+#include "CheckMacros.h"              // for CHECK_EQUAL, CHECK_CLOSE
+#include "Settings.h"                 // for openshot
+#include "TestMacros.h"               // for TEST, SUITE
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../ReaderBase.h"    // for ReaderInfo
+
+/home/ferd/devel/libopenshot/tests/FFmpegWriter_Tests.cpp should remove these lines:
+- #include "FFmpegReader.h"  // lines 38-38
+- #include "UnitTest++.h"  // lines 34-34
+
+The full include-list for /home/ferd/devel/libopenshot/tests/FFmpegWriter_Tests.cpp:
+#include <memory>                     // for shared_ptr, __shared_ptr_access
+#include <sstream>                    // for operator<<, stringstream, basic...
+#include "ChannelLayouts.h"           // for LAYOUT_STEREO
+#include "CheckMacros.h"              // for CHECK_EQUAL, CHECK_CLOSE
+#include "FFmpegWriter.h"             // for FFmpegWriter
+#include "Fraction.h"                 // for Fraction
+#include "Frame.h"                    // for Frame
+#include "Settings.h"                 // for openshot
+#include "TestMacros.h"               // for TEST, SUITE
+#include "effects/../FFmpegReader.h"  // for FFmpegReader
+#include "effects/../ReaderBase.h"    // for ReaderInfo
+---
+
+
+/home/ferd/devel/libopenshot/tests/FrameMapper_Tests.cpp should add these lines:
+#include <math.h>            // for sin, M_PI, abs
+#include <stdint.h>          // for int64_t
+#include <stdlib.h>          // for abs
+#include <memory>            // for shared_ptr, __shared_ptr_access
+#include <ostream>           // for operator<<, stringstream, basic_ostream
+#include <string>            // for char_traits, string
+#include <vector>            // for vector
+#include "ChannelLayouts.h"  // for LAYOUT_STEREO, LAYOUT_MONO, LAYOUT_SURROUND
+#include "CheckMacros.h"     // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "ReaderBase.h"      // for ReaderInfo
+#include "Settings.h"        // for openshot
+#include "TestMacros.h"      // for TEST, SUITE
+namespace openshot { class OutOfBoundsFrame; }
+namespace openshot { class ReaderClosed; }
+
+/home/ferd/devel/libopenshot/tests/FrameMapper_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/FrameMapper_Tests.cpp:
+#include <math.h>            // for sin, M_PI, abs
+#include <stdint.h>          // for int64_t
+#include <stdlib.h>          // for abs
+#include <memory>            // for shared_ptr, __shared_ptr_access
+#include <ostream>           // for operator<<, stringstream, basic_ostream
+#include <string>            // for char_traits, string
+#include <vector>            // for vector
+#include "CacheMemory.h"     // for CacheMemory
+#include "ChannelLayouts.h"  // for LAYOUT_STEREO, LAYOUT_MONO, LAYOUT_SURROUND
+#include "CheckMacros.h"     // for CHECK_EQUAL, CHECK_CLOSE, CHECK_THROW
+#include "Clip.h"            // for Clip
+#include "DummyReader.h"     // for DummyReader
+#include "FFmpegReader.h"    // for FFmpegReader
+#include "Fraction.h"        // for Fraction
+#include "Frame.h"           // for Frame
+#include "FrameMapper.h"     // for FrameMapper, MappedFrame, Field, PULLDOW...
+#include "ReaderBase.h"      // for ReaderInfo
+#include "Settings.h"        // for openshot
+#include "TestMacros.h"      // for TEST, SUITE
+#include "Timeline.h"        // for Timeline
+namespace openshot { class OutOfBoundsFrame; }
+namespace openshot { class ReaderClosed; }
+---
+
+
+/home/ferd/devel/libopenshot/tests/Frame_Tests.cpp should add these lines:
+#include <qimage.h>            // for QImage
+#include <qstring.h>           // for QString
+#include <string>              // for string
+#include "CheckMacros.h"       // for CHECK_EQUAL, CHECK
+#include "Settings.h"          // for openshot
+#include "TestMacros.h"        // for TEST, SUITE
+#include "effects/../Frame.h"  // for Frame
+
+/home/ferd/devel/libopenshot/tests/Frame_Tests.cpp should remove these lines:
+- #include <QImage>  // lines 42-42
+- #include "Frame.h"  // lines 38-38
+- #include "UnitTest++.h"  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Frame_Tests.cpp:
+#include <qimage.h>            // for QImage
+#include <qstring.h>           // for QString
+#include <memory>              // for shared_ptr, __shared_ptr_access, opera...
+#include <sstream>             // for operator<<, stringstream, basic_ostream
+#include <string>              // for string
+#include "CheckMacros.h"       // for CHECK_EQUAL, CHECK
+#include "Clip.h"              // for Clip
+#include "Fraction.h"          // for Fraction
+#include "Settings.h"          // for openshot
+#include "TestMacros.h"        // for TEST, SUITE
+#include "effects/../Frame.h"  // for Frame
+---
+
+
+/home/ferd/devel/libopenshot/tests/KeyFrame_Tests.cpp should add these lines:
+#include <stdint.h>          // for int64_t
+#include <iosfwd>            // for std
+#include "CheckMacros.h"     // for CHECK_CLOSE, CHECK_EQUAL, CHECK_THROW
+#include "Exceptions.h"      // for OutOfBoundsPoint (ptr only), openshot
+#include "TestMacros.h"      // for TEST
+#include "TimeConstraint.h"  // for UNITTEST_TIME_CONSTRAINT
+
+/home/ferd/devel/libopenshot/tests/KeyFrame_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/KeyFrame_Tests.cpp:
+#include <stdint.h>          // for int64_t
+#include <iosfwd>            // for std
+#include "CheckMacros.h"     // for CHECK_CLOSE, CHECK_EQUAL, CHECK_THROW
+#include "Coordinate.h"      // for Coordinate
+#include "Exceptions.h"      // for OutOfBoundsPoint (ptr only), openshot
+#include "Fraction.h"        // for Fraction
+#include "KeyFrame.h"        // for Keyframe
+#include "Point.h"           // for Point, BEZIER, CONSTANT, LINEAR
+#include "TestMacros.h"      // for TEST
+#include "TimeConstraint.h"  // for UNITTEST_TIME_CONSTRAINT
+---
+
+
+/home/ferd/devel/libopenshot/tests/Point_Tests.cpp should add these lines:
+#include <ostream>        // for operator<<, stringstream, basic_ostream
+#include "CheckMacros.h"  // for CHECK_EQUAL
+#include "TestMacros.h"   // for TEST, SUITE
+#include "json/json.h"    // for Value
+
+/home/ferd/devel/libopenshot/tests/Point_Tests.cpp should remove these lines:
+- #include "Enums.h"  // lines 35-35
+- #include "Json.h"  // lines 37-37
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Point_Tests.cpp:
+#include <ostream>        // for operator<<, stringstream, basic_ostream
+#include "CheckMacros.h"  // for CHECK_EQUAL
+#include "Coordinate.h"   // for Coordinate
+#include "Point.h"        // for Point, InterpolationType, BEZIER, HandleType
+#include "TestMacros.h"   // for TEST, SUITE
+#include "json/json.h"    // for Value
+---
+
+
+/home/ferd/devel/libopenshot/tests/Settings_Tests.cpp should add these lines:
+#include <iosfwd>         // for std
+#include "CheckMacros.h"  // for CHECK_EQUAL
+#include "TestMacros.h"   // for TEST
+
+/home/ferd/devel/libopenshot/tests/Settings_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 31-31
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Settings_Tests.cpp:
+#include <iosfwd>         // for std
+#include "CheckMacros.h"  // for CHECK_EQUAL
+#include "Settings.h"     // for Settings, openshot
+#include "TestMacros.h"   // for TEST
+---
+
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should add these lines:
+#include <stdlib.h>     // for free, malloc
+#include <array>        // for array, array<>::value_type
+#include <deque>        // for deque
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <vector>       // for vector, vector<>::const_iterator
+
+/home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp should remove these lines:
+- #include <cassert>  // lines 2440-2440
+- #include <cassert>  // lines 4154-4154
+- #include <cmath>  // lines 4163-4163
+- #include <cstdio>  // lines 4164-4164
+- #include <cstring>  // lines 2442-2442
+- #include <cstring>  // lines 4155-4155
+- #include <iomanip>  // lines 4156-4156
+- #include <memory>  // lines 4157-4157
+- #include <set>  // lines 4158-4158
+- #include <sstream>  // lines 253-253
+- #include <sstream>  // lines 2443-2443
+- #include <sstream>  // lines 4159-4159
+- #include <utility>  // lines 2444-2444
+- #include <utility>  // lines 4160-4160
+
+The full include-list for /home/ferd/devel/libopenshot/thirdparty/jsoncpp/jsoncpp.cpp:
+#include <stdlib.h>     // for free, malloc
+#include <algorithm>    // for min
+#include <array>        // for array, array<>::value_type
+#include <cassert>      // for assert
+#include <clocale>      // for localeconv, lconv
+#include <cmath>        // for isfinite, isnan, modf
+#include <cstddef>      // for size_t, ptrdiff_t
+#include <cstdio>       // for sscanf, size_t, EOF
+#include <cstring>      // for strlen, memcmp, memcpy, strchr
+#include <deque>        // for deque
+#include <istream>      // for operator<<, char_traits, basic_ostream, basic...
+#include <limits>       // for numeric_limits
+#include <map>          // for map<>::iterator, map<>::const_iterator, opera...
+#include <memory>       // for allocator, unique_ptr, allocator_traits<>::va...
+#include <set>          // for set, operator==, _Rb_tree_iterator, operator!=
+#include <stack>        // for stack
+#include <string>       // for basic_string, operator+, operator<<, operator==
+#include <utility>      // for move, pair, swap
+#include <vector>       // for vector, vector<>::const_iterator
+#include "json/json.h"  // for Value, String, Reader, Value::ValueHolder
+---
+
+
+/home/ferd/devel/libopenshot/tests/Timeline_Tests.cpp should add these lines:
+#include <string>                   // for string
+#include "ChannelLayouts.h"         // for LAYOUT_STEREO
+#include "CheckMacros.h"            // for CHECK_EQUAL, CHECK_CLOSE
+#include "ReaderBase.h"             // for ReaderInfo
+#include "Settings.h"               // for openshot
+#include "TestMacros.h"             // for TEST, SUITE
+#include "effects/../EffectBase.h"  // for EffectBase
+#include "effects/../KeyFrame.h"    // for Keyframe
+
+/home/ferd/devel/libopenshot/tests/Timeline_Tests.cpp should remove these lines:
+- #include "UnitTest++.h"  // lines 35-35
+
+The full include-list for /home/ferd/devel/libopenshot/tests/Timeline_Tests.cpp:
+#include <list>                     // for list, list<>::iterator, operator!=
+#include <memory>                   // for shared_ptr, __shared_ptr_access
+#include <sstream>                  // for operator<<, stringstream, basic_o...
+#include <string>                   // for string
+#include "ChannelLayouts.h"         // for LAYOUT_STEREO
+#include "CheckMacros.h"            // for CHECK_EQUAL, CHECK_CLOSE
+#include "Clip.h"                   // for Clip
+#include "Fraction.h"               // for Fraction
+#include "Frame.h"                  // for Frame
+#include "ReaderBase.h"             // for ReaderInfo
+#include "Settings.h"               // for openshot
+#include "TestMacros.h"             // for TEST, SUITE
+#include "Timeline.h"               // for Timeline
+#include "effects/../EffectBase.h"  // for EffectBase
+#include "effects/../KeyFrame.h"    // for Keyframe
+#include "effects/Blur.h"           // for Blur
+#include "effects/Negate.h"         // for Negate
+---
+

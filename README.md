@@ -4,7 +4,7 @@ solutions to the world.
 
 ## Build Status
 
-[![Build Status](https://img.shields.io/travis/OpenShot/libopenshot/develop.svg?label=libopenshot)](https://travis-ci.org/OpenShot/libopenshot) [![Build Status](https://img.shields.io/travis/OpenShot/libopenshot-audio/develop.svg?label=libopenshot-audio)](https://travis-ci.org/OpenShot/libopenshot-audio)
+[![libopenshot CI Build](https://github.com/OpenShot/libopenshot/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenShot/libopenshot/actions/workflows/ci.yml) [![libopenshot-audio CI Build](https://github.com/OpenShot/libopenshot-audio/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenShot/libopenshot-audio/actions/workflows/ci.yml)
 
 ## Features
 
@@ -76,7 +76,7 @@ https://github.com/OpenShot/libopenshot/issues
 
 ### License
 
-Copyright (c) 2008-2020 OpenShot Studios, LLC.
+Copyright (c) 2008-2021 OpenShot Studios, LLC.
 
 OpenShot Library (libopenshot) is free software: you can redistribute it
 and/or modify it under the terms of the GNU Lesser General Public License

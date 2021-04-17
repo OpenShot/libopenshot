@@ -59,10 +59,10 @@ namespace openshot
 
 	public:
 
-		/// Blank constructor, useful when using Json to load the effect properties
+		/// Default constructor, useful when using Json to load the effect properties
 		Deinterlace();
 
-		/// Default constructor
+		/// Constructor
 		Deinterlace(bool isOdd);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
@@ -71,7 +71,7 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::make_shared<openshot::Frame>(), frame_number); }
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
@@ -84,7 +84,7 @@ namespace openshot
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
 		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

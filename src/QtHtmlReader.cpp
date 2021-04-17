@@ -31,6 +31,7 @@
  */
 
 #include "QtHtmlReader.h"
+#include "Exceptions.h"
 #include <QImage>
 #include <QPainter>
 #include <QTextDocument>

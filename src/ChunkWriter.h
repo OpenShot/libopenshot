@@ -35,7 +35,6 @@
 #include "WriterBase.h"
 #include "FFmpegWriter.h"
 #include "CacheMemory.h"
-#include "Exceptions.h"
 #include "Json.h"
 
 #include <cmath>

@@ -31,6 +31,7 @@
  */
 
 #include "QtTextReader.h"
+#include "Exceptions.h"
 #include <QImage>
 #include <QPainter>
 
