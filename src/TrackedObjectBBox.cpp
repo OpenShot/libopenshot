@@ -394,10 +394,9 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 		protobufDataPath = root["protobuf_data_path"].asString();
 
 	// Set the id of the child clip
-	// Does not allow to link to the parent clip
-	if (!root["child_clip_id"].isNull() && root["box_id"].asString() != ""){
+	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != ""){
 		Clip* parentClip = (Clip *) ParentClip();
-		
+
 		if(parentClip && (root["child_clip_id"].asString() != parentClip->Id())){
 			ChildClipId(root["child_clip_id"].asString());
 		}

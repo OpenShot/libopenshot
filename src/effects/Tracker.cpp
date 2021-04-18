@@ -144,7 +144,10 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 					childClipImage = childClipFrame->GetImage();
 
 					// Set the Qt rectangle with the bounding-box properties
-					boxRect.setRect( (int)((fd.cx-fd.width/2)*fw), (int)((fd.cy - fd.height/2)*fh), (int)(fd.width*fw), (int)(fd.height*fh) );
+					boxRect.setRect((int)((fd.cx-fd.width/2)*fw),
+									(int)((fd.cy - fd.height/2)*fh),
+									(int)(fd.width*fw),
+									(int)(fd.height*fh) );
 				}
 			}
 		}

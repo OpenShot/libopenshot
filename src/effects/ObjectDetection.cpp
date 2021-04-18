@@ -31,7 +31,11 @@
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
 #include "Exceptions.h"
+#include "Timeline.h"
 
+#include <QImage>
+#include <QPainter>
+#include <QRectF>
 using namespace std;
 using namespace openshot;
 
@@ -85,6 +89,11 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
     if(cv_image.empty()){
         return frame;
     }
+
+    // Initialize the Qt rectangle that will hold the positions of the bounding-box
+	std::vector<QRectF> boxRects;
+	// Initialize the image of the TrackedObject child clip
+	std::vector<std::shared_ptr<QImage>> childClipImages;
 
     // Check if track data exists for the requested frame
     if (detectionsData.find(frame_number) != detectionsData.end()) {
@@ -144,12 +153,50 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                     box, cv_image, detections.objectIds.at(i), bg_rgba, bg_alpha, 1, true, draw_text);
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
                     box, cv_image, detections.objectIds.at(i), stroke_rgba, stroke_alpha, stroke_width, false, draw_text);
+            
+            
+                // Get the Detected Object's child clip
+                if (trackedObject->ChildClipId() != ""){
+                    // Cast the parent timeline of this effect 
+                    Timeline* parentTimeline = (Timeline *) ParentTimeline();
+                    if (parentTimeline){
+                        // Get the Tracked Object's child clip
+                        Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
+                        if (childClip){
+                            // Get the image of the child clip for this frame
+                            std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
+                            childClipImages.push_back(childClipFrame->GetImage());
+
+                            // Set the Qt rectangle with the bounding-box properties
+                            QRectF boxRect;
+                            boxRect.setRect((int)((trackedBox.cx-trackedBox.width/2)*fw),
+                                            (int)((trackedBox.cy - trackedBox.height/2)*fh),
+                                            (int)(trackedBox.width*fw),
+                                            (int)(trackedBox.height*fh));
+                            boxRects.push_back(boxRect);
+                        }
+                    }
+                }
             } 
         }
     }
 
     // Update Qt image with new Opencv frame
     frame->SetImageCV(cv_image);
+
+	// Set the bounding-box image with the Tracked Object's child clip image
+	if(boxRects.size() > 0){
+        // Get the frame image
+        QImage frameImage = *(frame->GetImage());
+        for(int i; i < boxRects.size();i++){
+            // Set a Qt painter to the frame image
+            QPainter painter(&frameImage);
+            // Draw the child clip image inside the bounding-box
+            painter.drawImage(boxRects[i], *childClipImages[i], QRectF(0, 0, frameImage.size().width(),  frameImage.size().height()));    
+        }
+        // Set the frame image as the composed image
+        frame->AddImage(std::make_shared<QImage>(frameImage));
+    }
 
     return frame;
 }
@@ -254,7 +301,6 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
         return false;
     }
     
-
     // Make sure classNames, detectionsData and trackedObjects are empty
     classNames.clear();
     detectionsData.clear();
@@ -338,18 +384,6 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
     google::protobuf::ShutdownProtobufLibrary();
 
     return true;
-}
-
-// Get tracker info for the desired frame
-DetectionData ObjectDetection::GetTrackedData(size_t frameId){
-
-    // Check if the tracker info for the requested frame exists
-    if ( detectionsData.find(frameId) == detectionsData.end() ) {
-        return DetectionData();
-    } else {
-        return detectionsData[frameId];
-    }
-
 }
 
 // Get the indexes and IDs of all visible objects in the given frame

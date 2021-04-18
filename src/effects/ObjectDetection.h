@@ -121,9 +121,6 @@ namespace openshot
         /// Load protobuf data file
         bool LoadObjDetectdData(std::string inputFilePath);
 
-        /// Get tracker info for the desired frame
-        DetectionData GetTrackedData(size_t frameId);
-
         /// Get the indexes and IDs of all visible objects in the given frame
         std::string GetVisibleObjects(int64_t frame_number) const override;
 
