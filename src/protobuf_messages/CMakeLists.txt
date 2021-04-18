@@ -65,3 +65,18 @@ install(FILES ${ProtoHeaders}
   COMPONENT devel
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/protobuf_messages
 )
+
+# On Windows, we copy project output DLLs into the test dirs
+# so that the unit test executables can find them
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+  add_custom_command(TARGET openshot_protobuf POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different
+      "$<TARGET_FILE:openshot_protobuf>"
+      "${PROJECT_BINARY_DIR}/tests/"
+    BYPRODUCTS
+      "${PROJECT_BINARY_DIR}/tests/libopenshot_protobuf.dll"
+    COMMENT
+      "Copying libopenshot_protobuf DLL to unit test directory"
+  )
+endif()

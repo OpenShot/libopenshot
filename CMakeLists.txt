@@ -180,17 +180,6 @@ if(NOT Catch2_FOUND)
 endif()
 if(CAN_BUILD_TESTS)
   enable_testing()
-
-  # On Windows, install a copy of the project output into the test dirs
-  if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
-    # Ensure test directory contains build output
-    add_test("Install"
-      cmake --install "${CMAKE_CURRENT_BINARY_DIR}"
-        --component testing
-        --prefix "${CMAKE_CURRENT_BINARY_DIR}/tests"
-    )
-  endif()
-
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)

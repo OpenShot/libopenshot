@@ -444,25 +444,34 @@ install(DIRECTORY .
   FILES_MATCHING PATTERN "*.h"
 )
 
+# On Windows, we copy project output DLLs into the tests dir
+# so that the unit test executables can find them
 if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
-  # Install libopenshot-audio in unit test directory
-  get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION_RELEASE)
-  install(FILES
-    "${AUDIO_LIB_PATH}"
-    COMPONENT testing
-    DESTINATION "."
-    EXCLUDE_FROM_ALL
+  # Copy the DLLs immediately after they're built
+  add_custom_command(TARGET openshot POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different
+      "$<TARGET_FILE:openshot>"
+      "${PROJECT_BINARY_DIR}/tests/"
+    BYPRODUCTS
+      "${PROJECT_BINARY_DIR}/tests/libopenshot.dll"
+    COMMENT
+      "Copying libopenshot DLL to unit test directory"
   )
-  set(test_dependencies openshot)
-  if(TARGET openshot_protobuf)
-    list(APPEND test_dependencies openshot_protobuf)
-  endif()
-  install(TARGETS ${test_dependencies}
-    COMPONENT testing
-    RUNTIME DESTINATION "."
-    EXCLUDE_FROM_ALL
+  # Also copy libopenshot-audio DLL
+  get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION)
+  add_custom_target(test-install-audio-dll ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${AUDIO_LIB_PATH}"
+      "${PROJECT_BINARY_DIR}/tests/"
+    BYPRODUCTS
+      "${PROJECT_BINARY_DIR}/tests/libopenshot-audio.dll"
+    COMMENT
+      "Copying OpenShotAudio library DLL to unit test directory"
   )
+  add_dependencies(test-install-audio-dll OpenShot::Audio)
 endif()
+
 
 ############### CPACK PACKAGING ##############
 if(MINGW)
