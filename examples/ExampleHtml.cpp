@@ -35,7 +35,10 @@
 #include <QGuiApplication>
 #include <QTimer>
 
-#include "OpenShot.h"
+#include "QtHtmlReader.h"
+#include "FFmpegWriter.h"
+#include "Fraction.h"
+#include "Enums.h"          // for GRAVITY_BOTTOM_RIGHT
 #include "CrashHandler.h"
 
 using namespace openshot;

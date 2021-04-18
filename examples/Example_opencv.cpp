@@ -31,12 +31,15 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include "../../src/CVTracker.h"
-#include "../../src/CVStabilization.h"
-#include "../../src/CVObjectDetection.h"
+#include "CVTracker.h"
+#include "CVStabilization.h"
+#include "CVObjectDetection.h"
 
-#include "../../src/OpenShot.h"
-#include "../../src/CrashHandler.h"
+#include "Clip.h"
+#include "EffectBase.h"
+#include "EffectInfo.h"
+#include "Frame.h"
+#include "CrashHandler.h"
 
 using namespace openshot;
 using namespace std;
@@ -60,7 +63,7 @@ void displayClip(openshot::Clip &r9){
 
     // Opencv display window
     cv::namedWindow("Display Image", cv::WINDOW_NORMAL );
-    
+
     // Get video lenght
     int videoLenght = r9.Reader()->info.video_length;
 
@@ -223,7 +226,7 @@ string jsonFormat(string key, string value, string type){
 // Return JSON string for the tracker effect
 string trackerJson(cv::Rect2d r, bool onlyProtoPath){
 
-    // Define path to save tracked data 
+    // Define path to save tracked data
     string protobufDataPath = "kcf_tracker.data";
     // Set the tracker
     string tracker = "KCF";
@@ -232,14 +235,14 @@ string trackerJson(cv::Rect2d r, bool onlyProtoPath){
     string protobuf_data_path = jsonFormat("protobuf_data_path", protobufDataPath);
     string trackerType = jsonFormat("tracker-type", tracker);
     string bboxCoords = jsonFormat(
-                                    "region", 
-                                            "{" + jsonFormat("x", to_string(r.x), "int") + 
-                                            "," + jsonFormat("y", to_string(r.y), "int") + 
+                                    "region",
+                                            "{" + jsonFormat("x", to_string(r.x), "int") +
+                                            "," + jsonFormat("y", to_string(r.y), "int") +
                                             "," + jsonFormat("width", to_string(r.width), "int") +
-                                            "," + jsonFormat("height", to_string(r.height), "int") + 
+                                            "," + jsonFormat("height", to_string(r.height), "int") +
                                             "," + jsonFormat("first-frame", to_string(0), "int") +
                                             "}",
-                                    "rstring");  
+                                    "rstring");
 
     // Return only the the protobuf path in JSON format
     if(onlyProtoPath)
@@ -252,7 +255,7 @@ string trackerJson(cv::Rect2d r, bool onlyProtoPath){
 // Return JSON string for the stabilizer effect
 string stabilizerJson(bool onlyProtoPath){
 
-    // Define path to save stabilized data 
+    // Define path to save stabilized data
     string protobufDataPath = "example_stabilizer.data";
     // Set smoothing window value
     string smoothingWindow = "30";
@@ -271,13 +274,13 @@ string stabilizerJson(bool onlyProtoPath){
 
 string objectDetectionJson(bool onlyProtoPath){
 
-    // Define path to save object detection data 
+    // Define path to save object detection data
     string protobufDataPath = "example_object_detection.data";
     // Define processing device
     string processingDevice = "GPU";
     // Set path to model configuration file
     string modelConfiguration = "yolov3.cfg";
-    // Set path to model weights 
+    // Set path to model weights
     string modelWeights = "yolov3.weights";
     // Set path to class names file
     string classesFile = "obj.names";
