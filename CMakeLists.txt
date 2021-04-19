@@ -179,6 +179,7 @@ if(NOT Catch2_FOUND)
   set(CAN_BUILD_TESTS FALSE)
 endif()
 if(CAN_BUILD_TESTS)
+  enable_testing()
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)
