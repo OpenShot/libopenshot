@@ -178,8 +178,9 @@ find_package(Catch2 QUIET)
 if(NOT Catch2_FOUND)
   set(CAN_BUILD_TESTS FALSE)
 endif()
-if(CAN_BUILD_TESTS)
-  enable_testing()
+if(CAN_BUILD_TESTS AND BUILD_TESTING)
+  include(CTest)
+  include(Catch)
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)
@@ -189,35 +190,53 @@ if(CAN_BUILD_TESTS)
       set(CTEST_OPTIONS "-j${CPU_COUNT}")
     endif()
   endif()
-  include(CTest)
-  include(Catch)
   add_subdirectory(tests)
 endif()
 add_feature_info("Unit tests" CAN_BUILD_TESTS "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
+  set(COVERAGE_EXCLUDES
+    "bindings/*"
+    "examples/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+  )
   setup_target_for_coverage_lcov(
     NAME coverage
     LCOV_ARGS "--no-external"
     EXECUTABLE ctest
     EXECUTABLE_ARGS ${CTEST_OPTIONS}
     DEPENDENCIES openshot ${UNIT_TEST_TARGETS}
-    EXCLUDE
-      "bindings/*"
-      "examples/*"
-      "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
-      "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+    EXCLUDE ${COVERAGE_EXCLUDES}
   )
+  foreach(_t IN LISTS UNIT_TEST_NAMES)
+    setup_target_for_coverage_lcov(
+      NAME "${_t}_coverage"
+      LCOV_ARGS "--no-external"
+      EXECUTABLE ctest
+      EXECUTABLE_ARGS ${CTEST_OPTIONS} -L "^${_t}$"
+      DEPENDENCIES openshot openshot-${_t}-test
+      EXCLUDE ${COVERAGE_EXCLUDES}
+    )
+  endforeach()
 endif()
 
-if(CAN_BUILD_TESTS AND NOT TARGET coverage)
+if(DEFINED UNIT_TEST_TARGETS AND NOT TARGET coverage)
   add_custom_target(coverage
     COMMAND ctest ${CTEST_OPTIONS}
     DEPENDS openshot ${UNIT_TEST_TARGETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Running unit tests (coverage disabled)"
   )
+  foreach(_t IN LISTS UNIT_TEST_NAMES)
+    add_custom_target("${_t}_coverage"
+      COMMAND ctest ${CTEST_OPTIONS} -L "^${_t}$"
+      DEPENDS openshot openshot-${_t}-test
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Running unit tests for ${_t} class (coverage disabled)"
+    )
+  endforeach()
 endif()
 
 if(TARGET test AND NOT TARGET os_test)
