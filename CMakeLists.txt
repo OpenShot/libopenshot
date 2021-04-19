@@ -69,6 +69,9 @@ include(GNUInstallDirs)
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
 
+# Unit test management
+include(CTest)
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
@@ -76,7 +79,6 @@ option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
-option(ENABLE_TESTS "Build unit tests (requires Catch2)" ON)
 option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 
@@ -88,11 +90,11 @@ option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)"
 
 # Legacy commandline override
 if (DISABLE_TESTS)
-  set(ENABLE_TESTS OFF)
+  set(BUILD_TESTING OFF)
 endif()
 
-if(DEFINED ENABLE_TESTS)
-  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires Catch2)" FORCE)
+if(ENABLE_TESTS)
+  set(BUILD_TESTING ${ENABLE_TESTS})
 endif()
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
@@ -173,26 +175,24 @@ if (ENABLE_DOCS)
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############
-set(CAN_BUILD_TESTS ${ENABLE_TESTS})
 find_package(Catch2 QUIET)
 if(NOT Catch2_FOUND)
-  set(CAN_BUILD_TESTS FALSE)
+  set(BUILD_TESTING FALSE)
 endif()
-if(CAN_BUILD_TESTS AND BUILD_TESTING)
-  include(CTest)
+if(BUILD_TESTING)
   include(Catch)
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)
     ProcessorCount(CPU_COUNT)
-    if(NOT CPU_COUNT EQUAL 0)
-      message(STATUS "Setting up unit tests to use ${CPU_COUNT} processors")
+    if(CPU_COUNT GREATER 1)
+      add_feature_info("Parallel tests" TRUE "Unit tests can use ${CPU_COUNT} processors")
       set(CTEST_OPTIONS "-j${CPU_COUNT}")
     endif()
   endif()
   add_subdirectory(tests)
 endif()
-add_feature_info("Unit tests" CAN_BUILD_TESTS "Compile unit tests for library functions")
+add_feature_info("Unit tests" ${BUILD_TESTING} "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)

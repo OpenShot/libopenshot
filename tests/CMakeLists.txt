@@ -76,12 +76,12 @@ endif()
 ###
 ### Catch2 unit tests
 ###
-if (NOT CAN_BUILD_TESTS OR NOT BUILD_TESTING)
-  return()
-endif()
-
 include(CTest)
 include(Catch)
+
+if(NOT BUILD_TESTING)
+  return()
+endif()
 
 # Create object library for test executable main(),
 # to avoid recompiling for every test
