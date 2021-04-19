@@ -29,7 +29,7 @@
  */
 
 #include "Frame.h"
-#include "JuceHeader.h"
+#include <OpenShotAudio.h>
 
 #include <QApplication>
 #include <QImage>

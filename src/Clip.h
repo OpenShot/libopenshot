@@ -54,7 +54,7 @@
 #include "Frame.h"
 #include "KeyFrame.h"
 #include "ReaderBase.h"
-#include "JuceHeader.h"
+#include <OpenShotAudio.h>
 
 
 namespace openshot {

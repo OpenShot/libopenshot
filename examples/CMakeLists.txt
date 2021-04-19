@@ -42,8 +42,8 @@ target_compile_definitions(openshot-example PRIVATE
 # Link test executable to the new library
 target_link_libraries(openshot-example openshot)
 
-add_executable(openshot-html-test ExampleHtml.cpp)
-target_link_libraries(openshot-html-test openshot Qt5::Gui)
+add_executable(openshot-html-example ExampleHtml.cpp)
+target_link_libraries(openshot-html-example openshot Qt5::Gui)
 
 ############### PLAYER EXECUTABLE ################
 # Create test executable

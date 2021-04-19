@@ -52,7 +52,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
-#include "JuceHeader.h"
+#include <OpenShotAudio.h>
 #ifdef USE_IMAGEMAGICK
 	#include "MagickUtilities.h"
 #endif

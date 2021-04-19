@@ -42,7 +42,7 @@
 #include <ctime>
 #include <zmq.hpp>
 #include <unistd.h>
-#include "JuceHeader.h"
+#include <OpenShotAudio.h>
 #include "Settings.h"
 
 
