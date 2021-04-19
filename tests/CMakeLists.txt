@@ -48,6 +48,8 @@ set(OPENSHOT_TESTS
   Color
   Coordinate
   DummyReader
+  ReaderBase
+  ImageWriter
   FFmpegReader
   FFmpegWriter
   Fraction
@@ -56,20 +58,14 @@ set(OPENSHOT_TESTS
   KeyFrame
   Point
   QtImageReader
-  ReaderBase
   Settings
   Timeline
 )
 
-# ImageMagick related test files
-if(DEFINED CACHE{HAVE_IMAGEMAGICK})
-  list(APPEND OPENSHOT_TESTS
-    ImageWriter
-  )
-endif()
-
-# OPENCV RELATED TEST FILES
-if(DEFINED CACHE{HAVE_OPENCV})
+###
+### OPENCV RELATED TEST FILES
+###
+if(ENABLE_OPENCV)
   list(APPEND OPENSHOT_TESTS
     CVTracker
     CVStabilizer
@@ -80,12 +76,12 @@ endif()
 ###
 ### Catch2 unit tests
 ###
-if (NOT CAN_BUILD_TESTS)
-  return()
-endif()
-
 include(CTest)
 include(Catch)
+
+if(NOT BUILD_TESTING)
+  return()
+endif()
 
 # Create object library for test executable main(),
 # to avoid recompiling for every test
@@ -96,13 +92,17 @@ foreach(tname ${OPENSHOT_TESTS})
   target_compile_definitions(openshot-${tname}-test PRIVATE
     TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
   )
-	target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
-	# Automatically configure CTest targets from Catch2 test cases
-	catch_discover_tests(
+  target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
+  # Automatically configure CTest targets from Catch2 test cases
+  catch_discover_tests(
     openshot-${tname}-test
     TEST_PREFIX ${tname}:
+    PROPERTIES
+      LABELS ${tname}
   )
   list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
+  list(APPEND CATCH2_TEST_NAMES ${tname})
 endforeach()
 # Export target list for coverage use
 set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
+set(UNIT_TEST_NAMES ${CATCH2_TEST_NAMES} PARENT_SCOPE)
