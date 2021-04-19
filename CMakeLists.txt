@@ -173,12 +173,12 @@ if (ENABLE_DOCS)
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############
-set(BUILD_TESTS ${ENABLE_TESTS})
+set(CAN_BUILD_TESTS ${ENABLE_TESTS})
 find_package(Catch2 QUIET)
 if(NOT Catch2_FOUND)
-  set(BUILD_TESTS FALSE)
+  set(CAN_BUILD_TESTS FALSE)
 endif()
-if(BUILD_TESTS)
+if(CAN_BUILD_TESTS)
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)
@@ -192,7 +192,7 @@ if(BUILD_TESTS)
   include(Catch)
   add_subdirectory(tests)
 endif()
-add_feature_info("Unit tests" BUILD_TESTS "Compile unit tests for library functions")
+add_feature_info("Unit tests" CAN_BUILD_TESTS "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
@@ -210,7 +210,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
   )
 endif()
 
-if(BUILD_TESTS AND NOT TARGET coverage)
+if(CAN_BUILD_TESTS AND NOT TARGET coverage)
   add_custom_target(coverage
     COMMAND ctest ${CTEST_OPTIONS}
     DEPENDS openshot ${UNIT_TEST_TARGETS}

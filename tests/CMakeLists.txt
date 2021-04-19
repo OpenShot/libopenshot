@@ -76,7 +76,7 @@ endif()
 ###
 ### Catch2 unit tests
 ###
-if (TESTS_ENABLED)
+if (CAN_BUILD_TESTS)
   include(Catch)
   include(CTest)
 
