@@ -26,10 +26,19 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+ */  
 
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
+
+#ifdef USE_OPENCV
+	#define int64 opencv_broken_int
+	#define uint64 opencv_broken_uint
+	#include <opencv2/imgproc/imgproc.hpp>
+	#undef uint64
+	#undef int64
+#endif
+
 
 #include <iomanip>
 #include <sstream>
@@ -43,7 +52,7 @@
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
-#include "JuceHeader.h"
+#include <OpenShotAudio.h>
 #ifdef USE_IMAGEMAGICK
 	#include "MagickUtilities.h"
 #endif
@@ -114,6 +123,10 @@ namespace openshot
 		std::string color;
 		int64_t max_audio_sample; ///< The max audio sample count added to this frame
 
+#ifdef USE_OPENCV
+		cv::Mat imagecv; ///< OpenCV image. It will always be in BGR format
+#endif
+
 		/// Constrain a color value from 0 to 255
 		int constrain(int color_value);
 
@@ -149,7 +162,7 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
-
+ 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);
 
@@ -278,6 +291,20 @@ namespace openshot
 
 		/// Play audio samples for this frame
 		void Play();
+
+#ifdef USE_OPENCV
+		/// Convert Qimage to Mat
+		cv::Mat Qimage2mat( std::shared_ptr<QImage>& qimage);
+
+		/// Convert OpenCV Mat to QImage
+		std::shared_ptr<QImage> Mat2Qimage(cv::Mat img);
+
+		/// Get pointer to OpenCV Mat image object
+		cv::Mat GetImageCV();
+
+		/// Set pointer to OpenCV image object
+		void SetImageCV(cv::Mat _image);
+#endif
 	};
 
 }

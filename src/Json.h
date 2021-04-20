@@ -33,7 +33,7 @@
 
 #include <string>
 #include "json/json.h"
-#include "Exceptions.h"
+
 
 namespace openshot {
     const Json::Value stringToJson(const std::string value);

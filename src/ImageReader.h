@@ -43,11 +43,13 @@
 #include <stdio.h>
 #include <memory>
 #include "CacheMemory.h"
-#include "Exceptions.h"
+
 #include "MagickUtilities.h"
 
 namespace openshot
 {
+	// Forward decls
+	class CacheBase;
 
 	/**
 	 * @brief This class uses the ImageMagick++ libraries, to open image files, and return
@@ -90,7 +92,7 @@ namespace openshot
 		void Close() override;
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() override { return NULL; };
+		CacheBase* GetCache() override { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
@@ -105,7 +107,7 @@ namespace openshot
 		/// Return the type name of the class
 		std::string Name() override { return "ImageReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

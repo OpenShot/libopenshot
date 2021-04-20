@@ -126,6 +126,12 @@
 		#define PIX_FMT_YUV444P AV_PIX_FMT_YUV444P
 	#endif
 
+	// Does ffmpeg pixel format contain an alpha channel?
+    inline static const bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
+        const AVPixFmtDescriptor *fmt_desc = av_pix_fmt_desc_get(pix_fmt);
+        return bool(fmt_desc->flags & AV_PIX_FMT_FLAG_ALPHA);
+    }
+
 	// FFmpeg's libavutil/common.h defines an RSHIFT incompatible with Ruby's
 	// definition in ruby/config.h, so we move it to FF_RSHIFT
 	#ifdef RSHIFT

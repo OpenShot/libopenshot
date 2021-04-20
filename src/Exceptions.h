@@ -41,7 +41,7 @@ namespace openshot {
 	 * A std::exception-derived exception class with custom message.
 	 * All OpenShot exception classes inherit from this class.
 	 */
-	class ExceptionBase : public std::exception //: public exception
+	class ExceptionBase : public std::exception
 	{
 	protected:
 		std::string m_message;
@@ -365,8 +365,13 @@ namespace openshot {
 		virtual ~ResampleError() noexcept {}
 	};
 
+#define TMS_DEP_MSG "The library no longer throws this exception. It will be removed in a future release."
+
+#ifndef SWIG
 	/// Exception when too many seek attempts happen
-	class TooManySeeks : public ExceptionBase
+	class
+	__attribute__ ((deprecated(TMS_DEP_MSG)))
+	TooManySeeks : public ExceptionBase
 	{
 	public:
 		std::string file_path;
@@ -376,10 +381,10 @@ namespace openshot {
 		 * @param message A message to accompany the exception
 		 * @param file_path (optional) The input file being processed
 		 */
-		TooManySeeks(std::string message, std::string file_path="")
-			: ExceptionBase(message), file_path(file_path) { }
+		TooManySeeks(std::string message, std::string file_path="") __attribute__ ((deprecated(TMS_DEP_MSG)));
 		virtual ~TooManySeeks() noexcept {}
 	};
+#endif
 
 	/// Exception when a writer is closed, and a frame is requested
 	class WriterClosed : public ExceptionBase

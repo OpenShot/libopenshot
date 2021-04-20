@@ -68,7 +68,7 @@ namespace openshot {
 		/// Get the distance between 2 RGB pairs. (0=identical colors, 10=very close colors, 760=very different colors)
 		static long GetDistance(long R1, long G1, long B1, long R2, long G2, long B2);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		void SetJson(const std::string value); ///< Load JSON string into this object

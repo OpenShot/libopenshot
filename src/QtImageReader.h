@@ -37,11 +37,13 @@
 #include <omp.h>
 #include <stdio.h>
 #include <memory>
-#include "Exceptions.h"
+
 #include "ReaderBase.h"
 
 namespace openshot
 {
+	// Forward decl
+	class CacheBase;
 
 	/**
 	 * @brief This class uses the Qt library, to open image files, and return
@@ -71,6 +73,15 @@ namespace openshot
 		bool is_open;	///> Is Reader opened
 		QSize max_size;	///> Current max_size as calculated with Clip properties
 
+		/// Load an SVG file with Resvg or fallback with Qt
+        ///
+        /// @returns Success as a boolean
+        /// @param path The file path of the SVG file
+		bool load_svg_path(QString path);
+
+		/// Calculate the max_size QSize, based on parent timeline and parent clip settings
+        QSize calculate_max_size();
+
 	public:
 		/// @brief Constructor for QtImageReader.
 		///
@@ -88,7 +99,7 @@ namespace openshot
 		void Close() override;
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		CacheMemory* GetCache() override { return NULL; };
+		CacheBase* GetCache() override { return NULL; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.
@@ -103,7 +114,7 @@ namespace openshot
 		/// Return the type name of the class
 		std::string Name() override { return "QtImageReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value) override; ///< Load JSON string into this object
 		Json::Value JsonValue() const override; ///< Generate Json::Value for this object

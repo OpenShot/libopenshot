@@ -35,8 +35,8 @@ if (POLICY CMP0057)
 endif()
 
 ###############  PROFILING  #################
-#set(PROFILER "/usr/lib//usr/lib/libprofiler.so.0.4.5")
-#set(PROFILER "/usr/lib/libtcmalloc.so.4")
+#set(PROFILER "/usr/lib/x86_64-linux-gnu/libprofiler.so.0")
+#set(PROFILER "/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4")
 
 if(CMAKE_VERSION VERSION_LESS 3.3)
   # IWYU wasn't supported internally in 3.2
@@ -99,6 +99,19 @@ set(OPENSHOT_SOURCES
   TimelineBase.cpp
   Timeline.cpp)
 
+# OpenCV related classes
+set(OPENSHOT_CV_SOURCES
+  CVTracker.cpp
+  CVStabilization.cpp
+  ClipProcessingJobs.cpp
+  CVObjectDetection.cpp
+  effects/Stabilizer.cpp
+  effects/Tracker.cpp
+  effects/ObjectDetection.cpp
+  ./sort_filter/sort.cpp
+  ./sort_filter/Hungarian.cpp
+  ./sort_filter/KalmanTracker.cpp)
+
 # Video effects
 set(EFFECTS_SOURCES
   effects/Bars.cpp
@@ -160,7 +173,10 @@ target_include_directories(openshot
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
-find_package(OpenShotAudio 0.2.0 REQUIRED)
+if(NOT TARGET OpenShot::Audio)
+  # Only load if necessary (not for integrated builds)
+  find_package(OpenShotAudio 0.2.0 REQUIRED)
+endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
 ###
@@ -209,7 +225,6 @@ if(ImageMagick_FOUND)
 
   # define a preprocessor macro (used in the C++ source)
   target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_IMAGEMAGICK=1)
 
   # Link with ImageMagick library
   target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
@@ -343,8 +358,7 @@ if (TARGET Resvg::Resvg)
   #include_directories(${Resvg_INCLUDE_DIRS})
   target_link_libraries(openshot PUBLIC Resvg::Resvg)
 
-  target_compile_definitions(openshot PUBLIC -DUSE_RESVG=1)
-  list(APPEND CMAKE_SWIG_FLAGS -DUSE_RESVG=1)
+  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
 
   set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
   mark_as_advanced(HAVE_RESVG)
@@ -370,10 +384,36 @@ if (ENABLE_BLACKMAGIC)
     target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
 
     # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC -DUSE_BLACKMAGIC=1)
-    list(APPEND CMAKE_SWIG_FLAGS -DUSE_BLACKMAGIC=1)
+    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
   endif()
 endif()
+
+################## OPENCV ###################
+if(ENABLE_OPENCV)
+  find_package(OpenCV 4)
+  if(NOT OpenCV_FOUND)
+    set(ENABLE_OPENCV FALSE CACHE BOOL
+      "Build with OpenCV algorithms (requires Boost, Protobuf 3)" FORCE)
+  else()
+    add_subdirectory(protobuf_messages)
+    # Add OpenCV source files
+    target_sources(openshot PRIVATE
+      ${OPENSHOT_CV_SOURCES}
+    )
+    target_compile_definitions(openshot PUBLIC USE_OPENCV=1)
+    target_link_libraries(openshot PUBLIC
+      opencv_core
+      opencv_video
+      opencv_highgui
+      opencv_dnn
+      opencv_tracking
+      openshot_protobuf
+    )
+  set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
+  mark_as_advanced(HAVE_OPENCV)
+  endif()
+endif()
+add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
 
 ###############  LINK LIBRARY  #################
 # Link remaining dependency libraries
@@ -392,16 +432,46 @@ endif()
 
 # Install primary library
 install(TARGETS openshot
+  COMPONENT runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot)
 
-install(
-  DIRECTORY .
+install(DIRECTORY .
+  COMPONENT devel
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   FILES_MATCHING PATTERN "*.h"
 )
+
+# On Windows, we copy project output DLLs into the tests dir
+# so that the unit test executables can find them
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+  # Copy the DLLs immediately after they're built
+  add_custom_command(TARGET openshot POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different
+      "$<TARGET_FILE:openshot>"
+      "${PROJECT_BINARY_DIR}/tests/"
+    BYPRODUCTS
+      "${PROJECT_BINARY_DIR}/tests/libopenshot.dll"
+    COMMENT
+      "Copying libopenshot DLL to unit test directory"
+  )
+  # Also copy libopenshot-audio DLL
+  get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION)
+  add_custom_target(test-install-audio-dll ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${AUDIO_LIB_PATH}"
+      "${PROJECT_BINARY_DIR}/tests/"
+    BYPRODUCTS
+      "${PROJECT_BINARY_DIR}/tests/libopenshot-audio.dll"
+    COMMENT
+      "Copying OpenShotAudio library DLL to unit test directory"
+  )
+  add_dependencies(test-install-audio-dll OpenShot::Audio)
+endif()
+
 
 ############### CPACK PACKAGING ##############
 if(MINGW)
@@ -410,9 +480,6 @@ endif()
 if(UNIX AND NOT APPLE)
   set(CPACK_GENERATOR "DEB")
 endif()
-#if(UNIX AND APPLE)
-#  set(CPACK_GENERATOR "DragNDrop")
-#endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)

@@ -34,7 +34,6 @@
 #include <memory>
 #include <cstdlib>
 #include "Frame.h"
-#include "Exceptions.h"
 #include "Json.h"
 
 namespace openshot {
@@ -108,7 +107,7 @@ namespace openshot {
 		/// @param channels The number of audio channels in the frame
 		void SetMaxBytesFromInfo(int64_t number_of_frames, int width, int height, int sample_rate, int channels);
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		virtual std::string Json() = 0; ///< Generate JSON string of this object
 		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
 		virtual Json::Value JsonValue() = 0; ///< Generate Json::Value for this object

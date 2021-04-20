@@ -46,7 +46,6 @@
 #include <unistd.h>
 
 #include "CacheMemory.h"
-#include "Exceptions.h"
 #include "Frame.h"
 #include "DecklinkInput.h"
 
@@ -117,7 +116,7 @@ namespace openshot
 		/// Return the type name of the class
 		std::string Name() { return "DecklinkReader"; };
 
-		/// Get and Set JSON methods
+		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object
 		void SetJson(const std::string value); ///< Load JSON string into this object
 		Json::Value JsonValue() const; ///< Generate Json::Value for this object
