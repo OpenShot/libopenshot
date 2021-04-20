@@ -29,7 +29,16 @@
  */
 
 #include "Timeline.h"
+
+#include "CacheBase.h"
+#include "CacheDisk.h"
+#include "CacheMemory.h"
+#include "CrashHandler.h"
+#include "FrameMapper.h"
 #include "Exceptions.h"
+
+#include <QDir>
+#include <QFileInfo>
 
 using namespace openshot;
 
@@ -77,6 +86,11 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	// Init max image size
 	SetMaxSize(info.width, info.height);
 }
+
+// Delegating constructor that copies parameters from a provided ReaderInfo
+Timeline::Timeline(const ReaderInfo info) :
+	Timeline::Timeline(info.width, info.height, info.fps, info.sample_rate,
+	                   info.channels, info.channel_layout) {};
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
