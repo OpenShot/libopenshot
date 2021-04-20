@@ -28,15 +28,15 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "KeyFrame.h"
-#include "Exceptions.h"
-
 #include <algorithm>
 #include <functional>
 #include <utility>
 #include <cassert>		 // For assert()
 #include <iostream>		 // For std::cout
 #include <iomanip>		 // For std::setprecision
+
+#include "KeyFrame.h"
+#include "Exceptions.h"
 
 using namespace std;
 using namespace openshot;
@@ -559,21 +559,21 @@ void Keyframe::UpdatePoint(int64_t index, Point p) {
 	AddPoint(p);
 }
 
-void Keyframe::PrintPoints() const {
-	cout << fixed << setprecision(4);
+void Keyframe::PrintPoints(std::ostream* out) const {
+	*out << std::fixed << std::setprecision(4);
 	for (std::vector<Point>::const_iterator it = Points.begin(); it != Points.end(); it++) {
 		Point p = *it;
-		cout << p.co.X << "\t" << p.co.Y << endl;
+		*out << p.co.X << "\t" << p.co.Y << std::endl;
 	}
 }
 
-void Keyframe::PrintValues() const {
-	cout << fixed << setprecision(4);
-	cout << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
+void Keyframe::PrintValues(std::ostream* out) const {
+	*out << std::fixed << std::setprecision(4);
+	*out << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
 
 	for (int64_t i = 1; i < GetLength(); ++i) {
-		cout << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
-		cout << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
+		*out << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
+		*out << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
 	}
 }
 

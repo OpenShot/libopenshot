@@ -28,6 +28,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
+#include <iostream>
+#include <iomanip>
+
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
@@ -611,7 +615,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	return final_cache.GetFrame(requested_frame);
 }
 
-void FrameMapper::PrintMapping()
+void FrameMapper::PrintMapping(std::ostream* out)
 {
 	// Check if mappings are dirty (and need to be recalculated)
 	if (is_dirty)
@@ -622,8 +626,16 @@ void FrameMapper::PrintMapping()
 	for (float map = 1; map <= frames.size(); map++)
 	{
 		MappedFrame frame = frames[map - 1];
-		cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
-		cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
+		*out << "Target frame #: " << map
+		     << " mapped to original frame #:\t("
+			 << frame.Odd.Frame << " odd, "
+			 << frame.Even.Frame << " even)" << std::endl;
+
+		*out << "  - Audio samples mapped to frame "
+		     << frame.Samples.frame_start << ":"
+			 << frame.Samples.sample_start << " to frame "
+			 << frame.Samples.frame_end << ":"
+			 << frame.Samples.sample_end << endl;
 	}
 
 }
