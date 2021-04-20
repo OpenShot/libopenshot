@@ -28,9 +28,10 @@ Scope Options:
              one per line.
 
 Output customization:
---export     Include an 'export' command for each variable set.
---powershell Output command to set an environment variable from
-             within PowerShell, instead of bash. (See Note, below.)
+--prefix <arg>  Prefix each variable with '<arg>', instead of 'PROJECT'.
+--export        Include an 'export' command for each variable set.
+--powershell    Output command to set an environment variable from
+                within PowerShell, instead of bash. (See Note, below.)
 
 Other flags:
 --help       Display this reference and exit.
@@ -73,7 +74,7 @@ powershell_output() {
 
 PATH_TO_CMAKELISTS=$(dirname $(realpath "$0"))/CMakeLists.txt
 
-ARGS=$(getopt --long 'name,p,pa,pr,package,project,version,soname,all,export,powershell,help' -n "$0" == "$@")
+ARGS=$(getopt --long 'name,p,pa,pro,package,project,version,soname,all,pre:,prefix:,export,powershell,help' -n "$0" == "$@")
 
 if [ $? -ne 0 ]; then
         echo 'Terminating...' >&2
@@ -83,53 +84,61 @@ fi
 eval set -- "$ARGS"
 unset ARGS
 
-while true; do
-    case "$1" in
-        '--n'*)
-            output_project_name=1
-            shift
-            continue
+while [[ $# -gt 0 ]]; do
+arg="$1"
+case $arg in
+    '--n'*)
+        output_project_name=1
+        shift
+        continue
+    ;;
+    '--pa'*|'--pro'*|'--v'*)
+        output_project_version=1
+        shift
+        continue
+    ;;
+    '--s'*)
+        output_soname=1
+        shift
+        continue
+    ;;
+    '--a'*)
+        output_project_version=1
+        output_project_name=1
+        output_soname=1
+        shift
+        continue
+    ;;
+    '--pre'*)
+        custom_prefix="$2"
+        shift
+        shift
+        continue
+    ;;
+    '--e'*)
+        export_variables=1
+        shift
+        continue
         ;;
-        '--pa'*|'--pr'*|'--v'*)
-            output_project_version=1
-            shift
-            continue
-        ;;
-        '--s'*)
-            output_soname=1
-            shift
-            continue
-        ;;
-        '--a'*)
-            output_project_version=1
-            output_project_name=1
-            output_soname=1
-            shift
-            continue
-        ;;
-        '--e'*)
-            export_variables=1
-            shift
-            continue
-        ;;
-        '--po'*)
-            powershell_format=1
-            shift
-            continue
-        ;;
-        '--h'*)
-            print_help
-            exit 0
-        ;;
-        '--')
-            shift
-            break
-        ;;
-        *)
-            echo 'Error parsing command line!' >&2
-            exit 1
-        ;;
-    esac
+    '--po'*)
+        powershell_format=1
+        shift
+        continue
+    ;;
+    '--h'*)
+        print_help
+        exit 0
+    ;;
+    '--')
+        shift
+        break
+    ;;
+    *)
+        echo 'Error parsing command line!' >&2
+        exit 1
+    ;;
+esac
+
 done
 
 # Default mode
@@ -137,6 +146,10 @@ if [ "x${output_project_version}" != "x1"\
      -a "x${output_soname}" != "x1"\
      -a "x${output_project_name}" != "x1" ]; then
     output_project_version=1
+fi
+PFX="PROJECT"
+if [ "x${custom_prefix}" != "x" ]; then
+    PFX="${custom_prefix}"
 fi
 
 # Output requested variables
@@ -146,9 +159,9 @@ if [ "x${output_project_version}" = "x1" ]; then
     |sed -e 's#set(PROJECT_VERSION_FULL\s*\"*\([^\")]*\)\"*\s*)#\1#;q'\
   )
   if [ "x${powershell_format}" = "x1" ]; then
-    powershell_output "PROJECT_VERSION" "${project_version}"
+    powershell_output "${PFX}_VERSION" "${project_version}"
   else
-    bash_output "PROJECT_VERSION" "${project_version}"
+    bash_output "${PFX}_VERSION" "${project_version}"
   fi
 fi
 
@@ -158,9 +171,9 @@ if [ "x${output_project_name}" = "x1" ]; then
     |sed -e 's#project(\(\S*\)[^)]*)#\1#;q'\
   )
   if [ "x${powershell_format}" = "x1" ]; then
-    powershell_output "PROJECT_NAME" "${project_name}"
+    powershell_output "${PFX}_NAME" "${project_name}"
   else
-    bash_output "PROJECT_NAME" "${project_name}"
+    bash_output "${PFX}_NAME" "${project_name}"
   fi
 fi
 
@@ -170,9 +183,9 @@ if [ "x${output_soname}" = "x1" ]; then
     |sed -e 's#set(PROJECT_SO_VERSION\s*\"*\([^\")]*\)\"*\s*)#\1#;q'\
   )
   if [ "x${powershell_format}" = "x1" ]; then
-    powershell_output "PROJECT_SO" "${project_soname}"
+    powershell_output "${PFX}_SO" "${project_soname}"
   else
-    bash_output "PROJECT_SO" "${project_soname}"
+    bash_output "${PFX}_SO" "${project_soname}"
   fi
 fi
 
