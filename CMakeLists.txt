@@ -69,6 +69,9 @@ include(GNUInstallDirs)
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
 
+# Unit test management
+include(CTest)
+
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
 option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
@@ -76,7 +79,6 @@ option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
-option(ENABLE_TESTS "Build unit tests (requires Catch2)" ON)
 option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 
@@ -88,11 +90,11 @@ option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)"
 
 # Legacy commandline override
 if (DISABLE_TESTS)
-  set(ENABLE_TESTS OFF)
+  set(BUILD_TESTING OFF)
 endif()
 
-if(DEFINED ENABLE_TESTS)
-  set(ENABLE_TESTS ${ENABLE_TESTS} CACHE BOOL "Build unit tests (requires Catch2)" FORCE)
+if(ENABLE_TESTS)
+  set(BUILD_TESTING ${ENABLE_TESTS})
 endif()
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
@@ -173,47 +175,68 @@ if (ENABLE_DOCS)
 endif()
 
 ############# PROCESS tests/ DIRECTORY ##############
-if(ENABLE_TESTS)
-  set(TESTS_ENABLED TRUE) # May be overridden by tests/CMakeLists.txt
-  find_package(Catch2 REQUIRED)
+find_package(Catch2 QUIET)
+if(NOT Catch2_FOUND)
+  set(BUILD_TESTING FALSE)
+endif()
+if(BUILD_TESTING)
+  include(Catch)
   if(ENABLE_PARALLEL_CTEST)
     # Figure out the amount of parallelism for CTest
     include(ProcessorCount)
     ProcessorCount(CPU_COUNT)
-    if(NOT CPU_COUNT EQUAL 0)
-      message(STATUS "Setting up unit tests to use ${CPU_COUNT} processors")
+    if(CPU_COUNT GREATER 1)
+      add_feature_info("Parallel tests" TRUE "Unit tests can use ${CPU_COUNT} processors")
       set(CTEST_OPTIONS "-j${CPU_COUNT}")
     endif()
   endif()
-  include(CTest)
-  include(Catch)
   add_subdirectory(tests)
 endif()
-add_feature_info("Unit tests" TESTS_ENABLED "Compile unit tests for library functions")
+add_feature_info("Unit tests" ${BUILD_TESTING} "Compile unit tests for library functions")
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
+  set(COVERAGE_EXCLUDES
+    "bindings/*"
+    "examples/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+  )
   setup_target_for_coverage_lcov(
     NAME coverage
     LCOV_ARGS "--no-external"
     EXECUTABLE ctest
     EXECUTABLE_ARGS ${CTEST_OPTIONS}
     DEPENDENCIES openshot ${UNIT_TEST_TARGETS}
-    EXCLUDE
-      "bindings/*"
-      "examples/*"
-      "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
-      "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+    EXCLUDE ${COVERAGE_EXCLUDES}
   )
+  foreach(_t IN LISTS UNIT_TEST_NAMES)
+    setup_target_for_coverage_lcov(
+      NAME "${_t}_coverage"
+      LCOV_ARGS "--no-external"
+      EXECUTABLE ctest
+      EXECUTABLE_ARGS ${CTEST_OPTIONS} -L "^${_t}$"
+      DEPENDENCIES openshot openshot-${_t}-test
+      EXCLUDE ${COVERAGE_EXCLUDES}
+    )
+  endforeach()
 endif()
 
-if(TESTS_ENABLED AND NOT TARGET coverage)
+if(DEFINED UNIT_TEST_TARGETS AND NOT TARGET coverage)
   add_custom_target(coverage
     COMMAND ctest ${CTEST_OPTIONS}
     DEPENDS openshot ${UNIT_TEST_TARGETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Running unit tests (coverage disabled)"
   )
+  foreach(_t IN LISTS UNIT_TEST_NAMES)
+    add_custom_target("${_t}_coverage"
+      COMMAND ctest ${CTEST_OPTIONS} -L "^${_t}$"
+      DEPENDS openshot openshot-${_t}-test
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Running unit tests for ${_t} class (coverage disabled)"
+    )
+  endforeach()
 endif()
 
 if(TARGET test AND NOT TARGET os_test)

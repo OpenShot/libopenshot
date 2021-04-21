@@ -47,7 +47,7 @@
 
 using namespace openshot;
 
-TEST_CASE( "GetPoint_With_No_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "GetPoint (no Points)", "[libopenshot][keyframe]" )
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -55,7 +55,7 @@ TEST_CASE( "GetPoint_With_No_Points", "[libopenshot][keyframe]" )
 	CHECK_THROWS_AS(k1.GetPoint(0), OutOfBoundsPoint);
 }
 
-TEST_CASE( "GetPoint_With_1_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "GetPoint (1 Point)", "[libopenshot][keyframe]" )
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -69,7 +69,7 @@ TEST_CASE( "GetPoint_With_1_Points", "[libopenshot][keyframe]" )
 }
 
 
-TEST_CASE( "AddPoint_With_1_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "AddPoint (1 Point)", "[libopenshot][keyframe]" )
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -80,7 +80,7 @@ TEST_CASE( "AddPoint_With_1_Point", "[libopenshot][keyframe]" )
 	CHECK_THROWS_AS(k1.GetPoint(1), OutOfBoundsPoint);
 }
 
-TEST_CASE( "AddPoint_With_2_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "AddPoint (2 Points)", "[libopenshot][keyframe]" )
 {
 	// Create an empty keyframe
 	Keyframe k1;
@@ -93,7 +93,7 @@ TEST_CASE( "AddPoint_With_2_Points", "[libopenshot][keyframe]" )
 	CHECK_THROWS_AS(k1.GetPoint(2), OutOfBoundsPoint);
 }
 
-TEST_CASE( "GetValue_For_Bezier_Curve_2_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "GetValue (Bezier curve, 2 Points)", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -112,7 +112,7 @@ TEST_CASE( "GetValue_For_Bezier_Curve_2_Points", "[libopenshot][keyframe]" )
 	CHECK(kf.GetLength() == 51);
 }
 
-TEST_CASE( "GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle", "[libopenshot][keyframe]" )
+TEST_CASE( "GetValue (Bezier, 5 Points, 40% handle)", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -135,7 +135,7 @@ TEST_CASE( "GetValue_For_Bezier_Curve_5_Points_40_Percent_Handle", "[libopenshot
 	CHECK(kf.GetLength() == 201);
 }
 
-TEST_CASE( "GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle", "[libopenshot][keyframe]" )
+TEST_CASE( "GetValue (Bezier, 5 Points, 25% Handle)", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -158,7 +158,7 @@ TEST_CASE( "GetValue_For_Bezier_Curve_5_Points_25_Percent_Handle", "[libopenshot
 	CHECK(kf.GetLength() == 201);
 }
 
-TEST_CASE( "GetValue_For_Linear_Curve_3_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "GetValue (Linear, 3 Points)", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -178,7 +178,7 @@ TEST_CASE( "GetValue_For_Linear_Curve_3_Points", "[libopenshot][keyframe]" )
 	CHECK(kf.GetLength() == 51);
 }
 
-TEST_CASE( "GetValue_For_Constant_Curve_3_Points", "[libopenshot][keyframe]" )
+TEST_CASE( "GetValue (Constant, 3 Points)", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -199,7 +199,7 @@ TEST_CASE( "GetValue_For_Constant_Curve_3_Points", "[libopenshot][keyframe]" )
 	CHECK(kf.GetLength() == 51);
 }
 
-TEST_CASE( "Check_Direction_and_Repeat_Fractions", "[libopenshot][keyframe]" )
+TEST_CASE( "GetDelta and GetRepeatFraction", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -234,7 +234,7 @@ TEST_CASE( "Check_Direction_and_Repeat_Fractions", "[libopenshot][keyframe]" )
 }
 
 
-TEST_CASE( "Get_Closest_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "GetClosestPoint", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -262,7 +262,7 @@ TEST_CASE( "Get_Closest_Point", "[libopenshot][keyframe]" )
 }
 
 
-TEST_CASE( "Get_Previous_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "GetPreviousPoint", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -281,7 +281,7 @@ TEST_CASE( "Get_Previous_Point", "[libopenshot][keyframe]" )
 
 }
 
-TEST_CASE( "Get_Max_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "GetMaxPoint", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve
 	Keyframe kf;
@@ -306,7 +306,7 @@ TEST_CASE( "Get_Max_Point", "[libopenshot][keyframe]" )
 	CHECK(kf.GetMaxPoint().co.Y == 2.0);
 }
 
-TEST_CASE( "Scale_Keyframe", "[libopenshot][keyframe]" )
+TEST_CASE( "Keyframe scaling", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -348,7 +348,7 @@ TEST_CASE( "Scale_Keyframe", "[libopenshot][keyframe]" )
 
 }
 
-TEST_CASE( "Flip_Keyframe", "[libopenshot][keyframe]" )
+TEST_CASE( "flip Keyframe", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -382,7 +382,7 @@ TEST_CASE( "Flip_Keyframe", "[libopenshot][keyframe]" )
 	CHECK(kf.GetValue(100) == Approx(10.0f).margin(0.01));
 }
 
-TEST_CASE( "Remove_Duplicate_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "remove duplicate Point", "[libopenshot][keyframe]" )
 {
 	// Create a keyframe curve with 2 points
 	Keyframe kf;
@@ -395,7 +395,7 @@ TEST_CASE( "Remove_Duplicate_Point", "[libopenshot][keyframe]" )
 	CHECK(kf.GetPoint(0).co.Y == Approx(2.0).margin(0.01));
 }
 
-TEST_CASE( "Large_Number_Values", "[libopenshot][keyframe]" )
+TEST_CASE( "large number values", "[libopenshot][keyframe]" )
 {
 	// Large value
 	int64_t const large_value = 30 * 60 * 90;
@@ -411,7 +411,7 @@ TEST_CASE( "Large_Number_Values", "[libopenshot][keyframe]" )
 	CHECK(kf.GetPoint(1).co.Y == Approx(100.0).margin(0.01));
 }
 
-TEST_CASE( "Remove_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "remove Point", "[libopenshot][keyframe]" )
 {
 	Keyframe kf;
 	kf.AddPoint(openshot::Point(Coordinate(1, 1), CONSTANT));
@@ -424,7 +424,7 @@ TEST_CASE( "Remove_Point", "[libopenshot][keyframe]" )
 	CHECK_THROWS_AS(kf.RemovePoint(100), OutOfBoundsPoint);
 }
 
-TEST_CASE( "Constant_Interpolation_First_Segment", "[libopenshot][keyframe]" )
+TEST_CASE( "Constant interp, first segment", "[libopenshot][keyframe]" )
 {
 	Keyframe kf;
 	kf.AddPoint(Point(Coordinate(1, 1), CONSTANT));
@@ -437,7 +437,7 @@ TEST_CASE( "Constant_Interpolation_First_Segment", "[libopenshot][keyframe]" )
 	CHECK(kf.GetInt(4) == 100);
 }
 
-TEST_CASE( "isIncreasing", "[libopenshot][keyframe]" )
+TEST_CASE( "IsIncreasing", "[libopenshot][keyframe]" )
 {
 	// Which cases need to be tested to keep same behaviour as
 	// previously?
@@ -486,7 +486,7 @@ TEST_CASE( "GetLength", "[libopenshot][keyframe]" )
 	CHECK(g.GetLength() == 201);
 }
 
-TEST_CASE( "Use_Interpolation_of_Segment_End_Point", "[libopenshot][keyframe]" )
+TEST_CASE( "use segment end point interpolation", "[libopenshot][keyframe]" )
 {
 	Keyframe f;
 	f.AddPoint(1,0, CONSTANT);
@@ -494,7 +494,7 @@ TEST_CASE( "Use_Interpolation_of_Segment_End_Point", "[libopenshot][keyframe]" )
 	CHECK(f.GetValue(50) == Approx(75.9).margin(0.1));
 }
 
-TEST_CASE( "Handle_Large_Segment", "[libopenshot][keyframe]" )
+TEST_CASE( "handle large segment", "[libopenshot][keyframe]" )
 {
 	Keyframe kf;
 	kf.AddPoint(1, 0, CONSTANT);
@@ -507,7 +507,7 @@ TEST_CASE( "Handle_Large_Segment", "[libopenshot][keyframe]" )
 	CHECK((double)fr.num / fr.den == Approx(0.5).margin(0.01));
 }
 
-TEST_CASE( "Point_Vector_Constructor", "[libopenshot][keyframe]" )
+TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
 {
 	std::vector<Point> points{Point(1, 10), Point(5, 20), Point(10, 30)};
 	Keyframe k1(points);
