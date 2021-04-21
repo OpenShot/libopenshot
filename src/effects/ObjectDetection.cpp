@@ -164,6 +164,8 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                         // Get the Tracked Object's child clip
                         Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
                         if (childClip){
+                            std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
+					        std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(f, frame_number);
                             // Get the image of the child clip for this frame
                             std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
                             childClipImages.push_back(childClipFrame->GetImage());

@@ -141,7 +141,8 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 				Clip* childClip = parentTimeline->GetClip(trackedData->ChildClipId());
 				if (childClip){
 					// Get the image of the child clip for this frame
-					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(frame_number);
+					std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
+					std::shared_ptr<Frame> childClipFrame = childClip->GetFrame(f, frame_number);
 					childClipImage = childClipFrame->GetImage();
 
 					// Set the Qt rectangle with the bounding-box properties
