@@ -2,6 +2,7 @@
  * @file
  * @brief Track an object selected by the user
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */

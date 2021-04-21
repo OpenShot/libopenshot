@@ -2,6 +2,7 @@
  * @file
  * @brief Unit tests for CVStabilizer
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */

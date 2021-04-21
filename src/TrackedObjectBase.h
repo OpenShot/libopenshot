@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for the TrackedObjectBase class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */

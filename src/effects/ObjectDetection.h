@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for Object Detection effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
