@@ -1669,10 +1669,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             av_opt_set_int(avr, "out_channels", info.channels, 0);
             SWR_INIT(avr);
         }
-        int nb_samples = 0;
-
         // Convert audio samples
-        nb_samples = SWR_CONVERT(
+        int nb_samples = SWR_CONVERT(
             avr,    // audio resample context
             audio_converted->data,           // output data pointers
             audio_converted->linesize[0],    // output plane size, in bytes. (0 if unknown)
@@ -1683,7 +1681,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         );
 
         // Set remaining samples
-        remaining_frame_samples = nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+        remaining_frame_samples = total_frame_samples;
 
         // Create a new array (to hold all resampled S16 audio samples)
         all_resampled_samples = (int16_t *) av_malloc(
