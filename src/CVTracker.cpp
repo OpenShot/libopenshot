@@ -28,13 +28,13 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CVTracker.h"
 #include <google/protobuf/util/time_util.h>
 
-using namespace std;
+#include "OpenCVUtilities.h"
+#include "CVTracker.h"
+
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
-
 
 // Constructor
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
@@ -45,25 +45,24 @@ CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processi
 }
 
 // Set desirable tracker method
-cv::Ptr<cv::Tracker> CVTracker::selectTracker(std::string trackerType){
-    cv::Ptr<cv::Tracker> t;
+cv::Ptr<OPENCV_TRACKER_TYPE> CVTracker::selectTracker(std::string trackerType){
 
     if (trackerType == "BOOSTING")
-        t = cv::TrackerBoosting::create();
+        return OPENCV_TRACKER_NS::TrackerBoosting::create();
     if (trackerType == "MIL")
-        t = cv::TrackerMIL::create();
+        return OPENCV_TRACKER_NS::TrackerMIL::create();
     if (trackerType == "KCF")
-        t = cv::TrackerKCF::create();
+        return OPENCV_TRACKER_NS::TrackerKCF::create();
     if (trackerType == "TLD")
-        t = cv::TrackerTLD::create();
+        return OPENCV_TRACKER_NS::TrackerTLD::create();
     if (trackerType == "MEDIANFLOW")
-        t = cv::TrackerMedianFlow::create();
+        return OPENCV_TRACKER_NS::TrackerMedianFlow::create();
     if (trackerType == "MOSSE")
-        t = cv::TrackerMOSSE::create();
+        return OPENCV_TRACKER_NS::TrackerMOSSE::create();
     if (trackerType == "CSRT")
-        t = cv::TrackerCSRT::create();
+        return OPENCV_TRACKER_NS::TrackerCSRT::create();
 
-    return t;
+    return nullptr;
 }
 
 // Track object in the hole clip or in a given interval
@@ -197,6 +196,8 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
 }
 
 bool CVTracker::SaveTrackedData(){
+    using std::ios;
+
     // Create tracker message
     pb_tracker::Tracker trackerMessage;
 
@@ -214,7 +215,7 @@ bool CVTracker::SaveTrackedData(){
         // Write the new message to disk.
         std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
         if (!trackerMessage.SerializeToOstream(&output)) {
-        cerr << "Failed to write protobuf message." << endl;
+        std::cerr << "Failed to write protobuf message." << std::endl;
         return false;
         }
     }
@@ -314,14 +315,16 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 
 // Load protobuf data file
 bool CVTracker::_LoadTrackedData(){
+    using std::ios;
+
     // Create tracker message
     pb_tracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
-        fstream input(protobuf_data_path, ios::in | ios::binary);
+        std::fstream input(protobuf_data_path, ios::in | ios::binary);
         if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
+            std::cerr << "Failed to parse protobuf message." << std::endl;
             return false;
         }
     }
@@ -353,4 +356,3 @@ bool CVTracker::_LoadTrackedData(){
 
     return true;
 }
-
