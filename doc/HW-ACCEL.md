@@ -7,15 +7,15 @@ our support for this in the future!
 
 The following table summarizes our current level of support:
 
-|                    |  Linux Decode   | Linux Encode   | Mac Decode |    Mac Encode  | Windows Decode | Windows Encode | Notes            |
-|--------------------|:---------------:|:--------------:|:----------:|:--------------:|:--------------:|:--------------:|------------------|
-| VA-API             |   ✔️ &nbsp;      |    ✔️ &nbsp;    |      -     |        -       |       -        |        -       | *Linux Only*     |
-| VDPAU              | ✔️ <sup>1</sup>  | ✅ <sup>2</sup> |      -    |        -       |       -        |        -       | *Linux Only*     |
-| CUDA (NVDEC/NVENC) | ❌ <sup>3</sup> |   ✔️ &nbsp;     |      -     |        -       |       -        |    ✔️ &nbsp;    | *Cross Platform* |
-| VideoToolBox       |           -     |         -      |  ✔️ &nbsp;  | ❌ <sup>4</sup> |      -        |       -         | *Mac Only*       |
-| DXVA2              |           -     |         -      |      -     |        -       | ❌ <sup>3</sup> |      -         | *Windows Only*   |
-| D3D11VA            |           -     |         -      |      -     |        -       | ❌ <sup>3</sup> |      -         | *Windows Only*   |
-| QSV                | ❌ <sup>3</sup> |   ❌ &nbsp;   |  ❌ &nbsp; |   ❌ &nbsp;    |   ❌ &nbsp;     |    ❌ &nbsp;   | *Cross Platform* |
+|                    |  Linux Decode   |  Linux Encode   |    Mac Decode   |    Mac Encode   |  Windows Decode | Windows Encode  | Notes            |
+|--------------------|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|:---------------:|------------------|
+| VA-API             | ✔️ <sup> </sup> | ✔️ <sup> </sup> |      -          |        -        |        -        |        -        | *Linux Only*     |
+| VDPAU              | ✔️ <sup>1</sup> | ✅ <sup>2</sup> |      -          |        -        |        -        |        -        | *Linux Only*     |
+| CUDA (NVDEC/NVENC) | ❌ <sup>3</sup> | ✔️ <sup> </sup> |      -          |        -        |        -        | ✔️ <sup> </sup> | *Cross Platform* |
+| VideoToolBox       |           -     |         -       | ✔️ <sup> </sup> | ❌ <sup>4</sup> |        -        |       -         | *Mac Only*       |
+| DXVA2              |           -     |         -       |      -          |        -        | ❌ <sup>3</sup> |       -         | *Windows Only*   |
+| D3D11VA            |           -     |         -       |      -          |        -        | ❌ <sup>3</sup> |       -         | *Windows Only*   |
+| QSV                | ❌ <sup>3</sup> | ❌ <sup> </sup> | ❌ <sup> </sup> | ❌ <sup> </sup> | ❌ <sup> </sup> | ❌ <sup> </sup> | *Cross Platform* |
 
 #### Notes
 
@@ -26,8 +26,8 @@ The following table summarizes our current level of support:
 
 ## Supported FFmpeg Versions
 
-* HW accel is supported from FFmpeg version 3.4
-* HW accel was removed for nVidia drivers in Ubuntu for FFmpeg 4+
+*   HW accel is supported from FFmpeg version 3.4
+*   HW accel was removed for nVidia drivers in Ubuntu for FFmpeg 4+
 
 **Notice:** The FFmpeg versions of Ubuntu and PPAs for Ubuntu show the
 same behaviour. FFmpeg 3 has working nVidia hardware acceleration while
@@ -78,9 +78,9 @@ in Ubuntu 18.04) for the AppImage to work with hardware acceleration.
 An AppImage that works on both systems (supporting libva and libva2),
 might be possible when no libva is included in the AppImage.
 
-*  vaapi is working for intel and AMD
-*  vaapi is working for decode only for nouveau
-*  nVidia driver is working for export only
+*   vaapi is working for intel and AMD
+*   vaapi is working for decode only for nouveau
+*   nVidia driver is working for export only
 
 ## AMD Graphics Cards (RadeonOpenCompute/ROCm)
 
@@ -116,11 +116,12 @@ fallback (you either get green frames or an "invalid file" error in OpenShot).
 This needs to be improved to successfully fall-back to software decoding.
 
 **Needed:**
-  * A way to get options and limits of the GPU, such as
- supported dimensions (width and height).
-  *  A way to list the actual Graphic Cards available to FFmpeg (for the
-  user to choose which card for decoding and encoding, as opposed
-  to "Graphics Card X")
+
+*   A way to get options and limits of the GPU, such as
+    supported dimensions (width and height).
+*   A way to list the actual Graphic Cards available to FFmpeg (for the
+    user to choose which card for decoding and encoding, as opposed
+    to "Graphics Card X")
 
 **Further improvement:** Right now the frame can be decoded on the GPU, but the
 frame is then copied to CPU memory for modifications. It is then copied back to

@@ -8,32 +8,32 @@ solutions to the world.
 
 ## Features
 
-* Cross-Platform (Linux, Mac, and Windows)
-* Multi-Layer Compositing
-* Video and Audio Effects (Chroma Key, Color Adjustment, Grayscale, etc…)
-* Animation Curves (Bézier, Linear, Constant)
-* Time Mapping (Curve-based Slow Down, Speed Up, Reverse)
-* Audio Mixing & Resampling (Curve-based)
-* Audio Plug-ins (VST & AU)
-* Audio Drivers (ASIO, WASAPI, DirectSound, CoreAudio, iPhone Audio,
-  ALSA, JACK, and Android)
-* Telecine and Inverse Telecine (Film to TV, TV to Film)
-* Frame Rate Conversions
-* Multi-Processor Support (Performance)
-* Python and Ruby Bindings (All Features Supported)
-* Qt Video Player Included (Ability to display video on any QWidget)
-* Unit Tests (Stability)
-* All FFmpeg Formats and Codecs Supported (Images, Videos, and Audio files)
-* Full Documentation with Examples (Doxygen Generated)
+*   Cross-Platform (Linux, Mac, and Windows)
+*   Multi-Layer Compositing
+*   Video and Audio Effects (Chroma Key, Color Adjustment, Grayscale, etc…)
+*   Animation Curves (Bézier, Linear, Constant)
+*   Time Mapping (Curve-based Slow Down, Speed Up, Reverse)
+*   Audio Mixing & Resampling (Curve-based)
+*   Audio Plug-ins (VST & AU)
+*   Audio Drivers (ASIO, WASAPI, DirectSound, CoreAudio, iPhone Audio,
+    ALSA, JACK, and Android)
+*   Telecine and Inverse Telecine (Film to TV, TV to Film)
+*   Frame Rate Conversions
+*   Multi-Processor Support (Performance)
+*   Python and Ruby Bindings (All Features Supported)
+*   Qt Video Player Included (Ability to display video on any QWidget)
+*   Unit Tests (Stability)
+*   All FFmpeg Formats and Codecs Supported (Images, Videos, and Audio files)
+*   Full Documentation with Examples (Doxygen Generated)
 
 ## Install
 
 Detailed instructions for building libopenshot and libopenshot-audio for
 each OS. These instructions are also available in the `/docs/` source folder.
 
-   * [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
-   * [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
-   * [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
+*   [Linux](https://github.com/OpenShot/libopenshot/wiki/Linux-Build-Instructions)
+*   [Mac](https://github.com/OpenShot/libopenshot/wiki/Mac-Build-Instructions)
+*   [Windows](https://github.com/OpenShot/libopenshot/wiki/Windows-Build-Instructions)
 
 ## Hardware Acceleration
 
@@ -47,9 +47,11 @@ Please see [`doc/HW-ACCEL.md`](doc/HW-ACCEL.md) for more information.
 ## Documentation
 
 Beautiful HTML documentation can be generated using Doxygen.
+
+```sh
+cmake --build <builddir> --target doc
 ```
-make doc
-```
+
 (Also available online: http://openshot.org/files/libopenshot/)
 
 ## Developers
@@ -68,11 +70,11 @@ https://github.com/OpenShot/libopenshot/issues
 
 ## Websites
 
-- https://www.openshot.org/  (Official website and blog)
-- https://github.com/OpenShot/libopenshot/ (source code and issue tracker)
-- https://github.com/OpenShot/libopenshot-audio/ (source code for audio library)
-- https://github.com/OpenShot/openshot-qt/ (source code for Qt client)
-- https://launchpad.net/openshot/
+*   https://www.openshot.org/  (Official website and blog)
+*   https://github.com/OpenShot/libopenshot/ (source code and issue tracker)
+*   https://github.com/OpenShot/libopenshot-audio/ (source code for audio library)
+*   https://github.com/OpenShot/openshot-qt/ (source code for Qt client)
+*   https://launchpad.net/openshot/
 
 ### License
 
