@@ -395,7 +395,7 @@ if(ENABLE_OPENCV)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
     # If we have version 4.5.1, all hope is lost
-  elseif(OpenCV_VERSION VERSION_EQUAL 4.5.1)
+  elseif(OpenCV_VERSION VERSION_EQUAL "4.5.1")
     message(SEND_ERROR [[Incompatible OpenCV version detected
 OpenCV version 4.5.1 contains header errors which make it unable to be used with OpenShot. OpenCV support wil be disabled. Upgrade to OpenCV 4.5.2+ or downgrade to 4.5.0 or earlier, to enable OpenCV.
 See https://github.com/opencv/opencv/issues/19260]])
@@ -424,7 +424,7 @@ See https://github.com/opencv/opencv/issues/19260]])
     mark_as_advanced(OPENCV_VERSION_STR)
 
     # We may need to use Tracker as opencv::legacy::Tracker
-    if(OpenCV_VERSION VERSION_GREATER_EQUAL 4.5.2)
+    if(OpenCV_VERSION VERSION_GREATER "4.5.1")
       target_compile_definitions(openshot PUBLIC USE_LEGACY_TRACKER=1)
     endif()
 
