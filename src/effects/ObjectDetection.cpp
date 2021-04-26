@@ -364,7 +364,11 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
                 // There is no tracked object with that id, so insert a new one
                 TrackedObjectBBox trackedObj((int)classesColor[classId](0), (int)classesColor[classId](1), (int)classesColor[classId](2), (int)0);
                 trackedObj.AddBox(id, x+(w/2), y+(h/2), w, h, 0.0);
+                
                 std::shared_ptr<TrackedObjectBBox> trackedObjPtr = std::make_shared<TrackedObjectBBox>(trackedObj);
+                ClipBase* parentClip = this->ParentClip();
+	            trackedObjPtr->ParentClip(parentClip);
+                
                 trackedObjects.insert({objectId, trackedObjPtr});
             }
 
