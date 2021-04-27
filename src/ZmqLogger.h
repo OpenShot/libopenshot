@@ -39,6 +39,7 @@
 #include <memory>
 #include <zmq.hpp>
 
+#ifndef SWIG
 #ifndef zmqLog
 	#define zmqLog() \
 		openshot::StreamLog(openshot::StreamLog::zmqLogFunction).GetStream()
@@ -46,6 +47,7 @@
 #ifndef LOGVAR
 	#define LOGVAR(VAR) #VAR << " = " << VAR
 #endif
+#endif  // SWIG
 
 #ifndef DebugLog
 	#define DebugLog(args...) openshot::ZmqLogger::Instance()->AppendDebugMethod(args)
@@ -62,7 +64,7 @@ namespace openshot {
 	 * a file and sends the stdout over a socket.
 	 */
 	class ZmqLogger {
-		/// Type aliases
+		// Type aliases
 		using Context = std::unique_ptr<zmq::context_t>;
 		using Publisher = std::unique_ptr<zmq::socket_t>;
 
@@ -141,6 +143,7 @@ namespace openshot {
 		static ZmqLogger * m_pInstance;
 	};
 
+#ifndef SWIG
     /**
      * @brief Stream-based logging class which feeds to ZmqLogger
      *
@@ -149,10 +152,10 @@ namespace openshot {
      * logging variables and their value.
      *
      * @code
-     * // Use the zmqLog() macro to create an instance of StreamLogger
+     * // (1) Use the zmqLog() macro to create an instance of StreamLogger
      * zmqLog() << "Hyperframulated the flux capacitor!";
      *
-     * // To log a variable with its value, use the LOGVAR() macro
+     * // (2) To log a variable with its value, use the LOGVAR() macro
      * int x = 5;
      * int y = 10;
      * zmqLog() << "Out of range! " << LOGVAR(x) << ", " << LOGVAR(y);
@@ -161,31 +164,35 @@ namespace openshot {
      * These messages will be logged:
      * 1: Hyperframulated the flux capacitor!
      * 2: Out of range! x = 5, y = 10
-	 *
+     *
     **/
 
-	// Implementation largely inspired by this StackOverflow answer:
-	//   https://stackoverflow.com/a/48475646/200794
-	// Referencing the Dr. Dobbs article "Logging In C++" by Petru Marginean
-	//   https://www.drdobbs.com/cpp/logging-in-c/201804215
+    // Implementation largely inspired by this StackOverflow answer:
+    //   https://stackoverflow.com/a/48475646/200794
+    // Referencing the Dr. Dobbs article "Logging In C++" by Petru Marginean
+    //   https://www.drdobbs.com/cpp/logging-in-c/201804215
     class StreamLog {
         using LogFunction = std::function<void(const std::string&)>;
 
     public:
-		/// Construct a StreamLog instance that calls logFunction to output messages
+        /// Construct a StreamLog instance that calls logFunction to output messages
         explicit StreamLog(LogFunction logFunction) : m_logFunction(std::move(logFunction)) {};
-		/// Return the logging stream that outputs to the selected function
+        /// Return the logging stream that outputs to the selected function
         std::ostringstream& GetStream() { return m_stringStream; }
-		/// Destroy the logging instance, which calls logFunction to log the stream
+
+        /// Destroy the logging instance, which calls logFunction to log the stream
         ~StreamLog() { m_logFunction(m_stringStream.str()); }
-		/// A logging function that delivers messages to ZmqLogger
-		static void zmqLogFunction(const std::string& message) {
-			ZmqLogger::Instance()->Log(message);
-		}
+
+ 	/// A logging function that delivers messages to ZmqLogger
+        static void zmqLogFunction(const std::string& message) {
+            ZmqLogger::Instance()->Log(message);
+        }
     private:
         std::ostringstream m_stringStream;
         LogFunction m_logFunction;
     };
+#endif  // SWIG
+
 }
 
 #endif
