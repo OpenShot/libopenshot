@@ -246,10 +246,12 @@ endif ()
 if (NOT jsoncpp_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
   message(STATUS "Using embedded jsoncpp (not found or USE_SYSTEM_JSONCPP disabled)")
   if (NOT TARGET jsoncpp_lib)
-    add_library(jsoncpp_lib INTERFACE)
-    target_include_directories(jsoncpp_lib INTERFACE
+    add_library(jsoncpp_lib OBJECT)
+    set_target_properties(jsoncpp_lib PROPERTIES
+      POSITION_INDEPENDENT_CODE TRUE)
+    target_include_directories(jsoncpp_lib PUBLIC
       "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
-    target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+    target_sources(jsoncpp_lib PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
     # Because this satisfies the requirement, an installed JsonCpp is optional
     set_package_properties(jsoncpp PROPERTIES TYPE OPTIONAL)
   endif ()
