@@ -184,7 +184,7 @@ target_link_libraries(openshot PUBLIC OpenShot::Audio)
 ###
 
 # Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickWand MagickCore)
+find_package(ImageMagick COMPONENTS Magick++ MagickCore)
 
 if(ImageMagick_FOUND)
   if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
@@ -246,10 +246,12 @@ endif ()
 if (NOT jsoncpp_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
   message(STATUS "Using embedded jsoncpp (not found or USE_SYSTEM_JSONCPP disabled)")
   if (NOT TARGET jsoncpp_lib)
-    add_library(jsoncpp_lib INTERFACE)
-    target_include_directories(jsoncpp_lib INTERFACE
+    add_library(jsoncpp_lib OBJECT)
+    set_target_properties(jsoncpp_lib PROPERTIES
+      POSITION_INDEPENDENT_CODE TRUE)
+    target_include_directories(jsoncpp_lib PUBLIC
       "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
-    target_sources(jsoncpp_lib INTERFACE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+    target_sources(jsoncpp_lib PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
     # Because this satisfies the requirement, an installed JsonCpp is optional
     set_package_properties(jsoncpp PROPERTIES TYPE OPTIONAL)
   endif ()
@@ -284,9 +286,14 @@ mark_as_advanced(QT_VERSION_STR)
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
-find_package(FFmpeg REQUIRED COMPONENTS avcodec avdevice avformat avutil swscale)
+find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
-set(all_comps avcodec avdevice avformat avfilter avutil postproc swscale swresample avresample)
+set(all_comps avcodec avformat avutil swscale)
+if(TARGET FFmpeg::swresample)
+  list(APPEND all_comps swresample)
+else()
+  list(APPEND all_comps avresample)
+endif()
 set(version_comps avcodec avformat avutil)
 
 foreach(ff_comp IN LISTS all_comps)
