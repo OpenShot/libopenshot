@@ -172,7 +172,7 @@ void FFmpegWriter::initialize_streams() {
 void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate) {
 	// Set the video options
 	if (codec.length() > 0) {
-		AVCodec *new_codec;
+		const AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if HAVE_HW_ACCEL
 #if defined(__linux__)
@@ -236,7 +236,11 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 			info.vcodec = new_codec->name;
 
 			// Update video codec in fmt
+#if IS_FFMPEG_4_4			
+//			fmt->video_codec = new_codec->id;
+#else
 			fmt->video_codec = new_codec->id;
+#endif
 		}
 	}
 	if (fps.num > 0) {
@@ -294,7 +298,7 @@ void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fr
 void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate) {
 	// Set audio options
 	if (codec.length() > 0) {
-		AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
+		const AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
 		if (new_codec == NULL)
 			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 		else {
@@ -302,7 +306,11 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 			info.acodec = new_codec->name;
 
 			// Update audio codec in fmt
+#if IS_FFMPEG_4_4
+		//	fmt->audio_codec = new_codec->id;
+#else
 			fmt->audio_codec = new_codec->id;
+#endif
 		}
 	}
 	if (sample_rate > 7999)
@@ -1067,7 +1075,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	AVStream *st;
 
 	// Find the audio codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
@@ -1152,7 +1160,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	AVStream *st;
 
 	// Find the video codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
@@ -1267,8 +1275,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 #if (LIBAVFORMAT_VERSION_MAJOR >= 58)
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if IS_FFMPEG_4_4
+	//st->codec->time_base.num = info.video_timebase.num;
+	//st->codec->time_base.den = info.video_timebase.den;
+#else
 	st->codec->time_base.num = info.video_timebase.num;
 	st->codec->time_base.den = info.video_timebase.den;
+#endif
 	#pragma GCC diagnostic pop
 #endif
 
@@ -1332,14 +1345,14 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 // open audio codec
 void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	//AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
 	audio_codec_ctx->thread_count = std::min(FF_NUM_PROCESSORS, 16);
 
 	// Find the audio encoder
-	codec = avcodec_find_encoder_by_name(info.acodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
 	if (!codec)
 		codec = avcodec_find_encoder(audio_codec_ctx->codec_id);
 	if (!codec)
@@ -1403,7 +1416,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 
 // open video codec
 void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	//AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, video_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
@@ -1451,7 +1464,7 @@ void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
 #endif // HAVE_HW_ACCEL
 
 	/* find the video encoder */
-	codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (!codec)
 		codec = avcodec_find_encoder(AV_FIND_DECODER_CODEC_ID(st));
 	if (!codec)
@@ -2046,7 +2059,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = video_st->index;
 		pkt.data = (uint8_t *) frame_final->data;
+#if IS_FFMPEG_4_4
+		pkt.size = sizeof(AVFrame);
+#else
 		pkt.size = sizeof(AVPicture);
+#endif
 
 		// Increment PTS (in frames and scaled to the codec's timebase)
 		write_video_count += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
