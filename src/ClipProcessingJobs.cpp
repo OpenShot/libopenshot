@@ -1,7 +1,9 @@
 #include "ClipProcessingJobs.h"
 
+namespace openshot {
+
 // Constructor responsible to choose processing type and apply to clip
-ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string processInfoJson) : 
+ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string processInfoJson) :
 processingType(processingType), processInfoJson(processInfoJson){
 }
 
@@ -20,7 +22,7 @@ void ClipProcessingJobs::processClip(Clip& clip, std::string json){
     }
 }
 
-// Apply object tracking to clip 
+// Apply object tracking to clip
 void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller){
 
     // Create CVTracker object
@@ -46,7 +48,7 @@ void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller)
 // Apply object detection to clip
 void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& controller){
 	// create CVObjectDetection object
-	CVObjectDetection objDetector(processInfoJson, controller); 
+	CVObjectDetection objDetector(processInfoJson, controller);
     // Start object detection process
     objDetector.detectObjectsClip(clip);
 
@@ -66,7 +68,7 @@ void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& con
 
 void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& controller){
     // create CVStabilization object
-	CVStabilization stabilizer(processInfoJson, controller); 
+	CVStabilization stabilizer(processInfoJson, controller);
     // Start stabilization process
     stabilizer.stabilizeClip(clip);
 
@@ -84,13 +86,13 @@ void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& control
     }
 }
 
-// Get processing progress while iterating on the clip 
+// Get processing progress while iterating on the clip
 int ClipProcessingJobs::GetProgress(){
 
     return (int)processingController.GetProgress();
 }
 
-// Check if processing finished 
+// Check if processing finished
 bool ClipProcessingJobs::IsDone(){
 
     if(processingController.GetFinished()){
@@ -113,3 +115,5 @@ bool ClipProcessingJobs::GetError(){
 std::string ClipProcessingJobs::GetErrorMessage(){
     return processingController.GetErrorMessage();
 }
+
+}  // namespace openshot

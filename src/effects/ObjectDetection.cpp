@@ -28,6 +28,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iostream>
+
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
 #include "Exceptions.h"
@@ -135,9 +138,9 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
 
     {
         // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
+        std::fstream input(inputFilePath, std::ios::in | std::ios::binary);
         if (!objMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
+            std::cerr << "Failed to parse protobuf message." << std::endl;
             return false;
         }
     }
