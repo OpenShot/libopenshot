@@ -29,6 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+
 #include "CVStabilization.h"
 #include <google/protobuf/util/time_util.h>
 
@@ -277,6 +281,8 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
 
 // Save stabilization data to protobuf file
 bool CVStabilization::SaveStabilizedData(){
+    using std::ios;
+
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
 
@@ -293,7 +299,7 @@ bool CVStabilization::SaveStabilizedData(){
     // Write the new message to disk.
     std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
     if (!stabilizationMessage.SerializeToOstream(&output)) {
-        cerr << "Failed to write protobuf message." << endl;
+        std::cerr << "Failed to write protobuf message." << std::endl;
         return false;
     }
 
@@ -381,12 +387,13 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 
 // Load protobuf data file
 bool CVStabilization::_LoadStabilizedData(){
+    using std::ios;
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
     // Read the existing tracker message.
-    fstream input(protobuf_data_path, ios::in | ios::binary);
+    std::fstream input(protobuf_data_path, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
-        cerr << "Failed to parse protobuf message." << endl;
+        std::cerr << "Failed to parse protobuf message." << std::endl;
         return false;
     }
 

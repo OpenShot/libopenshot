@@ -29,10 +29,16 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+#include <memory>
+#include <fstream>
+#include <iostream>
+
 #include "effects/Tracker.h"
 #include "Exceptions.h"
-#include <google/protobuf/util/time_util.h>
 #include "Timeline.h"
+
+#include <google/protobuf/util/time_util.h>
 
 #include <QImage>
 #include <QPainter>
@@ -178,7 +184,6 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	return frame;
 }
 
-
 void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background){
 	// Get the bouding box vertices
 	cv::Point2f vertices2f[4];
@@ -305,11 +310,11 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
 	{
-        if (!root["BaseFPS"]["num"].isNull())
+		if (!root["BaseFPS"]["num"].isNull())
 		{
 			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
 		}	
-        if (!root["BaseFPS"]["den"].isNull())
+		if (!root["BaseFPS"]["den"].isNull())
 		{
 			BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
 		}
@@ -324,7 +329,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		protobuf_data_path = root["protobuf_data_path"].asString();
 		if(!trackedData->LoadBoxData(protobuf_data_path))
 		{
-			std::cout<<"Invalid protobuf data path";
+			std::clog << "Invalid protobuf data path " << protobuf_data_path << '\n';
 			protobuf_data_path = "";
 		}
 	}

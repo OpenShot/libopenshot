@@ -37,6 +37,7 @@
 #include "Coordinate.h"
 #include "Json.h"
 
+
 TEST_CASE( "default constructor", "[libopenshot][point]" )
 {
 	openshot::Point p;

@@ -29,6 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+
 #include "CVObjectDetection.h"
 #include <google/protobuf/util/time_util.h>
 
