@@ -43,7 +43,6 @@
 #endif
 #include <errno.h>
 #include <cxxabi.h>
-#include "ZmqLogger.h"
 
 namespace openshot {
 

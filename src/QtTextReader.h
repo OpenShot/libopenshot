@@ -35,17 +35,11 @@
 
 #include "ReaderBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
-#include "CacheMemory.h"
 #include "Enums.h"
 
-
-class QImage;
+#include <QImage>
+#include <QFont>
 
 namespace openshot
 {

@@ -31,12 +31,18 @@
 #ifndef OPENSHOT_VIDEO_CACHE_THREAD_H
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
-#include "../OpenMPUtilities.h"
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
+#include "Frame.h"
+#include "JuceHeader.h"
+
+#include <atomic>
+#include <memory>
 
 namespace openshot
 {
+    // Forward decls
+    class ReaderBase;
+    class RendererBase;
+
     using juce::Thread;
     using juce::WaitableEvent;
 

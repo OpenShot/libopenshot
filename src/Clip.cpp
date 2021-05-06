@@ -40,6 +40,11 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
+
+#include <QSize>
+#include <QTransform>
+#include <QPainter>
 
 using namespace openshot;
 

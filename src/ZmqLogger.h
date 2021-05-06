@@ -31,23 +31,32 @@
 #ifndef OPENSHOT_LOGGER_H
 #define OPENSHOT_LOGGER_H
 
-
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <cstdlib>
 #include <string>
+#include <mutex>
+#include <fstream>
 #include <sstream>
-#include <cstdio>
-#include <ctime>
+#include <functional>
+#include <memory>
 #include <zmq.hpp>
-#include <unistd.h>
-#include <OpenShotAudio.h>
-#include "Settings.h"
 
+#ifndef SWIG
+#ifndef zmqLog
+	#define zmqLog() \
+		openshot::StreamLog(openshot::StreamLog::zmqLogFunction).GetStream()
+#endif
+#ifndef LOGVAR
+	#define LOGVAR(VAR) #VAR << " = " << VAR
+#endif
+#endif  // SWIG
+
+#ifndef DebugLog
+	#define DebugLog(args...) openshot::ZmqLogger::Instance()->AppendDebugMethod(args)
+#endif
+#ifndef DEBUGVAR
+	#define DEBUGVAR(VAR) #VAR, VAR
+#endif
 
 namespace openshot {
-
 	/**
 	 * @brief This class is used for logging and sending those logs over a ZemoMQ socket to a listener
 	 *
@@ -55,20 +64,63 @@ namespace openshot {
 	 * a file and sends the stdout over a socket.
 	 */
 	class ZmqLogger {
+		// Type aliases
+		using Context = std::unique_ptr<zmq::context_t>;
+		using Publisher = std::unique_ptr<zmq::socket_t>;
+
+	public:
+		/// Create or get an instance of this logger singleton (invoke the class with this method)
+		static ZmqLogger * Instance();
+
+		/// Append debug information
+		void AppendDebugMethod(
+			std::string method_name,
+			std::string arg1_name="", float arg1_value=-1.0,
+			std::string arg2_name="", float arg2_value=-1.0,
+			std::string arg3_name="", float arg3_value=-1.0,
+			std::string arg4_name="", float arg4_value=-1.0,
+			std::string arg5_name="", float arg5_value=-1.0,
+			std::string arg6_name="", float arg6_value=-1.0
+		);
+
+		/// Output message using all available logging methods
+		void Log(const std::string& message);
+
+		/// Log message to all messagebus subscribers
+		void SendLog(const std::string& message);
+
+		/// Log message to a file (if path set)
+		void LogToFile(const std::string& message);
+
+		/// Log message to console error stream (stderr)
+		void LogToStderr(const std::string& message);
+
+		/// Enable/Disable logging
+		void Enable(bool is_enabled) { enabled = is_enabled;};
+
+		/// Close logger (sockets and/or files)
+		void Close();
+
+		/// Set or change connection info for logger (i.e. tcp://*:5556)
+		void Connection(const std::string& new_connection);
+
+		/// Set or change the file path (optional)
+		void Path(const std::string& new_path);
+
 	private:
-		juce::CriticalSection loggerCriticalSection;
-		std::string connection;
+		std::recursive_mutex mutex;
+		std::string m_connection;
 
 		// Logfile related vars
-		std::string file_path;
-		std::ofstream log_file;
+		std::string m_filePath;
+		std::ofstream m_logFile;
 		bool enabled;
 
 		/// ZMQ Context
-		zmq::context_t *context;
+		Context m_context;
 
 		/// ZMQ Socket
-		zmq::socket_t *publisher;
+		Publisher m_publisher;
 
 		/// Default constructor
 		ZmqLogger(){};  // Don't allow user to create an instance of this singleton
@@ -89,40 +141,57 @@ namespace openshot {
 
 		/// Private variable to keep track of singleton instance
 		static ZmqLogger * m_pInstance;
-
-	public:
-		/// Create or get an instance of this logger singleton (invoke the class with this method)
-		static ZmqLogger * Instance();
-
-		/// Append debug information
-		void AppendDebugMethod(
-			std::string method_name,
-			std::string arg1_name="", float arg1_value=-1.0,
-			std::string arg2_name="", float arg2_value=-1.0,
-			std::string arg3_name="", float arg3_value=-1.0,
-			std::string arg4_name="", float arg4_value=-1.0,
-			std::string arg5_name="", float arg5_value=-1.0,
-			std::string arg6_name="", float arg6_value=-1.0
-		);
-
-		/// Close logger (sockets and/or files)
-		void Close();
-
-		/// Set or change connection info for logger (i.e. tcp://*:5556)
-		void Connection(std::string new_connection);
-
-		/// Enable/Disable logging
-		void Enable(bool is_enabled) { enabled = is_enabled;};
-
-		/// Set or change the file path (optional)
-		void Path(std::string new_path);
-
-		/// Log message to all subscribers of this logger (if any)
-		void Log(std::string message);
-
-		/// Log message to a file (if path set)
-		void LogToFile(std::string message);
 	};
+
+#ifndef SWIG
+    /**
+     * @brief Stream-based logging class which feeds to ZmqLogger
+     *
+     * ZmqLogger.h includes two convenience macros intended for use
+     * with this class. They make logging quick and painless, especially when
+     * logging variables and their value.
+     *
+     * @code
+     * // (1) Use the zmqLog() macro to create an instance of StreamLogger
+     * zmqLog() << "Hyperframulated the flux capacitor!";
+     *
+     * // (2) To log a variable with its value, use the LOGVAR() macro
+     * int x = 5;
+     * int y = 10;
+     * zmqLog() << "Out of range! " << LOGVAR(x) << ", " << LOGVAR(y);
+     * @endcode
+     *
+     * These messages will be logged:
+     * 1: Hyperframulated the flux capacitor!
+     * 2: Out of range! x = 5, y = 10
+     *
+    **/
+
+    // Implementation largely inspired by this StackOverflow answer:
+    //   https://stackoverflow.com/a/48475646/200794
+    // Referencing the Dr. Dobbs article "Logging In C++" by Petru Marginean
+    //   https://www.drdobbs.com/cpp/logging-in-c/201804215
+    class StreamLog {
+        using LogFunction = std::function<void(const std::string&)>;
+
+    public:
+        /// Construct a StreamLog instance that calls logFunction to output messages
+        explicit StreamLog(LogFunction logFunction) : m_logFunction(std::move(logFunction)) {};
+        /// Return the logging stream that outputs to the selected function
+        std::ostringstream& GetStream() { return m_stringStream; }
+
+        /// Destroy the logging instance, which calls logFunction to log the stream
+        ~StreamLog() { m_logFunction(m_stringStream.str()); }
+
+ 	/// A logging function that delivers messages to ZmqLogger
+        static void zmqLogFunction(const std::string& message) {
+            ZmqLogger::Instance()->Log(message);
+        }
+    private:
+        std::ostringstream m_stringStream;
+        LogFunction m_logFunction;
+    };
+#endif  // SWIG
 
 }
 

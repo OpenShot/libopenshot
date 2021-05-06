@@ -32,6 +32,9 @@
 #include "Exceptions.h"
 #include "../Clip.h"
 #include "../Timeline.h"
+#include <QPainter>
+#include <QPainterPath>
+#include <QRegularExpression>
 
 #include <QString>
 #include <QPoint>

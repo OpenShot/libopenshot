@@ -33,6 +33,7 @@
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
+#include "ZmqLogger.h"
 
 #include <iostream>
 

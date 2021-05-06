@@ -29,6 +29,8 @@
  */
 
 #include "ReaderBase.h"
+#include "ClipBase.h"
+#include "CacheBase.h"
 
 using namespace openshot;
 

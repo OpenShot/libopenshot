@@ -1,7 +1,6 @@
 /**
  * @file
- * @brief Source file for VideoPlaybackThread class
- * @author Duzy Chan <code@duzy.info>
+ * @brief Unit tests for openshot::Fraction
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -29,52 +28,41 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "VideoPlaybackThread.h"
+#include <string>
+#include <sstream>
+#include <ostream>
+
+#include <catch2/catch.hpp>
+
 #include "ZmqLogger.h"
 
-namespace openshot
+// A destination for our logging messages
+std::stringstream output;
+// Define a log function that writes to output
+void myLogOut(const std::string& message) {
+	output << message << std::endl;
+}
+#define myLog() openshot::StreamLog(myLogOut).GetStream()
+
+TEST_CASE( "Log to stream", "[libopenshot][streamlog]" )
 {
-	// Constructor
-    VideoPlaybackThread::VideoPlaybackThread(RendererBase *rb)
-	: Thread("video-playback"), renderer(rb)
-	, render(), reset(false)
-    {
-    }
+	// Reset output buffer
+	output.str(std::string());
+	output.clear();
 
-    // Destructor
-    VideoPlaybackThread::~VideoPlaybackThread()
-    {
-    }
+	myLog() << "StreamLogger test log";
 
-    // Get the currently playing frame number (if any)
-    int64_t VideoPlaybackThread::getCurrentFramePosition()
-    {
-    	if (frame)
-    		return frame->number;
-    	else
-    		return 0;
-    }
+	CHECK(output.str() == "StreamLogger test log\n");
+}
 
-    // Start the thread
-    void VideoPlaybackThread::run()
-    {
-	while (!threadShouldExit()) {
-	    // Make other threads wait on the render event
-		bool need_render = render.wait(500);
+TEST_CASE( "LOGVAR macro", "[libopenshot][streamlog]" )
+{
+	// Reset output buffer
+	output.str(std::string());
+	output.clear();
 
-		if (need_render && frame)
-		{
-			// Debug
-			ZmqLogger::Instance()->AppendDebugMethod("VideoPlaybackThread::run (before render)", "frame->number", frame->number, "need_render", need_render);
+	int x = 10;
+	myLog() << "Value of x: " << LOGVAR(x);
 
-			// Render the frame to the screen
-			renderer->paint(frame);
-		}
-
-		// Signal to other threads that the rendered event has completed
-		rendered.signal();
-	}
-
-	return;
-    }
+	CHECK(output.str() == "Value of x: x = 10\n");
 }

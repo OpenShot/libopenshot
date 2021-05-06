@@ -148,3 +148,12 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
 	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 }
+
+TEST_CASE( "Operator ostream", "[libopenshot][fraction]" )
+{
+	std::stringstream output;
+	openshot::Fraction f3(30000, 1001);
+
+	output << f3;
+	CHECK(output.str() == "Fraction(30000, 1001)";
+}

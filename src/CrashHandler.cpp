@@ -29,6 +29,10 @@
  */
 
 #include "CrashHandler.h"
+#include "ZmqLogger.h"
+
+#include <iomanip>
+#include <sstream>
 
 using namespace std;
 using namespace openshot;

@@ -30,6 +30,7 @@
 
 #include "AudioReaderSource.h"
 #include "Exceptions.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 using namespace openshot;
@@ -66,8 +67,8 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 		amount_remaining = 0;
 	}
 
-	// Debug
-	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::GetMoreSamplesFromReader", "amount_needed", amount_needed, "amount_remaining", amount_remaining);
+	DebugLog("AudioReaderSource::GetMoreSamplesFromReader",
+		DEBUGVAR(amount_needed), DEBUGVAR(amount_remaining));
 
 	// Init estimated buffer equal to the current frame position (before getting more samples)
 	estimated_frame = frame_number;
@@ -148,7 +149,9 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	int channels = buffer->getNumChannels();
 
 	// Debug
-	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
+	DebugLog("AudioReaderSource::reverse_buffer",
+		DEBUGVAR(number_of_samples), DEBUGVAR(channels)
+	);
 
 	// Reverse array (create new buffer to hold the reversed version)
 	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
@@ -187,7 +190,7 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 		// Do we need more samples?
 		if (speed == 1) {
 			// Only refill buffers if speed is normal
-			if ((reader && reader->IsOpen() && !frame) or
+			if ((reader && reader->IsOpen() && !frame) ||
 				(reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
 				// Refill buffer from reader
 				GetMoreSamplesFromReader();
@@ -224,18 +227,31 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 		if (number_to_copy > 0)
 		{
 			// Debug
-			ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::getNextAudioBlock", "number_to_copy", number_to_copy, "buffer_samples", buffer_samples, "buffer_channels", buffer_channels, "info.numSamples", info.numSamples, "speed", speed, "position", position);
+			DebugLog("AudioReaderSource::getNextAudioBlock",
+				DEBUGVAR(number_to_copy),
+				DEBUGVAR(buffer_samples),
+				DEBUGVAR(buffer_channels),
+				DEBUGVAR(info.numSamples),
+				DEBUGVAR(speed),
+				DEBUGVAR(position));
 
 			// Loop through each channel and copy some samples
-			for (int channel = 0; channel < buffer_channels; channel++)
-				info.buffer->copyFrom(channel, info.startSample, *buffer, channel, position, number_to_copy);
+			for (int channel = 0; channel < buffer_channels; channel++) {
+				info.buffer->copyFrom(
+					channel, info.startSample, *buffer,
+					channel, position, number_to_copy
+				);
+			}
 
 			// Update the position of this audio source
 			position += number_to_copy;
 		}
 
 		// Adjust estimate frame number (the estimated frame number that is being played)
-		estimated_samples_per_frame = Frame::GetSamplesPerFrame(estimated_frame, reader->info.fps, reader->info.sample_rate, buffer_channels);
+		estimated_samples_per_frame = Frame::GetSamplesPerFrame(
+			estimated_frame, reader->info.fps,
+			reader->info.sample_rate, buffer_channels
+		);
 		estimated_frame += double(info.numSamples) / double(estimated_samples_per_frame);
 	}
 }

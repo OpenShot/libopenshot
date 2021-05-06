@@ -29,13 +29,12 @@
  */
 
 #include "Settings.h"
+#include <cstdlib>        // For std::getenv
 
-using namespace std;
 using namespace openshot;
 
-
 // Global reference to Settings
-Settings *Settings::m_pInstance = NULL;
+Settings *Settings::m_pInstance = nullptr;
 
 // Create or Get an instance of the settings singleton
 Settings *Settings::Instance()
@@ -53,6 +52,9 @@ Settings *Settings::Instance()
 		m_pInstance->HW_EN_DEVICE_SET = 0;
 		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
 		m_pInstance->DEBUG_TO_STDERR = false;
+		auto env_debug = std::getenv("LIBOPENSHOT_DEBUG");
+		if (env_debug != nullptr)
+			m_pInstance->DEBUG_TO_STDERR = true;
 	}
 
 	return m_pInstance;
