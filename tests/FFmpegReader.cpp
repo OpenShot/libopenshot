@@ -273,7 +273,7 @@ TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 	CHECK(r.GetFrame(1)->GetImage()->height() == 360);
 }
 
-TEST_CASE( "DisplayInfo", "[libopenshot][clip]" )
+TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
 	std::stringstream path;
