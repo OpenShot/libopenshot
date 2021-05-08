@@ -29,6 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+
 #include "effects/Stabilizer.h"
 #include "Exceptions.h"
 #include <google/protobuf/util/time_util.h>
@@ -116,14 +120,14 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 // Load protobuf data file
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
-
+    using std::ios;
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
 
     // Read the existing tracker message.
-    fstream input(inputFilePath, ios::in | ios::binary);
+    std::fstream input(inputFilePath, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
-        cerr << "Failed to parse protobuf message." << endl;
+        std::cerr << "Failed to parse protobuf message." << std::endl;
         return false;
     }
 

@@ -32,19 +32,21 @@
 #ifndef OPENSHOT_CVTRACKER_H
 #define OPENSHOT_CVTRACKER_H
 
-#define int64 opencv_broken_int
-#define uint64 opencv_broken_uint
+#include "OpenCVUtilities.h"
+
+#define int64 int64_t
+#define uint64 uint64_t
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/core.hpp>
 #undef uint64
 #undef int64
 
-#include <fstream>
 #include "Clip.h"
 #include "KeyFrame.h"
 #include "Frame.h"
 #include "Json.h"
+
 #include "ProcessingController.h"
 #include "protobuf_messages/trackerdata.pb.h"
 
@@ -88,7 +90,7 @@ namespace openshot
 		private:
 			std::map<size_t, FrameData> trackedDataById; // Save tracked data
 			std::string trackerType; // Name of the chosen tracker
-			cv::Ptr<cv::Tracker> tracker; // Pointer of the selected tracker
+			cv::Ptr<OPENCV_TRACKER_TYPE> tracker; // Pointer of the selected tracker
 
 			cv::Rect2d bbox; // Bounding box coords
 			SortTracker sort;
@@ -117,8 +119,8 @@ namespace openshot
 			// Constructor
 			CVTracker(std::string processInfoJson, ProcessingController &processingController);
 
-			/// Set desirable tracker method
-			cv::Ptr<cv::Tracker> selectTracker(std::string trackerType);
+			// Set desirable tracker method
+			cv::Ptr<OPENCV_TRACKER_TYPE> selectTracker(std::string trackerType);
 
 			/// Track object in the hole clip or in a given interval
 			///
