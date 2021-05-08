@@ -45,7 +45,7 @@ using namespace openshot;
 TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
 {
 	// Reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -92,7 +92,7 @@ TEST_CASE( "Webm", "[libopenshot][ffmpegwriter]" )
 TEST_CASE( "Options_Overloads", "[libopenshot][ffmpegwriter]" )
 {
 	// Reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -128,4 +128,77 @@ TEST_CASE( "Options_Overloads", "[libopenshot][ffmpegwriter]" )
 	CHECK(r1.info.pixel_ratio.den == 1);
 	CHECK_FALSE(r1.info.interlaced_frame);
 	CHECK(r1.info.top_field_first == true);
+}
+
+
+TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegwriter]" )
+{
+	// Reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	/* WRITER ---------------- */
+	FFmpegWriter w("output1.webm");
+
+	// Set options
+	w.SetAudioOptions(true, "libvorbis", 44100, 2, LAYOUT_STEREO, 188000);
+	w.SetVideoOptions(
+		true, "libvpx",
+		Fraction(24,1),
+		1280, 720,
+		Fraction(1,1),
+		false, false,
+		30000000);
+
+	// Open writer
+	w.Open();
+
+	std::string expected(
+		R"(----------------------------
+----- File Information -----
+----------------------------
+--> Has Video: true
+--> Has Audio: true
+--> Has Single Image: false
+--> Duration: 0.00 Seconds
+--> File Size: 0.00 MB
+----------------------------
+----- Video Attributes -----
+----------------------------
+--> Width: 1280
+--> Height: 720
+--> Pixel Format: -1
+--> Frames Per Second: 24.00 (24/1)
+--> Video Bit Rate: 30000 kb/s
+--> Pixel Ratio: 1.00 (1/1)
+--> Display Aspect Ratio: 1.78 (16/9)
+--> Video Codec: libvpx
+--> Video Length: 0 Frames
+--> Video Stream Index: -1
+--> Video Timebase: 0.04 (1/24)
+--> Interlaced: false
+--> Interlaced: Top Field First: false
+----------------------------
+----- Audio Attributes -----
+----------------------------
+--> Audio Codec: libvorbis
+--> Audio Bit Rate: 188 kb/s
+--> Sample Rate: 44100 Hz
+--> # of Channels: 2
+--> Channel Layout: 3
+--> Audio Stream Index: -1
+--> Audio Timebase: 1.00 (1/1)
+----------------------------)");
+
+	// Store the DisplayInfo() text in 'output'
+	std::stringstream output;
+	w.DisplayInfo(&output);
+
+	w.Close();
+
+	// Compare a [0, expected.size()) substring of output to expected
+	auto compare_value = output.str().compare(0, expected.size(), expected);
+	CHECK(compare_value == 0);
 }
