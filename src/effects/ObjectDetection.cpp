@@ -467,16 +467,6 @@ Json::Value ObjectDetection::JsonValue() const {
     }
     root["objects"] = objects;
 
-    // Add the selected object Json to root
-    if(trackedObjects.count(selectedObjectIndex) != 0){
-        auto selectedObject = trackedObjects.at(selectedObjectIndex);
-        if (selectedObject){
-            Json::Value selectedObjectJSON = selectedObject->JsonValue();
-            for (auto const& key : selectedObjectJSON.getMemberNames())
-                root[key] = selectedObjectJSON[key];
-        }
-    }
-
     // return JsonValue
     return root;
 }
