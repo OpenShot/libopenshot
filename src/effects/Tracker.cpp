@@ -54,6 +54,7 @@ Tracker::Tracker(std::string clipTrackerDataPath)
 	trackedData->LoadBoxData(clipTrackerDataPath);
 	ClipBase* parentClip = this->ParentClip();
 	trackedData->ParentClip(parentClip);
+	trackedData->Id(std::to_string(0));
 	// Insert TrackedObject with index 0 to the trackedObjects map
 	trackedObjects.insert({0, trackedData});
 }
@@ -68,6 +69,7 @@ Tracker::Tracker()
 	trackedData = std::make_shared<TrackedObjectBBox>(trackedDataObject);
 	ClipBase* parentClip = this->ParentClip();
 	trackedData->ParentClip(parentClip);
+	trackedData->Id(std::to_string(0));
 	// Insert TrackedObject with index 0 to the trackedObjects map
 	trackedObjects.insert({0, trackedData});
 }
@@ -260,17 +262,15 @@ Json::Value Tracker::JsonValue() const {
     root["BaseFPS"]["num"] = BaseFPS.num;
 	root["BaseFPS"]["den"] = BaseFPS.den;
 	root["TimeScale"] = this->TimeScale;
-	root["objects_id"] = Json::Value(Json::arrayValue);
 
 	// Add trackedObjects IDs to JSON
-	for (auto const& trackedObject : trackedObjects){
-		// Get the trackedObject JSON 
-	    Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-		root["objects_id"].append(trackedObject.second->Id());
-		// Save the trackedObject JSON on root
-        for (auto const& key : trackedObjectJSON.getMemberNames())
-			root[key] = trackedObjectJSON[key];
-	}
+	Json::Value objects;
+    for (auto const& trackedObject : trackedObjects){
+        Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
+        // add object json 
+        objects[trackedObject.second->Id()] = trackedObjectJSON;
+    }
+    root["objects"] = objects;
 
 	// return JsonValue
 	return root;
@@ -329,17 +329,26 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		}
 	}
 
-	// Set the tracked object's properties
-	for (auto const& trackedObject : trackedObjects){
-		Json::Value trackedObjectJSON = root;
-		if (!root["objects_id"].isNull())
-			trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
-		trackedObject.second->SetJsonValue(trackedObjectJSON);
+    if (!root["objects"].isNull()){
+        for (auto const& trackedObject : trackedObjects){
+            std::string obj_id = std::to_string(trackedObject.first);
+            if(!root["objects"][obj_id].isNull()){
+                trackedObject.second->SetJsonValue(root["objects"][obj_id]);
+            }
+        }
 	}
+		
+    // Set the tracked object's ids
+    if (!root["objects_id"].isNull()){
+        for (auto const& trackedObject : trackedObjects){
+            Json::Value trackedObjectJSON;
+            trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
+            trackedObject.second->SetJsonValue(trackedObjectJSON);
+        }
+    }
 
 	return;
 }
-
 
 // Get all properties for a specific frame
 std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
@@ -348,8 +357,13 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	Json::Value root;
 
 	// Add trackedObject properties to JSON
-	for (auto const& trackedObject : trackedObjects)
-		root = trackedObject.second->PropertiesJSON(requested_frame);
+	Json::Value objects;
+	for (auto const& trackedObject : trackedObjects){
+		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
+		// add object json 
+        objects[trackedObject.second->Id()] = trackedObjectJSON;
+    }
+	root["objects"] = objects;
 
 	// Append effect's properties
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);

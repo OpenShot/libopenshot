@@ -498,7 +498,7 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
         protobuf_data_path = root["protobuf_data_path"].asString();
 
         if(!LoadObjDetectdData(protobuf_data_path)){
-            throw InvalidFile("Invalid protobuf data path");
+            throw InvalidFile("Invalid protobuf data path", "");
             protobuf_data_path = "";
         }
     }
