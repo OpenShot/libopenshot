@@ -34,7 +34,7 @@
 
 using namespace openshot;
 
-TEST_CASE( "Default_Constructor", "[libopenshot][settings]" )
+TEST_CASE( "Constructor", "[libopenshot][settings]" )
 {
 	// Create an empty color
 	Settings *s = Settings::Instance();
@@ -43,7 +43,7 @@ TEST_CASE( "Default_Constructor", "[libopenshot][settings]" )
 	CHECK_FALSE(s->HIGH_QUALITY_SCALING);
 }
 
-TEST_CASE( "Change_Settings", "[libopenshot][settings]" )
+TEST_CASE( "Change settings", "[libopenshot][settings]" )
 {
 	// Create an empty color
 	Settings *s = Settings::Instance();
@@ -55,4 +55,13 @@ TEST_CASE( "Change_Settings", "[libopenshot][settings]" )
 
 	CHECK(Settings::Instance()->OMP_THREADS == 8);
 	CHECK(Settings::Instance()->HIGH_QUALITY_SCALING == true);
+}
+
+TEST_CASE( "Debug logging", "[libopenshot][settings][environment]")
+{
+	// Check the environment
+	auto envvar = std::getenv("LIBOPENSHOT_DEBUG");
+	const auto is_enabled = bool(envvar != nullptr);
+
+	CHECK(Settings::Instance()->DEBUG_TO_STDERR == is_enabled);
 }
