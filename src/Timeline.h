@@ -198,10 +198,7 @@ namespace openshot {
 		std::vector<openshot::Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
 
 		/// Get a clip's frame or generate a blank frame
-		std::shared_ptr<openshot::Frame> GetOrCreateFrame(std::shared_ptr<Frame> background_frame, openshot::Clip* clip, int64_t number);
-
-		/// Apply effects to the source frame (if any)
-		std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer);
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(std::shared_ptr<Frame> background_frame, openshot::Clip* clip, int64_t number, openshot::TimelineInfoStruct* options);
 
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);
@@ -248,6 +245,9 @@ namespace openshot {
 		/// @brief Add an effect to the timeline
 		/// @param effect Add an effect to the timeline. An effect can modify the audio or video of an openshot::Frame.
 		void AddEffect(openshot::EffectBase* effect);
+
+        /// Apply global/timeline effects to the source frame (if any)
+        std::shared_ptr<openshot::Frame> apply_effects(std::shared_ptr<openshot::Frame> frame, int64_t timeline_frame_number, int layer);
 
 		/// Apply the timeline's framerate and samplerate to all clips
 		void ApplyMapperToClips();

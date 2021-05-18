@@ -335,15 +335,36 @@ std::shared_ptr<Frame> Clip::GetFrame(int64_t frame_number)
 
 		// Get the original frame and pass it to GetFrame overload
 		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
-		return GetFrame(original_frame, frame_number);
+		return GetFrame(original_frame, frame_number, NULL);
 	}
 	else
 		// Throw error if reader not initialized
 		throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
 }
 
-// Use an existing openshot::Frame object and draw this Clip's frame onto it
+// Create an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number)
+{
+    // Check for open reader (or throw exception)
+    if (!is_open)
+        throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
+
+    if (reader)
+    {
+        // Adjust out of bounds frame number
+        frame_number = adjust_frame_number_minimum(frame_number);
+
+        // Get the original frame and pass it to GetFrame overload
+        std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
+        return GetFrame(original_frame, frame_number, NULL);
+    }
+    else
+        // Throw error if reader not initialized
+        throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+}
+
+// Use an existing openshot::Frame object and draw this Clip's frame onto it
+std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number, openshot::TimelineInfoStruct* options)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
@@ -367,8 +388,17 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
 		get_time_mapped_frame(original_frame, new_frame_number);
 
-		// Apply effects to the frame (if any)
+		// Apply local effects to the frame (if any)
 		apply_effects(original_frame);
+
+        // Apply global timeline effects (i.e. transitions & masks... if any)
+        if (timeline != NULL && options != NULL) {
+            if (options->is_top_clip) {
+                // Apply global timeline effects (only to top clip... if overlapping)
+                Timeline* timeline_instance = (Timeline*) timeline;
+                original_frame = timeline_instance->apply_effects(original_frame, options->timeline_frame_number, Layer());
+            }
+        }
 
 		// Apply keyframe / transforms
 		apply_keyframes(original_frame, background_frame->GetImage());

@@ -214,24 +214,39 @@ namespace openshot {
 		/// Look up an effect by ID
 		openshot::EffectBase* GetEffect(const std::string& id);
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
+		/// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
 		/// of samples match the source reader.
 		///
 		/// @returns A new openshot::Frame object
-		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		/// @param frame_number The frame number (starting at 1) of the clip
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override;
 
-		/// @brief Get an openshot::Frame object for a specific frame number of this timeline. The image size and number
-		/// of samples can be customized to match the Timeline, or any custom output. Extra samples will be moved to the
-		/// next Frame. Missing samples will be moved from the next Frame.
+		/// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
+        /// of samples match the background_frame passed in and the timeline (if available).
 		///
 		/// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
-		/// rendered.
+		/// rendered/rasterized.
 		///
 		/// @returns The modified openshot::Frame object
 		/// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
-		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
+		/// @param frame_number The frame number (starting at 1) of the clip. The image size and number
+        /// of samples match the background_frame passed in and the timeline (if available)
 		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number);
+
+        /// @brief Get an openshot::Frame object for a specific frame number of this clip. The image size and number
+        /// of samples match the background_frame passed in and the timeline (if available).
+        ///
+        /// A new openshot::Frame objects is returned, based on a copy from the source image, with all keyframes and clip effects
+        /// rendered/rasterized.
+        ///
+        /// @returns The modified openshot::Frame object
+        /// @param background_frame The frame object to use as a background canvas (i.e. an existing Timeline openshot::Frame instance)
+        /// @param frame_number The frame number (starting at 1) of the clip on the timeline. The image size and number
+        /// of samples match the timeline.
+        /// @param options The openshot::TimelineInfoStruct pointer, with more details about this specific timeline clip,
+        /// such as, if it's a top clip, and what the absolute timeline frame number is. This info is used to apply global
+        /// transitions and masks, if needed.
+        std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number, openshot::TimelineInfoStruct* options);
 
 		/// Open the internal reader
 		void Open() override;

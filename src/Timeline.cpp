@@ -444,7 +444,7 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 }
 
 // Get or generate a blank frame
-std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> background_frame, Clip* clip, int64_t number)
+std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> background_frame, Clip* clip, int64_t number, openshot::TimelineInfoStruct* options)
 {
 	std::shared_ptr<Frame> new_frame;
 
@@ -456,7 +456,7 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> backgro
 		ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
-		new_frame = std::shared_ptr<Frame>(clip->GetFrame(background_frame, number));
+		new_frame = std::shared_ptr<Frame>(clip->GetFrame(background_frame, number, options));
 
 		// Return real frame
 		return new_frame;
@@ -477,9 +477,15 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> backgro
 // Process a new layer of video or audio
 void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume)
 {
-	// Get the clip's frame, composited on top of the current timeline frame
+    // Create timeline options (with details about this current frame request)
+    TimelineInfoStruct* options = new TimelineInfoStruct();
+    options->timeline_frame_number = timeline_frame_number;
+    options->is_top_clip = is_top_clip;
+
+    // Get the clip's frame, composited on top of the current timeline frame
 	std::shared_ptr<Frame> source_frame;
-	source_frame = GetOrCreateFrame(new_frame, source_clip, clip_frame_number);
+	source_frame = GetOrCreateFrame(new_frame, source_clip, clip_frame_number, options);
+    delete options;
 
 	// No frame found... so bail
 	if (!source_frame)
@@ -487,12 +493,6 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
-
-	/* Apply effects to the source frame (if any). If multiple clips are overlapping, only process the
-	 * effects on the top clip. */
-	if (is_top_clip) {
-		source_frame = apply_effects(source_frame, timeline_frame_number, source_clip->Layer());
-	}
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
