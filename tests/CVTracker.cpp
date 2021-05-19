@@ -57,7 +57,7 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 1}
+        "region": {"normalized_x": 0.459375, "normalized_y": 0.28333, "normalized_width": 0.28125, "normalized_height": 0.461111, "first-frame": 1}
     } )proto";
 
     // Create tracker
@@ -73,9 +73,9 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     float height = fd.y2 - y;
 
     // Compare if tracked data is equal to pre-tested ones
-    CHECK((int)(x * 640) == 259);
-    CHECK((int)(y * 360) == 131);
-    CHECK((int)(width * 640) == 180);
+    CHECK((int)(x * 640) == 256);
+    CHECK((int)(y * 360) == 134);
+    CHECK((int)(width * 640) == 179);
     CHECK((int)(height * 360) == 166);
 }
 
