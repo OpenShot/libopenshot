@@ -371,6 +371,9 @@ bool ObjectDetection::LoadObjDetectdData(std::string inputFilePath){
                 ClipBase* parentClip = this->ParentClip();
 	            trackedObjPtr->ParentClip(parentClip);
                 
+                // Create a temp ID. This ID is necessary to initialize the object_id Json list
+                // this Id will be replaced by the one created in the UI
+                trackedObjPtr->Id(std::to_string(objectId));
                 trackedObjects.insert({objectId, trackedObjPtr});
             }
 
@@ -458,21 +461,13 @@ Json::Value ObjectDetection::JsonValue() const {
     root["display_box_text"] = display_box_text.JsonValue();
 
     // Add tracked object's IDs to root
-    root["objects_id"] = Json::Value(Json::arrayValue);
+    Json::Value objects;
     for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-        root["objects_id"].append(trackedObject.second->Id());
+        // add object json 
+        objects[trackedObject.second->Id()] = trackedObjectJSON;
     }
-
-    // Add the selected object Json to root
-    if(trackedObjects.count(selectedObjectIndex) != 0){
-        auto selectedObject = trackedObjects.at(selectedObjectIndex);
-        if (selectedObject){
-            Json::Value selectedObjectJSON = selectedObject->JsonValue();
-            for (auto const& key : selectedObjectJSON.getMemberNames())
-                root[key] = selectedObjectJSON[key];
-        }
-    }
+    root["objects"] = objects;
 
     // return JsonValue
     return root;
@@ -484,7 +479,6 @@ void ObjectDetection::SetJson(const std::string value) {
     // Parse JSON string into JSON objects
     try
     {
-        std::cout<<"entrou no objectDetection SetJson \n"<<value<<"\n\n";
         const Json::Value root = openshot::stringToJson(value);
         // Set all values that match
         SetJsonValue(root);
@@ -492,14 +486,12 @@ void ObjectDetection::SetJson(const std::string value) {
     catch (const std::exception& e)
     {
         // Error parsing JSON (or missing keys)
-        std::cout<< "\n\n"<<e.what()<<"\n\n";
         throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
     }
 }
 
 // Load Json::Value into this object
 void ObjectDetection::SetJsonValue(const Json::Value root) {
-    std::cout<<"entrou no objectDetection SetJasonValue \n"<<root<<"\n\n";
     // Set parent data
     EffectBase::SetJsonValue(root);
 
@@ -508,7 +500,7 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
         protobuf_data_path = root["protobuf_data_path"].asString();
 
         if(!LoadObjDetectdData(protobuf_data_path)){
-            std::cout<<"Invalid protobuf data path";
+            throw InvalidFile("Invalid protobuf data path", "");
             protobuf_data_path = "";
         }
     }
@@ -536,6 +528,15 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
         }
     }
 
+    if (!root["objects"].isNull()){
+        for (auto const& trackedObject : trackedObjects){
+            std::string obj_id = std::to_string(trackedObject.first);
+            if(!root["objects"][obj_id].isNull()){
+                trackedObject.second->SetJsonValue(root["objects"][obj_id]);
+            }
+        }
+    }
+
     // Set the tracked object's ids
     if (!root["objects_id"].isNull()){
         for (auto const& trackedObject : trackedObjects){
@@ -543,13 +544,6 @@ void ObjectDetection::SetJsonValue(const Json::Value root) {
             trackedObjectJSON["box_id"] = root["objects_id"][trackedObject.first].asString();
             trackedObject.second->SetJsonValue(trackedObjectJSON);
         }
-    }
-
-    // Set the selected object's properties
-    if(trackedObjects.count(selectedObjectIndex) != 0){
-        auto selectedObject = trackedObjects.at(selectedObjectIndex);
-        if (selectedObject)
-            selectedObject->SetJsonValue(root);
     }
 }
 
@@ -559,12 +553,16 @@ std::string ObjectDetection::PropertiesJSON(int64_t requested_frame) const {
     // Generate JSON properties list
     Json::Value root;
 
-    // Add the selected object Json to root
+    Json::Value objects;
     if(trackedObjects.count(selectedObjectIndex) != 0){
         auto selectedObject = trackedObjects.at(selectedObjectIndex);
-        if (selectedObject)
-            root = selectedObject->PropertiesJSON(requested_frame);
+        if (selectedObject){
+            Json::Value trackedObjectJSON = selectedObject->PropertiesJSON(requested_frame);
+            // add object json 
+            objects[selectedObject->Id()] = trackedObjectJSON;
+        }
     }
+    root["objects"] = objects;
 
     root["selected_object_index"] = add_property_json("Selected Object", selectedObjectIndex, "int", "", NULL, 0, 200, false, requested_frame);
     root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
