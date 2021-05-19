@@ -67,16 +67,16 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     kcfTracker.trackClip(c1, 1, 20, true);
     // Get tracked data
     FrameData fd = kcfTracker.GetTrackedData(20);
-    float x = fd.x1;
-    float y = fd.y1;
-    float width = fd.x2 - x;
-    float height = fd.y2 - y;
+    int x = (float)fd.x1 * 640;
+    int y = (float)fd.y1 * 360;
+    int width = ((float)fd.x2*640) - x;
+    int height = ((float)fd.y2*360) - y;
 
     // Compare if tracked data is equal to pre-tested ones
-    CHECK((int)(x * 640) == 256);
-    CHECK((int)(y * 360) == 134);
-    CHECK((int)(width * 640) == 179);
-    CHECK((int)(height * 360) == 166);
+    CHECK(x >= 255); CHECK(x <= 257);
+    CHECK(y >= 133); CHECK(y <= 135);
+    CHECK(width >= 179); CHECK(width <= 181);
+    CHECK(height >= 165); CHECK(height <= 168);
 }
 
 
