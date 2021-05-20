@@ -164,7 +164,6 @@ namespace openshot {
 		void reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 
-
 	public:
 		openshot::GravityType gravity;   ///< The gravity of a clip determines where it snaps to its parent
 		openshot::ScaleType scale;		 ///< The scale determines how a clip should be resized to fit its parent
@@ -244,8 +243,7 @@ namespace openshot {
         /// @param frame_number The frame number (starting at 1) of the clip on the timeline. The image size and number
         /// of samples match the timeline.
         /// @param options The openshot::TimelineInfoStruct pointer, with more details about this specific timeline clip,
-        /// such as, if it's a top clip, and what the absolute timeline frame number is. This info is used to apply global
-        /// transitions and masks, if needed.
+        /// such as, if it's a top clip. This info is used to apply global transitions and masks, if needed.
         std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> background_frame, int64_t frame_number, openshot::TimelineInfoStruct* options);
 
 		/// Open the internal reader

@@ -394,9 +394,9 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
         // Apply global timeline effects (i.e. transitions & masks... if any)
         if (timeline != NULL && options != NULL) {
             if (options->is_top_clip) {
-                // Apply global timeline effects (only to top clip... if overlapping)
+                // Apply global timeline effects (only to top clip... if overlapping, pass in timeline frame number)
                 Timeline* timeline_instance = (Timeline*) timeline;
-                original_frame = timeline_instance->apply_effects(original_frame, options->timeline_frame_number, Layer());
+                original_frame = timeline_instance->apply_effects(original_frame, background_frame->number, Layer());
             }
         }
 

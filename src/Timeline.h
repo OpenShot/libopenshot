@@ -175,7 +175,7 @@ namespace openshot {
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
 		/// Process a new layer of video or audio
-		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume);
+		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
 
 		/// Apply a FrameMapper to a clip which matches the settings of this timeline
 		void apply_mapper_to_clip(openshot::Clip* clip);

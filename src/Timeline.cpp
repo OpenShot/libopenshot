@@ -475,11 +475,10 @@ std::shared_ptr<Frame> Timeline::GetOrCreateFrame(std::shared_ptr<Frame> backgro
 }
 
 // Process a new layer of video or audio
-void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, int64_t timeline_frame_number, bool is_top_clip, float max_volume)
+void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume)
 {
     // Create timeline options (with details about this current frame request)
     TimelineInfoStruct* options = new TimelineInfoStruct();
-    options->timeline_frame_number = timeline_frame_number;
     options->is_top_clip = is_top_clip;
 
     // Get the clip's frame, composited on top of the current timeline frame
@@ -492,12 +491,12 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 		return;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer", "new_frame->number", new_frame->number, "clip_frame_number", clip_frame_number);
 
 	/* COPY AUDIO - with correct volume */
 	if (source_clip->Reader()->info.has_audio) {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
+		ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Copy Audio)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number);
 
 		if (source_frame->GetAudioChannelsCount() == info.channels && source_clip->has_audio.GetInt(clip_frame_number) != 0)
 			for (int channel = 0; channel < source_frame->GetAudioChannelsCount(); channel++)
@@ -550,7 +549,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 			}
 		else
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number, "timeline_frame_number", timeline_frame_number);
+			ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (No Audio Copied - Wrong # of Channels)", "source_clip->Reader()->info.has_audio", source_clip->Reader()->info.has_audio, "source_frame->GetAudioChannelsCount()", source_frame->GetAudioChannelsCount(), "info.channels", info.channels, "clip_frame_number", clip_frame_number);
 	}
 
 	// Debug output
@@ -753,7 +752,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
                 ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Calculate clip's frame #)", "clip->Position()", clip->Position(), "clip->Start()", clip->Start(), "info.fps.ToFloat()", info.fps.ToFloat(), "clip_frame_number", clip_frame_number);
 
                 // Add clip's frame as layer
-                add_layer(new_frame, clip, clip_frame_number, requested_frame, is_top_clip, max_volume);
+                add_layer(new_frame, clip, clip_frame_number, is_top_clip, max_volume);
 
             } else {
                 // Debug output
