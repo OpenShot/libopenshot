@@ -94,8 +94,14 @@ namespace openshot{
 	}
 	// Interpolate two points using the right Point's interpolation method
 	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
-		assert(left.co.X < target);
-		assert(target <= right.co.X);
+		// check if target is outside of the extremities poits
+		// This can occur when moving fast the play head
+		if(left.co.X > target){
+			return left.co.Y;
+		}
+		if(target > right.co.X){
+			return right.co.Y;
+		}
 		switch (right.interpolation) {
 		case CONSTANT: return left.co.Y;
 		case LINEAR: return InterpolateLinearCurve(left, right, target);
