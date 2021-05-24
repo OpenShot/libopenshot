@@ -695,8 +695,9 @@ TEST_CASE( "AttachToObject", "[libopenshot][keyframe]" )
 	// Tracked Data JSON
 	auto trackedDataJson = trackedData->JsonValue();
 
-	// Get and cast the trakcedObject
-	auto trackedObject_base = t.GetTrackedObject("");
+	// Get and cast the trakcedObjec
+	std::list<std::string> ids = t.GetTrackedObjectsIds();
+	auto trackedObject_base = t.GetTrackedObject(ids.front());
 	auto trackedObject = std::make_shared<TrackedObjectBBox>();
 	trackedObject = std::dynamic_pointer_cast<TrackedObjectBBox>(trackedObject_base);
 	CHECK(trackedObject == trackedData);
