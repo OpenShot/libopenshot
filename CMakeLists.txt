@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.2...3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12...3.20 FATAL_ERROR)
 
 message("\
 -----------------------------------------------------------------
