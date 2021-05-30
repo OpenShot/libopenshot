@@ -1,6 +1,7 @@
 /**
  * @file
- * @brief Unit tests for openshot::Color
+ * @brief Header file for OpenCVUtilities (set some common macros)
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -8,7 +9,7 @@
 
 /* LICENSE
  *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * Copyright (c) 2008-2021 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,40 +29,22 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <catch2/catch.hpp>
+#ifndef OPENSHOT_OPENCV_UTILITIES_H
+#define OPENSHOT_OPENCV_UTILITIES_H
 
-#include "Settings.h"
+#define int64 int64_t
+#define uint64 uint64_t
+#if USE_LEGACY_TRACKER
+    #include <opencv2/tracking.hpp>
+    #include <opencv2/tracking/tracking_legacy.hpp>
+    #define OPENCV_TRACKER_TYPE cv::legacy::Tracker
+    #define OPENCV_TRACKER_NS cv::legacy
+#else
+    #include <opencv2/tracking.hpp>
+    #define OPENCV_TRACKER_TYPE cv::Tracker
+    #define OPENCV_TRACKER_NS cv
+#endif
+#undef int64
+#undef uint64
 
-using namespace openshot;
-
-TEST_CASE( "Constructor", "[libopenshot][settings]" )
-{
-	// Create an empty color
-	Settings *s = Settings::Instance();
-
-	CHECK(s->OMP_THREADS == 12);
-	CHECK_FALSE(s->HIGH_QUALITY_SCALING);
-}
-
-TEST_CASE( "Change settings", "[libopenshot][settings]" )
-{
-	// Create an empty color
-	Settings *s = Settings::Instance();
-	s->OMP_THREADS = 8;
-	s->HIGH_QUALITY_SCALING = true;
-
-	CHECK(s->OMP_THREADS == 8);
-	CHECK(s->HIGH_QUALITY_SCALING == true);
-
-	CHECK(Settings::Instance()->OMP_THREADS == 8);
-	CHECK(Settings::Instance()->HIGH_QUALITY_SCALING == true);
-}
-
-TEST_CASE( "Debug logging", "[libopenshot][settings][environment]")
-{
-	// Check the environment
-	auto envvar = std::getenv("LIBOPENSHOT_DEBUG");
-	const auto is_enabled = bool(envvar != nullptr);
-
-	CHECK(Settings::Instance()->DEBUG_TO_STDERR == is_enabled);
-}
+#endif  // OPENSHOT_OPENCV_UTILITIES_H

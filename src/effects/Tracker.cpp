@@ -28,8 +28,14 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string>
+#include <memory>
+#include <fstream>
+#include <iostream>
+
 #include "effects/Tracker.h"
 #include "Exceptions.h"
+
 #include <google/protobuf/util/time_util.h>
 
 using namespace std;
@@ -104,14 +110,16 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 
 // Load protobuf data file
 bool Tracker::LoadTrackedData(std::string inputFilePath){
+	using std::ios;
+
     // Create tracker message
     pb_tracker::Tracker trackerMessage;
 
     {
         // Read the existing tracker message.
-        fstream input(inputFilePath, ios::in | ios::binary);
+        std::fstream input(inputFilePath, ios::in | ios::binary);
         if (!trackerMessage.ParseFromIstream(&input)) {
-            cerr << "Failed to parse protobuf message." << endl;
+            std::cerr << "Failed to parse protobuf message." << std::endl;
             return false;
         }
     }
@@ -202,7 +210,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		protobuf_data_path = (root["protobuf_data_path"].asString());
 
 		if(!LoadTrackedData(protobuf_data_path)){
-			std::cout<<"Invalid protobuf data path";
+			std::cerr << "Invalid protobuf data path\n";
 			protobuf_data_path = "";
 		}
 	}
