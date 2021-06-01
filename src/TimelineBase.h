@@ -59,6 +59,11 @@ namespace openshot {
 
 		/// Constructor for the base timeline
 		TimelineBase();
+
+		/// This function will be overloaded in the Timeline class passing no arguments
+		/// so we'll be able to access the Timeline::Clips() function from a pointer object of
+		/// the TimelineBase class
+		virtual void Clips(int test);
 	};
 }
 

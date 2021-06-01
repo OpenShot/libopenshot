@@ -2,6 +2,7 @@
  * @file
  * @brief Track an object selected by the user
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -125,6 +126,9 @@ namespace openshot
 			///
 			/// If start, end and process_interval are passed as argument, clip will be processed in [start,end)
 			void trackClip(openshot::Clip& video, size_t _start=0, size_t _end=0, bool process_interval=false);
+
+			/// Filter current bounding box jitter
+			cv::Rect2d filter_box_jitter(size_t frameId);
 
 			/// Get tracked data for a given frame
 			FrameData GetTrackedData(size_t frameId);

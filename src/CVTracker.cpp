@@ -2,6 +2,7 @@
  * @file
  * @brief Track an object selected by the user
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -44,8 +45,8 @@ using google::protobuf::util::TimeUtil;
 CVTracker::CVTracker(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController), json_interval(false){
     SetJson(processInfoJson);
-    start = 0;
-    end = 0;
+    start = 1;
+    end = 1;
 }
 
 // Set desirable tracker method
@@ -76,15 +77,15 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
     if(!json_interval){
         start = _start; end = _end;
 
-        if(!process_interval || end <= 0 || end-start == 0){
+        if(!process_interval || end <= 1 || end-start == 0){
             // Get total number of frames in video
-            start = video.Start() * video.Reader()->info.fps.ToInt();
-            end = video.End() * video.Reader()->info.fps.ToInt();
+            start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+            end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
         }
     }
     else{
-        start = start + video.Start() * video.Reader()->info.fps.ToInt();
-        end = video.End() * video.Reader()->info.fps.ToInt();
+        start = (int)(start + video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
     }
 
     if(error){
@@ -110,6 +111,12 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
 
         // Grab OpenCV Mat image
         cv::Mat cvimage = f->GetImageCV();
+
+        if(frame == start){
+            // Take the normalized inital bounding box and multiply to the current video shape
+            bbox = cv::Rect2d(bbox.x*cvimage.cols,bbox.y*cvimage.rows,bbox.width*cvimage.cols,
+                                        bbox.height*cvimage.rows);
+        }
 
         // Pass the first frame to initialize the tracker
         if(!trackerInit){
@@ -175,28 +182,40 @@ bool CVTracker::trackFrame(cv::Mat &frame, size_t frameId){
         float fw = frame.size().width;
         float fh = frame.size().height;
 
-        std::vector<cv::Rect> bboxes = {bbox};
-        std::vector<float> confidence = {1.0};
-        std::vector<int> classId = {1};
-
-        sort.update(bboxes, frameId, sqrt(pow(frame.rows, 2) + pow(frame.cols, 2)), confidence, classId);
-
-        for(auto TBox : sort.frameTrackingResult)
-            bbox = TBox.box;
-
+        cv::Rect2d filtered_box = filter_box_jitter(frameId);
         // Add new frame data
-        trackedDataById[frameId] = FrameData(frameId, 0, (bbox.x)/fw,
-                                                         (bbox.y)/fh,
-                                                         (bbox.x+bbox.width)/fw,
-                                                         (bbox.y+bbox.height)/fh);
+        trackedDataById[frameId] = FrameData(frameId, 0, (filtered_box.x)/fw,
+                                                         (filtered_box.y)/fh,
+                                                         (filtered_box.x+filtered_box.width)/fw,
+                                                         (filtered_box.y+filtered_box.height)/fh);
     }
     else
     {
-        // Add new frame data
-        trackedDataById[frameId] = FrameData(frameId);
+        // Copy the last frame data if the tracker get lost
+        trackedDataById[frameId] = trackedDataById[frameId-1];
     }
 
     return ok;
+}
+
+cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
+    // get tracked data for the previous frame
+    float last_box_width = trackedDataById[frameId-1].x2 - trackedDataById[frameId-1].x1;
+    float last_box_height = trackedDataById[frameId-1].y2 - trackedDataById[frameId-1].y1;
+
+    float curr_box_width  = bbox.width;
+    float curr_box_height  = bbox.height;
+    // keep the last width and height if the difference is less than 1%
+    float threshold = 0.01;
+    
+    cv::Rect2d filtered_box = bbox;
+    if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
+        filtered_box.width = last_box_width;
+    }
+    if(std::abs(1-(curr_box_height/last_box_height)) <= threshold){
+        filtered_box.height = last_box_height;
+    }
+    return filtered_box;
 }
 
 bool CVTracker::SaveTrackedData(){
@@ -289,10 +308,10 @@ void CVTracker::SetJsonValue(const Json::Value root) {
 	}
 
     if (!root["region"].isNull()){
-        double x = root["region"]["x"].asDouble();
-        double y = root["region"]["y"].asDouble();
-        double w = root["region"]["width"].asDouble();
-        double h = root["region"]["height"].asDouble();
+        double x = root["region"]["normalized_x"].asDouble();
+        double y = root["region"]["normalized_y"].asDouble();
+        double w = root["region"]["normalized_width"].asDouble();
+        double h = root["region"]["normalized_height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
 	}

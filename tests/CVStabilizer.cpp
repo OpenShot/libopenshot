@@ -2,6 +2,7 @@
  * @file
  * @brief Unit tests for CVStabilizer
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -62,7 +63,7 @@ TEST_CASE( "Stabilize_Video", "[libopenshot][opencv][stabilizer]" )
     CVStabilization stabilizer(json_data, stabilizer_pc);
 
     // Stabilize clip for frames 0-21
-    stabilizer.stabilizeClip(c1, 0, 21, true);
+    stabilizer.stabilizeClip(c1, 1, 21, true);
 
     // Get stabilized data
     TransformParam tp = stabilizer.GetTransformParamData(20);
@@ -106,7 +107,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][stabilizer]" )
     CVStabilization stabilizer_1(json_data, stabilizer_pc);
 
     // Stabilize clip for frames 0-20
-    stabilizer_1.stabilizeClip(c1, 0, 20+1, true);
+    stabilizer_1.stabilizeClip(c1, 1, 20+1, true);
 
     // Get stabilized data
     TransformParam tp_1 = stabilizer_1.GetTransformParamData(20);

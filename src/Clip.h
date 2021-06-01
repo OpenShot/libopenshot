@@ -44,6 +44,7 @@
 #include <memory>
 #include <string>
 #include <QtGui/QImage>
+
 #include "AudioResampler.h"
 #include "ClipBase.h"
 #include "Color.h"
@@ -53,6 +54,7 @@
 #include "EffectInfo.h"
 #include "Frame.h"
 #include "KeyFrame.h"
+#include "TrackedObjectBase.h"
 #include "ReaderBase.h"
 #include <OpenShotAudio.h>
 
@@ -122,6 +124,10 @@ namespace openshot {
 		bool waveform; ///< Should a waveform be used instead of the clip's image
 		std::list<openshot::EffectBase*> effects; ///< List of clips on this timeline
 		bool is_open;	///< Is Reader opened
+		std::string parentObjectId; ///< Id of the bounding box that this clip is attached to
+		std::shared_ptr<openshot::TrackedObjectBase> parentTrackedObject; ///< Tracked object this clip is attached to
+		openshot::Clip* parentClipObject; ///< Clip object this clip is attached to
+
 
 		// Audio resampler (if time mapping)
 		openshot::AudioResampler *resampler;
@@ -197,6 +203,23 @@ namespace openshot {
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
 
+		/// Get and set the object id that this clip is attached to
+		std::string GetAttachedId() const { return parentObjectId; };
+		/// Set id of the object id that this clip is attached to
+		void SetAttachedId(std::string value) { parentObjectId = value; };
+
+		/// Attach clip to Tracked Object or to another Clip
+		void AttachToObject(std::string object_id);
+
+		/// Set the pointer to the trackedObject this clip is attached to
+		void SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
+		/// Set the pointer to the clip this clip is attached to
+		void SetAttachedClip(Clip* clipObject);
+		/// Return a pointer to the trackedObject this clip is attached to
+		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return parentTrackedObject; };
+		/// Return a pointer to the clip this clip is attached to
+		Clip* GetAttachedClip() const { return parentClipObject; };
+		
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 

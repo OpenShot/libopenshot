@@ -86,6 +86,7 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   Json.cpp
   KeyFrame.cpp
+  TrackedObjectBase.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp
   PlayerBase.cpp
@@ -105,6 +106,7 @@ set(OPENSHOT_CV_SOURCES
   CVStabilization.cpp
   ClipProcessingJobs.cpp
   CVObjectDetection.cpp
+  TrackedObjectBBox.cpp
   effects/Stabilizer.cpp
   effects/Tracker.cpp
   effects/ObjectDetection.cpp
@@ -288,7 +290,7 @@ mark_as_advanced(QT_VERSION_STR)
 # Find FFmpeg libraries (used for video encoding / decoding)
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
-set(all_comps avcodec avformat avutil swscale)
+set(all_comps avcodec avformat avutil swscale avresample)
 if(TARGET FFmpeg::swresample)
   list(APPEND all_comps swresample)
 else()
@@ -507,3 +509,4 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
+

@@ -40,6 +40,18 @@
 
 namespace openshot {
 
+	/// Check if the X coordinate of a given Point is lower than a given value
+	bool IsPointBeforeX(Point const & p, double const x);
+
+	/// Linear interpolation between two points
+	double InterpolateLinearCurve(Point const & left, Point const & right, double const target);
+
+	/// Bezier interpolation between two points
+	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error);
+
+	/// Interpolate two points using the right Point's interpolation method
+	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error);
+
 	/**
 	 * @brief A Keyframe is a collection of Point instances, which is used to vary a number or property over time.
 	 *
@@ -58,8 +70,10 @@ namespace openshot {
 	 * \endcode
 	 */
 	class Keyframe {
+	
+
 	private:
-		std::vector<Point> Points;			///< Vector of all Points
+		std::vector<Point> Points;	///< Vector of all Points
 
 	public:
 		/// Default constructor for the Keyframe class

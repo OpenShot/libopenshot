@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for Stabilizer effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -76,7 +77,7 @@ namespace openshot
 {
 
     /**
-     * @brief This class stabilizes video clip to remove undesired shaking and jitter.
+     * @brief This class stabilizes a video clip to remove undesired shaking and jitter.
      *
      * Adding stabilization is useful to increase video quality overall, since it removes
      * from subtle to harsh unexpected camera movements.

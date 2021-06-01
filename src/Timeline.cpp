@@ -243,6 +243,115 @@ Timeline::~Timeline() {
 	}
 }
 
+// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(trackedObject->Id());
+
+	if (iterator != tracked_objects.end()){
+		// Tracked object's id already present on the map, overwrite it
+		iterator->second = trackedObject;
+	} 
+	else{
+		// Tracked object's id not present -> insert it on the map
+		tracked_objects[trackedObject->Id()] = trackedObject;
+	}
+
+	return;
+}
+
+// Return tracked object pointer by it's id
+std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::string id) const{
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(id);
+
+	if (iterator != tracked_objects.end()){
+		// Id found, return the pointer to the tracked object
+		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = iterator->second;
+		return trackedObject;
+	}
+	else {
+		// Id not found, return a null pointer
+		return nullptr;
+	}	
+}
+
+// Return the ID's of the tracked objects as a list of strings
+std::list<std::string> Timeline::GetTrackedObjectsIds() const{
+
+	// Create a list of strings
+	std::list<std::string> trackedObjects_ids;
+
+	// Iterate through the tracked_objects map
+	for (auto const& it: tracked_objects){
+		// Add the IDs to the list
+		trackedObjects_ids.push_back(it.first);
+	}
+
+	return trackedObjects_ids;
+}
+
+#ifdef USE_OPENCV
+// Return the trackedObject's properties as a JSON string
+std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_number) const {
+
+	// Initialize the JSON object
+	Json::Value trackedObjectJson;
+
+	// Search for the tracked object on the map
+	auto iterator = tracked_objects.find(id);
+
+	if (iterator != tracked_objects.end())
+	{
+		// Id found, Get the object pointer and cast it as a TrackedObjectBBox
+		std::shared_ptr<TrackedObjectBBox> trackedObject = std::static_pointer_cast<TrackedObjectBBox>(iterator->second);
+
+		// Get the trackedObject values for it's first frame
+		if (trackedObject->ExactlyContains(frame_number)){
+			BBox box = trackedObject->GetBox(frame_number);
+			float x1 = box.cx - (box.width/2);
+			float y1 = box.cy - (box.height/2);
+			float x2 = box.cx + (box.width/2);
+			float y2 = box.cy + (box.height/2);
+			float rotation = box.angle;
+
+			trackedObjectJson["x1"] = x1;
+			trackedObjectJson["y1"] = y1;
+			trackedObjectJson["x2"] = x2;
+			trackedObjectJson["y2"] = y2;
+			trackedObjectJson["rotation"] = rotation;
+		
+		} else {
+			BBox box = trackedObject->BoxVec.begin()->second;
+			float x1 = box.cx - (box.width/2);
+			float y1 = box.cy - (box.height/2);
+			float x2 = box.cx + (box.width/2);
+			float y2 = box.cy + (box.height/2);
+			float rotation = box.angle;
+
+			trackedObjectJson["x1"] = x1;
+			trackedObjectJson["y1"] = y1;
+			trackedObjectJson["x2"] = x2;
+			trackedObjectJson["y2"] = y2;
+			trackedObjectJson["rotation"] = rotation;
+		}
+
+	}
+	else {
+		// Id not found, return all 0 values
+		trackedObjectJson["x1"] = 0;
+		trackedObjectJson["y1"] = 0;
+		trackedObjectJson["x2"] = 0;
+		trackedObjectJson["y2"] = 0;
+		trackedObjectJson["rotation"] = 0;
+	}	
+
+	return trackedObjectJson.toStyledString();
+}
+#endif
+
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
@@ -325,6 +434,25 @@ openshot::EffectBase* Timeline::GetClipEffect(const std::string& id)
 		}
 	}
 	return nullptr;
+}
+
+// Return the list of effects on all clips
+std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
+
+	// Initialize the list
+	std::list<EffectBase*> timelineEffectsList;
+
+	// Loop through all clips
+	for (const auto& clip : clips) {
+		
+		// Get the clip's list of effects
+		std::list<EffectBase*> clipEffectsList = clip->Effects();
+
+		// Append the clip's effects to the list
+		timelineEffectsList.insert(timelineEffectsList.end(), clipEffectsList.begin(), clipEffectsList.end());
+	}
+
+	return timelineEffectsList;
 }
 
 // Compute the end time of the latest timeline element
@@ -677,6 +805,18 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			return frame;
 		}
 
+		// Check if previous frame was cached? (if not, assume we are seeking somewhere else on the Timeline, and need
+		// to clear all cache (for continuity sake). For example, jumping back to a previous spot can cause issues with audio
+		// data where the new jump location doesn't match up with the previously cached audio data.
+		std::shared_ptr<Frame> previous_frame = final_cache->GetFrame(requested_frame - 1);
+		if (!previous_frame) {
+			// Seeking to new place on timeline (destroy cache)
+			ClearAllCache();
+		}
+
+		// Minimum number of frames to process (for performance reasons)
+		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
+
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
 		std::vector<Clip*> nearby_clips;
@@ -919,6 +1059,13 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		for (const Json::Value existing_clip : root["clips"]) {
 			// Create Clip
 			Clip *c = new Clip();
+
+			// When a clip is attached to an object, it searches for the object
+			// on it's parent timeline. Setting the parent timeline of the clip here
+			// allows attaching it to an object when exporting the project (because)
+			// the exporter script initializes the clip and it's effects 
+			// before setting it's parent timeline.
+			c->ParentTimeline(this);
 
 			// Load Json into Clip
 			c->SetJsonValue(existing_clip);

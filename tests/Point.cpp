@@ -30,6 +30,7 @@
 
 #include <catch2/catch.hpp>
 #include <sstream>
+
 #include "Point.h"
 #include "Enums.h"
 #include "Exceptions.h"
