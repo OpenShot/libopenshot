@@ -795,16 +795,16 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["scale"]["choices"].append(add_property_choice_json("Crop", SCALE_CROP, scale));
 	root["scale"]["choices"].append(add_property_choice_json("Best Fit", SCALE_FIT, scale));
 	root["scale"]["choices"].append(add_property_choice_json("Stretch", SCALE_STRETCH, scale));
-	root["scale"]["choices"].append(add_property_choice_json("", SCALE_NONE, scale));
+	root["scale"]["choices"].append(add_property_choice_json("None", SCALE_NONE, scale));
 
 	// Add frame number display choices (dropdown style)
-	root["display"]["choices"].append(add_property_choice_json("", FRAME_DISPLAY_NONE, display));
+	root["display"]["choices"].append(add_property_choice_json("None", FRAME_DISPLAY_NONE, display));
 	root["display"]["choices"].append(add_property_choice_json("Clip", FRAME_DISPLAY_CLIP, display));
 	root["display"]["choices"].append(add_property_choice_json("Timeline", FRAME_DISPLAY_TIMELINE, display));
 	root["display"]["choices"].append(add_property_choice_json("Both", FRAME_DISPLAY_BOTH, display));
 
 	// Add volume mixing choices (dropdown style)
-	root["mixing"]["choices"].append(add_property_choice_json("", VOLUME_MIX_NONE, mixing));
+	root["mixing"]["choices"].append(add_property_choice_json("None", VOLUME_MIX_NONE, mixing));
 	root["mixing"]["choices"].append(add_property_choice_json("Average", VOLUME_MIX_AVERAGE, mixing));
 	root["mixing"]["choices"].append(add_property_choice_json("Reduce", VOLUME_MIX_REDUCE, mixing));
 
