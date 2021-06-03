@@ -56,7 +56,7 @@ float Fraction::ToFloat() {
 }
 
 // Return this fraction as a double (i.e. 1/2 = 0.5)
-double Fraction::ToDouble() {
+double Fraction::ToDouble() const {
 	return double(num) / double(den);
 }
 
@@ -91,7 +91,7 @@ void Fraction::Reduce() {
 }
 
 // Return the reciprocal as a new Fraction
-Fraction Fraction::Reciprocal()
+Fraction Fraction::Reciprocal() const
 {
 	// flip the fraction
 	return Fraction(den, num);

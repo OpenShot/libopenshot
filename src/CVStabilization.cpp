@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for CVStabilization class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -43,8 +44,8 @@ using google::protobuf::util::TimeUtil;
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController){
     SetJson(processInfoJson);
-    start = 0;
-    end = 0;
+    start = 1;
+    end = 1;
 }
 
 // Process clip and store necessary stabilization data
@@ -64,10 +65,10 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
     cv::Size readerDims(video.Reader()->info.width, video.Reader()->info.height);
 
     size_t frame_number;
-    if(!process_interval || end == 0 || end-start == 0){
+    if(!process_interval || end <= 1 || end-start == 0){
         // Get total number of frames in video
-        start = video.Start() * video.Reader()->info.fps.ToInt();
-        end = video.End() * video.Reader()->info.fps.ToInt();
+        start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
     }
 
     // Extract and track opticalflow features for each frame

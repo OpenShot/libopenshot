@@ -176,6 +176,9 @@ std::string ChromaKey::PropertiesJSON(int64_t requested_frame) const {
 	root["color"]["green"] = add_property_json("Green", color.green.GetValue(requested_frame), "float", "", &color.green, 0, 255, false, requested_frame);
 	root["fuzz"] = add_property_json("Fuzz", fuzz.GetValue(requested_frame), "float", "", &fuzz, 0, 125, false, requested_frame);
 
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+
 	// Return formatted string
 	return root.toStyledString();
 }

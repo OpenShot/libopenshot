@@ -58,6 +58,7 @@ void Clip::init_settings()
 	mixing = VOLUME_MIX_NONE;
 	waveform = false;
 	previous_properties = "";
+	parentObjectId = "";
 
 	// Init scale curves
 	scale_x = Keyframe(1.0);
@@ -98,6 +99,10 @@ void Clip::init_settings()
 	// Init audio and video overrides
 	has_audio = Keyframe(-1.0);
 	has_video = Keyframe(-1.0);
+
+	// Initialize the attached object and attached clip as null pointers
+	parentTrackedObject = nullptr;
+	parentClipObject = NULL;
 
 	// Init reader info struct
 	init_reader_settings();
@@ -238,6 +243,40 @@ Clip::~Clip()
 		delete resampler;
 		resampler = NULL;
 	}
+}
+
+// Attach clip to bounding box
+void Clip::AttachToObject(std::string object_id)
+{
+	// Search for the tracked object on the timeline
+	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+
+	if (parentTimeline) {
+		// Create a smart pointer to the tracked object from the timeline
+		std::shared_ptr<openshot::TrackedObjectBase> trackedObject = parentTimeline->GetTrackedObject(object_id);
+		Clip* clipObject = parentTimeline->GetClip(object_id);
+
+		// Check for valid tracked object
+		if (trackedObject){
+			SetAttachedObject(trackedObject);
+		}
+		else if (clipObject) {
+			SetAttachedClip(clipObject);
+		}
+	}
+	return;
+}
+
+// Set the pointer to the trackedObject this clip is attached to
+void Clip::SetAttachedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
+	parentTrackedObject = trackedObject;
+	return;
+}
+
+// Set the pointer to the clip this clip is attached to
+void Clip::SetAttachedClip(Clip* clipObject){
+	parentClipObject = clipObject;
+	return;
 }
 
 /// Set the current reader
@@ -736,7 +775,11 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	root["display"] = add_property_json("Frame Number", display, "int", "", NULL, 0, 3, false, requested_frame);
 	root["mixing"] = add_property_json("Volume Mixing", mixing, "int", "", NULL, 0, 2, false, requested_frame);
 	root["waveform"] = add_property_json("Waveform", waveform, "int", "", NULL, 0, 1, false, requested_frame);
-
+	if (!parentObjectId.empty()) {
+		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", parentObjectId, NULL, -1, -1, false, requested_frame);
+	} else {
+		root["parentObjectId"] = add_property_json("Parent", 0.0, "string", "", NULL, -1, -1, false, requested_frame);
+	}
 	// Add gravity choices (dropdown style)
 	root["gravity"]["choices"].append(add_property_choice_json("Top Left", GRAVITY_TOP_LEFT, gravity));
 	root["gravity"]["choices"].append(add_property_choice_json("Top Center", GRAVITY_TOP, gravity));
@@ -768,16 +811,77 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
+	
+	// Add the parentTrackedObject's properties
+	if (parentTrackedObject)
+	{	
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
+
+		// Get attached object's parent clip properties
+		std::map< std::string, float > trackedObjectParentClipProperties = parentTrackedObject->GetParentClipProperties(timeline_frame_number);
+		double parentObject_frame_number = trackedObjectParentClipProperties["frame_number"];
+		// Get attached object properties
+		std::map< std::string, float > trackedObjectProperties = parentTrackedObject->GetBoxValues(parentObject_frame_number);
+		
+		// Correct the parent Tracked Object properties by the clip's reference system
+		float parentObject_location_x = trackedObjectProperties["cx"] - 0.5 + trackedObjectParentClipProperties["cx"];
+		float parentObject_location_y = trackedObjectProperties["cy"] - 0.5 + trackedObjectParentClipProperties["cy"];
+		float parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
+		float parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
+		float parentObject_rotation = trackedObjectProperties["r"] + trackedObjectParentClipProperties["r"];
+
+		// Add the parent Tracked Object properties to JSON
+		root["location_x"] = add_property_json("Location X", parentObject_location_x, "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+		root["location_y"] = add_property_json("Location Y", parentObject_location_y, "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+		root["scale_x"] = add_property_json("Scale X", parentObject_scale_x, "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+		root["scale_y"] = add_property_json("Scale Y", parentObject_scale_y, "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+		root["rotation"] = add_property_json("Rotation", parentObject_rotation, "float", "", &rotation, -360, 360, false, requested_frame);
+		root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
+		root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
+	}
+	// Add the parentClipObject's properties
+	else if (parentClipObject)
+	{
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
+
+		// Correct the parent Clip Object properties by the clip's reference system
+		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		float parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
+		float parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
+		float parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
+		float parentObject_shear_x = parentClipObject->shear_x.GetValue(timeline_frame_number);
+		float parentObject_shear_y = parentClipObject->shear_y.GetValue(timeline_frame_number);
+		float parentObject_rotation = parentClipObject->rotation.GetValue(timeline_frame_number);
+
+		// Add the parent Clip Object properties to JSON
+		root["location_x"] = add_property_json("Location X", parentObject_location_x, "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+		root["location_y"] = add_property_json("Location Y", parentObject_location_y, "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+		root["scale_x"] = add_property_json("Scale X", parentObject_scale_x, "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+		root["scale_y"] = add_property_json("Scale Y", parentObject_scale_y, "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+		root["rotation"] = add_property_json("Rotation", parentObject_rotation, "float", "", &rotation, -360, 360, false, requested_frame);
+		root["shear_x"] = add_property_json("Shear X", parentObject_shear_x, "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
+		root["shear_y"] = add_property_json("Shear Y", parentObject_shear_y, "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
+	}
+	else
+	{
+		// Add this own clip's properties to JSON
+		root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", &location_x, -1.0, 1.0, false, requested_frame);
+		root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", &location_y, -1.0, 1.0, false, requested_frame);
+		root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
+		root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
+		root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
+		root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
+		root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
+	}
 
 	// Keyframes
-	root["location_x"] = add_property_json("Location X", location_x.GetValue(requested_frame), "float", "", &location_x, -1.0, 1.0, false, requested_frame);
-	root["location_y"] = add_property_json("Location Y", location_y.GetValue(requested_frame), "float", "", &location_y, -1.0, 1.0, false, requested_frame);
-	root["scale_x"] = add_property_json("Scale X", scale_x.GetValue(requested_frame), "float", "", &scale_x, 0.0, 1.0, false, requested_frame);
-	root["scale_y"] = add_property_json("Scale Y", scale_y.GetValue(requested_frame), "float", "", &scale_y, 0.0, 1.0, false, requested_frame);
 	root["alpha"] = add_property_json("Alpha", alpha.GetValue(requested_frame), "float", "", &alpha, 0.0, 1.0, false, requested_frame);
-	root["shear_x"] = add_property_json("Shear X", shear_x.GetValue(requested_frame), "float", "", &shear_x, -1.0, 1.0, false, requested_frame);
-	root["shear_y"] = add_property_json("Shear Y", shear_y.GetValue(requested_frame), "float", "", &shear_y, -1.0, 1.0, false, requested_frame);
-	root["rotation"] = add_property_json("Rotation", rotation.GetValue(requested_frame), "float", "", &rotation, -360, 360, false, requested_frame);
 	root["origin_x"] = add_property_json("Origin X", origin_x.GetValue(requested_frame), "float", "", &origin_x, 0.0, 1.0, false, requested_frame);
 	root["origin_y"] = add_property_json("Origin Y", origin_y.GetValue(requested_frame), "float", "", &origin_y, 0.0, 1.0, false, requested_frame);
 	root["volume"] = add_property_json("Volume", volume.GetValue(requested_frame), "float", "", &volume, 0.0, 1.0, false, requested_frame);
@@ -810,6 +914,7 @@ Json::Value Clip::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = ClipBase::JsonValue(); // get parent properties
+	root["parentObjectId"] = parentObjectId;
 	root["gravity"] = gravity;
 	root["scale"] = scale;
 	root["anchor"] = anchor;
@@ -884,6 +989,15 @@ void Clip::SetJsonValue(const Json::Value root) {
 	ClipBase::SetJsonValue(root);
 
 	// Set data from Json (if key is found)
+	if (!root["parentObjectId"].isNull()){
+		parentObjectId = root["parentObjectId"].asString();
+		if (parentObjectId.size() > 0 && parentObjectId != ""){
+			AttachToObject(parentObjectId);
+		} else{
+			parentTrackedObject = nullptr;
+			parentClipObject = NULL;
+		}
+	}
 	if (!root["gravity"].isNull())
 		gravity = (GravityType) root["gravity"].asInt();
 	if (!root["scale"].isNull())
@@ -1066,6 +1180,40 @@ void Clip::AddEffect(EffectBase* effect)
 
 	// Sort effects
 	sort_effects();
+
+	// Get the parent timeline of this clip
+	Timeline* parentTimeline = (Timeline *) ParentTimeline();
+
+	if (parentTimeline)
+		effect->ParentTimeline(parentTimeline);
+
+    #ifdef USE_OPENCV
+	// Add Tracked Object to Timeline
+	if (effect->info.has_tracked_object){
+
+		// Check if this clip has a parent timeline
+		if (parentTimeline){
+
+			effect->ParentTimeline(parentTimeline);
+
+			// Iterate through effect's vector of Tracked Objects
+			for (auto const& trackedObject : effect->trackedObjects){
+				
+				// Cast the Tracked Object as TrackedObjectBBox
+				std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
+
+				// Set the Tracked Object's parent clip to this
+				trackedObjectBBox->ParentClip(this);
+
+				// Add the Tracked Object to the timeline
+				parentTimeline->AddTrackedObject(trackedObjectBBox);
+			}	
+		}
+	}
+    #endif
+
+	// Clear cache
+	cache.Clear();
 }
 
 // Remove an effect from the clip
@@ -1206,6 +1354,12 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
+
+	// Apply stretch scale to correctly fit the bounding-box
+	if (parentTrackedObject){
+		scale = SCALE_STRETCH;
+	}
+
 	switch (scale)
 	{
 		case (SCALE_FIT): {
@@ -1243,6 +1397,74 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		}
 	}
 
+	// Initialize parent object's properties (Clip or Tracked Object)
+	float parentObject_location_x = 0.0;
+	float parentObject_location_y = 0.0;
+	float parentObject_scale_x = 1.0;
+	float parentObject_scale_y = 1.0;
+	float parentObject_shear_x = 0.0;
+	float parentObject_shear_y = 0.0;
+	float parentObject_rotation = 0.0;
+
+	// Get the parentClipObject properties
+	if (parentClipObject){
+
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
+
+		// Get parent object's properties (Clip)
+		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
+		parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
+		parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
+		parentObject_shear_x = parentClipObject->shear_x.GetValue(timeline_frame_number);
+		parentObject_shear_y = parentClipObject->shear_y.GetValue(timeline_frame_number);
+		parentObject_rotation = parentClipObject->rotation.GetValue(timeline_frame_number);
+	}
+
+	// Get the parentTrackedObject properties
+	if (parentTrackedObject){
+
+		// Convert Clip's frame position to Timeline's frame position
+		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
+		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
+
+		// Get parentTrackedObject's parent clip's properties
+		std::map<std::string, float> trackedObjectParentClipProperties = parentTrackedObject->GetParentClipProperties(timeline_frame_number);
+
+		// Get the attached object's parent clip's properties
+		if (!trackedObjectParentClipProperties.empty())
+		{
+			// Get parent object's properties (Tracked Object)
+			float parentObject_frame_number = trackedObjectParentClipProperties["frame_number"];
+
+			// Access the parentTrackedObject's properties
+			std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(parentObject_frame_number);
+
+			// Get the Tracked Object's properties and correct them by the clip's reference system
+			parentObject_location_x = trackedObjectProperties["cx"] - 0.5 + trackedObjectParentClipProperties["location_x"];
+			parentObject_location_y = trackedObjectProperties["cy"] - 0.5 + trackedObjectParentClipProperties["location_y"];
+			parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
+			parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
+			parentObject_rotation = trackedObjectProperties["r"] + trackedObjectParentClipProperties["rotation"];
+		} 
+		else 
+		{
+			// Access the parentTrackedObject's properties
+			std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(timeline_frame_number);
+
+			// Get the Tracked Object's properties and correct them by the clip's reference system
+			parentObject_location_x = trackedObjectProperties["cx"] - 0.5;
+			parentObject_location_y = trackedObjectProperties["cy"] - 0.5;
+			parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
+			parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
+			parentObject_rotation = trackedObjectProperties["r"];
+		}
+	}
+
 	/* GRAVITY LOCATION - Initialize X & Y to the correct values (before applying location curves) */
 	float x = 0.0; // left
 	float y = 0.0; // top
@@ -1250,9 +1472,16 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	// Adjust size for scale x and scale y
 	float sx = scale_x.GetValue(frame->number); // percentage X scale
 	float sy = scale_y.GetValue(frame->number); // percentage Y scale
+
+	// Change clip's scale to parentObject's scale
+	if(parentObject_scale_x != 0.0 && parentObject_scale_y != 0.0){
+		sx*= parentObject_scale_x;
+		sy*= parentObject_scale_y;
+	}
+
 	float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
-
+	
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
@@ -1291,16 +1520,16 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
+	QTransform transform;
+		
 	/* LOCATION, ROTATION, AND SCALE */
-	float r = rotation.GetValue(frame->number); // rotate in degrees
-	x += (width * location_x.GetValue(frame->number)); // move in percentage of final width
-	y += (height * location_y.GetValue(frame->number)); // move in percentage of final height
-	float shear_x_value = shear_x.GetValue(frame->number);
-	float shear_y_value = shear_y.GetValue(frame->number);
+	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
+	x += (width * (location_x.GetValue(frame->number) + parentObject_location_x )); // move in percentage of final width
+	y += (height * (location_y.GetValue(frame->number) + parentObject_location_y )); // move in percentage of final height
+	float shear_x_value = shear_x.GetValue(frame->number) + parentObject_shear_x;
+	float shear_y_value = shear_y.GetValue(frame->number) + parentObject_shear_y;
 	float origin_x_value = origin_x.GetValue(frame->number);
 	float origin_y_value = origin_y.GetValue(frame->number);
-
-	QTransform transform;
 
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
@@ -1308,8 +1537,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-	}
-
+	} 
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);
@@ -1319,11 +1547,9 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		transform.shear(shear_x_value, shear_y_value);
 		transform.translate(-origin_x_offset,-origin_y_offset);
 	}
-
 	// SCALE CLIP (if needed)
 	float source_width_scale = (float(source_size.width()) / float(source_image->width())) * sx;
 	float source_height_scale = (float(source_size.height()) / float(source_image->height())) * sy;
-
 	if (!isEqual(source_width_scale, 1.0) || !isEqual(source_height_scale, 1.0)) {
 		transform.scale(source_width_scale, source_height_scale);
 	}

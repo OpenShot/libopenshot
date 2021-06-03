@@ -38,6 +38,7 @@
 #include <QtGui/QImage>
 #include <QtGui/QPainter>
 #include <QtCore/QRegularExpression>
+
 #include "TimelineBase.h"
 #include "ReaderBase.h"
 
@@ -47,6 +48,11 @@
 #include "Fraction.h"
 #include "Frame.h"
 #include "KeyFrame.h"
+#ifdef USE_OPENCV
+#include "TrackedObjectBBox.h"
+#endif
+#include "TrackedObjectBase.h"
+
 
 
 namespace openshot {
@@ -174,6 +180,8 @@ namespace openshot {
 		std::mutex get_frame_mutex; ///< Mutex to protect GetFrame method from different threads calling it
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
+		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
+		
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
 
@@ -238,6 +246,17 @@ namespace openshot {
 
         virtual ~Timeline();
 
+		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+		void AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
+		/// Return tracked object pointer by it's id
+		std::shared_ptr<openshot::TrackedObjectBase> GetTrackedObject(std::string id) const;
+		/// Return the ID's of the tracked objects as a list of strings
+		std::list<std::string> GetTrackedObjectsIds() const;
+		/// Return the trackedObject's properties as a JSON string
+        #ifdef USE_OPENCV
+		std::string GetTrackedObjectValues(std::string id, int64_t frame_number) const;
+        #endif
+
 		/// @brief Add an openshot::Clip to the timeline
 		/// @param clip Add an openshot::Clip to the timeline. A clip can contain any type of Reader.
 		void AddClip(openshot::Clip* clip);
@@ -283,6 +302,9 @@ namespace openshot {
 
 		/// Return the list of effects on the timeline
 		std::list<openshot::EffectBase*> Effects() { return effects; };
+
+		/// Return the list of effects on all clips
+		std::list<openshot::EffectBase*> ClipEffects() const;
 
 		/// Get the cache object used by this reader
 		openshot::CacheBase* GetCache() override { return final_cache; };
