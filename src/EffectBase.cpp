@@ -29,6 +29,7 @@
  */
 
 #include "EffectBase.h"
+
 #include "Exceptions.h"
 #include "Timeline.h"
 
@@ -106,7 +107,7 @@ Json::Value EffectBase::JsonValue() const {
 }
 
 // Load JSON string into this object
-void EffectBase::SetJson(std::string value) {
+void EffectBase::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
 	try
@@ -123,7 +124,7 @@ void EffectBase::SetJson(std::string value) {
 }
 
 // Load Json::Value into this object
-void EffectBase::SetJsonValue(Json::Value root) {
+void EffectBase::SetJsonValue(const Json::Value root) {
 
 	if (ParentTimeline()){
 		// Get parent timeline
@@ -133,34 +134,37 @@ void EffectBase::SetJsonValue(Json::Value root) {
 		std::list<EffectBase*> effects = parentTimeline->ClipEffects();
 
 		// TODO: Fix recursive call for Object Detection
-		
+
 		// // Loop through the effects and check if we have a child effect linked to this effect
 		for (auto const& effect : effects){
 			// Set the properties of all effects which parentEffect points to this
 			if ((effect->info.parent_effect_id == this->Id()) && (effect->Id() != this->Id()))
-				effect->SetJsonValue(root);	
+				effect->SetJsonValue(root);
 		}
 	}
 
 	// Set this effect properties with the parent effect properties (except the id and parent_effect_id)
+    Json::Value my_root;
 	if (parentEffect){
-		root = parentEffect->JsonValue();
-		root["id"] = this->Id();
-		root["parent_effect_id"] = this->info.parent_effect_id;
-	}
+		my_root = parentEffect->JsonValue();
+		my_root["id"] = this->Id();
+		my_root["parent_effect_id"] = this->info.parent_effect_id;
+	} else {
+        my_root = root;
+    }
 
 	// Set parent data
-	ClipBase::SetJsonValue(root);
+	ClipBase::SetJsonValue(my_root);
 
 	// Set data from Json (if key is found)
-	if (!root["order"].isNull())
-		Order(root["order"].asInt());
+	if (!my_root["order"].isNull())
+		Order(my_root["order"].asInt());
 
-	if (!root["parent_effect_id"].isNull()){
-		info.parent_effect_id = root["parent_effect_id"].asString();
+	if (!my_root["parent_effect_id"].isNull()){
+		info.parent_effect_id = my_root["parent_effect_id"].asString();
 		if (info.parent_effect_id.size() > 0 && info.parent_effect_id != "" && parentEffect == NULL)
 			SetParentEffect(info.parent_effect_id);
-		else 
+		else
 			parentEffect = NULL;
 	}
 }
@@ -192,7 +196,7 @@ void EffectBase::ParentClip(openshot::ClipBase* new_clip) {
 
 // Set the parent effect from which this properties will be set to
 void EffectBase::SetParentEffect(std::string parentEffect_id) {
-	
+
 	// Get parent Timeline
 	Timeline* parentTimeline = (Timeline *) ParentTimeline();
 
@@ -210,7 +214,7 @@ void EffectBase::SetParentEffect(std::string parentEffect_id) {
 			EffectJSON["id"] = this->Id();
 			EffectJSON["parent_effect_id"] = this->info.parent_effect_id;
 			this->SetJsonValue(EffectJSON);
-		} 
+		}
 	}
 	return;
 }

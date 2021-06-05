@@ -32,27 +32,22 @@
 #ifndef OPENSHOT_TRACKEDOBJECTBASE_H
 #define OPENSHOT_TRACKEDOBJECTBASE_H
 
-#include <iostream>
-#include <iomanip>
-#include <cmath>
-#include <assert.h>
 #include <vector>
 #include <string>
-#include "Exceptions.h"
-#include "Fraction.h"
-#include "Coordinate.h"
-#include "KeyFrame.h"
-#include "Point.h"
-#include "Json.h"
-#include "ClipBase.h"
 
+#include "KeyFrame.h"
+#include "Json.h"
 
 namespace openshot {
+
+    // Forward decls
+    class ClipBase;
+
 	/**
 	 * @brief This abstract class is the base class of all Tracked Objects.
 	 *
 	 * A Tracked Object is an object or a desired set of pixels in a digital image
-	 * which properties (such as position, width and height) can be detected and 
+	 * which properties (such as position, width and height) can be detected and
 	 * predicted along the frames of a clip.
 	 */
 	class TrackedObjectBase {
@@ -63,7 +58,7 @@ namespace openshot {
 		ClipBase* parentClip;
 
 	public:
-		
+
 		Keyframe visible;
 		Keyframe draw_box;
 
@@ -72,6 +67,9 @@ namespace openshot {
 
 		/// Constructor which takes an object ID
 		TrackedObjectBase(std::string _id);
+
+        /// Destructor
+        virtual ~TrackedObjectBase() = default;
 
 		/// Get the id of this object
 		std::string Id() const { return id; }
@@ -108,9 +106,7 @@ namespace openshot {
 		virtual Json::Value PropertiesJSON(int64_t requested_frame) const = 0;
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
-
-	
 	};
-} // Namespace openshot
+}  // Namespace openshot
 
 #endif

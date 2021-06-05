@@ -31,13 +31,14 @@
 #ifndef OPENSHOT_EFFECT_BASE_H
 #define OPENSHOT_EFFECT_BASE_H
 
-#include <iostream>
-#include <iomanip>
-#include <memory>
 #include "ClipBase.h"
+
 #include "Json.h"
-#include "Frame.h"
 #include "TrackedObjectBase.h"
+
+#include <memory>
+#include <map>
+#include <string>
 
 namespace openshot
 {
@@ -111,13 +112,13 @@ namespace openshot
 		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
 
 		// Get and Set JSON methods
-		virtual std::string Json() const = 0; ///< Generate JSON string of this object
-		virtual void SetJson(std::string value) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
-		virtual void SetJsonValue(Json::Value root) = 0; ///< Load Json::Value into this object
+		virtual std::string Json() const; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value); ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
 		virtual std::string Json(int64_t requested_frame) const{
-			return {};
+			return "";
 		};
 		virtual void SetJson(int64_t requested_frame, const std::string value) {
 			return;
@@ -130,6 +131,7 @@ namespace openshot
 
 		/// Set the order that this effect should be executed.
 		void Order(int new_order) { order = new_order; }
+
 		virtual ~EffectBase() = default;
 	};
 

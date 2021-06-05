@@ -30,29 +30,21 @@
  */
 
 #include "TrackedObjectBase.h"
-#include <algorithm>
-#include <functional>
-#include <utility>
+
+#include "Json.h"
 
 namespace openshot
 {
 
-	// Blank constructor
-	TrackedObjectBase::TrackedObjectBase() : visible(1.0), draw_box(1)
-	{
-		// Initializes the id as ""
-		id = "";
-		childClipId = "";
-	}
+	// Default constructor, delegating
+	TrackedObjectBase::TrackedObjectBase() : TrackedObjectBase("") {}
 
-	// Default constructor
-	TrackedObjectBase::TrackedObjectBase(std::string _id) : visible(1.0)
-	{
-		Id(_id);
-		childClipId = "";
-	}
+	// Constructor
+	TrackedObjectBase::TrackedObjectBase(std::string _id)
+		: visible(1.0), draw_box(1), id(_id), childClipId("") {}
 
-	Json::Value TrackedObjectBase::add_property_choice_json(std::string name, int value, int selected_value) const
+	Json::Value TrackedObjectBase::add_property_choice_json(
+		std::string name, int value, int selected_value) const
 	{
 		// Create choice
 		Json::Value new_choice = Json::Value(Json::objectValue);

@@ -30,28 +30,29 @@
  */
 
 #include "TrackedObjectBBox.h"
-#include "Clip.h"
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <functional>
 
-using namespace std;
+#include "Clip.h"
+
+#include "protobuf_messages/trackerdata.pb.h"
+#include <google/protobuf/util/time_util.h>
+
+using google::protobuf::util::TimeUtil;
+
 using namespace openshot;
 
+// Default Constructor, delegating
+TrackedObjectBBox::TrackedObjectBBox()
+	: TrackedObjectBBox::TrackedObjectBBox(0, 0, 255, 0) {}
 
-// Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
-TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
-										  stroke_width(2) , background_alpha(1.0), stroke_alpha(0.0), background_corner(0), 
-										  stroke(0,0,255,0), background(0,0,255,0)
-{
-	this->TimeScale = 1.0;
-	return;
-}
-
-TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa) : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
-										  stroke_width(2) , background_alpha(1.0), stroke_alpha(0.0), background_corner(0), 
-										  stroke(Red,Green,Blue,Alfa), background(0,0,255,0)
+// Constructor that takes RGBA values for stroke, and sets the bounding-box
+// displacement as 0 and the scales as 1 for the first frame
+TrackedObjectBBox::TrackedObjectBBox(int Red, int Green, int Blue, int Alfa)
+	: delta_x(0.0), delta_y(0.0),
+	  scale_x(1.0), scale_y(1.0), rotation(0.0),
+	  background_alpha(1.0), background_corner(0),
+	  stroke_width(2) , stroke_alpha(0.0),
+	  stroke(Red, Green, Blue, Alfa),
+	  background(0, 0, 255, 0)
 {
 	this->TimeScale = 1.0;
 	return;
@@ -71,7 +72,7 @@ void TrackedObjectBBox::AddBox(int64_t _frame_num, float _cx, float _cy, float _
 	double time = this->FrameNToTime(_frame_num, 1.0);
 	// Create an iterator that points to the BoxVec pair indexed by the time of given frame
 	auto BBoxIterator = BoxVec.find(time);
-	
+
 	if (BBoxIterator != BoxVec.end())
 	{
 		// There is a bounding-box indexed by the time of given frame, update-it
@@ -144,7 +145,7 @@ BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 	double time = this->FrameNToTime(frame_number, this->TimeScale);
 
 	// Return a iterator pointing to the BoxVec pair indexed by time or to the pair indexed
-	// by the closest upper time value.  
+	// by the closest upper time value.
 	auto currentBBoxIterator = BoxVec.lower_bound(time);
 
 	// Check if there is a pair indexed by time, returns an empty bbox if there isn't.
@@ -167,7 +168,7 @@ BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 		currentBBox.width *= this->scale_x.GetValue(frame_number);
 		currentBBox.height *= this->scale_y.GetValue(frame_number);
 		currentBBox.angle += this->rotation.GetValue(frame_number);
-	
+
 		return currentBBox;
 	}
 
@@ -186,7 +187,7 @@ BBox TrackedObjectBBox::GetBox(int64_t frame_number)
 	interpolatedBBox.width *= this->scale_x.GetValue(frame_number);
 	interpolatedBBox.height *= this->scale_y.GetValue(frame_number);
 	interpolatedBBox.angle += this->rotation.GetValue(frame_number);
-	
+
 	return interpolatedBBox;
 }
 
@@ -247,22 +248,24 @@ void TrackedObjectBBox::ScalePoints(double time_scale){
 	this->TimeScale = time_scale;
 }
 
-// Load the bounding-boxes information from the protobuf file 
+// Load the bounding-boxes information from the protobuf file
 bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 {
+    using std::ios;
+
 	// Variable to hold the loaded data
 	pb_tracker::Tracker bboxMessage;
 
 	// Read the existing tracker message.
-	fstream input(inputFilePath, ios::in | ios::binary);
+	std::fstream input(inputFilePath, ios::in | ios::binary);
 
 	// Check if it was able to read the protobuf data
 	if (!bboxMessage.ParseFromIstream(&input))
 	{
-		cerr << "Failed to parse protobuf message." << endl;
+		std::cerr << "Failed to parse protobuf message." << std::endl;
 		return false;
 	}
-	
+
 	this->clear();
 
 	// Iterate over all frames of the saved message
@@ -290,11 +293,12 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 			this->AddBox(frame_number, cx, cy, width, height, angle);
 		}
 	}
-	
+
 	// Show the time stamp from the last update in tracker data file
 	if (bboxMessage.has_last_updated())
 	{
-		cout << " Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(bboxMessage.last_updated()) << endl;
+		std::cout << " Loaded Data. Saved Time Stamp: "
+		          << TimeUtil::ToString(bboxMessage.last_updated()) << std::endl;
 	}
 
 	// Delete all global objects allocated by libprotobuf.
@@ -333,7 +337,7 @@ Json::Value TrackedObjectBBox::JsonValue() const
 	root["delta_x"] = delta_x.JsonValue();
 	root["delta_y"] = delta_y.JsonValue();
 	root["scale_x"] = scale_x.JsonValue();
-	root["scale_y"] = scale_y.JsonValue(); 
+	root["scale_y"] = scale_y.JsonValue();
 	root["rotation"] = rotation.JsonValue();
 	root["visible"] = visible.JsonValue();
 	root["draw_box"] = draw_box.JsonValue();
@@ -368,7 +372,7 @@ void TrackedObjectBBox::SetJson(const std::string value)
 
 // Load Json::Value into this object
 void TrackedObjectBBox::SetJsonValue(const Json::Value root)
-{   
+{
 
 	// Set the Id by the given JSON object
 	if (!root["box_id"].isNull() && root["box_id"].asString() != "")
@@ -376,7 +380,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 
 	// Set the BaseFps by the given JSON object
 	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
-	{	  
+	{
 		if (!root["BaseFPS"]["num"].isNull())
 			BaseFps.num = (int)root["BaseFPS"]["num"].asInt();
 		if (!root["BaseFPS"]["den"].isNull())
@@ -396,7 +400,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 		Clip* parentClip = (Clip *) ParentClip();
 		ChildClipId(root["child_clip_id"].asString());
 	}
-	
+
 	// Set the Keyframes by the given JSON object
 	if (!root["delta_x"].isNull())
 		delta_x.SetJsonValue(root["delta_x"]);
@@ -458,7 +462,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 	root["draw_box"] = add_property_json("Draw Box", draw_box.GetValue(requested_frame), "int", "", &draw_box, -1, 1.0, false, requested_frame);
 	root["draw_box"]["choices"].append(add_property_choice_json("Off", 0, draw_box.GetValue(requested_frame)));
 	root["draw_box"]["choices"].append(add_property_choice_json("On", 1, draw_box.GetValue(requested_frame)));
-	
+
 	root["stroke"] = add_property_json("Border", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["stroke"]["red"] = add_property_json("Red", stroke.red.GetValue(requested_frame), "float", "", &stroke.red, 0, 255, false, requested_frame);
 	root["stroke"]["blue"] = add_property_json("Blue", stroke.blue.GetValue(requested_frame), "float", "", &stroke.blue, 0, 255, false, requested_frame);
@@ -468,7 +472,7 @@ Json::Value TrackedObjectBBox::PropertiesJSON(int64_t requested_frame) const
 
 	root["background_alpha"] = add_property_json("Background Alpha", background_alpha.GetValue(requested_frame), "float", "", &background_alpha, 0.0, 1.0, false, requested_frame);
 	root["background_corner"] = add_property_json("Background Corner Radius", background_corner.GetValue(requested_frame), "int", "", &background_corner, 0.0, 60.0, false, requested_frame);
-	
+
 	root["background"] = add_property_json("Background", 0.0, "color", "", NULL, 0, 255, false, requested_frame);
 	root["background"]["red"] = add_property_json("Red", background.red.GetValue(requested_frame), "float", "", &background.red, 0, 255, false, requested_frame);
 	root["background"]["blue"] = add_property_json("Blue", background.blue.GetValue(requested_frame), "float", "", &background.blue, 0, 255, false, requested_frame);
@@ -539,13 +543,13 @@ std::map<std::string, float> TrackedObjectBBox::GetBoxValues(int64_t frame_numbe
 	boxValues["dy"] = this->delta_y.GetValue(frame_number);
 	boxValues["r"] = this->rotation.GetValue(frame_number);
 
-	
+
 	return boxValues;
 }
 
 // Return a map that contains the properties of this object's parent clip
 std::map<std::string, float> TrackedObjectBBox::GetParentClipProperties(int64_t frame_number) const {
-	
+
 	// Get the parent clip of this object as a Clip pointer
 	Clip* parentClip = (Clip *) ParentClip();
 
