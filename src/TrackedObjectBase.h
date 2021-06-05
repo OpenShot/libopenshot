@@ -47,7 +47,7 @@ namespace openshot {
 	 * @brief This abstract class is the base class of all Tracked Objects.
 	 *
 	 * A Tracked Object is an object or a desired set of pixels in a digital image
-	 * which properties (such as position, width and height) can be detected and 
+	 * which properties (such as position, width and height) can be detected and
 	 * predicted along the frames of a clip.
 	 */
 	class TrackedObjectBase {
@@ -58,7 +58,7 @@ namespace openshot {
 		ClipBase* parentClip;
 
 	public:
-		
+
 		Keyframe visible;
 		Keyframe draw_box;
 
@@ -67,6 +67,9 @@ namespace openshot {
 
 		/// Constructor which takes an object ID
 		TrackedObjectBase(std::string _id);
+
+        /// Destructor
+        virtual ~TrackedObjectBase() = default;
 
 		/// Get the id of this object
 		std::string Id() const { return id; }
@@ -104,6 +107,6 @@ namespace openshot {
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
 	};
-} // Namespace openshot
+}  // Namespace openshot
 
 #endif
