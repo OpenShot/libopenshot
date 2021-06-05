@@ -31,13 +31,14 @@
 #ifndef OPENSHOT_EFFECT_BASE_H
 #define OPENSHOT_EFFECT_BASE_H
 
-#include <iostream>
-#include <iomanip>
-#include <memory>
 #include "ClipBase.h"
+
 #include "Json.h"
-#include "Frame.h"
 #include "TrackedObjectBase.h"
+
+#include <memory>
+#include <map>
+#include <string>
 
 namespace openshot
 {

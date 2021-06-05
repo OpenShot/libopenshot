@@ -32,33 +32,22 @@
 #ifndef OPENSHOT_TRACKEDOBJECTBBOX_H
 #define OPENSHOT_TRACKEDOBJECTBBOX_H
 
-#include <iostream>
-#include <iomanip>
-#include <cmath>
-#include <assert.h>
-#include <vector>
+#include "TrackedObjectBase.h"
+
+#include "Color.h"
 #include "Exceptions.h"
 #include "Fraction.h"
-#include "Coordinate.h"
-#include "Point.h"
 #include "Json.h"
 #include "KeyFrame.h"
-#include "TrackedObjectBase.h"
-#include "Color.h"
-#include "protobuf_messages/trackerdata.pb.h"
-#include <google/protobuf/util/time_util.h>
-
-
-using google::protobuf::util::TimeUtil;
 
 namespace openshot
 {
 	/**
 	 * @brief This struct holds the information of a bounding-box.
-	 * 
+	 *
 	 * A bounding-box is a rectangular shape that enclosures an
 	 * object or a desired set of pixels in a digital image.
-	 * 
+	 *
 	 * The bounding-box structure holds five floating-point properties:
 	 * the x and y coordinates of the rectangle's center point (cx, cy),
 	 * the rectangle's width, height and rotation.
@@ -89,7 +78,7 @@ namespace openshot
 			angle = _angle;
 		}
 
-		
+
 		/// Generate JSON string of this object
 		std::string Json() const
 		{
@@ -141,17 +130,17 @@ namespace openshot
 				height = root["height"].asDouble();
 			if (!root["angle"].isNull())
 				angle = root["angle"].asDouble();
-		} 
+		}
 	};
 
 	/**
 	 * @brief This class contains the properties of a tracked object
 	 * and functions to manipulate it.
-	 * 
+	 *
 	 * The bounding-box displacement in X and Y directions, it's width,
 	 * height and rotation variation over the frames are set as
 	 * openshot::Keyframe objects.
-	 * 
+	 *
 	 * The bounding-box information over the clip's frames are
 	 * saved into a protobuf file and loaded into an
 	 * object of this class.
@@ -160,7 +149,7 @@ namespace openshot
 	{
 	private:
 		Fraction BaseFps;
-		double TimeScale;  
+		double TimeScale;
 
 	public:
 		std::map<double, BBox> BoxVec; ///< Index the bounding-box by time of each frame
@@ -184,7 +173,7 @@ namespace openshot
 
 		/// Add a BBox to the BoxVec map
 		void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) override;
-		
+
 		/// Update object's BaseFps
 		void SetBaseFPS(Fraction fps);
 
@@ -213,7 +202,7 @@ namespace openshot
 			return const_cast<TrackedObjectBBox *>(this)->GetBox(frame_number);
 		}
 
-		/// Load the bounding-boxes information from the protobuf file 
+		/// Load the bounding-boxes information from the protobuf file
 		bool LoadBoxData(std::string inputFilePath);
 
 		/// Get the time of the given frame
@@ -223,7 +212,7 @@ namespace openshot
 		BBox InterpolateBoxes(double t1, double t2, BBox left, BBox right, double target);
 
 		/// Clear the BoxVec map
-		void clear(); 
+		void clear();
 
 		/// Get and Set JSON methods
 		std::string Json() const override;				  ///< Generate JSON string of this object
@@ -242,7 +231,7 @@ namespace openshot
 		std::map<std::string, float> GetBoxValues(int64_t frame_number) const override;
 		/// Return a map that contains the properties of this object's parent clip
 		std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const override;
-	
+
 	};
 } // namespace openshot
 

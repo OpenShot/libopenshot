@@ -30,15 +30,13 @@
  */
 
 #include "TrackedObjectBBox.h"
+
 #include "Clip.h"
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <functional>
 
-using namespace std;
-using namespace openshot;
+#include "protobuf_messages/trackerdata.pb.h"
+#include <google/protobuf/util/time_util.h>
 
+using google::protobuf::util::TimeUtil;
 
 // Default Constructor that sets the bounding-box displacement as 0 and the scales as 1 for the first frame
 TrackedObjectBBox::TrackedObjectBBox() : delta_x(0.0), delta_y(0.0), scale_x(1.0), scale_y(1.0), rotation(0.0),
@@ -247,22 +245,24 @@ void TrackedObjectBBox::ScalePoints(double time_scale){
 	this->TimeScale = time_scale;
 }
 
-// Load the bounding-boxes information from the protobuf file 
+// Load the bounding-boxes information from the protobuf file
 bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 {
+    using std::ios;
+
 	// Variable to hold the loaded data
 	pb_tracker::Tracker bboxMessage;
 
 	// Read the existing tracker message.
-	fstream input(inputFilePath, ios::in | ios::binary);
+	std::fstream input(inputFilePath, ios::in | ios::binary);
 
 	// Check if it was able to read the protobuf data
 	if (!bboxMessage.ParseFromIstream(&input))
 	{
-		cerr << "Failed to parse protobuf message." << endl;
+		std::cerr << "Failed to parse protobuf message." << std::endl;
 		return false;
 	}
-	
+
 	this->clear();
 
 	// Iterate over all frames of the saved message
@@ -294,7 +294,8 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 	// Show the time stamp from the last update in tracker data file
 	if (bboxMessage.has_last_updated())
 	{
-		cout << " Loaded Data. Saved Time Stamp: " << TimeUtil::ToString(bboxMessage.last_updated()) << endl;
+		std::cout << " Loaded Data. Saved Time Stamp: "
+		          << TimeUtil::ToString(bboxMessage.last_updated()) << std::endl;
 	}
 
 	// Delete all global objects allocated by libprotobuf.

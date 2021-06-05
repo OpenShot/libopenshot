@@ -32,22 +32,17 @@
 #ifndef OPENSHOT_TRACKEDOBJECTBASE_H
 #define OPENSHOT_TRACKEDOBJECTBASE_H
 
-#include <iostream>
-#include <iomanip>
-#include <cmath>
-#include <assert.h>
 #include <vector>
 #include <string>
-#include "Exceptions.h"
-#include "Fraction.h"
-#include "Coordinate.h"
-#include "KeyFrame.h"
-#include "Point.h"
-#include "Json.h"
-#include "ClipBase.h"
 
+#include "KeyFrame.h"
+#include "Json.h"
 
 namespace openshot {
+
+    // Forward decls
+    class ClipBase;
+
 	/**
 	 * @brief This abstract class is the base class of all Tracked Objects.
 	 *
@@ -108,8 +103,6 @@ namespace openshot {
 		virtual Json::Value PropertiesJSON(int64_t requested_frame) const = 0;
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
-
-	
 	};
 } // Namespace openshot
 

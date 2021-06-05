@@ -30,9 +30,8 @@
  */
 
 #include "TrackedObjectBase.h"
-#include <algorithm>
-#include <functional>
-#include <utility>
+
+#include "Json.h"
 
 namespace openshot
 {
