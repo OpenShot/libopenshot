@@ -146,6 +146,7 @@
 	#include "CVStabilization.h"
 	#include "CVTracker.h"
 	#include "CVObjectDetection.h"
+	#include "TrackedObjectBBox.h"
 #endif
 
 #endif

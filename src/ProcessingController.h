@@ -2,6 +2,7 @@
  * @file
  * @brief This is a message class for thread safe comunication between ClipProcessingJobs and OpenCV classes
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */

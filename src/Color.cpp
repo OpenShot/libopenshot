@@ -75,6 +75,17 @@ std::string Color::GetColorHex(int64_t frame_number) {
 	return QColor( r,g,b,a ).name().toStdString();
 }
 
+// Get the RGBA values of a color at a specific frame
+std::vector<int> Color::GetColorRGBA(int64_t frame_number) {
+	std::vector<int> rgba;
+	rgba.push_back(red.GetInt(frame_number));
+	rgba.push_back(green.GetInt(frame_number));
+	rgba.push_back(blue.GetInt(frame_number));
+	rgba.push_back(alpha.GetInt(frame_number));
+
+	return rgba;
+}
+
 // Get the distance between 2 RGB pairs (alpha is ignored)
 long Color::GetDistance(long R1, long G1, long B1, long R2, long G2, long B2)
 {

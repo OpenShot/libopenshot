@@ -24,6 +24,11 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Allow spaces in test names
+if(POLICY CMP0110)
+  cmake_policy(SET CMP0110 NEW)
+endif()
+
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
@@ -80,27 +85,45 @@ endif()
 ###
 ### Catch2 unit tests
 ###
-if (CAN_BUILD_TESTS)
-  include(Catch)
-  include(CTest)
+include(CTest)
+include(Catch)
 
-  # Create object library for test executable main(),
-  # to avoid recompiling for every test
-  add_library(catch-main OBJECT catch_main.cpp)
-
-  foreach(tname ${OPENSHOT_TESTS})
-    add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
-    target_compile_definitions(openshot-${tname}-test PRIVATE
-      TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
-    )
-  	target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
-		# Automatically configure CTest targets from Catch2 test cases
-		catch_discover_tests(
-      openshot-${tname}-test
-      TEST_PREFIX ${tname}:
-    )
-    list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
-	endforeach()
-  # Export target list for coverage use
-  set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
+if(NOT BUILD_TESTING)
+  return()
 endif()
+
+# Create object library for test executable main(),
+# to avoid recompiling for every test
+add_library(catch-main OBJECT catch_main.cpp)
+
+foreach(tname ${OPENSHOT_TESTS})
+  add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
+  target_compile_definitions(openshot-${tname}-test PRIVATE
+    TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
+  )
+  target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
+  # Automatically configure CTest targets from Catch2 test cases
+  catch_discover_tests(
+    openshot-${tname}-test
+    TEST_PREFIX ${tname}:
+    PROPERTIES
+      LABELS ${tname}
+  )
+  list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
+  list(APPEND CATCH2_TEST_NAMES ${tname})
+endforeach()
+# Add an additional special-case test, for an envvar-dependent setting
+add_test(NAME [=["Settings:Debug logging (enabled)"]=]
+  COMMAND
+    openshot-Settings-test "[environment]"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+set_tests_properties([=["Settings:Debug logging (enabled)"]=]
+  PROPERTIES
+    LABELS Settings
+    ENVIRONMENT "LIBOPENSHOT_DEBUG=1"
+)
+
+# Export target list for coverage use
+set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
+set(UNIT_TEST_NAMES ${CATCH2_TEST_NAMES} PARENT_SCOPE)

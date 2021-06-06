@@ -31,12 +31,14 @@
 #ifndef OPENSHOT_EFFECT_BASE_H
 #define OPENSHOT_EFFECT_BASE_H
 
-#include <iostream>
-#include <iomanip>
-#include <memory>
 #include "ClipBase.h"
+
 #include "Json.h"
-#include "Frame.h"
+#include "TrackedObjectBase.h"
+
+#include <memory>
+#include <map>
+#include <string>
 
 namespace openshot
 {
@@ -52,8 +54,10 @@ namespace openshot
 		std::string class_name; ///< The class name of the effect
 		std::string name; ///< The name of the effect
 		std::string description; ///< The description of this effect and what it does
+		std::string parent_effect_id; ///< Id of the parent effect (if there is one)
 		bool has_video;	///< Determines if this effect manipulates the image of a frame
 		bool has_audio;	///< Determines if this effect manipulates the audio of a frame
+		bool has_tracked_object; ///< Determines if this effect track objects through the clip
 	};
 
 	/**
@@ -72,6 +76,12 @@ namespace openshot
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
+
+		/// Parent effect (which properties will set this effect properties)
+		EffectBase* parentEffect;
+
+		/// Map of Tracked Object's by their indices (used by Effects that track objects on clips)
+		std::map<int, std::shared_ptr<openshot::TrackedObjectBase> > trackedObjects;
 
 		/// Information about the current effect
 		EffectInfoStruct info;
@@ -92,11 +102,28 @@ namespace openshot
 		/// Set parent clip object of this effect
 		void ParentClip(openshot::ClipBase* new_clip);
 
+		/// Set the parent effect from which this properties will be set to
+		void SetParentEffect(std::string parentEffect_id);
+
+		/// Return the ID of this effect's parent clip
+		std::string ParentClipId() const;
+
+		/// Get the indexes and IDs of all visible objects in the given frame
+		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
+
 		// Get and Set JSON methods
-		virtual std::string Json() const = 0; ///< Generate JSON string of this object
-		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
-		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
+		virtual std::string Json() const; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value); ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+
+		virtual std::string Json(int64_t requested_frame) const{
+			return "";
+		};
+		virtual void SetJson(int64_t requested_frame, const std::string value) {
+			return;
+		};
+
 		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
 
 		/// Get the order that this effect should be executed.
@@ -104,6 +131,7 @@ namespace openshot
 
 		/// Set the order that this effect should be executed.
 		void Order(int new_order) { order = new_order; }
+
 		virtual ~EffectBase() = default;
 	};
 

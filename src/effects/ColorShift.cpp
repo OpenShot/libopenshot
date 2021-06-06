@@ -282,6 +282,9 @@ std::string ColorShift::PropertiesJSON(int64_t requested_frame) const {
 	root["alpha_x"] = add_property_json("Alpha X Shift", alpha_x.GetValue(requested_frame), "float", "", &alpha_x, -1, 1, false, requested_frame);
 	root["alpha_y"] = add_property_json("Alpha Y Shift", alpha_y.GetValue(requested_frame), "float", "", &alpha_y, -1, 1, false, requested_frame);
 
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
+
 	// Return formatted string
 	return root.toStyledString();
 }

@@ -39,13 +39,7 @@
 
 #define ENABLE_VAAPI 0
 
-#if HAVE_HW_ACCEL
-#pragma message "You are compiling with experimental hardware decode"
-#else
-#pragma message "You are compiling only with software decode"
-#endif
-
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 #define MAX_SUPPORTED_WIDTH 1950
 #define MAX_SUPPORTED_HEIGHT 1100
 
@@ -76,13 +70,13 @@ typedef struct VAAPIDecodeContext {
 	 int                   surface_count;
  } VAAPIDecodeContext;
 #endif // ENABLE_VAAPI
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 
 using namespace openshot;
 
 int hw_de_on = 0;
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 	AVPixelFormat hw_de_av_pix_fmt_global = AV_PIX_FMT_NONE;
 	AVHWDeviceType hw_de_av_device_type_global = AV_HWDEVICE_TYPE_NONE;
 #endif
@@ -135,7 +129,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 	return false;
 }
 
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 
 // Get hardware pix format
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
@@ -216,7 +210,7 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 	}
 	return ret;
 }
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 void FFmpegReader::Open() {
 	// Open reader if not already open
@@ -269,7 +263,7 @@ void FFmpegReader::Open() {
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
 			do {
 				pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 				if (hw_de_on && (retry_decode_open==2)) {
 					// Up to here no decision is made if hardware or software decode
 					hw_de_supported = IsHardwareDecodeSupported(pCodecCtx->codec_id);
@@ -286,7 +280,7 @@ void FFmpegReader::Open() {
 
 				// Init options
 				av_dict_set(&opts, "strict", "experimental", 0);
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					// Open Hardware Acceleration
 					int i_decoder_hw = 0;
@@ -415,7 +409,7 @@ void FFmpegReader::Open() {
 						  throw InvalidCodec("Hardware device create failed.", path);
 					}
 				}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 
 				// Disable per-frame threading for album arts
 				// Using FF_THREAD_FRAME adds one frame decoding delay per thread,
@@ -429,7 +423,7 @@ void FFmpegReader::Open() {
 				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
 					throw InvalidCodec("A video codec was found, but could not be opened.", path);
 
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					AVHWFramesConstraints *constraints = NULL;
 					void *hwconfig = NULL;
@@ -496,7 +490,7 @@ void FFmpegReader::Open() {
 				}
 #else
 				retry_decode_open = 0;
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 			} while (retry_decode_open); // retry_decode_open
 			// Free options
 			av_dict_free(&opts);
@@ -582,14 +576,14 @@ void FFmpegReader::Close() {
 		if (info.has_video) {
 			avcodec_flush_buffers(pCodecCtx);
 			AV_FREE_CONTEXT(pCodecCtx);
-#if HAVE_HW_ACCEL
+#if USE_HW_ACCEL
 			if (hw_de_on) {
 				if (hw_device_ctx) {
 					av_buffer_unref(&hw_device_ctx);
 					hw_device_ctx = NULL;
 				}
 			}
-#endif // HAVE_HW_ACCEL
+#endif // USE_HW_ACCEL
 		}
 		if (info.has_audio) {
 			avcodec_flush_buffers(aCodecCtx);
@@ -1081,22 +1075,22 @@ bool FFmpegReader::GetAVFrame() {
 	frameFinished = 0;
 	ret = avcodec_send_packet(pCodecCtx, packet);
 
-	#if HAVE_HW_ACCEL
+	#if USE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
 		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
 		hw_de_av_device_type = hw_de_av_device_type_global;
-	#endif // HAVE_HW_ACCEL
+	#endif // USE_HW_ACCEL
 		if (ret < 0 || ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)");
 		}
 		else {
 			AVFrame *next_frame2;
-	#if HAVE_HW_ACCEL
+	#if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				next_frame2 = AV_ALLOCATE_FRAME();
 			}
 			else
-	#endif // HAVE_HW_ACCEL
+	#endif // USE_HW_ACCEL
 			{
 				next_frame2 = next_frame;
 			}
@@ -1109,7 +1103,7 @@ bool FFmpegReader::GetAVFrame() {
 				if (ret != 0) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (invalid return frame received)");
 				}
-	#if HAVE_HW_ACCEL
+	#if USE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
 					int err;
 					if (next_frame2->format == hw_de_av_pix_fmt) {
@@ -1123,7 +1117,7 @@ bool FFmpegReader::GetAVFrame() {
 					}
 				}
 				else
-	#endif // HAVE_HW_ACCEL
+	#endif // USE_HW_ACCEL
 				{	// No hardware acceleration used -> no copy from GPU memory needed
 					next_frame = next_frame2;
 				}
@@ -1137,11 +1131,11 @@ bool FFmpegReader::GetAVFrame() {
 												(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
 				}
 			}
-	#if HAVE_HW_ACCEL
+	#if USE_HW_ACCEL
 			if (hw_de_on && hw_de_supported) {
 				AV_FREE_FRAME(&next_frame2);
 			}
-	#endif // HAVE_HW_ACCEL
+	#endif // USE_HW_ACCEL
 		}
 #else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);

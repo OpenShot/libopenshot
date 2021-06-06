@@ -30,9 +30,10 @@ jobs:
       run: |
         sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
         sudo apt update
+        sudo apt remove libzmq5  # See actions/virtual-environments#3317
         sudo apt install \
           cmake swig doxygen graphviz curl lcov \
-          libopenshot-audio-dev \
+          libopenshot-audio-dev libasound2-dev \
           qtbase5-dev qtbase5-dev-tools \
           libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
           libzmq3-dev libmagick++-dev \

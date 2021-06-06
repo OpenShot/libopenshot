@@ -120,6 +120,8 @@
 		#include "effects/Stabilizer.h"
 		#include "effects/Tracker.h"
 		#include "effects/ObjectDetection.h"
+		#include "TrackedObjectBase.h"
+		#include "TrackedObjectBBox.h"
 	%}
 #endif
 
@@ -291,6 +293,8 @@
 
 #ifdef USE_OPENCV
 	%include "ClipProcessingJobs.h"
+	%include "TrackedObjectBase.h"
+	%include "TrackedObjectBBox.h"
 #endif
 
 #ifdef USE_IMAGEMAGICK
@@ -320,5 +324,3 @@
 	%include "effects/Tracker.h"
 	%include "effects/ObjectDetection.h"
 #endif
-
-

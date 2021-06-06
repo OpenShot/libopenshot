@@ -75,13 +75,13 @@ namespace openshot {
 		float ToFloat();
 
 		/// Return this fraction as a double (i.e. 1/2 = 0.5)
-		double ToDouble();
+		double ToDouble() const;
 
 		/// Return a rounded integer of the fraction (for example 30000/1001 returns 30)
 		int ToInt();
 
 		/// Return the reciprocal as a Fraction
-		Fraction Reciprocal();
+		Fraction Reciprocal() const;
 	};
 
 

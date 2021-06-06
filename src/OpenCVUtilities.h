@@ -1,6 +1,7 @@
 /**
  * @file
- * @brief Source file for Timeline class
+ * @brief Header file for OpenCVUtilities (set some common macros)
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
@@ -8,7 +9,7 @@
 
 /* LICENSE
  *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * Copyright (c) 2008-2021 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,22 +29,22 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "TimelineBase.h"
+#ifndef OPENSHOT_OPENCV_UTILITIES_H
+#define OPENSHOT_OPENCV_UTILITIES_H
 
-using namespace openshot;
+#define int64 int64_t
+#define uint64 uint64_t
+#if USE_LEGACY_TRACKER
+    #include <opencv2/tracking.hpp>
+    #include <opencv2/tracking/tracking_legacy.hpp>
+    #define OPENCV_TRACKER_TYPE cv::legacy::Tracker
+    #define OPENCV_TRACKER_NS cv::legacy
+#else
+    #include <opencv2/tracking.hpp>
+    #define OPENCV_TRACKER_TYPE cv::Tracker
+    #define OPENCV_TRACKER_NS cv
+#endif
+#undef int64
+#undef uint64
 
-/// Constructor for the base timeline
-TimelineBase::TimelineBase()
-{
-	// Init preview size (default)
-	preview_width = 1920;
-	preview_height = 1080;
-}
-
-/* This function will be overloaded in the Timeline class passing no arguments
-* so we'll be able to access the Timeline::Clips() function from a pointer object of
-* the TimelineBase class
-*/
-void TimelineBase::Clips(int test){
-	return;
-}
+#endif  // OPENSHOT_OPENCV_UTILITIES_H
