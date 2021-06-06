@@ -327,11 +327,17 @@ endif()
 # Include in feature summary
 if(USE_HW_ACCEL AND HAVE_HW_ACCEL)
   set(FFMPEG_HARDWARE_ACCELERATION TRUE)
+elseif(USE_HW_ACCEL)
+  set(FFMPEG_HARDWARE_ACCELERATION "NOTFOUND")
 else()
   set(FFMPEG_HARDWARE_ACCELERATION FALSE)
 endif()
-set(_hwaccel_help "GPU-accelerated routines (FFmpeg 3.4+)")
-add_feature_info("FFmpeg hwaccel" FFMPEG_HARDWARE_ACCELERATION ${_hwaccel_help})
+
+# Report HWAccel status, unless it's indeterminate
+if (NOT FFMPEG_HARDWARE_ACCELERATION STREQUAL "NOTFOUND")
+  set(_hwaccel_help "GPU-accelerated routines (FFmpeg 3.4+)")
+  add_feature_info("FFmpeg hwaccel" FFMPEG_HARDWARE_ACCELERATION ${_hwaccel_help})
+endif()
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
