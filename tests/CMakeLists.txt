@@ -62,14 +62,14 @@ set(OPENSHOT_TESTS
 )
 
 # ImageMagick related test files
-if(DEFINED CACHE{HAVE_IMAGEMAGICK})
+if($CACHE{HAVE_IMAGEMAGICK})
   list(APPEND OPENSHOT_TESTS
     ImageWriter
   )
 endif()
 
 # OPENCV RELATED TEST FILES
-if(DEFINED CACHE{HAVE_OPENCV})
+if($CACHE{HAVE_OPENCV})
   list(APPEND OPENSHOT_TESTS
     CVTracker
     CVStabilizer
@@ -104,4 +104,3 @@ if (CAN_BUILD_TESTS)
   # Export target list for coverage use
   set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
 endif()
-
