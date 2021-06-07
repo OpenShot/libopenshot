@@ -53,8 +53,6 @@ set(OPENSHOT_TESTS
   Color
   Coordinate
   DummyReader
-  ReaderBase
-  ImageWriter
   FFmpegReader
   FFmpegWriter
   Fraction
@@ -63,14 +61,20 @@ set(OPENSHOT_TESTS
   KeyFrame
   Point
   QtImageReader
+  ReaderBase
   Settings
   Timeline
 )
 
-###
-### OPENCV RELATED TEST FILES
-###
-if(ENABLE_OPENCV)
+# ImageMagick related test files
+if($CACHE{HAVE_IMAGEMAGICK})
+  list(APPEND OPENSHOT_TESTS
+    ImageWriter
+  )
+endif()
+
+# OPENCV RELATED TEST FILES
+if($CACHE{HAVE_OPENCV})
   list(APPEND OPENSHOT_TESTS
     CVTracker
     CVStabilizer
