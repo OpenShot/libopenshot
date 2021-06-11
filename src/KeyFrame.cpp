@@ -28,15 +28,17 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <algorithm>
-#include <functional>
-#include <utility>
-#include <cassert>		 // For assert()
-#include <iostream>		 // For std::cout
-#include <iomanip>		 // For std::setprecision
-
 #include "KeyFrame.h"
 #include "Exceptions.h"
+
+#include <algorithm>   // For std::lower_bound, std::move_backward
+#include <functional>  // For std::less, std::less_equal, etc…
+#include <utility>     // For std::swap
+#include <numeric>     // For std::accumulate
+#include <cassert>     // For assert()
+#include <cmath>       // For fabs, round
+#include <iostream>    // For std::cout
+#include <iomanip>     // For std::setprecision
 
 using namespace std;
 using namespace openshot;
@@ -560,21 +562,50 @@ void Keyframe::UpdatePoint(int64_t index, Point p) {
 }
 
 void Keyframe::PrintPoints(std::ostream* out) const {
-	*out << std::fixed << std::setprecision(4);
-	for (std::vector<Point>::const_iterator it = Points.begin(); it != Points.end(); it++) {
-		Point p = *it;
-		*out << p.co.X << "\t" << p.co.Y << std::endl;
-	}
+    *out << std::right << std::setprecision(4) << std::setfill(' ');
+    for (const auto& p : Points) {
+        *out << std::defaultfloat
+             << std::setw(6) << p.co.X
+             << std::setw(14) << std::fixed << p.co.Y
+             << '\n';
+    }
+    *out << std::flush;
 }
 
 void Keyframe::PrintValues(std::ostream* out) const {
-	*out << std::fixed << std::setprecision(4);
-	*out << "Frame Number (X)\tValue (Y)\tIs Increasing\tRepeat Numerator\tRepeat Denominator\tDelta (Y Difference)\n";
+    // Column widths
+    std::vector<int> w{10, 12, 8, 11, 19};
 
-	for (int64_t i = 1; i < GetLength(); ++i) {
-		*out << i << "\t" << GetValue(i) << "\t" << IsIncreasing(i) << "\t" ;
-		*out << GetRepeatFraction(i).num << "\t" << GetRepeatFraction(i).den << "\t" << GetDelta(i) << "\n";
-	}
+    *out << std::right << std::setfill(' ') << std::boolalpha
+         << std::setprecision(4);
+    // Headings
+    *out << "│"
+         << std::setw(w[0]) << "Frame# (X)" << " │"
+         << std::setw(w[1]) << "Y Value" << " │"
+         << std::setw(w[2]) << "Delta Y" << " │ "
+         << std::setw(w[3]) << "Increasing?" << " │ "
+         << std::setw(w[4]) << std::left << "Repeat Fraction" << std::right
+         << "│\n";
+    // Divider
+    *out << "├───────────"
+         << "┼─────────────"
+         << "┼─────────"
+         << "┼─────────────"
+         << "┼────────────────────┤\n";
+
+    for (int64_t i = 1; i < GetLength(); ++i) {
+        *out << "│"
+             << std::setw(w[0]-2) << std::defaultfloat << i
+             << (Contains(Point(i, 1)) ? " *" : "  ") << " │"
+             << std::setw(w[1]) << std::fixed << GetValue(i) << " │"
+             << std::setw(w[2]) << std::defaultfloat << std::showpos
+                                << GetDelta(i) << " │ " << std::noshowpos
+             << std::setw(w[3]) << IsIncreasing(i) << " │ "
+             << std::setw(w[4]) << std::left << GetRepeatFraction(i)
+                                << std::right << "│\n";
+    }
+    *out << " * = Keyframe point (non-interpolated)\n";
+    *out << std::flush;
 }
 
 
