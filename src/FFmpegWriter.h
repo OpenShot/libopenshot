@@ -157,7 +157,7 @@ namespace openshot {
 		bool prepare_streams;
 		bool write_header;
 		bool write_trailer;
-#if IS_FFMPEG_4_4
+#if IS_FFMPEG_4_5
 		const AVOutputFormat *fmt;
 #else
 		AVOutputFormat *fmt;

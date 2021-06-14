@@ -236,7 +236,7 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 			info.vcodec = new_codec->name;
 
 			// Update video codec in fmt
-#if IS_FFMPEG_4_4			
+#if IS_FFMPEG_4_5			
 //			fmt->video_codec = new_codec->id;
 #else
 			fmt->video_codec = new_codec->id;
@@ -306,7 +306,7 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 			info.acodec = new_codec->name;
 
 			// Update audio codec in fmt
-#if IS_FFMPEG_4_4
+#if IS_FFMPEG_4_5
 		//	fmt->audio_codec = new_codec->id;
 #else
 			fmt->audio_codec = new_codec->id;
@@ -1275,7 +1275,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 #if (LIBAVFORMAT_VERSION_MAJOR >= 58)
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if IS_FFMPEG_4_4
+#if IS_FFMPEG_4_5
 	//st->codec->time_base.num = info.video_timebase.num;
 	//st->codec->time_base.den = info.video_timebase.den;
 #else
@@ -2059,7 +2059,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = video_st->index;
 		pkt.data = (uint8_t *) frame_final->data;
-#if IS_FFMPEG_4_4
+#if IS_FFMPEG_4_5
 		pkt.size = sizeof(AVFrame);
 #else
 		pkt.size = sizeof(AVPicture);
