@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for Object Detection effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -45,16 +46,24 @@
 // Struct that stores the detected bounding boxes for all the clip frames
 struct DetectionData{
     DetectionData(){}
-    DetectionData(std::vector<int> _classIds, std::vector<float> _confidences, std::vector<cv::Rect_<float>> _boxes, size_t _frameId){
+    DetectionData(
+        std::vector<int> _classIds,
+        std::vector<float> _confidences,
+        std::vector<cv::Rect_<float>> _boxes,
+        size_t _frameId,
+        std::vector<int> _objectIds)
+    {
         classIds = _classIds;
         confidences = _confidences;
         boxes = _boxes;
         frameId = _frameId;
+        objectIds = _objectIds;
     }
     size_t frameId;
     std::vector<int> classIds;
     std::vector<float> confidences;
     std::vector<cv::Rect_<float>> boxes;
+    std::vector<int> objectIds;
 };
 
 namespace openshot
@@ -70,17 +79,32 @@ namespace openshot
         std::vector<std::string> classNames;
 
         std::vector<cv::Scalar> classesColor;
+        
+        /// Draw class name and confidence score on top of the bounding box
+        Keyframe display_box_text;
+        /// Minimum confidence value to display the detected objects
+        float confidence_threshold = 0.5; 
+        /// Contain the user selected classes for visualization
+        std::vector<std::string> display_classes;
+        std::string class_filter;
 
         /// Init effect settings
         void init_effect_details();
+        /// Draw bounding box with class and score text 
+        void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame, int objectNumber, std::vector<int> color, float alpha, 
+                        int thickness, bool is_background, bool draw_text);
+        /// Draw rotated rectangle with alpha channel
+        void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
 
-        void drawPred(int classId, float conf, cv::Rect2d box, cv::Mat& frame);
 
     public:
-
-        ObjectDetection();
+        /// Index of the Tracked Object that was selected to modify it's properties
+        int selectedObjectIndex;
 
         ObjectDetection(std::string clipTrackerDataPath);
+
+        /// Default constructor
+        ObjectDetection();
 
         /// @brief This method is required for all derived classes of EffectBase, and returns a
         /// modified openshot::Frame object
@@ -98,7 +122,8 @@ namespace openshot
         /// Load protobuf data file
         bool LoadObjDetectdData(std::string inputFilePath);
 
-        DetectionData GetTrackedData(size_t frameId);
+        /// Get the indexes and IDs of all visible objects in the given frame
+        std::string GetVisibleObjects(int64_t frame_number) const override;
 
         // Get and Set JSON methods
         std::string Json() const override; ///< Generate JSON string of this object

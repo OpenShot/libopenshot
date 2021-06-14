@@ -31,8 +31,23 @@
 #ifndef OPENSHOT_TIMELINE_BASE_H
 #define OPENSHOT_TIMELINE_BASE_H
 
+#include <cstdint>
+
 
 namespace openshot {
+    /**
+     * @brief This struct contains info about the current Timeline clip instance
+     *
+     * When the Timeline requests an openshot::Frame instance from a Clip, it passes
+     * this struct along, with some additional details from the Timeline, such as if this clip is
+     * above or below overlapping clips, etc... This info can help determine if a Clip should apply
+     * global effects from the Timeline, such as a global Transition/Mask effect.
+     */
+    struct TimelineInfoStruct
+    {
+        bool is_top_clip;                 ///< Is clip on top (if overlapping another clip)
+    };
+
 	/**
 	 * @brief This class represents a timeline (used for building generic timeline implementations)
 	 */
@@ -44,6 +59,11 @@ namespace openshot {
 
 		/// Constructor for the base timeline
 		TimelineBase();
+
+		/// This function will be overloaded in the Timeline class passing no arguments
+		/// so we'll be able to access the Timeline::Clips() function from a pointer object of
+		/// the TimelineBase class
+		virtual void Clips(int test);
 	};
 }
 

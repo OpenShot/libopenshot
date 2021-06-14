@@ -31,21 +31,24 @@
 #include "KeyFrame.h"
 #include "Exceptions.h"
 
-#include <cassert>         // For assert()
-#include <iostream>        // For std::cout
-#include <iomanip>         // For std::setprecision
 #include <algorithm>
 #include <functional>
 #include <utility>
+#include <cassert>		 // For assert()
+#include <iostream>		 // For std::cout
+#include <iomanip>		 // For std::setprecision
 
 using namespace std;
 using namespace openshot;
 
-namespace {
+namespace openshot{
+
+	// Check if the X coordinate of a given Point is lower than a given value
 	bool IsPointBeforeX(Point const & p, double const x) {
 		return p.co.X < x;
 	}
 
+	// Linear interpolation between two points
 	double InterpolateLinearCurve(Point const & left, Point const & right, double const target) {
 		double const diff_Y = right.co.Y - left.co.Y;
 		double const diff_X = right.co.X - left.co.X;
@@ -53,6 +56,7 @@ namespace {
 		return left.co.Y + slope * (target - left.co.X);
 	}
 
+	// Bezier interpolation between two points
 	double InterpolateBezierCurve(Point const & left, Point const & right, double const target, double const allowed_error) {
 		double const X_diff = right.co.X - left.co.X;
 		double const Y_diff = right.co.Y - left.co.Y;
@@ -88,11 +92,16 @@ namespace {
 			t_step /= 2;
 		} while (true);
 	}
-
-
+	// Interpolate two points using the right Point's interpolation method
 	double InterpolateBetween(Point const & left, Point const & right, double target, double allowed_error) {
-		assert(left.co.X < target);
-		assert(target <= right.co.X);
+		// check if target is outside of the extremities poits
+		// This can occur when moving fast the play head
+		if(left.co.X > target){
+			return left.co.Y;
+		}
+		if(target > right.co.X){
+			return right.co.Y;
+		}
 		switch (right.interpolation) {
 		case CONSTANT: return left.co.Y;
 		case LINEAR: return InterpolateLinearCurve(left, right, target);
@@ -100,25 +109,23 @@ namespace {
 		default: return InterpolateLinearCurve(left, right, target);
 		}
 	}
-
-
-	template<typename Check>
-	int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
-		int64_t start = left.co.X;
-		int64_t stop = right.co.X;
-		while (start < stop) {
-			int64_t const mid = (start + stop + 1) / 2;
-			double const value = InterpolateBetween(left, right, mid, 0.01);
-			if (check(round(value), current)) {
-				start = mid;
-			} else {
-				stop = mid - 1;
-			}
-		}
-		return start;
-	}
 }
 
+template<typename Check>
+int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t const current, Check check) {
+	int64_t start = left.co.X;
+	int64_t stop = right.co.X;
+	while (start < stop) {
+		int64_t const mid = (start + stop + 1) / 2;
+		double const value = InterpolateBetween(left, right, mid, 0.01);
+		if (check(round(value), current)) {
+			start = mid;
+		} else {
+			stop = mid - 1;
+		}
+	}
+	return start;
+}
 
 // Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) {
@@ -543,6 +550,7 @@ void Keyframe::RemovePoint(int64_t index) {
 		throw OutOfBoundsPoint("Invalid point requested", index, Points.size());
 }
 
+// Replace an existing point with a new point
 void Keyframe::UpdatePoint(int64_t index, Point p) {
 	// Remove matching point
 	RemovePoint(index);

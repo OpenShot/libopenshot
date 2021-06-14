@@ -2,6 +2,7 @@
  * @file
  * @brief Unit tests for CVTracker
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -56,26 +57,26 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
+        "region": {"normalized_x": 0.459375, "normalized_y": 0.28333, "normalized_width": 0.28125, "normalized_height": 0.461111, "first-frame": 1}
     } )proto";
 
     // Create tracker
     CVTracker kcfTracker(json_data, tracker_pc);
 
     // Track clip for frames 0-20
-    kcfTracker.trackClip(c1, 0, 20, true);
+    kcfTracker.trackClip(c1, 1, 20, true);
     // Get tracked data
     FrameData fd = kcfTracker.GetTrackedData(20);
-    float x = fd.x1;
-    float y = fd.y1;
-    float width = fd.x2 - x;
-    float height = fd.y2 - y;
+    int x = (float)fd.x1 * 640;
+    int y = (float)fd.y1 * 360;
+    int width = ((float)fd.x2*640) - x;
+    int height = ((float)fd.y2*360) - y;
 
     // Compare if tracked data is equal to pre-tested ones
-    CHECK((int)(x * 640) == 259);
-    CHECK((int)(y * 360) == 131);
-    CHECK((int)(width * 640) == 180);
-    CHECK((int)(height * 360) == 166);
+    CHECK(x >= 255); CHECK(x <= 257);
+    CHECK(y >= 133); CHECK(y <= 135);
+    CHECK(width >= 179); CHECK(width <= 181);
+    CHECK(height >= 165); CHECK(height <= 168);
 }
 
 
@@ -94,7 +95,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 0}
+        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 1}
     } )proto";
 
 
@@ -102,7 +103,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     CVTracker kcfTracker_1(json_data, tracker_pc);
 
     // Track clip for frames 0-20
-    kcfTracker_1.trackClip(c1, 0, 20, true);
+    kcfTracker_1.trackClip(c1, 1, 20, true);
 
     // Get tracked data
     FrameData fd_1 = kcfTracker_1.GetTrackedData(20);
@@ -119,7 +120,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker_type": "",
-        "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 0}
+        "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 1}
     } )proto";
 
     // Create second tracker

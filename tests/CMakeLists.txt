@@ -24,6 +24,11 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+# Allow spaces in test names
+if(POLICY CMP0110)
+  cmake_policy(SET CMP0110 NEW)
+endif()
+
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
@@ -48,8 +53,6 @@ set(OPENSHOT_TESTS
   Color
   Coordinate
   DummyReader
-  ReaderBase
-  ImageWriter
   FFmpegReader
   FFmpegWriter
   Fraction
@@ -58,14 +61,20 @@ set(OPENSHOT_TESTS
   KeyFrame
   Point
   QtImageReader
+  ReaderBase
   Settings
   Timeline
 )
 
-###
-### OPENCV RELATED TEST FILES
-###
-if(ENABLE_OPENCV)
+# ImageMagick related test files
+if($CACHE{HAVE_IMAGEMAGICK})
+  list(APPEND OPENSHOT_TESTS
+    ImageWriter
+  )
+endif()
+
+# OPENCV RELATED TEST FILES
+if($CACHE{HAVE_OPENCV})
   list(APPEND OPENSHOT_TESTS
     CVTracker
     CVStabilizer
@@ -103,6 +112,18 @@ foreach(tname ${OPENSHOT_TESTS})
   list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
   list(APPEND CATCH2_TEST_NAMES ${tname})
 endforeach()
+# Add an additional special-case test, for an envvar-dependent setting
+add_test(NAME [=["Settings:Debug logging (enabled)"]=]
+  COMMAND
+    openshot-Settings-test "[environment]"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+set_tests_properties([=["Settings:Debug logging (enabled)"]=]
+  PROPERTIES
+    LABELS Settings
+    ENVIRONMENT "LIBOPENSHOT_DEBUG=1"
+)
+
 # Export target list for coverage use
 set(UNIT_TEST_TARGETS ${CATCH2_TEST_TARGETS} PARENT_SCOPE)
 set(UNIT_TEST_NAMES ${CATCH2_TEST_NAMES} PARENT_SCOPE)

@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for CVStabilization class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -28,6 +29,10 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+
 #include "CVStabilization.h"
 #include <google/protobuf/util/time_util.h>
 
@@ -39,8 +44,8 @@ using google::protobuf::util::TimeUtil;
 CVStabilization::CVStabilization(std::string processInfoJson, ProcessingController &processingController)
 : processingController(&processingController){
     SetJson(processInfoJson);
-    start = 0;
-    end = 0;
+    start = 1;
+    end = 1;
 }
 
 // Process clip and store necessary stabilization data
@@ -60,10 +65,10 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
     cv::Size readerDims(video.Reader()->info.width, video.Reader()->info.height);
 
     size_t frame_number;
-    if(!process_interval || end == 0 || end-start == 0){
+    if(!process_interval || end <= 1 || end-start == 0){
         // Get total number of frames in video
-        start = video.Start() * video.Reader()->info.fps.ToInt();
-        end = video.End() * video.Reader()->info.fps.ToInt();
+        start = (int)(video.Start() * video.Reader()->info.fps.ToFloat()) + 1;
+        end = (int)(video.End() * video.Reader()->info.fps.ToFloat()) + 1;
     }
 
     // Extract and track opticalflow features for each frame
@@ -276,6 +281,8 @@ std::map<size_t,TransformParam> CVStabilization::GenNewCamPosition(std::map <siz
 
 // Save stabilization data to protobuf file
 bool CVStabilization::SaveStabilizedData(){
+    using std::ios;
+
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
 
@@ -292,7 +299,7 @@ bool CVStabilization::SaveStabilizedData(){
     // Write the new message to disk.
     std::fstream output(protobuf_data_path, ios::out | ios::trunc | ios::binary);
     if (!stabilizationMessage.SerializeToOstream(&output)) {
-        cerr << "Failed to write protobuf message." << endl;
+        std::cerr << "Failed to write protobuf message." << std::endl;
         return false;
     }
 
@@ -380,12 +387,13 @@ void CVStabilization::SetJsonValue(const Json::Value root) {
 
 // Load protobuf data file
 bool CVStabilization::_LoadStabilizedData(){
+    using std::ios;
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
     // Read the existing tracker message.
-    fstream input(protobuf_data_path, ios::in | ios::binary);
+    std::fstream input(protobuf_data_path, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
-        cerr << "Failed to parse protobuf message." << endl;
+        std::cerr << "Failed to parse protobuf message." << std::endl;
         return false;
     }
 

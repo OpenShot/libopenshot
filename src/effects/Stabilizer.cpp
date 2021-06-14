@@ -2,6 +2,7 @@
  * @file
  * @brief Source file for Stabilizer effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -27,6 +28,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 
 #include "effects/Stabilizer.h"
 #include "Exceptions.h"
@@ -115,14 +120,14 @@ std::shared_ptr<Frame> Stabilizer::GetFrame(std::shared_ptr<Frame> frame, int64_
 
 // Load protobuf data file
 bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
-
+    using std::ios;
     // Create stabilization message
     pb_stabilize::Stabilization stabilizationMessage;
 
     // Read the existing tracker message.
-    fstream input(inputFilePath, ios::in | ios::binary);
+    std::fstream input(inputFilePath, ios::in | ios::binary);
     if (!stabilizationMessage.ParseFromIstream(&input)) {
-        cerr << "Failed to parse protobuf message." << endl;
+        std::cerr << "Failed to parse protobuf message." << std::endl;
         return false;
     }
 
@@ -233,6 +238,9 @@ std::string Stabilizer::PropertiesJSON(int64_t requested_frame) const {
 	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
 
 	root["zoom"] = add_property_json("Zoom", zoom.GetValue(requested_frame), "float", "", &zoom, 0.0, 2.0, false, requested_frame);
+
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

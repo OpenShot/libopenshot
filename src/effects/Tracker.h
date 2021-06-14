@@ -2,6 +2,7 @@
  * @file
  * @brief Header file for Tracker effect class
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
  *
  * @ref License
  */
@@ -31,65 +32,43 @@
 #ifndef OPENSHOT_TRACKER_EFFECT_H
 #define OPENSHOT_TRACKER_EFFECT_H
 
+#include <string>
+#include <memory>
+#include <map>
+
 #include "../EffectBase.h"
 
-#include <cmath>
-#include <fstream>
-#include <stdio.h>
-#include <memory>
-#include "../Color.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
+
 #include "protobuf_messages/trackerdata.pb.h"
-
-// Tracking info struct
-struct EffectFrameData{
-  size_t frame_id = -1;
-  float rotation = 0;
-  float x1 = -1;
-  float y1 = -1;
-  float x2 = -1;
-  float y2 = -1;
-
-  // Constructors
-  EffectFrameData()
-  {}
-
-  EffectFrameData( int _frame_id)
-  {frame_id = _frame_id;}
-
-  EffectFrameData( int _frame_id , float _rotation, float _x1, float _y1, float _x2, float _y2)
-  {
-      frame_id = _frame_id;
-      rotation = _rotation;
-      x1 = _x1;
-      y1 = _y1;
-      x2 = _x2;
-      y2 = _y2;
-  }
-};
-
+#include "../TrackedObjectBBox.h"
+#include "../Clip.h"
 
 namespace openshot
 {
     /**
-     * @brief This class track a given object through the clip and, when called, draws a box surrounding it.
+     * @brief This class tracks a given object through the clip, draws a box around it and allow
+     * the user to attach another clip (image or video) to the tracked object.
      *
-     * Tracking is useful to better visualize and follow the movement of an object through video.
+     * Tracking is useful to better visualize, follow the movement of an object through video
+     * and attach an image or video to it.
      */
     class Tracker : public EffectBase
     {
     private:
         /// Init effect settings
         void init_effect_details();
-        std::string protobuf_data_path;
+
+        Fraction BaseFPS;
+        double TimeScale;
 
     public:
+		std::string protobuf_data_path; ///< Path to the protobuf file that holds the bounding-box data
+		std::shared_ptr<TrackedObjectBBox> trackedData; ///< Pointer to an object that holds the bounding-box data and it's Keyframes
 
-        std::map<int, EffectFrameData> trackedDataById; // Save object tracking box data
-
-        /// Blank constructor, useful when using Json to load the effect properties
-        Tracker(std::string clipTrackerDataPath);
+		/// Blank constructor, useful when using Json to load the effect properties
+		Tracker(std::string clipTrackerDataPath);
 
         /// Default constructor
         Tracker();
@@ -106,11 +85,10 @@ namespace openshot
         std::shared_ptr<Frame> GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) override;
         std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::shared_ptr<Frame> (new Frame()), frame_number); }
 
-        // Load protobuf data file
-        bool LoadTrackedData(std::string inputFilePath);
+        /// Get the indexes and IDs of all visible objects in the given frame
+        std::string GetVisibleObjects(int64_t frame_number) const override;
 
-        // Get tracker info for the desired frame
-        EffectFrameData GetTrackedData(size_t frameId);
+        void DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::vector<int> color, float alpha, int thickness, bool is_background);
 
         // Get and Set JSON methods
         std::string Json() const override; ///< Generate JSON string of this object

@@ -86,6 +86,7 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   Json.cpp
   KeyFrame.cpp
+  TrackedObjectBase.cpp
   OpenShotVersion.cpp
   ZmqLogger.cpp
   PlayerBase.cpp
@@ -105,6 +106,7 @@ set(OPENSHOT_CV_SOURCES
   CVStabilization.cpp
   ClipProcessingJobs.cpp
   CVObjectDetection.cpp
+  TrackedObjectBBox.cpp
   effects/Stabilizer.cpp
   effects/Tracker.cpp
   effects/ObjectDetection.cpp
@@ -300,14 +302,42 @@ foreach(ff_comp IN LISTS all_comps)
   if(TARGET FFmpeg::${ff_comp})
     target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
     # Keep track of some FFmpeg lib versions, to embed in our version header
-    if(${ff_comp} IN_LIST version_comps)
+    if(${ff_comp} IN_LIST version_comps AND ${ff_comp}_VERSION)
       string(TOUPPER ${ff_comp} v_name)
       set(${v_name}_VERSION_STR ${${ff_comp}_VERSION} CACHE STRING "${ff_comp} version used" FORCE)
       mark_as_advanced(${v_name}_VERSION_STR)
     endif()
   endif()
-
 endforeach()
+
+# Version check for hardware-acceleration code
+if(USE_HW_ACCEL AND avcodec_VERSION)
+  if(${avcodec_VERSION} VERSION_GREATER 57.107.100)
+    set(HAVE_HW_ACCEL TRUE)
+  endif()
+endif()
+
+# Hwaccel preprocessor define (for source #ifdefs)
+if (NOT USE_HW_ACCEL)
+  target_compile_definitions(openshot PUBLIC USE_HW_ACCEL=0)
+elseif (HAVE_HW_ACCEL)
+  target_compile_definitions(openshot PUBLIC USE_HW_ACCEL=1)
+endif()
+
+# Include in feature summary
+if(USE_HW_ACCEL AND HAVE_HW_ACCEL)
+  set(FFMPEG_HARDWARE_ACCELERATION TRUE)
+elseif(USE_HW_ACCEL)
+  set(FFMPEG_HARDWARE_ACCELERATION "NOTFOUND")
+else()
+  set(FFMPEG_HARDWARE_ACCELERATION FALSE)
+endif()
+
+# Report HWAccel status, unless it's indeterminate
+if (NOT FFMPEG_HARDWARE_ACCELERATION STREQUAL "NOTFOUND")
+  set(_hwaccel_help "GPU-accelerated routines (FFmpeg 3.4+)")
+  add_feature_info("FFmpeg hwaccel" FFMPEG_HARDWARE_ACCELERATION ${_hwaccel_help})
+endif()
 
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
@@ -402,7 +432,7 @@ if(ENABLE_OPENCV)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
     # If we have version 4.5.1, all hope is lost
-  elseif(OpenCV_VERSION VERSION_EQUAL 4.5.1)
+  elseif(OpenCV_VERSION VERSION_EQUAL "4.5.1")
     message(WARNING [[Incompatible OpenCV version detected
 OpenCV version 4.5.1 contains header errors which make it unable to be used with OpenShot. OpenCV support wil be disabled. Upgrade to OpenCV 4.5.2+ or downgrade to 4.5.0 or earlier, to enable OpenCV.
 See https://github.com/opencv/opencv/issues/19260]])
@@ -431,7 +461,7 @@ See https://github.com/opencv/opencv/issues/19260]])
     mark_as_advanced(OPENCV_VERSION_STR)
 
     # We may need to use Tracker as opencv::legacy::Tracker
-    if(OpenCV_VERSION VERSION_GREATER_EQUAL 4.5.2)
+    if(OpenCV_VERSION VERSION_GREATER "4.5.1")
       target_compile_definitions(openshot PUBLIC USE_LEGACY_TRACKER=1)
     endif()
 
@@ -507,3 +537,4 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
+

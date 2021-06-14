@@ -24,7 +24,7 @@
 # along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-cmake_minimum_required(VERSION 3.2...3.14 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10...3.20 FATAL_ERROR)
 
 message("\
 -----------------------------------------------------------------
@@ -74,19 +74,21 @@ include(CTest)
 
 ################ OPTIONS ##################
 # Optional build settings for libopenshot
-option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
-option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
-
 option(ENABLE_IWYU "Enable 'Include What You Use' scanner (CMake 3.3+)" OFF)
 
 option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
+option(VERBOSE_TESTS "Run CTest with maximum verbosity" OFF)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 
 option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
 
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
+
+option(USE_SYSTEM_JSONCPP "Use system installed JsonCpp, if found" ON)
+option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)" ON)
+option(USE_HW_ACCEL "Enable hardware-accelerated encoding-decoding with FFmpeg 3.4+" ON)
 
 # Legacy commandline override
 if (DISABLE_TESTS)
@@ -181,14 +183,22 @@ if(NOT Catch2_FOUND)
 endif()
 if(BUILD_TESTING)
   include(Catch)
+  # Parallel tests seem to hang randomly on Windows
   if(ENABLE_PARALLEL_CTEST)
-    # Figure out the amount of parallelism for CTest
-    include(ProcessorCount)
-    ProcessorCount(CPU_COUNT)
-    if(CPU_COUNT GREATER 1)
-      add_feature_info("Parallel tests" TRUE "Unit tests can use ${CPU_COUNT} processors")
-      set(CTEST_OPTIONS "-j${CPU_COUNT}")
+    if(WIN32)
+      message(WARNING "Win32 detected, disabling parallel unit tests")
+    else()
+      # Figure out the amount of parallelism for CTest
+      include(ProcessorCount)
+      ProcessorCount(CPU_COUNT)
+      if(CPU_COUNT GREATER 1)
+        add_feature_info("Parallel tests" TRUE "Unit tests can use ${CPU_COUNT} processors")
+        list(APPEND CTEST_OPTIONS "-j${CPU_COUNT}")
+      endif()
     endif()
+  endif()
+  if(VERBOSE_TESTS)
+    list(APPEND CTEST_OPTIONS "-VV")
   endif()
   add_subdirectory(tests)
 endif()

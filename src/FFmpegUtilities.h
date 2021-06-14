@@ -44,9 +44,10 @@
 	#ifndef IS_FFMPEG_4_5
 	#define IS_FFMPEG_4_5 (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 136, 100))
 	#endif
+	
+	#ifndef USE_HW_ACCEL
+	#define USE_HW_ACCEL (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 107, 100))
 
-	#ifndef HAVE_HW_ACCEL
-	#define HAVE_HW_ACCEL (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 107, 100))
 	#endif
 
 	// Include the FFmpeg headers
