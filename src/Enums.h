@@ -80,5 +80,37 @@ namespace openshot
 		VOLUME_MIX_AVERAGE,	///< Evenly divide the overlapping clips volume keyframes, so that the sum does not exceed 100%
 		VOLUME_MIX_REDUCE 	///< Reduce volume by about %25, and then mix (louder, but could cause pops if the sum exceeds 100%)
 	};
+
+
+	/// This enumeration determines the distortion type of Distortion Effect.
+	enum DistortionType
+	{
+		HARD_CLIPPING,
+		SOFT_CLIPPING,
+		EXPONENTIAL,
+		FULL_WAVE_RECTIFIER,
+		HALF_WAVE_RECTIFIER,
+	};
+
+	/// This enumeration determines the filter type of ParametricEQ Effect.
+	enum FilterType
+	{
+		LOW_PASS,
+		HIGH_PASS,
+		LOW_SHELF,
+		HIGH_SHELF,
+		BAND_PASS,
+		BAND_STOP,
+		PEAKING_NOTCH,
+	};
+
+	/// This enumeration determines the compressor mode of compressor Effect.
+	enum CompressorMode
+	{
+		COMPRESSOR,
+		LIMITER,
+		EXPANDER,
+		NOISE_GATE,
+	};
 }
 #endif

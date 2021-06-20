@@ -88,6 +88,18 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "Wave")
 		return new Wave();
 
+	else if(effect_type == "Noise")
+		return new Noise();
+
+	else if(effect_type == "Distortion")
+		return new Distortion();
+
+	else if(effect_type == "ParametricEQ")
+		return new ParametricEQ();
+
+	else if(effect_type == "Compressor")
+		return new Compressor();
+
 	#ifdef USE_OPENCV
 	else if(effect_type == "Stabilizer")
 		return new Stabilizer();
@@ -124,6 +136,11 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+	/* Audio */
+	root.append(Noise().JsonInfo());
+	root.append(Distortion().JsonInfo());
+	root.append(ParametricEQ().JsonInfo());
+	root.append(Compressor().JsonInfo());
 
 	#ifdef USE_OPENCV
 	root.append(Stabilizer().JsonInfo());
