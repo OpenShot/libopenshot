@@ -119,7 +119,7 @@ namespace openshot
 
     void QtPlayer::Play()
     {
-    	// Set mode to playing, and speed to normal
+        // Set mode to playing, and speed to normal
     	mode = PLAYBACK_PLAY;
     	Speed(1);
 
