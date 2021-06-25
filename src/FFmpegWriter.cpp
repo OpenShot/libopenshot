@@ -1836,10 +1836,6 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
                 audio_encoder_buffer_size, 0);
         }
 
-        // Increment PTS (in samples)
-        write_audio_count += FFMIN(audio_input_frame_size, audio_input_position);
-        frame_final->pts = write_audio_count; // Set the AVFrame's PTS
-
         // Init the packet
         AVPacket pkt;
         av_init_packet(&pkt);
@@ -1910,6 +1906,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         if (error_code < 0) {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
         }
+
+        // Increment PTS (in samples)
+        write_audio_count += FFMIN(audio_input_frame_size, audio_input_position);
+        frame_final->pts = write_audio_count; // Set the AVFrame's PTS
 
         // deallocate AVFrame
         av_freep(&(frame_final->data[0]));
