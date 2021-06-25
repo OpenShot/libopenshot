@@ -291,12 +291,17 @@ mark_as_advanced(QT_VERSION_STR)
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
 set(all_comps avcodec avformat avutil swscale)
-if(TARGET FFmpeg::swresample)
-  list(APPEND all_comps swresample)
-else()
-  list(APPEND all_comps avresample)
-endif()
 set(version_comps avcodec avformat avutil)
+
+# Pick a resampler.  Prefer swresample if possible
+if(TARGET FFmpeg::swresample AND ${avformat_VERSION} VERSION_GREATER "57.0.0")
+  set(resample_lib swresample)
+  set(USE_SW TRUE)
+else()
+  set(resample_lib avresample)
+  set(USE_SW FALSE)
+endif()
+list(APPEND all_comps ${resample_lib})
 
 foreach(ff_comp IN LISTS all_comps)
   if(TARGET FFmpeg::${ff_comp})
@@ -310,9 +315,15 @@ foreach(ff_comp IN LISTS all_comps)
   endif()
 endforeach()
 
+# Indicate which resampler we linked with, and set a config header flag
+add_feature_info("FFmpeg ${resample_lib}" TRUE "Audio resampling uses ${resample_lib}")
+# Set the appropriate flag in OpenShotVersion.h
+set(FFMPEG_USE_SWRESAMPLE ${USE_SW} CACHE BOOL "libswresample used for audio resampling" FORCE)
+mark_as_advanced(FFMPEG_USE_SWRESAMPLE)
+
 # Version check for hardware-acceleration code
 if(USE_HW_ACCEL AND avcodec_VERSION)
-  if(${avcodec_VERSION} VERSION_GREATER 57.107.100)
+  if(${avcodec_VERSION} VERSION_GREATER "57.107.100")
     set(HAVE_HW_ACCEL TRUE)
   endif()
 endif()
