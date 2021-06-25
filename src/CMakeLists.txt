@@ -288,7 +288,10 @@ mark_as_advanced(QT_VERSION_STR)
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
-find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
+find_package(FFmpeg REQUIRED
+  COMPONENTS avcodec avformat avutil swscale
+  OPTIONAL_COMPONENTS swresample avresample
+)
 
 set(all_comps avcodec avformat avutil swscale)
 if(TARGET FFmpeg::swresample)
@@ -302,17 +305,17 @@ foreach(ff_comp IN LISTS all_comps)
   if(TARGET FFmpeg::${ff_comp})
     target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
     # Keep track of some FFmpeg lib versions, to embed in our version header
-    if(${ff_comp} IN_LIST version_comps AND ${ff_comp}_VERSION)
+    if(${ff_comp} IN_LIST version_comps AND FFmpeg_${ff_comp}_VERSION)
       string(TOUPPER ${ff_comp} v_name)
-      set(${v_name}_VERSION_STR ${${ff_comp}_VERSION} CACHE STRING "${ff_comp} version used" FORCE)
+      set(${v_name}_VERSION_STR ${FFmpeg_${ff_comp}_VERSION} CACHE STRING "${ff_comp} version used" FORCE)
       mark_as_advanced(${v_name}_VERSION_STR)
     endif()
   endif()
 endforeach()
 
 # Version check for hardware-acceleration code
-if(USE_HW_ACCEL AND avcodec_VERSION)
-  if(${avcodec_VERSION} VERSION_GREATER 57.107.100)
+if(USE_HW_ACCEL AND FFmpeg_avcodec_VERSION)
+  if(${FFmpeg_avcodec_VERSION} VERSION_GREATER "57.107.100")
     set(HAVE_HW_ACCEL TRUE)
   endif()
 endif()
@@ -537,4 +540,3 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
-
