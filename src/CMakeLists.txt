@@ -551,4 +551,3 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
-
