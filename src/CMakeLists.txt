@@ -326,7 +326,7 @@ mark_as_advanced(FFMPEG_USE_SWRESAMPLE)
 
 # Version check for hardware-acceleration code
 if(USE_HW_ACCEL AND FFmpeg_avcodec_VERSION)
-  if(${FFmpeg_avcodec_VERSION} VERSION_GREATER "57.107.100")
+  if(${FFmpeg_avcodec_VERSION} VERSION_GREATER "57.106")
     set(HAVE_HW_ACCEL TRUE)
   endif()
 endif()
