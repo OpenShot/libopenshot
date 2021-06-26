@@ -870,12 +870,7 @@ void FFmpegWriter::flush_encoders() {
                     avcodec_flush_buffers(video_codec_ctx);
                     break;
                 }
-                if (pkt.pts != AV_NOPTS_VALUE)
-                    pkt.pts = av_rescale_q(pkt.pts, video_codec_ctx->time_base, video_st->time_base);
-                if (pkt.dts != AV_NOPTS_VALUE)
-                    pkt.dts = av_rescale_q(pkt.dts, video_codec_ctx->time_base, video_st->time_base);
-                if (pkt.duration > 0)
-                    pkt.duration = av_rescale_q(pkt.duration, video_codec_ctx->time_base, video_st->time_base);
+                av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
                 pkt.stream_index = video_st->index;
                 error_code = av_interleaved_write_frame(oc, &pkt);
             }
@@ -894,12 +889,7 @@ void FFmpegWriter::flush_encoders() {
 			}
 
 			// set the timestamp
-			if (pkt.pts != AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(pkt.pts, video_codec_ctx->time_base, video_st->time_base);
-			if (pkt.dts != AV_NOPTS_VALUE)
-				pkt.dts = av_rescale_q(pkt.dts, video_codec_ctx->time_base, video_st->time_base);
-			if (pkt.duration > 0)
-				pkt.duration = av_rescale_q(pkt.duration, video_codec_ctx->time_base, video_st->time_base);
+            av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
 			pkt.stream_index = video_st->index;
 
 			// Write packet
@@ -940,12 +930,7 @@ void FFmpegWriter::flush_encoders() {
             pkt.pts = pkt.dts = write_audio_count;
 
             // Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
-            if (pkt.pts != AV_NOPTS_VALUE)
-                pkt.pts = av_rescale_q(pkt.pts, audio_codec_ctx->time_base, audio_st->time_base);
-            if (pkt.dts != AV_NOPTS_VALUE)
-                pkt.dts = av_rescale_q(pkt.dts, audio_codec_ctx->time_base, audio_st->time_base);
-            if (pkt.duration > 0)
-                pkt.duration = av_rescale_q(pkt.duration, audio_codec_ctx->time_base, audio_st->time_base);
+            av_packet_rescale_ts(&pkt, audio_codec_ctx->time_base, audio_st->time_base);
 
             // set stream
             pkt.stream_index = audio_st->index;
@@ -1887,12 +1872,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             pkt.pts = pkt.dts = write_audio_count;
 
             // Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
-            if (pkt.pts != AV_NOPTS_VALUE)
-                pkt.pts = av_rescale_q(pkt.pts, audio_codec_ctx->time_base, audio_st->time_base);
-            if (pkt.dts != AV_NOPTS_VALUE)
-                pkt.dts = av_rescale_q(pkt.dts, audio_codec_ctx->time_base, audio_st->time_base);
-            if (pkt.duration > 0)
-                pkt.duration = av_rescale_q(pkt.duration, audio_codec_ctx->time_base, audio_st->time_base);
+            av_packet_rescale_ts(&pkt, audio_codec_ctx->time_base, audio_st->time_base);
 
             // set stream
             pkt.stream_index = audio_st->index;
@@ -2144,12 +2124,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
 			// set the timestamp
-			if (pkt.pts != AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(pkt.pts, video_codec_ctx->time_base, video_st->time_base);
-			if (pkt.dts != AV_NOPTS_VALUE)
-				pkt.dts = av_rescale_q(pkt.dts, video_codec_ctx->time_base, video_st->time_base);
-			if (pkt.duration > 0)
-				pkt.duration = av_rescale_q(pkt.duration, video_codec_ctx->time_base, video_st->time_base);
+            av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
 			pkt.stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
