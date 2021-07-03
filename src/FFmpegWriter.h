@@ -151,8 +151,8 @@ namespace openshot {
 		int cache_size;
 		bool is_writing;
 		bool is_open;
-		int64_t write_video_count;
-		int64_t write_audio_count;
+		int64_t video_timestamp;
+		int64_t audio_timestamp;
 
 		bool prepare_streams;
 		bool write_header;
