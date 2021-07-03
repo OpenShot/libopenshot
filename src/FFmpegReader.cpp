@@ -768,12 +768,12 @@ void FFmpegReader::UpdateVideoInfo() {
 	// Check for valid duration (if found)
 	if (info.duration <= 0.0f && pFormatCtx->duration >= 0)
 		// Use the format's duration
-		info.duration = pFormatCtx->duration / AV_TIME_BASE;
+		info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
 
 	// Calculate duration from filesize and bitrate (if any)
 	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0)
 		// Estimate from bitrate, total bytes, and framerate
-		info.duration = (info.file_size / info.video_bit_rate);
+		info.duration = float(info.file_size) / info.video_bit_rate;
 
 	// No duration found in stream of file
 	if (info.duration <= 0.0f) {

@@ -947,7 +947,7 @@ void FFmpegWriter::flush_encoders() {
             // Increment PTS by duration of packet
             audio_timestamp += pkt.duration;
 
-                    // deallocate memory for packet
+            // deallocate memory for packet
             AV_FREE_PACKET(&pkt);
         }
     }
@@ -1885,8 +1885,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_audio_packets ERROR [" + (std::string) av_err2str(error_code) + "]", "error_code", error_code);
         }
 
-        // Increment PTS by duration of packet
-        audio_timestamp += pkt.duration;
+        // Increment PTS (no pkt.duration, so calculate with maths)
+        audio_timestamp += FFMIN(audio_input_frame_size, audio_input_position);
 
         // deallocate AVFrame
         av_freep(&(frame_final->data[0]));
@@ -2134,9 +2134,6 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 			}
 		}
 
-        // Increment PTS (in frames and scaled to the codec's timebase)
-        video_timestamp += pkt.duration;
-
 		// Deallocate packet
 		AV_FREE_PACKET(&pkt);
 #if USE_HW_ACCEL
@@ -2148,6 +2145,9 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 #endif // USE_HW_ACCEL
 	}
+
+    // Increment PTS (in frames and scaled to the codec's timebase)
+    video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
 	// Success
 	return true;
