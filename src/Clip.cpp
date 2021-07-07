@@ -121,12 +121,8 @@ void Clip::init_reader_settings() {
 
 // Init reader's rotation (if any)
 void Clip::init_reader_rotation() {
-	// Only init rotation from reader when needed
-	if (rotation.GetCount() > 1)
-		// Do nothing if more than 1 rotation Point
-		return;
-	else if (rotation.GetCount() == 1 && rotation.GetValue(1) != 0.0)
-		// Do nothing if 1 Point, and it's not the default value
+	// Dont init rotation if clip has keyframes
+	if (rotation.GetCount() > 0)
 		return;
 
 	// Init rotation
