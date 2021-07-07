@@ -1722,7 +1722,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         // Convert to planar (if needed by audio codec)
         AVFrame *frame_final = AV_ALLOCATE_FRAME();
         AV_RESET_FRAME(frame_final);
-  if (av_sample_fmt_is_planar(audio_codec_ctx->sample_fmt)) {
+        if (av_sample_fmt_is_planar(audio_codec_ctx->sample_fmt)) {
             ZmqLogger::Instance()->AppendDebugMethod(
       "FFmpegWriter::write_audio_packets (2nd resampling for Planar formats)",
                 "in_sample_fmt", output_sample_fmt,
@@ -1768,8 +1768,11 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 
             // Create output frame (and allocate arrays)
             frame_final->nb_samples = audio_input_frame_size;
+            frame_final->channels = info.channels;
+            frame_final->format = audio_codec_ctx->sample_fmt;
+            frame_final->channel_layout = info.channel_layout;
             av_samples_alloc(frame_final->data, frame_final->linesize, info.channels,
-        frame_final->nb_samples, audio_codec_ctx->sample_fmt, 0);
+                frame_final->nb_samples, audio_codec_ctx->sample_fmt, 0);
 
             // Convert audio samples
             int nb_samples = SWR_CONVERT(
@@ -1786,7 +1789,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             if (nb_samples > 0) {
                 memcpy(samples, frame_final->data[0],
                     nb_samples * av_get_bytes_per_sample(audio_codec_ctx->sample_fmt) * info.channels);
-    }
+            }
 
             // deallocate AVFrame
             av_freep(&(audio_frame->data[0]));
