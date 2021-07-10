@@ -34,7 +34,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Distortion::Distortion() : distortion_type(HARD_CLIPPING), input_gain(0), output_gain(0), tone(0) {
+Distortion::Distortion() : distortion_type(HARD_CLIPPING), input_gain(10), output_gain(-10), tone(5) {
 	// Init effect properties
 	init_effect_details();
 }
