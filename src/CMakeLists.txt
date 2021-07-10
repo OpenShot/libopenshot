@@ -131,10 +131,13 @@ set(EFFECTS_SOURCES
   effects/Saturation.cpp
   effects/Shift.cpp
   effects/Wave.cpp
+  audio_effects/STFT.cpp
   audio_effects/Noise.cpp
   audio_effects/Distortion.cpp
   audio_effects/ParametricEQ.cpp
-  audio_effects/Compressor.cpp)
+  audio_effects/Compressor.cpp
+  audio_effects/Pitch.cpp
+  audio_effects/Robotization.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES
@@ -294,7 +297,7 @@ mark_as_advanced(QT_VERSION_STR)
 # Find FFmpeg libraries (used for video encoding / decoding)
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
 
-set(all_comps avcodec avformat avutil swscale avresample)
+set(all_comps avcodec avformat avutil swscale)
 if(TARGET FFmpeg::swresample)
   list(APPEND all_comps swresample)
 else()

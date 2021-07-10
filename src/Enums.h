@@ -112,5 +112,41 @@ namespace openshot
 		EXPANDER,
 		NOISE_GATE,
 	};
+
+	/// This enumeration determines the FFT size.
+	enum FFTSize
+	{
+		FFT_SIZE_32,
+		FFT_SIZE_64,
+		FFT_SIZE_128,
+		FFT_SIZE_256,
+		FFT_SIZE_512,
+		FFT_SIZE_1024,
+		FFT_SIZE_2048,
+		FFT_SIZE_4096,
+		FFT_SIZE_8192,
+	};
+
+	/// This enumeration determines the hop size.
+	enum HopSize {
+        HOP_SIZE_2,
+        HOP_SIZE_4,
+        HOP_SIZE_8,
+    };
+
+	/// This enumeration determines the window type.
+	enum WindowType {
+        RECTANGULAR,
+        BART_LETT,
+        HANN,
+        HAMMING,
+    };
+
+	enum RobotizationEffectType {
+		PASS_THROUGH,
+        ROBOTIZATION,
+		WHISPERIZATION,
+	};
+
 }
 #endif

@@ -78,7 +78,7 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
 		//auto *inBuffer = frame->audio->getReadPointer(channel);
-		auto *channelData = frame->audio->getWritePointer(channel);
+		auto *channel_data = frame->audio->getWritePointer(channel);
 		float out;
 
 		for (auto sample = 0; sample < frame->audio->getNumSamples(); ++sample)
@@ -86,7 +86,7 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 
 			const int input_gain_value = (int)input_gain.GetValue(frame_number);
 			const int output_gain_value = (int)output_gain.GetValue(frame_number);
-			const float in = channelData[sample]*powf(10.0f, input_gain_value * 0.05f);
+			const float in = channel_data[sample]*powf(10.0f, input_gain_value * 0.05f);
 			
 			// Use the current distortion type
 			switch (distortion_type) {
@@ -142,7 +142,7 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
             }
 
 			float filtered = filters[channel]->processSingleSampleRaw(out);
-			channelData[sample] = filtered*powf(10.0f, output_gain_value * 0.05f);
+			channel_data[sample] = filtered*powf(10.0f, output_gain_value * 0.05f);
 		}
 	}
 
@@ -152,11 +152,11 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 
 void Distortion::updateFilters(int64_t frame_number)
 {
-    double discreteFrequency = M_PI * 0.01;
+    double discrete_frequency = M_PI * 0.01;
     double gain = pow(10.0, (float)tone.GetValue(frame_number) * 0.05);
 
     for (int i = 0; i < filters.size(); ++i)
-        filters[i]->updateCoefficients(discreteFrequency, gain);
+        filters[i]->updateCoefficients(discrete_frequency, gain);
 }
 
 // Generate JSON string of this object
