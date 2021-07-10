@@ -111,6 +111,12 @@ if (DEFINED _inc)
   set_property(SOURCE openshot.i PROPERTY INCLUDE_DIRECTORIES ${_inc})
 endif()
 
+### (FINALLY!)
+### Properly manage dependencies (regenerate bindings after changes)
+if (CMAKE_VERSION VERSION_GREATER 3.20)
+  set_property(SOURCE openshot.i PROPERTY USE_SWIG_DEPENDENCIES TRUE)
+endif()
+
 ### Add the SWIG interface file (which defines all the SWIG methods)
 if (CMAKE_VERSION VERSION_LESS 3.8.0)
 	swig_add_module(rbopenshot ruby openshot.i)
