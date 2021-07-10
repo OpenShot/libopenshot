@@ -34,7 +34,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Robotization::Robotization() : fft_size(FFT_SIZE_2048), hop_size(HOP_SIZE_8), window_type(RECTANGULAR), effect_type(ROBOTIZATION), stft(*this) {
+Robotization::Robotization() : fft_size(FFT_SIZE_512), hop_size(HOP_SIZE_2), window_type(RECTANGULAR), effect_type(ROBOTIZATION), stft(*this) {
 	// Init effect properties
 	init_effect_details();
 }
@@ -52,7 +52,6 @@ void Robotization::init_effect_details()
 {
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
-    // stft = RobotizationWhisperizationEffect(*this);
 
 	/// Set the effect info
 	info.class_name = "Robotization";
@@ -69,29 +68,18 @@ std::shared_ptr<openshot::Frame> Robotization::GetFrame(std::shared_ptr<openshot
 	const ScopedLock sl (lock);
     ScopedNoDenormals noDenormals;
 
-	// const ScopedLock sl (lock);
-    // ScopedNoDenormals noDenormals;
-
-	// copy of the AudioBuffer frame->audio object (not the pointer)
-	// input_buffer = std::make_shared<juce::AudioBuffer<float>>(*frame->audio);
-	// output_buffer = std::make_shared<juce::AudioBuffer<float>>(*frame->audio);
-	// frame->audio;
-
     const int num_input_channels = frame->audio->getNumChannels();
     const int num_output_channels = frame->audio->getNumChannels();
     const int num_samples = frame->audio->getNumSamples();
     const int hop_size_value = 1 << ((int)hop_size + 1); 
 	const int fft_size_value = 1 << ((int)fft_size + 5); 
 
-    stft.setup(num_input_channels);
+    stft.setup(num_output_channels);
     stft.updateParameters((int)fft_size_value,
                           (int)hop_size_value,
                           (int)window_type);
 
     stft.process(*frame->audio);
-
-    for (int channel = num_input_channels; channel < num_output_channels; ++channel)
-        frame->audio->clear(channel, 0, num_samples);
 
 	// return the modified frame
 	return frame;
@@ -188,9 +176,9 @@ std::string Robotization::PropertiesJSON(int64_t requested_frame) const {
 	root["fft_size"]["choices"].append(add_property_choice_json("8192", FFT_SIZE_8192, fft_size));
 	
 	// Add hop_size choices (dropdown style)
-	root["hop_size"]["choices"].append(add_property_choice_json("2", HOP_SIZE_2, hop_size));
-	root["hop_size"]["choices"].append(add_property_choice_json("4", HOP_SIZE_4, hop_size));
-	root["hop_size"]["choices"].append(add_property_choice_json("8", HOP_SIZE_8, hop_size));
+	root["hop_size"]["choices"].append(add_property_choice_json("1/2", HOP_SIZE_2, hop_size));
+	root["hop_size"]["choices"].append(add_property_choice_json("1/4", HOP_SIZE_4, hop_size));
+	root["hop_size"]["choices"].append(add_property_choice_json("1/8", HOP_SIZE_8, hop_size));
 
 	// Add window_type choices (dropdown style)
 	root["window_type"]["choices"].append(add_property_choice_json("Rectangular", RECTANGULAR, window_type));

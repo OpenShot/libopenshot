@@ -123,19 +123,19 @@ namespace openshot
 					}
 					case ROBOTIZATION: {
 						for (int index = 0; index < fft_size; ++index) {
-							float magnitude = abs (frequency_domain_buffer[index]);
-							frequency_domain_buffer[index].real (magnitude);
-							frequency_domain_buffer[index].imag (0.0f);
+							float magnitude = abs(frequency_domain_buffer[index]);
+							frequency_domain_buffer[index].real(magnitude);
+							frequency_domain_buffer[index].imag(0.0f);
 						}
 						break;
 					}
 					case WHISPERIZATION: {
 						for (int index = 0; index < fft_size / 2 + 1; ++index) {
-							float magnitude = abs (frequency_domain_buffer[index]);
+							float magnitude = abs(frequency_domain_buffer[index]);
 							float phase = 2.0f * M_PI * (float)rand() / (float)RAND_MAX;
 
-							frequency_domain_buffer[index].real (magnitude * cosf (phase));
-							frequency_domain_buffer[index].imag (magnitude * sinf (phase));
+							frequency_domain_buffer[index].real(magnitude * cosf (phase));
+							frequency_domain_buffer[index].imag(magnitude * sinf (phase));
 							if (index > 0 && index < fft_size / 2) {
 								frequency_domain_buffer[fft_size - index].real (magnitude * cosf (phase));
 								frequency_domain_buffer[fft_size - index].imag (magnitude * sinf (-phase));
@@ -145,10 +145,10 @@ namespace openshot
 					}
 				}
 
-				fft->perform (frequency_domain_buffer, time_domain_buffer, true);
+				fft->perform(frequency_domain_buffer, time_domain_buffer, true);
 			}
 
-			Robotization& parent;
+			Robotization &parent;
 		};
 
 		juce::CriticalSection lock;
