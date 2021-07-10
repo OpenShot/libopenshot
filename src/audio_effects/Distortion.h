@@ -106,23 +106,7 @@ namespace openshot
 		class Filter : public juce::IIRFilter
 		{
 		public:
-			void updateCoefficients (const double discreteFrequency,
-									const double gain) noexcept
-			{
-				jassert (discreteFrequency > 0);
-
-				double tan_half_wc = tan (discreteFrequency / 2.0);
-				double sqrt_gain = sqrt (gain);
-
-				coefficients = juce::IIRCoefficients (/* b0 */ sqrt_gain * tan_half_wc + gain,
-													  /* b1 */ sqrt_gain * tan_half_wc - gain,
-													  /* b2 */ 0.0,
-													  /* a0 */ sqrt_gain * tan_half_wc + 1.0,
-													  /* a1 */ sqrt_gain * tan_half_wc - 1.0,
-													  /* a2 */ 0.0);
-
-				setCoefficients (coefficients);
-			}
+			void updateCoefficients(const double discrete_frequency, const double gain) noexcept;
 		};
 
 		juce::OwnedArray<Filter> filters;

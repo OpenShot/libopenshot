@@ -57,7 +57,7 @@ void Robotization::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Robotization";
 	info.name = "Robotization";
-	info.description = "Robotization effect on the frame's sound.";
+	info.description = "Add robotization effect on the frame's audio track. This effect transforms the voice present in an audio into a robotic voice effect.";
 	info.has_audio = true;
 	info.has_video = false;
 }

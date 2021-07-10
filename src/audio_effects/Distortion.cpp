@@ -56,10 +56,11 @@ void Distortion::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Distortion";
 	info.name = "Distortion";
-	info.description = "Add distortion on the frame's sound.";
+	info.description = "Add distortion on the frame's audio. This effect alters the audio by clipping the signal.";
 	info.has_audio = true;
 	info.has_video = false;
 }
+
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
@@ -77,7 +78,6 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 	// Add distortion
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
-		//auto *inBuffer = frame->audio->getReadPointer(channel);
 		auto *channel_data = frame->audio->getWritePointer(channel);
 		float out;
 
@@ -164,6 +164,22 @@ std::string Distortion::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
+}
+
+void Distortion::Filter::updateCoefficients(const double discrete_frequency, const double gain)
+{
+	jassert(discrete_frequency > 0);
+
+	double tan_half_wc = tan(discrete_frequency / 2.0);
+	double sqrt_gain = sqrt(gain);
+
+	coefficients = juce::IIRCoefficients(/* b0 */ sqrt_gain * tan_half_wc + gain,
+										 /* b1 */ sqrt_gain * tan_half_wc - gain,
+										 /* b2 */ 0.0,
+										 /* a0 */ sqrt_gain * tan_half_wc + 1.0,
+										 /* a1 */ sqrt_gain * tan_half_wc - 1.0,
+										 /* a2 */ 0.0);
+	setCoefficients(coefficients);
 }
 
 // Generate Json::Value for this object

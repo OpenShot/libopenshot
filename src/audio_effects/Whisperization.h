@@ -107,7 +107,7 @@ namespace openshot
 		class WhisperizationEffect : public STFT
 		{
 		public:
-			WhisperizationEffect (Whisperization& p) : parent (p) { }
+			WhisperizationEffect(Whisperization& p) : parent (p) { }
 
 		private:
 			void modification(const int channel) override;

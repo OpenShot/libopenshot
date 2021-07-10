@@ -56,14 +56,12 @@ void Compressor::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Compressor";
 	info.name = "Compressor";
-	info.description = "Add Compressor on the frame's sound.";
+	info.description = "Add compressor effect on the frame's audio. This effect reduces the volume of loud sounds or amplify quiet sounds.";
 	info.has_audio = true;
 	info.has_video = false;
 
     input_level = 0.0f;
     yl_prev = 0.0f;
-
-
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
