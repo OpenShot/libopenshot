@@ -58,7 +58,6 @@ namespace openshot
 		
 
 	public:
-		openshot::CompressorMode mode;
 		Keyframe threshold;
 		Keyframe ratio;
 		Keyframe attack;
@@ -85,7 +84,7 @@ namespace openshot
 		/// Default constructor
 		///
 		/// @param new_level The audio default Compressor level (between 1 and 100)
-		Compressor(openshot::CompressorMode new_mode, Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass);
+		Compressor(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass);
 
 		float calculateAttackOrRelease(float value);
 

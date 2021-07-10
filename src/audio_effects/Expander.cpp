@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Compressor audio effect class
+ * @brief Source file for Expander audio effect class
  * @author 
  *
  * @ref License
@@ -28,35 +28,35 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Compressor.h"
+#include "Expander.h"
 #include "Exceptions.h"
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Compressor::Compressor() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
+Expander::Expander() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
-Compressor::Compressor(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
-					   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
+Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
+				   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
 {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Init effect settings
-void Compressor::init_effect_details()
+void Expander::init_effect_details()
 {
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
-	info.class_name = "Compressor";
-	info.name = "Compressor";
-	info.description = "Add Compressor on the frame's sound.";
+	info.class_name = "Expander";
+	info.name = "Expander";
+	info.description = "Add Expander on the frame's sound.";
 	info.has_audio = true;
 	info.has_video = false;
 
@@ -68,9 +68,9 @@ void Compressor::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	// Adding Compressor
+	// Adding Expander
     const int num_input_channels = frame->audio->getNumChannels();
     const int num_output_channels = frame->audio->getNumChannels();
     const int num_samples = frame->audio->getNumSamples();
@@ -95,21 +95,23 @@ std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::
         float gain = makeup_gain.GetValue(frame_number);
 		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
         
-		input_level = input_squared;
+		const float average_factor = 0.9999f;
+		input_level = average_factor * input_level + (1.0f - average_factor) * input_squared;
 
         xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
-
-		if (xg < T)
+		
+		if (xg > T)
 			yg = xg;
 		else
-			yg = T + (xg - T) / R;
+			yg = T + (xg - T) * R;
 
 		xl = xg - yg;
 
-		if (xl > yl_prev)
+		if (xl < yl_prev)
 			yl = alphaA * yl_prev + (1.0f - alphaA) * xl;
 		else
 			yl = alphaR * yl_prev + (1.0f - alphaR) * xl;
+
 
         control = powf (10.0f, (gain - yl) * 0.05f);
         yl_prev = yl;
@@ -127,7 +129,7 @@ std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::
 	return frame;
 }
 
-float Compressor::calculateAttackOrRelease(float value)
+float Expander::calculateAttackOrRelease(float value)
 {
     if (value == 0.0f)
         return 0.0f;
@@ -136,14 +138,14 @@ float Compressor::calculateAttackOrRelease(float value)
 }
 
 // Generate JSON string of this object
-std::string Compressor::Json() const {
+std::string Expander::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
-Json::Value Compressor::JsonValue() const {
+Json::Value Expander::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -160,7 +162,7 @@ Json::Value Compressor::JsonValue() const {
 }
 
 // Load JSON string into this object
-void Compressor::SetJson(const std::string value) {
+void Expander::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
 	try
@@ -177,7 +179,7 @@ void Compressor::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Compressor::SetJsonValue(const Json::Value root) {
+void Expander::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -203,7 +205,7 @@ void Compressor::SetJsonValue(const Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Compressor::PropertiesJSON(int64_t requested_frame) const {
+std::string Expander::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;

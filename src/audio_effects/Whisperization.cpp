@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Source file for Robotization audio effect class
+ * @brief Source file for Whisperization audio effect class
  * @author 
  *
  * @ref License
@@ -28,20 +28,19 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Robotization.h"
+#include "Whisperization.h"
 #include "Exceptions.h"
 
 using namespace openshot;
 
-
 /// Blank constructor, useful when using Json to load the effect properties
-Robotization::Robotization() : fft_size(FFT_SIZE_512), hop_size(HOP_SIZE_2), window_type(RECTANGULAR), stft(*this) {
+Whisperization::Whisperization() : fft_size(FFT_SIZE_512), hop_size(HOP_SIZE_8), window_type(RECTANGULAR), stft(*this) {
 	// Init effect properties
 	init_effect_details();
 }
 
 // Default constructor
-Robotization::Robotization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type) : 
+Whisperization::Whisperization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type) : 
 			 fft_size(new_fft_size), hop_size(new_hop_size), window_type(new_window_type), stft(*this)
 {
 	// Init effect properties
@@ -49,22 +48,22 @@ Robotization::Robotization(openshot::FFTSize new_fft_size, openshot::HopSize new
 }
 
 // Init effect settings
-void Robotization::init_effect_details()
+void Whisperization::init_effect_details()
 {
 	/// Initialize the values of the EffectInfo struct.
 	InitEffectInfo();
 
 	/// Set the effect info
-	info.class_name = "Robotization";
-	info.name = "Robotization";
-	info.description = "Robotization effect on the frame's sound.";
+	info.class_name = "Whisperization";
+	info.name = "Whisperization";
+	info.description = "Whisperization effect on the frame's sound.";
 	info.has_audio = true;
 	info.has_video = false;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<openshot::Frame> Robotization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame> Whisperization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	const ScopedLock sl (lock);
     ScopedNoDenormals noDenormals;
@@ -86,28 +85,36 @@ std::shared_ptr<openshot::Frame> Robotization::GetFrame(std::shared_ptr<openshot
 	return frame;
 }
 
-void Robotization::RobotizationEffect::modification(const int channel)
+void Whisperization::WhisperizationEffect::modification(const int channel)
 {
 	fft->perform(time_domain_buffer, frequency_domain_buffer, false);
 
-	for (int index = 0; index < fft_size; ++index) {
+	for (int index = 0; index < fft_size / 2 + 1; ++index) {
 		float magnitude = abs(frequency_domain_buffer[index]);
-		frequency_domain_buffer[index].real(magnitude);
-		frequency_domain_buffer[index].imag(0.0f);
+		float phase = 2.0f * M_PI * (float)rand() / (float)RAND_MAX;
+
+		frequency_domain_buffer[index].real(magnitude * cosf(phase));
+		frequency_domain_buffer[index].imag(magnitude * sinf(phase));
+		
+		if (index > 0 && index < fft_size / 2) {
+			frequency_domain_buffer[fft_size - index].real(magnitude * cosf (phase));
+			frequency_domain_buffer[fft_size - index].imag(magnitude * sinf (-phase));
+		}
 	}
 
 	fft->perform(frequency_domain_buffer, time_domain_buffer, true);
 }
 
+
 // Generate JSON string of this object
-std::string Robotization::Json() const {
+std::string Whisperization::Json() const {
 
 	// Return formatted string
 	return JsonValue().toStyledString();
 }
 
 // Generate Json::Value for this object
-Json::Value Robotization::JsonValue() const {
+Json::Value Whisperization::JsonValue() const {
 
 	// Create root json object
 	Json::Value root = EffectBase::JsonValue(); // get parent properties
@@ -121,7 +128,7 @@ Json::Value Robotization::JsonValue() const {
 }
 
 // Load JSON string into this object
-void Robotization::SetJson(const std::string value) {
+void Whisperization::SetJson(const std::string value) {
 
 	// Parse JSON string into JSON objects
 	try
@@ -138,7 +145,7 @@ void Robotization::SetJson(const std::string value) {
 }
 
 // Load Json::Value into this object
-void Robotization::SetJsonValue(const Json::Value root) {
+void Whisperization::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
@@ -154,7 +161,7 @@ void Robotization::SetJsonValue(const Json::Value root) {
 }
 
 // Get all properties for a specific frame
-std::string Robotization::PropertiesJSON(int64_t requested_frame) const {
+std::string Whisperization::PropertiesJSON(int64_t requested_frame) const {
 
 	// Generate JSON properties list
 	Json::Value root;
@@ -187,6 +194,7 @@ std::string Robotization::PropertiesJSON(int64_t requested_frame) const {
 	root["window_type"]["choices"].append(add_property_choice_json("Hann", HANN, window_type));
 	root["window_type"]["choices"].append(add_property_choice_json("Hamming", HAMMING, window_type));
 	
+
 	// Return formatted string
 	return root.toStyledString();
 }

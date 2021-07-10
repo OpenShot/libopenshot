@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Robotization audio effect class
+ * @brief Header file for whisperization audio effect class
  * @author 
  *
  * @ref License
@@ -28,8 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_ROBOTIZATION_AUDIO_EFFECT_H
-#define OPENSHOT_ROBOTIZATION_AUDIO_EFFECT_H
+#ifndef OPENSHOT_WHISPERIZATION_AUDIO_EFFECT_H
+#define OPENSHOT_WHISPERIZATION_AUDIO_EFFECT_H
 #define _USE_MATH_DEFINES
 
 #include "../EffectBase.h"
@@ -50,28 +50,27 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class adds a robotization effect into the audio
+	 * @brief This class adds a whisperization effect into the audio
 	 *
 	 */
-	class Robotization : public EffectBase
+	class Whisperization : public EffectBase
 	{
 	private:
 		/// Init effect settings
 		void init_effect_details();
 
 	public:
-		// Keyframe shift;	///< Robotization shift keyframe. The Robotization shift inserted on the audio.
 		openshot::FFTSize fft_size;
 		openshot::HopSize hop_size;
 		openshot::WindowType window_type;
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Robotization();
+		Whisperization();
 
 		/// Default constructor
 		///
-		/// @param new_level The audio default Robotization level (between 1 and 100)
-		Robotization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type);
+		/// @param new_level The audio default Whisperization level (between 1 and 100)
+		Whisperization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -105,19 +104,19 @@ namespace openshot
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 
 
-		class RobotizationEffect : public STFT
+		class WhisperizationEffect : public STFT
 		{
 		public:
-			RobotizationEffect (Robotization& p) : parent (p) { }
+			WhisperizationEffect (Whisperization& p) : parent (p) { }
 
 		private:
 			void modification(const int channel) override;
 
-			Robotization &parent;
+			Whisperization &parent;
 		};
 
 		juce::CriticalSection lock;
-    	RobotizationEffect stft;
+    	WhisperizationEffect stft;
 		std::unique_ptr<juce::dsp::FFT> fft;
 	};
 

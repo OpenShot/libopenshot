@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Header file for Pitch audio effect class
+ * @brief Header file for Expander audio effect class
  * @author 
  *
  * @ref License
@@ -28,9 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENSHOT_PITCH_AUDIO_EFFECT_H
-#define OPENSHOT_PITCH_AUDIO_EFFECT_H
-#define _USE_MATH_DEFINES
+#ifndef OPENSHOT_EXPANDER_AUDIO_EFFECT_H
+#define OPENSHOT_EXPANDER_AUDIO_EFFECT_H
 
 #include "../EffectBase.h"
 
@@ -42,35 +41,52 @@
 #include <memory>
 #include <string>
 #include <math.h>
-#include <cmath>
 
 
 namespace openshot
 {
 
 	/**
-	 * @brief This class adds a pitch into the audio
+	 * @brief This class adds a Expander into the audio
 	 *
 	 */
-	class Pitch : public EffectBase
+	class Expander : public EffectBase
 	{
 	private:
 		/// Init effect settings
 		void init_effect_details();
+		
 
 	public:
-		Keyframe shift;	///< Pitch shift keyframe. The pitch shift inserted on the audio.
-		openshot::FFTSize fft_size;
-		openshot::HopSize hop_size;
-		openshot::WindowType window_type;
+		Keyframe threshold;
+		Keyframe ratio;
+		Keyframe attack;
+		Keyframe release;
+		Keyframe makeup_gain;
+		Keyframe bypass;
+
+		juce::AudioSampleBuffer mixed_down_input;
+		float xl;
+		float yl;
+		float xg;
+		float yg;
+		float control;
+
+		float input_level;
+		float yl_prev;
+
+		float inverse_sample_rate;
+		float inverseE;
 
 		/// Blank constructor, useful when using Json to load the effect properties
-		Pitch();
+		Expander();
 
 		/// Default constructor
 		///
-		/// @param new_level The audio default pitch level (between 1 and 100)
-		Pitch(Keyframe new_shift, openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type);
+		/// @param new_level The audio default Expander level (between 1 and 100)
+		Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass);
+
+		float calculateAttackOrRelease(float value);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -102,42 +118,6 @@ namespace openshot
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
-
-
-		void updateFftSize(std::shared_ptr<openshot::Frame> frame);
-		void updateHopSize();
-		void updateAnalysisWindow();
-		void updateWindow(const juce::HeapBlock<float>& window, const int window_length);
-		void updateWindowScaleFactor();
-		float princArg(const float phase);
-
-
-		juce::CriticalSection lock;
-		std::unique_ptr<juce::dsp::FFT> fft;
-
-		int input_buffer_length;
-		int input_buffer_write_position;
-		juce::AudioSampleBuffer input_buffer;
-
-		int output_buffer_length;
-		int output_buffer_write_position;
-		int output_buffer_read_position;
-		juce::AudioSampleBuffer output_buffer;
-
-		juce::HeapBlock<float> fft_window;
-		juce::HeapBlock<juce::dsp::Complex<float>> fft_time_domain;
-		juce::HeapBlock<juce::dsp::Complex<float>> fft_frequency_domain;
-
-		int samples_since_last_FFT;
-
-		int overlap;
-		int hopSize;
-		float window_scale_factor;
-
-		juce::HeapBlock<float> omega;
-		juce::AudioSampleBuffer input_phase;
-		juce::AudioSampleBuffer output_phase;
-		bool need_to_reset_phases;
 	};
 
 }

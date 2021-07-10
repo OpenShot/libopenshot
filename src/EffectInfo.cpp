@@ -100,11 +100,14 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if(effect_type == "Compressor")
 		return new Compressor();
 
-	else if(effect_type == "Pitch")
-		return new Pitch();
+	else if(effect_type == "Expander")
+		return new Expander();
 
 	else if(effect_type == "Robotization")
 		return new Robotization();
+
+	else if(effect_type == "Whisperization")
+		return new Whisperization();
 
 	#ifdef USE_OPENCV
 	else if(effect_type == "Stabilizer")
@@ -147,8 +150,9 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Distortion().JsonInfo());
 	root.append(ParametricEQ().JsonInfo());
 	root.append(Compressor().JsonInfo());
-	root.append(Pitch().JsonInfo());
+	root.append(Expander().JsonInfo());
 	root.append(Robotization().JsonInfo());
+	root.append(Whisperization().JsonInfo());
 
 	#ifdef USE_OPENCV
 	root.append(Stabilizer().JsonInfo());

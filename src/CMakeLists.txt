@@ -136,8 +136,9 @@ set(EFFECTS_SOURCES
   audio_effects/Distortion.cpp
   audio_effects/ParametricEQ.cpp
   audio_effects/Compressor.cpp
-  audio_effects/Pitch.cpp
-  audio_effects/Robotization.cpp)
+  audio_effects/Expander.cpp
+  audio_effects/Robotization.cpp
+  audio_effects/Whisperization.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES

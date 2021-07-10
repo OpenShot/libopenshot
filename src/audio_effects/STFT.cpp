@@ -32,7 +32,7 @@ void STFT::process(juce::AudioSampleBuffer &block)
             input_buffer.setSample(channel, current_input_buffer_write_position, input_sample);
             if (++current_input_buffer_write_position >= input_buffer_length)
                 current_input_buffer_write_position = 0;
-            
+            // diff
             channel_data[sample] = output_buffer.getSample(channel, current_output_buffer_read_position);
 
             output_buffer.setSample(channel, current_output_buffer_read_position, 0.0f);
@@ -42,7 +42,7 @@ void STFT::process(juce::AudioSampleBuffer &block)
             if (++current_samples_since_last_FFT >= hop_size) {
                 current_samples_since_last_FFT = 0;
                 analysis(channel);
-                modification();
+                modification(channel);
                 synthesis(channel);
             }
         }
@@ -99,9 +99,12 @@ void STFT::updateHopSize(const int new_overlap)
     }
 }
 
+
 void STFT::updateWindow(const int new_window_type)
 {
-    switch (new_window_type) {
+    window_type = new_window_type;
+
+    switch (window_type) {
         case RECTANGULAR: {
             for (int sample = 0; sample < fft_size; ++sample)
                 fft_window[sample] = 1.0f;
@@ -123,7 +126,7 @@ void STFT::updateWindow(const int new_window_type)
             break;
         }
     }
-
+    
     float window_sum = 0.0f;
     for (int sample = 0; sample < fft_size; ++sample)
         window_sum += fft_window[sample];
@@ -132,6 +135,8 @@ void STFT::updateWindow(const int new_window_type)
     if (overlap != 0 && window_sum != 0.0f)
         window_scale_factor = 1.0f / (float)overlap / window_sum * (float)fft_size;
 }
+
+
 
 void STFT::analysis(const int channel)
 {
@@ -145,7 +150,7 @@ void STFT::analysis(const int channel)
     }
 }
 
-void STFT::modification()
+void STFT::modification(const int channel)
 {
     fft->perform(time_domain_buffer, frequency_domain_buffer, false);
 

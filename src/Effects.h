@@ -53,8 +53,9 @@
 #include "audio_effects/Distortion.h"
 #include "audio_effects/ParametricEQ.h"
 #include "audio_effects/Compressor.h"
-#include "audio_effects/Pitch.h"
+#include "audio_effects/Expander.h"
 #include "audio_effects/Robotization.h"
+#include "audio_effects/Whisperization.h"
 
 /* OpenCV Effects */
 #ifdef USE_OPENCV

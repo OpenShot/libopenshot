@@ -104,15 +104,6 @@ namespace openshot
 		PEAKING_NOTCH,
 	};
 
-	/// This enumeration determines the compressor mode of compressor Effect.
-	enum CompressorMode
-	{
-		COMPRESSOR,
-		LIMITER,
-		EXPANDER,
-		NOISE_GATE,
-	};
-
 	/// This enumeration determines the FFT size.
 	enum FFTSize
 	{
@@ -141,12 +132,6 @@ namespace openshot
         HANN,
         HAMMING,
     };
-
-	enum RobotizationEffectType {
-		PASS_THROUGH,
-        ROBOTIZATION,
-		WHISPERIZATION,
-	};
-
+	
 }
 #endif

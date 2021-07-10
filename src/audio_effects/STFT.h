@@ -19,22 +19,23 @@ namespace openshot
 
         void setup(const int num_input_channels);
 
-        void updateParameters(const int new_fft_size, const int new_overlap, const int new_window_type);
-
         void process(juce::AudioSampleBuffer &block);
 
-    private:
-        void updateFftSize(const int new_fft_size);
+        void updateParameters(const int new_fft_size, const int new_overlap, const int new_window_type);
+
+        virtual void updateFftSize(const int new_fft_size);
   
-        void updateHopSize(const int new_overlap);
+        virtual void updateHopSize(const int new_overlap);
 
-        void updateWindow(const int new_window_type);
+        virtual void updateWindow(const int new_window_type);
+    
+    private:
  
-        void analysis(const int channel);
+        virtual void modification(const int channel);
 
-        virtual void modification();
+        virtual void analysis(const int channel);
 
-        void synthesis(const int channel);
+        virtual void synthesis(const int channel);
 
     protected:
         int num_channels;
@@ -55,6 +56,7 @@ namespace openshot
 
         int overlap;
         int hop_size;
+        int window_type;
         float window_scale_factor;
 
         int input_buffer_write_position;
