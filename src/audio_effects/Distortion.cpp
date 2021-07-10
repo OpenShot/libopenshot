@@ -168,8 +168,6 @@ std::string Distortion::Json() const {
 
 void Distortion::Filter::updateCoefficients(const double discrete_frequency, const double gain)
 {
-	jassert(discrete_frequency > 0);
-
 	double tan_half_wc = tan(discrete_frequency / 2.0);
 	double sqrt_gain = sqrt(gain);
 

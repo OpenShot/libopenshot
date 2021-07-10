@@ -106,7 +106,7 @@ namespace openshot
 		class Filter : public juce::IIRFilter
 		{
 		public:
-			void updateCoefficients(const double discrete_frequency, const double gain) noexcept;
+			void updateCoefficients(const double discrete_frequency, const double gain);
 		};
 
 		juce::OwnedArray<Filter> filters;
