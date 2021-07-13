@@ -186,55 +186,56 @@ target_link_libraries(openshot PUBLIC OpenShot::Audio)
 ###
 
 # Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickCore)
+if (ENABLE_MAGICK)
+  find_package(ImageMagick COMPONENTS Magick++ MagickCore)
 
-if(ImageMagick_FOUND)
-  if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
-    add_library(Magick++_TARGET INTERFACE)
+  if(ImageMagick_FOUND)
+    if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
+      add_library(Magick++_TARGET INTERFACE)
 
-    # Include ImageMagick++ headers (needed for compile)
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_INCLUDE_DIRECTORIES ${ImageMagick_INCLUDE_DIRS})
+      # Include ImageMagick++ headers (needed for compile)
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${ImageMagick_INCLUDE_DIRS})
 
-    # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-    if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
-      set(MAGICKCORE_QUANTUM_DEPTH 16)
+      # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+      if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+        set(MAGICKCORE_QUANTUM_DEPTH 16)
+      endif()
+      if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+        set(MAGICKCORE_HDRI_ENABLE 0)
+      endif()
+
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_COMPILE_DEFINITIONS
+          MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_COMPILE_DEFINITIONS
+          MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
+
+      target_link_libraries(Magick++_TARGET INTERFACE
+        ${ImageMagick_LIBRARIES})
+
+      # Alias to our namespaced name
+      add_library(ImageMagick::Magick++ ALIAS Magick++_TARGET)
+
     endif()
-    if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
-      set(MAGICKCORE_HDRI_ENABLE 0)
-    endif()
 
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS
-        MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS
-        MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
+    # Add optional ImageMagic-dependent sources
+    target_sources(openshot PRIVATE
+      ImageReader.cpp
+      ImageWriter.cpp
+      TextReader.cpp)
 
-    target_link_libraries(Magick++_TARGET INTERFACE
-      ${ImageMagick_LIBRARIES})
+    # define a preprocessor macro (used in the C++ source)
+    target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
 
-    # Alias to our namespaced name
-    add_library(ImageMagick::Magick++ ALIAS Magick++_TARGET)
+    # Link with ImageMagick library
+    target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
 
+    set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
+    mark_as_advanced(HAVE_IMAGEMAGICK)
   endif()
-
-  # Add optional ImageMagic-dependent sources
-  target_sources(openshot PRIVATE
-    ImageReader.cpp
-    ImageWriter.cpp
-    TextReader.cpp)
-
-  # define a preprocessor macro (used in the C++ source)
-  target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
-
-  # Link with ImageMagick library
-  target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
-
-  set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
-  mark_as_advanced(HAVE_IMAGEMAGICK)
 endif()
-
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
