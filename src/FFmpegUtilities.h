@@ -134,7 +134,7 @@ inline static const std::string av_make_error_string(int errnum)
 #endif
 
 // Does ffmpeg pixel format contain an alpha channel?
-inline static const bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
+inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     const AVPixFmtDescriptor *fmt_desc = av_pix_fmt_desc_get(pix_fmt);
     return bool(fmt_desc->flags & AV_PIX_FMT_FLAG_ALPHA);
 }
