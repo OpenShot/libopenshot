@@ -80,7 +80,7 @@ option(ENABLE_PARALLEL_CTEST "Run CTest using multiple processors" ON)
 option(VERBOSE_TESTS "Run CTest with maximum verbosity" OFF)
 option(ENABLE_COVERAGE "Scan test coverage using gcov and report" OFF)
 
-option(ENABLE_DOCS "Build API documentation (requires Doxygen)" ON)
+option(ENABLE_LIB_DOCS "Build API documentation (requires Doxygen)" ON)
 
 option(APPIMAGE_BUILD "Build to install in an AppImage (Linux only)" OFF)
 
@@ -111,14 +111,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-IF (WIN32)
-	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
-ENDIF(WIN32)
-
 ############## Code Coverage #########################
 if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
   message(WARNING "ENABLE_COVERAGE requires unit tests, forcing ENABLE_TESTS")
-  set(ENABLE_TESTS ON CACHE BOOL "Build unit tests (requires Catch2 or UnitTest++)" FORCE)
+  set(ENABLE_TESTS ON CACHE BOOL "Build unit tests (requires Catch2)" FORCE)
 endif()
 
 if (ENABLE_COVERAGE)
@@ -155,26 +151,73 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/src/OpenShotVersion.h
 
 
 ################### DOCUMENTATION ###################
+# Legacy option support
+if(DEFINED CACHE{ENABLE_DOCS})
+  set(ENABLE_LIB_DOCS ${ENABLE_DOCS} CACHE BOOL "Build API documentation (requires Doxygen)")
+  unset(ENABLE_DOCS CACHE)
+  message(WARNING "The ENABLE_DOCS option is deprecated, please use ENABLE_LIB_DOCS")
+endif()
+
 # Find Doxygen (used for documentation)
-set(DOCS_ENABLED FALSE) # Only set true if Doxygen is found and configured
-if (ENABLE_DOCS)
-  include(cmake/Modules/UseDoxygen.cmake)
+set(CAN_BUILD_LIB_DOCS FALSE) # Only set true if Doxygen is found and configured
+if (ENABLE_LIB_DOCS AND CMAKE_VERSION VERSION_GREATER 3.11)
+  find_package(Doxygen)
+  if(Doxygen_FOUND)
+  	message(STATUS "Doxygen found, enabling ${PROJECT_NAME} documentation target")
+    set(DOXYGEN_QUIET YES)
+    set(DOXYGEN_PROJECT_NAME "OpenShot Library | libopenshot")
+    set(DOXYGEN_PROJECT_NUMBER ${PROJECT_VERSION})
+    set(DOXYGEN_STRIP_FROM_PATH "${PROJECT_SOURCE_DIR}/src")
+    set(DOXYGEN_STRIP_FROM_INC_PATH "${PROJECT_SOURCE_DIR}/src")
+    set(DOXYGEN_INCLUDE_FILE_PATTERNS "*.h")
+    set(DOXYGEN_EXCLUDE
+      ${PROJECT_SOURCE_DIR}/src/OpenShot.h
+      ${PROJECT_SOURCE_DIR}/src/Effects.h
+    )
+    set(DOXYGEN_PREDEFINED USE_BLACKMAGIC USE_IMAGEMAGICK)
+    set(DOXYGEN_IMAGE_PATH ${PROJECT_SOURCE_DIR})
+    set(DOXYGEN_OUTPUT_DIRECTORY "docs")
 
-  # Doxygen was found
-  if (TARGET doc)
-  	message(STATUS "Doxygen found, documentation target enabled")
-  	set(DOCS_ENABLED TRUE)
+    set(DOXYGEN_EXTRACT_ALL YES)
+    set(DOXYGEN_SORT_BRIEF_DOCS YES)
+    set(DOXYGEN_RECURSIVE YES)
+    set(DOXYGEN_SOURCE_BROWSER YES)
+    set(DOXYGEN_REFERENCED_BY_RELATION YES)
 
-    # Install docs, if the user builds them with `make doc`
-    install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
-    install(CODE "MESSAGE(\"(Compile with 'make doc' command, requires Doxygen)\")")
+    set(DOXYGEN_HTML_OUTPUT "html")
+    set(DOXYGEN_HTML_DYNAMIC_SECTIONS NO)
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
-            DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
-            MESSAGE_NEVER # Don't spew about file copies
-            OPTIONAL )    # No error if the docs aren't found
+    set(DOXYGEN_DOT_IMAGE_FORMAT svg)
+    set(DOXYGEN_INTERACTIVE_SVG YES)
+    set(DOXYGEN_DOT_TRANSPARENT YES)
+
+    doxygen_add_docs(${PROJECT_NAME}-doc
+      ${PROJECT_SOURCE_DIR}/src
+      ${PROJECT_SOURCE_DIR}/doc
+      ${PROJECT_BINARY_DIR}/src/OpenShotVersion.h
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generate ${PROJECT_NAME} documentation"
+    )
   endif()
 endif()
+if (TARGET ${PROJECT_NAME}-doc)
+	set(CAN_BUILD_LIB_DOCS TRUE)
+
+  # Install docs, if the user builds them
+  install(CODE "MESSAGE(\"Checking for documentation files to install...\")")
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/html/
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}/API
+    MESSAGE_NEVER # Don't spew about file copies
+    OPTIONAL )    # No error if the docs aren't found
+
+  if(NOT TARGET doc)
+    add_custom_target(doc)
+  endif()
+  if(TARGET doc)
+    add_dependencies(doc ${PROJECT_NAME}-doc)
+  endif()
+endif()
+add_feature_info("${PROJECT_NAME} docs" CAN_BUILD_LIB_DOCS "Build ${PROJECT_NAME} API documentation")
 
 ############# PROCESS tests/ DIRECTORY ##############
 find_package(Catch2 QUIET)
@@ -284,8 +327,10 @@ foreach(_tname IN LISTS optional_targets)
   endif()
 endforeach()
 
-########### PRINT FEATURE SUMMARY ##############
+###
+### PRINT FEATURE SUMMARY
+###
 feature_summary(WHAT ALL
   INCLUDE_QUIET_PACKAGES
   FATAL_ON_MISSING_REQUIRED_PACKAGES
-  DESCRIPTION "Build configuration:")
+  DESCRIPTION "${PROJECT_NAME} build configuration:")
