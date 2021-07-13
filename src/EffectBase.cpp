@@ -28,6 +28,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
+#include <iomanip>
+
 #include "EffectBase.h"
 
 #include "Exceptions.h"
@@ -57,16 +60,16 @@ void EffectBase::InitEffectInfo()
 }
 
 // Display file information
-void EffectBase::DisplayInfo() {
-	std::cout << std::fixed << std::setprecision(2) << std::boolalpha;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "----- Effect Information -----" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--> Name: " << info.name << std::endl;
-	std::cout << "--> Description: " << info.description << std::endl;
-	std::cout << "--> Has Video: " << info.has_video << std::endl;
-	std::cout << "--> Has Audio: " << info.has_audio << std::endl;
-	std::cout << "----------------------------" << std::endl;
+void EffectBase::DisplayInfo(std::ostream* out) {
+	*out << std::fixed << std::setprecision(2) << std::boolalpha;
+	*out << "----------------------------" << std::endl;
+	*out << "----- Effect Information -----" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--> Name: " << info.name << std::endl;
+	*out << "--> Description: " << info.description << std::endl;
+	*out << "--> Has Video: " << info.has_video << std::endl;
+	*out << "--> Has Audio: " << info.has_audio << std::endl;
+	*out << "----------------------------" << std::endl;
 }
 
 // Constrain a color value from 0 to 255

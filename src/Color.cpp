@@ -28,6 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cmath>
+
 #include "Color.h"
 #include "Exceptions.h"
 

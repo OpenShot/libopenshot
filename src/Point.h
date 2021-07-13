@@ -126,6 +126,31 @@ namespace openshot
 
 	};
 
+	// Stream output operator for openshot::Point
+	template<class charT, class traits>
+	std::basic_ostream<charT, traits>&
+	operator<<(std::basic_ostream<charT, traits>& o, const openshot::Point& p) {
+    	std::basic_ostringstream<charT, traits> s;
+    	s.flags(o.flags());
+    	s.imbue(o.getloc());
+    	s.precision(o.precision());
+    	s << "co" << p.co;
+		switch(p.interpolation) {
+		case(openshot::LINEAR):
+			s << " interpolation(LINEAR)";
+			break;
+		case(openshot::CONSTANT):
+			s << " interpolation(CONSTANT)";
+			break;
+		case(openshot::BEZIER):
+			s << " interpolation(BEZIER)"
+			  << " handle_left" << p.handle_left
+			  << " handle_right" << p.handle_right;
+			break;
+		}
+    	return o << s.str();
+	};
+
 }
 
 #endif

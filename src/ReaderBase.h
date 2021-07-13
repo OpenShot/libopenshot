@@ -31,11 +31,9 @@
 #ifndef OPENSHOT_READER_BASE_H
 #define OPENSHOT_READER_BASE_H
 
-#include <iostream>
-#include <iomanip>
 #include <memory>
-#include <cstdlib>
-#include <sstream>
+#include <iostream>
+
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"
 #include "ClipBase.h"
@@ -120,7 +118,7 @@ namespace openshot
 		virtual void Close() = 0;
 
 		/// Display file information in the standard output stream (stdout)
-		void DisplayInfo();
+		void DisplayInfo(std::ostream* out=&std::cout);
 
 		/// Get the cache object used by this reader (note: not all readers use cache)
 		virtual openshot::CacheBase* GetCache() = 0;
