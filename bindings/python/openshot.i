@@ -131,6 +131,9 @@
 	try {
 		$action
 	}
+	catch (openshot::ExceptionBase &e) {
+		SWIG_exception_fail(SWIG_RuntimeError, e.py_message().c_str());
+	}
 	catch (std::exception &e) {
 		SWIG_exception_fail(SWIG_RuntimeError, e.what());
 	}
