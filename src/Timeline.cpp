@@ -88,9 +88,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Delegating constructor that copies parameters from a provided ReaderInfo
-Timeline::Timeline(const ReaderInfo info) :
-	Timeline::Timeline(info.width, info.height, info.fps, info.sample_rate,
-	                   info.channels, info.channel_layout) {};
+Timeline::Timeline(const ReaderInfo info) : Timeline::Timeline(
+	info.width, info.height, info.fps, info.sample_rate,
+	info.channels, info.channel_layout) {}
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
@@ -243,7 +243,7 @@ Timeline::~Timeline() {
 	}
 }
 
-// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 
 	// Search for the tracked object on the map
@@ -252,7 +252,7 @@ void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> tra
 	if (iterator != tracked_objects.end()){
 		// Tracked object's id already present on the map, overwrite it
 		iterator->second = trackedObject;
-	} 
+	}
 	else{
 		// Tracked object's id not present -> insert it on the map
 		tracked_objects[trackedObject->Id()] = trackedObject;
@@ -275,7 +275,7 @@ std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::str
 	else {
 		// Id not found, return a null pointer
 		return nullptr;
-	}	
+	}
 }
 
 // Return the ID's of the tracked objects as a list of strings
@@ -322,7 +322,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 			trackedObjectJson["x2"] = x2;
 			trackedObjectJson["y2"] = y2;
 			trackedObjectJson["rotation"] = rotation;
-		
+
 		} else {
 			BBox box = trackedObject->BoxVec.begin()->second;
 			float x1 = box.cx - (box.width/2);
@@ -346,7 +346,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 		trackedObjectJson["x2"] = 0;
 		trackedObjectJson["y2"] = 0;
 		trackedObjectJson["rotation"] = 0;
-	}	
+	}
 
 	return trackedObjectJson.toStyledString();
 }
@@ -444,7 +444,7 @@ std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
 
 	// Loop through all clips
 	for (const auto& clip : clips) {
-		
+
 		// Get the clip's list of effects
 		std::list<EffectBase*> clipEffectsList = clip->Effects();
 
@@ -1063,7 +1063,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
 			// allows attaching it to an object when exporting the project (because)
-			// the exporter script initializes the clip and it's effects 
+			// the exporter script initializes the clip and it's effects
 			// before setting it's parent timeline.
 			c->ParentTimeline(this);
 

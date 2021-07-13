@@ -181,7 +181,7 @@ namespace openshot {
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
-		
+
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
 
@@ -246,7 +246,7 @@ namespace openshot {
 
         virtual ~Timeline();
 
-		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 		void AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
 		/// Return tracked object pointer by it's id
 		std::shared_ptr<openshot::TrackedObjectBase> GetTrackedObject(std::string id) const;
@@ -281,7 +281,7 @@ namespace openshot {
         void ClearAllCache();
 
 		/// Return a list of clips on the timeline
-		std::list<openshot::Clip*> Clips() { return clips; };
+		std::list<openshot::Clip*> Clips() override { return clips; };
 
 		/// Look up a single clip by ID
 		openshot::Clip* GetClip(const std::string& id);

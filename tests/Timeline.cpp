@@ -271,6 +271,33 @@ TEST_CASE( "Clip order", "[libopenshot][timeline]" )
 	t.Close();
 }
 
+TEST_CASE( "TimelineBase", "[libopenshot][timeline]" )
+{
+    // Create a timeline
+    Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+    // Add some clips out of order
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "front3.png";
+    Clip clip1(path.str());
+    clip1.Layer(1);
+    t.AddClip(&clip1);
+
+    Clip clip2(path.str());
+    clip2.Layer(0);
+    t.AddClip(&clip2);
+
+    // Verify that the list of clips can be accessed
+    // through the Clips() method of a TimelineBase*
+    TimelineBase* base = &t;
+    auto l = base->Clips();
+    CHECK(l.size() == 2);
+    auto find1 = std::find(l.begin(), l.end(), &clip1);
+    auto find2 = std::find(l.begin(), l.end(), &clip2);
+    CHECK(find1 != l.end());
+    CHECK(find2 != l.end());
+}
+
 
 TEST_CASE( "Effect order", "[libopenshot][timeline]" )
 {
