@@ -50,13 +50,13 @@ TEST_CASE( "ReaderBase_Derived_Class", "[libopenshot][readerbase]" )
 	public:
 		TestReader() { };
 		CacheBase* GetCache() { return nullptr; };
-		std::shared_ptr<Frame> GetFrame(int64_t number) { std::shared_ptr<Frame> f(new Frame()); return f; }
+		std::shared_ptr<Frame> GetFrame(int64_t) { std::shared_ptr<Frame> f(new Frame()); return f; }
 		void Close() { };
 		void Open() { };
 		std::string Json() const { return ""; };
-		void SetJson(std::string value) { };
+		void SetJson(std::string) { };
 		Json::Value JsonValue() const { return Json::Value("{}"); };
-		void SetJsonValue(Json::Value root) { };
+		void SetJsonValue(Json::Value) { };
 		bool IsOpen() { return true; };
 		std::string Name() { return "TestReader"; };
 	};

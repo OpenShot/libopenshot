@@ -83,16 +83,16 @@ namespace openshot {
 		void ChildClipId(std::string _childClipId) { childClipId = _childClipId; };
 
 		/// Check if there is data for the exact frame number
-		virtual bool ExactlyContains(int64_t frame_number) const { return {}; };
+		virtual bool ExactlyContains(int64_t) const { return {}; };
 
 		/// Scale an object's property
-		virtual void ScalePoints(double scale) { return; };
+		virtual void ScalePoints(double) { return; };
 		/// Return the main properties of a TrackedObjectBBox instance - such as position, size and rotation
-		virtual std::map<std::string, float> GetBoxValues(int64_t frame_number) const { std::map<std::string, float> ret; return ret; };
+		virtual std::map<std::string, float> GetBoxValues(int64_t) const { std::map<std::string, float> ret; return ret; };
 		/// Return the main properties of the tracked object's parent clip - such as position, size and rotation
-		virtual std::map<std::string, float> GetParentClipProperties(int64_t frame_number) const { std::map<std::string, float> ret; return ret; }
+		virtual std::map<std::string, float> GetParentClipProperties(int64_t) const { std::map<std::string, float> ret; return ret; }
 		/// Add a bounding box to the tracked object's BoxVec map
-		virtual void AddBox(int64_t _frame_num, float _cx, float _cy, float _width, float _height, float _angle) { return; };
+		virtual void AddBox(int64_t, float, float, float, float, float) { return; };
 
 
 		/// Get and Set JSON methods
@@ -103,7 +103,7 @@ namespace openshot {
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
-		virtual Json::Value PropertiesJSON(int64_t requested_frame) const = 0;
+		virtual Json::Value PropertiesJSON(int64_t) const = 0;
 		/// Generate JSON choice for a property (dropdown properties)
 		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
 	};

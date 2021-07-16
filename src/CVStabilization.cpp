@@ -119,6 +119,9 @@ void CVStabilization::stabilizeClip(openshot::Clip& video, size_t _start, size_t
 
 // Track current frame features and find the relative transformation
 bool CVStabilization::TrackFrameFeatures(cv::Mat frame, size_t frameNum){
+
+    (void)frameNum;  // UNUSED
+
     // Check if there are black frames
     if(cv::countNonZero(frame) < 1){
         return false;
@@ -402,7 +405,7 @@ bool CVStabilization::_LoadStabilizedData(){
     trajectoryData.clear();
 
     // Iterate over all frames of the saved message and assign to the data maps
-    for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
+    for (int i = 0; i < stabilizationMessage.frame_size(); i++) {
         const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);
 
         // Load frame number

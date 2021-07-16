@@ -131,7 +131,8 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
             trackerInit = trackFrame(cvimage, frame_number);
 
             // Draw box on image
-            FrameData fd = GetTrackedData(frame_number);
+            // XXX: UNUSED
+            // FrameData fd = GetTrackedData(frame_number);
 
         }
         // Update progress
@@ -207,7 +208,7 @@ cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
     float curr_box_height  = bbox.height;
     // keep the last width and height if the difference is less than 1%
     float threshold = 0.01;
-    
+
     cv::Rect2d filtered_box = bbox;
     if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
         filtered_box.width = last_box_width;
@@ -227,7 +228,6 @@ bool CVTracker::SaveTrackedData(){
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,FrameData>::iterator it=trackedDataById.begin(); it!=trackedDataById.end(); ++it){
         FrameData fData = it->second;
-        pb_tracker::Frame* pbFrameData;
         AddFrameDataToProto(trackerMessage.add_frame(), fData);
     }
 
@@ -356,7 +356,7 @@ bool CVTracker::_LoadTrackedData(){
     trackedDataById.clear();
 
     // Iterate over all frames of the saved message
-    for (size_t i = 0; i < trackerMessage.frame_size(); i++) {
+    for (int i = 0; i < trackerMessage.frame_size(); i++) {
         const pb_tracker::Frame& pbFrameData = trackerMessage.frame(i);
 
         // Load frame and rotation data

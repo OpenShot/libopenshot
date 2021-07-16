@@ -95,7 +95,7 @@ void CrashHandler::abortHandler(int signum)
 }
 #else
 // Linux and Mac Exception Handler
-void CrashHandler::abortHandler( int signum, siginfo_t* si, void* unused )
+void CrashHandler::abortHandler( int signum, siginfo_t*, void*)
 {
 	// Associate each signal with a signal name string.
 	const char* name = NULL;

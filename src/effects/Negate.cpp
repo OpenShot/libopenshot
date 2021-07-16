@@ -53,6 +53,7 @@ std::shared_ptr<openshot::Frame> Negate::GetFrame(std::shared_ptr<openshot::Fram
 {
 	// Make a negative of the images pixels
 	frame->GetImage()->invertPixels();
+        frame->number = frame_number;
 
 	// return the modified frame
 	return frame;

@@ -95,6 +95,7 @@ std::shared_ptr<openshot::Frame> Deinterlace::GetFrame(std::shared_ptr<openshot:
 	frame->AddImage(image);
 
 	// return the modified frame
+        frame->number = frame_number;
 	return frame;
 }
 

@@ -136,7 +136,7 @@ bool Stabilizer::LoadStabilizedData(std::string inputFilePath){
     trajectoryData.clear();
 
     // Iterate over all frames of the saved message and assign to the data maps
-    for (size_t i = 0; i < stabilizationMessage.frame_size(); i++) {
+    for (int i = 0; i < stabilizationMessage.frame_size(); i++) {
 
 		// Create stabilization message
         const pb_stabilize::Frame& pbFrameData = stabilizationMessage.frame(i);

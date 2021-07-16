@@ -39,11 +39,10 @@
 using namespace openshot;
 
 
-int main(int argc, char* argv[]) {
+int main() {
 
     // Types for storing time durations in whole and fractional milliseconds
     using ms = std::chrono::milliseconds;
-    using s = std::chrono::seconds;
     using double_ms = std::chrono::duration<double, ms::period>;
 
     // FFmpeg Reader performance test
@@ -59,8 +58,8 @@ int main(int argc, char* argv[]) {
                   << " (" << double_ms(time2 - time1).count() << " ms)\n";
     }
     const auto total_2 = std::chrono::high_resolution_clock::now();
-    auto total_sec = std::chrono::duration_cast<ms>(total_2 - total_1);
-    std::cout << "FFmpegReader TOTAL: " << total_sec.count() << " ms\n";
+    auto total_msec = std::chrono::duration_cast<ms>(total_2 - total_1);
+    std::cout << "FFmpegReader TOTAL: " << total_msec.count() << " ms\n";
     r9.Close();
 
 
@@ -80,8 +79,8 @@ int main(int argc, char* argv[]) {
                   << " (" << double_ms(time2 - time1).count() << " ms)\n";
     }
     const auto total_4 = std::chrono::high_resolution_clock::now();
-    total_sec = std::chrono::duration_cast<ms>(total_4 - total_3);
-    std::cout << "Timeline TOTAL: " << total_sec.count() << " ms\n";
+    total_msec = std::chrono::duration_cast<ms>(total_4 - total_3);
+    std::cout << "Timeline TOTAL: " << total_msec.count() << " ms\n";
     tm.Close();
 
     std::cout << "Completed successfully!\n";

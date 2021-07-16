@@ -184,7 +184,7 @@ void CVObjectDetection::postprocess(const cv::Size &frameDims, const std::vector
     boxes.clear(); confidences.clear(); classIds.clear(); objectIds.clear();
     // Get SORT predicted boxes
     for(auto TBox : sort.frameTrackingResult){
-        if(TBox.frame == frameId){
+        if(TBox.frame == static_cast<int>(frameId)){
             boxes.push_back(TBox.box);
             confidences.push_back(TBox.confidence);
             classIds.push_back(TBox.classId);
@@ -318,7 +318,7 @@ bool CVObjectDetection::SaveObjDetectedData(){
     pb_objdetect::ObjDetect objMessage;
 
     //Save class names in protobuf message
-    for(int i = 0; i<classNames.size(); i++){
+    for(size_t i = 0; i<classNames.size(); i++){
         std::string* className = objMessage.add_classnames();
         className->assign(classNames.at(i));
     }
@@ -326,7 +326,7 @@ bool CVObjectDetection::SaveObjDetectedData(){
     // Iterate over all frames data and save in protobuf message
     for(std::map<size_t,CVDetectionData>::iterator it=detectionsData.begin(); it!=detectionsData.end(); ++it){
         CVDetectionData dData = it->second;
-        pb_objdetect::Frame* pbFrameData;
+        // pb_objdetect::Frame* pbFrameData;
         AddFrameDataToProto(objMessage.add_frame(), dData);
     }
 
@@ -457,7 +457,7 @@ bool CVObjectDetection::_LoadObjDetectdData(){
     }
 
     // Iterate over all frames of the saved message
-    for (size_t i = 0; i < objMessage.frame_size(); i++) {
+    for (int i = 0; i < objMessage.frame_size(); i++) {
         // Create protobuf message reader
         const pb_objdetect::Frame& pbFrameData = objMessage.frame(i);
 
@@ -468,22 +468,22 @@ bool CVObjectDetection::_LoadObjDetectdData(){
         const google::protobuf::RepeatedPtrField<pb_objdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
 
         // Construct data vectors related to detections in the current frame
-        std::vector<int> classIds; 
-        std::vector<float> confidences; 
+        std::vector<int> classIds;
+        std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
         std::vector<int> objectIds;
 
-        for(int i = 0; i < pbFrameData.bounding_box_size(); i++){
+        for(int j = 0; j < pbFrameData.bounding_box_size(); ++j){
             // Get bounding box coordinates
-            float x = pBox.Get(i).x(); float y = pBox.Get(i).y();
-            float w = pBox.Get(i).w(); float h = pBox.Get(i).h();
+            float x = pBox.Get(j).x(); float y = pBox.Get(j).y();
+            float w = pBox.Get(j).w(); float h = pBox.Get(j).h();
             // Create OpenCV rectangle with the bouding box info
             cv::Rect_<float> box(x, y, w, h);
 
             // Get class Id (which will be assign to a class name) and prediction confidence
-            int classId = pBox.Get(i).classid(); float confidence = pBox.Get(i).confidence();
+            int classId = pBox.Get(j).classid(); float confidence = pBox.Get(j).confidence();
             // Get object Id
-            int objectId = pBox.Get(i).objectid();
+            // int objectId = pBox.Get(j).objectid();
 
             // Push back data into vectors
             boxes.push_back(box); classIds.push_back(classId); confidences.push_back(confidence);

@@ -74,8 +74,9 @@ PlayerDemo::~PlayerDemo()
 {
 }
 
-void PlayerDemo::closeEvent(QCloseEvent *event)
+void PlayerDemo::closeEvent(QCloseEvent* event)
 {
+	Q_UNUSED(event);
 	// Close window, stop player, and quit
 	QWidget *pWin = QApplication::activeWindow();
 	pWin->hide();
@@ -150,7 +151,8 @@ void PlayerDemo::keyPressEvent(QKeyEvent *event)
 
 void PlayerDemo::open(bool checked)
 {
-	// Get filename of media files
+    Q_UNUSED(checked);
+    // Get filename of media files
     const QString filename = QFileDialog::getOpenFileName(this, "Open Video File");
     if (filename.isEmpty()) return;
 

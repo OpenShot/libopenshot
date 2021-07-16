@@ -137,8 +137,8 @@ void SortTracker::update(vector<cv::Rect> detections_cv, int frame_count, double
 			if (assignment[i] == -1) // unassigned label will be set as -1 in the assignment algorithm
 				unmatchedTrajectories.insert(i);
 	}
-	else
-		;
+	else { }
+
 
 	// filter out matched with low IOU
 	matchedPairs.clear();

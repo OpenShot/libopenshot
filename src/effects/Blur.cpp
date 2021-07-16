@@ -34,16 +34,18 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Blur::Blur() : horizontal_radius(6.0), vertical_radius(6.0), sigma(3.0), iterations(3.0) {
-	// Init effect properties
-	init_effect_details();
-}
+Blur::Blur()
+    : Blur::Blur(Keyframe(6.0), Keyframe(6.0), Keyframe(3.0), Keyframe(3.0))
+{ }
 
 // Default constructor
 Blur::Blur(Keyframe new_horizontal_radius, Keyframe new_vertical_radius, Keyframe new_sigma, Keyframe new_iterations) :
-		horizontal_radius(new_horizontal_radius), vertical_radius(new_vertical_radius),
+		horizontal_radius(new_horizontal_radius),
+                vertical_radius(new_vertical_radius),
 		sigma(new_sigma), iterations(new_iterations)
 {
+	(void)sigma;  // UNUSED
+
 	// Init effect properties
 	init_effect_details();
 }
@@ -72,7 +74,6 @@ std::shared_ptr<openshot::Frame> Blur::GetFrame(std::shared_ptr<openshot::Frame>
 	// Get the current blur radius
 	int horizontal_radius_value = horizontal_radius.GetValue(frame_number);
 	int vertical_radius_value = vertical_radius.GetValue(frame_number);
-	float sigma_value = sigma.GetValue(frame_number);
 	int iteration_value = iterations.GetInt(frame_number);
 
 	int w = frame_image->width();

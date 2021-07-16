@@ -44,6 +44,6 @@ TimelineBase::TimelineBase()
 * so we'll be able to access the Timeline::Clips() function from a pointer object of
 * the TimelineBase class
 */
-void TimelineBase::Clips(int test){
+void TimelineBase::Clips(int){
 	return;
 }

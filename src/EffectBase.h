@@ -109,7 +109,7 @@ namespace openshot
 		std::string ParentClipId() const;
 
 		/// Get the indexes and IDs of all visible objects in the given frame
-		virtual std::string GetVisibleObjects(int64_t frame_number) const {return {}; };
+		virtual std::string GetVisibleObjects(int64_t) const { return {}; }
 
 		// Get and Set JSON methods
 		virtual std::string Json() const; ///< Generate JSON string of this object
@@ -117,12 +117,9 @@ namespace openshot
 		virtual Json::Value JsonValue() const; ///< Generate Json::Value for this object
 		virtual void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
-		virtual std::string Json(int64_t requested_frame) const{
-			return "";
-		};
-		virtual void SetJson(int64_t requested_frame, const std::string value) {
-			return;
-		};
+                // For OpenCV subclasses
+		virtual std::string Json(int64_t) const { return {}; }
+		virtual void SetJson(int64_t, const std::string) { }
 
 		Json::Value JsonInfo() const; ///< Generate JSON object of meta data / info
 

@@ -59,7 +59,7 @@ protected:
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
-    void open(bool checked);
+    void open(bool);
 
 private:
     QVBoxLayout *vbox;

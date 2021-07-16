@@ -384,18 +384,10 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
     if (!is_open)
         throw ReaderClosed("The Clip is closed.  Call Open() before calling this method.");
 
-    if (reader)
-    {
-        // Adjust out of bounds frame number
-        frame_number = adjust_frame_number_minimum(frame_number);
-
-        // Get the original frame and pass it to GetFrame overload
-        std::shared_ptr<Frame> original_frame = GetOrCreateFrame(frame_number);
-        return GetFrame(original_frame, frame_number, NULL);
-    }
-    else
-        // Throw error if reader not initialized
+    if (!reader)
         throw ReaderClosed("No Reader has been initialized for this Clip.  Call Reader(*reader) before calling this method.");
+
+    return GetFrame(background_frame, frame_number, nullptr);
 }
 
 // Use an existing openshot::Frame object and draw this Clip's frame onto it
@@ -807,10 +799,10 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
-	
+
 	// Add the parentTrackedObject's properties
 	if (parentTrackedObject)
-	{	
+	{
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
@@ -821,7 +813,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double parentObject_frame_number = trackedObjectParentClipProperties["frame_number"];
 		// Get attached object properties
 		std::map< std::string, float > trackedObjectProperties = parentTrackedObject->GetBoxValues(parentObject_frame_number);
-		
+
 		// Correct the parent Tracked Object properties by the clip's reference system
 		float parentObject_location_x = trackedObjectProperties["cx"] - 0.5 + trackedObjectParentClipProperties["cx"];
 		float parentObject_location_y = trackedObjectProperties["cy"] - 0.5 + trackedObjectParentClipProperties["cy"];
@@ -847,7 +839,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
 
 		// Correct the parent Clip Object properties by the clip's reference system
-		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		float parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		float parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		float parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1069,7 +1061,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
-					
+
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 
@@ -1185,25 +1177,21 @@ void Clip::AddEffect(EffectBase* effect)
 
     #ifdef USE_OPENCV
 	// Add Tracked Object to Timeline
-	if (effect->info.has_tracked_object){
+	if (effect->info.has_tracked_object && parentTimeline) {
 
-		// Check if this clip has a parent timeline
-		if (parentTimeline){
+		effect->ParentTimeline(parentTimeline);
 
-			effect->ParentTimeline(parentTimeline);
+		// Iterate through effect's vector of Tracked Objects
+		for (auto const& trackedObject : effect->trackedObjects){
 
-			// Iterate through effect's vector of Tracked Objects
-			for (auto const& trackedObject : effect->trackedObjects){
-				
-				// Cast the Tracked Object as TrackedObjectBBox
-				std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
+			// Cast the Tracked Object as TrackedObjectBBox
+			std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
 
-				// Set the Tracked Object's parent clip to this
-				trackedObjectBBox->ParentClip(this);
+			// Set the Tracked Object's parent clip to this
+			trackedObjectBBox->ParentClip(this);
 
-				// Add the Tracked Object to the timeline
-				parentTimeline->AddTrackedObject(trackedObjectBBox);
-			}	
+			// Add the Tracked Object to the timeline
+			parentTimeline->AddTrackedObject(trackedObjectBBox);
 		}
 	}
     #endif
@@ -1411,7 +1399,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parent object's properties (Clip)
-		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1446,8 +1434,8 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 			parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
 			parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
 			parentObject_rotation = trackedObjectProperties["r"] + trackedObjectParentClipProperties["rotation"];
-		} 
-		else 
+		}
+		else
 		{
 			// Access the parentTrackedObject's properties
 			std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(timeline_frame_number);
@@ -1477,7 +1465,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
 	float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
-	
+
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
@@ -1517,7 +1505,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
 	QTransform transform;
-		
+
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
 	x += (width * (location_x.GetValue(frame->number) + parentObject_location_x )); // move in percentage of final width
@@ -1533,7 +1521,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-	} 
+	}
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);

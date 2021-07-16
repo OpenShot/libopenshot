@@ -1228,7 +1228,6 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	PixelFormat pix_fmt = AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx);
 	int height = info.height;
 	int width = info.width;
-	int64_t video_length = info.video_length;
 	AVFrame *my_frame = pFrame;
 	pFrame = NULL;
 
@@ -1389,7 +1388,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	AV_RESET_FRAME(audio_frame);
 
 	int packet_samples = 0;
-	int data_size = 0;
 
 #if IS_FFMPEG_3_2
 		int ret = 0;
@@ -1426,7 +1424,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 		// determine how many samples were decoded
 		int plane_size = -1;
-		data_size = av_samples_get_buffer_size(&plane_size,
+		ret = av_samples_get_buffer_size(&plane_size,
 											   AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channels,
 											   audio_frame->nb_samples,
 											   (AVSampleFormat) (AV_GET_SAMPLE_FORMAT(aStream, aCodecCtx)), 1);

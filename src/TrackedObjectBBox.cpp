@@ -269,7 +269,7 @@ bool TrackedObjectBBox::LoadBoxData(std::string inputFilePath)
 	this->clear();
 
 	// Iterate over all frames of the saved message
-	for (size_t i = 0; i < bboxMessage.frame_size(); i++)
+	for (int i = 0; i < bboxMessage.frame_size(); i++)
 	{
 		// Get data of the i-th frame
 		const pb_tracker::Frame &pbFrameData = bboxMessage.frame(i);
@@ -397,7 +397,6 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 		protobufDataPath = root["protobuf_data_path"].asString();
 	// Set the id of the child clip
 	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != ""){
-		Clip* parentClip = (Clip *) ParentClip();
 		ChildClipId(root["child_clip_id"].asString());
 	}
 
