@@ -60,7 +60,6 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		// Keyframe shift;	///< Robotization shift keyframe. The Robotization shift inserted on the audio.
 		openshot::FFTSize fft_size;
 		openshot::HopSize hop_size;
 		openshot::WindowType window_type;

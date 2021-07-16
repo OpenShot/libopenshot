@@ -91,6 +91,12 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if(effect_type == "Noise")
 		return new Noise();
 
+	else if(effect_type == "Delay")
+		return new Delay();
+
+	else if(effect_type == "Echo")
+		return new Echo();
+
 	else if(effect_type == "Distortion")
 		return new Distortion();
 
@@ -147,6 +153,8 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Wave().JsonInfo());
 	/* Audio */
 	root.append(Noise().JsonInfo());
+	root.append(Delay().JsonInfo());
+	root.append(Echo().JsonInfo());
 	root.append(Distortion().JsonInfo());
 	root.append(ParametricEQ().JsonInfo());
 	root.append(Compressor().JsonInfo());

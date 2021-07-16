@@ -50,6 +50,8 @@
 
 /* Audio Effects */
 #include "audio_effects/Noise.h"
+#include "audio_effects/Delay.h"
+#include "audio_effects/Echo.h"
 #include "audio_effects/Distortion.h"
 #include "audio_effects/ParametricEQ.h"
 #include "audio_effects/Compressor.h"

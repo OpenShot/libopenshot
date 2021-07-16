@@ -74,7 +74,7 @@ std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::
     const int num_samples = frame->audio->getNumSamples();
 
     mixed_down_input.setSize(1, num_samples);
-	inverse_sample_rate = 1.0f / frame->SampleRate(); //(float)getSampleRate();
+	inverse_sample_rate = 1.0f / frame->SampleRate();
     inverseE = 1.0f / M_E;
 	
 	if ((bool)bypass.GetValue(frame_number))

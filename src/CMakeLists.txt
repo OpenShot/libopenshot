@@ -133,6 +133,8 @@ set(EFFECTS_SOURCES
   effects/Wave.cpp
   audio_effects/STFT.cpp
   audio_effects/Noise.cpp
+  audio_effects/Delay.cpp
+  audio_effects/Echo.cpp
   audio_effects/Distortion.cpp
   audio_effects/ParametricEQ.cpp
   audio_effects/Compressor.cpp

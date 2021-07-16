@@ -78,7 +78,6 @@ std::shared_ptr<openshot::Frame> ParametricEQ::GetFrame(std::shared_ptr<openshot
     const int num_samples = frame->audio->getNumSamples();
     updateFilters(frame_number, num_samples);
 
-	// Add distortion
 	for (int channel = 0; channel < frame->audio->getNumChannels(); channel++)
 	{
 		auto *channel_data = frame->audio->getWritePointer(channel);

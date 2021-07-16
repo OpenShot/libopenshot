@@ -49,7 +49,7 @@ namespace openshot
 {
 
 	/**
-	 * @brief This class adds a noise into the audio
+	 * @brief This class adds a equalization into the audio
 	 *
 	 */
 	class ParametricEQ : public EffectBase
