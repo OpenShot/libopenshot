@@ -49,8 +49,8 @@ jobs:
       run: |
         mkdir build
         pushd build
-        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" "${{ steps.coverage.outputs.value }}"
-        cmake --build . -- VERBOSE=1
+        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wno-switch -Wno-reorder" "${{ steps.coverage.outputs.value }}"
+        cmake --build .
         popd
 
     - name: Test libopenshot
