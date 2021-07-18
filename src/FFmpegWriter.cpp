@@ -547,36 +547,35 @@ void FFmpegWriter::SetOption(StreamType stream, std::string name, std::string va
 			// This might be better in an extra methods as more options
 			// and way to set quality are possible
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
-    // FFmpeg 4.0+
-				switch (c->codec_id) {
-					case AV_CODEC_ID_AV1 :
-						c->bit_rate = 0;
-						if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
-							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
-						}
-						else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
-							// Set number of tiles to a fixed value
-							// TODO Let user choose number of tiles
-							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
-						}
-						else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
-							// Set number of tiles to a fixed value
-							// TODO Let user choose number of tiles
-							// libaom doesn't have qp only crf
-							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
-						}
-						else {
-							av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
-						}
-					case AV_CODEC_ID_HEVC :
-						c->bit_rate = 0;
-						if (strstr(info.vcodec.c_str(), "svt_hevc") != NULL) {
-							av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),51), 0);
-							av_opt_set_int(c->priv_data, "preset", 7, 0);
-							av_opt_set_int(c->priv_data, "forced-idr",1,0);
-						}
-						break;
-				}
+            // FFmpeg 4.0+
+            if (c->codec_id == AV_CODEC_ID_AV1) {
+                c->bit_rate = 0;
+                if (strstr(info.vcodec.c_str(), "svtav1") != NULL) {
+                    av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),63), 0);
+                }
+                else if (strstr(info.vcodec.c_str(), "rav1e") != NULL) {
+                    // Set number of tiles to a fixed value
+                    // TODO Let user choose number of tiles
+                    av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),255), 0);
+                }
+                else if (strstr(info.vcodec.c_str(), "aom") != NULL) {
+                    // Set number of tiles to a fixed value
+                    // TODO Let user choose number of tiles
+                    // libaom doesn't have qp only crf
+                    av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+                }
+                else {
+                    av_opt_set_int(c->priv_data, "crf", std::min(std::stoi(value),63), 0);
+                }
+            }
+            if (c->codec_id == AV_CODEC_ID_AV1 || c->codec_id == AV_CODEC_ID_HEVC) {
+                c->bit_rate = 0;
+                if (strstr(info.vcodec.c_str(), "svt_hevc") != NULL) {
+                    av_opt_set_int(c->priv_data, "qp", std::min(std::stoi(value),51), 0);
+                    av_opt_set_int(c->priv_data, "preset", 7, 0);
+                    av_opt_set_int(c->priv_data, "forced-idr",1,0);
+                }
+            }
 #endif  // FFmpeg 4.0+
 		} else {
 			// Set AVOption
@@ -1166,10 +1165,9 @@ AVStream *FFmpegWriter::add_video_stream() {
 		// Defaults are used because mpeg2 otherwise had problems
 	} else {
 		// Check if codec supports crf or qp
-		switch (c->codec_id) {
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
-			// FFmpeg 4.0+
-			case AV_CODEC_ID_AV1 :
+		// FFmpeg 4.0+
+		if (c->codec_id == AV_CODEC_ID_AV1) {
 			// TODO: Set `crf` or `qp` according to bitrate, as bitrate is not supported by these encoders yet.
 			if (info.video_bit_rate >= 1000) {
 				c->bit_rate = 0;
@@ -1204,7 +1202,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 				av_opt_set_int(c->priv_data, "row-mt", 1, 0);			// use multiple cores
 				av_opt_set_int(c->priv_data, "cpu-used", 3, 0);			// default is 1, usable is 4
 			}
-			//break;
+		}
+#endif  // FFmpeg 4.0+
+
+		switch (c->codec_id) {
+#if (LIBAVCODEC_VERSION_MAJOR >= 58)
+            			// FFmpeg 4.0+
+			case AV_CODEC_ID_AV1 :
 #endif
 			case AV_CODEC_ID_VP9 :
 			case AV_CODEC_ID_HEVC :
