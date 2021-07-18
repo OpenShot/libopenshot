@@ -39,6 +39,8 @@
 #include "EffectInfo.h"
 #include "Exceptions.h"
 
+#include "TrackedObjectBase.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>

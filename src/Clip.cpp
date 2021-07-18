@@ -38,6 +38,7 @@
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "TrackedObjectBase.h"
 
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"

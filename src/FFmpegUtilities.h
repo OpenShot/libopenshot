@@ -183,9 +183,9 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
     #define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codecpar->codec_id
     #define AV_GET_CODEC_CONTEXT(av_stream, av_codec) \
-            ({ AVCodecContext *context = avcodec_alloc_context3(av_codec); \
-               avcodec_parameters_to_context(context, av_stream->codecpar); \
-               context; })
+         avcodec_alloc_context3(av_codec)
+    #define AV_COPY_STREAM_PARAMS(context, av_stream) \
+         avcodec_parameters_to_context(context, av_stream->codecpar)
     #define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_codec;
     #define AV_GET_CODEC_FROM_STREAM(av_stream,codec_in)
     #define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_stream->codecpar
@@ -200,13 +200,13 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) \
             av_opt_set(priv_data, name, value, 0); \
             avcodec_parameters_from_context(av_stream->codecpar, avcodec);
-    #define AV_FORMAT_NEW_STREAM(oc, st_codec_ctx, av_codec, av_st) \
+    #define AV_FORMAT_NEW_STREAM(oc, st_codec_ctx, av_codec, av_st) {\
             av_st = avformat_new_stream(oc, NULL);\
             if (!av_st) \
                 throw OutOfMemory("Could not allocate memory for the video stream.", path); \
             c = avcodec_alloc_context3(av_codec); \
             st_codec_ctx = c; \
-            av_st->codecpar->codec_id = av_codec->id;
+            av_st->codecpar->codec_id = av_codec->id; }
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec_ctx) \
             avcodec_parameters_from_context(av_stream->codecpar, av_codec_ctx);
 
@@ -226,9 +226,9 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_GET_CODEC_TYPE(av_stream) av_stream->codecpar->codec_type
     #define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codecpar->codec_id
     #define AV_GET_CODEC_CONTEXT(av_stream, av_codec) \
-            ({ AVCodecContext *context = avcodec_alloc_context3(av_codec); \
-               avcodec_parameters_to_context(context, av_stream->codecpar); \
-               context; })
+            avcodec_alloc_context3(av_codec)
+    #define AV_COPY_STREAM_PARAMS(context, av_stream) \
+               avcodec_parameters_to_context(context, av_stream->codecpar)
     #define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_codec;
     #define AV_GET_CODEC_FROM_STREAM(av_stream,codec_in)
     #define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_stream->codecpar
@@ -244,7 +244,7 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_OPTION_SET( av_stream, priv_data, name, value, avcodec) \
             av_opt_set(priv_data, name, value, 0); \
             avcodec_parameters_from_context(av_stream->codecpar, avcodec);
-    #define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) \
+    #define AV_FORMAT_NEW_STREAM(oc, st_codec, av_codec, av_st) { \
             av_st = avformat_new_stream(oc, NULL);\
             if (!av_st) \
                 throw OutOfMemory("Could not allocate memory for the video stream.", path); \
@@ -253,7 +253,8 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
             avcodec_get_context_defaults3(av_st->codec, av_codec); \
             c = av_st->codec; \
             _Pragma ("GCC diagnostic pop"); \
-            st_codec = c;
+            st_codec = c; \
+        }
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec) \
             avcodec_parameters_from_context(av_stream->codecpar, av_codec);
 
@@ -273,6 +274,7 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
     #define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codec->codec_id
     #define AV_GET_CODEC_CONTEXT(av_stream, av_codec) av_stream->codec
+    #define AV_COPY_STREAM_PARAMS(context, av_stream)
     #define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_stream->codec
     #define AV_GET_CODEC_FROM_STREAM(av_stream, codec_in) codec_in = av_stream->codec;
     #define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_context
@@ -284,12 +286,13 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_OUTPUT_CONTEXT(output_context, path) oc = avformat_alloc_context()
     #define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
     #define AV_OPTION_SET(av_stream, priv_data, name, value, avcodec) av_opt_set (priv_data, name, value, 0)
-    #define AV_FORMAT_NEW_STREAM( oc,  av_context,  av_codec, av_st) \
+    #define AV_FORMAT_NEW_STREAM( oc,  av_context,  av_codec, av_st) { \
             av_st = avformat_new_stream(oc, av_codec); \
             if (!av_st) \
                 throw OutOfMemory("Could not allocate memory for the video stream.", path); \
             avcodec_get_context_defaults3(av_st->codec, av_codec); \
-            c = av_st->codec;
+            c = av_st->codec; \
+       }
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 
 #else
@@ -308,6 +311,7 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_GET_CODEC_TYPE(av_stream) av_stream->codec->codec_type
     #define AV_FIND_DECODER_CODEC_ID(av_stream) av_stream->codec->codec_id
     #define AV_GET_CODEC_CONTEXT(av_stream, av_codec) av_stream->codec
+    #define AV_COPY_STREAM_PARAMS(context, av_stream)
     #define AV_GET_CODEC_PAR_CONTEXT(av_stream, av_codec) av_stream->codec
     #define AV_GET_CODEC_FROM_STREAM(av_stream, codec_in ) codec_in = av_stream->codec;
     #define AV_GET_CODEC_ATTRIBUTES(av_stream, av_context) av_context
@@ -319,12 +323,13 @@ inline static bool ffmpeg_has_alpha(PixelFormat pix_fmt) {
     #define AV_OUTPUT_CONTEXT(output_context, path) oc = avformat_alloc_context()
     #define AV_OPTION_FIND(priv_data, name) av_opt_find(priv_data, name, NULL, 0, 0)
     #define AV_OPTION_SET(av_stream, priv_data, name, value, avcodec) av_opt_set (priv_data, name, value, 0)
-    #define AV_FORMAT_NEW_STREAM( oc,  av_context,  av_codec, av_st) \
+    #define AV_FORMAT_NEW_STREAM( oc,  av_context,  av_codec, av_st) { \
             av_st = avformat_new_stream(oc, av_codec); \
             if (!av_st) \
                 throw OutOfMemory("Could not allocate memory for the video stream.", path); \
             avcodec_get_context_defaults3(av_st->codec, av_codec); \
-            c = av_st->codec;
+            c = av_st->codec; \
+        }
     #define AV_COPY_PARAMS_FROM_CONTEXT(av_stream, av_codec)
 #endif
 

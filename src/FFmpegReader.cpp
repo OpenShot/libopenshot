@@ -264,6 +264,7 @@ void FFmpegReader::Open() {
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
 			do {
 				pCodecCtx = AV_GET_CODEC_CONTEXT(pStream, pCodec);
+                AV_COPY_STREAM_PARAMS(pCodecCtx, pStream);
 #if USE_HW_ACCEL
 				if (hw_de_on && (retry_decode_open==2)) {
 					// Up to here no decision is made if hardware or software decode
@@ -514,6 +515,7 @@ void FFmpegReader::Open() {
 			// Get codec and codec context from stream
 			AVCodec *aCodec = avcodec_find_decoder(codecId);
 			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
+            AV_COPY_STREAM_PARAMS(aCodecCtx, aStream);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
 			aCodecCtx->thread_count = std::min(FF_NUM_PROCESSORS, 16);

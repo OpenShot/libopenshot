@@ -134,7 +134,7 @@ Keyframe::Keyframe(double value) {
 }
 
 // Constructor which takes a vector of Points
-Keyframe::Keyframe(const std::vector<openshot::Point>& points) : Points(points) {};
+Keyframe::Keyframe(const std::vector<openshot::Point>& points) : Points(points) {}
 
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.

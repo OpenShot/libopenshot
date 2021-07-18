@@ -35,24 +35,24 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor
-Point::Point() : Point::Point(Coordinate(1, 0), BEZIER, AUTO) {};
+Point::Point() : Point::Point(Coordinate(1, 0), BEZIER, AUTO) {}
 
 // Constructor which creates a single coordinate at X=1
-Point::Point(float y) : Point::Point(Coordinate(1, y), CONSTANT, AUTO) {};
+Point::Point(float y) : Point::Point(Coordinate(1, y), CONSTANT, AUTO) {}
 
 // Constructor which creates a Bezier curve with point at (x, y)
-Point::Point(float x, float y) : Point::Point(Coordinate(x, y), BEZIER, AUTO) {};
+Point::Point(float x, float y) : Point::Point(Coordinate(x, y), BEZIER, AUTO) {}
 
 // Constructor which also creates a Point, setting X,Y, and interpolation.
 Point::Point(float x, float y, InterpolationType interpolation)
-	: Point::Point(Coordinate(x, y), interpolation, AUTO) {};
+	: Point::Point(Coordinate(x, y), interpolation, AUTO) {}
 
 
 // Direct Coordinate-accepting constructors
-Point::Point(const Coordinate& co) : Point::Point(co, BEZIER, AUTO) {};
+Point::Point(const Coordinate& co) : Point::Point(co, BEZIER, AUTO) {}
 
 Point::Point(const Coordinate& co, InterpolationType interpolation)
-	: Point::Point(co, interpolation, AUTO) {};
+	: Point::Point(co, interpolation, AUTO) {}
 
 Point::Point(const Coordinate& co, InterpolationType interpolation, HandleType handle_type) :
 	co(co), interpolation(interpolation), handle_type(handle_type) {
