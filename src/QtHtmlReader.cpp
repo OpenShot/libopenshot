@@ -32,6 +32,9 @@
 
 #include "QtHtmlReader.h"
 #include "Exceptions.h"
+#include "Frame.h"
+
+#include <QColor>
 #include <QImage>
 #include <QPainter>
 #include <QTextDocument>

@@ -34,11 +34,14 @@
 #include <map>
 #include <deque>
 #include <memory>
+
 #include "CacheBase.h"
-#include "Frame.h"
+
 #include <QDir>
 
 namespace openshot {
+
+    class Frame;
 
 	/**
 	 * @brief This class is a disk-based cache manager for Frame objects.

@@ -29,6 +29,7 @@
  */
 
 #include "DecklinkWriter.h"
+#include "Frame.h"
 
 using namespace openshot;
 

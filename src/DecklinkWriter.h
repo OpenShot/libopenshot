@@ -33,24 +33,26 @@
 
 #include "WriterBase.h"
 
-#include <cmath>
-#include <ctime>
-#include <fcntl.h>
-#include <iostream>
-#include <omp.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <memory>
-#include <unistd.h>
+// #include <cmath>
+// #include <ctime>
+// #include <fcntl.h>
+// #include <iostream>
+// #include <omp.h>
+// #include <pthread.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include <memory>
+// #include <unistd.h>
 
 #include "CacheMemory.h"
-#include "Frame.h"
+
 #include "DecklinkOutput.h"
 
 namespace openshot
 {
+    class Frame;
+    class ReaderBase;
 
 	/**
 	 * @brief This class uses the Blackmagic Decklink libraries, to send video streams to Blackmagic devices.

@@ -34,15 +34,15 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <QFont>
-#include <QFontMetrics>
 #include <QRegularExpression>
+
 #include "../Color.h"
 #include "../EffectBase.h"
 #include "../Json.h"
 #include "../KeyFrame.h"
 
-
+class QFontMetrics;
+class QFont;
 
 namespace openshot
 {

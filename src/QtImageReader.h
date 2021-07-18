@@ -31,14 +31,12 @@
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
 
 #include "ReaderBase.h"
+
+#include <QString>
+#include <QImage>
 
 namespace openshot
 {
@@ -68,10 +66,10 @@ namespace openshot
 	{
 	private:
 		QString path;
-		std::shared_ptr<QImage> image;			///> Original image (full quality)
-		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
-		bool is_open;	///> Is Reader opened
-		QSize max_size;	///> Current max_size as calculated with Clip properties
+		std::shared_ptr<QImage> image;			///< Original image (full quality)
+		std::shared_ptr<QImage> cached_image;	///< Scaled for performance
+		bool is_open;	///< Is Reader opened
+		QSize max_size;	///< Current max_size as calculated with Clip properties
 
 		/// Load an SVG file with Resvg or fallback with Qt
         ///

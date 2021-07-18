@@ -34,12 +34,14 @@
 
 #include <iostream>
 #include <vector>
+
 #include "PlayerBase.h"
 #include "Qt/PlayerPrivate.h"
-#include "RendererBase.h"
 
 namespace openshot
 {
+    class RendererBase;
+
     /**
      * @brief This class is used to playback a video from a reader.
      *

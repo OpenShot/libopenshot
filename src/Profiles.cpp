@@ -31,6 +31,9 @@
 #include "Profiles.h"
 #include "Exceptions.h"
 
+#include <QFile>
+#include <QTextStream>
+
 using namespace openshot;
 
 

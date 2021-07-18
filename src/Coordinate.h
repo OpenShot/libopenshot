@@ -31,7 +31,6 @@
 #ifndef OPENSHOT_COORDINATE_H
 #define OPENSHOT_COORDINATE_H
 
-#include <iostream>
 #include "Fraction.h"
 #include "Json.h"
 

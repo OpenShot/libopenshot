@@ -34,15 +34,9 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
-
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
-#include "CacheMemory.h"
+
+#include "ReaderBase.h"
 #include "Enums.h"
 
 #include "MagickUtilities.h"

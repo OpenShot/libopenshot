@@ -32,8 +32,7 @@
 #define OPENSHOT_EFFECT_INFO_H
 
 #include "Effects.h"
-
-
+#include "Json.h"
 
 namespace openshot
 {

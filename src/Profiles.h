@@ -31,16 +31,8 @@
 #ifndef OPENSHOT_PROFILE_H
 #define OPENSHOT_PROFILE_H
 
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <fstream>
-#include <QtCore/QString>
-#include <QtCore/QStringList>
-#include <QtCore/QFile>
-#include <QTextStream>
-#include <cstdio>
-#include <cstdlib>
+
 #include "Fraction.h"
 #include "Json.h"
 

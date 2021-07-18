@@ -31,11 +31,10 @@
 #ifndef OPENSHOT_PLAYER_BASE_H
 #define OPENSHOT_PLAYER_BASE_H
 
-#include <iostream>
-#include "ReaderBase.h"
-
 namespace openshot
 {
+    class ReaderBase;
+
 	/**
 	 * @brief This enumeration determines the mode of the video player (i.e. playing, paused, etc...)
 	 *

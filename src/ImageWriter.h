@@ -40,16 +40,13 @@
 
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
 #include "WriterBase.h"
 
 #include <string>
 #include <vector>
-#include "CacheMemory.h"
-#include "Exceptions.h"
+
 #include "Fraction.h"
 
-#include "OpenMPUtilities.h"
 #include "MagickUtilities.h"
 
 namespace openshot

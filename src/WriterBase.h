@@ -31,16 +31,14 @@
 #ifndef OPENSHOT_WRITER_BASE_H
 #define OPENSHOT_WRITER_BASE_H
 
-#include <iostream>
-#include <iomanip>
 #include "ChannelLayouts.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "ReaderBase.h"
-#include "ZmqLogger.h"
 
 namespace openshot
 {
+    class Frame;
+
 	/**
 	 * @brief This struct contains info about encoding a media file, such as height, width, frames per second, etc...
 	 *

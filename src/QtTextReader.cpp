@@ -32,6 +32,9 @@
 
 #include "QtTextReader.h"
 #include "Exceptions.h"
+#include "Frame.h"
+
+#include <Qt>
 #include <QImage>
 #include <QPainter>
 

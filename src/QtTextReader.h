@@ -37,13 +37,12 @@
 
 #include <cmath>
 #include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
+
 #include "CacheMemory.h"
 #include "Enums.h"
 
+#include <QFont>
 
 class QImage;
 

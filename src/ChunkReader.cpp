@@ -31,6 +31,8 @@
 #include "ChunkReader.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
+#include "TimelineBase.h"
+#include "Timeline.h"
 
 #include <QDir>
 
