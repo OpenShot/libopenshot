@@ -31,26 +31,22 @@
 #ifndef OPENSHOT_READER_BASE_H
 #define OPENSHOT_READER_BASE_H
 
-#include <iostream>
-#include <iomanip>
 #include <memory>
-#include <cstdlib>
-#include <sstream>
+#include <string>
+#include <map>
+
 #include "CacheMemory.h"
 #include "ChannelLayouts.h"
-#include "ClipBase.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "Json.h"
-#include "ZmqLogger.h"
-#include <QString>
-#include <QGraphicsItem>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
-#include <QPixmap>
+
+#include <OpenShotAudio.h>
 
 namespace openshot
 {
+    class ClipBase;
+    class Frame;
+
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
@@ -96,16 +92,8 @@ namespace openshot
 	 */
 	class ReaderBase
 	{
-	protected:
-		/// Section lock for multiple threads
-		juce::CriticalSection getFrameCriticalSection;
-		juce::CriticalSection processingCriticalSection;
-		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
-
-		/// Constructor for the base reader, where many things are initialized.
-	    ReaderBase();
 
 		/// Information about the current media file
 		openshot::ReaderInfo info;
@@ -149,6 +137,17 @@ namespace openshot
 		virtual void Open() = 0;
 
 		virtual ~ReaderBase() = default;
+
+	protected:
+            /// Constructor for the base reader
+	    ReaderBase();
+
+	    // Section locks for multiple threads
+	    juce::CriticalSection getFrameCriticalSection;
+	    juce::CriticalSection processingCriticalSection;
+
+            /// Pointer to the parent clip instance (if any)
+	    openshot::ClipBase* clip;
 	};
 
 }

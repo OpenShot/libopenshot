@@ -34,44 +34,62 @@
 #include <cstdint>
 #include <list>
 
+#include "ReaderBase.h"
 
 namespace openshot {
     // Forward decl
     class Clip;
 
     /**
-     * @brief This struct contains info about the current Timeline clip instance
+     * @brief Contextual data for the current Timeline clip instance
      *
-     * When the Timeline requests an openshot::Frame instance from a Clip, it passes
-     * this struct along, with some additional details from the Timeline, such as if this clip is
-     * above or below overlapping clips, etc... This info can help determine if a Clip should apply
-     * global effects from the Timeline, such as a global Transition/Mask effect.
+     * When the Timeline requests an openshot::Frame instance from a Clip,
+     * it passes details related to frame composition in this struct.
+     * Currently the only information it carries relates to stacking
+     * position when compositing layers.
+     *
+     * This info can help determine if a Clip should apply global effects
+     * from the Timeline, such as a global Transition/Mask effect.
      */
     struct TimelineInfoStruct
     {
-        bool is_top_clip;                 ///< Is clip on top (if overlapping another clip)
+        bool is_top_clip; ///< Is clip on top (if overlapping another clip)
     };
 
-	/**
-	 * @brief This class represents a timeline (used for building generic timeline implementations)
-	 */
-	class TimelineBase {
+    /**
+     * @brief Abstract base class representing a timeline
+     */
+    class TimelineBase : public openshot::ReaderBase {
 
-	public:
-		int preview_width; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
-		int preview_height; ///< Optional preview width of timeline image. If your preview window is smaller than the timeline, it's recommended to set this.
+    public:
+        /// Optional preview width of timeline image.
+        ///
+        /// If your preview window is smaller than the timeline,
+        /// it's recommended to set this.
+        int preview_width;
 
-		/// Constructor for the base timeline
-		TimelineBase();
+        /// Optional preview width of timeline image.
+        ///
+        /// If your preview window is smaller than the timeline,
+        /// it's recommended to set this.
+        int preview_height;
 
-		/// Destructor
-		virtual ~TimelineBase() = default;
+        /// Destructor
+        virtual ~TimelineBase() = default;
 
-		/// This function will be overloaded in the Timeline class passing no arguments
-		/// so we'll be able to access the Timeline::Clips() function from a pointer object of
-		/// the TimelineBase class
-		virtual std::list<openshot::Clip*> Clips() = 0;
-	};
+        // Retrieve a list of clips on the Timeline
+        //
+        // This is an interface method that must be overridden
+        // by subclasses, so that a clips list will be accessible
+        // Through the Clips() method of a TimelineBase* pointer.
+        virtual std::list<openshot::Clip*> Clips() = 0;
+
+    protected:
+        /// Default constructor for the base timeline
+        TimelineBase() : ReaderBase::ReaderBase(),
+            preview_width(1920), preview_height(1080) {}
+
+    };
 }
 
 #endif

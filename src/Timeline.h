@@ -35,9 +35,6 @@
 #include <memory>
 #include <mutex>
 #include <set>
-#include <QtGui/QImage>
-#include <QtGui/QPainter>
-#include <QtCore/QRegularExpression>
 
 #include "TimelineBase.h"
 #include "ReaderBase.h"
@@ -46,20 +43,21 @@
 #include "Clip.h"
 #include "EffectBase.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "KeyFrame.h"
+
 #ifdef USE_OPENCV
-#include "TrackedObjectBBox.h"
+    #include "TrackedObjectBBox.h"
 #endif
-#include "TrackedObjectBase.h"
 
 
 
 namespace openshot {
 
 	// Forward decls
+    class Frame;
 	class FrameMapper;
 	class CacheBase;
+    class TrackedObjectBase;
 
 	/// Comparison method for sorting clip pointers (by Layer and then Position). Clips are sorted
 	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
@@ -165,7 +163,7 @@ namespace openshot {
 	 * t.Close();
 	 * @endcode
 	 */
-	class Timeline : public openshot::TimelineBase, public openshot::ReaderBase {
+	class Timeline : public openshot::TimelineBase {
 	private:
 		bool is_open; ///<Is Timeline Open?
 		bool auto_map_clips; ///< Auto map framerates and sample rates to all clips

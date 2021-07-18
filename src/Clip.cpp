@@ -29,17 +29,22 @@
  */
 
 #include "Clip.h"
+
+#include "EffectInfo.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
 #include "QtImageReader.h"
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+	#include "TextReader.h"
+#endif
+
+#include <QPainter>
 
 using namespace openshot;
 

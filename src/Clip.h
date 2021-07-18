@@ -43,24 +43,31 @@
 
 #include <memory>
 #include <string>
-#include <QtGui/QImage>
 
-#include "AudioResampler.h"
+#include <QTransform>
+#include <QImage>
+
+#include "ReaderBase.h"
+
 #include "ClipBase.h"
 #include "Color.h"
 #include "Enums.h"
 #include "EffectBase.h"
 #include "Effects.h"
-#include "EffectInfo.h"
-#include "Frame.h"
 #include "KeyFrame.h"
-#include "TrackedObjectBase.h"
-#include "ReaderBase.h"
+
+#include "TimelineBase.h"
+
 #include <OpenShotAudio.h>
 
 
 namespace openshot {
-	class EffectInfo;
+
+    class AudioResampler;
+    class CacheBase;
+    class EffectInfo;
+    class Frame;
+    class TrackedObjectBase;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -106,7 +113,7 @@ namespace openshot {
 	 * c2.alpha.AddPoint(384, 1.0); // Animate the alpha to visible (between frame #360 and frame #384)
 	 * @endcode
 	 */
-	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
+	class Clip : public openshot::ClipBase {
 	protected:
 		/// Section lock for multiple threads
 	    juce::CriticalSection getFrameCriticalSection;
@@ -130,7 +137,7 @@ namespace openshot {
 
 
 		// Audio resampler (if time mapping)
-		openshot::AudioResampler *resampler;
+		openshot::AudioResampler* resampler;
 
 		// File Reader object
 		openshot::ReaderBase* reader;
@@ -198,7 +205,7 @@ namespace openshot {
 		virtual ~Clip();
 
         /// Get the cache object (always return NULL for this reader)
-        openshot::CacheMemory* GetCache() override { return NULL; };
+        openshot::CacheBase* GetCache() override { return nullptr; };
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };
@@ -219,7 +226,7 @@ namespace openshot {
 		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return parentTrackedObject; };
 		/// Return a pointer to the clip this clip is attached to
 		Clip* GetAttachedClip() const { return parentClipObject; };
-		
+
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 

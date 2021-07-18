@@ -49,8 +49,8 @@ Json::Value ClipBase::JsonValue() const {
 }
 
 // Load Json::Value into this object
-void ClipBase::SetJsonValue(const Json::Value root) {
-
+void ClipBase::SetJsonValue(const Json::Value root)
+{
 	// Set data from Json (if key is found)
 	if (!root["id"].isNull())
 		Id(root["id"].asString());
@@ -65,44 +65,52 @@ void ClipBase::SetJsonValue(const Json::Value root) {
 }
 
 // Generate JSON for a property
-Json::Value ClipBase::add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const {
+Json::Value ClipBase::add_property_json(
+    std::string name, float value,
+    std::string type, std::string memo,
+    const Keyframe* keyframe,
+    float min_value, float max_value,
+    bool readonly, int64_t requested_frame) const
+{
+    // Create JSON Object
+    Json::Value prop = Json::Value(Json::objectValue);
+    prop["name"] = name;
+    prop["value"] = value;
+    prop["memo"] = memo;
+    prop["type"] = type;
+    prop["min"] = min_value;
+    prop["max"] = max_value;
 
-	// Requested Point
-	const Point requested_point(requested_frame, requested_frame);
+    if (keyframe) {
+        const Point requested(
+            requested_frame, requested_frame);
+        const Point closest = keyframe->GetClosestPoint(
+            requested);
+        const Point previous = keyframe->GetPreviousPoint(closest);
 
-	// Create JSON Object
-	Json::Value prop = Json::Value(Json::objectValue);
-	prop["name"] = name;
-	prop["value"] = value;
-	prop["memo"] = memo;
-	prop["type"] = type;
-	prop["min"] = min_value;
-	prop["max"] = max_value;
-	if (keyframe) {
-		prop["keyframe"] = keyframe->Contains(requested_point);
-		prop["points"] = int(keyframe->GetCount());
-		Point closest_point = keyframe->GetClosestPoint(requested_point);
-		prop["interpolation"] = closest_point.interpolation;
-		prop["closest_point_x"] = closest_point.co.X;
-		prop["previous_point_x"] = keyframe->GetPreviousPoint(closest_point).co.X;
-	}
-	else {
-		prop["keyframe"] = false;
-		prop["points"] = 0;
-		prop["interpolation"] = CONSTANT;
-		prop["closest_point_x"] = -1;
-		prop["previous_point_x"] = -1;
-	}
+        prop["keyframe"] = keyframe->Contains(requested);
+        prop["points"] = int(keyframe->GetCount());
+        prop["interpolation"] = closest.interpolation;
+        prop["closest_point_x"] = closest.co.X;
+        prop["previous_point_x"] = previous.co.X;
+	} else {
+        prop["keyframe"] = false;
+        prop["points"] = 0;
+        prop["interpolation"] = CONSTANT;
+        prop["closest_point_x"] = -1;
+        prop["previous_point_x"] = -1;
+    }
 
-	prop["readonly"] = readonly;
-	prop["choices"] = Json::Value(Json::arrayValue);
+    prop["readonly"] = readonly;
+    prop["choices"] = Json::Value(Json::arrayValue);
 
-	// return JsonValue
-	return prop;
+    // return JsonValue
+    return prop;
 }
 
-Json::Value ClipBase::add_property_choice_json(std::string name, int value, int selected_value) const {
-
+Json::Value ClipBase::add_property_choice_json(
+    std::string name, int value, int selected_value) const
+{
 	// Create choice
 	Json::Value new_choice = Json::Value(Json::objectValue);
 	new_choice["name"] = name;

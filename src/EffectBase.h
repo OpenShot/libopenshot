@@ -32,9 +32,7 @@
 #define OPENSHOT_EFFECT_BASE_H
 
 #include "ClipBase.h"
-
 #include "Json.h"
-#include "TrackedObjectBase.h"
 
 #include <memory>
 #include <map>
@@ -42,6 +40,9 @@
 
 namespace openshot
 {
+    class CacheBase;
+    class TrackedObjectBase;
+
 	/**
 	 * @brief This struct contains info about an effect, such as the name, video or audio effect, etc...
 	 *
@@ -67,7 +68,7 @@ namespace openshot
 	 * The only requirements for an 'effect', is to derive from this base class, implement the Apply()
 	 * method, and call the InitEffectInfo() method.
 	 */
-	class EffectBase : public ClipBase
+	class EffectBase : public openshot::ClipBase
 	{
 	private:
 		int order; ///< The order to evaluate this effect. Effects are processed in this order (when more than one overlap).
@@ -111,11 +112,18 @@ namespace openshot
 		/// Get the indexes and IDs of all visible objects in the given frame
 		virtual std::string GetVisibleObjects(int64_t) const { return {}; }
 
+        // Base class methods we need to override in subclasses
+        openshot::CacheBase* GetCache() override { return nullptr; }
+        void Open() override {}
+        void Close() override {}
+        bool IsOpen() override { return true; }
+        std::string Name() override { return info.name; }
+
 		// Get and Set JSON methods
-		virtual std::string Json() const; ///< Generate JSON string of this object
-		virtual void SetJson(const std::string value); ///< Load JSON string into this object
-		virtual Json::Value JsonValue() const; ///< Generate Json::Value for this object
-		virtual void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
+		virtual std::string Json() const override; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value) override; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
                 // For OpenCV subclasses
 		virtual std::string Json(int64_t) const { return {}; }

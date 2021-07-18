@@ -34,11 +34,16 @@
 #include "CacheDisk.h"
 #include "CacheMemory.h"
 #include "CrashHandler.h"
+#include "Frame.h"
 #include "FrameMapper.h"
+#include "EffectInfo.h"
 #include "Exceptions.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QImage>
+#include <QPainter>
+#include <QRegularExpression>
 
 using namespace openshot;
 

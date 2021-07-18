@@ -33,22 +33,27 @@
 
 #include <memory>
 #include <sstream>
+
+#include "ReaderBase.h"
 #include "CacheMemory.h"
 #include "Frame.h"
 #include "Point.h"
 #include "KeyFrame.h"
 #include "Json.h"
-#include "TimelineBase.h"
 
 
 namespace openshot {
+
+    class CacheBase;
+    class TimelineBase;
+
 	/**
 	 * @brief This abstract class is the base class, used by all clips in libopenshot.
 	 *
 	 * Clips are objects that attach to the timeline and can be layered and positioned
 	 * together. There are 2 primary types of clips: Effects and Video/Audio Clips.
 	 */
-	class ClipBase {
+	class ClipBase : public openshot::ReaderBase {
 	protected:
 		std::string id; ///< ID Property for all derived Clip and Effect classes.
 		float position; ///< The position on the timeline where this clip should start playing
@@ -59,24 +64,29 @@ namespace openshot {
 		openshot::TimelineBase* timeline; ///< Pointer to the parent timeline instance (if any)
 
 		/// Generate JSON for a property
-		Json::Value add_property_json(std::string name, float value, std::string type, std::string memo, const Keyframe* keyframe, float min_value, float max_value, bool readonly, int64_t requested_frame) const;
+		virtual Json::Value
+        add_property_json(
+            std::string name, float value,
+            std::string type, std::string memo,
+            const Keyframe* keyframe,
+            float min_value, float max_value,
+            bool readonly, int64_t requested_frame)
+        const;
 
-		/// Generate JSON choice for a property (dropdown properties)
-		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
+        /// Generate JSON choice for a property (dropdown properties)
+        virtual Json::Value
+        add_property_choice_json(
+            std::string name, int value, int selected_value)
+        const;
+
+
+        /// Constructor for the base class
+        ClipBase() : ReaderBase::ReaderBase(),
+            position(0.0), layer(0), start(0.0), end(0.0),
+            previous_properties(""), timeline(nullptr) {}
 
 	public:
 		CacheMemory cache;
-
-		/// Constructor for the base clip
-		ClipBase() {
-			// Initialize values
-			position = 0.0;
-			layer = 0;
-			start = 0.0;
-			end = 0.0;
-			previous_properties = "";
-			timeline = NULL;
-		};
 
 		// Compare a clip using the Position() property
 		bool operator< ( ClipBase& a) { return (Position() < a.Position()); }
@@ -90,7 +100,7 @@ namespace openshot {
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) = 0;
+		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override = 0;
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
@@ -113,18 +123,24 @@ namespace openshot {
 		openshot::TimelineBase* ParentTimeline() { return timeline; } ///< Get the associated Timeline pointer (if any)
 
 		// Set basic properties
-		void Id(std::string value) { id = value; } ///> Set the Id of this clip object
+		void Id(std::string value) { id = value; } ///< Set the Id of this clip object
 		void Position(float value) { position = value; } ///< Set position on timeline (in seconds)
 		void Layer(int value) { layer = value; } ///< Set layer of clip on timeline (lower number is covered by higher numbers)
 		void Start(float value) { start = value; } ///< Set start position (in seconds) of clip (trim start of video)
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 		void ParentTimeline(openshot::TimelineBase* new_timeline) { timeline = new_timeline; } ///< Set associated Timeline pointer
 
+        // Base class methods we need to override in subclasses
+        openshot::CacheBase* GetCache() override { return nullptr; }
+		void Close() override = 0;
+		virtual bool IsOpen() override = 0;
+		virtual std::string Name() override = 0;
+
 		// Get and Set JSON methods
-		virtual std::string Json() const = 0; ///< Generate JSON string of this object
-		virtual void SetJson(const std::string value) = 0; ///< Load JSON string into this object
-		virtual Json::Value JsonValue() const = 0; ///< Generate Json::Value for this object
-		virtual void SetJsonValue(const Json::Value root) = 0; ///< Load Json::Value into this object
+		virtual std::string Json() const override = 0; ///< Generate JSON string of this object
+		virtual void SetJson(const std::string value) override = 0; ///< Load JSON string into this object
+		virtual Json::Value JsonValue() const override; ///< Generate Json::Value for this object
+		virtual void SetJsonValue(const Json::Value root) override; ///< Load Json::Value into this object
 
 		/// Get all properties for a specific frame (perfect for a UI to display the current state
 		/// of all properties at any time)
