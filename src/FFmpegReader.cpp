@@ -134,6 +134,7 @@ bool AudioLocation::is_near(AudioLocation location, int samples_per_frame, int64
 // Get hardware pix format
 static enum AVPixelFormat get_hw_dec_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts)
 {
+    (void)ctx;  // UNUSED
 	const enum AVPixelFormat *p;
 
 	for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
@@ -1161,7 +1162,7 @@ bool FFmpegReader::GetAVFrame() {
 }
 
 // Check the current seek position and determine if we need to seek again
-bool FFmpegReader::CheckSeek(bool is_video) {
+bool FFmpegReader::CheckSeek(bool) {
 	// Are we seeking for a specific frame?
 	if (is_seeking) {
 		// Determine if both an audio and video packet have been decoded since the seek happened.
@@ -1225,7 +1226,6 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessVideoPacket (Before)", "requested_frame", requested_frame, "current_frame", current_frame);
 
 	// Init some things local (for OpenMP)
-	PixelFormat pix_fmt = AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx);
 	int height = info.height;
 	int width = info.width;
 	AVFrame *my_frame = pFrame;
@@ -1499,7 +1499,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, audio_frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 
 	SWRCONTEXT *avr = NULL;
-	int nb_samples = 0;
 
 	// setup resample context
 	avr = SWR_ALLOC();
@@ -1514,7 +1513,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	SWR_INIT(avr);
 
 	// Convert audio samples
-	nb_samples = SWR_CONVERT(avr,    // audio resample context
+	SWR_CONVERT(avr,    // audio resample context
 							 audio_converted->data,          // output data pointers
 							 audio_converted->linesize[0],   // output plane size, in bytes. (0 if unknown)
 							 audio_converted->nb_samples,    // maximum number of samples that the output buffer can hold

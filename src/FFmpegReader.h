@@ -157,7 +157,7 @@ namespace openshot {
 		void CheckFPS();
 
 		/// Check the current seek position and determine if we need to seek again
-		bool CheckSeek(bool is_video);
+		bool CheckSeek(bool);
 
 		/// Check if a frame is missing and attempt to replace its frame image (and
 		bool CheckMissingFrame(int64_t requested_frame);

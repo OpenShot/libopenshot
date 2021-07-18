@@ -957,6 +957,9 @@ void FFmpegWriter::flush_encoders() {
 // Close the video codec
 void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 {
+    (void)oc;  // UNUSED
+    (void)st;  // UNUSED
+
 #if USE_HW_ACCEL
 	if (hw_en_on && hw_en_supported) {
 		if (hw_device_ctx) {
@@ -970,6 +973,9 @@ void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 // Close the audio codec
 void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 {
+    (void)oc;  // UNUSED
+    (void)st;  // UNUSED
+
 	// Clear buffers
 	delete[] samples;
 	delete[] audio_outbuf;
@@ -1312,7 +1318,10 @@ AVStream *FFmpegWriter::add_video_stream() {
 }
 
 // open audio codec
-void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
+void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st)
+{
+    (void)oc;  // UNUSED
+
 	AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec_ctx)
 
@@ -1383,7 +1392,10 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 }
 
 // open video codec
-void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
+void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st)
+{
+    (void)oc;  // UNUSED
+
 	AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, video_codec_ctx)
 
