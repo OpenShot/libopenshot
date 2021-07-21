@@ -56,7 +56,7 @@ void Expander::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Expander";
 	info.name = "Expander";
-	info.description = "Add Expander on the frame's audio track. Louder parts of the audio becomes relatively louder and quieter parts becomes quieter.";
+	info.description = "Louder parts of audio becomes relatively louder and quieter parts becomes quieter.";
 	info.has_audio = true;
 	info.has_video = false;
 

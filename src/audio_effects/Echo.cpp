@@ -56,7 +56,7 @@ void Echo::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Echo";
 	info.name = "Echo";
-	info.description = "Add echo on the frame's sound.";
+	info.description = "Reflection of sound with a delay after the direct sound.";
 	info.has_audio = true;
 	info.has_video = false;
 	initialized = false;

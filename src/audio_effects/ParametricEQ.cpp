@@ -57,7 +57,7 @@ void ParametricEQ::init_effect_details()
 	/// Set the effect info
 	info.class_name = "ParametricEQ";
 	info.name = "Parametric EQ";
-	info.description = "Add equalization on the frame's sound. This effect is a filter that allows you to adjust the volume level of a frequency within an audio.";
+	info.description = "Filter that allows you to adjust the volume level of a frequency in the audio track.";
 	info.has_audio = true;
 	info.has_video = false;
 }

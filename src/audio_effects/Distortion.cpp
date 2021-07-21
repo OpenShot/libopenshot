@@ -56,7 +56,7 @@ void Distortion::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Distortion";
 	info.name = "Distortion";
-	info.description = "Add distortion on the frame's audio. This effect alters the audio by clipping the signal.";
+	info.description = "Alter the audio by clipping the signal.";
 	info.has_audio = true;
 	info.has_video = false;
 }

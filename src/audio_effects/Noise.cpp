@@ -55,7 +55,7 @@ void Noise::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Noise";
 	info.name = "Noise";
-	info.description = "Add white noise on the frame's sound.";
+	info.description = "Random signal having equal intensity at different frequencies.";
 	info.has_audio = true;
 	info.has_video = false;
 }

@@ -56,7 +56,7 @@ void Whisperization::init_effect_details()
 	/// Set the effect info
 	info.class_name = "Whisperization";
 	info.name = "Whisperization";
-	info.description = "Add whisperization effect on the frame's audio track. This effect transforms the voice present in an audio into a whispering voice effect.";
+	info.description = "Transform the voice present in an audio track into a whispering voice effect.";
 	info.has_audio = true;
 	info.has_video = false;
 }
