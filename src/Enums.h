@@ -80,5 +80,58 @@ namespace openshot
 		VOLUME_MIX_AVERAGE,	///< Evenly divide the overlapping clips volume keyframes, so that the sum does not exceed 100%
 		VOLUME_MIX_REDUCE 	///< Reduce volume by about %25, and then mix (louder, but could cause pops if the sum exceeds 100%)
 	};
+
+
+	/// This enumeration determines the distortion type of Distortion Effect.
+	enum DistortionType
+	{
+		HARD_CLIPPING,
+		SOFT_CLIPPING,
+		EXPONENTIAL,
+		FULL_WAVE_RECTIFIER,
+		HALF_WAVE_RECTIFIER,
+	};
+
+	/// This enumeration determines the filter type of ParametricEQ Effect.
+	enum FilterType
+	{
+		LOW_PASS,
+		HIGH_PASS,
+		LOW_SHELF,
+		HIGH_SHELF,
+		BAND_PASS,
+		BAND_STOP,
+		PEAKING_NOTCH,
+	};
+
+	/// This enumeration determines the FFT size.
+	enum FFTSize
+	{
+		FFT_SIZE_32,
+		FFT_SIZE_64,
+		FFT_SIZE_128,
+		FFT_SIZE_256,
+		FFT_SIZE_512,
+		FFT_SIZE_1024,
+		FFT_SIZE_2048,
+		FFT_SIZE_4096,
+		FFT_SIZE_8192,
+	};
+
+	/// This enumeration determines the hop size.
+	enum HopSize {
+        HOP_SIZE_2,
+        HOP_SIZE_4,
+        HOP_SIZE_8,
+    };
+
+	/// This enumeration determines the window type.
+	enum WindowType {
+        RECTANGULAR,
+        BART_LETT,
+        HANN,
+        HAMMING,
+    };
+	
 }
 #endif

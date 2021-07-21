@@ -48,6 +48,18 @@
 #include "effects/Shift.h"
 #include "effects/Wave.h"
 
+/* Audio Effects */
+#include "audio_effects/Noise.h"
+#include "audio_effects/Delay.h"
+#include "audio_effects/Echo.h"
+#include "audio_effects/Distortion.h"
+#include "audio_effects/ParametricEQ.h"
+#include "audio_effects/Compressor.h"
+#include "audio_effects/Expander.h"
+#include "audio_effects/Robotization.h"
+#include "audio_effects/Whisperization.h"
+
+/* OpenCV Effects */
 #ifdef USE_OPENCV
 #include "effects/ObjectDetection.h"
 #include "effects/Tracker.h"
