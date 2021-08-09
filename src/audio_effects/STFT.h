@@ -1,3 +1,7 @@
+// © OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #pragma once
 
 #ifndef OPENSHOT_STFT_AUDIO_EFFECT_H

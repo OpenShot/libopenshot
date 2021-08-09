@@ -1,5 +1,6 @@
-#ifndef OPENSHOT_H
-#define OPENSHOT_H
+// Copyright (c) 2008-2021 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 /**
  * @file
@@ -94,6 +95,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef OPENSHOT_H
+#define OPENSHOT_H
 
 // Include the version number of OpenShot Library
 #include "OpenShotVersion.h"
