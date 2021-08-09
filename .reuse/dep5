@@ -10,4 +10,4 @@ License: LGPL-3.0-or-later
 Files: thirdparty/jsoncpp/*
 Copyright: Copyright (c) 2007-2010 by Baptiste Lepilleur and
 The JsonCpp Authors
-License: CC0 or MIT
+License: CC0-1.0 or MIT
