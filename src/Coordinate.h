@@ -87,7 +87,7 @@ operator<<(std::basic_ostream<charT, traits>& o, const openshot::Coordinate& co)
     s.precision(o.precision());
     s << "(" << co.X << ", " << co.Y << ")";
     return o << s.str();
-};
+}
 
 }
 

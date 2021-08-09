@@ -94,7 +94,7 @@ operator<<(std::basic_ostream<charT, traits>& o, const openshot::Fraction& frac)
     s.precision(o.precision());
     s << "Fraction(" << frac.num << ", " << frac.den << ")";
     return o << s.str();
-};
+}
 
 }  // namespace openshot
 #endif

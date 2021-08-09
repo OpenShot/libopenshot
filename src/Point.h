@@ -147,7 +147,7 @@ operator<<(std::basic_ostream<charT, traits>& o, const openshot::Point& p) {
 		break;
 	}
 	return o << s.str();
-};
+}
 
 }  // namespace openshot
 
