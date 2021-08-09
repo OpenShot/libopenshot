@@ -3,6 +3,6 @@ Upstream-Name: libopenshot
 Upstream-Contact: Jonathan Thomas <jonathan@openshot.org>
 Source: https://github.com/OpenShot/libopenshot
 
-Files: examples/*
-Copyright: 2008 OpenShot Studios, LLC
+Files: examples/* doc/images/*
+Copyright: OpenShot Studios, LLC
 License: LGPL-3.0-or-later
