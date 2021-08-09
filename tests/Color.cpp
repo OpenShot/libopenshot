@@ -15,6 +15,8 @@
 
 #include <catch2/catch.hpp>
 
+#include <QColor>
+
 #include "Color.h"
 #include "Exceptions.h"
 #include "KeyFrame.h"
@@ -83,7 +85,18 @@ TEST_CASE( "HEX_Value", "[libopenshot][color]" )
 
 }
 
-TEST_CASE( "HEX_Constructor", "[libopenshot][color]" )
+TEST_CASE( "QColor ctor", "[libopenshot][color]" )
+{
+    QColor qc(Qt::red);
+    openshot::Color c(qc);
+
+    CHECK(c.red.GetLong(1) == Approx(255.0).margin(0.0001));
+    CHECK(c.green.GetLong(1) == Approx(0.0).margin(0.0001));
+    CHECK(c.blue.GetLong(1) == Approx(0.0).margin(0.0001));
+    CHECK(c.alpha.GetLong(1) == Approx(255.0).margin(0.0001));
+}
+
+TEST_CASE( "std::string construction", "[libopenshot][color]" )
 {
 	// Color
 	openshot::Color c("#4586db");
