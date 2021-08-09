@@ -1,3 +1,9 @@
+<!--
+© OpenShot Studios, LLC
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 OpenShot Video Library (libopenshot) is a free, open-source C++ library
 dedicated to delivering high quality video editing, animation, and playback
 solutions to the world.

@@ -1,3 +1,7 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # - Try to find the BlackMagic DeckLinkAPI
 # Once done this will define
 #  
