@@ -60,18 +60,24 @@ void ParametricEQ::init_effect_details()
 	info.description = "Filter that allows you to adjust the volume level of a frequency in the audio track.";
 	info.has_audio = true;
 	info.has_video = false;
+	initialized = false;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> ParametricEQ::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	filters.clear();
+	if (!initialized)
+	{
+		filters.clear();
 
-    for (int i = 0; i < frame->audio->getNumChannels(); ++i) {
-        Filter* filter;
-        filters.add(filter = new Filter());
-    }
+		for (int i = 0; i < frame->audio->getNumChannels(); ++i) {
+			Filter *filter;
+			filters.add(filter = new Filter());
+		}
+
+		initialized = true;
+	}
 
 	const int num_input_channels = frame->audio->getNumChannels();
     const int num_output_channels = frame->audio->getNumChannels();
@@ -91,6 +97,87 @@ std::shared_ptr<openshot::Frame> ParametricEQ::GetFrame(std::shared_ptr<openshot
 
 	// return the modified frame
 	return frame;
+}
+
+void ParametricEQ::Filter::updateCoefficients (
+	const double discrete_frequency,
+	const double q_factor,
+	const double gain,
+	const int filter_type)
+{
+	double bandwidth = jmin (discrete_frequency / q_factor, M_PI * 0.99);
+	double two_cos_wc = -2.0 * cos (discrete_frequency);
+	double tan_half_bw = tan (bandwidth / 2.0);
+	double tan_half_wc = tan (discrete_frequency / 2.0);
+	double sqrt_gain = sqrt (gain);
+
+	switch (filter_type) {
+		case 0 /* LOW_PASS */: {
+			coefficients = IIRCoefficients (/* b0 */ tan_half_wc,
+											/* b1 */ tan_half_wc,
+											/* b2 */ 0.0,
+											/* a0 */ tan_half_wc + 1.0,
+											/* a1 */ tan_half_wc - 1.0,
+											/* a2 */ 0.0);
+			break;
+		}
+		case 1 /* HIGH_PASS */: {
+			coefficients = IIRCoefficients (/* b0 */ 1.0,
+											/* b1 */ -1.0,
+											/* b2 */ 0.0,
+											/* a0 */ tan_half_wc + 1.0,
+											/* a1 */ tan_half_wc - 1.0,
+											/* a2 */ 0.0);
+			break;
+		}
+		case 2 /* LOW_SHELF */: {
+			coefficients = IIRCoefficients (/* b0 */ gain * tan_half_wc + sqrt_gain,
+											/* b1 */ gain * tan_half_wc - sqrt_gain,
+											/* b2 */ 0.0,
+											/* a0 */ tan_half_wc + sqrt_gain,
+											/* a1 */ tan_half_wc - sqrt_gain,
+											/* a2 */ 0.0);
+			break;
+		}
+		case 3 /* HIGH_SHELF */: {
+			coefficients = IIRCoefficients (/* b0 */ sqrt_gain * tan_half_wc + gain,
+											/* b1 */ sqrt_gain * tan_half_wc - gain,
+											/* b2 */ 0.0,
+											/* a0 */ sqrt_gain * tan_half_wc + 1.0,
+											/* a1 */ sqrt_gain * tan_half_wc - 1.0,
+											/* a2 */ 0.0);
+			break;
+		}
+		case 4 /* BAND_PASS */: {
+			coefficients = IIRCoefficients (/* b0 */ tan_half_bw,
+											/* b1 */ 0.0,
+											/* b2 */ -tan_half_bw,
+											/* a0 */ 1.0 + tan_half_bw,
+											/* a1 */ two_cos_wc,
+											/* a2 */ 1.0 - tan_half_bw);
+			break;
+		}
+		case 5 /* BAND_STOP */: {
+			coefficients = IIRCoefficients (/* b0 */ 1.0,
+											/* b1 */ two_cos_wc,
+											/* b2 */ 1.0,
+											/* a0 */ 1.0 + tan_half_bw,
+											/* a1 */ two_cos_wc,
+											/* a2 */ 1.0 - tan_half_bw);
+			break;
+		}
+		case 6 /* PEAKING_NOTCH */: {
+			coefficients = IIRCoefficients (/* b0 */ sqrt_gain + gain * tan_half_bw,
+											/* b1 */ sqrt_gain * two_cos_wc,
+											/* b2 */ sqrt_gain - gain * tan_half_bw,
+											/* a0 */ sqrt_gain + tan_half_bw,
+											/* a1 */ sqrt_gain * two_cos_wc,
+											/* a2 */ sqrt_gain - tan_half_bw);
+			break;
+		}
+	}
+
+	setCoefficients(coefficients);
 }
 
 void ParametricEQ::updateFilters(int64_t frame_number, double sample_rate)

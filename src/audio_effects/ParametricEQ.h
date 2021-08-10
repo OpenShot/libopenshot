@@ -63,6 +63,7 @@ namespace openshot
 		Keyframe frequency;	
 		Keyframe q_factor;
 		Keyframe gain;
+		bool initialized;
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		ParametricEQ();
@@ -109,85 +110,7 @@ namespace openshot
 			void updateCoefficients (const double discrete_frequency,
 									 const double q_factor,
 									 const double gain,
-									 const int filter_type) noexcept
-			{
-				jassert (discrete_frequency > 0);
-				jassert (q_factor > 0);
-
-				double bandwidth = jmin (discrete_frequency / q_factor, M_PI * 0.99);
-				double two_cos_wc = -2.0 * cos (discrete_frequency);
-				double tan_half_bw = tan (bandwidth / 2.0);
-				double tan_half_wc = tan (discrete_frequency / 2.0);
-				double sqrt_gain = sqrt (gain);
-
-				switch (filter_type) {
-					case 0 /* LOW_PASS */: {
-						coefficients = IIRCoefficients (/* b0 */ tan_half_wc,
-														/* b1 */ tan_half_wc,
-														/* b2 */ 0.0,
-														/* a0 */ tan_half_wc + 1.0,
-														/* a1 */ tan_half_wc - 1.0,
-														/* a2 */ 0.0);
-						break;
-					}
-					case 1 /* HIGH_PASS */: {
-						coefficients = IIRCoefficients (/* b0 */ 1.0,
-														/* b1 */ -1.0,
-														/* b2 */ 0.0,
-														/* a0 */ tan_half_wc + 1.0,
-														/* a1 */ tan_half_wc - 1.0,
-														/* a2 */ 0.0);
-						break;
-					}
-					case 2 /* LOW_SHELF */: {
-						coefficients = IIRCoefficients (/* b0 */ gain * tan_half_wc + sqrt_gain,
-														/* b1 */ gain * tan_half_wc - sqrt_gain,
-														/* b2 */ 0.0,
-														/* a0 */ tan_half_wc + sqrt_gain,
-														/* a1 */ tan_half_wc - sqrt_gain,
-														/* a2 */ 0.0);
-						break;
-					}
-					case 3 /* HIGH_SHELF */: {
-						coefficients = IIRCoefficients (/* b0 */ sqrt_gain * tan_half_wc + gain,
-														/* b1 */ sqrt_gain * tan_half_wc - gain,
-														/* b2 */ 0.0,
-														/* a0 */ sqrt_gain * tan_half_wc + 1.0,
-														/* a1 */ sqrt_gain * tan_half_wc - 1.0,
-														/* a2 */ 0.0);
-						break;
-					}
-					case 4 /* BAND_PASS */: {
-						coefficients = IIRCoefficients (/* b0 */ tan_half_bw,
-														/* b1 */ 0.0,
-														/* b2 */ -tan_half_bw,
-														/* a0 */ 1.0 + tan_half_bw,
-														/* a1 */ two_cos_wc,
-														/* a2 */ 1.0 - tan_half_bw);
-						break;
-					}
-					case 5 /* BAND_STOP */: {
-						coefficients = IIRCoefficients (/* b0 */ 1.0,
-														/* b1 */ two_cos_wc,
-														/* b2 */ 1.0,
-														/* a0 */ 1.0 + tan_half_bw,
-														/* a1 */ two_cos_wc,
-														/* a2 */ 1.0 - tan_half_bw);
-						break;
-					}
-					case 6 /* PEAKING_NOTCH */: {
-						coefficients = IIRCoefficients (/* b0 */ sqrt_gain + gain * tan_half_bw,
-														/* b1 */ sqrt_gain * two_cos_wc,
-														/* b2 */ sqrt_gain - gain * tan_half_bw,
-														/* a0 */ sqrt_gain + tan_half_bw,
-														/* a1 */ sqrt_gain * two_cos_wc,
-														/* a2 */ sqrt_gain - tan_half_bw);
-						break;
-					}
-				}
-
-				setCoefficients (coefficients);
-			}
+									 const int filter_type);
 		};
 
 		juce::OwnedArray<Filter> filters;
