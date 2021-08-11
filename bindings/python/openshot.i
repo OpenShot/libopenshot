@@ -1,8 +1,10 @@
-/* ####################### src/openshot.i (libopenshot) ########################
-# @brief SWIG configuration for libopenshot (to generate Python SWIG bindings)
-# @author Jonathan Thomas <jonathan@openshot.org>
-#
-# @section LICENSE
+/**
+ * @file
+ * @brief SWIG configuration for libopenshot (to generate Python SWIG bindings)
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+*/
 // Copyright (c) 2008-2019 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
