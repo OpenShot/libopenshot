@@ -1,3 +1,7 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # Find and load the ruby libopenshot wrapper library
 require "openshot"
 
