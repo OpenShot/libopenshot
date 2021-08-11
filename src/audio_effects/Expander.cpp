@@ -1,0 +1,228 @@
+/**
+ * @file
+ * @brief Source file for Expander audio effect class
+ * @author 
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "Expander.h"
+#include "Exceptions.h"
+
+using namespace openshot;
+
+/// Blank constructor, useful when using Json to load the effect properties
+Expander::Expander() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
+	// Init effect properties
+	init_effect_details();
+}
+
+// Default constructor
+Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
+				   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
+{
+	// Init effect properties
+	init_effect_details();
+}
+
+// Init effect settings
+void Expander::init_effect_details()
+{
+	/// Initialize the values of the EffectInfo struct.
+	InitEffectInfo();
+
+	/// Set the effect info
+	info.class_name = "Expander";
+	info.name = "Expander";
+	info.description = "Louder parts of audio becomes relatively louder and quieter parts becomes quieter.";
+	info.has_audio = true;
+	info.has_video = false;
+
+    input_level = 0.0f;
+    yl_prev = 0.0f;
+
+
+}
+
+// This method is required for all derived classes of EffectBase, and returns a
+// modified openshot::Frame object
+std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
+{
+	// Adding Expander
+    const int num_input_channels = frame->audio->getNumChannels();
+    const int num_output_channels = frame->audio->getNumChannels();
+    const int num_samples = frame->audio->getNumSamples();
+
+    mixed_down_input.setSize(1, num_samples);
+	inverse_sample_rate = 1.0f / frame->SampleRate();
+    inverseE = 1.0f / M_E;
+	
+	if ((bool)bypass.GetValue(frame_number))
+        return frame;
+
+	mixed_down_input.clear();
+
+	for (int channel = 0; channel < num_input_channels; ++channel)
+        mixed_down_input.addFrom(0, 0, *frame->audio, channel, 0, num_samples, 1.0f / num_input_channels);
+
+    for (int sample = 0; sample < num_samples; ++sample) {
+        float T = threshold.GetValue(frame_number);
+        float R = ratio.GetValue(frame_number);
+        float alphaA = calculateAttackOrRelease(attack.GetValue(frame_number));
+        float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
+        float gain = makeup_gain.GetValue(frame_number);
+		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
+        
+		const float average_factor = 0.9999f;
+		input_level = average_factor * input_level + (1.0f - average_factor) * input_squared;
+
+        xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
+		
+		if (xg > T)
+			yg = xg;
+		else
+			yg = T + (xg - T) * R;
+
+		xl = xg - yg;
+
+		if (xl < yl_prev)
+			yl = alphaA * yl_prev + (1.0f - alphaA) * xl;
+		else
+			yl = alphaR * yl_prev + (1.0f - alphaR) * xl;
+
+
+        control = powf (10.0f, (gain - yl) * 0.05f);
+        yl_prev = yl;
+
+        for (int channel = 0; channel < num_input_channels; ++channel) {
+            float new_value = frame->audio->getSample(channel, sample)*control;
+            frame->audio->setSample(channel, sample, new_value);
+        }
+	}
+
+    for (int channel = num_input_channels; channel < num_output_channels; ++channel)
+        frame->audio->clear(channel, 0, num_samples);
+
+	// return the modified frame
+	return frame;
+}
+
+float Expander::calculateAttackOrRelease(float value)
+{
+    if (value == 0.0f)
+        return 0.0f;
+    else
+        return pow (inverseE, inverse_sample_rate / value);
+}
+
+// Generate JSON string of this object
+std::string Expander::Json() const {
+
+	// Return formatted string
+	return JsonValue().toStyledString();
+}
+
+// Generate Json::Value for this object
+Json::Value Expander::JsonValue() const {
+
+	// Create root json object
+	Json::Value root = EffectBase::JsonValue(); // get parent properties
+	root["type"] = info.class_name;
+	root["threshold"] = threshold.JsonValue();
+	root["ratio"] = ratio.JsonValue();
+	root["attack"] = attack.JsonValue();
+	root["release"] = release.JsonValue();
+	root["makeup_gain"] = makeup_gain.JsonValue();
+	root["bypass"] = bypass.JsonValue();
+
+	// return JsonValue
+	return root;
+}
+
+// Load JSON string into this object
+void Expander::SetJson(const std::string value) {
+
+	// Parse JSON string into JSON objects
+	try
+	{
+		const Json::Value root = openshot::stringToJson(value);
+		// Set all values that match
+		SetJsonValue(root);
+	}
+	catch (const std::exception& e)
+	{
+		// Error parsing JSON (or missing keys)
+		throw InvalidJSON("JSON is invalid (missing keys or invalid data types)");
+	}
+}
+
+// Load Json::Value into this object
+void Expander::SetJsonValue(const Json::Value root) {
+
+	// Set parent data
+	EffectBase::SetJsonValue(root);
+
+	// Set data from Json (if key is found)
+	if (!root["threshold"].isNull())
+		threshold.SetJsonValue(root["threshold"]);
+
+	if (!root["ratio"].isNull())
+		ratio.SetJsonValue(root["ratio"]);
+
+	if (!root["attack"].isNull())
+		attack.SetJsonValue(root["attack"]);
+
+	if (!root["release"].isNull())
+		release.SetJsonValue(root["release"]);
+
+	if (!root["makeup_gain"].isNull())
+		makeup_gain.SetJsonValue(root["makeup_gain"]);
+
+	if (!root["bypass"].isNull())
+		bypass.SetJsonValue(root["bypass"]);
+}
+
+// Get all properties for a specific frame
+std::string Expander::PropertiesJSON(int64_t requested_frame) const {
+
+	// Generate JSON properties list
+	Json::Value root;
+	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
+	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);
+	root["start"] = add_property_json("Start", Start(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+	root["end"] = add_property_json("End", End(), "float", "", NULL, 0, 1000 * 60 * 30, false, requested_frame);
+	root["duration"] = add_property_json("Duration", Duration(), "float", "", NULL, 0, 1000 * 60 * 30, true, requested_frame);
+
+	// Keyframes
+	root["threshold"] = add_property_json("Threshold (dB)", threshold.GetValue(requested_frame), "float", "", &threshold, -60, 0, false, requested_frame);
+	root["ratio"] = add_property_json("Ratio", ratio.GetValue(requested_frame), "float", "", &ratio, 1, 100, false, requested_frame);
+	root["attack"] = add_property_json("Attack (ms)", attack.GetValue(requested_frame), "float", "", &attack, 0.1, 100, false, requested_frame);
+	root["release"] = add_property_json("Release (ms)", release.GetValue(requested_frame), "float", "", &release, 10, 1000, false, requested_frame);
+	root["makeup_gain"] = add_property_json("Makeup gain (dB)", makeup_gain.GetValue(requested_frame), "float", "", &makeup_gain, -12, 12, false, requested_frame);
+	root["bypass"] = add_property_json("Bypass", bypass.GetValue(requested_frame), "bool", "", &bypass, 0, 1, false, requested_frame);
+
+	// Return formatted string
+	return root.toStyledString();
+}
