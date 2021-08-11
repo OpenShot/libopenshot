@@ -10,6 +10,7 @@
 // Copyright (c) 2009 Blackmagic Design
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 
 #ifndef OPENSHOT_DECKLINK_INPUT_H
 #define OPENSHOT_DECKLINK_INPUT_H
