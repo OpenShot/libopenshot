@@ -102,16 +102,16 @@ extern "C" {
 #endif
 
 // This wraps an unsafe C macro to be C++ compatible function
-inline static const std::string av_make_error_string(int errnum)
+inline static const std::string av_err2string(int errnum)
 {
     char errbuf[AV_ERROR_MAX_STRING_SIZE];
     av_strerror(errnum, errbuf, AV_ERROR_MAX_STRING_SIZE);
-    return (std::string)errbuf;
+    return static_cast<std::string>(errbuf);
 }
 
 // Redefine the C macro to use our new C++ function
 #undef av_err2str
-#define av_err2str(errnum) av_make_error_string(errnum).c_str()
+#define av_err2str(errnum) av_err2string(errnum).c_str()
 
 // Define this for compatibility
 #ifndef PixelFormat

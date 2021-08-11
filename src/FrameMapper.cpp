@@ -828,7 +828,9 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
 	if (error_code < 0)
 	{
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio ERROR [" + (std::string)av_err2str(error_code) + "]", "error_code", error_code);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FrameMapper::ResampleMappedAudio ERROR [" + av_err2string(error_code) + "]",
+			"error_code", error_code);
 		throw ErrorEncodingVideo("Error while resampling audio in frame mapper", frame->number);
 	}
 
