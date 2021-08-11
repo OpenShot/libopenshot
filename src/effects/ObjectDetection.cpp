@@ -153,6 +153,14 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                     (int)(  trackedBox.width*fw),
                     (int)(  trackedBox.height*fh)
                     );
+
+                // If the Draw Box property is off, then make the box invisible
+                if (trackedObject->draw_box.GetValue(frame_number) == 0) 
+                {
+                    bg_alpha = 1.0;
+                    stroke_alpha = 1.0;
+                }
+
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
                     box, cv_image, detections.objectIds.at(i), bg_rgba, bg_alpha, 1, true, draw_text);
                 drawPred(detections.classIds.at(i), detections.confidences.at(i),
@@ -166,6 +174,7 @@ std::shared_ptr<Frame> ObjectDetection::GetFrame(std::shared_ptr<Frame> frame, i
                     if (parentTimeline){
                         // Get the Tracked Object's child clip
                         Clip* childClip = parentTimeline->GetClip(trackedObject->ChildClipId());
+                        
                         if (childClip){
                             std::shared_ptr<Frame> f(new Frame(1, frame->GetWidth(), frame->GetHeight(), "#00000000"));
                             // Get the image of the child clip for this frame

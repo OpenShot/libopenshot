@@ -129,7 +129,17 @@ set(EFFECTS_SOURCES
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
-  effects/Wave.cpp)
+  effects/Wave.cpp
+  audio_effects/STFT.cpp
+  audio_effects/Noise.cpp
+  audio_effects/Delay.cpp
+  audio_effects/Echo.cpp
+  audio_effects/Distortion.cpp
+  audio_effects/ParametricEQ.cpp
+  audio_effects/Compressor.cpp
+  audio_effects/Expander.cpp
+  audio_effects/Robotization.cpp
+  audio_effects/Whisperization.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES
