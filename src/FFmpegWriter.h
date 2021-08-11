@@ -3,6 +3,9 @@
  * @brief Header file for FFmpegWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
+ * This file is originally based on the Libavformat API example, and then modified
+ * by the libopenshot project.
+ *
  * @ref License
  */
 
