@@ -65,10 +65,10 @@ TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
 	r.Open();
 
 	// Get frame, with no Timeline or Clip
-	// Default SVG scaling sizes things to 1920x1080
+	// Size should be equal to default SVG size
 	std::shared_ptr<Frame> f = r.GetFrame(1);
-    CHECK(f->GetImage()->width() == 1080);
-    CHECK(f->GetImage()->height() == 1080);
+    CHECK(f->GetImage()->width() == 72);
+    CHECK(f->GetImage()->height() == 72);
 
     Fraction fps(30000,1000);
     Timeline t1(640, 480, fps, 44100, 2, LAYOUT_STEREO);
