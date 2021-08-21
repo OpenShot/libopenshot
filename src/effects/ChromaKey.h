@@ -41,11 +41,21 @@
 #include <memory>
 #include <string>
 
+#define CHROMAKEY_METHOD_BASIC		0
+#define CHROMAKEY_METHOD_HSV_H		1
+#define CHROMAKEY_METHOD_HSV_S		2
+#define CHROMAKEY_METHOD_HSV_V		3
+#define CHROMAKEY_METHOD_CIE_LCH_L	4
+#define CHROMAKEY_METHOD_CIE_LCH_C	5
+#define CHROMAKEY_METHOD_CIE_LCH_H	6
+#define CHROMAKEY_METHOD_CIE_DISTANCE	7
+#define CHROMAKEY_METHOD_LAST		7
+
 namespace openshot
 {
 
 	/**
-	 * @brief This class uses the ImageMagick++ libraries, to remove (i.e. key out) a color (i.e. greenscreen)
+	 * @brief This class removes (i.e. keys out) a color (i.e. greenscreen)
 	 *
 	 * The greenscreen / bluescreen effect replaces matching colors in the video image with
 	 * transparent pixels, revealing lower layers in the timeline.
@@ -55,6 +65,9 @@ namespace openshot
 	private:
 		Color color;
 		Keyframe fuzz;
+		int method;
+
+		mutable std::vector<unsigned char> pixelbuf;
 
 		/// Init effect settings
 		void init_effect_details();
@@ -71,6 +84,15 @@ namespace openshot
 		/// @param color The color to match
 		/// @param fuzz The fuzz factor (or threshold)
 		ChromaKey(Color color, Keyframe fuzz);
+
+		/// New constructor, which takes an openshot::Color object, a 'fuzz' factor, and a numeric
+		/// keying method, which is used together with the fuzz factor to determine how similar
+		/// colored pixels are matched. The higher the fuzz, the more colors are matched.
+		///
+		/// @param color The color to match
+		/// @param fuzz The fuzz factor (or threshold)
+		/// @param method The keying method
+		ChromaKey(Color color, Keyframe fuzz, int method);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

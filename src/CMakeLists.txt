@@ -401,6 +401,22 @@ if (TARGET cppzmq)
 endif()
 
 ###
+### Babl
+###
+
+# Find babl library for colourspace conversion (used for advanced chroma keying
+find_package(babl)
+
+if (babl_FOUND)
+  set(HAVE_BABL TRUE CACHE BOOL "Building with babl support" FORCE)
+  mark_as_advanced(HAVE_BABL)
+endif()
+
+if (TARGET babl_lib)
+  target_link_libraries(openshot PUBLIC babl_lib)
+endif ()
+
+###
 ### Resvg, the Rust SVG library
 ###
 
