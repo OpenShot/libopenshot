@@ -103,6 +103,9 @@ namespace openshot {
 		/// The audio device name to use during playback
 		std::string PLAYBACK_AUDIO_DEVICE_NAME = "";
 
+		/// The device type for the playback audio devices
+		std::string PLAYBACK_AUDIO_DEVICE_TYPE = "";
+
 		/// The current install path of OpenShot (needs to be set when using Timeline(path), since certain
 		/// paths depend on the location of OpenShot transitions and files)
 		std::string PATH_OPENSHOT_INSTALL = "";

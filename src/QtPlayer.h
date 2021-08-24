@@ -34,12 +34,15 @@
 
 #include <iostream>
 #include <vector>
+
 #include "PlayerBase.h"
 #include "Qt/PlayerPrivate.h"
 #include "RendererBase.h"
 
 namespace openshot
 {
+    using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
+
     /**
      * @brief This class is used to playback a video from a reader.
      *
@@ -64,7 +67,7 @@ namespace openshot
 	std::string GetError();
 
 	/// Get Audio Devices from JUCE
-	std::vector<openshot::AudioDeviceInfo> GetAudioDeviceNames();
+	AudioDeviceList GetAudioDeviceNames();
 
 	/// Play the video
 	void Play();

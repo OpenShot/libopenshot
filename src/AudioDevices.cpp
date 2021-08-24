@@ -1,14 +1,15 @@
 /**
  * @file
- * @brief Source file for global Settings class
+ * @brief Utility methods for identifying audio devices
  * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  *
  * @ref License
  */
 
 /* LICENSE
  *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * Copyright (c) 2008-2021 OpenShot Studios, LLC
  * <http://www.openshotstudios.com/>. This file is part of
  * OpenShot Library (libopenshot), an open-source project dedicated to
  * delivering high quality video editing and animation solutions to the
@@ -28,36 +29,31 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdlib>        // For std::getenv
+#include "AudioDevices.h"
 
-#include "Settings.h"
+#include <OpenShotAudio.h>
 
 using namespace openshot;
 
-// Global reference to Settings
-Settings *Settings::m_pInstance = nullptr;
+using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
 
-// Create or Get an instance of the settings singleton
-Settings *Settings::Instance()
-{
-	if (!m_pInstance) {
-		// Create the actual instance of Settings only once
-		m_pInstance = new Settings;
-		m_pInstance->HARDWARE_DECODER = 0;
-		m_pInstance->HIGH_QUALITY_SCALING = false;
-		m_pInstance->OMP_THREADS = 12;
-		m_pInstance->FF_THREADS = 8;
-		m_pInstance->DE_LIMIT_HEIGHT_MAX = 1100;
-		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
-		m_pInstance->HW_DE_DEVICE_SET = 0;
-		m_pInstance->HW_EN_DEVICE_SET = 0;
-		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
-		m_pInstance->PLAYBACK_AUDIO_DEVICE_TYPE = "";
-		m_pInstance->DEBUG_TO_STDERR = false;
-		auto env_debug = std::getenv("LIBOPENSHOT_DEBUG");
-		if (env_debug != nullptr)
-			m_pInstance->DEBUG_TO_STDERR = true;
-	}
+// Build a list of devices found, and return
+AudioDeviceList AudioDevices::getNames() {
+    // A temporary device manager, used to scan device names.
+    // Its initialize() is never called, and devices are not opened.
+    std::unique_ptr<juce::AudioDeviceManager>
+        manager(new juce::AudioDeviceManager());
 
-	return m_pInstance;
+    m_devices.clear();
+
+    auto &types = manager->getAvailableDeviceTypes();
+    for (auto* t : types) {
+        t->scanForDevices();
+	const auto names = t->getDeviceNames();
+        for (const auto& name : names) {
+            m_devices.emplace_back(
+                name.toStdString(), t->getTypeName().toStdString());
+        }
+    }
+    return m_devices;
 }

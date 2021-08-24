@@ -29,15 +29,20 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "QtPlayer.h"
+
+#include "AudioDevices.h"
 #include "Clip.h"
 #include "FFmpegReader.h"
 #include "Timeline.h"
-#include "QtPlayer.h"
 #include "Qt/PlayerPrivate.h"
 #include "Qt/VideoRenderer.h"
 
 namespace openshot
 {
+
+    using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
+
     // Delegating constructor
     QtPlayer::QtPlayer()
     : QtPlayer::QtPlayer(new VideoRenderer())
@@ -77,12 +82,9 @@ namespace openshot
     }
 
     /// Get Audio Devices from JUCE
-    std::vector<openshot::AudioDeviceInfo> QtPlayer::GetAudioDeviceNames() {
-    	if (reader && threads_started) {
-    		return p->audioPlayback->getAudioDeviceNames();
-    	} else {
-    		return std::vector<openshot::AudioDeviceInfo>();
-    	}
+    AudioDeviceList QtPlayer::GetAudioDeviceNames() {
+        AudioDevices devs;
+        return devs.getNames();
     }
 
     void QtPlayer::SetSource(const std::string &source)

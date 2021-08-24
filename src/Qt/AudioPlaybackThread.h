@@ -32,32 +32,34 @@
 #ifndef OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 #define OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
-#include "../AudioReaderSource.h"
-#include "../AudioDeviceInfo.h"
-#include "../Settings.h"
+#include "AudioDevices.h"
+#include "AudioReaderSource.h"
+
+#include <OpenShotAudio.h>
 
 namespace openshot
 {
 
-	/**
-	 *  @brief Singleton wrapper for AudioDeviceManager (to prevent multiple instances).
-	 */
-	class AudioDeviceManagerSingleton {
-	private:
+// Forward decls
+class ReaderBase;
+class Frame;
+class PlayerPrivate;
+class QtPlayer;
+
+/**
+ *  @brief Singleton wrapper for AudioDeviceManager (to prevent multiple instances).
+ */
+class AudioDeviceManagerSingleton {
+private:
 		/// Default constructor (Don't allow user to create an instance of this singleton)
 		AudioDeviceManagerSingleton(){ initialise_error=""; };
 
 		/// Private variable to keep track of singleton instance
 		static AudioDeviceManagerSingleton * m_pInstance;
 
-	public:
+public:
 		/// Error found during JUCE initialise method
 		std::string initialise_error;
-
-		/// List of valid audio device names
-		std::vector<openshot::AudioDeviceInfo> audio_device_names;
 
 		/// Override with no channels and no preferred audio device
 		static AudioDeviceManagerSingleton * Instance();
@@ -117,22 +119,23 @@ namespace openshot
 		/// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
-        /// Get Audio Error (if any)
-        std::string getError()
-        {
-            return AudioDeviceManagerSingleton::Instance()->initialise_error;
-        }
+		/// Get Audio Error (if any)
+		std::string getError()
+		{
+		    return AudioDeviceManagerSingleton::Instance()->initialise_error;
+		}
 
-        /// Get Audio Device Names (if any)
-        std::vector<openshot::AudioDeviceInfo> getAudioDeviceNames()
-        {
-            return AudioDeviceManagerSingleton::Instance()->audio_device_names;
-        };
+		/// Get Audio Device Names (if any)
+		std::vector<std::pair<std::string, std::string>> getAudioDeviceNames()
+		{
+                    AudioDevices devs;
+		    return devs.getNames();
+		};
 
 		friend class PlayerPrivate;
 		friend class QtPlayer;
-    };
+};
 
-}
+}  // namespace openshot
 
 #endif // OPENSHOT_AUDIO_PLAYBACK_THREAD_H
