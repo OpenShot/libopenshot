@@ -40,7 +40,7 @@ AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_
 	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
 
 	// Initialize an audio buffer (based on reader)
-	buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
+	buffer = new juce::AudioBuffer<float>(reader->info.channels, size);
 
 	// initialize the audio samples to zero (silence)
 	buffer->clear();
@@ -73,7 +73,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 	estimated_frame = frame_number;
 
 	// Init new buffer
-	juce::AudioSampleBuffer *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
+	auto *new_buffer = new juce::AudioBuffer<float>(reader->info.channels, size);
 	new_buffer->clear();
 
 	// Move the remaining samples into new buffer (if any)
@@ -142,7 +142,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 }
 
 // Reverse an audio buffer
-juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuffer* buffer)
+juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioBuffer<float>* buffer)
 {
 	int number_of_samples = buffer->getNumSamples();
 	int channels = buffer->getNumChannels();
@@ -151,7 +151,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
 
 	// Reverse array (create new buffer to hold the reversed version)
-	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	auto *reversed = new juce::AudioBuffer<float>(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -286,7 +286,7 @@ void AudioReaderSource::setLooping (bool shouldLoop)
 }
 
 // Update the internal buffer used by this source
-void AudioReaderSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
+void AudioReaderSource::setBuffer (juce::AudioBuffer<float> *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);

@@ -167,7 +167,7 @@ namespace openshot {
 		void sort_effects();
 
 		/// Reverse an audio buffer
-		void reverse_buffer(juce::AudioSampleBuffer* buffer);
+		void reverse_buffer(juce::AudioBuffer<float>* buffer);
 
 
 	public:

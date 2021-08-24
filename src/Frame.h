@@ -109,7 +109,7 @@ namespace openshot
 	private:
 		std::shared_ptr<QImage> image;
 		std::shared_ptr<QImage> wave_image;
-		
+
 		std::shared_ptr<QApplication> previewApp;
 		juce::CriticalSection addingImageSection;
         juce::CriticalSection addingAudioSection;
@@ -131,7 +131,7 @@ namespace openshot
 		int constrain(int color_value);
 
 	public:
-		std::shared_ptr<juce::AudioSampleBuffer> audio;
+		std::shared_ptr<juce::AudioBuffer<float>> audio;
 		int64_t number;	 ///< This is the frame number (starting at 1)
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
@@ -224,7 +224,7 @@ namespace openshot
 		/// Get number of audio samples
 		int GetAudioSamplesCount();
 
-	    juce::AudioSampleBuffer *GetAudioSampleBuffer();
+	    juce::AudioBuffer<float> *GetAudioSampleBuffer();
 
 		/// Get the size in bytes of this frame (rough estimate)
 		int64_t GetBytes();

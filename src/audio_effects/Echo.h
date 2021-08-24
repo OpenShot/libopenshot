@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Header file for Echo audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -57,11 +57,11 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		Keyframe echo_time;	
-		Keyframe feedback;	
+		Keyframe echo_time;
+		Keyframe feedback;
 		Keyframe mix;
 
-		juce::AudioSampleBuffer echo_buffer;
+		juce::AudioBuffer<float> echo_buffer;
 		int echo_buffer_samples;
 		int echo_buffer_channels;
 		int echo_write_position;
@@ -79,8 +79,8 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { 
-			return GetFrame(std::make_shared<openshot::Frame>(), frame_number); 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override {
+			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		}
 
 		void setup(std::shared_ptr<openshot::Frame> frame);

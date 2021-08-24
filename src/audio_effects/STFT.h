@@ -14,23 +14,23 @@ namespace openshot
     {
     public:
         STFT() : num_channels (1) { }
-        
+
         virtual ~STFT() { }
 
         void setup(const int num_input_channels);
 
-        void process(juce::AudioSampleBuffer &block);
+        void process(juce::AudioBuffer<float> &block);
 
         void updateParameters(const int new_fft_size, const int new_overlap, const int new_window_type);
 
         virtual void updateFftSize(const int new_fft_size);
-  
+
         virtual void updateHopSize(const int new_overlap);
 
         virtual void updateWindow(const int new_window_type);
-    
+
     private:
- 
+
         virtual void modification(const int channel);
 
         virtual void analysis(const int channel);
@@ -45,10 +45,10 @@ namespace openshot
         std::unique_ptr<juce::dsp::FFT> fft;
 
         int input_buffer_length;
-        juce::AudioSampleBuffer input_buffer;
+        juce::AudioBuffer<float> input_buffer;
 
         int output_buffer_length;
-        juce::AudioSampleBuffer output_buffer;
+        juce::AudioBuffer<float> output_buffer;
 
         juce::HeapBlock<float> fft_window;
         juce::HeapBlock<juce::dsp::Complex<float>> time_domain_buffer;

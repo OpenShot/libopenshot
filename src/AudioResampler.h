@@ -44,8 +44,8 @@ namespace openshot {
 	 */
 	class AudioResampler {
 	private:
-		juce::AudioSampleBuffer *buffer;
-		juce::AudioSampleBuffer *resampled_buffer;
+		juce::AudioBuffer<float> *buffer;
+		juce::AudioBuffer<float> *resampled_buffer;
 		openshot::AudioBufferSource *buffer_source;
 		juce::ResamplingAudioSource *resample_source;
 		juce::AudioSourceChannelInfo resample_callback_buffer;
@@ -67,15 +67,15 @@ namespace openshot {
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param sample_rate The original sample rate of the buffered samples
 		/// @param new_sample_rate The requested sample rate you need
-		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
+		void SetBuffer(juce::AudioBuffer<float> *new_buffer, double sample_rate, double new_sample_rate);
 
 		/// @brief Sets the audio buffer and key settings
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param ratio The multiplier that needs to be applied to the sample rate (this is how resampling happens)
-		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double ratio);
+		void SetBuffer(juce::AudioBuffer<float> *new_buffer, double ratio);
 
 		/// Get the resampled audio buffer
-		juce::AudioSampleBuffer* GetResampledBuffer();
+		juce::AudioBuffer<float>* GetResampledBuffer();
 	};
 
 }

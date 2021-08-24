@@ -34,7 +34,7 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor
-AudioBufferSource::AudioBufferSource(juce::AudioSampleBuffer *audio_buffer)
+AudioBufferSource::AudioBufferSource(juce::AudioBuffer<float> *audio_buffer)
 		: position(0), repeat(false), buffer(audio_buffer)
 { }
 
@@ -134,7 +134,7 @@ void AudioBufferSource::setLooping (bool shouldLoop)
 }
 
 // Use a different AudioSampleBuffer for this source
-void AudioBufferSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
+void AudioBufferSource::setBuffer (juce::AudioBuffer<float> *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);

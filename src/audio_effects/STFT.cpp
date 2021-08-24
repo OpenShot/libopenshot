@@ -14,7 +14,7 @@ void STFT::updateParameters(const int new_fft_size, const int new_overlap, const
     updateWindow(new_window_type);
 }
 
-void STFT::process(juce::AudioSampleBuffer &block)
+void STFT::process(juce::AudioBuffer<float> &block)
 {
     num_samples = block.getNumSamples();
 
@@ -25,7 +25,7 @@ void STFT::process(juce::AudioSampleBuffer &block)
         current_output_buffer_write_position = output_buffer_write_position;
         current_output_buffer_read_position = output_buffer_read_position;
         current_samples_since_last_FFT = samples_since_last_FFT;
-        
+
         for (int sample = 0; sample < num_samples; ++sample) {
             const float input_sample = channel_data[sample];
 
@@ -78,7 +78,7 @@ void STFT::updateFftSize(const int new_fft_size)
 
         frequency_domain_buffer.realloc(fft_size);
         frequency_domain_buffer.clear(fft_size);
-        
+
         input_buffer_write_position = 0;
         output_buffer_write_position = 0;
         output_buffer_read_position = 0;
@@ -126,7 +126,7 @@ void STFT::updateWindow(const int new_window_type)
             break;
         }
     }
-    
+
     float window_sum = 0.0f;
     for (int sample = 0; sample < fft_size; ++sample)
         window_sum += fft_window[sample];

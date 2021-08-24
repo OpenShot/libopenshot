@@ -54,15 +54,17 @@
 #ifdef USE_IMAGEMAGICK
 	%shared_ptr(Magick::Image)
 #endif
-%shared_ptr(juce::AudioSampleBuffer)
+%shared_ptr(juce::AudioBuffer<float>)
 %shared_ptr(openshot::Frame)
 
-/* Template specializations */
+/* Instantiate the required template specializations */
 %template() std::map<std::string, int>;
 %template() std::pair<int, int>;
 %template() std::vector<int>;
 %template() std::pair<double, double>;
 %template() std::pair<float, float>;
+%template() std::pair<std::string, std::string>;
+%template() std::vector<std::pair<std::string, std::string>>;
 
 %{
 /* Ruby and FFmpeg define competing RSHIFT macros,
@@ -76,6 +78,7 @@
 #include "OpenShotVersion.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"
+#include "AudioDevices.h"
 #include "CacheBase.h"
 #include "CacheDisk.h"
 #include "CacheMemory.h"
@@ -110,7 +113,6 @@
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "ZmqLogger.h"
-#include "AudioDeviceInfo.h"
 
 /* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
 #ifdef RSHIFT
@@ -138,9 +140,22 @@
 	%}
 #endif
 
+/* Wrap std templates (list, vector, etc...) */
+%template(ClipList) std::list<openshot::Clip *>;
+%template(EffectBaseList) std::list<openshot::EffectBase *>;
+%template(CoordinateVector) std::vector<openshot::Coordinate>;
+%template(PointsVector) std::vector<openshot::Point>;
+%template(FieldVector) std::vector<openshot::Field>;
+%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
+%template(MetadataMap) std::map<std::string, std::string>;
+
+/* Deprecated */
+%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;
+
 %include "OpenShotVersion.h"
 %include "ReaderBase.h"
 %include "WriterBase.h"
+%include "AudioDevices.h"
 %include "CacheBase.h"
 %include "CacheDisk.h"
 %include "CacheMemory.h"
@@ -200,14 +215,12 @@
 %include "TimelineBase.h"
 %include "Timeline.h"
 %include "ZmqLogger.h"
-%include "AudioDeviceInfo.h"
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
 	%include "ImageWriter.h"
 	%include "TextReader.h"
 #endif
-
 
 /* Effects */
 %include "effects/Bars.h"
@@ -227,12 +240,3 @@
 %include "effects/Wave.h"
 
 
-/* Wrap std templates (list, vector, etc...) */
-%template(ClipList) std::list<openshot::Clip *>;
-%template(EffectBaseList) std::list<openshot::EffectBase *>;
-%template(CoordinateVector) std::vector<openshot::Coordinate>;
-%template(PointsVector) std::vector<openshot::Point>;
-%template(FieldVector) std::vector<openshot::Field>;
-%template(MappedFrameVector) std::vector<openshot::MappedFrame>;
-%template(MetadataMap) std::map<std::string, std::string>;
-%template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;

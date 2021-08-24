@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Header file for Delay audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -57,9 +57,9 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		Keyframe delay_time;	
+		Keyframe delay_time;
 
-		juce::AudioSampleBuffer delay_buffer;
+		juce::AudioBuffer<float> delay_buffer;
 		int delay_buffer_samples;
 		int delay_buffer_channels;
 		int delay_write_position;
@@ -77,8 +77,8 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { 
-			return GetFrame(std::make_shared<openshot::Frame>(), frame_number); 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override {
+			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		}
 
 		void setup(std::shared_ptr<openshot::Frame> frame);

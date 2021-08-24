@@ -53,7 +53,7 @@ using namespace openshot;
 
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
-	: audio(std::make_shared<juce::AudioSampleBuffer>(channels, samples)),
+	: audio(std::make_shared<juce::AudioBuffer<float>>(channels, samples)),
 	  number(number), width(width), height(height),
 	  pixel_ratio(1,1), color(color), qbuffer(NULL),
 	  channels(channels), channel_layout(LAYOUT_STEREO),
@@ -111,7 +111,7 @@ void Frame::DeepCopy(const Frame& other)
 	if (other.image)
 		image = std::make_shared<QImage>(*(other.image));
 	if (other.audio)
-		audio = std::make_shared<juce::AudioSampleBuffer>(*(other.audio));
+		audio = std::make_shared<juce::AudioBuffer<float>>(*(other.audio));
 	if (other.wave_image)
 		wave_image = std::make_shared<QImage>(*(other.wave_image));
 }
@@ -324,8 +324,8 @@ float* Frame::GetAudioSamples(int channel)
 // Get a planar array of sample data, using any sample rate
 float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
-	float *output = NULL;
-	juce::AudioSampleBuffer *buffer(audio.get());
+	float *output = nullptr;
+	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -370,8 +370,8 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 // Get an array of sample data (all channels interleaved together), using any sample rate
 float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
-	float *output = NULL;
-	juce::AudioSampleBuffer *buffer(audio.get());
+	float *output = nullptr;
+	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -429,7 +429,7 @@ int Frame::GetAudioSamplesCount()
 	return max_audio_sample;
 }
 
-juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
+juce::AudioBuffer<float> *Frame::GetAudioSampleBuffer()
 {
     return audio.get();
 }

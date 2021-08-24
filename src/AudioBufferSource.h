@@ -49,12 +49,12 @@ namespace openshot
 	private:
 		int position;
 		bool repeat;
-		juce::AudioSampleBuffer *buffer;
+		juce::AudioBuffer<float> *buffer;
 
 	public:
 		/// @brief Default constructor
 		/// @param audio_buffer This buffer contains the samples you want to play through JUCE.
-		AudioBufferSource(juce::AudioSampleBuffer *audio_buffer);
+		AudioBufferSource(juce::AudioBuffer<float> *audio_buffer);
 
 		/// Destructor
 		~AudioBufferSource();
@@ -87,7 +87,7 @@ namespace openshot
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
-		void setBuffer (juce::AudioSampleBuffer *audio_buffer);
+		void setBuffer (juce::AudioBuffer<float> *audio_buffer);
 	};
 
 }
