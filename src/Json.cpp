@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Json.h"
+#include "Json.h"
+#include "Exceptions.h"
 
 const Json::Value openshot::stringToJson(const std::string value) {
 

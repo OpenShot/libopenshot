@@ -28,7 +28,13 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Mask.h"
+#include "Mask.h"
+#include "Exceptions.h"
+#include "FFmpegReader.h"
+#ifdef USE_IMAGEMAGICK
+	#include "ImageReader.h"
+#endif
+#include "ReaderBase.h"
 
 using namespace openshot;
 
@@ -62,7 +68,7 @@ void Mask::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number) {
+std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) {
 	// Get the mask image (from the mask reader)
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
@@ -84,13 +90,14 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 			(original_mask && original_mask->size() != frame_image->size())) {
 
 			// Only get mask if needed
-			std::shared_ptr<QImage> mask_without_sizing = std::shared_ptr<QImage>(
-					new QImage(*reader->GetFrame(frame_number)->GetImage()));
+			auto mask_without_sizing = std::make_shared<QImage>(
+				*reader->GetFrame(frame_number)->GetImage());
 
 			// Resize mask image to match frame size
-			original_mask = std::shared_ptr<QImage>(new QImage(
-					mask_without_sizing->scaled(frame_image->width(), frame_image->height(), Qt::IgnoreAspectRatio,
-												Qt::SmoothTransformation)));
+			original_mask = std::make_shared<QImage>(
+				mask_without_sizing->scaled(
+					frame_image->width(), frame_image->height(),
+					Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 		}
 	}
 
@@ -101,12 +108,6 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	unsigned char *pixels = (unsigned char *) frame_image->bits();
 	unsigned char *mask_pixels = (unsigned char *) original_mask->bits();
 
-	int R = 0;
-	int G = 0;
-	int B = 0;
-	int A = 0;
-	int gray_value = 0;
-	float factor = 0.0;
 	double contrast_value = (contrast.GetValue(frame_number));
 	double brightness_value = (brightness.GetValue(frame_number));
 
@@ -114,15 +115,16 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 	for (int pixel = 0, byte_index=0; pixel < original_mask->width() * original_mask->height(); pixel++, byte_index+=4)
 	{
 		// Get the RGB values from the pixel
-		R = mask_pixels[byte_index];
-		G = mask_pixels[byte_index + 1];
-		B = mask_pixels[byte_index + 2];
+		int R = mask_pixels[byte_index];
+		int G = mask_pixels[byte_index + 1];
+		int B = mask_pixels[byte_index + 2];
+		int A = mask_pixels[byte_index + 3];
 
 		// Get the average luminosity
-		gray_value = qGray(R, G, B);
+		int gray_value = qGray(R, G, B);
 
 		// Adjust the contrast
-		factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
+		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
 		gray_value = constrain((factor * (gray_value - 128)) + 128);
 
 		// Adjust the brightness
@@ -131,16 +133,23 @@ std::shared_ptr<Frame> Mask::GetFrame(std::shared_ptr<Frame> frame, int64_t fram
 		// Constrain the value from 0 to 255
 		gray_value = constrain(gray_value);
 
+		// Calculate the % change in alpha
+		float alpha_percent = float(constrain(A - gray_value)) / 255.0;
+
 		// Set the alpha channel to the gray value
 		if (replace_image) {
-			// Replace frame pixels with gray value
+			// Replace frame pixels with gray value (including alpha channel)
 			pixels[byte_index + 0] = gray_value;
 			pixels[byte_index + 1] = gray_value;
 			pixels[byte_index + 2] = gray_value;
+			pixels[byte_index + 3] = gray_value;
 		} else {
-			// Set alpha channel
-			A = pixels[byte_index + 3];
-			pixels[byte_index + 3] = constrain(A - gray_value);
+			// Mulitply new alpha value with all the colors (since we are using a premultiplied
+			// alpha format)
+			pixels[byte_index + 0] *= alpha_percent;
+			pixels[byte_index + 1] *= alpha_percent;
+			pixels[byte_index + 2] *= alpha_percent;
+			pixels[byte_index + 3] *= alpha_percent;
 		}
 
 	}
@@ -283,6 +292,9 @@ std::string Mask::PropertiesJSON(int64_t requested_frame) const {
 		root["reader"] = add_property_json("Source", 0.0, "reader", reader->Json(), NULL, 0, 1, false, requested_frame);
 	else
 		root["reader"] = add_property_json("Source", 0.0, "reader", "{}", NULL, 0, 1, false, requested_frame);
+
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

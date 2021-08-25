@@ -34,12 +34,13 @@
 //Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "../include/ImageWriter.h"
+#include "ImageWriter.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
 ImageWriter::ImageWriter(std::string path) :
-		path(path), cache_size(8), is_writing(false), write_video_count(0), image_quality(75), number_of_loops(1),
+		path(path), cache_size(8), write_video_count(0), image_quality(75), number_of_loops(1),
 		combine_frames(true), is_open(false)
 {
 	// Disable audio & video (so they can be independently enabled)

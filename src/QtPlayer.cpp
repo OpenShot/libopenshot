@@ -29,12 +29,12 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Clip.h"
-#include "../include/FFmpegReader.h"
-#include "../include/Timeline.h"
-#include "../include/QtPlayer.h"
-#include "../include/Qt/PlayerPrivate.h"
-#include "../include/Qt/VideoRenderer.h"
+#include "Clip.h"
+#include "FFmpegReader.h"
+#include "Timeline.h"
+#include "QtPlayer.h"
+#include "Qt/PlayerPrivate.h"
+#include "Qt/VideoRenderer.h"
 
 namespace openshot
 {
@@ -90,7 +90,23 @@ namespace openshot
     	FFmpegReader *ffreader = new FFmpegReader(source);
     	ffreader->DisplayInfo();
 
-    	reader = new Timeline(ffreader->info.width, ffreader->info.height, ffreader->info.fps, ffreader->info.sample_rate, ffreader->info.channels, ffreader->info.channel_layout);
+    	// Use default sample rate (or use the FFmpegReader's audio settings if any)
+    	int sample_rate = 44100;
+    	if (ffreader->info.sample_rate > 0)
+    	    sample_rate = ffreader->info.sample_rate;
+
+        // Use default channels (or use the FFmpegReader's audio settings if any)
+    	int channels = 2;
+    	if (ffreader->info.channels > 0)
+    	    channels = ffreader->info.channels;
+
+        // Use default channel layout (or use the FFmpegReader's audio settings if any)
+    	openshot::ChannelLayout channel_layout = openshot::LAYOUT_STEREO;
+    	if (channels != 2)
+            channel_layout = ffreader->info.channel_layout;
+
+    	// Create timeline instance (720p, since we have no re-scaling in this player yet)
+    	reader = new Timeline(1280, 720, ffreader->info.fps, sample_rate, channels, channel_layout);
     	Clip *c = new Clip(source);
 
     	Timeline* tm = (Timeline*)reader;
@@ -103,7 +119,7 @@ namespace openshot
 
     void QtPlayer::Play()
     {
-    	// Set mode to playing, and speed to normal
+        // Set mode to playing, and speed to normal
     	mode = PLAYBACK_PLAY;
     	Speed(1);
 

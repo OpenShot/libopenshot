@@ -1,0 +1,150 @@
+/**
+ * @file
+ * @brief Source file for ClipProcessingJobs class
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ * @author Brenno Caldato <brenno.caldato@outlook.com>
+ *
+ * @ref License
+ */
+
+/* LICENSE
+ *
+ * Copyright (c) 2008-2019 OpenShot Studios, LLC
+ * <http://www.openshotstudios.com/>. This file is part of
+ * OpenShot Library (libopenshot), an open-source project dedicated to
+ * delivering high quality video editing and animation solutions to the
+ * world. For more information visit <http://www.openshot.org/>.
+ *
+ * OpenShot Library (libopenshot) is free software: you can redistribute it
+ * and/or modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * OpenShot Library (libopenshot) is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "ClipProcessingJobs.h"
+
+namespace openshot {
+
+// Constructor responsible to choose processing type and apply to clip
+ClipProcessingJobs::ClipProcessingJobs(std::string processingType, std::string processInfoJson) :
+processingType(processingType), processInfoJson(processInfoJson){
+}
+
+void ClipProcessingJobs::processClip(Clip& clip, std::string json){
+    processInfoJson = json;
+
+    // Process clip and save processed data
+    if(processingType == "Stabilizer"){
+        t = std::thread(&ClipProcessingJobs::stabilizeClip, this, std::ref(clip), std::ref(this->processingController));
+    }
+    if(processingType == "Tracker"){
+        t = std::thread(&ClipProcessingJobs::trackClip, this, std::ref(clip), std::ref(this->processingController));
+    }
+    if(processingType == "Object Detector"){
+        t = std::thread(&ClipProcessingJobs::detectObjectsClip, this, std::ref(clip), std::ref(this->processingController));
+    }
+}
+
+// Apply object tracking to clip
+void ClipProcessingJobs::trackClip(Clip& clip, ProcessingController& controller){
+
+    // Create CVTracker object
+    CVTracker tracker(processInfoJson, controller);
+    // Start tracking
+    tracker.trackClip(clip);
+
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save stabilization data
+        tracker.SaveTrackedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+
+}
+
+// Apply object detection to clip
+void ClipProcessingJobs::detectObjectsClip(Clip& clip, ProcessingController& controller){
+	// create CVObjectDetection object
+	CVObjectDetection objDetector(processInfoJson, controller);
+    // Start object detection process
+    objDetector.detectObjectsClip(clip);
+
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save object detection data
+        objDetector.SaveObjDetectedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+}
+
+void ClipProcessingJobs::stabilizeClip(Clip& clip, ProcessingController& controller){
+    // create CVStabilization object
+	CVStabilization stabilizer(processInfoJson, controller);
+    // Start stabilization process
+    stabilizer.stabilizeClip(clip);
+
+    // Thread controller. If effect processing is done, save data
+    // Else, kill thread
+    if(controller.ShouldStop()){
+        controller.SetFinished(true);
+        return;
+    }
+    else{
+        // Save stabilization data
+        stabilizer.SaveStabilizedData();
+        // tells to UI that the processing finished
+        controller.SetFinished(true);
+    }
+}
+
+// Get processing progress while iterating on the clip
+int ClipProcessingJobs::GetProgress(){
+
+    return (int)processingController.GetProgress();
+}
+
+// Check if processing finished
+bool ClipProcessingJobs::IsDone(){
+
+    if(processingController.GetFinished()){
+        t.join();
+    }
+    return processingController.GetFinished();
+}
+
+// stop preprocessing before finishing it
+void ClipProcessingJobs::CancelProcessing(){
+    processingController.CancelProcessing();
+}
+
+// check if there is an error with the config
+bool ClipProcessingJobs::GetError(){
+    return processingController.GetError();
+}
+
+// get the error message
+std::string ClipProcessingJobs::GetErrorMessage(){
+    return processingController.GetErrorMessage();
+}
+
+}  // namespace openshot

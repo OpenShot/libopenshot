@@ -28,8 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/EffectInfo.h"
-
+#include "EffectInfo.h"
 
 using namespace openshot;
 
@@ -52,6 +51,9 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if (effect_type == "Brightness")
 		return new Brightness();
+
+	else if (effect_type == "Caption")
+		return new Caption();
 
 	else if (effect_type == "ChromaKey")
 		return new ChromaKey();
@@ -85,6 +87,45 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if (effect_type == "Wave")
 		return new Wave();
+
+	else if(effect_type == "Noise")
+		return new Noise();
+
+	else if(effect_type == "Delay")
+		return new Delay();
+
+	else if(effect_type == "Echo")
+		return new Echo();
+
+	else if(effect_type == "Distortion")
+		return new Distortion();
+
+	else if(effect_type == "ParametricEQ")
+		return new ParametricEQ();
+
+	else if(effect_type == "Compressor")
+		return new Compressor();
+
+	else if(effect_type == "Expander")
+		return new Expander();
+
+	else if(effect_type == "Robotization")
+		return new Robotization();
+
+	else if(effect_type == "Whisperization")
+		return new Whisperization();
+
+	#ifdef USE_OPENCV
+	else if(effect_type == "Stabilizer")
+		return new Stabilizer();
+
+	else if(effect_type == "Tracker")
+		return new Tracker();
+		
+	else if(effect_type == "Object Detector")
+		return new ObjectDetection();
+	#endif
+
 	return NULL;
 }
 
@@ -98,6 +139,7 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Bars().JsonInfo());
 	root.append(Blur().JsonInfo());
 	root.append(Brightness().JsonInfo());
+	root.append(Caption().JsonInfo());
 	root.append(ChromaKey().JsonInfo());
 	root.append(ColorShift().JsonInfo());
 	root.append(Crop().JsonInfo());
@@ -109,6 +151,22 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+	/* Audio */
+	root.append(Noise().JsonInfo());
+	root.append(Delay().JsonInfo());
+	root.append(Echo().JsonInfo());
+	root.append(Distortion().JsonInfo());
+	root.append(ParametricEQ().JsonInfo());
+	root.append(Compressor().JsonInfo());
+	root.append(Expander().JsonInfo());
+	root.append(Robotization().JsonInfo());
+	root.append(Whisperization().JsonInfo());
+
+	#ifdef USE_OPENCV
+	root.append(Stabilizer().JsonInfo());
+	root.append(Tracker().JsonInfo());
+	root.append(ObjectDetection().JsonInfo());
+	#endif
 
 	// return JsonValue
 	return root;

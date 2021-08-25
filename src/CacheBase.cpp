@@ -28,7 +28,7 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/CacheBase.h"
+#include "CacheBase.h"
 
 using namespace std;
 using namespace openshot;

@@ -28,12 +28,19 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../include/effects/Pixelate.h"
+#include "Pixelate.h"
+#include "Exceptions.h"
+#include "Json.h"
+
+#include <QImage>
+#include <QPainter>
+#include <QRect>
+#include <QPoint>
 
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Pixelate::Pixelate() : pixelization(0.7), left(0.0), top(0.0), right(0.0), bottom(0.0) {
+Pixelate::Pixelate() : pixelization(0.5), left(0.0), top(0.0), right(0.0), bottom(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
@@ -68,7 +75,7 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
 	// Get current keyframe values
-	double pixelization_value = 1.0 - std::min(fabs(pixelization.GetValue(frame_number)), 1.0);
+	double pixelization_value = std::min(pow(0.001, fabs(pixelization.GetValue(frame_number))), 1.0);
 	double left_value = left.GetValue(frame_number);
 	double top_value = top.GetValue(frame_number);
 	double right_value = right.GetValue(frame_number);
@@ -82,8 +89,12 @@ std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t 
 		QRect area(QPoint(0,0), frame_image->size());
 		area = area.marginsRemoved({int(left_value * w), int(top_value * h), int(right_value * w), int(bottom_value * h)});
 
+		int scale_to = (int) (area.width() * pixelization_value);
+		if (scale_to < 1) {
+			scale_to = 1; // Not less than one pixel
+		}
 		// Copy and scale pixels in area to be pixelated
-		auto frame_scaled = frame_image->copy(area).scaledToWidth(area.width() * pixelization_value, Qt::SmoothTransformation);
+		auto frame_scaled = frame_image->copy(area).scaledToWidth(scale_to, Qt::SmoothTransformation);
 
 		// Draw pixelated image back over original
 		QPainter painter(frame_image.get());
@@ -172,6 +183,9 @@ std::string Pixelate::PropertiesJSON(int64_t requested_frame) const {
 	root["top"] = add_property_json("Top Margin", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
 	root["right"] = add_property_json("Right Margin", right.GetValue(requested_frame), "float", "", &right, 0.0, 1.0, false, requested_frame);
 	root["bottom"] = add_property_json("Bottom Margin", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 1.0, false, requested_frame);
+
+	// Set the parent effect which properties this effect will inherit
+	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);
 
 	// Return formatted string
 	return root.toStyledString();

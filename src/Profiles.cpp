@@ -28,7 +28,8 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/Profiles.h"
+#include "Profiles.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 
