@@ -75,7 +75,7 @@ namespace openshot
         ///
         /// @returns Success as a boolean
         /// @param path The file path of the SVG file
-		bool load_svg_path(QString path);
+        QSize load_svg_path(QString path);
 
 		/// Calculate the max_size QSize, based on parent timeline and parent clip settings
         QSize calculate_max_size();

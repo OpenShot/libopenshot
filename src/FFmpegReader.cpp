@@ -33,6 +33,7 @@
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
+#include "Timeline.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
@@ -1286,9 +1287,18 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			}
 
 		} else {
-			// No scaling, use original image size (slower)
-			max_width = info.width;
-			max_height = info.height;
+            // Scale video to equivalent unscaled size
+            // Since the preview window can change sizes, we want to always
+            // scale against the ratio of original video size to timeline size
+            float preview_ratio = 1.0;
+            if (parent->ParentTimeline()) {
+                Timeline *t = (Timeline *) parent->ParentTimeline();
+                preview_ratio = t->preview_width / float(t->info.width);
+            }
+            float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
+            float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
+            max_width = info.width * max_scale_x * preview_ratio;
+            max_height = info.height * max_scale_y * preview_ratio;
 		}
 	}
 

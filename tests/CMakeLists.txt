@@ -95,6 +95,7 @@ endif()
 # Create object library for test executable main(),
 # to avoid recompiling for every test
 add_library(catch-main OBJECT catch_main.cpp)
+target_link_libraries(catch-main PUBLIC Catch2::Catch2)
 
 foreach(tname ${OPENSHOT_TESTS})
   add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)

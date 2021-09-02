@@ -34,7 +34,7 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Crop::Crop() : left(0.1), top(0.1), right(0.1), bottom(0.1) {
+Crop::Crop() : left(0.0), top(0.0), right(0.0), bottom(0.0) {
 	// Init effect properties
 	init_effect_details();
 }
