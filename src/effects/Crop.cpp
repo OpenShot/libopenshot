@@ -130,7 +130,7 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 
 	// Loop through rows of pixels
 	for (int row = 0; row < frame_image->height(); row++) {
-        int adjusted_row = row + row_offset;
+        int adjusted_row = row - row_offset;
 	    // Is this row visible?
         if (adjusted_row >= top_bar_height && adjusted_row < (frame_image->height() - bottom_bar_height) && (copy_length + copy_offset > 0)) {
             // Copy image (row by row, with offsets for x and y offset, and src/dst starting points for column filtering)
