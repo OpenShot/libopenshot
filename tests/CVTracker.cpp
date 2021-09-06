@@ -73,10 +73,10 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     int height = ((float)fd.y2*360) - y;
 
     // Compare if tracked data is equal to pre-tested ones
-    CHECK(x >= 255); CHECK(x <= 257);
-    CHECK(y >= 133); CHECK(y <= 135);
-    CHECK(width >= 179); CHECK(width <= 181);
-    CHECK(height >= 165); CHECK(height <= 168);
+    CHECK(x == Approx(256).margin(1));
+    CHECK(y == Approx(134).margin(1));
+    CHECK(width == Approx(180).margin(1));
+    CHECK(height == Approx(166).margin(2));
 }
 
 
@@ -95,9 +95,14 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"x": 294, "y": 102, "width": 180, "height": 166, "first-frame": 1}
+        "region": {
+            "normalized_x": 0.46,
+            "normalized_y": 0.28,
+            "normalized_width": 0.28,
+            "normalized_height": 0.46,
+            "first-frame": 1
+        }
     } )proto";
-
 
     // Create first tracker
     CVTracker kcfTracker_1(json_data, tracker_pc);
@@ -120,7 +125,13 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker_type": "",
-        "region": {"x": -1, "y": -1, "width": -1, "height": -1, "first-frame": 1}
+        "region": {
+            "normalized_x": 0.1,
+            "normalized_y": 0.1,
+            "normalized_width": 0.5,
+            "normalized_height": 0.5,
+            "first-frame": 1
+        }
     } )proto";
 
     // Create second tracker
@@ -138,8 +149,9 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     float height_2 = fd_2.y2 - y_2;
 
     // Compare first tracker data with second tracker data
-    CHECK((int)(x_1 * 640) == (int)(x_2 * 640));
-    CHECK((int)(y_1 * 360) == (int)(y_2 * 360));
-    CHECK((int)(width_1 * 640) == (int)(width_2 * 640));
-    CHECK((int)(height_1 * 360) == (int)(height_2 * 360));
+    CHECK(x_1 == Approx(x_2).margin(0.01));
+    CHECK(y_1 == Approx(y_2).margin(0.01));
+    CHECK(width_1 == Approx(width_2).margin(0.01));
+    CHECK(height_1 == Approx(height_2).margin(0.01));
+
 }
