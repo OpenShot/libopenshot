@@ -207,7 +207,7 @@ cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
     float curr_box_height  = bbox.height;
     // keep the last width and height if the difference is less than 1%
     float threshold = 0.01;
-    
+
     cv::Rect2d filtered_box = bbox;
     if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
         filtered_box.width = last_box_width;
@@ -299,13 +299,13 @@ void CVTracker::SetJson(const std::string value) {
 // Load Json::Value into this object
 void CVTracker::SetJsonValue(const Json::Value root) {
 
-	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull()){
-		protobuf_data_path = (root["protobuf_data_path"].asString());
-	}
+    // Set data from Json (if key is found)
+    if (!root["protobuf_data_path"].isNull()){
+        protobuf_data_path = (root["protobuf_data_path"].asString());
+    }
     if (!root["tracker-type"].isNull()){
-		trackerType = (root["tracker-type"].asString());
-	}
+        trackerType = (root["tracker-type"].asString());
+    }
 
     if (!root["region"].isNull()){
         double x = root["region"]["normalized_x"].asDouble();
