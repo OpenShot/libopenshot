@@ -13,10 +13,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      # Work around a codecov issue detecting commit SHAs
-      # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
       with:
+        # Work around a codecov issue detecting commit SHAs
+        # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
         fetch-depth: 0
+
+    - name: Checkout OpenShotAudio
+      uses: actions/checkout@v2
+      with:
+        repository: OpenShot/libopenshot-audio
+        path: audio
 
     - uses: haya14busa/action-cond@v1
       id: coverage
@@ -28,12 +34,11 @@ jobs:
     - name: Install dependencies
       shell: bash
       run: |
-        sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
         sudo apt update
         sudo apt remove libzmq5  # See actions/virtual-environments#3317
         sudo apt install \
           cmake swig doxygen graphviz curl lcov \
-          libopenshot-audio-dev libasound2-dev \
+          libasound2-dev \
           qtbase5-dev qtbase5-dev-tools \
           libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
           libzmq3-dev libmagick++-dev \
@@ -43,13 +48,30 @@ jobs:
         wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
         sudo dpkg -i catch2_2.13.0-1_all.deb
 
+    - uses: actions/cache@v2
+      id: cache
+      with:
+        path: audio/build
+        key: ${{ matrix.os }}-${{ matrix.compiler }}
+
+    - name: Build OpenShotAudio (if not cached)
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        pushd audio
+        if [ ! -d build ]; then
+          mkdir build
+          cmake -B build -S .
+        fi
+        cmake --build build
+        popd
 
     - name: Build libopenshot
       shell: bash
       run: |
         mkdir build
         pushd build
-        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" "${{ steps.coverage.outputs.value }}"
+        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" -DOpenShotAudio_ROOT="../audio/build" "${{ steps.coverage.outputs.value }}"
         cmake --build . -- VERBOSE=1
         popd
 
