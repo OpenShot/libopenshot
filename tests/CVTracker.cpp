@@ -40,8 +40,46 @@
 
 using namespace openshot;
 
-// Just for the tracker constructor, it won't be used
-ProcessingController tracker_pc;
+TEST_CASE( "initialization", "[libopenshot][opencv][tracker]" )
+{
+    std::string bad_json = R"proto(
+    }
+        [1, 2, 3, "a"]
+    } )proto";
+    ProcessingController badPC;
+    CVTracker* badTracker;
+    CHECK_THROWS_AS(
+        badTracker = new CVTracker(bad_json, badPC),
+        openshot::InvalidJSON
+    );
+
+    std::string json1 = R"proto(
+    {
+        "tracker-type": "KCF"
+    } )proto";
+
+    ProcessingController pc1;
+    CVTracker tracker1(json1, pc1);
+    CHECK(pc1.GetError() == true);
+    CHECK(pc1.GetErrorMessage() == "No initial bounding box selected");
+
+    std::string json2 = R"proto(
+    {
+        "tracker-type": "KCF",
+        "region": {
+            "normalized_x": 0.459375,
+            "normalized_y": 0.28333,
+            "normalized_width": -0.28125,
+            "normalized_height": -0.461111
+        }
+    } )proto";
+
+    // Create tracker
+    ProcessingController pc2;
+    CVTracker tracker2(json2, pc2);
+    CHECK(pc2.GetError() == true);
+    CHECK(pc2.GetErrorMessage() == "No first-frame");
+}
 
 TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
 {
@@ -57,10 +95,17 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
     {
         "protobuf_data_path": "kcf_tracker.data",
         "tracker-type": "KCF",
-        "region": {"normalized_x": 0.459375, "normalized_y": 0.28333, "normalized_width": 0.28125, "normalized_height": 0.461111, "first-frame": 1}
+        "region": {
+            "normalized_x": 0.459375,
+            "normalized_y": 0.28333,
+            "normalized_width": 0.28125,
+            "normalized_height": 0.461111,
+            "first-frame": 1
+        }
     } )proto";
 
     // Create tracker
+    ProcessingController tracker_pc;
     CVTracker kcfTracker(json_data, tracker_pc);
 
     // Track clip for frames 0-20
@@ -105,6 +150,7 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
     } )proto";
 
     // Create first tracker
+    ProcessingController tracker_pc;
     CVTracker kcfTracker_1(json_data, tracker_pc);
 
     // Track clip for frames 0-20
@@ -128,8 +174,8 @@ TEST_CASE( "SaveLoad_Protobuf", "[libopenshot][opencv][tracker]" )
         "region": {
             "normalized_x": 0.1,
             "normalized_y": 0.1,
-            "normalized_width": 0.5,
-            "normalized_height": 0.5,
+            "normalized_width": -0.5,
+            "normalized_height": -0.5,
             "first-frame": 1
         }
     } )proto";
