@@ -314,20 +314,22 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         double h = root["region"]["normalized_height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
+
+        if (!root["region"]["first-frame"].isNull()){
+            start = root["region"]["first-frame"].asInt64();
+            json_interval = true;
+        }
+        else{
+            processingController->SetError(true, "No first-frame");
+            error = true;
+        }
+
 	}
     else{
         processingController->SetError(true, "No initial bounding box selected");
         error = true;
     }
 
-    if (!root["region"]["first-frame"].isNull()){
-        start = root["region"]["first-frame"].asInt64();
-        json_interval = true;
-    }
-    else{
-        processingController->SetError(true, "No first-frame");
-        error = true;
-    }
 }
 
 /*
