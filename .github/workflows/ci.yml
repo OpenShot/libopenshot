@@ -52,7 +52,7 @@ jobs:
       id: cache
       with:
         path: audio/build
-        key: ${{ matrix.os }}-${{ matrix.compiler }}
+        key: audio-${{ matrix.os }}-${{ matrix.compiler }}-${{ hashFiles('audio/CMakeLists.txt') }}
 
     - name: Build OpenShotAudio (if not cached)
       if: steps.cache.outputs.cache-hit != 'true'
