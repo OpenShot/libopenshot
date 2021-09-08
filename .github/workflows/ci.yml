@@ -89,7 +89,7 @@ jobs:
         cmake --build . --target install -- VERBOSE=1
         popd
 
-    - uses: codecov/codecov-action@v2.0.2
+    - uses: codecov/codecov-action@v2.0.3
       if: ${{ matrix.compiler == 'clang' }}
       with:
         file: build/coverage.info
