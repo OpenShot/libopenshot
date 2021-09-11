@@ -36,14 +36,13 @@
 #include <memory>
 #include <map>
 
-#include "../EffectBase.h"
+#include "EffectBase.h"
 
-#include "../Json.h"
-#include "../KeyFrame.h"
+#include "Clip.h"
+#include "Json.h"
+#include "KeyFrame.h"
 
-#include "protobuf_messages/trackerdata.pb.h"
-#include "../TrackedObjectBBox.h"
-#include "../Clip.h"
+#include "TrackedObjectBBox.h"
 
 namespace openshot
 {

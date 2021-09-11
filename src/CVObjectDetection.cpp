@@ -34,6 +34,8 @@
 #include <iostream>
 
 #include "CVObjectDetection.h"
+#include "objdetectdata.pb.h"
+
 #include <google/protobuf/util/time_util.h>
 
 using namespace std;
@@ -468,8 +470,8 @@ bool CVObjectDetection::_LoadObjDetectdData(){
         const google::protobuf::RepeatedPtrField<pb_objdetect::Frame_Box > &pBox = pbFrameData.bounding_box();
 
         // Construct data vectors related to detections in the current frame
-        std::vector<int> classIds; 
-        std::vector<float> confidences; 
+        std::vector<int> classIds;
+        std::vector<float> confidences;
         std::vector<cv::Rect_<float>> boxes;
         std::vector<int> objectIds;
 
