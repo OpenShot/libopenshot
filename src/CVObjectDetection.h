@@ -23,9 +23,13 @@
 #include "Json.h"
 #include "ProcessingController.h"
 #include "Clip.h"
-#include "protobuf_messages/objdetectdata.pb.h"
 
 #include "sort_filter/sort.hpp"
+
+// Forward decl
+namespace pb_objdetect {
+    class Frame;
+}
 
 namespace openshot
 {
@@ -33,9 +37,9 @@ namespace openshot
     struct CVDetectionData{
         CVDetectionData(){}
         CVDetectionData(
-            std::vector<int> _classIds, 
+            std::vector<int> _classIds,
             std::vector<float> _confidences,
-            std::vector<cv::Rect_<float>> _boxes, 
+            std::vector<cv::Rect_<float>> _boxes,
             size_t _frameId,
             std::vector<int> _objectIds)
         {

@@ -30,9 +30,13 @@
 #include "Json.h"
 
 #include "ProcessingController.h"
-#include "protobuf_messages/trackerdata.pb.h"
 
 #include "sort_filter/sort.hpp"
+
+// Forward decl
+namespace pb_tracker {
+    class Frame;
+}
 
 namespace openshot
 {

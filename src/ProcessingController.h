@@ -14,10 +14,8 @@
 #ifndef OPENSHOT_PROCESSINGCONTROLLER_H
 #define OPENSHOT_PROCESSINGCONTROLLER_H
 
-#include <iostream>
-#include <thread>
-#include <mutex> 
-
+#include <mutex>
+#include <string>
 
 class ProcessingController{
     private:
@@ -33,7 +31,7 @@ class ProcessingController{
         std::mutex mtxerror;
 
 	public:
-    
+
     ProcessingController(){
         processingProgress = 0;
         stopProcessing = false;
@@ -41,23 +39,23 @@ class ProcessingController{
     }
 
     int GetFinished(){
-        std::lock_guard<std::mutex> lck (mtxFinished); 
+        std::lock_guard<std::mutex> lck (mtxFinished);
         bool f = processingFinished;
         return f;
     }
 
     void SetFinished(bool f){
-        std::lock_guard<std::mutex> lck (mtxFinished); 
+        std::lock_guard<std::mutex> lck (mtxFinished);
         processingFinished = f;
     }
-    
+
     void SetProgress(uint p){
-        std::lock_guard<std::mutex> lck (mtxProgress); 
+        std::lock_guard<std::mutex> lck (mtxProgress);
         processingProgress = p;
     }
 
     int GetProgress(){
-        std::lock_guard<std::mutex> lck (mtxProgress); 
+        std::lock_guard<std::mutex> lck (mtxProgress);
         uint p = processingProgress;
         return p;
     }
@@ -74,7 +72,7 @@ class ProcessingController{
     }
 
     void SetError(bool err, std::string message){
-        std::lock_guard<std::mutex> lck (mtxerror); 
+        std::lock_guard<std::mutex> lck (mtxerror);
         error = err;
         error_message = message;
     }
@@ -84,7 +82,7 @@ class ProcessingController{
         bool e = error;
         return e;
     }
-    
+
     std::string GetErrorMessage(){
         std::lock_guard<std::mutex> lck (mtxerror);
         std::string message = error_message;
