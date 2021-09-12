@@ -64,6 +64,8 @@ set(OPENSHOT_TESTS
   ReaderBase
   Settings
   Timeline
+  # Effects
+  ChromaKey
 )
 
 # ImageMagick related test files
