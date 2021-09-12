@@ -299,13 +299,13 @@ void CVTracker::SetJson(const std::string value) {
 // Load Json::Value into this object
 void CVTracker::SetJsonValue(const Json::Value root) {
 
-	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull()){
-		protobuf_data_path = (root["protobuf_data_path"].asString());
-	}
+    // Set data from Json (if key is found)
+    if (!root["protobuf_data_path"].isNull()){
+        protobuf_data_path = (root["protobuf_data_path"].asString());
+    }
     if (!root["tracker-type"].isNull()){
-		trackerType = (root["tracker-type"].asString());
-	}
+        trackerType = (root["tracker-type"].asString());
+    }
 
     if (!root["region"].isNull()){
         double x = root["region"]["normalized_x"].asDouble();
@@ -314,20 +314,22 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         double h = root["region"]["normalized_height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
+
+        if (!root["region"]["first-frame"].isNull()){
+            start = root["region"]["first-frame"].asInt64();
+            json_interval = true;
+        }
+        else{
+            processingController->SetError(true, "No first-frame");
+            error = true;
+        }
+
 	}
     else{
         processingController->SetError(true, "No initial bounding box selected");
         error = true;
     }
 
-    if (!root["region"]["first-frame"].isNull()){
-        start = root["region"]["first-frame"].asInt64();
-        json_interval = true;
-    }
-    else{
-        processingController->SetError(true, "No first-frame");
-        error = true;
-    }
 }
 
 /*

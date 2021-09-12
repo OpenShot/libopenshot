@@ -60,11 +60,12 @@ namespace openshot
 
 
 	public:
-		Color color;		///< Color of bars
 		Keyframe left;		///< Size of left bar
 		Keyframe top;		///< Size of top bar
 		Keyframe right;		///< Size of right bar
 		Keyframe bottom;	///< Size of bottom bar
+		Keyframe x;	        ///< X-offset
+		Keyframe y;         ///< Y-offset
 
 		/// Blank constructor, useful when using Json to load the effect properties
 		Crop();
