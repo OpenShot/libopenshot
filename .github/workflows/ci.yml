@@ -39,7 +39,7 @@ jobs:
         sudo apt install \
           cmake swig doxygen graphviz curl lcov \
           libasound2-dev \
-          qtbase5-dev qtbase5-dev-tools \
+          qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
           libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
           libzmq3-dev libmagick++-dev \
           libopencv-dev libprotobuf-dev protobuf-compiler
