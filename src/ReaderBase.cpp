@@ -29,6 +29,8 @@
  */
 
 #include "ReaderBase.h"
+#include "ClipBase.h"
+#include "Frame.h"
 
 using namespace openshot;
 

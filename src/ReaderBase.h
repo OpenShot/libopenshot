@@ -31,26 +31,23 @@
 #ifndef OPENSHOT_READER_BASE_H
 #define OPENSHOT_READER_BASE_H
 
-#include <iostream>
-#include <iomanip>
+#include <map>
 #include <memory>
-#include <cstdlib>
-#include <sstream>
-#include "CacheMemory.h"
+#include <string>
+#include <vector>
+
 #include "ChannelLayouts.h"
-#include "ClipBase.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "Json.h"
-#include "ZmqLogger.h"
-#include <QString>
-#include <QGraphicsItem>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
-#include <QPixmap>
+
+#include <OpenShotAudio.h>
 
 namespace openshot
 {
+	class ClipBase;
+	class CacheBase;
+	class Frame;
+
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *

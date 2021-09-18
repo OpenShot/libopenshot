@@ -34,11 +34,12 @@
 #include "Clip.h"
 #include "CacheMemory.h"
 #include "Timeline.h"
-#include <QtCore/QString>
-#include <QtGui/QImage>
-#include <QtGui/QPainter>
-#include <QtGui/QIcon>
-#include <QtGui/QImageReader>
+
+#include <QString>
+#include <QImage>
+#include <QPainter>
+#include <QIcon>
+#include <QImageReader>
 
 #if USE_RESVG == 1
 	// If defined and found in CMake, utilize the libresvg for parsing

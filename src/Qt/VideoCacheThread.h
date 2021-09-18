@@ -34,6 +34,7 @@
 #include "../OpenMPUtilities.h"
 #include "../ReaderBase.h"
 #include "../RendererBase.h"
+#include "../CacheBase.h"
 
 namespace openshot
 {

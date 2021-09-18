@@ -32,11 +32,13 @@
 #define OPENSHOT_CACHE_BASE_H
 
 #include <memory>
-#include <cstdlib>
-#include "Frame.h"
+
 #include "Json.h"
 
+#include <OpenShotAudio.h>
+
 namespace openshot {
+	class Frame;
 
 	/**
 	 * @brief All cache managers in libopenshot are based on this CacheBase class

@@ -38,6 +38,8 @@
 #include <QRect>
 #include <QPen>
 #include <QBrush>
+#include <QPainter>
+#include <QPainterPath>
 
 using namespace openshot;
 

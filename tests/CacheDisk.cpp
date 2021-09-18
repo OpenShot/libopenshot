@@ -34,6 +34,7 @@
 #include <catch2/catch.hpp>
 
 #include "CacheDisk.h"
+#include "Frame.h"
 #include "Json.h"
 
 using namespace openshot;

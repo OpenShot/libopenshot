@@ -30,6 +30,10 @@
 
 #include "AudioReaderSource.h"
 #include "Exceptions.h"
+#include "Frame.h"
+#include "ZmqLogger.h"
+
+#include <OpenShotAudio.h>
 
 using namespace std;
 using namespace openshot;

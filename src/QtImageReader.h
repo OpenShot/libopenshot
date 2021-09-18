@@ -31,14 +31,13 @@
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
 
 #include "ReaderBase.h"
+
+#include <QImage>
+#include <QSize>
+#include <QString>
 
 namespace openshot
 {
