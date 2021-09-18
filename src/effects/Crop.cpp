@@ -40,15 +40,14 @@
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Crop::Crop() : left(0.0), top(0.0), right(0.0), bottom(0.0), x(0.0), y(0.0) {
-	// Init effect properties
-	init_effect_details();
-}
+/// Default constructor, useful when using Json to load the effect properties
+Crop::Crop() : Crop::Crop(0.0, 0.0, 0.0, 0.0, 0.0, 0.0) {}
 
-// Default constructor
-Crop::Crop(Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
-		left(left), top(top), right(right), bottom(bottom), x(0.0), y(0.0)
+Crop::Crop(
+    Keyframe left, Keyframe top,
+    Keyframe right, Keyframe bottom,
+    Keyframe x, Keyframe y) :
+		left(left), top(top), right(right), bottom(bottom), x(x), y(y)
 {
 	// Init effect properties
 	init_effect_details();
