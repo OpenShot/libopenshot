@@ -222,8 +222,8 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 					for (pixel = 0; pixel < pixelcount; pixel++, pixels += 4, pc += 3)
 					{
 						float L2 = ((float) pc[0]) / 2.55;
-						float a2 = pc[1] - 127;
-						float b2 = pc[2] - 127;
+						int   a2 = pc[1] - 127;
+						int   b2 = pc[2] - 127;
 						float C2 = sqrt(a2 * a2 + b2 * b2);
 
 						float delta_L_prime = L2 - L1;
