@@ -37,19 +37,10 @@
 #include "../Frame.h"
 #include "../Exceptions.h"
 #include "../KeyFrame.h"
+#include "../Enums.h"
 
 #include <memory>
 #include <string>
-
-#define CHROMAKEY_METHOD_BASIC		0
-#define CHROMAKEY_METHOD_HSV_H		1
-#define CHROMAKEY_METHOD_HSV_S		2
-#define CHROMAKEY_METHOD_HSV_V		3
-#define CHROMAKEY_METHOD_CIE_LCH_L	4
-#define CHROMAKEY_METHOD_CIE_LCH_C	5
-#define CHROMAKEY_METHOD_CIE_LCH_H	6
-#define CHROMAKEY_METHOD_CIE_DISTANCE	7
-#define CHROMAKEY_METHOD_LAST		7
 
 namespace openshot
 {
@@ -65,9 +56,8 @@ namespace openshot
 	private:
 		Color color;
 		Keyframe fuzz;
-		int method;
-
-		mutable std::vector<unsigned char> pixelbuf;
+		Keyframe halo;
+		ChromaKeyMethod method;
 
 		/// Init effect settings
 		void init_effect_details();
@@ -77,22 +67,34 @@ namespace openshot
 		/// Blank constructor, useful when using Json to load the effect properties
 		ChromaKey();
 
-		/// Default constructor, which takes an openshot::Color object and a 'fuzz' factor, which
-		/// is used to determine how similar colored pixels are matched. The higher the fuzz, the
-		/// more colors are matched.
+		/// @brief Constructor specifying the key color, keying method and distance.
+		///
+		/// Standard constructor, which takes an openshot::Color object, a 'fuzz' factor,
+		/// an optional halo threshold and an optional keying method.
+		///
+		/// The keying method determines the algorithm to use to determine the distance
+		/// between the key color and the pixel color. The default keying method,
+		/// CHROMAKEY_BASIC, treates each of the R,G,B values as a vector and calculates
+		/// the length of the difference between those vectors.
+		///
+		/// Pixels that are less than "fuzz" distance from the key color are eliminated
+		/// by setting their alpha values to zero.
+		///
+		/// If halo is non-zero, pixels that are withing the halo distance of the fuzz
+		/// distance are given an alpha value that increases with the distance from the
+		/// fuzz boundary.
+		///
+		/// Pixels that are at least as far as fuzz+halo from the key color are foreground
+		/// pixels and are left intact.
+		///
+		/// The default method attempts to undo the premultiplication of alpha to find the original
+		/// color of a pixel. The other methods take the color as is (with alpha premultiplied).
 		///
 		/// @param color The color to match
 		/// @param fuzz The fuzz factor (or threshold)
-		ChromaKey(Color color, Keyframe fuzz);
-
-		/// New constructor, which takes an openshot::Color object, a 'fuzz' factor, and a numeric
-		/// keying method, which is used together with the fuzz factor to determine how similar
-		/// colored pixels are matched. The higher the fuzz, the more colors are matched.
-		///
-		/// @param color The color to match
-		/// @param fuzz The fuzz factor (or threshold)
+		/// @param halo The additional threshold for halo elimination.
 		/// @param method The keying method
-		ChromaKey(Color color, Keyframe fuzz, int method);
+		ChromaKey(Color color, Keyframe fuzz, Keyframe halo = 0.0, ChromaKeyMethod method = CHROMAKEY_BASIC);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into

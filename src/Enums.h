@@ -132,6 +132,22 @@ namespace openshot
         HANN,
         HAMMING,
     };
-	
+
+	/// This enumeration determines the algorithm used by the ChromaKey filter
+	enum ChromaKeyMethod
+	{
+		CHROMAKEY_BASIC,	///< Length of difference between RGB vectors
+		CHROMAKEY_HSVL_H,	///< Difference between HSV/HSL hues
+		CHROMAKEY_HSV_S,	///< Difference between HSV saturations
+		CHROMAKEY_HSL_S,	///< Difference between HSL saturations
+		CHROMAKEY_HSV_V,	///< Difference between HSV values
+		CHROMAKEY_HSL_L,	///< Difference between HSL luminances
+		CHROMAKEY_CIE_LCH_L,	///< Difference between CIE LCH(ab) luminousities
+		CHROMAKEY_CIE_LCH_C,	///< Difference between CIE LCH(ab) chromas
+		CHROMAKEY_CIE_LCH_H,	///< Difference between CIE LCH(ab) hues
+		CHROMAKEY_CIE_DISTANCE, ///< CIEDE2000 perceptual difference
+		CHROMAKEY_YCBCR,	///< YCbCr vector difference of CbCr
+		CHROMAKEY_LAST_METHOD = CHROMAKEY_YCBCR
+	};
 }
 #endif

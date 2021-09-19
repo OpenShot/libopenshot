@@ -413,6 +413,7 @@ if (babl_FOUND)
 endif()
 
 if (TARGET babl_lib)
+  target_compile_definitions(openshot PUBLIC USE_BABL=1)
   target_link_libraries(openshot PUBLIC babl_lib)
 endif ()
 

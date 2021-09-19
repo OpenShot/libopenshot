@@ -1,6 +1,22 @@
-set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
+function(_babl_GET_VERSION _header)
+  file(STRINGS "${_header}" _version_defs
+    REGEX "^[ \t]*#define[ \t]+BABL_[A-Z]+_VERSION.*")
+  if(_version_defs)
+    string(REGEX REPLACE
+      ".*BABL_MAJOR_VERSION[ \t]+([0-9]+).*" "\\1"
+      babl_MAJOR "${_version_defs}")
+    string(REGEX REPLACE
+      ".*BABL_MINOR_VERSION[ \t]+([0-9]+).*" "\\1"
+      babl_MINOR "${_version_defs}")
+    string(REGEX REPLACE
+      ".*BABL_MICRO_VERSION[ \t]+([0-9]+).*" "\\1"
+      babl_PATCH "${_version_defs}")
+    set(babl_VERSION "${babl_MAJOR}.${babl_MINOR}.${babl_PATCH}" PARENT_SCOPE)
+  endif()
+endfunction()
+
 find_package(PkgConfig)
-pkg_check_modules(PC_BABL QUIET babl)
+pkg_check_modules(PC_BABL babl)
 
 set(babl_VERSION ${PC_BABL_VERSION})
 
@@ -14,6 +30,7 @@ find_path(babl_INCLUDE_DIR
 
 find_library(babl_LIBRARY
   NAMES babl-0.1
+  SUFFIXES babl-0.1
   HINTS
     ${babl_DIR}/lib
     ${PC_BABL_LIBDIR}
@@ -23,6 +40,13 @@ find_library(babl_LIBRARY
 
 set ( babl_LIBRARIES ${babl_LIBRARY} )
 set ( babl_INCLUDE_DIRS ${babl_INCLUDE_DIR} )
+
+if(babl_INCLUDE_DIR AND NOT babl_VERSION)
+  set(_version_hdr "${babl_INCLUDE_DIR}/babl/babl-version.h")
+  if(EXISTS "${_version_hdr}")
+    _babl_GET_VERSION("${_version_hdr}")
+  endif()
+endif()
 
 if (babl_INCLUDE_DIRS AND babl_LIBRARIES)
   set(babl_FOUND TRUE)
