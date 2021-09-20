@@ -32,13 +32,21 @@
 #include <sstream>
 #include <memory>
 
-#include <catch2/catch.hpp>
-
 #include "Frame.h"
 #include "effects/ChromaKey.h"
 
 #include <QColor>
 #include <QImage>
+
+// Stream output formatter for QColor, needed so Catch2 can display
+// values when CHECK(qcolor1 == qcolor2) comparisons fail
+std::ostream& operator << ( std::ostream& os, QColor const& value ) {
+    os << "QColor(" << value.red() << ", " << value.green() << ", "
+       << value.blue() << ", " << value.alpha() << ")";
+    return os;
+}
+
+#include <catch2/catch.hpp>
 
 using namespace openshot;
 
@@ -57,10 +65,8 @@ TEST_CASE( "basic keying", "[libopenshot][effect][chromakey]" )
 
     // Check color fill (should be transparent)
     QColor pix = i->pixelColor(10, 10);
-    CHECK(pix.red() == 0);
-    CHECK(pix.green() == 0);
-    CHECK(pix.blue() == 0);
-    CHECK(pix.alpha() == 0);
+    QColor trans{Qt::transparent};
+    CHECK(pix == trans);
 }
 
 TEST_CASE( "threshold", "[libopenshot][effect][chromakey]" )
@@ -77,9 +83,7 @@ TEST_CASE( "threshold", "[libopenshot][effect][chromakey]" )
 
     // Output should be the same, no ChromaKey
     QColor pix_e = i->pixelColor(10, 10);
-    CHECK(pix_e.red() == 0);
-    CHECK(pix_e.green() == 204);
-    CHECK(pix_e.blue() == 0);
-    CHECK(pix_e.alpha() == 255);
+    QColor expected(0, 204, 0, 255);
+    CHECK(pix_e == expected);
 }
 
