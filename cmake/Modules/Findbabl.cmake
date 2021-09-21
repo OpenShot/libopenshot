@@ -22,6 +22,7 @@ set(babl_VERSION ${PC_BABL_VERSION})
 
 find_path(babl_INCLUDE_DIR
   NAMES babl/babl.h
+  PATH_SUFFIXES babl-0.1
   HINTS
     ${babl_DIR}/include
     ${PC_BABL_INCLUDE_DIRS}
@@ -30,7 +31,6 @@ find_path(babl_INCLUDE_DIR
 
 find_library(babl_LIBRARY
   NAMES babl-0.1
-  SUFFIXES babl-0.1
   HINTS
     ${babl_DIR}/lib
     ${PC_BABL_LIBDIR}

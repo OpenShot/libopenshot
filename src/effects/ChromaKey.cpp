@@ -360,7 +360,7 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 
 					for (int x = 0; x < width; ++x, pixel += 4, pf += 3)
 					{
-						float tmp = fabs(pf[1] - mask.f[1]) <= threshold;
+						float tmp = fabs(pf[1] - mask.f[1]);
 
 						if (tmp <= threshold)
 						{
