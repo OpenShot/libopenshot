@@ -6,9 +6,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, ubuntu-20.04]
-        compiler: [gcc, clang]
+        compiler:
+         - { cc: gcc, cpp: g++ }
+         - { cc: clang, cpp: clang++ }
     env:
-      CC: ${{ matrix.compiler }}
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cpp }}
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
@@ -27,7 +30,7 @@ jobs:
     - uses: haya14busa/action-cond@v1
       id: coverage
       with:
-        cond: ${{ matrix.compiler == 'clang' }}
+        cond: ${{ matrix.compiler.cc == 'gcc' }}
         if_true: "-DENABLE_COVERAGE:BOOL=1"
         if_false: "-DENABLE_COVERAGE:BOOL=0"
 
@@ -52,7 +55,7 @@ jobs:
       id: cache
       with:
         path: audio/build
-        key: audio-${{ matrix.os }}-${{ matrix.compiler }}-${{ hashFiles('audio/CMakeLists.txt') }}
+        key: audio-${{ matrix.os }}-${{ matrix.compiler.cpp }}-${{ hashFiles('audio/CMakeLists.txt') }}
 
     - name: Build OpenShotAudio (if not cached)
       if: steps.cache.outputs.cache-hit != 'true'
@@ -90,6 +93,6 @@ jobs:
         popd
 
     - uses: codecov/codecov-action@v2.1.0
-      if: ${{ matrix.compiler == 'clang' }}
+      if: ${{ matrix.compiler.cc == 'gcc' }}
       with:
         file: build/coverage.info
