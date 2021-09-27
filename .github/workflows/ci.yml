@@ -6,9 +6,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, ubuntu-20.04]
-        compiler: [gcc, clang]
+        compiler:
+         - { cc: gcc, cpp: g++ }
+         - { cc: clang, cpp: clang++ }
     env:
-      CC: ${{ matrix.compiler }}
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cpp }}
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
@@ -27,7 +30,7 @@ jobs:
     - uses: haya14busa/action-cond@v1
       id: coverage
       with:
-        cond: ${{ matrix.compiler == 'clang' }}
+        cond: ${{ matrix.compiler.cc == 'gcc' }}
         if_true: "-DENABLE_COVERAGE:BOOL=1"
         if_false: "-DENABLE_COVERAGE:BOOL=0"
 
@@ -39,7 +42,7 @@ jobs:
         sudo apt install \
           cmake swig doxygen graphviz curl lcov \
           libasound2-dev \
-          qtbase5-dev qtbase5-dev-tools \
+          qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
           libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
           libzmq3-dev libmagick++-dev \
           libopencv-dev libprotobuf-dev protobuf-compiler
@@ -52,7 +55,7 @@ jobs:
       id: cache
       with:
         path: audio/build
-        key: audio-${{ matrix.os }}-${{ matrix.compiler }}-${{ hashFiles('audio/CMakeLists.txt') }}
+        key: audio-${{ matrix.os }}-${{ matrix.compiler.cpp }}-${{ hashFiles('audio/CMakeLists.txt') }}
 
     - name: Build OpenShotAudio (if not cached)
       if: steps.cache.outputs.cache-hit != 'true'
@@ -89,7 +92,7 @@ jobs:
         cmake --build . --target install -- VERBOSE=1
         popd
 
-    - uses: codecov/codecov-action@v2.0.3
-      if: ${{ matrix.compiler == 'clang' }}
+    - uses: codecov/codecov-action@v2.1.0
+      if: ${{ matrix.compiler.cc == 'gcc' }}
       with:
         file: build/coverage.info

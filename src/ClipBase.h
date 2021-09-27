@@ -63,8 +63,8 @@ namespace openshot {
 		std::string previous_properties; ///< This string contains the previous JSON properties
 		openshot::TimelineBase* timeline; ///< Pointer to the parent timeline instance (if any)
 
-		/// Generate JSON for a property
-		virtual Json::Value
+        /// Generate JSON for a property
+        virtual Json::Value
         add_property_json(
             std::string name, float value,
             std::string type, std::string memo,
@@ -130,8 +130,8 @@ namespace openshot {
 		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
 		void ParentTimeline(openshot::TimelineBase* new_timeline) { timeline = new_timeline; } ///< Set associated Timeline pointer
 
-        // Base class methods we need to override in subclasses
-        openshot::CacheBase* GetCache() override { return nullptr; }
+		// Base class methods we need to override in subclasses
+		openshot::CacheBase* GetCache() override { return nullptr; }
 		void Close() override = 0;
 		virtual bool IsOpen() override = 0;
 		virtual std::string Name() override = 0;

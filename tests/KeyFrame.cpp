@@ -516,6 +516,75 @@ TEST_CASE( "std::vector<Point> constructor", "[libopenshot][keyframe]" )
 	CHECK(k1.GetValue(10) == Approx(30.0f).margin(0.0001));
 }
 
+TEST_CASE( "PrintPoints", "[libopenshot][keyframe]" )
+{
+	std::vector<Point> points{
+        Point(1, 10),
+        Point(225, 397),
+        Point(430, -153.4),
+        Point(999, 12345.678)
+    };
+	Keyframe k1(points);
+
+    std::stringstream output;
+    k1.PrintPoints(&output);
+
+    const std::string expected =
+R"(     1       10.0000
+   225      397.0000
+   430     -153.4000
+   999    12345.6777)";
+
+    // Ensure the two strings are equal up to the limits of 'expected'
+    CHECK(output.str().compare(0, expected.size(), expected) == 0);
+}
+
+TEST_CASE( "PrintValues", "[libopenshot][keyframe]" )
+{
+    std::vector<Point> points{
+        Point(1, 10),
+        Point(225, 397),
+        Point(430, -153.4),
+        Point(999, 12345.678)
+    };
+	Keyframe k1(points);
+
+    std::stringstream output;
+    k1.PrintValues(&output);
+
+    const std::string expected =
+R"(│Frame# (X) │     Y Value │ Delta Y │ Increasing? │ Repeat Fraction    │
+├───────────┼─────────────┼─────────┼─────────────┼────────────────────┤
+│       1 * │     10.0000 │     +10 │        true │ Fraction(1, 7)     │
+│       2   │     10.0104 │      +0 │        true │ Fraction(2, 7)     │
+│       3   │     10.0414 │      +0 │        true │ Fraction(3, 7)     │
+│       4   │     10.0942 │      +0 │        true │ Fraction(4, 7)     │
+│       5   │     10.1665 │      +0 │        true │ Fraction(5, 7)     │
+│       6   │     10.2633 │      +0 │        true │ Fraction(6, 7)     │
+│       7   │     10.3794 │      +0 │        true │ Fraction(7, 7)     │
+│       8   │     10.5193 │      +1 │        true │ Fraction(1, 5)     │
+│       9   │     10.6807 │      +0 │        true │ Fraction(2, 5)     │
+│      10   │     10.8636 │      +0 │        true │ Fraction(3, 5)     │
+│      11   │     11.0719 │      +0 │        true │ Fraction(4, 5)     │
+│      12   │     11.3021 │      +0 │        true │ Fraction(5, 5)     │
+│      13   │     11.5542 │      +1 │        true │ Fraction(1, 4)     │
+│      14   │     11.8334 │      +0 │        true │ Fraction(2, 4)     │
+│      15   │     12.1349 │      +0 │        true │ Fraction(3, 4)     │
+│      16   │     12.4587 │      +0 │        true │ Fraction(4, 4)     │
+│      17   │     12.8111 │      +1 │        true │ Fraction(1, 2)     │
+│      18   │     13.1863 │      +0 │        true │ Fraction(2, 2)     │
+│      19   │     13.5840 │      +1 │        true │ Fraction(1, 3)     │
+│      20   │     14.0121 │      +0 │        true │ Fraction(2, 3)     │
+│      21   │     14.4632 │      +0 │        true │ Fraction(3, 3)     │
+│      22   │     14.9460 │      +1 │        true │ Fraction(1, 2)     │
+│      23   │     15.4522 │      +0 │        true │ Fraction(2, 2)     │
+│      24   │     15.9818 │      +1 │        true │ Fraction(1, 1)     │
+│      25   │     16.5446 │      +1 │        true │ Fraction(1, 2)     │)";
+
+    // Ensure the two strings are equal up to the limits of 'expected'
+    CHECK(output.str().compare(0, expected.size(), expected) == 0);
+}
+
 #ifdef USE_OPENCV
 TEST_CASE( "TrackedObjectBBox init", "[libopenshot][keyframe]" )
 {

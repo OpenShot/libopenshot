@@ -87,11 +87,12 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 	info.acodec = "openshot::timeline";
 	info.vcodec = "openshot::timeline";
 
-    // Init cache
-    final_cache = new CacheMemory();
-
 	// Init max image size
 	SetMaxSize(info.width, info.height);
+
+	// Init cache
+	final_cache = new CacheMemory();
+	final_cache->SetMaxBytesFromInfo(max_concurrent_frames * 4, info.width, info.height, info.sample_rate, info.channels);
 }
 
 // Delegating constructor that copies parameters from a provided ReaderInfo
@@ -102,7 +103,7 @@ Timeline::Timeline(const ReaderInfo info) : Timeline::Timeline(
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath),
-        max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
+		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
 
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -219,11 +220,12 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 	info.has_video = true;
 	info.has_audio = true;
 
-    // Init cache
-    final_cache = new CacheMemory();
-
 	// Init max image size
 	SetMaxSize(info.width, info.height);
+
+	// Init cache
+	final_cache = new CacheMemory();
+	final_cache->SetMaxBytesFromInfo(max_concurrent_frames * 4, info.width, info.height, info.sample_rate, info.channels);
 }
 
 Timeline::~Timeline() {
@@ -1067,8 +1069,8 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
 			// allows attaching it to an object when exporting the project (because)
-			// the exporter script initializes the clip and it's effects
-			// before setting it's parent timeline.
+			// the exporter script initializes the clip and it's effects 
+			// before setting its parent timeline.
 			c->ParentTimeline(this);
 
 			// Load Json into Clip
@@ -1534,7 +1536,4 @@ void Timeline::SetMaxSize(int width, int height) {
 	// Update preview settings
 	preview_width = display_ratio_size.width();
 	preview_height = display_ratio_size.height();
-
-	// Update timeline cache size
-    final_cache->SetMaxBytesFromInfo(max_concurrent_frames * 4, preview_width, preview_height, info.sample_rate, info.channels);
 }

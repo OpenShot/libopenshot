@@ -111,7 +111,7 @@ namespace openshot
 		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
 		/// Display file information in the standard output stream (stdout)
-		void DisplayInfo();
+		void DisplayInfo(std::ostream* out=&std::cout);
 
 		/// Open the writer (and start initializing streams)
 		virtual void Open() = 0;

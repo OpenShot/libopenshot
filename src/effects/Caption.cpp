@@ -131,7 +131,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	Timeline* timeline = NULL;
 	Fraction fps;
 	double scale_factor = 1.0; // amount of scaling needed for text (based on preview window size)
-	if (clip->ParentTimeline() != NULL) {
+	if (clip && clip->ParentTimeline() != NULL) {
 		timeline = (Timeline*) clip->ParentTimeline();
 	} else if (this->ParentTimeline() != NULL) {
 		timeline = (Timeline*) this->ParentTimeline();

@@ -47,8 +47,7 @@ Fraction::Fraction(std::vector<int> vector)
 
 // Full constructor
 Fraction::Fraction(int num, int den) :
-	num(num), den(den) {
-}
+	num(num), den(den) {}
 
 // Return this fraction as a float (i.e. 1/2 = 0.5)
 float Fraction::ToFloat() {
