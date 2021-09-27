@@ -52,7 +52,7 @@ TEST_CASE( "default constructor", "[libopenshot][point]" )
 	CHECK(p.interpolation == openshot::InterpolationType::BEZIER);
 	CHECK(p.handle_type == openshot::HandleType::AUTO);
 }
-TEST_CASE( "XY constructor", "[libopenshot][point]" )
+TEST_CASE( "x,y ctor", "[libopenshot][point]" )
 {
 	// Create a point with X and Y values
 	openshot::Point p1(2,9);
@@ -62,7 +62,7 @@ TEST_CASE( "XY constructor", "[libopenshot][point]" )
 	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST_CASE( "std::pair constructor", "[libopenshot][point]" )
+TEST_CASE( "std::pair ctor", "[libopenshot][point]" )
 {
 	// Create a point from a std::pair
 	std::pair<double, double> coordinates(22, 5);
@@ -72,7 +72,7 @@ TEST_CASE( "std::pair constructor", "[libopenshot][point]" )
 	CHECK(p1.co.Y == Approx(5.0f).margin(0.00001));
 }
 
-TEST_CASE( "constructor from Coordinate", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate
 	openshot::Coordinate c1(3,7);
@@ -83,7 +83,7 @@ TEST_CASE( "constructor from Coordinate", "[libopenshot][point]" )
 	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST_CASE( "constructor from Coordinate, LINEAR", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor, LINEAR", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -95,7 +95,7 @@ TEST_CASE( "constructor from Coordinate, LINEAR", "[libopenshot][point]" )
 	CHECK(p1.interpolation == openshot::InterpolationType::LINEAR);
 }
 
-TEST_CASE( "constructor from Coordinate, BEZIER", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor, BEZIER", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -107,7 +107,7 @@ TEST_CASE( "constructor from Coordinate, BEZIER", "[libopenshot][point]" )
 	CHECK(p1.interpolation == openshot::InterpolationType::BEZIER);
 }
 
-TEST_CASE( "constructor from Coordinate, CONSTANT", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor, CONSTANT", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(2,8);
@@ -119,7 +119,7 @@ TEST_CASE( "constructor from Coordinate, CONSTANT", "[libopenshot][point]" )
 	CHECK(p1.interpolation == openshot::InterpolationType::CONSTANT);
 }
 
-TEST_CASE( "constructor from Coordinate, BEZIER+AUTO", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor, BEZIER+AUTO", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -133,7 +133,7 @@ TEST_CASE( "constructor from Coordinate, BEZIER+AUTO", "[libopenshot][point]" )
 	CHECK(p1.handle_type == openshot::HandleType::AUTO);
 }
 
-TEST_CASE( "constructor from Coordinate, BEZIER+MANUAL", "[libopenshot][point]" )
+TEST_CASE( "Coordinate ctor, BEZIER+MANUAL", "[libopenshot][point]" )
 {
 	// Create a point with a coordinate and interpolation
 	openshot::Coordinate c1(3,9);
@@ -187,4 +187,25 @@ TEST_CASE( "SetJson", "[libopenshot][point]" )
 	CHECK(p1.handle_right.Y == -2.0);
 	CHECK(p1.handle_type == openshot::HandleType::MANUAL);
 	CHECK(p1.interpolation == openshot::InterpolationType::CONSTANT);
+}
+
+
+TEST_CASE( "Operator ostream", "[libopenshot][point]" )
+{
+	openshot::Coordinate c1(10, 5);
+
+	std::stringstream output1;
+	openshot::Point p1(c1, openshot::InterpolationType::LINEAR);
+	output1 << p1;
+	CHECK(output1.str() == "co(10, 5) LINEAR");
+
+	std::stringstream output2;
+	openshot::Point p2(c1, openshot::InterpolationType::CONSTANT);
+	output2 << p2;
+	CHECK(output2.str() == "co(10, 5) CONSTANT");
+
+	std::stringstream output3;
+	openshot::Point p3(c1, openshot::InterpolationType::BEZIER);
+	output3 << p3;
+	CHECK(output3.str() == "co(10, 5) BEZIER[L(0.5, 1),R(0.5, 0)]");
 }
