@@ -48,10 +48,9 @@ target_link_libraries(openshot_protobuf protobuf::libprotobuf)
 
 # Set SONAME and other library properties
 set_target_properties(openshot_protobuf PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_SO_VERSION}
-        INSTALL_NAME_DIR "$<INSTALL_PREFIX>/lib"
-        )
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_SO_VERSION}
+  )
 
 # Install protobuf library and generated headers
 install(TARGETS openshot_protobuf
