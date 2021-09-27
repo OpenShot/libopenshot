@@ -50,7 +50,7 @@ target_link_libraries(openshot_protobuf protobuf::libprotobuf)
 set_target_properties(openshot_protobuf PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_SO_VERSION}
-        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+        INSTALL_NAME_DIR "$<INSTALL_PREFIX>/lib"
         )
 
 # Install protobuf library and generated headers
