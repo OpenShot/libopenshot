@@ -199,6 +199,5 @@ TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegwriter]" )
 	w.Close();
 
 	// Compare a [0, expected.size()) substring of output to expected
-	auto compare_value = output.str().compare(0, expected.size(), expected);
-	CHECK(compare_value == 0);
+	CHECK(output.str().substr(0, expected.size()) == expected);
 }

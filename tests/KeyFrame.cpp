@@ -536,7 +536,7 @@ R"(     1       10.0000
    999    12345.6777)";
 
     // Ensure the two strings are equal up to the limits of 'expected'
-    CHECK(output.str().compare(0, expected.size(), expected) == 0);
+    CHECK(output.str().substr(0, expected.size()) == expected);
 }
 
 TEST_CASE( "PrintValues", "[libopenshot][keyframe]" )
@@ -582,7 +582,7 @@ R"(│Frame# (X) │     Y Value │ Delta Y │ Increasing? │ Repeat Fraction
 │      25   │     16.5446 │      +1 │        true │ Fraction(1, 2)     │)";
 
     // Ensure the two strings are equal up to the limits of 'expected'
-    CHECK(output.str().compare(0, expected.size(), expected) == 0);
+    CHECK(output.str().substr(0, expected.size()) == expected);
 }
 
 #ifdef USE_OPENCV
