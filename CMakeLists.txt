@@ -40,8 +40,8 @@ For more information, please visit <http://www.openshot.org/>.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
-set(PROJECT_VERSION_FULL "0.2.5-dev3")
-set(PROJECT_SO_VERSION 19)
+set(PROJECT_VERSION_FULL "0.2.7-dev")
+set(PROJECT_SO_VERSION 21)
 
 # Remove the dash and anything following, to get the #.#.# version for project()
 STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
@@ -98,6 +98,12 @@ endif()
 if(ENABLE_TESTS)
   set(BUILD_TESTING ${ENABLE_TESTS})
 endif()
+
+### JUCE requires one of -DDEBUG or -DNDEBUG set on the
+### compile command line. CMake automatically sets -DNDEBUG
+### on all non-debug configs, so we'll just add -DDEBUG to
+### the debug build flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
@@ -200,6 +206,7 @@ if(BUILD_TESTING)
   if(VERBOSE_TESTS)
     list(APPEND CTEST_OPTIONS "-VV")
   endif()
+  list(APPEND CTEST_OPTIONS "--output-on-failure")
   add_subdirectory(tests)
 endif()
 add_feature_info("Unit tests" ${BUILD_TESTING} "Compile unit tests for library functions")
@@ -211,6 +218,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
     "examples/*"
     "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
     "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+    "audio/*"
   )
   setup_target_for_coverage_lcov(
     NAME coverage

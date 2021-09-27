@@ -121,12 +121,8 @@ void Clip::init_reader_settings() {
 
 // Init reader's rotation (if any)
 void Clip::init_reader_rotation() {
-	// Only init rotation from reader when needed
-	if (rotation.GetCount() > 1)
-		// Do nothing if more than 1 rotation Point
-		return;
-	else if (rotation.GetCount() == 1 && rotation.GetValue(1) != 0.0)
-		// Do nothing if 1 Point, and it's not the default value
+	// Dont init rotation if clip has keyframes
+	if (rotation.GetCount() > 0)
 		return;
 
 	// Init rotation
@@ -1384,13 +1380,9 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 			break;
 		}
 		case (SCALE_NONE): {
-			// Calculate ratio of source size to project size
-			// Even with no scaling, previews need to be adjusted correctly
-			// (otherwise NONE scaling draws the frame image outside of the preview)
-			float source_width_ratio = source_size.width() / float(width);
-			float source_height_ratio = source_size.height() / float(height);
-			source_size.scale(width * source_width_ratio, height * source_height_ratio, Qt::KeepAspectRatio);
-
+		    // Image is already the original size (i.e. no scaling mode) relative
+		    // to the preview window size (i.e. timeline / preview ratio). No further
+		    // scaling is needed here.
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
 			break;

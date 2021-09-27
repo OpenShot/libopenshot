@@ -39,7 +39,6 @@
 #include "Timeline.h"
 #include "Json.h"
 
-using namespace std;
 using namespace openshot;
 
 TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
@@ -51,7 +50,7 @@ TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
 	FFmpegReader r(path.str());
 
@@ -62,7 +61,7 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -92,7 +91,7 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "test.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -138,7 +137,7 @@ TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -195,7 +194,7 @@ TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -211,7 +210,7 @@ TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -247,7 +246,7 @@ TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -272,4 +271,34 @@ TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 	// Check size of frame image (it should now match the parent timeline)
 	CHECK(r.GetFrame(1)->GetImage()->width() == 640);
 	CHECK(r.GetFrame(1)->GetImage()->height() == 360);
+}
+
+TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	std::string expected(R"(----------------------------
+----- File Information -----
+----------------------------
+--> Has Video: true
+--> Has Audio: true
+--> Has Single Image: false
+--> Duration: 51.95 Seconds
+--> File Size: 7.26 MB
+----------------------------
+----- Video Attributes -----
+----------------------------
+--> Width: 1280
+--> Height: 720)");
+
+	// Store the DisplayInfo() text in 'output'
+	std::stringstream output;
+	r.DisplayInfo(&output);
+
+	// Compare a [0, expected.size()) substring of output to expected
+	CHECK(output.str().substr(0, expected.size()) == expected);
 }

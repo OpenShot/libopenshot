@@ -88,6 +88,33 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if (effect_type == "Wave")
 		return new Wave();
 
+	else if(effect_type == "Noise")
+		return new Noise();
+
+	else if(effect_type == "Delay")
+		return new Delay();
+
+	else if(effect_type == "Echo")
+		return new Echo();
+
+	else if(effect_type == "Distortion")
+		return new Distortion();
+
+	else if(effect_type == "ParametricEQ")
+		return new ParametricEQ();
+
+	else if(effect_type == "Compressor")
+		return new Compressor();
+
+	else if(effect_type == "Expander")
+		return new Expander();
+
+	else if(effect_type == "Robotization")
+		return new Robotization();
+
+	else if(effect_type == "Whisperization")
+		return new Whisperization();
+
 	#ifdef USE_OPENCV
 	else if(effect_type == "Stabilizer")
 		return new Stabilizer();
@@ -124,6 +151,16 @@ Json::Value EffectInfo::JsonValue() {
 	root.append(Saturation().JsonInfo());
 	root.append(Shift().JsonInfo());
 	root.append(Wave().JsonInfo());
+	/* Audio */
+	root.append(Noise().JsonInfo());
+	root.append(Delay().JsonInfo());
+	root.append(Echo().JsonInfo());
+	root.append(Distortion().JsonInfo());
+	root.append(ParametricEQ().JsonInfo());
+	root.append(Compressor().JsonInfo());
+	root.append(Expander().JsonInfo());
+	root.append(Robotization().JsonInfo());
+	root.append(Whisperization().JsonInfo());
 
 	#ifdef USE_OPENCV
 	root.append(Stabilizer().JsonInfo());

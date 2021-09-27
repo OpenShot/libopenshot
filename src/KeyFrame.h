@@ -31,7 +31,7 @@
 #ifndef OPENSHOT_KEYFRAME_H
 #define OPENSHOT_KEYFRAME_H
 
-#include <cmath>
+#include <iostream>
 #include <vector>
 
 #include "Fraction.h"
@@ -160,10 +160,10 @@ namespace openshot {
 		void UpdatePoint(int64_t index, Point p);
 
 		/// Print a list of points
-		void PrintPoints() const;
+		void PrintPoints(std::ostream* out=&std::cout) const;
 
 		/// Print just the Y value of the point's primary coordinate
-		void PrintValues() const;
+		void PrintValues(std::ostream* out=&std::cout) const;
 
 	};
 

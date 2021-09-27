@@ -130,7 +130,17 @@ set(EFFECTS_SOURCES
   effects/Pixelate.cpp
   effects/Saturation.cpp
   effects/Shift.cpp
-  effects/Wave.cpp)
+  effects/Wave.cpp
+  audio_effects/STFT.cpp
+  audio_effects/Noise.cpp
+  audio_effects/Delay.cpp
+  audio_effects/Echo.cpp
+  audio_effects/Distortion.cpp
+  audio_effects/ParametricEQ.cpp
+  audio_effects/Compressor.cpp
+  audio_effects/Expander.cpp
+  audio_effects/Robotization.cpp
+  audio_effects/Whisperization.cpp)
 
 # Qt video player components
 set(QT_PLAYER_SOURCES
@@ -186,55 +196,56 @@ target_link_libraries(openshot PUBLIC OpenShot::Audio)
 ###
 
 # Find the ImageMagick++ library
-find_package(ImageMagick COMPONENTS Magick++ MagickCore)
+if (ENABLE_MAGICK)
+  find_package(ImageMagick COMPONENTS Magick++ MagickCore)
 
-if(ImageMagick_FOUND)
-  if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
-    add_library(Magick++_TARGET INTERFACE)
+  if(ImageMagick_FOUND)
+    if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
+      add_library(Magick++_TARGET INTERFACE)
 
-    # Include ImageMagick++ headers (needed for compile)
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_INCLUDE_DIRECTORIES ${ImageMagick_INCLUDE_DIRS})
+      # Include ImageMagick++ headers (needed for compile)
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${ImageMagick_INCLUDE_DIRS})
 
-    # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
-    if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
-      set(MAGICKCORE_QUANTUM_DEPTH 16)
+      # Set the Quantum Depth that ImageMagick was built with (default to 16 bits)
+      if(NOT DEFINED MAGICKCORE_QUANTUM_DEPTH)
+        set(MAGICKCORE_QUANTUM_DEPTH 16)
+      endif()
+      if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
+        set(MAGICKCORE_HDRI_ENABLE 0)
+      endif()
+
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_COMPILE_DEFINITIONS
+          MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
+      set_property(TARGET Magick++_TARGET APPEND PROPERTY
+        INTERFACE_COMPILE_DEFINITIONS
+          MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
+
+      target_link_libraries(Magick++_TARGET INTERFACE
+        ${ImageMagick_LIBRARIES})
+
+      # Alias to our namespaced name
+      add_library(ImageMagick::Magick++ ALIAS Magick++_TARGET)
+
     endif()
-    if(NOT DEFINED MAGICKCORE_HDRI_ENABLE)
-      set(MAGICKCORE_HDRI_ENABLE 0)
-    endif()
 
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS
-        MAGICKCORE_QUANTUM_DEPTH=${MAGICKCORE_QUANTUM_DEPTH})
-    set_property(TARGET Magick++_TARGET APPEND PROPERTY
-      INTERFACE_COMPILE_DEFINITIONS
-        MAGICKCORE_HDRI_ENABLE=${MAGICKCORE_HDRI_ENABLE})
+    # Add optional ImageMagic-dependent sources
+    target_sources(openshot PRIVATE
+      ImageReader.cpp
+      ImageWriter.cpp
+      TextReader.cpp)
 
-    target_link_libraries(Magick++_TARGET INTERFACE
-      ${ImageMagick_LIBRARIES})
+    # define a preprocessor macro (used in the C++ source)
+    target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
 
-    # Alias to our namespaced name
-    add_library(ImageMagick::Magick++ ALIAS Magick++_TARGET)
+    # Link with ImageMagick library
+    target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
 
+    set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
+    mark_as_advanced(HAVE_IMAGEMAGICK)
   endif()
-
-  # Add optional ImageMagic-dependent sources
-  target_sources(openshot PRIVATE
-    ImageReader.cpp
-    ImageWriter.cpp
-    TextReader.cpp)
-
-  # define a preprocessor macro (used in the C++ source)
-  target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)
-
-  # Link with ImageMagick library
-  target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
-
-  set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
-  mark_as_advanced(HAVE_IMAGEMAGICK)
 endif()
-
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -273,7 +284,7 @@ endif ()
 
 ################# QT5 ###################
 # Find QT5 libraries
-set(_qt_components Core Gui Widgets)
+set(_qt_components Core Gui Widgets Svg)
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
@@ -288,31 +299,45 @@ mark_as_advanced(QT_VERSION_STR)
 
 ################### FFMPEG #####################
 # Find FFmpeg libraries (used for video encoding / decoding)
-find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale)
+find_package(FFmpeg REQUIRED
+  COMPONENTS avcodec avformat avutil swscale
+  OPTIONAL_COMPONENTS swresample avresample
+)
 
 set(all_comps avcodec avformat avutil swscale)
-if(TARGET FFmpeg::swresample)
-  list(APPEND all_comps swresample)
-else()
-  list(APPEND all_comps avresample)
-endif()
 set(version_comps avcodec avformat avutil)
+
+# Pick a resampler.  Prefer swresample if possible
+if(TARGET FFmpeg::swresample AND ${FFmpeg_avformat_VERSION} VERSION_GREATER "57.0.0")
+  set(resample_lib swresample)
+  set(USE_SW TRUE)
+else()
+  set(resample_lib avresample)
+  set(USE_SW FALSE)
+endif()
+list(APPEND all_comps ${resample_lib})
 
 foreach(ff_comp IN LISTS all_comps)
   if(TARGET FFmpeg::${ff_comp})
     target_link_libraries(openshot PUBLIC FFmpeg::${ff_comp})
     # Keep track of some FFmpeg lib versions, to embed in our version header
-    if(${ff_comp} IN_LIST version_comps AND ${ff_comp}_VERSION)
+    if(${ff_comp} IN_LIST version_comps AND FFmpeg_${ff_comp}_VERSION)
       string(TOUPPER ${ff_comp} v_name)
-      set(${v_name}_VERSION_STR ${${ff_comp}_VERSION} CACHE STRING "${ff_comp} version used" FORCE)
+      set(${v_name}_VERSION_STR ${FFmpeg_${ff_comp}_VERSION} CACHE STRING "${ff_comp} version used" FORCE)
       mark_as_advanced(${v_name}_VERSION_STR)
     endif()
   endif()
 endforeach()
 
+# Indicate which resampler we linked with, and set a config header flag
+add_feature_info("FFmpeg ${resample_lib}" TRUE "Audio resampling uses ${resample_lib}")
+# Set the appropriate flag in OpenShotVersion.h
+set(FFMPEG_USE_SWRESAMPLE ${USE_SW} CACHE BOOL "libswresample used for audio resampling" FORCE)
+mark_as_advanced(FFMPEG_USE_SWRESAMPLE)
+
 # Version check for hardware-acceleration code
-if(USE_HW_ACCEL AND avcodec_VERSION)
-  if(${avcodec_VERSION} VERSION_GREATER 57.107.100)
+if(USE_HW_ACCEL AND FFmpeg_avcodec_VERSION)
+  if(${FFmpeg_avcodec_VERSION} VERSION_GREATER "57.106")
     set(HAVE_HW_ACCEL TRUE)
   endif()
 endif()
@@ -537,4 +562,3 @@ endif()
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jonathan Thomas") #required
 
 include(CPack)
-
