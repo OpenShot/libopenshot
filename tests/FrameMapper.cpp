@@ -191,7 +191,7 @@ TEST_CASE( "30_fps_to_24_fps_Pulldown_None", "[libopenshot][framemapper]" )
 
 TEST_CASE( "resample_audio_48000_to_41000", "[libopenshot][framemapper]" )
 {
-	// Create a reader: 24 fps, 2 channels, 48000 sample rate
+	// Create a reader
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
@@ -617,6 +617,42 @@ TEST_CASE( "Distribute samples", "[libopenshot][framemapper]" ) {
         cache.Clear();
 
     } // for rates
+}
+
+TEST_CASE( "PrintMapping", "[libopenshot][framemapper]" )
+{
+	const std::string expected(
+		R"(Target frame #: 1 mapped to original frame #:	(1 odd, 1 even)
+  - Audio samples mapped to frame 1:0 to frame 1:1599
+Target frame #: 2 mapped to original frame #:	(2 odd, 2 even)
+  - Audio samples mapped to frame 1:1600 to frame 2:1199
+Target frame #: 3 mapped to original frame #:	(2 odd, 3 even)
+  - Audio samples mapped to frame 2:1200 to frame 3:799
+Target frame #: 4 mapped to original frame #:	(3 odd, 4 even)
+  - Audio samples mapped to frame 3:800 to frame 4:399
+Target frame #: 5 mapped to original frame #:	(4 odd, 4 even)
+  - Audio samples mapped to frame 4:400 to frame 4:1999
+Target frame #: 6 mapped to original frame #:	(5 odd, 5 even)
+  - Audio samples mapped to frame 5:0 to frame 5:1599
+Target frame #: 7 mapped to original frame #:	(6 odd, 6 even)
+  - Audio samples mapped to frame 5:1600 to frame 6:1199
+Target frame #: 8 mapped to original frame #:	(6 odd, 7 even)
+  - Audio samples mapped to frame 6:1200 to frame 7:799
+Target frame #: 9 mapped to original frame #:	(7 odd, 8 even)
+  - Audio samples mapped to frame 7:800 to frame 8:399
+Target frame #: 10 mapped to original frame #:	(8 odd, 8 even)
+  - Audio samples mapped to frame 8:400 to frame 8:1999)");
+
+	DummyReader r(Fraction(24,1), 720, 480, 48000, 2, 5.0);
+	// Create mapping 24 fps and 30 fps
+	FrameMapper mapping(
+		&r, Fraction(30, 1), PULLDOWN_CLASSIC, 48000, 2, LAYOUT_STEREO);
+	std::stringstream mapping_out;
+	mapping.PrintMapping(&mapping_out);
+
+	// Compare a [0, expected.size()) substring of output to expected
+	auto compare_value = mapping_out.str().compare(0, expected.size(), expected);
+	CHECK(compare_value == 0);
 }
 
 TEST_CASE( "Json", "[libopenshot][framemapper]" )

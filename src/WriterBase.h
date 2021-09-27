@@ -32,7 +32,7 @@
 #define OPENSHOT_WRITER_BASE_H
 
 #include <iostream>
-#include <iomanip>
+
 #include "ChannelLayouts.h"
 #include "Fraction.h"
 #include "Frame.h"
@@ -113,7 +113,7 @@ namespace openshot
 		void SetJsonValue(const Json::Value root); ///< Load Json::Value into this object
 
 		/// Display file information in the standard output stream (stdout)
-		void DisplayInfo();
+		void DisplayInfo(std::ostream* out=&std::cout);
 
 		/// Open the writer (and start initializing streams)
 		virtual void Open() = 0;
