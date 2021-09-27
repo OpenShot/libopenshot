@@ -152,9 +152,6 @@ set(QT_PLAYER_SOURCES
   Qt/VideoRenderer.cpp
   Qt/VideoRenderWidget.cpp)
 
-# Disable RPATH
-set(CMAKE_MACOSX_RPATH 0)
-
 ############### CREATE LIBRARY #################
 # Create shared openshot library
 add_library(openshot SHARED)
@@ -170,7 +167,6 @@ set_target_properties(openshot PROPERTIES
   AUTOMOC ON
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_SO_VERSION}
-  INSTALL_NAME_DIR "$<INSTALL_PREFIX>/lib"
 )
 
 # Location of our includes, both internally and when installed
