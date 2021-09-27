@@ -7,19 +7,19 @@ jobs:
     strategy:
       matrix:
         sys:
-          - { os: ubuntu-18.04, shell: bash }
-          - { os: ubuntu-latest, shell: bash }
-          - { os: macos-latest, shell: bash }
-          - { os: windows-latest, shell: 'msys2 {0}' }
+          - {os: ubuntu-18.04, shell: bash}
+          - {os: ubuntu-latest, shell: bash}
+          - {os: macos-latest, shell: bash}
+          - {os: windows-latest, shell: 'msys2 {0}'}
         compiler:
-          - { cc: gcc, cxx: g++ }
-          - { cc: clang, cxx: clang++ }
+          - {cc: gcc, cxx: g++}
+          - {cc: clang, cxx: clang++}
         exclude:
           # Windows clang isn't being our friend,
           # JUCE seems to think it can use _get_tzname there
           # (it can't)
-          - sys: { os: windows-latest, shell: 'msys2 {0}' }
-            compiler: { cc: clang, cxx: clang++ }
+          - sys: {os: windows-latest, shell: 'msys2 {0}'}
+            compiler: {cc: clang, cxx: clang++}
     defaults:
       run:
         shell: "${{ matrix.sys.shell }}"
@@ -27,6 +27,7 @@ jobs:
       CC: ${{ matrix.compiler.cc }}
       CXX: ${{ matrix.compiler.cxx }}
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
+      INSTALL_PATH: '${{ github.workspace }}/install'
 
     steps:
       - uses: actions/checkout@v2
@@ -63,7 +64,8 @@ jobs:
             cmake swig doxygen graphviz curl lcov \
             libasound2-dev \
             qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
-            libfdk-aac-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
+            libfdk-aac-dev libavcodec-dev libavformat-dev \
+            libavutil-dev libswscale-dev libswresample-dev \
             libzmq3-dev libmagick++-dev libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler
           # Install catch2 package from Ubuntu 20.10, since for some reason
@@ -116,17 +118,14 @@ jobs:
             mkdir build
             if [ "_${{ runner.os }}" == "_macOS" ]; then
               export CMAKE_EXTRA="${CMAKE_EXTRA} \
-                -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
-            fi
-            if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
-              export CMAKE_EXTRA="${CMAKE_EXTRA} \
+                -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15" \
                 -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
                 -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
                 -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
             fi
             cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
               -DCMAKE_BUILD_TYPE="Debug" \
-              -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+              -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" \
               ${CMAKE_EXTRA}
           fi
           cmake --build build
@@ -147,7 +146,7 @@ jobs:
               -DENABLE_RUBY=0";
             export PATH="/usr/local/opt/qt@5/bin:$PATH";
           fi
-          if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
+          if [ "_${{ runner.os }}" == "_macOS" ]; then
             export CMAKE_EXTRA="${CMAKE_EXTRA} \
               -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
               -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
@@ -157,12 +156,12 @@ jobs:
             export CMAKE_EXTRA="${CMAKE_EXTRA} \
               -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
               -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld \
-              -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+              -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld";
           fi
           mkdir build
           cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
             -DCMAKE_BUILD_TYPE="Debug" \
-            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" \
             -DOpenShotAudio_ROOT="./audio/build" \
             ${CMAKE_EXTRA} \
             "${{ steps.coverage.outputs.value }}"
@@ -178,20 +177,7 @@ jobs:
 
       - name: macOS Library checks
         if: ${{ runner.os == 'macos' }}
-        run: |
-          pushd ${{ github.workspace }}/install
-          for lib in libopenshot-audio.dylib libopenshot.dylib libopenshot_protobuf.dylib; do
-            echo
-            echo "== ${lib} =============================="
-            otool -D "lib/${lib}"
-            otool -L "lib/${lib}"
-            otool -l "lib/${lib}" |grep -i path;
-          done
-          echo
-          echo "== openshot-player ===================================="
-          otool -L "bin/openshot-player"
-          otool -l "bin/openshot-player" |grep -i path
-          popd
+        run: cmake/scan-mac-libs.sh
 
       - uses: codecov/codecov-action@v2.1.0
         if: ${{ steps.coverage.outputs.value }}
