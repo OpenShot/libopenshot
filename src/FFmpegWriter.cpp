@@ -1672,7 +1672,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         );
 
         // Copy audio samples over original samples
-        memcpy(all_resampled_samples, audio_converted->data[0], nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
+        memcpy(all_resampled_samples, audio_converted->data[0],
+               static_cast<size_t>(
+                   nb_samples * info.channels
+                   * av_get_bytes_per_sample(output_sample_fmt)));
 
         // Remove converted audio
         av_freep(&(audio_frame->data[0]));
@@ -1706,7 +1709,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
                        av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
                 ),
                 all_resampled_samples + samples_position,
-                diff * av_get_bytes_per_sample(output_sample_fmt)
+                static_cast<size_t>(
+                    diff * av_get_bytes_per_sample(output_sample_fmt))
             );
 
         // Increment counters
@@ -1760,7 +1764,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             );
 
             // Copy audio into buffer for frame
-            memcpy(final_samples_planar, samples, audio_frame->nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
+            memcpy(final_samples_planar, samples,
+                   static_cast<size_t>(
+                       audio_frame->nb_samples * info.channels
+                       * av_get_bytes_per_sample(output_sample_fmt)));
 
             // Fill input frame with sample data
             avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt,
@@ -1786,10 +1793,13 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             );
 
             // Copy audio samples over original samples
-            if (nb_samples > 0) {
-                memcpy(samples, frame_final->data[0],
-                    nb_samples * av_get_bytes_per_sample(audio_codec_ctx->sample_fmt) * info.channels);
-            }
+            const auto copy_length = static_cast<size_t>(
+                nb_samples
+                * av_get_bytes_per_sample(audio_codec_ctx->sample_fmt)
+                * info.channels);
+
+            if (nb_samples > 0)
+                memcpy(samples, frame_final->data[0], copy_length);
 
             // deallocate AVFrame
             av_freep(&(audio_frame->data[0]));
@@ -1800,11 +1810,13 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 
         } else {
             // Create a new array
-            final_samples = (int16_t *) av_malloc(
-                sizeof(int16_t) * audio_input_position
+            const auto buf_size = static_cast<size_t>(
+                audio_input_position
                 * (av_get_bytes_per_sample(audio_codec_ctx->sample_fmt) /
-                   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
-            );
+                   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))
+                );
+            final_samples = reinterpret_cast<int16_t*>(
+                    av_malloc(sizeof(int16_t) * buf_size));
 
             // Copy audio into buffer for frame
             memcpy(final_samples, samples,

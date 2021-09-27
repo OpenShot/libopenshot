@@ -438,8 +438,10 @@ juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
 int64_t Frame::GetBytes()
 {
 	int64_t total_bytes = 0;
-	if (image)
-		total_bytes += (width * height * sizeof(char) * 4);
+	if (image) {
+		total_bytes += static_cast<int64_t>(
+		    width * height * sizeof(char) * 4);
+	}
 	if (audio) {
 		// approximate audio size (sample rate / 24 fps)
 		total_bytes += (sample_rate / 24.0) * sizeof(float);
