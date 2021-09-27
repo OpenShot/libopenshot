@@ -576,8 +576,7 @@ void Keyframe::PrintValues(std::ostream* out) const {
     // Column widths
     std::vector<int> w{10, 12, 8, 11, 19};
 
-    *out << std::right << std::setfill(' ') << std::boolalpha
-         << std::setprecision(4);
+    *out << std::right << std::setfill(' ') << std::setprecision(4);
     // Headings
     *out << "│"
          << std::setw(w[0]) << "Frame# (X)" << " │"
@@ -600,7 +599,8 @@ void Keyframe::PrintValues(std::ostream* out) const {
              << std::setw(w[1]) << std::fixed << GetValue(i) << " │"
              << std::setw(w[2]) << std::defaultfloat << std::showpos
                                 << GetDelta(i) << " │ " << std::noshowpos
-             << std::setw(w[3]) << IsIncreasing(i) << " │ "
+             << std::setw(w[3])
+             << (IsIncreasing(i) ? "true" : "false") << " │ "
              << std::setw(w[4]) << std::left << GetRepeatFraction(i)
                                 << std::right << "│\n";
     }
