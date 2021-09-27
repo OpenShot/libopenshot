@@ -651,8 +651,7 @@ Target frame #: 10 mapped to original frame #:	(8 odd, 8 even)
 	mapping.PrintMapping(&mapping_out);
 
 	// Compare a [0, expected.size()) substring of output to expected
-	auto compare_value = mapping_out.str().compare(0, expected.size(), expected);
-	CHECK(compare_value == 0);
+	CHECK(mapping_out.str().substr(0, expected.size()) == expected);
 }
 
 TEST_CASE( "Json", "[libopenshot][framemapper]" )
