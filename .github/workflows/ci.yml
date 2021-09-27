@@ -76,7 +76,7 @@ jobs:
         run: |
           brew install \
             qt5 ffmpeg zeromq cppzmq libomp opencv protobuf babl \
-            python3 swig catch2 doxygen graphviz
+            python3 swig catch2 doxygen graphviz gcc
 
       - name: Set up MSYS and install Windows dependencies
         if: ${{ runner.os == 'Windows' }}
@@ -115,7 +115,8 @@ jobs:
           if [ ! -d build ]; then
             mkdir build
             if [ "_${{ runner.os }}" == "_macOS" ]; then
-              export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
+              export CMAKE_EXTRA="${CMAKE_EXTRA} \
+                -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
             fi
             if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
               export CMAKE_EXTRA="${CMAKE_EXTRA} \
@@ -140,16 +141,17 @@ jobs:
       - name: Build libopenshot
         run: |
           if [ "_${{ runner.os }}" == "_macOS" ]; then
-            export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
-            -DQt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5 \
-            -DENABLE_RUBY=0";
+            export CMAKE_EXTRA="${CMAKE_EXTRA} \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 \
+              -DQt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5 \
+              -DENABLE_RUBY=0";
             export PATH="/usr/local/opt/qt@5/bin:$PATH";
           fi
           if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
             export CMAKE_EXTRA="${CMAKE_EXTRA} \
-            -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
-            -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
-            -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
+              -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
+              -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
+              -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
           fi
           if [ "_${{ runner.os }}" == "_Windows" ]; then
             export CMAKE_EXTRA="${CMAKE_EXTRA} \
@@ -177,18 +179,19 @@ jobs:
       - name: macOS Library checks
         if: ${{ runner.os == 'macos' }}
         run: |
-          echo "\\n\\n== libopenshot-audio.dylib =============================="
-          otool -D "${{ github.workspace }}/install/lib/libopenshot-audio.dylib"
-          otool -L "${{ github.workspace }}/install/lib/libopenshot-audio.dylib"
-          echo "\\n\\n== libopenshot.dylib ===================================="
-          otool -D "${{ github.workspace }}/install/lib/libopenshot.dylib"
-          otool -L "${{ github.workspace }}/install/lib/libopenshot.dylib"
-          echo "\\n\\n== libopenshot_protobuf.dylib ==========================="
-          otool -D "${{ github.workspace }}/install/lib/libopenshot_protobuf.dylib"
-          otool -L "${{ github.workspace }}/install/lib/libopenshot_protobuf.dylib"
-          echo "\\n\\n== openshot-player ===================================="
-          otool -L "${{ github.workspace }}/install/bin/openshot-player"
-
+          pushd ${{ github.workspace }}/install
+          for lib in libopenshot-audio.dylib libopenshot.dylib libopenshot_protobuf.dylib; do
+            echo
+            echo "== ${lib} =============================="
+            otool -D "lib/${lib}"
+            otool -L "lib/${lib}"
+            otool -l "lib/${lib}" |grep -i path;
+          done
+          echo
+          echo "== openshot-player ===================================="
+          otool -L "bin/openshot-player"
+          otool -l "bin/openshot-player" |grep -i path
+          popd
 
       - uses: codecov/codecov-action@v2.1.0
         if: ${{ steps.coverage.outputs.value }}
