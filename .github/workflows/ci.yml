@@ -177,11 +177,14 @@ jobs:
       - name: macOS Library checks
         if: ${{ runner.os == 'macos' }}
         run: |
-          otool -l "${{ github.workspace }}/install/lib/libopenshot-audio.dylib"
+          echo "\n\n== libopenshot-audio.dylib =============================="
+          otool -D "${{ github.workspace }}/install/lib/libopenshot-audio.dylib"
           otool -L "${{ github.workspace }}/install/lib/libopenshot-audio.dylib"
-          otool -l "${{ github.workspace }}/install/lib/libopenshot.dylib"
+          echo "\n\n== libopenshot.dylib ===================================="
+          otool -D "${{ github.workspace }}/install/lib/libopenshot.dylib"
           otool -L "${{ github.workspace }}/install/lib/libopenshot.dylib"
-          otool -l "${{ github.workspace }}/install/lib/libopenshot_protobuf.dylib"
+          echo "\n\n== libopenshot_protobuf.dylib ==========================="
+          otool -D "${{ github.workspace }}/install/lib/libopenshot_protobuf.dylib"
           otool -L "${{ github.workspace }}/install/lib/libopenshot_protobuf.dylib"
 
       - uses: codecov/codecov-action@v2.1.0
