@@ -38,7 +38,7 @@ void DummyReader::init(Fraction fps, int width, int height, int sample_rate, int
 	// Set key info settings
 	info.has_audio = false;
 	info.has_video = true;
-	info.file_size = width * height * sizeof(int);
+	info.file_size = static_cast<size_t>(width * height * sizeof(int));
 	info.vcodec = "raw";
 	info.fps = fps;
 	info.width = width;
