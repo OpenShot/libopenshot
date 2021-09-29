@@ -296,7 +296,7 @@ function(setup_target_for_coverage_gcovr_xml)
 
     set(options NONE)
     set(oneValueArgs BASE_DIRECTORY NAME)
-    set(multiValueArgs EXCLUDE EXECUTABLE EXECUTABLE_ARGS DEPENDENCIES)
+    set(multiValueArgs GCOVR_ARGS EXCLUDE EXECUTABLE EXECUTABLE_ARGS DEPENDENCIES)
     cmake_parse_arguments(Coverage "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     if(NOT GCOVR_PATH)
@@ -327,12 +327,15 @@ function(setup_target_for_coverage_gcovr_xml)
         list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
+    # Grab extra args for tool
+    set(GCOVR_ARGS ${Coverage_GCOVR_ARGS})
+
     add_custom_target(${Coverage_NAME}
         # Run tests
         ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
 
         # Running gcovr
-        COMMAND ${GCOVR_PATH} --xml
+        COMMAND ${GCOVR_PATH} ${GCOVR_ARGS} --xml
             -r ${BASEDIR} ${GCOVR_EXCLUDE_ARGS}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}.xml
@@ -368,7 +371,7 @@ function(setup_target_for_coverage_gcovr_html)
 
     set(options NONE)
     set(oneValueArgs BASE_DIRECTORY NAME)
-    set(multiValueArgs EXCLUDE EXECUTABLE EXECUTABLE_ARGS DEPENDENCIES)
+    set(multiValueArgs GCOVR_ARGS EXCLUDE EXECUTABLE EXECUTABLE_ARGS DEPENDENCIES)
     cmake_parse_arguments(Coverage "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     if(NOT GCOVR_PATH)
@@ -399,6 +402,9 @@ function(setup_target_for_coverage_gcovr_html)
         list(APPEND GCOVR_EXCLUDE_ARGS "${EXCLUDE}")
     endforeach()
 
+    # Grab extra args for tool
+    set(GCOVR_ARGS ${Coverage_GCOVR_ARGS})
+
     add_custom_target(${Coverage_NAME}
         # Run tests
         ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
@@ -407,7 +413,7 @@ function(setup_target_for_coverage_gcovr_html)
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/${Coverage_NAME}
 
         # Running gcovr
-        COMMAND ${GCOVR_PATH} --html --html-details
+        COMMAND ${GCOVR_PATH} ${GCOVR_ARGS} --html --html-details
             -r ${BASEDIR} ${GCOVR_EXCLUDE_ARGS}
             --object-directory=${PROJECT_BINARY_DIR}
             -o ${Coverage_NAME}/index.html

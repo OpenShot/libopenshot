@@ -44,7 +44,7 @@ if(CMAKE_VERSION VERSION_LESS 3.3)
 endif()
 
 if(ENABLE_IWYU)
-	find_program(IWYU_PATH NAMES "iwyu"
+	find_program(IWYU_PATH NAMES "iwyu" "include-what-you-use"
 		DOC "include-what-you-use source code scanner executable")
 	if(IWYU_PATH)
 		if(IWYU_OPTS)
