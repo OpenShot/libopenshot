@@ -213,26 +213,35 @@ add_feature_info("Unit tests" ${BUILD_TESTING} "Compile unit tests for library f
 
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
+    add_custom_target(includesdebug
+      COMMAND ${CMAKE_COMMAND} -E echo [[
+INTERFACE_INCLUDE_DIRECTORIES:
+$<TARGET_GENEX_EVAL:openshot,
+  $<TARGET_PROPERTY:openshot,INTERFACE_INCLUDE_DIRECTORIES>>
+
+INCLUDE_DIRECTORIES
+$<TARGET_GENEX_EVAL:openshot,
+  $<TARGET_PROPERTY:openshot,INCLUDE_DIRECTORIES>>
+]])
+
   set(COVERAGE_EXCLUDES
-    "bindings/*"
-    "examples/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/*"
-    "audio/*"
+    "bindings/.*"
+    "examples/.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/.*"
+    "audio/.*"
+    "/usr/include/.*"
   )
-  setup_target_for_coverage_lcov(
+  setup_target_for_coverage_gcovr_xml(
     NAME coverage
-    LCOV_ARGS "--no-external"
+    GCOVR_ARGS -s
     EXECUTABLE ctest
     EXECUTABLE_ARGS ${CTEST_OPTIONS}
     DEPENDENCIES openshot ${UNIT_TEST_TARGETS}
     EXCLUDE ${COVERAGE_EXCLUDES}
   )
   foreach(_t IN LISTS UNIT_TEST_NAMES)
-    setup_target_for_coverage_lcov(
+    setup_target_for_coverage_gcovr_xml(
       NAME "${_t}_coverage"
-      LCOV_ARGS "--no-external"
       EXECUTABLE ctest
       EXECUTABLE_ARGS ${CTEST_OPTIONS} -L "^${_t}$"
       DEPENDENCIES openshot openshot-${_t}-test
