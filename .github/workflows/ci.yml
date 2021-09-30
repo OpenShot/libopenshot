@@ -55,7 +55,7 @@ jobs:
       - uses: haya14busa/action-cond@v1
         id: coverage
         with:
-          cond: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
+          cond: ${{ matrix.compiler.cc == 'gcc' && runner.os != 'Windows' }}
           if_true: "-DENABLE_COVERAGE:BOOL=1"
 
       - name: Install Linux dependencies
