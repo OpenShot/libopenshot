@@ -85,6 +85,7 @@ void QtImageReader::Open()
 			image = std::make_shared<QImage>();
             QImageReader imgReader( path );
             imgReader.setAutoTransform( true );
+            imgReader.setDecideFormatFromContent( true );
             loaded = imgReader.read(image.get());
 		}
 
