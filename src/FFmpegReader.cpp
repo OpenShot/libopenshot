@@ -1537,10 +1537,9 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 	// Copy audio samples over original samples
 	memcpy(audio_buf,
 	       audio_converted->data[0],
-	       static_cast<size_t>(
-	           audio_converted->nb_samples
+	       static_cast<size_t>(audio_converted->nb_samples)
 	           * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
-	           * info.channels)
+	           * info.channels
 	      );
 
 	// Deallocate resample buffer
