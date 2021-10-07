@@ -1143,6 +1143,10 @@ AVStream *FFmpegWriter::add_video_stream() {
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
 
+	// Set sample aspect ratio
+    c->sample_aspect_ratio.num = info.pixel_ratio.num;
+    c->sample_aspect_ratio.den = info.pixel_ratio.den;
+
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -1219,7 +1223,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 		}
 	}
 
-//TODO: Implement variable bitrate feature (which actually works). This implementation throws
+    //TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
 	//c->rc_min_rate = info.video_bit_rate;
 	//c->rc_max_rate = info.video_bit_rate;
