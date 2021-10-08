@@ -157,9 +157,11 @@ jobs:
       - name: Build Resvg (if enabled and not cached)
         if: ${{ steps.use-resvg.outputs.value }} && (steps.cache-resvg.outputs.cache-hit != 'true')
         run: |
-          pushd resvg/c-api
-          cargo build --release
-          popd
+          if [ -d "resvg/c-api" ]; then
+            pushd resvg/c-api
+            cargo build --release
+            popd
+          fi
 
       - name: Build libopenshot
         run: |
