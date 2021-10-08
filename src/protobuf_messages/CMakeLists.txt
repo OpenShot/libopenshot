@@ -68,7 +68,7 @@ install(FILES ${ProtoHeaders}
 
 # On Windows, we copy project output DLLs into the test dirs
 # so that the unit test executables can find them
-if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32 AND BUILD_TESTING)
   add_custom_command(TARGET openshot_protobuf POST_BUILD
     COMMAND
       ${CMAKE_COMMAND} -E copy_if_different

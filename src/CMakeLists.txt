@@ -536,7 +536,7 @@ install(DIRECTORY .
 
 # On Windows, we copy project output DLLs into the tests dir
 # so that the unit test executables can find them
-if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32 AND BUILD_TESTING)
   # Copy the DLLs immediately after they're built
   add_custom_command(TARGET openshot POST_BUILD
     COMMAND
