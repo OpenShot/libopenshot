@@ -294,7 +294,6 @@ std::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
 	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-	std::shared_ptr<openshot::Frame> f;
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -305,10 +304,12 @@ std::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
 			smallest_frame = *itr;
 	}
 
-	// Return frame
-	f = GetFrame(smallest_frame);
-
-	return f;
+    // Return frame (if any)
+    if (smallest_frame != -1) {
+        return GetFrame(smallest_frame);
+    } else {
+        return NULL;
+    }
 }
 
 // Gets the maximum bytes value

@@ -86,6 +86,7 @@ namespace openshot
     void VideoCacheThread::run()
     {
         // Types for storing time durations in whole and fractional milliseconds
+        std::shared_ptr<openshot::Frame> smallest_frame = NULL;
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
@@ -107,13 +108,11 @@ namespace openshot
 						ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_concurrent_frames", max_concurrent_frames, "needed_frames", (position - current_display_frame));
 
 						// Force the frame to be generated
-						if (reader->GetCache()->GetSmallestFrame()) {
-							int64_t smallest_cached_frame = reader->GetCache()->GetSmallestFrame()->number;
-							if (smallest_cached_frame > current_display_frame) {
-								// Cache position has gotten too far away from current display frame.
-								// Reset the position to the current display frame.
-								position = current_display_frame;
-							}
+                        smallest_frame = reader->GetCache()->GetSmallestFrame();
+                        if (smallest_frame && smallest_frame->number > current_display_frame) {
+                            // Cache position has gotten too far away from current display frame.
+                            // Reset the position to the current display frame.
+                            position = current_display_frame;
 						}
 						reader->GetFrame(position);
 					}
