@@ -284,7 +284,7 @@ endif ()
 
 ################# QT5 ###################
 # Find QT5 libraries
-set(_qt_components Core Gui Widgets Svg)
+set(_qt_components Core Gui Widgets)
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
