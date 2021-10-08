@@ -139,17 +139,14 @@ void Frame::Display()
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
 
-	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
-	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-	{
-		// Calculate correct DAR (display aspect ratio)
-		int new_width = previewImage->size().width();
-		int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-		// Resize to fix DAR
-		previewImage = std::make_shared<QImage>(previewImage->scaled(
-			new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-	}
+    // Update the image to reflect the correct pixel aspect ration (i.e. to fix non-square pixels)
+    if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+    {
+        // Resize to fix DAR
+        previewImage = std::make_shared<QImage>(previewImage->scaled(
+                previewImage->size().width(), previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble(),
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
 
 	// Create window
 	QWidget previewWindow;
@@ -187,6 +184,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		int height_padding = 20 * (audio->getNumChannels() - 1);
 		int total_height = new_height + height_padding;
 		int total_width = 0;
+		float zero_height = 1.0; // Used to clamp near-zero vales to this value to prevent gaps
 
 		// Loop through each audio channel
 		float Y = 100.0;
@@ -202,9 +200,17 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 				// Sample value (scaled to -100 to 100)
 				float value = samples[sample] * 100.0;
 
+				// Set threshold near zero (so we don't allow near-zero values)
+				// This prevents empty gaps from appearing in the waveform
+				if (value > -zero_height && value < 0.0) {
+				    value = -zero_height;
+				} else if (value > 0.0 && value < zero_height) {
+                    value = zero_height;
+				}
+
 				// Append a line segment for each sample
-                lines.push_back(QPointF(X,Y+1.0));
-                lines.push_back(QPointF(X,(Y-value)+1.0));
+                lines.push_back(QPointF(X, Y));
+                lines.push_back(QPointF(X, Y - value));
 			}
 
 			// Add Channel Label Coordinate
@@ -233,12 +239,6 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		// Draw the waveform
 		painter.drawLines(lines);
 		painter.end();
-
-		// Resize Image (if requested)
-		if (width != total_width || height != total_height) {
-			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-			wave_image = std::make_shared<QImage>(scaled_wave_image);
-		}
 	}
 	else
 	{
@@ -246,6 +246,12 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		wave_image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 		wave_image->fill(QColor(QString::fromStdString("#000000")));
 	}
+
+    // Resize Image (if needed)
+    if (wave_image->width() != width || wave_image->height() != height) {
+        QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        wave_image = std::make_shared<QImage>(scaled_wave_image);
+    }
 
 	// Return new image
 	return wave_image;
@@ -571,29 +577,22 @@ void Frame::Save(std::string path, float scale, std::string format, int quality)
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
 
+    // Update the image to reflect the correct pixel aspect ration (i.e. to fix non-square pixels)
+    if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+    {
+        // Resize to fix DAR
+        previewImage = std::make_shared<QImage>(previewImage->scaled(
+                previewImage->size().width(), previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble(),
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
+
 	// scale image if needed
 	if (fabs(scale) > 1.001 || fabs(scale) < 0.999)
 	{
-		int new_width = width;
-		int new_height = height;
-
-		// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
-		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-		{
-			// Calculate correct DAR (display aspect ratio)
-			int new_width = previewImage->size().width();
-			int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-			// Resize to fix DAR
-			previewImage = std::make_shared<QImage>(previewImage->scaled(
-				new_width, new_height,
-				Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-		}
-
 		// Resize image
 		previewImage = std::make_shared<QImage>(previewImage->scaled(
-			new_width * scale, new_height * scale,
-			Qt::KeepAspectRatio, Qt::SmoothTransformation));
+		        previewImage->size().width() * scale, previewImage->size().height() * scale,
+		        Qt::KeepAspectRatio, Qt::SmoothTransformation));
 	}
 
 	// Save image
@@ -906,7 +905,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 		// Fill with black
 		AddColor(width, height, color);
 
-	return image;
+    return image;
 }
 
 #ifdef USE_OPENCV

@@ -683,7 +683,7 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width());
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::add_layer (Transform: Composite Image Layer: Completed)", "source_frame->number", source_frame->number, "new_frame->GetImage()->width()", new_frame->GetImage()->width(), "new_frame->GetImage()->height()", new_frame->GetImage()->height());
 }
 
 // Update the list of 'opened' clips
@@ -1523,7 +1523,7 @@ void Timeline::ClearAllCache() {
 // Settings::Instance()->MAX_WIDTH and Settings::Instance()->MAX_HEIGHT.
 void Timeline::SetMaxSize(int width, int height) {
 	// Maintain aspect ratio regardless of what size is passed in
-	QSize display_ratio_size = QSize(info.display_ratio.num * info.pixel_ratio.ToFloat(), info.display_ratio.den * info.pixel_ratio.ToFloat());
+	QSize display_ratio_size = QSize(info.width, info.height);
 	QSize proposed_size = QSize(std::min(width, info.width), std::min(height, info.height));
 
 	// Scale QSize up to proposed size

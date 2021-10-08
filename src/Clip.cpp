@@ -1239,10 +1239,10 @@ bool Clip::isEqual(double a, double b)
 // Apply keyframes to the source frame (if any)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
     // Skip out if video was disabled or only an audio frame (no visualisation in use)
-    if (has_video.GetInt(frame->number) == 0 ||
-        (!Waveform() && !Reader()->info.has_video))
+    if (!Waveform() && !Reader()->info.has_video) {
         // Skip the rest of the image processing for performance reasons
         return;
+    }
 
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
@@ -1251,7 +1251,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     if (Waveform())
     {
         // Debug output
-        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform(), "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
 
         // Get the color of the waveform
         int red = wave_color.red.GetInt(frame->number);
@@ -1261,17 +1261,14 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 
         // Generate Waveform Dynamically (the size of the timeline)
         source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+        frame->AddImage(source_image);
     }
 
-    // Size of final image
-    int width = background_canvas->width();
-    int height = background_canvas->height();
-
     // Get transform from clip's keyframes
-    QTransform transform = get_transform(frame, width, height);
+    QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
 
     // Debug output
-    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
+    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
 
     // Load timeline's new frame image into a QPainter
     QPainter painter(background_canvas.get());
@@ -1325,7 +1322,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
 
-	/* ALPHA & OPACITY */
+    /* ALPHA & OPACITY */
 	if (alpha.GetValue(frame->number) != 1.0)
 	{
 		float alpha_value = alpha.GetValue(frame->number);
@@ -1351,7 +1348,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
 
-	// Apply stretch scale to correctly fit the bounding-box
+    // Apply stretch scale to correctly fit the bounding-box
 	if (parentTrackedObject){
 		scale = SCALE_STRETCH;
 	}
@@ -1471,7 +1468,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		sy*= parentObject_scale_y;
 	}
 
-	float scaled_source_width = source_size.width() * sx;
+    float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
 	
 	switch (gravity)
