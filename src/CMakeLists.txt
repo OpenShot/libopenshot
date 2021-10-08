@@ -282,9 +282,46 @@ if (TARGET jsoncpp_lib)
   target_link_libraries(openshot PUBLIC jsoncpp_lib)
 endif ()
 
-################# QT5 ###################
-# Find QT5 libraries
-set(_qt_components Core Gui Widgets Svg)
+
+###
+### Resvg, the Rust SVG library
+###
+
+# Migrate some legacy variable names
+if(DEFINED RESVGDIR AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT ${RESVGDIR})
+endif()
+if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT $ENV{RESVGDIR})
+endif()
+
+# Find resvg library (used for rendering svg files)
+find_package(Resvg)
+
+# Include resvg headers (optional SVG library)
+if (TARGET Resvg::Resvg)
+  #include_directories(${Resvg_INCLUDE_DIRS})
+  target_link_libraries(openshot PUBLIC Resvg::Resvg)
+
+  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
+
+  set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
+  mark_as_advanced(HAVE_RESVG)
+else()
+  set(HAVE_RESVG FALSE CACHE BOOL "Building with Resvg support" FORCE)
+endif()
+
+###
+### Qt Toolkit
+###
+
+set(_qt_components Core Gui Widgets)
+
+# We also need QtSvg unless we have Resvg insetead.
+if(NOT HAVE_RESVG)
+  list(APPEND _qt_components Svg)
+endif()
+
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
@@ -416,32 +453,6 @@ if (TARGET babl_lib)
   target_compile_definitions(openshot PUBLIC USE_BABL=1)
   target_link_libraries(openshot PUBLIC babl_lib)
 endif ()
-
-###
-### Resvg, the Rust SVG library
-###
-
-# Migrate some legacy variable names
-if(DEFINED RESVGDIR AND NOT DEFINED Resvg_ROOT)
-  set(Resvg_ROOT ${RESVGDIR})
-endif()
-if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
-  set(Resvg_ROOT $ENV{RESVGDIR})
-endif()
-
-# Find resvg library (used for rendering svg files)
-find_package(Resvg)
-
-# Include resvg headers (optional SVG library)
-if (TARGET Resvg::Resvg)
-  #include_directories(${Resvg_INCLUDE_DIRS})
-  target_link_libraries(openshot PUBLIC Resvg::Resvg)
-
-  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
-
-  set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
-  mark_as_advanced(HAVE_RESVG)
-endif()
 
 ################# BLACKMAGIC DECKLINK ###################
 # Find BlackMagic DeckLinkAPI libraries

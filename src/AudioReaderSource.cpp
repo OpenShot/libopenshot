@@ -35,21 +35,25 @@ using namespace std;
 using namespace openshot;
 
 // Constructor that reads samples from a reader
-AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
-	: reader(audio_reader), frame_number(starting_frame_number),
-	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
-
-	// Initialize an audio buffer (based on reader)
-	buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
-
-	// initialize the audio samples to zero (silence)
+AudioReaderSource::AudioReaderSource(
+    ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size
+) :
+    position(0),
+    size(buffer_size),
+    buffer(new juce::AudioSampleBuffer(audio_reader->info.channels, buffer_size)),
+    speed(1),
+    reader(audio_reader),
+    frame_number(starting_frame_number),
+    frame_position(0),
+    estimated_frame(0)
+{
+	// Zero the buffer contents
 	buffer->clear();
 }
 
 // Destructor
 AudioReaderSource::~AudioReaderSource()
 {
-	// Clear and delete the buffer
 	delete buffer;
 	buffer = NULL;
 }

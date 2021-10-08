@@ -99,6 +99,12 @@ if(ENABLE_TESTS)
   set(BUILD_TESTING ${ENABLE_TESTS})
 endif()
 
+### JUCE requires one of -DDEBUG or -DNDEBUG set on the
+### compile command line. CMake automatically sets -DNDEBUG
+### on all non-debug configs, so we'll just add -DDEBUG to
+### the debug build flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
 if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
@@ -212,6 +218,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
     "examples/*"
     "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
     "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/*"
     "audio/*"
   )
   setup_target_for_coverage_lcov(

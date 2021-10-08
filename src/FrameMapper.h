@@ -33,9 +33,9 @@
 
 #include <assert.h>
 #include <iostream>
-#include <cmath>
 #include <vector>
 #include <memory>
+
 #include "CacheMemory.h"
 #include "ReaderBase.h"
 #include "Frame.h"
@@ -211,7 +211,7 @@ namespace openshot
 		void Open() override;
 
 		/// Print all of the original frames and which new frames they map to
-		void PrintMapping();
+		void PrintMapping(std::ostream* out=&std::cout);
 
 		/// Get the current reader
 		ReaderBase* Reader();

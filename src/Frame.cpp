@@ -66,15 +66,15 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 }
 
 // Delegating Constructor - blank frame
-Frame::Frame() : Frame::Frame(1, 1, 1, "#000000", 0, 2) {};
+Frame::Frame() : Frame::Frame(1, 1, 1, "#000000", 0, 2) {}
 
 // Delegating Constructor - image only
 Frame::Frame(int64_t number, int width, int height, std::string color)
-	: Frame::Frame(number, width, height, color, 0, 2) {};
+	: Frame::Frame(number, width, height, color, 0, 2) {}
 
 // Delegating Constructor - audio only
 Frame::Frame(int64_t number, int samples, int channels)
-	: Frame::Frame(number, 1, 1, "#000000", samples, channels) {};
+	: Frame::Frame(number, 1, 1, "#000000", samples, channels) {}
 
 
 // Copy constructor
@@ -438,8 +438,10 @@ juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
 int64_t Frame::GetBytes()
 {
 	int64_t total_bytes = 0;
-	if (image)
-		total_bytes += (width * height * sizeof(char) * 4);
+	if (image) {
+		total_bytes += static_cast<int64_t>(
+		    width * height * sizeof(char) * 4);
+	}
 	if (audio) {
 		// approximate audio size (sample rate / 24 fps)
 		total_bytes += (sample_rate / 24.0) * sizeof(float);
@@ -918,7 +920,7 @@ cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
     cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );
 	cv::cvtColor(mat2, mat2, cv::COLOR_RGB2BGR);
     return mat2;
-};
+}
 
 // Get pointer to OpenCV image object
 cv::Mat Frame::GetImageCV()
