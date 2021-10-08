@@ -40,16 +40,15 @@
 #include <QtGui/QIcon>
 #include <QtGui/QImageReader>
 
-#if USE_RESVG == 1
-	// If defined and found in CMake, utilize the libresvg for parsing
-	// SVG files and rasterizing them to QImages.
-	#include "ResvgQt.h"
-#endif
-
 using namespace openshot;
 
 QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
+
+#if RESVG_VERSION_MIN(0, 11)
+    // Initialize the Resvg options
+    resvg_options.loadSystemFonts();
+#endif
 	// Open and Close the reader, to populate its attributes (such as height, width, etc...)
 	if (inspect_reader) {
 		Open();
@@ -171,8 +170,8 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
     // Calculate max image size
     QSize current_max_size = calculate_max_size();
 
-	// Scale image smaller (or use a previous scaled image)
-	if (!cached_image || (max_size.width() != current_max_size.width() || max_size.height() != current_max_size.height())) {
+    // Scale image smaller (or use a previous scaled image)
+    if (!cached_image || max_size != current_max_size) {
         // Check for SVG files and rasterize them to QImages
         if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
             load_svg_path(path);
@@ -181,21 +180,22 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
         // We need to resize the original image to a smaller image (for performance reasons)
         // Only do this once, to prevent tons of unneeded scaling operations
         cached_image = std::make_shared<QImage>(image->scaled(
-                current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                       current_max_size,
+                       Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-		// Set max size (to later determine if max_size is changed)
-		max_size.setWidth(current_max_size.width());
-		max_size.setHeight(current_max_size.height());
-	}
+        // Set max size (to later determine if max_size is changed)
+        max_size = current_max_size;
+    }
 
-	// Create or get frame object
-	auto image_frame = std::make_shared<Frame>(
-		requested_frame, cached_image->width(), cached_image->height(), "#000000",
-		Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels),
-		info.channels);
+    auto sample_count = Frame::GetSamplesPerFrame(
+        requested_frame, info.fps, info.sample_rate, info.channels);
+    auto sz = cached_image->size();
 
-	// Add Image data to frame
-	image_frame->AddImage(cached_image);
+    // Create frame object
+    auto image_frame = std::make_shared<Frame>(
+            requested_frame, sz.width(), sz.height(), "#000000",
+            sample_count, info.channels);
+    image_frame->AddImage(cached_image);
 
 	// return frame object
 	return image_frame;
@@ -270,27 +270,34 @@ QSize QtImageReader::load_svg_path(QString) {
     // Calculate max image size
     QSize current_max_size = calculate_max_size();
 
-#if USE_RESVG == 1
-    // Use libresvg for parsing/rasterizing SVG
+// Try to use libresvg for parsing/rasterizing SVG, if available
+#if RESVG_VERSION_MIN(0, 11)
+    ResvgRenderer renderer(path, resvg_options);
+    if (renderer.isValid()) {
+        default_size = renderer.defaultSize();
+        // Scale SVG size to keep aspect ratio, and fill max_size as much as possible
+        QSize svg_size = default_size.scaled(current_max_size, Qt::KeepAspectRatio);
+        auto qimage = renderer.renderToImage(svg_size);
+        image = std::make_shared<QImage>(
+                qimage.convertToFormat(QImage::Format_RGBA8888_Premultiplied));
+        loaded = true;
+    }
+#elif RESVG_VERSION_MIN(0, 0)
     ResvgRenderer renderer(path);
     if (renderer.isValid()) {
-        // Set default SVG size
-        default_size.setWidth(renderer.defaultSize().width());
-        default_size.setHeight(renderer.defaultSize().height());
-
-        // Scale SVG size to keep aspect ratio, and fill the max_size as best as possible
-        QSize svg_size(default_size.width(), default_size.height());
-        svg_size.scale(current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio);
-
+        default_size = renderer.defaultSize();
+        // Scale SVG size to keep aspect ratio, and fill max_size as much as possible
+        QSize svg_size = default_size.scaled(current_max_size, Qt::KeepAspectRatio);
         // Load SVG at max size
-        image = std::make_shared<QImage>(svg_size, QImage::Format_RGBA8888_Premultiplied);
+        image = std::make_shared<QImage>(svg_size,
+                QImage::Format_RGBA8888_Premultiplied);
         image->fill(Qt::transparent);
         QPainter p(image.get());
         renderer.render(&p);
         p.end();
         loaded = true;
     }
-#endif
+#endif  // Resvg
 
     if (!loaded) {
         // Use Qt for parsing/rasterizing SVG
@@ -304,7 +311,8 @@ QSize QtImageReader::load_svg_path(QString) {
 
             if (image->width() < current_max_size.width() || image->height() < current_max_size.height()) {
                 // Load SVG into larger/project size (so image is not blurry)
-                QSize svg_size = image->size().scaled(current_max_size.width(), current_max_size.height(), Qt::KeepAspectRatio);
+                QSize svg_size = image->size().scaled(
+                                 current_max_size, Qt::KeepAspectRatio);
                 if (QCoreApplication::instance()) {
                     // Requires QApplication to be running (for QPixmap support)
                     // Re-rasterize SVG image to max size
@@ -312,7 +320,7 @@ QSize QtImageReader::load_svg_path(QString) {
                 } else {
                     // Scale image without re-rasterizing it (due to lack of QApplication)
                     image = std::make_shared<QImage>(image->scaled(
-                            svg_size.width(), svg_size.height(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                            svg_size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
                 }
             }
         }
