@@ -33,7 +33,7 @@
 
 #include "Clip.h"
 
-#include "protobuf_messages/trackerdata.pb.h"
+#include "trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
 using google::protobuf::util::TimeUtil;
@@ -395,7 +395,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 	// Set the protobuf data path by the given JSON object
 	if (!root["protobuf_data_path"].isNull())
 		protobufDataPath = root["protobuf_data_path"].asString();
-	
+
 	// Set the id of the child clip
 	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != "" && root["child_clip_id"].asString() != Id()){
 		Clip* parentClip = (Clip *) ParentClip();

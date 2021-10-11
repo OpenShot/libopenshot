@@ -32,15 +32,13 @@
 #ifndef OPENSHOT_STABILIZER_EFFECT_H
 #define OPENSHOT_STABILIZER_EFFECT_H
 
-#include "../EffectBase.h"
+#include "EffectBase.h"
 
-#include <cmath>
-#include <stdio.h>
 #include <memory>
-#include "../Color.h"
-#include "../Json.h"
-#include "../KeyFrame.h"
-#include "protobuf_messages/stabilizedata.pb.h"
+
+#include "Color.h"
+#include "Json.h"
+#include "KeyFrame.h"
 
 // Store the relative transformation parameters between consecutive frames
 struct EffectTransformParam

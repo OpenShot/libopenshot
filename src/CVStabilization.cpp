@@ -34,6 +34,8 @@
 #include <iostream>
 
 #include "CVStabilization.h"
+
+#include "stabilizedata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
 using namespace std;
