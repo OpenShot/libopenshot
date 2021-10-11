@@ -227,7 +227,10 @@ $<TARGET_GENEX_EVAL:openshot,
   set(COVERAGE_EXCLUDES
     "bindings/.*"
     "examples/.*"
-    "${CMAKE_CURRENT_BINARY_DIR}/.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/bindings/.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/examples/.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/.*_autogen.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/.*"
     "audio/.*"
     "/usr/include/.*"
   )
