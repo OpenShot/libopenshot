@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "Color.h"
 #include "Json.h"
 #include "KeyFrame.h"
 
@@ -55,6 +54,8 @@ struct EffectCamTrajectory
 
 namespace openshot
 {
+    // Forwward decls
+    class Frame;
 
     /**
      * @brief This class stabilizes a video clip to remove undesired shaking and jitter.

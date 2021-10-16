@@ -20,7 +20,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Color.h"
 #include "Json.h"
 #include "KeyFrame.h"
 
@@ -49,6 +48,9 @@ struct DetectionData{
 
 namespace openshot
 {
+    // Forward decls
+    class Frame;
+
     /**
      * @brief This effect displays all the detected objects on a clip.
      */
