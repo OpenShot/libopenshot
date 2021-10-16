@@ -1,3 +1,7 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 name: libopenshot CI Build
 on: [push, pull_request]
 

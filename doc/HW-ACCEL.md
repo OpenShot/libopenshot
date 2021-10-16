@@ -1,3 +1,9 @@
+<!--
+© OpenShot Studios, LLC
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 ## Hardware Acceleration
 
 OpenShot now has experimental support for hardware acceleration, which uses 1 (or more)
