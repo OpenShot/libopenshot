@@ -1,3 +1,7 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # Workflow to run 'reuse lint' via the reuse-action script,
 # which will flag any files added or changed in the repo
 # that don't have valid, verifiable license data associated
