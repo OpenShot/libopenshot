@@ -33,27 +33,21 @@ target_link_libraries(openshot-html-example openshot Qt5::Gui)
 # Create test executable
 add_executable(openshot-player qt-demo/main.cpp)
 
-set_target_properties(openshot-player PROPERTIES AUTOMOC ON)
+set_target_properties(openshot-player
+  PROPERTIES
+    AUTOMOC ON
+    WIN32_EXECUTABLE ON
+)
 
 # Link test executable to the new library
 target_link_libraries(openshot-player openshot)
-
-############### TEST BLACKMAGIC CAPTURE APP ################
-if (BLACKMAGIC_FOUND)
-	# Create test executable
-	add_executable(openshot-blackmagic
-			examples/ExampleBlackmagic.cpp)
-
-	# Link test executable to the new library
-	target_link_libraries(openshot-blackmagic openshot)
-endif()
 
 ############### OPENCV EXAMPLE ################
 #if (DEFINED CACHE{HAVE_OPENCV})
 #	# Create test executable
 #	add_executable(openshot-example-opencv
 #			Example_opencv.cpp)
-#	
+#
 #	target_compile_definitions(openshot-example-opencv PRIVATE
 #	                           -DTEST_MEDIA_PATH="${TEST_MEDIA_PATH}" )
 #	# Link test executable to the new library

@@ -421,30 +421,6 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
-################# BLACKMAGIC DECKLINK ###################
-# Find BlackMagic DeckLinkAPI libraries
-if (ENABLE_BLACKMAGIC)
-  find_package(BlackMagic)
-
-  if (BLACKMAGIC_FOUND)
-    # BlackMagic related files
-    target_sources(openshot PRIVATE
-      DecklinkInput.cpp
-      DecklinkReader.cpp
-      DecklinkOutput.cpp
-      DecklinkWriter.cpp)
-
-    # Include Blackmagic headers (needed for compile)
-    target_include_directories(openshot PRIVATE ${BLACKMAGIC_INCLUDE_DIR})
-
-    # Link libopenshot with BlackMagic libs
-    target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
-
-    # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
-  endif()
-endif()
-
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
   find_package(OpenCV 4)

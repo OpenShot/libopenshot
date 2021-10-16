@@ -16,17 +16,6 @@ endif()
 # Test media path, used by unit tests for input data
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 
-################# BLACKMAGIC DECKLINK ###################
-if(ENABLE_BLACKMAGIC)
-	# Find BlackMagic DeckLinkAPI libraries
-	find_package(BlackMagic)
-
-	if(BLACKMAGIC_FOUND)
-		# Include Blackmagic headers (needed for compile)
-		include_directories(${BLACKMAGIC_INCLUDE_DIR})
-	endif()
-endif()
-
 ###
 ###  TEST SOURCE FILES
 ###
@@ -82,11 +71,15 @@ add_library(catch-main OBJECT catch_main.cpp)
 target_link_libraries(catch-main PUBLIC Catch2::Catch2)
 
 foreach(tname ${OPENSHOT_TESTS})
-  add_executable(openshot-${tname}-test ${tname}.cpp $<TARGET_OBJECTS:catch-main>)
+  add_executable(openshot-${tname}-test
+    ${tname}.cpp
+    $<TARGET_OBJECTS:catch-main>
+  )
   target_compile_definitions(openshot-${tname}-test PRIVATE
     TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
   )
   target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
+
   # Automatically configure CTest targets from Catch2 test cases
   catch_discover_tests(
     openshot-${tname}-test
@@ -97,13 +90,14 @@ foreach(tname ${OPENSHOT_TESTS})
   list(APPEND CATCH2_TEST_TARGETS openshot-${tname}-test)
   list(APPEND CATCH2_TEST_NAMES ${tname})
 endforeach()
+
 # Add an additional special-case test, for an envvar-dependent setting
-add_test(NAME [=["Settings:Debug logging (enabled)"]=]
-  COMMAND
-    openshot-Settings-test "[environment]"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-set_tests_properties([=["Settings:Debug logging (enabled)"]=]
+catch_discover_tests(
+  openshot-Settings-test
+  TEST_LIST Settings_EXTRA_TESTS
+  TEST_PREFIX Settings:
+  TEST_SUFFIX "(enabled)"
+  TEST_WORKING_DIR "${_test_dir}"
   PROPERTIES
     LABELS Settings
     ENVIRONMENT "LIBOPENSHOT_DEBUG=1"

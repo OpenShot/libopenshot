@@ -107,13 +107,6 @@
 #endif
 %}
 
-#ifdef USE_BLACKMAGIC
-	%{
-		#include "DecklinkReader.h"
-		#include "DecklinkWriter.h"
-	%}
-#endif
-
 #ifdef USE_IMAGEMAGICK
 	%{
 		#include "ImageReader.h"
@@ -135,10 +128,6 @@
 %include "Clip.h"
 %include "Coordinate.h"
 %include "Color.h"
-#ifdef USE_BLACKMAGIC
-	%include "DecklinkReader.h"
-	%include "DecklinkWriter.h"
-#endif
 %include "DummyReader.h"
 %include "EffectBase.h"
 %include "Effects.h"
