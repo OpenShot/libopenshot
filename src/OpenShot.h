@@ -113,10 +113,6 @@
 #include "Clip.h"
 #include "ClipBase.h"
 #include "Coordinate.h"
-#ifdef USE_BLACKMAGIC
-	#include "DecklinkReader.h"
-	#include "DecklinkWriter.h"
-#endif
 #include "DummyReader.h"
 #include "EffectBase.h"
 #include "Effects.h"
