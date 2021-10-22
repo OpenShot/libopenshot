@@ -1,28 +1,6 @@
-# Redistribution and use is allowed according to the terms of the New
-# BSD license:
+# Copyright (c) 2009, 2010, 2011 Tobias Rautenkranz <tobias@rautenkranz.ch>
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#
-# 1. Redistributions of source code must retain the copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# SPDX-License-Identifier: BSD-3-Clause
 
 #  - Run Doxygen
 #
@@ -56,24 +34,17 @@
 #  DOXYFILE_EXTRA_SOURCES - Additional source diretories/files for Doxygen to scan.
 #  	The Paths should be in double quotes and separated by space. e.g.:
 #  	 "${CMAKE_CURRENT_BINARY_DIR}/foo.c" "${CMAKE_CURRENT_BINARY_DIR}/bar/"
-#  
+#
 #  DOXYFILE_OUTPUT_DIR - Path where the Doxygen output is stored.
 #  	Defaults to "${CMAKE_CURRENT_BINARY_DIR}/doc".
-#  
+#
 #  DOXYFILE_LATEX - ON/OFF; Set to "ON" if you want the LaTeX documentation
 #  	to be built.
 #  DOXYFILE_LATEX_DIR - Directory relative to DOXYFILE_OUTPUT_DIR where
 #  	the Doxygen LaTeX output is stored. Defaults to "latex".
-#  
+#
 #  DOXYFILE_HTML_DIR - Directory relative to DOXYFILE_OUTPUT_DIR where
 #  	the Doxygen html output is stored. Defaults to "html".
-#
-
-#
-#  Copyright (c) 2009, 2010, 2011 Tobias Rautenkranz <tobias@rautenkranz.ch>
-#
-#  Redistribution and use is allowed according to the terms of the New
-#  BSD license.
 #
 
 macro(usedoxygen_set_default name value type docstring)
@@ -118,14 +89,14 @@ if(DOXYGEN_FOUND AND DOXYFILE_IN_FOUND)
 		set(DOXYFILE_DOT "YES")
 	endif()
 
-	set_property(DIRECTORY 
+	set_property(DIRECTORY
 		APPEND PROPERTY
 		ADDITIONAL_MAKE_CLEAN_FILES
 		"${DOXYFILE_OUTPUT_DIR}/${DOXYFILE_HTML_DIR}")
 
 	add_custom_target(doxygen
 		COMMAND "${DOXYGEN_EXECUTABLE}"
-			"${DOXYFILE}" 
+			"${DOXYFILE}"
 		COMMENT "Writing documentation to ${DOXYFILE_OUTPUT_DIR}..."
 		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 

@@ -3,33 +3,15 @@
  * @brief Source file for FFmpegWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @ref License
- */
-
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
  * This file is originally based on the Libavformat API example, and then modified
  * by the libopenshot project.
  *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ * @ref License
  */
+
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
@@ -1143,6 +1125,10 @@ AVStream *FFmpegWriter::add_video_stream() {
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
 
+	// Set sample aspect ratio
+    c->sample_aspect_ratio.num = info.pixel_ratio.num;
+    c->sample_aspect_ratio.den = info.pixel_ratio.den;
+
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000
 #if (LIBAVCODEC_VERSION_MAJOR >= 58)
@@ -1219,7 +1205,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 		}
 	}
 
-//TODO: Implement variable bitrate feature (which actually works). This implementation throws
+    //TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
 	//c->rc_min_rate = info.video_bit_rate;
 	//c->rc_max_rate = info.video_bit_rate;

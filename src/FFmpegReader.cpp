@@ -3,33 +3,15 @@
  * @brief Source file for FFmpegReader class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @ref License
- */
-
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
  * This file is originally based on the Libavformat API example, and then modified
  * by the libopenshot project.
  *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ * @ref License
  */
+
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
@@ -645,14 +627,29 @@ void FFmpegReader::UpdateAudioInfo() {
 	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
 	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
 	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
+	if (info.audio_bit_rate <= 0) {
+	    // Get bitrate from format
+        info.audio_bit_rate = pFormatCtx->bit_rate;
+	}
 
 	// Set audio timebase
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
 
 	// Get timebase of audio stream (if valid) and greater than the current duration
-	if (aStream->duration > 0.0f && aStream->duration > info.duration)
-		info.duration = aStream->duration * info.audio_timebase.ToDouble();
+	if (aStream->duration > 0 && aStream->duration > info.duration) {
+	    // Get duration from audio stream
+        info.duration = aStream->duration * info.audio_timebase.ToDouble();
+    } else if (pFormatCtx->duration > 0 && info.duration <= 0.0f) {
+        // Use the format's duration
+        info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+    }
+
+    // Calculate duration from filesize and bitrate (if any)
+    if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
+        // Estimate from bitrate, total bytes, and framerate
+        info.duration = float(info.file_size) / info.video_bit_rate;
+    }
 
 	// Check for an invalid video length
 	if (info.has_video && info.video_length <= 0) {
@@ -767,14 +764,16 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.duration = pStream->duration * info.video_timebase.ToDouble();
 
 	// Check for valid duration (if found)
-	if (info.duration <= 0.0f && pFormatCtx->duration >= 0)
-		// Use the format's duration
-		info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+	if (info.duration <= 0.0f && pFormatCtx->duration >= 0) {
+        // Use the format's duration
+        info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+    }
 
 	// Calculate duration from filesize and bitrate (if any)
-	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0)
-		// Estimate from bitrate, total bytes, and framerate
-		info.duration = float(info.file_size) / info.video_bit_rate;
+	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
+        // Estimate from bitrate, total bytes, and framerate
+        info.duration = float(info.file_size) / info.video_bit_rate;
+    }
 
 	// No duration found in stream of file
 	if (info.duration <= 0.0f) {
@@ -1268,7 +1267,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			max_width = std::max(float(max_width), max_width * max_scale_x);
 			max_height = std::max(float(max_height), max_height * max_scale_y);
 
-		} else if (parent->scale == SCALE_CROP) {
+        } else if (parent->scale == SCALE_CROP) {
 			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
 			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
@@ -1842,20 +1841,25 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number
-			video_pts_offset = 0 - GetVideoPTS();
+            if (pStream->start_time != AV_NOPTS_VALUE && pStream->start_time > 0) {
+                // Adjust all PTS by start_time (if available)
+                video_pts_offset = 0 - pStream->start_time;
+            } else {
+                // Find the difference between PTS and frame number
+                video_pts_offset = 0 - GetVideoPTS();
 
-			// Find the difference between PTS and frame number
-			// Also, determine if PTS is invalid (too far away from zero)
-			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
-			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
-			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
-			// for ideas to improve this logic.
-			int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
-			if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
-				// Ignore PTS, it seems invalid
-				video_pts_offset = 0;
-			}
+                // Find the difference between PTS and frame number
+                // Also, determine if PTS is invalid (too far away from zero)
+                // We compare the PTS to the timebase value equal to 1 second (which means the PTS
+                // must be within the -1 second to +1 second of zero, otherwise we ignore it)
+                // TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+                // for ideas to improve this logic.
+                int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
+                if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
+                    // Ignore PTS, it seems invalid
+                    video_pts_offset = 0;
+                }
+            }
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1870,11 +1874,19 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
 			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
 			// for ideas to improve this logic.
-			audio_pts_offset = 0 - packet->pts;
-			int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
-			if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
-				// Ignore PTS, it seems invalid
-				audio_pts_offset = 0;
+			if (aStream->start_time != AV_NOPTS_VALUE && aStream->start_time > 0) {
+			    // Adjust all PTS by start_time (if available)
+                audio_pts_offset = 0 - aStream->start_time;
+			} else {
+			    // Determine if PTS is sane
+                audio_pts_offset = 0 - packet->pts;
+                int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
+                if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
+                    // Ignore PTS, it seems invalid
+                    // Assuming the start_time is not set or not valid, then the PTS should be near the
+                    // beginning of the stream
+                    audio_pts_offset = 0;
+                }
 			}
 
 			// debug output

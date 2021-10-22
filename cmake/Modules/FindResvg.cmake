@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # vim: ts=2 sw=2
 #[=======================================================================[.rst:
 FindResvg
