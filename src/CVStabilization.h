@@ -20,11 +20,20 @@
 #include <opencv2/core.hpp>
 #undef uint64
 #undef int64
-#include <cmath>
-#include "protobuf_messages/stabilizedata.pb.h"
+
+#include <map>
+#include <string>
+#include <vector>
+
 #include "ProcessingController.h"
+
 #include "Clip.h"
 #include "Json.h"
+
+// Forward decl
+namespace pb_stabilize {
+    class Frame;
+}
 
 // Store the relative transformation parameters between consecutive frames
 struct TransformParam
@@ -82,7 +91,7 @@ class CVStabilization {
     bool error = false;
 
     /// Will handle a Thread safely comutication between ClipProcessingJobs and the processing effect classes
-	ProcessingController *processingController;
+    ProcessingController *processingController;
 
     /// Track current frame features and find the relative transformation
     bool TrackFrameFeatures(cv::Mat frame, size_t frameNum);

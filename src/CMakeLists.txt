@@ -427,7 +427,7 @@ if(ENABLE_OPENCV)
   if(NOT OpenCV_FOUND)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
-    # If we have version 4.5.1, all hope is lost
+  # If we have version 4.5.1, all hope is lost
   elseif(OpenCV_VERSION VERSION_EQUAL "4.5.1")
     message(WARNING [[Incompatible OpenCV version detected
 OpenCV version 4.5.1 contains header errors which make it unable to be used with OpenShot. OpenCV support wil be disabled. Upgrade to OpenCV 4.5.2+ or downgrade to 4.5.0 or earlier, to enable OpenCV.
@@ -435,7 +435,35 @@ See https://github.com/opencv/opencv/issues/19260]])
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
   else()
-    add_subdirectory(protobuf_messages)
+    ###
+    ### Protocol Buffers
+    ###
+    find_package(Protobuf 3 REQUIRED)
+
+    # Create a target for libprotobuf, if necessary (CMake < 3.9)
+    if(NOT TARGET protobuf::libprotobuf)
+      add_library(protobuf_TARGET INTERFACE)
+      target_include_directories(protobuf_TARGET
+        INTERFACE ${Protobuf_INCLUDE_DIRS})
+      target_link_libraries(protobuf_TARGET INTERFACE ${Protobuf_LIBRARIES})
+      add_library(protobuf::libprotobuf ALIAS protobuf_TARGET)
+    endif()
+
+    # Create libopenshot_protobuf
+    set(PROTOBUF_SOURCES
+      "objdetectdata.proto"
+      "stabilizedata.proto"
+      "trackerdata.proto"
+    )
+    PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${PROTOBUF_SOURCES})
+
+    target_sources(openshot PRIVATE ${ProtoSources} ${ProtoHeaders})
+    target_link_libraries(openshot PRIVATE protobuf::libprotobuf)
+
+    ###
+    ### OpenCV
+    ###
+
     # Add OpenCV source files
     target_sources(openshot PRIVATE
       ${OPENSHOT_CV_SOURCES}
@@ -447,7 +475,6 @@ See https://github.com/opencv/opencv/issues/19260]])
       opencv_highgui
       opencv_dnn
       opencv_tracking
-      openshot_protobuf
     )
     set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
     mark_as_advanced(HAVE_OPENCV)
@@ -480,7 +507,7 @@ endif()
 ### INSTALL HEADERS & LIBRARY
 ###
 
-# Install primary library
+# Install libraries
 install(TARGETS openshot
   COMPONENT runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -493,6 +520,7 @@ install(DIRECTORY .
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot
   FILES_MATCHING PATTERN "*.h"
 )
+
 
 # On Windows, we copy project output DLLs into the tests dir
 # so that the unit test executables can find them
@@ -508,6 +536,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32 AND BUILD_TESTING)
     COMMENT
       "Copying libopenshot DLL to unit test directory"
   )
+
   # Also copy libopenshot-audio DLL
   get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION)
   add_custom_target(test-install-audio-dll ALL

@@ -19,6 +19,7 @@
 
 #include "OpenCVUtilities.h"
 #include "CVTracker.h"
+#include "trackerdata.pb.h"
 
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
