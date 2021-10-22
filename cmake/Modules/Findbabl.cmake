@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2021 OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 function(_babl_GET_VERSION _header)
   file(STRINGS "${_header}" _version_defs
     REGEX "^[ \t]*#define[ \t]+BABL_[A-Z]+_VERSION.*")
