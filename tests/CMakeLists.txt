@@ -95,6 +95,7 @@ endforeach()
 catch_discover_tests(
   openshot-Settings-test
   TEST_LIST Settings_EXTRA_TESTS
+  TEST_SPEC "[environment]"
   TEST_PREFIX Settings:
   TEST_SUFFIX "(enabled)"
   TEST_WORKING_DIR "${_test_dir}"
