@@ -114,7 +114,7 @@ int64_t SearchBetweenPoints(Point const & left, Point const & right, int64_t con
 // Constructor which sets the default point & coordinate at X=1
 Keyframe::Keyframe(double value) {
 	// Add initial point
-	AddPoint(Point(value));
+	AddPoint(Point(1, value));
 }
 
 // Constructor which takes a vector of Points
