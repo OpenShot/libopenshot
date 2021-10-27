@@ -18,12 +18,11 @@
 
 #include "ReaderBase.h"
 #include "Json.h"
-#include "CacheMemory.h"
 
 namespace openshot
 {
+	class CacheBase;
 	class Frame;
-
 	/**
 	 * @brief This struct holds the location of a frame within a chunk.
 	 *
@@ -119,7 +118,7 @@ namespace openshot
 		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		openshot::CacheMemory* GetCache() override { return nullptr; };
+		openshot::CacheBase* GetCache() override { return nullptr; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)

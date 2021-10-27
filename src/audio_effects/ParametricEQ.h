@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Header file for Parametric EQ audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -14,21 +14,21 @@
 #define OPENSHOT_PARAMETRIC_EQ_AUDIO_EFFECT_H
 #define _USE_MATH_DEFINES
 
-#include "../EffectBase.h"
+#include "EffectBase.h"
 
-#include "../Frame.h"
-#include "../Json.h"
-#include "../KeyFrame.h"
-#include "../Enums.h"
+#include "Json.h"
+#include "KeyFrame.h"
+#include "Enums.h"
 
 #include <memory>
 #include <string>
-#include <math.h>
-// #include <OpenShotAudio.h>
 
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 namespace openshot
 {
+	class Frame;
 
 	/**
 	 * @brief This class adds a equalization into the audio
@@ -41,8 +41,8 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		openshot::FilterType filter_type;	
-		Keyframe frequency;	
+		openshot::FilterType filter_type;
+		Keyframe frequency;
 		Keyframe q_factor;
 		Keyframe gain;
 		bool initialized;
@@ -52,7 +52,7 @@ namespace openshot
 
 		/// Default constructor
 		///
-		/// @param new_level 
+		/// @param new_level
 		ParametricEQ(openshot::FilterType new_filter_type, Keyframe new_frequency, Keyframe new_gain, Keyframe new_q_factor);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
@@ -61,8 +61,8 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { 
-			return GetFrame(std::make_shared<openshot::Frame>(), frame_number); 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override {
+			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		}
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
@@ -86,7 +86,7 @@ namespace openshot
 		/// of all properties at any time)
 		std::string PropertiesJSON(int64_t requested_frame) const override;
 
-		class Filter : public IIRFilter
+		class Filter : public juce::IIRFilter
 		{
 		public:
 			void updateCoefficients (const double discrete_frequency,

@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Expander audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -12,6 +12,7 @@
 
 #include "Expander.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
@@ -22,7 +23,7 @@ Expander::Expander() : threshold(-10), ratio(1), attack(1), release(1), makeup_g
 }
 
 // Default constructor
-Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
+Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) :
 				   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
 {
 	// Init effect properties
@@ -60,7 +61,7 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
     mixed_down_input.setSize(1, num_samples);
 	inverse_sample_rate = 1.0f / frame->SampleRate();
     inverseE = 1.0f / M_E;
-	
+
 	if ((bool)bypass.GetValue(frame_number))
         return frame;
 
@@ -76,12 +77,12 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
         float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
         float gain = makeup_gain.GetValue(frame_number);
 		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
-        
+
 		const float average_factor = 0.9999f;
 		input_level = average_factor * input_level + (1.0f - average_factor) * input_squared;
 
         xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
-		
+
 		if (xg > T)
 			yg = xg;
 		else

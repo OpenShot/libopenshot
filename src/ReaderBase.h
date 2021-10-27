@@ -15,6 +15,8 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -22,14 +24,11 @@
 #include "Fraction.h"
 #include "Json.h"
 
-#include <OpenShotAudio.h>
-
 namespace openshot
 {
-	class ClipBase;
 	class CacheBase;
+	class ClipBase;
 	class Frame;
-
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
@@ -76,9 +75,9 @@ namespace openshot
 	class ReaderBase
 	{
 	protected:
-		/// Section lock for multiple threads
-		juce::CriticalSection getFrameCriticalSection;
-		juce::CriticalSection processingCriticalSection;
+		/// Mutex for multiple threads
+		std::recursive_mutex getFrameMutex;
+		std::recursive_mutex processingMutex;
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:

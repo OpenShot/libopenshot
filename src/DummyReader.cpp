@@ -113,7 +113,7 @@ std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 
 	if (dummy_cache_count == 0 && image_frame) {
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Always return same frame (regardless of which frame number was requested)
 		image_frame->number = requested_frame;
@@ -121,7 +121,7 @@ std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 
 	} else if (dummy_cache_count > 0) {
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Get a frame from the dummy cache
 		std::shared_ptr<openshot::Frame> f = dummy_cache->GetFrame(requested_frame);

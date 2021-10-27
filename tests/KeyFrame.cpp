@@ -16,16 +16,18 @@
 #include <memory>
 
 #include "KeyFrame.h"
-#include "Exceptions.h"
 #include "Coordinate.h"
-#include "Fraction.h"
 #include "Clip.h"
+#include "Exceptions.h"
+#include "FFmpegReader.h"
+#include "Fraction.h"
+#include "Point.h"
 #include "Timeline.h"
+
 #ifdef USE_OPENCV
 #include "effects/Tracker.h"
 #include "TrackedObjectBBox.h"
 #endif
-#include "Point.h"
 
 using namespace openshot;
 

@@ -15,6 +15,7 @@
 #include "CacheMemory.h"
 #include "Clip.h"
 #include "DummyReader.h"
+#include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "Frame.h"

@@ -14,6 +14,7 @@
 #include "Exceptions.h"
 
 using namespace openshot;
+using namespace juce;
 
 /// Blank constructor, useful when using Json to load the effect properties
 ParametricEQ::ParametricEQ() : filter_type(LOW_PASS), frequency(500), gain(0), q_factor(0) {

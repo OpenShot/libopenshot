@@ -14,10 +14,9 @@
 #define OPENSHOT_CACHE_BASE_H
 
 #include <memory>
+#include <mutex>
 
 #include "Json.h"
-
-#include <OpenShotAudio.h>
 
 namespace openshot {
 	class Frame;
@@ -35,8 +34,8 @@ namespace openshot {
 		std::string cache_type; ///< This is a friendly type name of the derived cache instance
 		int64_t max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
-		/// Section lock for multiple threads
-	    juce::CriticalSection *cacheCriticalSection;
+		/// Mutex for multiple threads
+		std::recursive_mutex *cacheMutex;
 
 
 	public:

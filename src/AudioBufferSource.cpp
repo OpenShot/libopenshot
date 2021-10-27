@@ -16,14 +16,14 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor
-AudioBufferSource::AudioBufferSource(juce::AudioSampleBuffer *audio_buffer)
+AudioBufferSource::AudioBufferSource(juce::AudioBuffer<float> *audio_buffer)
 		: position(0), repeat(false), buffer(audio_buffer)
 { }
 
 // Destructor
 AudioBufferSource::~AudioBufferSource()
 {
-	// forget the AudioSampleBuffer. It still exists; we just don't know about it.
+	// forget the AudioBuffer<float>. It still exists; we just don't know about it.
 	buffer = NULL;
 }
 
@@ -115,8 +115,8 @@ void AudioBufferSource::setLooping (bool shouldLoop)
 	repeat = shouldLoop;
 }
 
-// Use a different AudioSampleBuffer for this source
-void AudioBufferSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
+// Use a different AudioBuffer<float> for this source
+void AudioBufferSource::setBuffer (juce::AudioBuffer<float> *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);

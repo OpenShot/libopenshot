@@ -19,6 +19,7 @@
 #include "Clip.h"
 #include "CVTracker.h"  // for FrameData, CVTracker
 #include "ProcessingController.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 

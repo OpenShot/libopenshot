@@ -25,24 +25,23 @@
 
 #include <memory>
 #include <string>
-#include <QtGui/QImage>
 
-#include "AudioResampler.h"
 #include "ClipBase.h"
+#include "ReaderBase.h"
+
 #include "Color.h"
 #include "Enums.h"
 #include "EffectBase.h"
-#include "Effects.h"
 #include "EffectInfo.h"
-#include "Frame.h"
 #include "KeyFrame.h"
 #include "TrackedObjectBase.h"
-#include "ReaderBase.h"
-#include <OpenShotAudio.h>
 
+#include <QImage>
 
 namespace openshot {
+	class AudioResampler;
 	class EffectInfo;
+	class Frame;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -90,8 +89,8 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 	protected:
-		/// Section lock for multiple threads
-	    juce::CriticalSection getFrameCriticalSection;
+		/// Mutex for multiple threads
+	    std::recursive_mutex getFrameMutex;
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -149,7 +148,7 @@ namespace openshot {
 		void sort_effects();
 
 		/// Reverse an audio buffer
-		void reverse_buffer(juce::AudioSampleBuffer* buffer);
+		void reverse_buffer(juce::AudioBuffer<float>* buffer);
 
 
 	public:
@@ -201,7 +200,7 @@ namespace openshot {
 		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return parentTrackedObject; };
 		/// Return a pointer to the clip this clip is attached to
 		Clip* GetAttachedClip() const { return parentClipObject; };
-		
+
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 

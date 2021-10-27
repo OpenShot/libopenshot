@@ -16,8 +16,9 @@
 #include <iostream>
 
 #include "CVObjectDetection.h"
-#include "objdetectdata.pb.h"
+#include "Exceptions.h"
 
+#include "objdetectdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
 using namespace std;

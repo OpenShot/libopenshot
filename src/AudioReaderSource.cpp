@@ -15,8 +15,6 @@
 #include "Frame.h"
 #include "ZmqLogger.h"
 
-#include <OpenShotAudio.h>
-
 using namespace std;
 using namespace openshot;
 
@@ -26,7 +24,7 @@ AudioReaderSource::AudioReaderSource(
 ) :
     position(0),
     size(buffer_size),
-    buffer(new juce::AudioSampleBuffer(audio_reader->info.channels, buffer_size)),
+    buffer(new juce::AudioBuffer<float>(audio_reader->info.channels, buffer_size)),
     speed(1),
     reader(audio_reader),
     frame_number(starting_frame_number),
@@ -63,7 +61,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 	estimated_frame = frame_number;
 
 	// Init new buffer
-	juce::AudioSampleBuffer *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
+	juce::AudioBuffer<float> *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
 	new_buffer->clear();
 
 	// Move the remaining samples into new buffer (if any)
@@ -132,7 +130,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 }
 
 // Reverse an audio buffer
-juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuffer* buffer)
+juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioSampleBuffer* buffer)
 {
 	int number_of_samples = buffer->getNumSamples();
 	int channels = buffer->getNumChannels();
@@ -141,7 +139,7 @@ juce::AudioSampleBuffer* AudioReaderSource::reverse_buffer(juce::AudioSampleBuff
 	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
 
 	// Reverse array (create new buffer to hold the reversed version)
-	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioBuffer<float> *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -276,7 +274,7 @@ void AudioReaderSource::setLooping (bool shouldLoop)
 }
 
 // Update the internal buffer used by this source
-void AudioReaderSource::setBuffer (juce::AudioSampleBuffer *audio_buffer)
+void AudioReaderSource::setBuffer (juce::AudioBuffer<float> *audio_buffer)
 {
 	buffer = audio_buffer;
 	setNextReadPosition(0);

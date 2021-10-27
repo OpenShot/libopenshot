@@ -14,19 +14,12 @@
 #define OPENSHOT_LOGGER_H
 
 
-#include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <cstdlib>
+#include <memory>
+#include <mutex>
 #include <string>
-#include <sstream>
-#include <cstdio>
-#include <ctime>
-#include <zmq.hpp>
-#include <unistd.h>
-#include <OpenShotAudio.h>
-#include "Settings.h"
 
+#include <zmq.hpp>
 
 namespace openshot {
 
@@ -38,7 +31,7 @@ namespace openshot {
 	 */
 	class ZmqLogger {
 	private:
-		juce::CriticalSection loggerCriticalSection;
+		std::recursive_mutex loggerMutex;
 		std::string connection;
 
 		// Logfile related vars

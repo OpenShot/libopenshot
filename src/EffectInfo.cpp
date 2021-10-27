@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "EffectInfo.h"
+#include "Effects.h"
 
 using namespace openshot;
-
 
 // Generate JSON string of this object
 std::string EffectInfo::Json() {
@@ -103,7 +103,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 
 	else if(effect_type == "Tracker")
 		return new Tracker();
-		
+
 	else if(effect_type == "Object Detector")
 		return new ObjectDetection();
 	#endif

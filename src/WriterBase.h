@@ -17,12 +17,12 @@
 
 #include "ChannelLayouts.h"
 #include "Fraction.h"
-#include "Frame.h"
-#include "ReaderBase.h"
-#include "ZmqLogger.h"
+#include "Json.h"
 
 namespace openshot
 {
+	class ReaderBase;
+	class Frame;
 	/**
 	 * @brief This struct contains info about encoding a media file, such as height, width, frames per second, etc...
 	 *

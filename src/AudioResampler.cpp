@@ -34,7 +34,7 @@ AudioResampler::AudioResampler()
 	resample_source = new juce::ResamplingAudioSource(buffer_source, false, 2);
 
 	// Init resampled buffer
-	resampled_buffer = new juce::AudioSampleBuffer(2, 1);
+	resampled_buffer = new juce::AudioBuffer<float>(2, 1);
 	resampled_buffer->clear();
 
 	// Init callback buffer
@@ -56,7 +56,7 @@ AudioResampler::~AudioResampler()
 }
 
 // Sets the audio buffer and updates the key settings
-void AudioResampler::SetBuffer(juce::AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate)
+void AudioResampler::SetBuffer(juce::AudioBuffer<float> *new_buffer, double sample_rate, double new_sample_rate)
 {
 	if (sample_rate <= 0)
 		sample_rate = 44100;
@@ -71,7 +71,7 @@ void AudioResampler::SetBuffer(juce::AudioSampleBuffer *new_buffer, double sampl
 }
 
 // Sets the audio buffer and key settings
-void AudioResampler::SetBuffer(juce::AudioSampleBuffer *new_buffer, double ratio)
+void AudioResampler::SetBuffer(juce::AudioBuffer<float> *new_buffer, double ratio)
 {
 	// Update buffer & buffer source
 	buffer = new_buffer;
@@ -102,7 +102,7 @@ void AudioResampler::SetBuffer(juce::AudioSampleBuffer *new_buffer, double ratio
 }
 
 // Get the resampled audio buffer
-juce::AudioSampleBuffer* AudioResampler::GetResampledBuffer()
+juce::AudioBuffer<float>* AudioResampler::GetResampledBuffer()
 {
 	// Resample the current frame's audio buffer (into the temp callback buffer)
 	resample_source->getNextAudioBlock(resample_callback_buffer);
