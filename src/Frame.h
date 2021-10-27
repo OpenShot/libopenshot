@@ -91,7 +91,7 @@ namespace openshot
 	private:
 		std::shared_ptr<QImage> image;
 		std::shared_ptr<QImage> wave_image;
-		
+
 		std::shared_ptr<QApplication> previewApp;
 		juce::CriticalSection addingImageSection;
         juce::CriticalSection addingAudioSection;
@@ -142,10 +142,12 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, std::string new_color);
+                /// Add (or replace) pixel data (filled with new_color)
+		void AddColor(const QColor& new_color);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
- 
+
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);
 

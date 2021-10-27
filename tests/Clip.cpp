@@ -15,7 +15,12 @@
 
 #include <catch2/catch.hpp>
 
+#include <QColor>
+#include <QImage>
+#include <QSize>
+
 #include "Clip.h"
+#include "Enums.h"
 #include "Frame.h"
 #include "Fraction.h"
 #include "Timeline.h"
@@ -231,4 +236,42 @@ TEST_CASE( "verify parent Timeline", "[libopenshot][clip]" )
 	// Check size of frame image (with an associated timeline)
 	CHECK(640 == c1.GetFrame(1)->GetImage()->width());
 	CHECK(360 == c1.GetFrame(1)->GetImage()->height());
+}
+
+TEST_CASE( "has_video", "[libopenshot][clip]" )
+{
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+    openshot::Clip c1(path.str());
+
+    c1.has_video.AddPoint(1.0, 0.0);
+    c1.has_video.AddPoint(5.0, -1.0, openshot::CONSTANT);
+    c1.has_video.AddPoint(10.0, 1.0, openshot::CONSTANT);
+
+    c1.Open();
+
+    auto trans_color = QColor(Qt::transparent);
+    auto f1 = c1.GetFrame(1);
+    CHECK(f1->has_image_data);
+
+    auto f2 = c1.GetFrame(5);
+    CHECK(f2->has_image_data);
+
+    auto f3 = c1.GetFrame(5);
+    CHECK(f3->has_image_data);
+
+    auto i1 = f1->GetImage();
+    QSize f1_size(f1->GetWidth(), f1->GetHeight());
+    CHECK(i1->size() == f1_size);
+    CHECK(i1->pixelColor(20, 20) == trans_color);
+
+    auto i2 = f2->GetImage();
+    QSize f2_size(f2->GetWidth(), f2->GetHeight());
+    CHECK(i2->size() == f2_size);
+    CHECK(i2->pixelColor(20, 20) != trans_color);
+
+    auto i3 = f3->GetImage();
+    QSize f3_size(f3->GetWidth(), f3->GetHeight());
+    CHECK(i3->size() == f3_size);
+    CHECK(i3->pixelColor(20, 20) != trans_color);
 }
