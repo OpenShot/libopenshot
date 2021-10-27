@@ -13,6 +13,8 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "FFmpegUtilities.h"
+
 #include "FFmpegReader.h"
 #include "Exceptions.h"
 #include "Timeline.h"
