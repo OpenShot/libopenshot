@@ -403,7 +403,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 	if (audio)
 		return audio->getNumChannels();
 	else
@@ -413,7 +413,7 @@ int Frame::GetAudioChannelsCount()
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 	return max_audio_sample;
 }
 
@@ -716,22 +716,25 @@ int Frame::constrain(int color_value)
 	return color_value;
 }
 
-// Add (or replace) pixel data to the frame (based on a solid color)
 void Frame::AddColor(int new_width, int new_height, std::string new_color)
 {
-	// Set color
-	color = new_color;
+     const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+     // Update parameters
+    width = new_width;
+    height = new_height;
+    color = new_color;
+    AddColor(QColor(QString::fromStdString(new_color)));
+}
 
+// Add (or replace) pixel data to the frame (based on a solid color)
+void Frame::AddColor(const QColor& new_color)
+{
 	// Create new image object, and fill with pixel data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	image = std::make_shared<QImage>(new_width, new_height, QImage::Format_RGBA8888_Premultiplied);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+	image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 
 	// Fill with solid color
-	image->fill(QColor(QString::fromStdString(color)));
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
+	image->fill(new_color);
 	has_image_data = true;
 }
 
@@ -742,7 +745,7 @@ void Frame::AddImage(
 {
 	// Create new buffer
 	{
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		qbuffer = pixels_;
 	}  // Release addingImageSection lock
 
@@ -766,7 +769,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 		return;
 
 	// assign image data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 	image = new_image;
 
 	// Always convert to Format_RGBA8888_Premultiplied (if different)
@@ -806,7 +809,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		}
 
 		// Get the frame's image
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
 		unsigned char *pixels = image->bits();
 		const unsigned char *new_pixels = new_image->constBits();
 
@@ -831,7 +834,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Resize JUCE audio buffer
 	audio->setSize(channels, length, true, true, false);
@@ -844,7 +847,7 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
-	const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+	const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
 	// Clamp starting sample to 0
 	int destStartSampleAdjusted = max(destStartSample, 0);
@@ -873,7 +876,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 // Apply gain ramp (i.e. fading volume)
 void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Apply gain ramp
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
@@ -1078,7 +1081,7 @@ void Frame::cleanUpBuffer(void *info)
 // Add audio silence
 void Frame::AddAudioSilence(int numSamples)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const juce::GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
 
     // Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);
