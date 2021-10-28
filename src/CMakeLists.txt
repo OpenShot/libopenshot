@@ -421,6 +421,23 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
+###
+### Babl
+###
+
+# Find babl library for colourspace conversion (used for advanced chroma keying
+find_package(babl)
+
+if (babl_FOUND)
+  set(HAVE_BABL TRUE CACHE BOOL "Building with babl support" FORCE)
+  mark_as_advanced(HAVE_BABL)
+endif()
+
+if (TARGET babl_lib)
+  target_compile_definitions(openshot PUBLIC USE_BABL=1)
+  target_link_libraries(openshot PUBLIC babl_lib)
+endif ()
+
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
   find_package(OpenCV 4)
