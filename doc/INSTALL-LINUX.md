@@ -147,6 +147,7 @@ software packages available to download and install.
                         libavformat-dev \
                         libavresample-dev \
                         libavutil-dev \
+                        libbabl-dev \
                         libfdk-aac-dev \
                         libfreetype6-dev \
                         libjsoncpp-dev \
