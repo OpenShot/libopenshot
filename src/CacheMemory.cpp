@@ -12,6 +12,7 @@
 
 #include "CacheMemory.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace std;
 using namespace openshot;

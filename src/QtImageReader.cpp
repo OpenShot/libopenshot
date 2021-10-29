@@ -16,11 +16,12 @@
 #include "Clip.h"
 #include "CacheMemory.h"
 #include "Timeline.h"
-#include <QtCore/QString>
-#include <QtGui/QImage>
-#include <QtGui/QPainter>
-#include <QtGui/QIcon>
-#include <QtGui/QImageReader>
+
+#include <QString>
+#include <QImage>
+#include <QPainter>
+#include <QIcon>
+#include <QImageReader>
 
 using namespace openshot;
 

@@ -14,6 +14,8 @@
 
 #include "QtTextReader.h"
 #include "Exceptions.h"
+#include "Frame.h"
+
 #include <QImage>
 #include <QPainter>
 

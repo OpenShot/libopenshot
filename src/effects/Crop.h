@@ -58,7 +58,10 @@ namespace openshot
 		/// @param top The curve to adjust the top bar size (between 0 and 1)
 		/// @param right The curve to adjust the right bar size (between 0 and 1)
 		/// @param bottom The curve to adjust the bottom bar size (between 0 and 1)
-		Crop(Keyframe left, Keyframe top, Keyframe right, Keyframe bottom);
+        /// @param x x-offset of original image in output frame (-1.0 - 1.0)
+        /// @param y y-offset of original image in output frame (-1.0 - 1.0)
+		Crop(Keyframe left, Keyframe top, Keyframe right, Keyframe bottom,
+             Keyframe x=0.0, Keyframe y=0.0);
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// new openshot::Frame object. All Clip keyframes and effects are resolved into
@@ -66,7 +69,10 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { return GetFrame(std::make_shared<openshot::Frame>(), frame_number); }
+		std::shared_ptr<openshot::Frame>
+        GetFrame(int64_t frame_number) override {
+            return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
+        }
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a
 		/// modified openshot::Frame object
@@ -77,7 +83,8 @@ namespace openshot
 		/// @returns The modified openshot::Frame object
 		/// @param frame The frame object that needs the clip or effect applied to it
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
+		std::shared_ptr<openshot::Frame>
+        GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number) override;
 
 		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

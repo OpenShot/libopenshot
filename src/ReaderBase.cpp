@@ -15,6 +15,8 @@
 #include <sstream>
 
 #include "ReaderBase.h"
+#include "ClipBase.h"
+#include "Frame.h"
 
 #include "Json.h"
 

@@ -12,7 +12,9 @@
 
 #include "CacheDisk.h"
 #include "Exceptions.h"
+#include "Frame.h"
 #include "QtUtilities.h"
+
 #include <Qt>
 #include <QString>
 #include <QTextStream>

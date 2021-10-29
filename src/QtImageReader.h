@@ -37,6 +37,10 @@
 
 class QImage;
 
+#include <QImage>
+#include <QSize>
+#include <QString>
+
 namespace openshot
 {
     // Forward decl

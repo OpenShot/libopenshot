@@ -13,8 +13,8 @@
 #ifndef OPENSHOT_AUDIOREADERSOURCE_H
 #define OPENSHOT_AUDIOREADERSOURCE_H
 
-#include <iomanip>
 #include "ReaderBase.h"
+
 #include <OpenShotAudio.h>
 
 /// This namespace is the default namespace for all code in the openshot library

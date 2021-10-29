@@ -37,6 +37,8 @@ set(OPENSHOT_TESTS
   ReaderBase
   Settings
   Timeline
+  # Effects
+  Crop
 )
 
 # ImageMagick related test files
