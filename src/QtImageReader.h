@@ -13,19 +13,35 @@
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
+#include <string>
+
+#include <QString>
+#include <QSize>
 
 #include "ReaderBase.h"
+#include "Json.h"
+
+#if USE_RESVG == 1
+	// If defined and found in CMake, utilize the libresvg for parsing
+	// SVG files and rasterizing them to QImages.
+	#include "ResvgQt.h"
+
+    #define RESVG_VERSION_MIN(a, b) (\
+        RESVG_MAJOR_VERSION > a \
+        || (RESVG_MAJOR_VERSION == a && RESVG_MINOR_VERSION >= b) \
+    )
+#else
+    #define RESVG_VERSION_MIN(a, b) 0
+#endif
+
+class QImage;
 
 namespace openshot
 {
-	// Forward decl
-	class CacheBase;
+    // Forward decl
+    class CacheBase;
+    class Frame;
 
 	/**
 	 * @brief This class uses the Qt library, to open image files, and return
@@ -54,6 +70,10 @@ namespace openshot
 		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
 		bool is_open;	///> Is Reader opened
 		QSize max_size;	///> Current max_size as calculated with Clip properties
+
+#if RESVG_VERSION_MIN(0, 11)
+        ResvgOptions resvg_options;
+#endif
 
 		/// Load an SVG file with Resvg or fallback with Qt
         ///
