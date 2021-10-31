@@ -123,17 +123,19 @@ jobs:
               mingw-w64-x86_64-swig
 
       - uses: actions/cache@v2
+        name: Import OpenShotAudio cache
         id: cache-audio
         with:
           path: audio/build
-          key: audio-${{ runner.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
+          key: audio-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
 
       - uses: actions/cache@v2
+        name: Import Resvg cache
         if: ${{ steps.use-resvg.outputs.value }}
         id: cache-resvg
         with:
           path: resvg/target
-          key: resvg-${{ runner.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('resvg/Cargo.toml') }}
+          key: resvg-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('resvg/Cargo.toml') }}
 
       - name: Build OpenShotAudio (if not cached)
         if: steps.cache-audio.outputs.cache-hit != 'true'
