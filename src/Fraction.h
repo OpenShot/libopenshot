@@ -64,7 +64,43 @@ public:
 
 	/// Return the reciprocal as a Fraction
 	Fraction Reciprocal() const;
+
+    // Multiplication and division
+
+    /// Multiply two Fraction objects together
+    openshot::Fraction operator*(openshot::Fraction other) {
+        return openshot::Fraction(num * other.num, den * other.den);
+    }
+
+    /// Divide a Fraction by another Fraction
+    openshot::Fraction operator/(openshot::Fraction other) {
+        return *this * other.Reciprocal();
+    }
+
+    /// Multiplication in the form (openshot_Fraction * numeric_value)
+    template<class numT>
+    numT operator*(const numT& other) const {
+        return static_cast<numT>(ToDouble() * other);
+    }
+
+    /// Division in the form (openshot_Fraction / numeric_value)
+    template<class numT>
+    numT operator/(const numT& other) const {
+        return static_cast<numT>(ToDouble() / other);
+    }
 };
+
+/// Multiplication in the form (numeric_value * openshot_Fraction)
+template<class numT>
+numT operator*(const numT& left, const openshot::Fraction& right) {
+    return static_cast<numT>(left * right.ToDouble());
+}
+
+/// Division in the form (numeric_value / openshot_Fraction)
+template<class numT>
+numT operator/(const numT& left, const openshot::Fraction& right) {
+    return static_cast<numT>(left / right.ToDouble());
+}
 
 // Stream output operator for openshot::Fraction
 template<class charT, class traits>
