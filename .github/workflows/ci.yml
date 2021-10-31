@@ -51,7 +51,7 @@ jobs:
         with:
           repository: RazrFalcon/resvg
           path: resvg
-          branch: v0.11.0
+          ref: v0.19.0
 
       - uses: haya14busa/action-cond@v1
         id: generator
