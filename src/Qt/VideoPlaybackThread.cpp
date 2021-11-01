@@ -12,6 +12,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "VideoPlaybackThread.h"
+#include "ZmqLogger.h"
 
 namespace openshot
 {

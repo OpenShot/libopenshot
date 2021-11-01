@@ -10,6 +10,11 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+#include <sstream>
+#include <iomanip>
+
 #include "Frame.h"
 #include <OpenShotAudio.h>
 
@@ -27,8 +32,9 @@
 #include <QPointF>
 #include <QWidget>
 
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
+#ifdef USE_IMAGEMAGICK
+    #include "MagickUtilities.h"
+#endif
 
 using namespace std;
 using namespace openshot;
