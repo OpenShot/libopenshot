@@ -12,8 +12,9 @@
 
 #include "VideoCacheThread.h"
 #include "Exceptions.h"
-#include <algorithm>
+#include "ZmqLogger.h"
 
+#include <algorithm>
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
 

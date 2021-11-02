@@ -14,6 +14,13 @@
 
 #ifdef USE_IMAGEMAGICK
 
+    // Avoid a bug in the interaction between ImageMagick
+    // and the standard C insertion headers, which can
+    // cause functions used by macros in the standard C
+    // assertion code to be put in an ImageMagick library
+    // namespace instead of the global namespace
+    #include <cassert>
+
 // Exclude a warning message with IM6 headers
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"

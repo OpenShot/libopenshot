@@ -21,23 +21,27 @@
 	#undef int64
 #endif
 
-
-#include <iomanip>
-#include <sstream>
 #include <queue>
-#include <QApplication>
-#include <QImage>
 #include <memory>
-#include <unistd.h>
-#include "ZmqLogger.h"
+
 #include "ChannelLayouts.h"
 #include "AudioBufferSource.h"
 #include "AudioResampler.h"
 #include "Fraction.h"
+
 #include <OpenShotAudio.h>
+
+#include <QColor>
+#include <QImage>
+
 #ifdef USE_IMAGEMAGICK
-	#include "MagickUtilities.h"
+// Forward declare Magick::Image
+namespace Magick {
+    class Image;
+}
 #endif
+
+class QApplication;
 
 namespace openshot
 {
