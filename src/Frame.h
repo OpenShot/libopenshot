@@ -34,13 +34,6 @@
 #include <QColor>
 #include <QImage>
 
-#ifdef USE_IMAGEMAGICK
-// Forward declare Magick::Image
-namespace Magick {
-    class Image;
-}
-#endif
-
 class QApplication;
 
 namespace openshot
@@ -98,8 +91,7 @@ namespace openshot
 
 		std::shared_ptr<QApplication> previewApp;
 		juce::CriticalSection addingImageSection;
-        juce::CriticalSection addingAudioSection;
-		const unsigned char *qbuffer;
+		juce::CriticalSection addingAudioSection;
 		openshot::Fraction pixel_ratio;
 		int channels;
 		ChannelLayout channel_layout;
@@ -146,7 +138,8 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, std::string new_color);
-                /// Add (or replace) pixel data (filled with new_color)
+
+		/// Add (or replace) pixel data (filled with new_color)
 		void AddColor(const QColor& new_color);
 
 		/// Add (or replace) pixel data to the frame
@@ -157,11 +150,6 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame (for only the odd or even lines)
 		void AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines);
-
-#ifdef USE_IMAGEMAGICK
-		/// Add (or replace) pixel data to the frame from an ImageMagick Image
-		void AddMagickImage(std::shared_ptr<Magick::Image> new_image);
-#endif
 
 		/// Add audio samples to a specific channel
 		void AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
@@ -178,9 +166,6 @@ namespace openshot
 
 		// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
 		void ChannelsLayout(openshot::ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
-
-		/// Clean up buffer after QImage is deleted
-		static void cleanUpBuffer(void *info);
 
 		/// Clear the waveform image (and deallocate its memory)
 		void ClearWaveform();
@@ -219,11 +204,6 @@ namespace openshot
 
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
-
-#ifdef USE_IMAGEMAGICK
-		/// Get pointer to ImageMagick image object
-		std::shared_ptr<Magick::Image> GetMagickImage();
-#endif
 
 		/// Set Pixel Aspect Ratio
 		openshot::Fraction GetPixelRatio() { return pixel_ratio; };

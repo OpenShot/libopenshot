@@ -16,6 +16,8 @@
 #include <iomanip>
 
 #include "Frame.h"
+#include "QtUtilities.h"
+
 #include <OpenShotAudio.h>
 
 #include <QApplication>
@@ -32,10 +34,6 @@
 #include <QPointF>
 #include <QWidget>
 
-#ifdef USE_IMAGEMAGICK
-    #include "MagickUtilities.h"
-#endif
-
 using namespace std;
 using namespace openshot;
 
@@ -43,7 +41,7 @@ using namespace openshot;
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
 	: audio(std::make_shared<juce::AudioSampleBuffer>(channels, samples)),
 	  number(number), width(width), height(height),
-	  pixel_ratio(1,1), color(color), qbuffer(NULL),
+	  pixel_ratio(1,1), color(color),
 	  channels(channels), channel_layout(LAYOUT_STEREO),
 	  sample_rate(44100),
 	  has_audio_data(false), has_image_data(false),
@@ -749,20 +747,14 @@ void Frame::AddImage(
 	int new_width, int new_height, int bytes_per_pixel,
 	QImage::Format type, const unsigned char *pixels_)
 {
-	// Create new buffer
-	{
-		const juce::GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-		qbuffer = pixels_;
-	}  // Release addingImageSection lock
-
 	// Create new image object from pixel data
 	auto new_image = std::make_shared<QImage>(
-		qbuffer,
+		pixels_,
 		new_width, new_height,
 		new_width * bytes_per_pixel,
 		type,
-		(QImageCleanupFunction) &openshot::Frame::cleanUpBuffer,
-		(void*) qbuffer
+		(QImageCleanupFunction) &openshot::cleanUpBuffer,
+		(void*) pixels_
 	);
 	AddImage(new_image);
 }
@@ -948,60 +940,6 @@ void Frame::SetImageCV(cv::Mat _image)
 }
 #endif
 
-#ifdef USE_IMAGEMAGICK
-// Get pointer to ImageMagick image object
-std::shared_ptr<Magick::Image> Frame::GetMagickImage()
-{
-	// Check for blank image
-	if (!image)
-		// Fill with black
-		AddColor(width, height, "#000000");
-
-	// Get the pixels from the frame image
-	const QRgb *tmpBits = (const QRgb*)image->constBits();
-
-	// Create new image object, and fill with pixel data
-	auto magick_image = std::make_shared<Magick::Image>(
-		image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits);
-
-	// Give image a transparent background color
-	magick_image->backgroundColor(Magick::Color("none"));
-	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	MAGICK_IMAGE_ALPHA(magick_image, true);
-
-	return magick_image;
-}
-#endif
-
-#ifdef USE_IMAGEMAGICK
-// Get pointer to QImage of frame
-void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
-{
-	const int BPP = 4;
-	const std::size_t bufferSize = new_image->columns() * new_image->rows() * BPP;
-
-	/// Use realloc for fast memory allocation.
-	/// TODO: consider locking the buffer for mt safety
-	//qbuffer = reinterpret_cast<unsigned char*>(realloc(qbuffer, bufferSize));
-	qbuffer = new unsigned char[bufferSize]();
-	unsigned char *buffer = (unsigned char*)qbuffer;
-
-	MagickCore::ExceptionInfo exception;
-	// TODO: Actually do something, if we get an exception here
-	MagickCore::ExportImagePixels(new_image->constImage(), 0, 0, new_image->columns(), new_image->rows(), "RGBA", Magick::CharPixel, buffer, &exception);
-
-	// Create QImage of frame data
-	image = std::make_shared<QImage>(
-		qbuffer, width, height, width * BPP, QImage::Format_RGBA8888_Premultiplied,
-		(QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer);
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
-	has_image_data = true;
-}
-#endif
-
 // Play audio samples for this frame
 void Frame::Play()
 {
@@ -1071,17 +1009,6 @@ void Frame::Play()
 	cout << "End of Play()" << endl;
 
 
-}
-
-// Clean up buffer after QImage is deleted
-void Frame::cleanUpBuffer(void *info)
-{
-	if (info)
-	{
-		// Remove buffer since QImage tells us to
-		unsigned char* ptr_to_qbuffer = (unsigned char*) info;
-		delete[] ptr_to_qbuffer;
-	}
 }
 
 // Add audio silence
