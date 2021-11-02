@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_ENUMS_H
 #define OPENSHOT_ENUMS_H
@@ -132,6 +114,22 @@ namespace openshot
         HANN,
         HAMMING,
     };
-	
+
+	/// This enumeration determines the algorithm used by the ChromaKey filter
+	enum ChromaKeyMethod
+	{
+		CHROMAKEY_BASIC,	///< Length of difference between RGB vectors
+		CHROMAKEY_HSVL_H,	///< Difference between HSV/HSL hues
+		CHROMAKEY_HSV_S,	///< Difference between HSV saturations
+		CHROMAKEY_HSL_S,	///< Difference between HSL saturations
+		CHROMAKEY_HSV_V,	///< Difference between HSV values
+		CHROMAKEY_HSL_L,	///< Difference between HSL luminances
+		CHROMAKEY_CIE_LCH_L,	///< Difference between CIE LCH(ab) luminousities
+		CHROMAKEY_CIE_LCH_C,	///< Difference between CIE LCH(ab) chromas
+		CHROMAKEY_CIE_LCH_H,	///< Difference between CIE LCH(ab) hues
+		CHROMAKEY_CIE_DISTANCE, ///< CIEDE2000 perceptual difference
+		CHROMAKEY_YCBCR,	///< YCbCr vector difference of CbCr
+		CHROMAKEY_LAST_METHOD = CHROMAKEY_YCBCR
+	};
 }
 #endif

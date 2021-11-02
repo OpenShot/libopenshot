@@ -1,5 +1,6 @@
-#ifndef OPENSHOT_H
-#define OPENSHOT_H
+// Copyright (c) 2008-2021 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 /**
  * @file
@@ -95,6 +96,9 @@
  * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef OPENSHOT_H
+#define OPENSHOT_H
+
 // Include the version number of OpenShot Library
 #include "OpenShotVersion.h"
 
@@ -109,10 +113,6 @@
 #include "Clip.h"
 #include "ClipBase.h"
 #include "Coordinate.h"
-#ifdef USE_BLACKMAGIC
-	#include "DecklinkReader.h"
-	#include "DecklinkWriter.h"
-#endif
 #include "DummyReader.h"
 #include "EffectBase.h"
 #include "Effects.h"

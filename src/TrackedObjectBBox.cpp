@@ -7,33 +7,17 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <fstream>
 
 #include "TrackedObjectBBox.h"
 
 #include "Clip.h"
 
-#include "protobuf_messages/trackerdata.pb.h"
+#include "trackerdata.pb.h"
 #include <google/protobuf/util/time_util.h>
 
 using google::protobuf::util::TimeUtil;
@@ -395,7 +379,7 @@ void TrackedObjectBBox::SetJsonValue(const Json::Value root)
 	// Set the protobuf data path by the given JSON object
 	if (!root["protobuf_data_path"].isNull())
 		protobufDataPath = root["protobuf_data_path"].asString();
-	
+
 	// Set the id of the child clip
 	if (!root["child_clip_id"].isNull() && root["child_clip_id"].asString() != "" && root["child_clip_id"].asString() != Id()){
 		Clip* parentClip = (Clip *) ParentClip();

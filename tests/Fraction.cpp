@@ -6,31 +6,17 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <catch2/catch.hpp>
 
 #include "Fraction.h"
+
+#include <map>
+#include <vector>
+#include <sstream>
 
 using namespace std;
 using namespace openshot;
@@ -147,4 +133,13 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	CHECK(f1.den == 720);
 	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
 	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+}
+
+TEST_CASE( "Operator ostream", "[libopenshot][fraction]" )
+{
+	std::stringstream output;
+	openshot::Fraction f3(30000, 1001);
+
+	output << f3;
+	CHECK(output.str() == "Fraction(30000, 1001)");
 }

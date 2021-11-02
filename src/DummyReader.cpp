@@ -6,30 +6,13 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "DummyReader.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
@@ -38,7 +21,7 @@ void DummyReader::init(Fraction fps, int width, int height, int sample_rate, int
 	// Set key info settings
 	info.has_audio = false;
 	info.has_video = true;
-	info.file_size = width * height * sizeof(int);
+	info.file_size = static_cast<size_t>(width) * height * sizeof(int);
 	info.vcodec = "raw";
 	info.fps = fps;
 	info.width = width;

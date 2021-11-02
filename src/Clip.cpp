@@ -6,40 +6,27 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Clip.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
 #include "QtImageReader.h"
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
+
+#ifdef USE_IMAGEMAGICK
+    #include "MagickUtilities.h"
+    #include "ImageReader.h"
+    #include "TextReader.h"
+#endif
+
+#include <Qt>
 
 using namespace openshot;
 
@@ -504,7 +491,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for a valid time map curve
 	if (time.GetLength() > 1)
 	{
-		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
+		const juce::GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
 
 		// create buffer and resampler
 		juce::AudioSampleBuffer *samples = NULL;
@@ -721,8 +708,10 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
-			reader_copy->SampleRate(reader_frame->SampleRate());
-			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
+                        if (has_video.GetInt(number) == 0)
+                            reader_copy->AddColor(QColor(Qt::transparent));
+                        if (has_audio.GetInt(number) == 0)
+                            reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
 			return reader_copy;
 		}
 
@@ -807,10 +796,10 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
-	
+
 	// Add the parentTrackedObject's properties
 	if (parentTrackedObject)
-	{	
+	{
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
@@ -821,7 +810,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double parentObject_frame_number = trackedObjectParentClipProperties["frame_number"];
 		// Get attached object properties
 		std::map< std::string, float > trackedObjectProperties = parentTrackedObject->GetBoxValues(parentObject_frame_number);
-		
+
 		// Correct the parent Tracked Object properties by the clip's reference system
 		float parentObject_location_x = trackedObjectProperties["cx"] - 0.5 + trackedObjectParentClipProperties["cx"];
 		float parentObject_location_y = trackedObjectProperties["cy"] - 0.5 + trackedObjectParentClipProperties["cy"];
@@ -847,7 +836,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
 
 		// Correct the parent Clip Object properties by the clip's reference system
-		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		float parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		float parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		float parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1069,7 +1058,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
-					
+
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 
@@ -1194,7 +1183,7 @@ void Clip::AddEffect(EffectBase* effect)
 
 			// Iterate through effect's vector of Tracked Objects
 			for (auto const& trackedObject : effect->trackedObjects){
-				
+
 				// Cast the Tracked Object as TrackedObjectBBox
 				std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
 
@@ -1203,7 +1192,7 @@ void Clip::AddEffect(EffectBase* effect)
 
 				// Add the Tracked Object to the timeline
 				parentTimeline->AddTrackedObject(trackedObjectBBox);
-			}	
+			}
 		}
 	}
     #endif
@@ -1239,10 +1228,10 @@ bool Clip::isEqual(double a, double b)
 // Apply keyframes to the source frame (if any)
 void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
     // Skip out if video was disabled or only an audio frame (no visualisation in use)
-    if (has_video.GetInt(frame->number) == 0 ||
-        (!Waveform() && !Reader()->info.has_video))
+    if (!Waveform() && !Reader()->info.has_video) {
         // Skip the rest of the image processing for performance reasons
         return;
+    }
 
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
@@ -1251,7 +1240,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     if (Waveform())
     {
         // Debug output
-        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform());
+        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform(), "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
 
         // Get the color of the waveform
         int red = wave_color.red.GetInt(frame->number);
@@ -1261,17 +1250,14 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 
         // Generate Waveform Dynamically (the size of the timeline)
         source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
+        frame->AddImage(source_image);
     }
 
-    // Size of final image
-    int width = background_canvas->width();
-    int height = background_canvas->height();
-
     // Get transform from clip's keyframes
-    QTransform transform = get_transform(frame, width, height);
+    QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
 
     // Debug output
-    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number);
+    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
 
     // Load timeline's new frame image into a QPainter
     QPainter painter(background_canvas.get());
@@ -1325,7 +1311,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
 
-	/* ALPHA & OPACITY */
+    /* ALPHA & OPACITY */
 	if (alpha.GetValue(frame->number) != 1.0)
 	{
 		float alpha_value = alpha.GetValue(frame->number);
@@ -1351,7 +1337,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	/* RESIZE SOURCE IMAGE - based on scale type */
 	QSize source_size = source_image->size();
 
-	// Apply stretch scale to correctly fit the bounding-box
+    // Apply stretch scale to correctly fit the bounding-box
 	if (parentTrackedObject){
 		scale = SCALE_STRETCH;
 	}
@@ -1407,7 +1393,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parent object's properties (Clip)
-		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1442,8 +1428,8 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 			parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
 			parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
 			parentObject_rotation = trackedObjectProperties["r"] + trackedObjectParentClipProperties["rotation"];
-		} 
-		else 
+		}
+		else
 		{
 			// Access the parentTrackedObject's properties
 			std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(timeline_frame_number);
@@ -1471,9 +1457,9 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		sy*= parentObject_scale_y;
 	}
 
-	float scaled_source_width = source_size.width() * sx;
+    float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
-	
+
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
@@ -1513,7 +1499,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
 	QTransform transform;
-		
+
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
 	x += (width * (location_x.GetValue(frame->number) + parentObject_location_x )); // move in percentage of final width
@@ -1529,7 +1515,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-	} 
+	}
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);

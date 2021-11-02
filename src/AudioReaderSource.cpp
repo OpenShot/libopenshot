@@ -6,50 +6,40 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "AudioReaderSource.h"
 #include "Exceptions.h"
+#include "Frame.h"
+#include "ZmqLogger.h"
+
+#include <OpenShotAudio.h>
 
 using namespace std;
 using namespace openshot;
 
 // Constructor that reads samples from a reader
-AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
-	: reader(audio_reader), frame_number(starting_frame_number),
-	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
-
-	// Initialize an audio buffer (based on reader)
-	buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
-
-	// initialize the audio samples to zero (silence)
+AudioReaderSource::AudioReaderSource(
+    ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size
+) :
+    position(0),
+    size(buffer_size),
+    buffer(new juce::AudioSampleBuffer(audio_reader->info.channels, buffer_size)),
+    speed(1),
+    reader(audio_reader),
+    frame_number(starting_frame_number),
+    frame_position(0),
+    estimated_frame(0)
+{
+	// Zero the buffer contents
 	buffer->clear();
 }
 
 // Destructor
 AudioReaderSource::~AudioReaderSource()
 {
-	// Clear and delete the buffer
 	delete buffer;
 	buffer = NULL;
 }

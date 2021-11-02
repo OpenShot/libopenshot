@@ -5,24 +5,8 @@
 # @section LICENSE
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
-# <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to
-# delivering high quality video editing and animation solutions to the
-# world. For more information visit <http://www.openshot.org/>.
 #
-# OpenShot Library (libopenshot) is free software: you can redistribute it
-# and/or modify it under the terms of the GNU Lesser General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# OpenShot Library (libopenshot) is distributed in the hope that it will be
-# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 cmake_minimum_required(VERSION 3.10...3.20 FATAL_ERROR)
 
@@ -98,6 +82,12 @@ endif()
 if(ENABLE_TESTS)
   set(BUILD_TESTING ${ENABLE_TESTS})
 endif()
+
+### JUCE requires one of -DDEBUG or -DNDEBUG set on the
+### compile command line. CMake automatically sets -DNDEBUG
+### on all non-debug configs, so we'll just add -DDEBUG to
+### the debug build flags
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
@@ -212,6 +202,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
     "examples/*"
     "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
     "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/*"
     "audio/*"
   )
   setup_target_for_coverage_lcov(

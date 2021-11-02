@@ -7,27 +7,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <string>
 #include <memory>
@@ -37,6 +19,7 @@
 #include "effects/Tracker.h"
 #include "Exceptions.h"
 #include "Timeline.h"
+#include "trackerdata.pb.h"
 
 #include <google/protobuf/util/time_util.h>
 
@@ -111,7 +94,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 	std::shared_ptr<QImage> childClipImage = nullptr;
 
     // Check if frame isn't NULL
-    if(!frame_image.empty() && 
+    if(!frame_image.empty() &&
 		trackedData->Contains(frame_number) &&
 		trackedData->visible.GetValue(frame_number) == 1)
 	{
@@ -123,7 +106,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 		BBox fd = trackedData->GetBox(frame_number);
 
         // Check if track data exists for the requested frame
-        if (trackedData->draw_box.GetValue(frame_number) == 1) 
+        if (trackedData->draw_box.GetValue(frame_number) == 1)
 		{
 			std::vector<int> stroke_rgba = trackedData->stroke.GetColorRGBA(frame_number);
 			int stroke_width = trackedData->stroke_width.GetValue(frame_number);
@@ -132,17 +115,17 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 			float bg_alpha = trackedData->background_alpha.GetValue(frame_number);
 
 			// Create a rotated rectangle object that holds the bounding box
-			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ), 
-								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ), 
+			cv::RotatedRect box ( cv::Point2f( (int)(fd.cx*fw), (int)(fd.cy*fh) ),
+								  cv::Size2f( (int)(fd.width*fw), (int)(fd.height*fh) ),
 								  (int) (fd.angle) );
 
 			DrawRectangleRGBA(frame_image, box, bg_rgba, bg_alpha, 1, true);
 			DrawRectangleRGBA(frame_image, box, stroke_rgba, stroke_alpha, stroke_width, false);
 		}
-		
+
 		// Get the image of the Tracked Object' child clip
 		if (trackedData->ChildClipId() != ""){
-			// Cast the parent timeline of this effect 
+			// Cast the parent timeline of this effect
 			Timeline* parentTimeline = (Timeline *) ParentTimeline();
 			if (parentTimeline){
 				// Get the Tracked Object's child clip
@@ -161,7 +144,7 @@ std::shared_ptr<Frame> Tracker::GetFrame(std::shared_ptr<Frame> frame, int64_t f
 				}
 			}
 		}
-	
+
     }
 
 	// Set image with drawn box to frame
@@ -214,7 +197,7 @@ void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::
 		cv::Mat overlayFrame;
 		frame_image.copyTo(overlayFrame);
 
-		// Draw bounding box 
+		// Draw bounding box
 		for (int i = 0; i < 4; i++)
 		{
 			cv::line(overlayFrame, vertices2f[i], vertices2f[(i+1)%4], cv::Scalar(color[2],color[1],color[0]),
@@ -228,7 +211,7 @@ void Tracker::DrawRectangleRGBA(cv::Mat &frame_image, cv::RotatedRect box, std::
 
 // Get the indexes and IDs of all visible objects in the given frame
 std::string Tracker::GetVisibleObjects(int64_t frame_number) const{
-    
+
     // Initialize the JSON objects
     Json::Value root;
     root["visible_objects_index"] = Json::Value(Json::arrayValue);
@@ -272,7 +255,7 @@ Json::Value Tracker::JsonValue() const {
 	Json::Value objects;
     for (auto const& trackedObject : trackedObjects){
         Json::Value trackedObjectJSON = trackedObject.second->JsonValue();
-        // add object json 
+        // add object json
         objects[trackedObject.second->Id()] = trackedObjectJSON;
     }
     root["objects"] = objects;
@@ -313,13 +296,13 @@ void Tracker::SetJsonValue(const Json::Value root) {
 		if (!root["BaseFPS"]["num"].isNull())
 		{
 			BaseFPS.num = (int) root["BaseFPS"]["num"].asInt();
-		}	
+		}
 		if (!root["BaseFPS"]["den"].isNull())
 		{
 			BaseFPS.den = (int) root["BaseFPS"]["den"].asInt();
 		}
 	}
-	
+
 	if (!root["TimeScale"].isNull())
 		TimeScale = (double) root["TimeScale"].asDouble();
 
@@ -342,7 +325,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
             }
         }
 	}
-		
+
     // Set the tracked object's ids
     if (!root["objects_id"].isNull()){
         for (auto const& trackedObject : trackedObjects){
@@ -357,7 +340,7 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 // Get all properties for a specific frame
 std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
-	
+
 	// Generate JSON properties list
 	Json::Value root;
 
@@ -365,7 +348,7 @@ std::string Tracker::PropertiesJSON(int64_t requested_frame) const {
 	Json::Value objects;
 	for (auto const& trackedObject : trackedObjects){
 		Json::Value trackedObjectJSON = trackedObject.second->PropertiesJSON(requested_frame);
-		// add object json 
+		// add object json
         objects[trackedObject.second->Id()] = trackedObjectJSON;
     }
 	root["objects"] = objects;

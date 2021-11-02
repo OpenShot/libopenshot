@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2016 Cong Ma
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
 ///////////////////////////////////////////////////////////////////////////////
 // Hungarian.h: Header file for Class HungarianAlgorithm.
 //

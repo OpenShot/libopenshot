@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <string>
 #include <sstream>
@@ -269,6 +251,33 @@ TEST_CASE( "Clip order", "[libopenshot][timeline]" )
 	}
 
 	t.Close();
+}
+
+TEST_CASE( "TimelineBase", "[libopenshot][timeline]" )
+{
+    // Create a timeline
+    Timeline t(640, 480, Fraction(30, 1), 44100, 2, LAYOUT_STEREO);
+
+    // Add some clips out of order
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "front3.png";
+    Clip clip1(path.str());
+    clip1.Layer(1);
+    t.AddClip(&clip1);
+
+    Clip clip2(path.str());
+    clip2.Layer(0);
+    t.AddClip(&clip2);
+
+    // Verify that the list of clips can be accessed
+    // through the Clips() method of a TimelineBase*
+    TimelineBase* base = &t;
+    auto l = base->Clips();
+    CHECK(l.size() == 2);
+    auto find1 = std::find(l.begin(), l.end(), &clip1);
+    auto find2 = std::find(l.begin(), l.end(), &clip2);
+    CHECK(find1 != l.end());
+    CHECK(find2 != l.end());
 }
 
 

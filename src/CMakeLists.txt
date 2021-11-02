@@ -5,24 +5,8 @@
 # @section LICENSE
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
-# <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to
-# delivering high quality video editing and animation solutions to the
-# world. For more information visit <http://www.openshot.org/>.
 #
-# OpenShot Library (libopenshot) is free software: you can redistribute it
-# and/or modify it under the terms of the GNU Lesser General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# OpenShot Library (libopenshot) is distributed in the hope that it will be
-# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
@@ -282,9 +266,46 @@ if (TARGET jsoncpp_lib)
   target_link_libraries(openshot PUBLIC jsoncpp_lib)
 endif ()
 
-################# QT5 ###################
-# Find QT5 libraries
+
+###
+### Resvg, the Rust SVG library
+###
+
+# Migrate some legacy variable names
+if(DEFINED RESVGDIR AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT ${RESVGDIR})
+endif()
+if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
+  set(Resvg_ROOT $ENV{RESVGDIR})
+endif()
+
+# Find resvg library (used for rendering svg files)
+find_package(Resvg)
+
+# Include resvg headers (optional SVG library)
+if (TARGET Resvg::Resvg)
+  #include_directories(${Resvg_INCLUDE_DIRS})
+  target_link_libraries(openshot PUBLIC Resvg::Resvg)
+
+  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
+
+  set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
+  mark_as_advanced(HAVE_RESVG)
+else()
+  set(HAVE_RESVG FALSE CACHE BOOL "Building with Resvg support" FORCE)
+endif()
+
+###
+### Qt Toolkit
+###
+
 set(_qt_components Core Gui Widgets)
+
+# We also need QtSvg unless we have Resvg insetead.
+if(NOT HAVE_RESVG)
+  list(APPEND _qt_components Svg)
+endif()
+
 find_package(Qt5 COMPONENTS ${_qt_components} REQUIRED)
 
 foreach(_qt_comp IN LISTS _qt_components)
@@ -401,54 +422,21 @@ if (TARGET cppzmq)
 endif()
 
 ###
-### Resvg, the Rust SVG library
+### Babl
 ###
 
-# Migrate some legacy variable names
-if(DEFINED RESVGDIR AND NOT DEFINED Resvg_ROOT)
-  set(Resvg_ROOT ${RESVGDIR})
-endif()
-if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
-  set(Resvg_ROOT $ENV{RESVGDIR})
-endif()
+# Find babl library for colourspace conversion (used for advanced chroma keying
+find_package(babl)
 
-# Find resvg library (used for rendering svg files)
-find_package(Resvg)
-
-# Include resvg headers (optional SVG library)
-if (TARGET Resvg::Resvg)
-  #include_directories(${Resvg_INCLUDE_DIRS})
-  target_link_libraries(openshot PUBLIC Resvg::Resvg)
-
-  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
-
-  set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
-  mark_as_advanced(HAVE_RESVG)
+if (babl_FOUND)
+  set(HAVE_BABL TRUE CACHE BOOL "Building with babl support" FORCE)
+  mark_as_advanced(HAVE_BABL)
 endif()
 
-################# BLACKMAGIC DECKLINK ###################
-# Find BlackMagic DeckLinkAPI libraries
-if (ENABLE_BLACKMAGIC)
-  find_package(BlackMagic)
-
-  if (BLACKMAGIC_FOUND)
-    # BlackMagic related files
-    target_sources(openshot PRIVATE
-      DecklinkInput.cpp
-      DecklinkReader.cpp
-      DecklinkOutput.cpp
-      DecklinkWriter.cpp)
-
-    # Include Blackmagic headers (needed for compile)
-    target_include_directories(openshot PRIVATE ${BLACKMAGIC_INCLUDE_DIR})
-
-    # Link libopenshot with BlackMagic libs
-    target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
-
-    # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
-  endif()
-endif()
+if (TARGET babl_lib)
+  target_compile_definitions(openshot PUBLIC USE_BABL=1)
+  target_link_libraries(openshot PUBLIC babl_lib)
+endif ()
 
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
@@ -456,7 +444,7 @@ if(ENABLE_OPENCV)
   if(NOT OpenCV_FOUND)
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
-    # If we have version 4.5.1, all hope is lost
+  # If we have version 4.5.1, all hope is lost
   elseif(OpenCV_VERSION VERSION_EQUAL "4.5.1")
     message(WARNING [[Incompatible OpenCV version detected
 OpenCV version 4.5.1 contains header errors which make it unable to be used with OpenShot. OpenCV support wil be disabled. Upgrade to OpenCV 4.5.2+ or downgrade to 4.5.0 or earlier, to enable OpenCV.
@@ -464,7 +452,35 @@ See https://github.com/opencv/opencv/issues/19260]])
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
   else()
-    add_subdirectory(protobuf_messages)
+    ###
+    ### Protocol Buffers
+    ###
+    find_package(Protobuf 3 REQUIRED)
+
+    # Create a target for libprotobuf, if necessary (CMake < 3.9)
+    if(NOT TARGET protobuf::libprotobuf)
+      add_library(protobuf_TARGET INTERFACE)
+      target_include_directories(protobuf_TARGET
+        INTERFACE ${Protobuf_INCLUDE_DIRS})
+      target_link_libraries(protobuf_TARGET INTERFACE ${Protobuf_LIBRARIES})
+      add_library(protobuf::libprotobuf ALIAS protobuf_TARGET)
+    endif()
+
+    # Create libopenshot_protobuf
+    set(PROTOBUF_SOURCES
+      "objdetectdata.proto"
+      "stabilizedata.proto"
+      "trackerdata.proto"
+    )
+    PROTOBUF_GENERATE_CPP(ProtoSources ProtoHeaders ${PROTOBUF_SOURCES})
+
+    target_sources(openshot PRIVATE ${ProtoSources} ${ProtoHeaders})
+    target_link_libraries(openshot PRIVATE protobuf::libprotobuf)
+
+    ###
+    ### OpenCV
+    ###
+
     # Add OpenCV source files
     target_sources(openshot PRIVATE
       ${OPENSHOT_CV_SOURCES}
@@ -476,7 +492,6 @@ See https://github.com/opencv/opencv/issues/19260]])
       opencv_highgui
       opencv_dnn
       opencv_tracking
-      openshot_protobuf
     )
     set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
     mark_as_advanced(HAVE_OPENCV)
@@ -509,7 +524,7 @@ endif()
 ### INSTALL HEADERS & LIBRARY
 ###
 
-# Install primary library
+# Install libraries
 install(TARGETS openshot
   COMPONENT runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -523,9 +538,10 @@ install(DIRECTORY .
   FILES_MATCHING PATTERN "*.h"
 )
 
+
 # On Windows, we copy project output DLLs into the tests dir
 # so that the unit test executables can find them
-if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
+if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32 AND BUILD_TESTING)
   # Copy the DLLs immediately after they're built
   add_custom_command(TARGET openshot POST_BUILD
     COMMAND
@@ -537,6 +553,7 @@ if(CMAKE_VERSION VERSION_GREATER 3.13 AND WIN32)
     COMMENT
       "Copying libopenshot DLL to unit test directory"
   )
+
   # Also copy libopenshot-audio DLL
   get_target_property(AUDIO_LIB_PATH OpenShot::Audio LOCATION)
   add_custom_target(test-install-audio-dll ALL
