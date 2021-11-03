@@ -161,7 +161,7 @@ jobs:
           popd
 
       - name: Build Resvg (if enabled and not cached)
-        if: ${{ steps.use-resvg.outputs.value }} && (steps.cache-resvg.outputs.cache-hit != 'true')
+        if: steps.cache-resvg && (steps.cache-resvg.outputs.cache-hit != 'true')
         run: |
           if [ -d "resvg/c-api" ]; then
             pushd resvg/c-api
