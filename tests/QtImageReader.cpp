@@ -32,7 +32,7 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
 	// Create a reader
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "front.png";
-    QtImageReader r(path.str());
+	QtImageReader r(path.str());
 
 	// Check invalid path
 	CHECK_THROWS_AS(r.GetFrame(1), ReaderClosed);
@@ -40,15 +40,15 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
 
 TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
 {
-	// Create a reader
-	std::stringstream path;
-	path << TEST_MEDIA_PATH << "1F0CF.svg";
+    // Create a reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "1F0CF.svg";
     QtImageReader r(path.str());
-	r.Open();
+    r.Open();
 
-	// Get frame, with no Timeline or Clip
-	// Size should be equal to default SVG size
-	std::shared_ptr<Frame> f = r.GetFrame(1);
+    // Get frame, with no Timeline or Clip
+    // Size should be equal to default SVG size
+    std::shared_ptr<Frame> f = r.GetFrame(1);
     CHECK(f->GetImage()->width() == 72);
     CHECK(f->GetImage()->height() == 72);
 
@@ -79,7 +79,7 @@ TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
     CHECK(f->GetImage()->width() == 480 * 2);
     CHECK(f->GetImage()->height() == 480 * 2);
 
-	// Close reader
-	t1.Close();
-	r.Close();
+    // Close reader
+    t1.Close();
+    r.Close();
 }
