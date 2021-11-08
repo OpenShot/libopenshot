@@ -897,7 +897,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
         final_cache->Add(new_frame);
 
 		// Return frame (or blank frame)
-		return final_cache->GetFrame(requested_frame);
+		return new_frame;
 	}
 }
 
