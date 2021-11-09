@@ -292,7 +292,7 @@ if (NOT jsoncpp_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
     install(DIRECTORY "${BUNDLED_JSONCPP_PATH}/json"
       COMPONENT devel
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/json
-      FILES_MATCHING GLOB "*.h"
+      FILES_MATCHING PATTERN "*.h"
     )
 
     # Because this satisfies the requirement, an installed JsonCpp is optional
