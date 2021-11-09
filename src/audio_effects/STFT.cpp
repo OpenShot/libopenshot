@@ -1,3 +1,7 @@
+// © OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #include "STFT.h"
 
 using namespace openshot;
@@ -14,7 +18,7 @@ void STFT::updateParameters(const int new_fft_size, const int new_overlap, const
     updateWindow(new_window_type);
 }
 
-void STFT::process(juce::AudioSampleBuffer &block)
+void STFT::process(juce::AudioBuffer<float> &block)
 {
     num_samples = block.getNumSamples();
 

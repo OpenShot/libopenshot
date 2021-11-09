@@ -6,33 +6,18 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_RESAMPLER_H
 #define OPENSHOT_RESAMPLER_H
 
 #include "AudioBufferSource.h"
-#include <OpenShotAudio.h>
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 namespace openshot {
 
@@ -44,8 +29,8 @@ namespace openshot {
 	 */
 	class AudioResampler {
 	private:
-		juce::AudioSampleBuffer *buffer;
-		juce::AudioSampleBuffer *resampled_buffer;
+		juce::AudioBuffer<float> *buffer;
+		juce::AudioBuffer<float> *resampled_buffer;
 		openshot::AudioBufferSource *buffer_source;
 		juce::ResamplingAudioSource *resample_source;
 		juce::AudioSourceChannelInfo resample_callback_buffer;
@@ -67,15 +52,15 @@ namespace openshot {
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param sample_rate The original sample rate of the buffered samples
 		/// @param new_sample_rate The requested sample rate you need
-		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double sample_rate, double new_sample_rate);
+		void SetBuffer(juce::AudioBuffer<float> *new_buffer, double sample_rate, double new_sample_rate);
 
 		/// @brief Sets the audio buffer and key settings
 		/// @param new_buffer The buffer of audio samples needing to be resampled
 		/// @param ratio The multiplier that needs to be applied to the sample rate (this is how resampling happens)
-		void SetBuffer(juce::AudioSampleBuffer *new_buffer, double ratio);
+		void SetBuffer(juce::AudioBuffer<float> *new_buffer, double ratio);
 
 		/// Get the resampled audio buffer
-		juce::AudioSampleBuffer* GetResampledBuffer();
+		juce::AudioBuffer<float>* GetResampledBuffer();
 	};
 
 }

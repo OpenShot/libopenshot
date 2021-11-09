@@ -6,39 +6,22 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_AUDIOREADERSOURCE_H
 #define OPENSHOT_AUDIOREADERSOURCE_H
 
-#include <iomanip>
 #include "ReaderBase.h"
-#include <OpenShotAudio.h>
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 /// This namespace is the default namespace for all code in the openshot library
 namespace openshot
 {
-
+	class Frame;
 	/**
 	 * @brief This class is used to expose any ReaderBase derived class as an AudioSource in JUCE.
 	 *
@@ -50,7 +33,7 @@ namespace openshot
 		int position; /// The position of the audio source (index of buffer)
 		bool repeat; /// Repeat the audio source when finished
 		int size; /// The size of the internal buffer
-		juce::AudioSampleBuffer *buffer; /// The audio sample buffer
+		juce::AudioBuffer<float> *buffer; /// The audio sample buffer
 		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
@@ -64,7 +47,7 @@ namespace openshot
 		void GetMoreSamplesFromReader();
 
 		/// Reverse an audio buffer (for backwards audio)
-		juce::AudioSampleBuffer* reverse_buffer(juce::AudioSampleBuffer* buffer);
+		juce::AudioBuffer<float>* reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
 
@@ -105,7 +88,7 @@ namespace openshot
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
-		void setBuffer (juce::AudioSampleBuffer *audio_buffer);
+		void setBuffer (juce::AudioBuffer<float> *audio_buffer);
 
 	    const ReaderInfo & getReaderInfo() const { return reader->info; }
 

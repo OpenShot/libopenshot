@@ -1,3 +1,9 @@
+<!--
+© OpenShot Studios, LLC
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 ## Detailed Install Instructions
 
 Operating system specific install instructions are located in:

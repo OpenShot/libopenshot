@@ -1,3 +1,9 @@
+<!--
+© OpenShot Studios, LLC
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 # Building libopenshot for Windows
 
 ## Getting Started
@@ -195,6 +201,7 @@ pacman -S mingw64/mingw-w64-x86_64-python3-pip
 pacman -S mingw32/mingw-w64-i686-zeromq
 pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
 pacman -S mingw64/mingw-w64-x86_64-python3-cx_Freeze
+pacman -S mingw64/mingw-w64-x86_64-ninja
 pacman -S git
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
@@ -214,6 +221,7 @@ pacman -S mingw32/mingw-w64-i686-python3-pip
 pacman -S mingw32/mingw-w64-i686-zeromq
 pacman -S mingw32/mingw-w64-i686-python3-pyzmq
 pacman -S mingw32/mingw-w64-i686-python3-cx_Freeze
+pacman -S mingw32/mingw-w64-i686-ninja
 pacman -S git
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
@@ -228,6 +236,7 @@ pip3 install slacker
 pip3 install tinys3
 pip3 install github3.py
 pip3 install requests
+pip3 install meson
 ```  
 
 7) Download Unittest++ (https://github.com/unittest-cpp/unittest-cpp) into /MSYS2/[USER]/unittest-cpp-master/
@@ -237,7 +246,17 @@ cmake -G "MSYS Makefiles" ../ -DCMAKE_MAKE_PROGRAM=mingw32-make -DCMAKE_INSTALL_
 mingw32-make install
 ```
 
-8) ZMQ++ Header (This might not be needed anymore)
+8) Install babl pixel encoding and color space conversion engine (https://gegl.org/babl/)
+
+``` 
+git clone https://gitlab.gnome.org/GNOME/babl.git
+cd babl
+meson build --prefix=C:/msys64/mingw32
+cd build
+meson install
+```
+
+9) ZMQ++ Header (This might not be needed anymore)
   NOTE: Download and copy zmq.hpp into the /c/msys64/mingw64/include/ folder
 
 ## Manual Dependencies

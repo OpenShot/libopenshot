@@ -1,50 +1,32 @@
 /**
  * @file
  * @brief Header file for Echo audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_ECHO_AUDIO_EFFECT_H
 #define OPENSHOT_ECHO_AUDIO_EFFECT_H
 
-#include "../EffectBase.h"
+#include "EffectBase.h"
 
-#include "../Frame.h"
-#include "../Json.h"
-#include "../KeyFrame.h"
+#include "Json.h"
+#include "KeyFrame.h"
 
 #include <memory>
 #include <string>
-#include <random>
-#include <math.h>
 
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 namespace openshot
 {
+	class Frame;
 
 	/**
 	 * @brief This class adds a echo into the audio
@@ -57,11 +39,11 @@ namespace openshot
 		void init_effect_details();
 
 	public:
-		Keyframe echo_time;	
-		Keyframe feedback;	
+		Keyframe echo_time;
+		Keyframe feedback;
 		Keyframe mix;
 
-		juce::AudioSampleBuffer echo_buffer;
+		juce::AudioBuffer<float> echo_buffer;
 		int echo_buffer_samples;
 		int echo_buffer_channels;
 		int echo_write_position;
@@ -79,8 +61,8 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { 
-			return GetFrame(std::make_shared<openshot::Frame>(), frame_number); 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override {
+			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		}
 
 		void setup(std::shared_ptr<openshot::Frame> frame);

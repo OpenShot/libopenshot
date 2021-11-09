@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */  
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
@@ -39,26 +21,34 @@
 	#undef int64
 #endif
 
-
-#include <iomanip>
+#include <memory>
+#include <mutex>
 #include <sstream>
 #include <queue>
-#include <QApplication>
-#include <QImage>
-#include <memory>
-#include <unistd.h>
-#include "ZmqLogger.h"
+
 #include "ChannelLayouts.h"
-#include "AudioBufferSource.h"
-#include "AudioResampler.h"
 #include "Fraction.h"
-#include <OpenShotAudio.h>
+
+#include <QColor>
+#include <QImage>
+
 #ifdef USE_IMAGEMAGICK
-	#include "MagickUtilities.h"
+// Forward declare Magick::Image
+namespace Magick {
+    class Image;
+}
 #endif
+
+class QApplication;
+
+namespace juce {
+    template <typename Type> class AudioBuffer;
+}
 
 namespace openshot
 {
+	class AudioBufferSource;
+	class AudioResampler;
 	/**
 	 * @brief This class represents a single frame of video (i.e. image & audio data)
 	 *
@@ -109,10 +99,10 @@ namespace openshot
 	private:
 		std::shared_ptr<QImage> image;
 		std::shared_ptr<QImage> wave_image;
-		
+
 		std::shared_ptr<QApplication> previewApp;
-		juce::CriticalSection addingImageSection;
-        juce::CriticalSection addingAudioSection;
+		std::recursive_mutex addingImageMutex;
+        std::recursive_mutex addingAudioMutex;
 		const unsigned char *qbuffer;
 		openshot::Fraction pixel_ratio;
 		int channels;
@@ -131,7 +121,7 @@ namespace openshot
 		int constrain(int color_value);
 
 	public:
-		std::shared_ptr<juce::AudioSampleBuffer> audio;
+		std::shared_ptr<juce::AudioBuffer<float>> audio;
 		int64_t number;	 ///< This is the frame number (starting at 1)
 		bool has_audio_data; ///< This frame has been loaded with audio data
 		bool has_image_data; ///< This frame has been loaded with pixel data
@@ -160,10 +150,12 @@ namespace openshot
 
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, std::string new_color);
+                /// Add (or replace) pixel data (filled with new_color)
+		void AddColor(const QColor& new_color);
 
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
- 
+
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);
 
@@ -224,7 +216,7 @@ namespace openshot
 		/// Get number of audio samples
 		int GetAudioSamplesCount();
 
-	    juce::AudioSampleBuffer *GetAudioSampleBuffer();
+	    juce::AudioBuffer<float> *GetAudioSampleBuffer();
 
 		/// Get the size in bytes of this frame (rough estimate)
 		int64_t GetBytes();

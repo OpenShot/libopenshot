@@ -6,40 +6,29 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Clip.h"
+
+#include "AudioResampler.h"
 #include "Exceptions.h"
 #include "FFmpegReader.h"
 #include "FrameMapper.h"
-#ifdef USE_IMAGEMAGICK
-	#include "ImageReader.h"
-	#include "TextReader.h"
-#endif
 #include "QtImageReader.h"
 #include "ChunkReader.h"
 #include "DummyReader.h"
 #include "Timeline.h"
+#include "ZmqLogger.h"
+
+#ifdef USE_IMAGEMAGICK
+    #include "MagickUtilities.h"
+    #include "ImageReader.h"
+    #include "TextReader.h"
+#endif
+
+#include <Qt>
 
 using namespace openshot;
 
@@ -466,13 +455,13 @@ std::string Clip::get_file_extension(std::string path)
 }
 
 // Reverse an audio buffer
-void Clip::reverse_buffer(juce::AudioSampleBuffer* buffer)
+void Clip::reverse_buffer(juce::AudioBuffer<float>* buffer)
 {
 	int number_of_samples = buffer->getNumSamples();
 	int channels = buffer->getNumChannels();
 
 	// Reverse array (create new buffer to hold the reversed version)
-	juce::AudioSampleBuffer *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	juce::AudioBuffer<float> *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -504,10 +493,10 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 	// Check for a valid time map curve
 	if (time.GetLength() > 1)
 	{
-		const GenericScopedLock<juce::CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// create buffer and resampler
-		juce::AudioSampleBuffer *samples = NULL;
+		juce::AudioBuffer<float> *samples = NULL;
 		if (!resampler)
 			resampler = new AudioResampler();
 
@@ -527,10 +516,10 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 			if (time.GetRepeatFraction(frame_number).den > 1) {
 				// SLOWING DOWN AUDIO
 				// Resample data, and return new buffer pointer
-				juce::AudioSampleBuffer *resampled_buffer = NULL;
+				juce::AudioBuffer<float> *resampled_buffer = NULL;
 
 				// SLOW DOWN audio (split audio)
-				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
+				samples = new juce::AudioBuffer<float>(channels, number_of_samples);
 				samples->clear();
 
 				// Loop through channels, and get audio samples
@@ -574,7 +563,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 																		 reader->info.channels);
 
 					// Allocate a new sample buffer for these delta frames
-					samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+					samples = new juce::AudioBuffer<float>(channels, total_delta_samples);
 					samples->clear();
 
 					// Loop through each frame in this delta
@@ -582,7 +571,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame <= new_frame_number; delta_frame++) {
 						// buffer to hold detal samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioBuffer<float> *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -618,7 +607,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 																		 reader->info.channels);
 
 					// Allocate a new sample buffer for these delta frames
-					samples = new juce::AudioSampleBuffer(channels, total_delta_samples);
+					samples = new juce::AudioBuffer<float>(channels, total_delta_samples);
 					samples->clear();
 
 					// Loop through each frame in this delta
@@ -626,7 +615,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 						 delta_frame >= new_frame_number; delta_frame--) {
 						// buffer to hold delta samples
 						int number_of_delta_samples = GetOrCreateFrame(delta_frame)->GetAudioSamplesCount();
-						juce::AudioSampleBuffer *delta_samples = new juce::AudioSampleBuffer(channels,
+						juce::AudioBuffer<float> *delta_samples = new juce::AudioSampleBuffer(channels,
 																					   number_of_delta_samples);
 						delta_samples->clear();
 
@@ -657,7 +646,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 				resampler->SetBuffer(samples, float(start) / float(number_of_samples));
 
 				// Resample data, and return new buffer pointer
-				juce::AudioSampleBuffer *buffer = resampler->GetResampledBuffer();
+				juce::AudioBuffer<float> *buffer = resampler->GetResampledBuffer();
 
 				// Add the newly resized audio samples to the current frame
 				for (int channel = 0; channel < channels; channel++)
@@ -669,7 +658,7 @@ void Clip::get_time_mapped_frame(std::shared_ptr<Frame> frame, int64_t frame_num
 			}
 			else {
 				// Use the samples on this frame (but maybe reverse them if needed)
-				samples = new juce::AudioSampleBuffer(channels, number_of_samples);
+				samples = new juce::AudioBuffer<float>(channels, number_of_samples);
 				samples->clear();
 
 				// Loop through channels, and get audio samples
@@ -721,8 +710,10 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
-			reader_copy->SampleRate(reader_frame->SampleRate());
-			reader_copy->ChannelsLayout(reader_frame->ChannelsLayout());
+                        if (has_video.GetInt(number) == 0)
+                            reader_copy->AddColor(QColor(Qt::transparent));
+                        if (has_audio.GetInt(number) == 0)
+                            reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
 			return reader_copy;
 		}
 
@@ -807,10 +798,10 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 	// Add waveform choices (dropdown style)
 	root["waveform"]["choices"].append(add_property_choice_json("Yes", true, waveform));
 	root["waveform"]["choices"].append(add_property_choice_json("No", false, waveform));
-	
+
 	// Add the parentTrackedObject's properties
 	if (parentTrackedObject)
-	{	
+	{
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
@@ -821,7 +812,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double parentObject_frame_number = trackedObjectParentClipProperties["frame_number"];
 		// Get attached object properties
 		std::map< std::string, float > trackedObjectProperties = parentTrackedObject->GetBoxValues(parentObject_frame_number);
-		
+
 		// Correct the parent Tracked Object properties by the clip's reference system
 		float parentObject_location_x = trackedObjectProperties["cx"] - 0.5 + trackedObjectParentClipProperties["cx"];
 		float parentObject_location_y = trackedObjectProperties["cy"] - 0.5 + trackedObjectParentClipProperties["cy"];
@@ -847,7 +838,7 @@ std::string Clip::PropertiesJSON(int64_t requested_frame) const {
 		double timeline_frame_number = requested_frame + clip_start_position - clip_start_frame;
 
 		// Correct the parent Clip Object properties by the clip's reference system
-		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		float parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		float parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		float parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		float parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1069,7 +1060,7 @@ void Clip::SetJsonValue(const Json::Value root) {
 
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString()))) {
-					
+
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
 
@@ -1194,7 +1185,7 @@ void Clip::AddEffect(EffectBase* effect)
 
 			// Iterate through effect's vector of Tracked Objects
 			for (auto const& trackedObject : effect->trackedObjects){
-				
+
 				// Cast the Tracked Object as TrackedObjectBBox
 				std::shared_ptr<TrackedObjectBBox> trackedObjectBBox = std::static_pointer_cast<TrackedObjectBBox>(trackedObject.second);
 
@@ -1203,7 +1194,7 @@ void Clip::AddEffect(EffectBase* effect)
 
 				// Add the Tracked Object to the timeline
 				parentTimeline->AddTrackedObject(trackedObjectBBox);
-			}	
+			}
 		}
 	}
     #endif
@@ -1404,7 +1395,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parent object's properties (Clip)
-		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number); 
+		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
 		parentObject_location_y = parentClipObject->location_y.GetValue(timeline_frame_number);
 		parentObject_scale_x = parentClipObject->scale_x.GetValue(timeline_frame_number);
 		parentObject_scale_y = parentClipObject->scale_y.GetValue(timeline_frame_number);
@@ -1439,8 +1430,8 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 			parentObject_scale_x = trackedObjectProperties["w"]*trackedObjectProperties["sx"];
 			parentObject_scale_y = trackedObjectProperties["h"]*trackedObjectProperties["sy"];
 			parentObject_rotation = trackedObjectProperties["r"] + trackedObjectParentClipProperties["rotation"];
-		} 
-		else 
+		}
+		else
 		{
 			// Access the parentTrackedObject's properties
 			std::map<std::string, float> trackedObjectProperties = parentTrackedObject->GetBoxValues(timeline_frame_number);
@@ -1470,7 +1461,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 
     float scaled_source_width = source_size.width() * sx;
 	float scaled_source_height = source_size.height() * sy;
-	
+
 	switch (gravity)
 	{
 		case (GRAVITY_TOP_LEFT):
@@ -1510,7 +1501,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
 
 	QTransform transform;
-		
+
 	/* LOCATION, ROTATION, AND SCALE */
 	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
 	x += (width * (location_x.GetValue(frame->number) + parentObject_location_x )); // move in percentage of final width
@@ -1526,7 +1517,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP
 		transform.translate(x, y);
-	} 
+	}
 	if (!isEqual(r, 0) || !isEqual(shear_x_value, 0) || !isEqual(shear_y_value, 0)) {
 		// ROTATE CLIP (around origin_x, origin_y)
 		float origin_x_offset = (scaled_source_width * origin_x_value);

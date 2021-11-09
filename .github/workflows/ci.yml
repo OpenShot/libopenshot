@@ -1,3 +1,7 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 name: libopenshot CI Build
 on: [push, pull_request]
 
@@ -45,6 +49,14 @@ jobs:
           ref: mac-rpath
           path: audio
 
+      - name: Checkout Resvg
+        if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
+        uses: actions/checkout@v2
+        with:
+          repository: RazrFalcon/resvg
+          path: resvg
+          ref: v0.19.0
+
       - uses: haya14busa/action-cond@v1
         id: generator
         with:
@@ -58,6 +70,12 @@ jobs:
           cond: ${{ matrix.compiler.cc == 'gcc' && runner.os != 'Windows' }}
           if_true: "-DENABLE_COVERAGE:BOOL=1"
 
+      - uses: haya14busa/action-cond@v1
+        id: use-resvg
+        with:
+          cond: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
+          if_true: "-DResvg_ROOT:PATH=./resvg"
+
       - name: Install Linux dependencies
         if: ${{ runner.os == 'linux' }}
         run: |
@@ -70,7 +88,8 @@ jobs:
             libfdk-aac-dev libavcodec-dev libavformat-dev \
             libavutil-dev libswscale-dev libswresample-dev \
             libzmq3-dev libmagick++-dev libbabl-dev \
-            libopencv-dev libprotobuf-dev protobuf-compiler
+            libopencv-dev libprotobuf-dev protobuf-compiler \
+            cargo
           # Install catch2 package from Ubuntu 20.10, since for some reason
           # even 20.04 only has Catch 1.12.1 available.
           wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
@@ -108,13 +127,22 @@ jobs:
               mingw-w64-x86_64-swig
 
       - uses: actions/cache@v2
-        id: cache
+        name: Import OpenShotAudio cache
+        id: cache-audio
         with:
           path: audio/build
-          key: audio-mac-rpath-${{ runner.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
+          key: audio-mac-rpath-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
+
+      - uses: actions/cache@v2
+        name: Import Resvg cache
+        if: ${{ steps.use-resvg.outputs.value }}
+        id: cache-resvg
+        with:
+          path: resvg/target
+          key: resvg-mac-rpath-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('resvg/Cargo.toml') }}
 
       - name: Build OpenShotAudio (if not cached)
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache-audio.outputs.cache-hit != 'true'
         run: |
           pushd audio
           if [ ! -d build ]; then
@@ -133,11 +161,14 @@ jobs:
           cmake --build build
           popd
 
-      - name: Install OpenShotAudio
+      - name: Build Resvg (if enabled and not cached)
+        if: steps.cache-resvg && (steps.cache-resvg.outputs.cache-hit != 'true')
         run: |
-          pushd audio
-          cmake --install build
-          popd
+          if [ -d "resvg/c-api" ]; then
+            pushd resvg/c-api
+            cargo build --release
+            popd
+          fi
 
       - name: Build libopenshot
         run: |
@@ -156,7 +187,8 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${INSTALL_PATH}" \
             -DOpenShotAudio_ROOT="./audio/build" \
             ${CMAKE_EXTRA} \
-            "${{ steps.coverage.outputs.value }}"
+            "${{ steps.coverage.outputs.value }}" \
+            "${{ steps.use-resvg.outputs.value }}"
           cmake --build build -- VERBOSE=1
 
       - name: Test libopenshot

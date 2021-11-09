@@ -5,24 +5,8 @@
 # @section LICENSE
 #
 # Copyright (c) 2008-2019 OpenShot Studios, LLC
-# <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to
-# delivering high quality video editing and animation solutions to the
-# world. For more information visit <http://www.openshot.org/>.
 #
-# OpenShot Library (libopenshot) is free software: you can redistribute it
-# and/or modify it under the terms of the GNU Lesser General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# OpenShot Library (libopenshot) is distributed in the hope that it will be
-# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 # Collect and display summary of options/dependencies
 include(FeatureSummary)
@@ -483,29 +467,22 @@ if (TARGET cppzmq)
   target_link_libraries(openshot PUBLIC cppzmq)
 endif()
 
-################# BLACKMAGIC DECKLINK ###################
-# Find BlackMagic DeckLinkAPI libraries
-if (ENABLE_BLACKMAGIC)
-  find_package(BlackMagic)
+###
+### Babl
+###
 
-  if (BLACKMAGIC_FOUND)
-    # BlackMagic related files
-    target_sources(openshot PRIVATE
-      DecklinkInput.cpp
-      DecklinkReader.cpp
-      DecklinkOutput.cpp
-      DecklinkWriter.cpp)
+# Find babl library for colourspace conversion (used for advanced chroma keying
+find_package(babl)
 
-    # Include Blackmagic headers (needed for compile)
-    target_include_directories(openshot PRIVATE ${BLACKMAGIC_INCLUDE_DIR})
-
-    # Link libopenshot with BlackMagic libs
-    target_link_libraries(openshot PUBLIC ${BLACKMAGIC_LIBRARY_DIR})
-
-    # define a preprocessor macro (used in the C++)
-    target_compile_definitions(openshot PUBLIC USE_BLACKMAGIC=1)
-  endif()
+if (babl_FOUND)
+  set(HAVE_BABL TRUE CACHE BOOL "Building with babl support" FORCE)
+  mark_as_advanced(HAVE_BABL)
 endif()
+
+if (TARGET babl_lib)
+  target_compile_definitions(openshot PUBLIC USE_BABL=1)
+  target_link_libraries(openshot PUBLIC babl_lib)
+endif ()
 
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
@@ -619,7 +596,7 @@ install(FILES
   DESTINATION ${CMAKECONFIG_INSTALL_DIR}
 )
 
-# Install primary library
+# Install libraries
 install(TARGETS ${PROJECT_EXPORT_TARGETS}
   EXPORT ${PROJECT_EXPORTS}
   COMPONENT runtime

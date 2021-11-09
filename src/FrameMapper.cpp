@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <cmath>
 #include <iostream>
@@ -35,6 +17,7 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 using namespace openshot;
@@ -408,7 +391,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	if (final_frame) return final_frame;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Find parent properties (if any)
     Clip *parent = (Clip *) ParentClip();
@@ -666,7 +649,7 @@ void FrameMapper::Close()
 	if (reader)
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close");
 

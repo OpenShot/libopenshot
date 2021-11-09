@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Timeline.h"
 
@@ -89,9 +71,9 @@ Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int cha
 }
 
 // Delegating constructor that copies parameters from a provided ReaderInfo
-Timeline::Timeline(const ReaderInfo info) :
-	Timeline::Timeline(info.width, info.height, info.fps, info.sample_rate,
-	                   info.channels, info.channel_layout) {};
+Timeline::Timeline(const ReaderInfo info) : Timeline::Timeline(
+	info.width, info.height, info.fps, info.sample_rate,
+	info.channels, info.channel_layout) {}
 
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
@@ -245,7 +227,7 @@ Timeline::~Timeline() {
 	}
 }
 
-// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject){
 
 	// Search for the tracked object on the map
@@ -254,7 +236,7 @@ void Timeline::AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> tra
 	if (iterator != tracked_objects.end()){
 		// Tracked object's id already present on the map, overwrite it
 		iterator->second = trackedObject;
-	} 
+	}
 	else{
 		// Tracked object's id not present -> insert it on the map
 		tracked_objects[trackedObject->Id()] = trackedObject;
@@ -277,7 +259,7 @@ std::shared_ptr<openshot::TrackedObjectBase> Timeline::GetTrackedObject(std::str
 	else {
 		// Id not found, return a null pointer
 		return nullptr;
-	}	
+	}
 }
 
 // Return the ID's of the tracked objects as a list of strings
@@ -324,7 +306,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 			trackedObjectJson["x2"] = x2;
 			trackedObjectJson["y2"] = y2;
 			trackedObjectJson["rotation"] = rotation;
-		
+
 		} else {
 			BBox box = trackedObject->BoxVec.begin()->second;
 			float x1 = box.cx - (box.width/2);
@@ -348,7 +330,7 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 		trackedObjectJson["x2"] = 0;
 		trackedObjectJson["y2"] = 0;
 		trackedObjectJson["rotation"] = 0;
-	}	
+	}
 
 	return trackedObjectJson.toStyledString();
 }
@@ -446,7 +428,7 @@ std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
 
 	// Loop through all clips
 	for (const auto& clip : clips) {
-		
+
 		// Get the clip's list of effects
 		std::list<EffectBase*> clipEffectsList = clip->Effects();
 
@@ -486,7 +468,7 @@ int64_t Timeline::GetMaxFrame() {
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
     // Get lock (prevent getting frames while this happens)
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Determine type of reader
 	ReaderBase* clip_reader = NULL;
@@ -791,7 +773,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	else
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Check for open reader (or throw exception)
 		if (!is_open)
@@ -915,7 +897,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
         final_cache->Add(new_frame);
 
 		// Return frame (or blank frame)
-		return final_cache->GetFrame(requested_frame);
+		return new_frame;
 	}
 }
 
@@ -1023,7 +1005,7 @@ Json::Value Timeline::JsonValue() const {
 void Timeline::SetJson(const std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1065,7 +1047,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
 			// allows attaching it to an object when exporting the project (because)
-			// the exporter script initializes the clip and it's effects 
+			// the exporter script initializes the clip and it's effects
 			// before setting its parent timeline.
 			c->ParentTimeline(this);
 
@@ -1119,7 +1101,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 void Timeline::ApplyJsonDiff(std::string value) {
 
     // Get lock (prevent getting frames while this happens)
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1497,8 +1479,8 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 // Clear all caches
 void Timeline::ClearAllCache() {
 
-	// Get lock (prevent getting frames while this happens)
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    // Get lock (prevent getting frames while this happens)
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Clear primary cache
     final_cache->Clear();
@@ -1511,11 +1493,10 @@ void Timeline::ClearAllCache() {
 
         // Clear nested Reader (if any)
         if (clip->Reader()->Name() == "FrameMapper") {
-			FrameMapper* nested_reader = (FrameMapper*) clip->Reader();
-			if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
-				nested_reader->Reader()->GetCache()->Clear();
-		}
-
+          FrameMapper* nested_reader = (FrameMapper*) clip->Reader();
+          if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+            nested_reader->Reader()->GetCache()->Clear();
+        }
     }
 }
 

@@ -6,30 +6,23 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+#include <sstream>
+#include <iomanip>
 
 #include "Frame.h"
-#include <OpenShotAudio.h>
+
+#include "AudioBufferSource.h"
+#include "AudioResampler.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 #include <QApplication>
 #include <QImage>
@@ -45,15 +38,16 @@
 #include <QPointF>
 #include <QWidget>
 
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
+#ifdef USE_IMAGEMAGICK
+    #include "MagickUtilities.h"
+#endif
 
 using namespace std;
 using namespace openshot;
 
 // Constructor - image & audio
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
-	: audio(std::make_shared<juce::AudioSampleBuffer>(channels, samples)),
+	: audio(std::make_shared<juce::AudioBuffer<float>>(channels, samples)),
 	  number(number), width(width), height(height),
 	  pixel_ratio(1,1), color(color), qbuffer(NULL),
 	  channels(channels), channel_layout(LAYOUT_STEREO),
@@ -111,7 +105,7 @@ void Frame::DeepCopy(const Frame& other)
 	if (other.image)
 		image = std::make_shared<QImage>(*(other.image));
 	if (other.audio)
-		audio = std::make_shared<juce::AudioSampleBuffer>(*(other.audio));
+		audio = std::make_shared<juce::AudioBuffer<float>>(*(other.audio));
 	if (other.wave_image)
 		wave_image = std::make_shared<QImage>(*(other.wave_image));
 }
@@ -331,7 +325,7 @@ float* Frame::GetAudioSamples(int channel)
 float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
-	juce::AudioSampleBuffer *buffer(audio.get());
+	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -377,7 +371,7 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
 	float *output = NULL;
-	juce::AudioSampleBuffer *buffer(audio.get());
+	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
 
@@ -421,7 +415,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 	if (audio)
 		return audio->getNumChannels();
 	else
@@ -431,11 +425,11 @@ int Frame::GetAudioChannelsCount()
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 	return max_audio_sample;
 }
 
-juce::AudioSampleBuffer *Frame::GetAudioSampleBuffer()
+juce::AudioBuffer<float> *Frame::GetAudioSampleBuffer()
 {
     return audio.get();
 }
@@ -734,22 +728,25 @@ int Frame::constrain(int color_value)
 	return color_value;
 }
 
-// Add (or replace) pixel data to the frame (based on a solid color)
 void Frame::AddColor(int new_width, int new_height, std::string new_color)
 {
-	// Set color
-	color = new_color;
+     const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+     // Update parameters
+    width = new_width;
+    height = new_height;
+    color = new_color;
+    AddColor(QColor(QString::fromStdString(new_color)));
+}
 
+// Add (or replace) pixel data to the frame (based on a solid color)
+void Frame::AddColor(const QColor& new_color)
+{
 	// Create new image object, and fill with pixel data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	image = std::make_shared<QImage>(new_width, new_height, QImage::Format_RGBA8888_Premultiplied);
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 
 	// Fill with solid color
-	image->fill(QColor(QString::fromStdString(color)));
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
+	image->fill(new_color);
 	has_image_data = true;
 }
 
@@ -760,9 +757,9 @@ void Frame::AddImage(
 {
 	// Create new buffer
 	{
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
 		qbuffer = pixels_;
-	}  // Release addingImageSection lock
+	}  // Release addingImageMutex lock
 
 	// Create new image object from pixel data
 	auto new_image = std::make_shared<QImage>(
@@ -784,7 +781,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 		return;
 
 	// assign image data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
 	image = new_image;
 
 	// Always convert to Format_RGBA8888_Premultiplied (if different)
@@ -824,7 +821,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		}
 
 		// Get the frame's image
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
 		unsigned char *pixels = image->bits();
 		const unsigned char *new_pixels = new_image->constBits();
 
@@ -849,7 +846,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Resize JUCE audio buffer
 	audio->setSize(channels, length, true, true, false);
@@ -862,7 +859,7 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
-	const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+	const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
 	// Clamp starting sample to 0
 	int destStartSampleAdjusted = max(destStartSample, 0);
@@ -891,7 +888,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 // Apply gain ramp (i.e. fading volume)
 void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Apply gain ramp
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
@@ -1096,7 +1093,7 @@ void Frame::cleanUpBuffer(void *info)
 // Add audio silence
 void Frame::AddAudioSilence(int numSamples)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);
