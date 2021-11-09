@@ -167,10 +167,25 @@ set_target_properties(openshot PROPERTIES
   AUTOMOC ON
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_SO_VERSION}
-  EXPORT_NAME Lib
-  FRAMEWORK ON
-  INSTALL_RPATH "@loader_path/."
+  EXPORT_NAME Lib  # Exports as OpenShot::Lib
 )
+
+# Deal with build/install discovery of other libs
+if(APPLE)
+  set_target_properties(openshot PROPERTIES
+    FRAMEWORK ON
+    INSTALL_RPATH "@loader_path/."
+  )
+elif(UNIX AND NOT APPLE)
+  set_target_properties(openshot PROPERTIES
+    INSTALL_RPATH_USE_LINK_PATH ON
+    INSTALL_RPATH "$ORIGIN/."
+  )
+elif(WIN32)
+  set_target_properties(openshot PROPERTIES
+    RUNTIME_OUTPUT_DIR "${PROJECT_BINARY_DIR}"
+  )
+endif()
 
 # Location of our includes, both internally and when installed
 target_include_directories(openshot
@@ -180,10 +195,33 @@ target_include_directories(openshot
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libopenshot>
+)
+
+list(APPEND PROJECT_EXPORT_TARGETS openshot)
 
 ################# LIBOPENSHOT-AUDIO ###################
 # Find JUCE-based openshot Audio libraries
+
+# First, deal with possible subproject builds
+if(TARGET OpenShot::Audio)
+  # Is OpenShot::Audio an ALIAS target?
+  get_property(_audio_alias
+    TARGET OpenShot::Audio PROPERTY ALIASED_TARGET)
+  if(_audio_alias)
+    set(_tgt ${_audio_alias})
+  else()
+    set(_tgt OpenShot::Audio)
+  endif()
+  # Check if OpenShot::Audio (or its real target) is IMPORTED
+  get_property(_is_imported
+    TARGET ${_tgt} PROPERTY IMPORTED)
+  if(NOT _is_imported)
+    # We'll need to install it
+    list(APPEND PROJECT_EXPORT_TARGETS ${_tgt})
+  endif()
+endif()
+
 if(NOT TARGET OpenShot::Audio)
   # Only load if necessary (not for integrated builds)
   find_package(OpenShotAudio 0.2.0 REQUIRED)
@@ -200,7 +238,7 @@ if (ENABLE_MAGICK)
 
   if(ImageMagick_FOUND)
     if(NOT TARGET ImageMagick::Magick++ AND NOT TARGET Magick++_TARGET)
-      add_library(Magick++_TARGET INTERFACE)
+      add_library(Magick++_TARGET IMPORTED INTERFACE)
 
       # Include ImageMagick++ headers (needed for compile)
       set_property(TARGET Magick++_TARGET APPEND PROPERTY
@@ -258,12 +296,21 @@ endif ()
 if (NOT jsoncpp_FOUND AND NOT DISABLE_BUNDLED_JSONCPP)
   message(STATUS "Using embedded jsoncpp (not found or USE_SYSTEM_JSONCPP disabled)")
   if (NOT TARGET jsoncpp_lib)
+    # Build from bundled sources
+    set(BUNDLED_JSONCPP_PATH "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
     add_library(jsoncpp_lib OBJECT)
     set_target_properties(jsoncpp_lib PROPERTIES
       POSITION_INDEPENDENT_CODE TRUE)
-    target_include_directories(jsoncpp_lib PUBLIC
-      "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp")
-    target_sources(jsoncpp_lib PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/jsoncpp/jsoncpp.cpp")
+    target_include_directories(jsoncpp_lib PUBLIC ${BUNDLED_JSONCPP_PATH})
+    target_sources(jsoncpp_lib PRIVATE "${BUNDLED_JSONCPP_PATH}/jsoncpp.cpp")
+
+    # Bundle the headers with our install
+    install(DIRECTORY "${BUNDLED_JSONCPP_PATH}/json"
+      COMPONENT devel
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libopenshot/json
+      FILES_MATCHING GLOB "*.h"
+    )
+
     # Because this satisfies the requirement, an installed JsonCpp is optional
     set_package_properties(jsoncpp PROPERTIES TYPE OPTIONAL)
   endif ()
@@ -408,7 +455,7 @@ find_package(OpenMP REQUIRED)
 
 if(NOT TARGET OpenMP::OpenMP_CXX)
     # Older CMake versions (< 3.9) don't create find targets.
-    add_library(OpenMP_TARGET INTERFACE)
+    add_library(OpenMP_TARGET IMPORTED INTERFACE)
     add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
     target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
     target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
@@ -481,7 +528,7 @@ See https://github.com/opencv/opencv/issues/19260]])
 
     # Create a target for libprotobuf, if necessary (CMake < 3.9)
     if(NOT TARGET protobuf::libprotobuf)
-      add_library(protobuf_TARGET INTERFACE)
+      add_library(protobuf_TARGET IMPORTED INTERFACE)
       target_include_directories(protobuf_TARGET
         INTERFACE ${Protobuf_INCLUDE_DIRS})
       target_link_libraries(protobuf_TARGET INTERFACE ${Protobuf_LIBRARIES})
@@ -548,24 +595,14 @@ endif()
 include(CMakePackageConfigHelpers)
 
 set(PROJECT_EXPORT_NAME OpenShotLib)
+set(PROJECT_EXPORTS OpenShotLibTargets)
 
 set(CMAKECONFIG_INSTALL_DIR
   "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_EXPORT_NAME}"
   CACHE STRING "install path for CMake configuration")
 
-# Generate EXPORT configs to builddir
-export(EXPORT "${PROJECT_EXPORT_NAME}Targets"
-  NAMESPACE OpenShot::
-  FILE "${CMAKE_BINARY_DIR}/${PROJECT_EXPORT_NAME}Targets.cmake"
-)
-export(TARGETS openshot
-  NAMESPACE OpenShot::
-  FILE "${PROJECT_EXPORT_NAME}Targets.cmake"
-  EXPORT_LINK_INTERFACE_LIBRARIES
-)
-
 configure_package_config_file(
-  cmake/Config.cmake.in
+  "${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in"
   "${CMAKE_BINARY_DIR}/${PROJECT_EXPORT_NAME}Config.cmake"
   INSTALL_DESTINATION ${CMAKECONFIG_INSTALL_DIR}
 )
@@ -579,14 +616,12 @@ write_basic_package_version_file(
 install(FILES
   "${CMAKE_BINARY_DIR}/${PROJECT_EXPORT_NAME}Config.cmake"
   "${CMAKE_BINARY_DIR}/${PROJECT_EXPORT_NAME}ConfigVersion.cmake"
-  EXPORT "${PROJECT_EXPORT_NAME}Targets"
-  NAMESPACE OpenShot::
   DESTINATION ${CMAKECONFIG_INSTALL_DIR}
 )
 
-# Install libraries
-install(TARGETS openshot
-  EXPORT "${PROJECT_EXPORT_NAME}Targets"
+# Install primary library
+install(TARGETS ${PROJECT_EXPORT_TARGETS}
+  EXPORT ${PROJECT_EXPORTS}
   COMPONENT runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -601,8 +636,28 @@ install(DIRECTORY .
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(IMPORTED_RUNTIME_ARTIFACTS openshot
+export(TARGETS ${PROJECT_EXPORT_TARGETS}
+  NAMESPACE OpenShot::
+  FILE "${PROJECT_EXPORTS}.cmake"
+  EXPORT_LINK_INTERFACE_LIBRARIES
+)
+
+# Generate EXPORT configs to builddir
+export(EXPORT ${PROJECT_EXPORTS}
+  NAMESPACE OpenShot::
+  FILE "${CMAKE_BINARY_DIR}/${PROJECT_EXPORTS}.cmake"
+)
+
+install(
+  EXPORT ${PROJECT_EXPORTS}
+  FILE "${PROJECT_EXPORTS}.cmake"
+  NAMESPACE OpenShot::
+  DESTINATION ${CMAKECONFIG_INSTALL_DIR}
+)
+
+install(IMPORTED_RUNTIME_ARTIFACTS ${PROJECT_EXPORT_TARGETS}
   RUNTIME_DEPENDENCY_SET bundled_libs
+  COMPONENT bundle
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   BUNDLE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -611,9 +666,7 @@ install(IMPORTED_RUNTIME_ARTIFACTS openshot
   EXCLUDE_FROM_ALL
 )
 
-
-install(TARGETS openshot
-  EXPORT "${PROJECT_EXPORT_NAME}Targets"
+install(TARGETS ${PROJECT_EXPORT_TARGETS}
   COMPONENT bundle
   RUNTIME_DEPENDENCIES
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

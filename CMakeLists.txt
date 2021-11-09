@@ -103,23 +103,18 @@ endif()
 ### compile command line. CMake automatically sets -DNDEBUG
 ### on all non-debug configs, so we'll just add -DDEBUG to
 ### the debug build flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+add_compile_definitions($<$<CONFIG:Debug>:DEBUG>)
 
 #### Work around a GCC < 9 bug with handling of _Pragma() in macros
 #### See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55578
 if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
     (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9.0.0"))
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
+    add_compile_options("-no-integrated-cpp")
 endif()
 
-#### Enable C++11 (for std::shared_ptr support)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-IF (WIN32)
-	SET_PROPERTY(GLOBAL PROPERTY WIN32 "WIN32")
-ENDIF(WIN32)
 
 ############## Code Coverage #########################
 if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
@@ -227,10 +222,7 @@ $<TARGET_GENEX_EVAL:openshot,
   set(COVERAGE_EXCLUDES
     "bindings/.*"
     "examples/.*"
-    "${CMAKE_CURRENT_BINARY_DIR}/bindings/.*"
-    "${CMAKE_CURRENT_BINARY_DIR}/examples/.*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/.*_autogen.*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/.*"
+    "${CMAKE_CURRENT_BINARY_DIR}/.*"
     "audio/.*"
     "/usr/include/.*"
   )

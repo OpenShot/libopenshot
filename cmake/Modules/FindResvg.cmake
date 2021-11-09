@@ -60,6 +60,8 @@ find_path(Resvg_INCLUDE_DIRS
   PATH_SUFFIXES
     resvg
     capi/include
+    c-api
+    c-api/include
     resvg/capi/include
 )
 
