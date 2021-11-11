@@ -162,8 +162,10 @@ TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
     CHECK_FALSE(f1 * num1 == f1.ToDouble() * num1);
     CHECK_FALSE(f1 * num1 == f1.ToInt() * num1);
 
-    CHECK(f1 * num2 == static_cast<double>(f1.ToDouble() * num2));
-    CHECK(f1 * num3 == static_cast<float>(f1.ToDouble() * num3));
+    CHECK(f1 * num2 == Approx(static_cast<double>(f1.ToDouble() * num2))
+                       .margin(0.0001));
+    CHECK(f1 * num3 == Approx(static_cast<float>(f1.ToDouble() * num3))
+                       .margin(0.0001));
 
     CHECK(f1 * num4 == static_cast<int>(f1.ToDouble() * num4));
     CHECK_FALSE(f1 * num4 == f1.ToDouble() * num4);
@@ -174,8 +176,10 @@ TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
     CHECK_FALSE(num1 * f1 == num1 * f1.ToDouble());
     CHECK_FALSE(num1 * f1 == num1 * f1.ToInt());
 
-    CHECK(num2 * f1 == static_cast<double>(f1.ToDouble() * num2));
-    CHECK(num3 * f1 == static_cast<float>(f1.ToDouble() * num3));
+    CHECK(num2 * f1 == Approx(static_cast<double>(f1.ToDouble() * num2))
+                       .margin(0.0001));
+    CHECK(num3 * f1 == Approx(static_cast<float>(f1.ToDouble() * num3))
+                       .margin(0.0001));
 
     CHECK(num4 * f1 == static_cast<int>(f1.ToDouble() * num4));
     CHECK_FALSE(num4 * f1 == num4 * f1.ToDouble());
