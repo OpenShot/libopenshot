@@ -158,24 +158,25 @@ brew install babl
 Since libopenshot-audio is not available in a Homebrew or MacPorts package, we need to go through a 
 few additional steps to manually build and install it. Launch a terminal and enter:
 
-```
+```zsh
 cd [libopenshot-audio repo folder]
 mkdir build
 cd build
-cmake -d -G "Unix Makefiles" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang ../   (CLang must be used due to GNU incompatible Objective-C code in some of the Apple frameworks)
+# (CLang must be used due to GNU incompatible Objective-C code in some of the Apple frameworks)
+cmake --debug-output -G "Unix Makefiles" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang ../
 make
 make install
-./src/openshot-audio-test-sound  (This should play a test sound)
+./src/openshot-audio-demo  (This should play a test sound)
 ```
 
 ## Mac Build Instructions (libopenshot)
 Run the following commands to build libopenshot:
 
-```
-$ cd [libopenshot repo folder]
-$ mkdir build
-$ cd build
-$ cmake -G "Unix Makefiles"  -DCMAKE_CXX_COMPILER=/usr/local/opt/gcc48/bin/g++-4.8 -DCMAKE_C_COMPILER=/usr/local/opt/gcc48/bin/gcc-4.8 -DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt5/5.4.2/ -DPYTHON_INCLUDE_DIR=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/include/python3.3m/ -DPYTHON_LIBRARY=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/Versions/3.3/lib/libpython3.3.dylib -DPython_FRAMEWORKS=/usr/local/Cellar/python3/3.3.2/Frameworks/Python.framework/ ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"
+```zsh
+cd [libopenshot repo folder]
+mkdir build
+cd build
+cmake -G "Unix Makefiles" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_PREFIX_PATH="$(brew --cellar qt5)/<version>" -DPython_FRAMEWORKS="$(brew --cellar python3)/<version>/Frameworks/Python.framework/" ../ -D"CMAKE_BUILD_TYPE:STRING=Debug"
 ```
 
 The extra arguments on the cmake command make sure the compiler will be gcc4.8 and that cmake 
