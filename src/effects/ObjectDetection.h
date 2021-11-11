@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include <opencv2/opencv.hpp>
+#include "OpenCVUtilities.h"
 
 #include "Json.h"
 #include "KeyFrame.h"

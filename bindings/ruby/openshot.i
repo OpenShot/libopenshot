@@ -38,7 +38,7 @@
 #ifdef USE_IMAGEMAGICK
 	%shared_ptr(Magick::Image)
 #endif
-%shared_ptr(juce::AudioSampleBuffer)
+%shared_ptr(juce::AudioBuffer<float>)
 %shared_ptr(openshot::Frame)
 
 /* Template specializations */

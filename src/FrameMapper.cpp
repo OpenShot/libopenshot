@@ -391,7 +391,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	if (final_frame) return final_frame;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Find parent properties (if any)
     Clip *parent = (Clip *) ParentClip();
@@ -649,7 +649,7 @@ void FrameMapper::Close()
 	if (reader)
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close");
 

@@ -38,6 +38,7 @@ set(OPENSHOT_TESTS
   Settings
   Timeline
   # Effects
+  ChromaKey
   Crop
 )
 

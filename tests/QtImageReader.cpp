@@ -15,8 +15,9 @@
 #include <QGuiApplication>
 
 #include "QtImageReader.h"
-#include "Frame.h"
 #include "Clip.h"
+#include "Exceptions.h"
+#include "Frame.h"
 #include "Timeline.h"
 
 using namespace openshot;

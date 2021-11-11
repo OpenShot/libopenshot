@@ -14,11 +14,14 @@
 #ifndef OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 #define OPENSHOT_AUDIO_PLAYBACK_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
-#include "../AudioReaderSource.h"
-#include "../AudioDeviceInfo.h"
-#include "../Settings.h"
+#include "ReaderBase.h"
+#include "RendererBase.h"
+#include "AudioReaderSource.h"
+#include "AudioDeviceInfo.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 namespace openshot
 {

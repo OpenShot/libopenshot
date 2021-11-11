@@ -20,6 +20,7 @@
 
 #include "Json.h"
 
+
 using namespace openshot;
 
 /// Constructor for the base reader, where many things are initialized.

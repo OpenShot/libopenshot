@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Noise audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -12,6 +12,10 @@
 
 #include "Noise.h"
 #include "Exceptions.h"
+#include "Frame.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 using namespace openshot;
 
@@ -59,7 +63,7 @@ std::shared_ptr<openshot::Frame> Noise::GetFrame(std::shared_ptr<openshot::Frame
 			buffer[sample] = buffer[sample]*(1 - (1+(float)noise)/100) + buffer[sample]*0.0001*(rand()%100+1)*noise;
 		}
 	}
-	
+
 
 	// return the modified frame
 	return frame;

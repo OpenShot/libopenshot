@@ -39,6 +39,7 @@ namespace openshot
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	openshot::RendererBase *renderer;
 	int64_t last_video_position; /// The last frame actually displayed
+	int max_sleep_ms; /// The max milliseconds to sleep (when syncing audio and video)
 
 	/// Constructor
 	PlayerPrivate(openshot::RendererBase *rb);
@@ -52,7 +53,7 @@ namespace openshot
 	bool startPlayback();
 
 	/// Stop the video/audio playback
-	void stopPlayback(int timeOutMilliseconds = -1);
+	void stopPlayback();
 
 	/// Get the next frame (based on speed and direction)
 	std::shared_ptr<openshot::Frame> getFrame();

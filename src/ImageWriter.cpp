@@ -15,10 +15,11 @@
 
 #include "MagickUtilities.h"
 #include "QtUtilities.h"
-#include "Exceptions.h"
-#include "Frame.h"
 
 #include "ImageWriter.h"
+#include "Exceptions.h"
+#include "Frame.h"
+#include "ZmqLogger.h"
 
 using namespace openshot;
 

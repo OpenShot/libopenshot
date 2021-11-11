@@ -13,6 +13,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "QtTextReader.h"
+#include "CacheBase.h"
 #include "Exceptions.h"
 #include "Frame.h"
 

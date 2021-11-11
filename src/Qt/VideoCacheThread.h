@@ -13,10 +13,10 @@
 #ifndef OPENSHOT_VIDEO_CACHE_THREAD_H
 #define OPENSHOT_VIDEO_CACHE_THREAD_H
 
-#include "../OpenMPUtilities.h"
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
-#include "../CacheBase.h"
+#include "ReaderBase.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 namespace openshot
 {

@@ -26,13 +26,13 @@ namespace openshot
     , audioPlayback(new openshot::AudioPlaybackThread())
     , videoPlayback(new openshot::VideoPlaybackThread(rb))
     , videoCache(new openshot::VideoCacheThread())
-    , speed(1), reader(NULL), last_video_position(1)
+    , speed(1), reader(NULL), last_video_position(1), max_sleep_ms(3000)
     { }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
     {
-        stopPlayback(1000);
+        stopPlayback();
         delete audioPlayback;
         delete videoCache;
         delete videoPlayback;
@@ -128,7 +128,10 @@ namespace openshot
             }
 
             // Sleep (leaving the video frame on the screen for the correct amount of time)
-            if (sleep_time > sleep_time.zero()) {
+            // Don't sleep too long though (in some extreme cases, for example when stopping threads
+            // and shutting down, the video_frame_diff can jump to a crazy big number, and we don't
+            // want to sleep too long (max of X seconds)
+            if (sleep_time > sleep_time.zero() && sleep_time.count() < max_sleep_ms) {
                 std::this_thread::sleep_for(sleep_time);
             }
 
@@ -169,18 +172,18 @@ namespace openshot
     {
         if (video_position < 0) return false;
 
-        stopPlayback(-1);
+        stopPlayback();
         startThread(1);
         return true;
     }
 
     // Stop video/audio playback
-    void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
+    void PlayerPrivate::stopPlayback()
     {
-        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(timeOutMilliseconds);
-        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(timeOutMilliseconds);
-        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
-        if (isThreadRunning()) stopThread(timeOutMilliseconds);
+        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(max_sleep_ms);
+        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(max_sleep_ms);
+        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(max_sleep_ms);
+        if (isThreadRunning()) stopThread(max_sleep_ms);
     }
 
 }

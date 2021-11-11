@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Header file for Distortion audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -14,22 +14,22 @@
 #define OPENSHOT_DISTORTION_AUDIO_EFFECT_H
 #define _USE_MATH_DEFINES
 
-#include "../EffectBase.h"
+#include "EffectBase.h"
 
-#include "../Frame.h"
-#include "../Json.h"
-#include "../KeyFrame.h"
-#include "../Enums.h"
+#include "Json.h"
+#include "KeyFrame.h"
+#include "Enums.h"
 
 #include <memory>
 #include <string>
-#include <math.h>
-// #include <OpenShotAudio.h>
 
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
 
 namespace openshot
 {
-
+	class Frame;
 	/**
 	 * @brief This class adds a distortion into the audio
 	 *
@@ -42,8 +42,8 @@ namespace openshot
 
 	public:
 		openshot::DistortionType distortion_type;
-		Keyframe input_gain;	
-		Keyframe output_gain;	
+		Keyframe input_gain;
+		Keyframe output_gain;
 		Keyframe tone;
 
 		/// Blank constructor, useful when using Json to load the effect properties
@@ -60,8 +60,8 @@ namespace openshot
 		///
 		/// @returns A new openshot::Frame object
 		/// @param frame_number The frame number (starting at 1) of the clip or effect on the timeline.
-		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override { 
-			return GetFrame(std::make_shared<openshot::Frame>(), frame_number); 
+		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) override {
+			return GetFrame(std::make_shared<openshot::Frame>(), frame_number);
 		}
 
 		/// @brief This method is required for all derived classes of ClipBase, and returns a

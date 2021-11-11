@@ -13,13 +13,12 @@
 #ifndef OPENSHOT_EFFECT_INFO_H
 #define OPENSHOT_EFFECT_INFO_H
 
-#include "Effects.h"
-
-
+#include "Json.h"
 
 namespace openshot
 {
 	class Clip;
+	class EffectBase;
 	/**
 	 * @brief This class returns a listing of all effects supported by libopenshot
 	 *

@@ -17,6 +17,7 @@
 #include <babl/babl.h>
 #endif
 #include <vector>
+#include <cmath>
 
 using namespace openshot;
 
@@ -390,12 +391,12 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 					float KL = 1.0;
 					float KC = 1.0;
 					float KH = 1.0;
-					float pi = 4 * atan(1);
+					float pi = 4 * std::atan(1);
 
 					float L1 = ((float) mask.u[0]) / 2.55;
 					float a1 = mask.u[1] - 127;
 					float b1 = mask.u[2] - 127;
-					float C1 = sqrt(a1 * a1 + b1 * b1);
+					float C1 = std::sqrt(a1 * a1 + b1 * b1);
 
 					for (int y = 0; y < height; ++y)
 					{
@@ -406,23 +407,23 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 							float L2 = ((float) pc[0]) / 2.55;
 							int   a2 = pc[1] - 127;
 							int   b2 = pc[2] - 127;
-							float C2 = sqrt(a2 * a2 + b2 * b2);
+							float C2 = std::sqrt(a2 * a2 + b2 * b2);
 
 							float delta_L_prime = L2 - L1;
 							float L_bar = (L1 + L2) / 2;
 							float C_bar = (C1 + C2) / 2;
 
-							float a_prime_multiplier = 1 + 0.5 * (1 - sqrt(C_bar / (C_bar + 25)));
+							float a_prime_multiplier = 1 + 0.5 * (1 - std::sqrt(C_bar / (C_bar + 25)));
 							float a1_prime = a1 * a_prime_multiplier;
 							float a2_prime = a2 * a_prime_multiplier;
 
-							float C1_prime = sqrt(a1_prime * a1_prime + b1 * b1);
-							float C2_prime = sqrt(a2_prime * a2_prime + b2 * b2);
+							float C1_prime = std::sqrt(a1_prime * a1_prime + b1 * b1);
+							float C2_prime = std::sqrt(a2_prime * a2_prime + b2 * b2);
 							float C_prime_bar = (C1_prime + C2_prime) / 2;
 							float delta_C_prime = C2_prime - C1_prime;
 
-							float h1_prime = atan2(b1, a1_prime) * 180 / pi;
-							float h2_prime = atan2(b2, a2_prime) * 180 / pi;
+							float h1_prime = std::atan2(b1, a1_prime) * 180 / pi;
+							float h2_prime = std::atan2(b2, a2_prime) * 180 / pi;
 
 							float delta_h_prime = h2_prime - h1_prime;
 							double H_prime_bar = (C1_prime != 0 && C2_prime != 0) ? (h1_prime + h2_prime) / 2 : (h1_prime + h2_prime);
@@ -444,21 +445,21 @@ std::shared_ptr<openshot::Frame> ChromaKey::GetFrame(std::shared_ptr<openshot::F
 									H_prime_bar -= 180;
 							}
 
-							float delta_H_prime = 2 * sqrt(C1_prime * C2_prime) * sin(delta_h_prime * pi / 360);
+							float delta_H_prime = 2 * std::sqrt(C1_prime * C2_prime) * std::sin(delta_h_prime * pi / 360);
 
 							float T = 1
-								- 0.17 * cos((H_prime_bar - 30) * pi / 180)
-								+ 0.24 * cos(H_prime_bar * pi / 90)
-								+ 0.32 * cos((3 * H_prime_bar + 6) * pi / 180)
-								- 0.20 * cos((4 * H_prime_bar - 64) * pi / 180);
+								- 0.17 * std::cos((H_prime_bar - 30) * pi / 180)
+								+ 0.24 * std::cos(H_prime_bar * pi / 90)
+								+ 0.32 * std::cos((3 * H_prime_bar + 6) * pi / 180)
+								- 0.20 * std::cos((4 * H_prime_bar - 64) * pi / 180);
 
-							float SL = 1 + 0.015 * square(L_bar - 50) / sqrt(20 + square(L_bar - 50));
+							float SL = 1 + 0.015 * std::pow(L_bar - 50, 2) / std::sqrt(20 + std::pow(L_bar - 50, 2));
 							float SC = 1 + 0.045 * C_prime_bar;
 							float SH = 1 + 0.015 * C_prime_bar * T;
-							float RT = -2 * sqrt(C_prime_bar / (C_prime_bar + 25)) * sin(pi / 3 * exp(-square((H_prime_bar - 275) / 25)));
-							float delta_E = sqrt(square(delta_L_prime / KL / SL)
-										+ square(delta_C_prime / KC / SC)
-										+ square(delta_h_prime / KH / SH)
+							float RT = -2 * std::sqrt(C_prime_bar / (C_prime_bar + 25)) * std::sin(pi / 3 * std::exp(-std::pow((H_prime_bar - 275) / 25, 2)));
+							float delta_E = std::sqrt(std::pow(delta_L_prime / KL / SL, 2)
+										+ std::pow(delta_C_prime / KC / SC, 2)
+										+ std::pow(delta_h_prime / KH / SH, 2)
 										+ RT * delta_C_prime / KC / SC * delta_H_prime / KH / SH);
 							if (delta_E <= threshold)
 							{

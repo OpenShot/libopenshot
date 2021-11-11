@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Delay audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -12,6 +12,7 @@
 
 #include "Delay.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
@@ -84,7 +85,7 @@ std::shared_ptr<openshot::Frame> Delay::GetFrame(std::shared_ptr<openshot::Frame
             float read_position = fmodf((float)local_write_position - delay_time_value + (float)delay_buffer_samples, delay_buffer_samples);
             int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position) 
+            if (local_read_position != local_write_position)
 			{
                 float fraction = read_position - (float)local_read_position;
                 float delayed1 = delay_data[(local_read_position + 0)];

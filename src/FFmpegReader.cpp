@@ -13,15 +13,16 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+#include <unistd.h>
+
 #include "FFmpegUtilities.h"
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
 #include "Timeline.h"
 #include "ZmqLogger.h"
-
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
 
 #define ENABLE_VAAPI 0
 
@@ -583,7 +584,7 @@ void FFmpegReader::Close() {
 
 		// Clear processed lists
 		{
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processed_video_frames.clear();
 			processed_audio_frames.clear();
 			processing_video_frames.clear();
@@ -904,7 +905,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 		int processing_video_frames_size = 0;
 		int processing_audio_frames_size = 0;
 		{
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processing_video_frames_size = processing_video_frames.size();
 			processing_audio_frames_size = processing_audio_frames.size();
 		}
@@ -912,7 +913,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 		// Wait if too many frames are being processed
 		while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processing_video_frames_size = processing_video_frames.size();
 			processing_audio_frames_size = processing_audio_frames.size();
 		}
@@ -1236,7 +1237,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	pFrame = NULL;
 
 	// Add video frame to list of processing video frames
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	processing_video_frames[current_frame] = current_frame;
 
 	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
@@ -1368,7 +1369,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Remove video frame from list of processing video frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames.erase(current_frame);
 		processed_video_frames[current_frame] = current_frame;
 	}
@@ -1467,7 +1468,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// Add audio frame to list of processing audio frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 	}
 
@@ -1490,7 +1491,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 			// Add audio frame to list of processing audio frames
 			{
-				const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+				const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 				processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 			}
 
@@ -1645,7 +1646,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// Remove audio frame from list of processing audio frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		// Update all frames as completed
 		for (int64_t f = target_frame; f < starting_frame_number; f++) {
 			// Remove the frame # from the processing list. NOTE: If more than one thread is
@@ -1685,7 +1686,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	int processing_video_frames_size = 0;
 	int processing_audio_frames_size = 0;
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
 	}
@@ -1696,7 +1697,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
 	}
@@ -1707,7 +1708,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 	// Clear processed lists
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_audio_frames.clear();
 		processing_video_frames.clear();
 		processed_video_frames.clear();
@@ -1930,7 +1931,7 @@ int64_t FFmpegReader::ConvertVideoPTStoFrame(int64_t pts) {
 
 		// Sometimes frames are missing due to varying timestamps, or they were dropped. Determine
 		// if we are missing a video frame.
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		while (current_video_frame < frame) {
 			if (!missing_video_frames.count(current_video_frame)) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (tracking missing frame)", "current_video_frame", current_video_frame, "previous_video_frame", previous_video_frame);
@@ -2023,7 +2024,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Ignored - too big)", "Previous location frame", previous_packet_location.frame, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts);
 
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			for (int64_t audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
 				if (!missing_audio_frames.count(audio_frame)) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame);
@@ -2047,7 +2048,7 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 
 	if (!output) {
 		// Lock
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 		// (re-)Check working cache
 		output = working_cache.GetFrame(requested_frame);
@@ -2089,7 +2090,7 @@ bool FFmpegReader::IsPartialFrame(int64_t requested_frame) {
 // Check if a frame is missing and attempt to replace its frame image (and
 bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	// Lock
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 	// Increment check count for this frame (or init to 1)
 	++checked_frames[requested_frame];
@@ -2205,7 +2206,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		bool is_video_ready = false;
 		bool is_audio_ready = false;
 		{ // limit scope of next few lines
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			is_video_ready = processed_video_frames.count(f->number);
 			is_audio_ready = processed_audio_frames.count(f->number);
 
@@ -2268,7 +2269,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 
 				// Add to missing cache (if another frame depends on it)
 				{
-					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+					const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 					if (missing_video_frames_source.count(f->number)) {
 						// Debug output
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count());
@@ -2420,7 +2421,7 @@ int64_t FFmpegReader::GetSmallestVideoFrame() {
 	// Loop through frame numbers
 	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	for (itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr) {
 		if (itr->first < smallest_frame || smallest_frame == -1)
 			smallest_frame = itr->first;
@@ -2435,7 +2436,7 @@ int64_t FFmpegReader::GetSmallestAudioFrame() {
 	// Loop through frame numbers
 	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	for (itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr) {
 		if (itr->first < smallest_frame || smallest_frame == -1)
 			smallest_frame = itr->first;

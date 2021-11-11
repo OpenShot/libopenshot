@@ -12,6 +12,7 @@
 
 #include "ChunkWriter.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 

@@ -38,7 +38,7 @@
 #ifdef USE_IMAGEMAGICK
 	%shared_ptr(Magick::Image)
 #endif
-%shared_ptr(juce::AudioSampleBuffer)
+%shared_ptr(juce::AudioBuffer<float>)
 %shared_ptr(openshot::Frame)
 
 %{
@@ -107,6 +107,9 @@
 %exception {
 	try {
 		$action
+	}
+	catch (openshot::ExceptionBase &e) {
+		SWIG_exception_fail(SWIG_RuntimeError, e.py_message().c_str());
 	}
 	catch (std::exception &e) {
 		SWIG_exception_fail(SWIG_RuntimeError, e.what());
@@ -209,6 +212,31 @@
 		def values(self):
 			_items = self.GetMap()
 			return _items.values()
+		def __mul__(self, other):
+			if isinstance(other, Fraction):
+				return Fraction(self.num * other.num, self.den * other.den)
+			return float(self) * other
+		def __rmul__(self, other):
+			return other * float(self)
+		def __truediv__(self, other):
+			if isinstance(other, Fraction):
+				return Fraction(self.num * other.den, self.den * other.num)
+			return float(self) / other;
+		def __rtruediv__(self, other):
+			return other / float(self)
+		def __format__(self, format_spec):
+			integer_fmt = "bcdoxX"
+			float_fmt = "eEfFgGn%"
+			all_fmt = "".join(["s", integer_fmt, float_fmt])
+			if not format_spec or format_spec[-1] not in all_fmt:
+			  value = str(self)
+			elif format_spec[-1] in integer_fmt:
+				value = int(self)
+			elif format_spec[-1] in float_fmt:
+				value = float(self)
+			else:
+				value = str(self)
+			return "{value:{spec}}".format(value=value, spec=format_spec)
 	%}
 }
 

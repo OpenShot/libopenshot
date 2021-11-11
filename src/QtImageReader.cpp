@@ -11,10 +11,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "QtImageReader.h"
-#include "Exceptions.h"
-#include "Settings.h"
+
 #include "Clip.h"
 #include "CacheMemory.h"
+#include "Exceptions.h"
 #include "Timeline.h"
 
 #include <QString>
@@ -67,6 +67,7 @@ void QtImageReader::Open()
             image = std::make_shared<QImage>();
             QImageReader imgReader( path );
             imgReader.setAutoTransform( true );
+            imgReader.setDecideFormatFromContent( true );
             loaded = imgReader.read(image.get());
         }
 
@@ -147,8 +148,8 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
     if (!is_open)
         throw ReaderClosed("The Image is closed.  Call Open() before calling this method.", path.toStdString());
 
-    // Create a scoped lock, allowing only a single thread to run the following code at one time
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	// Create a scoped lock, allowing only a single thread to run the following code at one time
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Calculate max image size
     QSize current_max_size = calculate_max_size();

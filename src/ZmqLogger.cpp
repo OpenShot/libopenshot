@@ -12,6 +12,7 @@
 
 #include "ZmqLogger.h"
 #include "Exceptions.h"
+#include "Settings.h"
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"
@@ -62,7 +63,7 @@ ZmqLogger *ZmqLogger::Instance()
 void ZmqLogger::Connection(std::string new_connection)
 {
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 	// Does anything need to happen?
 	if (new_connection == connection)
@@ -106,7 +107,7 @@ void ZmqLogger::Log(std::string message)
 		return;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
@@ -183,7 +184,7 @@ void ZmqLogger::AppendDebugMethod(std::string method_name,
 
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 		std::stringstream message;
 		message << std::fixed << std::setprecision(4);

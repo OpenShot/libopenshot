@@ -17,6 +17,7 @@
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 #include <iostream>
 

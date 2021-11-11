@@ -15,12 +15,13 @@
 
 #include "ReaderBase.h"
 
-#include <OpenShotAudio.h>
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 /// This namespace is the default namespace for all code in the openshot library
 namespace openshot
 {
-
+	class Frame;
 	/**
 	 * @brief This class is used to expose any ReaderBase derived class as an AudioSource in JUCE.
 	 *
@@ -32,7 +33,7 @@ namespace openshot
 		int position; /// The position of the audio source (index of buffer)
 		bool repeat; /// Repeat the audio source when finished
 		int size; /// The size of the internal buffer
-		juce::AudioSampleBuffer *buffer; /// The audio sample buffer
+		juce::AudioBuffer<float> *buffer; /// The audio sample buffer
 		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
@@ -46,7 +47,7 @@ namespace openshot
 		void GetMoreSamplesFromReader();
 
 		/// Reverse an audio buffer (for backwards audio)
-		juce::AudioSampleBuffer* reverse_buffer(juce::AudioSampleBuffer* buffer);
+		juce::AudioBuffer<float>* reverse_buffer(juce::AudioSampleBuffer* buffer);
 
 	public:
 
@@ -87,7 +88,7 @@ namespace openshot
 		void setLooping (bool shouldLoop);
 
 		/// Update the internal buffer used by this source
-		void setBuffer (juce::AudioSampleBuffer *audio_buffer);
+		void setBuffer (juce::AudioBuffer<float> *audio_buffer);
 
 	    const ReaderInfo & getReaderInfo() const { return reader->info; }
 

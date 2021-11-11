@@ -14,6 +14,10 @@
 #include "VideoPlaybackThread.h"
 #include "ZmqLogger.h"
 
+#include "Frame.h"
+#include "RendererBase.h"
+#include "ZmqLogger.h"
+
 namespace openshot
 {
 	// Constructor
