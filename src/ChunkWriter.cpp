@@ -61,7 +61,7 @@ std::string ChunkWriter::get_chunk_path(int64_t chunk_number, std::string folder
 }
 
 // Add a frame to the queue waiting to be encoded.
-void ChunkWriter::WriteFrame(std::shared_ptr<Frame> frame)
+void ChunkWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame)
 {
 	// Check for open reader (or throw exception)
 	if (!is_open)
