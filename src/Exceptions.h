@@ -394,7 +394,7 @@ namespace openshot {
 #ifndef SWIG
 	/// Exception when too many seek attempts happen
 	class
-	__attribute__ ((deprecated(TMS_DEP_MSG)))
+	[[deprecated(TMS_DEP_MSG)]]
 	TooManySeeks : public FileExceptionBase
 	{
 	public:
@@ -404,7 +404,9 @@ namespace openshot {
 		 * @param message A message to accompany the exception
 		 * @param file_path (optional) The input file being processed
 		 */
-		TooManySeeks(std::string message, std::string file_path="") __attribute__ ((deprecated(TMS_DEP_MSG)));
+        [[deprecated(TMS_DEP_MSG)]]
+		TooManySeeks(std::string message, std::string file_path="")
+			: FileExceptionBase(message, file_path) { }
 		virtual ~TooManySeeks() noexcept {}
 	};
 #endif

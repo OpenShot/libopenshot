@@ -96,8 +96,8 @@ if ((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-integrated-cpp")
 endif()
 
-#### Enable C++11 (for std::shared_ptr support)
-set(CMAKE_CXX_STANDARD 11)
+#### Set C++ standard level
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -170,6 +170,7 @@ if (ENABLE_LIB_DOCS AND CMAKE_VERSION VERSION_GREATER 3.11)
       USE_OPENCV
       USE_BABL
       USE_RESVG
+      TMS_DEP_MSG:=0
     )
     set(DOXYGEN_IMAGE_PATH "${PROJECT_SOURCE_DIR}/doc/images")
     set(DOXYGEN_OUTPUT_DIRECTORY "doc")
