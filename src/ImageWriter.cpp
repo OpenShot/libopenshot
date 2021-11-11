@@ -19,6 +19,7 @@
 #include "ImageWriter.h"
 #include "Exceptions.h"
 #include "Frame.h"
+#include "ReaderBase.h"
 #include "ZmqLogger.h"
 
 using namespace openshot;
