@@ -16,21 +16,16 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
-
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
-#include "CacheMemory.h"
-#include "Enums.h"
 
+#include "ReaderBase.h"
+#include "Enums.h"
 #include "MagickUtilities.h"
 
 namespace openshot
 {
+	class CacheBase;
+	class Frame;
 
 	/**
 	 * @brief This class uses the ImageMagick++ libraries, to create frames with "Text", and return
@@ -108,7 +103,7 @@ namespace openshot
 		void Close() override;
 
 		/// Get the cache object used by this reader (always returns NULL for this object)
-		openshot::CacheMemory* GetCache() override { return NULL; };
+		openshot::CacheBase* GetCache() override { return nullptr; };
 
 		/// Get an openshot::Frame object for a specific frame number of this reader.  All numbers
 		/// return the same Frame, since they all share the same image data.

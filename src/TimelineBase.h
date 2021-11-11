@@ -50,6 +50,8 @@ namespace openshot {
 		/// so we'll be able to access the Timeline::Clips() function from a pointer object of
 		/// the TimelineBase class
 		virtual std::list<openshot::Clip*> Clips() = 0;
+
+		virtual ~TimelineBase() = default;
 	};
 }
 
