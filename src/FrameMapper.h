@@ -105,7 +105,7 @@ namespace openshot
 	 *
 	 * The <b>following graphic</b> displays a how frame rates are mapped, and how time remapping affects the order
 	 * of frames returned from the FrameMapper.
-	 * \image html /doc/images/FrameMapper.png
+	 * \image html FrameMapper.png
 	 *
 	 * Please see the following <b>Example Code</b>:
 	 * \code

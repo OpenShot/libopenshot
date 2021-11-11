@@ -17,15 +17,14 @@
 using namespace openshot;
 using namespace juce;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Robotization::Robotization() : fft_size(FFT_SIZE_512), hop_size(HOP_SIZE_2), window_type(RECTANGULAR), stft(*this) {
-	// Init effect properties
-	init_effect_details();
-}
+Robotization::Robotization()
+    : Robotization::Robotization(FFT_SIZE_512, HOP_SIZE_2, RECTANGULAR) {}
 
-// Default constructor
-Robotization::Robotization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type) :
-			 fft_size(new_fft_size), hop_size(new_hop_size), window_type(new_window_type), stft(*this)
+Robotization::Robotization(openshot::FFTSize fft_size,
+                           openshot::HopSize hop_size,
+                           openshot::WindowType window_type) :
+    fft_size(fft_size), hop_size(hop_size),
+    window_type(window_type), stft(*this)
 {
 	// Init effect properties
 	init_effect_details();

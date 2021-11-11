@@ -16,16 +16,10 @@
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Delay::Delay() : delay_time(1) {
-	// Init effect properties
-	init_effect_details();
-}
+Delay::Delay() : Delay::Delay(1) { }
 
-// Default constructor
-Delay::Delay(Keyframe new_delay_time) : delay_time(new_delay_time)
+Delay::Delay(Keyframe delay_time) : delay_time(delay_time)
 {
-	// Init effect properties
 	init_effect_details();
 }
 

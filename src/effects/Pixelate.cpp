@@ -51,7 +51,8 @@ void Pixelate::init_effect_details()
 
 // This method is required for all derived classes of EffectBase, and returns a
 // modified openshot::Frame object
-std::shared_ptr<Frame> Pixelate::GetFrame(std::shared_ptr<Frame> frame, int64_t frame_number)
+std::shared_ptr<openshot::Frame>
+Pixelate::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();

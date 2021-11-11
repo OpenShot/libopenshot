@@ -16,15 +16,13 @@
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Expander::Expander() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
-	// Init effect properties
-	init_effect_details();
-}
+Expander::Expander(): Expander::Expander(-10, 1, 1, 1, 1, false) { }
 
 // Default constructor
-Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) :
-				   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
+Expander::Expander(Keyframe threshold, Keyframe ratio, Keyframe attack,
+                   Keyframe release, Keyframe makeup_gain, Keyframe bypass) :
+    threshold(threshold), ratio(ratio), attack(attack),
+    release(release), makeup_gain(makeup_gain), bypass(bypass)
 {
 	// Init effect properties
 	init_effect_details();
