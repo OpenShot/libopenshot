@@ -70,9 +70,7 @@ set(OPENSHOT_SOURCES
   FrameMapper.cpp
   Json.cpp
   KeyFrame.cpp
-  TrackedObjectBase.cpp
   OpenShotVersion.cpp
-  ZmqLogger.cpp
   PlayerBase.cpp
   Point.cpp
   Profiles.cpp
@@ -82,7 +80,10 @@ set(OPENSHOT_SOURCES
   QtTextReader.cpp
   Settings.cpp
   TimelineBase.cpp
-  Timeline.cpp)
+  Timeline.cpp
+  TrackedObjectBase.cpp
+  ZmqLogger.cpp
+  )
 
 # OpenCV related classes
 set(OPENSHOT_CV_SOURCES
@@ -253,9 +254,11 @@ if (ENABLE_MAGICK)
 
     # Add optional ImageMagic-dependent sources
     target_sources(openshot PRIVATE
+      MagickUtilities.cpp
       ImageReader.cpp
       ImageWriter.cpp
-      TextReader.cpp)
+      TextReader.cpp
+    )
 
     # define a preprocessor macro (used in the C++ source)
     target_compile_definitions(openshot PUBLIC USE_IMAGEMAGICK=1)

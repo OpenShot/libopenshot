@@ -18,8 +18,8 @@ using namespace openshot;
 
 Echo::Echo() : Echo::Echo(0.1, 0.5, 0.5) { }
 
-Echo::Echo(Keyframe new_echo_time, Keyframe new_feedback, Keyframe new_mix) :
-			 echo_time(new_echo_time), feedback(new_feedback), mix(new_mix)
+Echo::Echo(Keyframe echo_time, Keyframe feedback, Keyframe mix) :
+    echo_time(echo_time), feedback(feedback), mix(mix)
 {
 	// Init effect properties
 	init_effect_details();

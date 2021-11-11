@@ -19,14 +19,9 @@
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Noise::Noise() : level(30) {
-	// Init effect properties
-	init_effect_details();
-}
+Noise::Noise(): Noise::Noise(30) { }
 
-// Default constructor
-Noise::Noise(Keyframe new_level) : level(new_level)
+Noise::Noise(Keyframe level) : level(level)
 {
 	// Init effect properties
 	init_effect_details();

@@ -21,6 +21,9 @@
     // namespace instead of the global namespace
     #include <cassert>
 
+    #include <memory>
+    #include <QImage>
+
 // Exclude a warning message with IM6 headers
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
@@ -30,8 +33,8 @@
     // Determine ImageMagick version, as IM7 isn't fully
     // backwards compatible
     #ifndef NEW_MAGICK
-	   #define NEW_MAGICK (MagickLibVersion >= 0x700)
-	#endif
+        #define NEW_MAGICK (MagickLibVersion >= 0x700)
+    #endif
 
     // IM7: <Magick::Image>->alpha(bool)
     // IM6: <Magick::Image>->matte(bool)
@@ -50,5 +53,17 @@
         #define MAGICK_DRAWABLE std::list<Magick::Drawable>
     #endif
 
-#endif
-#endif
+namespace openshot {
+
+    /// Convert QImage to Magick::Image
+    std::shared_ptr<Magick::Image>
+    QImage2Magick(std::shared_ptr<QImage>);
+
+    /// Convert Magick::Image to QImage
+    std::shared_ptr<QImage>
+    Magick2QImage(std::shared_ptr<Magick::Image>);
+
+}  // namespace
+
+#endif  // USE_IMAGEMAGICK
+#endif  // OPENSHOT_MAGICK_UTILITIES_H

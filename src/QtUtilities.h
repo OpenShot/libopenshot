@@ -23,4 +23,17 @@ namespace Qt {
 }
 #endif
 
+
+namespace openshot {
+    // Clean up buffer after QImage is deleted
+    static inline void cleanUpBuffer(void *info)
+    {
+        if (!info)
+            return;
+        // Remove buffer since QImage tells us to
+        auto* qbuffer = reinterpret_cast<unsigned char*>(info);
+        delete[] qbuffer;
+    }
+}  // namespace
+
 #endif // OPENSHOT_QT_UTILITIES_H

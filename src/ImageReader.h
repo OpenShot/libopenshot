@@ -16,23 +16,23 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
-
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
-#include "CacheMemory.h"
+#include <string>
 
-#include "MagickUtilities.h"
+#include "ReaderBase.h"
+#include "Json.h"
+
+// Forward decls
+namespace Magick {
+    class Image;
+}
+namespace openshot {
+	class CacheBase;
+	class Frame;
+}
 
 namespace openshot
 {
-	// Forward decls
-	class CacheBase;
-
 	/**
 	 * @brief This class uses the ImageMagick++ libraries, to open image files, and return
 	 * openshot::Frame objects containing the image.

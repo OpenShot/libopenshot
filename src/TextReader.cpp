@@ -13,6 +13,9 @@
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
+#include "QtUtilities.h"
+#include "MagickUtilities.h"
+
 #include "TextReader.h"
 #include "Exceptions.h"
 #include "Frame.h"
@@ -152,14 +155,15 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 	{
 		// Create or get frame object
 		auto image_frame = std::make_shared<Frame>(
-			requested_frame, image->size().width(), image->size().height(),
+			requested_frame,
+			image->size().width(), image->size().height(),
 			"#000000", 0, 2);
 
 		// Add Image data to frame
 		auto copy_image = std::make_shared<Magick::Image>(*image.get());
 		copy_image->modifyImage(); // actually copy the image data to this object
-		//TODO: Reimplement this with QImage
-		image_frame->AddMagickImage(copy_image);
+		auto qimage = openshot::Magick2QImage(copy_image);
+		image_frame->AddImage(qimage);
 
 		// return frame object
 		return image_frame;

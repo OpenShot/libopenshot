@@ -658,7 +658,7 @@ void FFmpegWriter::WriteHeader() {
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
+void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);

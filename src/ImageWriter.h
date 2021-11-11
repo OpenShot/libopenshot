@@ -15,20 +15,19 @@
 
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
-#include "WriterBase.h"
-
 #include <string>
 #include <vector>
-#include "CacheMemory.h"
-#include "Exceptions.h"
-#include "Fraction.h"
 
-#include "OpenMPUtilities.h"
+#include "WriterBase.h"
 #include "MagickUtilities.h"
+
+#include "Fraction.h"
 
 namespace openshot
 {
+	// Forward decls
+	class Frame;
+	class ReaderBase;
 
 	/**
 	 * @brief This class uses the ImageMagick library to write image files (including animated GIFs)
@@ -69,7 +68,7 @@ namespace openshot
 		int number_of_loops;
 		bool combine_frames;
 
-	    std::shared_ptr<Frame> last_frame;
+		std::shared_ptr<Frame> last_frame;
 
 	public:
 
@@ -102,8 +101,9 @@ namespace openshot
 		/// @param quality Quality of image (0 to 100, 70 is default)
 		/// @param loops Number of times to repeat the image (used on certain multi-frame image formats, such as GIF)
 		/// @param combine Combine frames into a single image (if possible), or save each frame as its own image
-		void SetVideoOptions(std::string format, Fraction fps, int width, int height,
-				int quality, int loops, bool combine);
+		void SetVideoOptions(
+			std::string format, Fraction fps, int width, int height,
+			int quality, int loops, bool combine);
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
@@ -117,7 +117,7 @@ namespace openshot
 
 	};
 
-}
+}  // namespace
 
-#endif //USE_IMAGEMAGICK
-#endif //OPENSHOT_IMAGE_WRITER_H
+#endif  //USE_IMAGEMAGICK
+#endif  //OPENSHOT_IMAGE_WRITER_H
