@@ -11,12 +11,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Mask.h"
+
 #include "Exceptions.h"
+
+#include "ReaderBase.h"
+#include "ChunkReader.h"
 #include "FFmpegReader.h"
+#include "QtImageReader.h"
+
 #ifdef USE_IMAGEMAGICK
 	#include "ImageReader.h"
 #endif
-#include "ReaderBase.h"
 
 using namespace openshot;
 

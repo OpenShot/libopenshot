@@ -19,7 +19,6 @@
 
 #include <memory>
 
-#include "CacheMemory.h"
 #include "Enums.h"
 
 #include <QFont>
@@ -30,6 +29,7 @@ namespace openshot
 {
 	// Forward decls
 	class CacheBase;
+	class Frame;
 
 	/**
 	 * @brief This class uses Qt libraries, to create frames with "Text", and return

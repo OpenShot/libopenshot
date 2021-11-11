@@ -12,9 +12,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "AudioPlaybackThread.h"
+#include "Settings.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
+
+using namespace juce;
 
 namespace openshot
 {

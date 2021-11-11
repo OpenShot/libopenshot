@@ -15,6 +15,8 @@
 
 #include "WriterBase.h"
 #include "Exceptions.h"
+#include "Frame.h"
+#include "ReaderBase.h"
 
 using namespace openshot;
 

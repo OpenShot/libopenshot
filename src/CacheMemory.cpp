@@ -40,9 +40,8 @@ CacheMemory::~CacheMemory()
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
 
-	// remove critical section
-	delete cacheCriticalSection;
-	cacheCriticalSection = NULL;
+	// remove mutex
+	delete cacheMutex;
 }
 
 
@@ -52,7 +51,7 @@ void CacheMemory::CalculateRanges() {
 	if (needs_range_processing) {
 
 		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 		// Sort ordered frame #s, and calculate JSON ranges
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
@@ -109,7 +108,7 @@ void CacheMemory::CalculateRanges() {
 void CacheMemory::Add(std::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 	int64_t frame_number = frame->number;
 
 	// Freshen frame if it already exists
@@ -134,7 +133,7 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Does frame exists in cache?
 	if (frames.count(frame_number))
@@ -150,7 +149,7 @@ std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -173,7 +172,7 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 int64_t CacheMemory::GetBytes()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	int64_t total_bytes = 0;
 
@@ -197,7 +196,7 @@ void CacheMemory::Remove(int64_t frame_number)
 void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -232,7 +231,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 void CacheMemory::MoveToFront(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Does frame exists in cache?
 	if (frames.count(frame_number))
@@ -258,7 +257,7 @@ void CacheMemory::MoveToFront(int64_t frame_number)
 void CacheMemory::Clear()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	frames.clear();
 	frame_numbers.clear();
@@ -270,7 +269,7 @@ void CacheMemory::Clear()
 int64_t CacheMemory::Count()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Return the number of frames in the cache
 	return frames.size();
@@ -283,7 +282,7 @@ void CacheMemory::CleanUp()
 	if (max_bytes > 0)
 	{
 		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{

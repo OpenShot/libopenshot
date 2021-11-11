@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Echo audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -12,17 +12,13 @@
 
 #include "Echo.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Echo::Echo() : echo_time(0.1), feedback(0.5), mix(0.5) {
-	// Init effect properties
-	init_effect_details();
-}
+Echo::Echo() : Echo::Echo(0.1, 0.5, 0.5) { }
 
-// Default constructor
-Echo::Echo(Keyframe new_echo_time, Keyframe new_feedback, Keyframe new_mix) : 
+Echo::Echo(Keyframe new_echo_time, Keyframe new_feedback, Keyframe new_mix) :
 			 echo_time(new_echo_time), feedback(new_feedback), mix(new_mix)
 {
 	// Init effect properties
@@ -87,7 +83,7 @@ std::shared_ptr<openshot::Frame> Echo::GetFrame(std::shared_ptr<openshot::Frame>
             float read_position = fmodf((float)local_write_position - echo_time_value + (float)echo_buffer_samples, echo_buffer_samples);
             int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position) 
+            if (local_read_position != local_write_position)
 			{
                 float fraction = read_position - (float)local_read_position;
                 float echoed1 = echo_data[(local_read_position + 0)];

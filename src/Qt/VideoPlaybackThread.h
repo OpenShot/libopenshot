@@ -14,11 +14,13 @@
 #ifndef OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 #define OPENSHOT_VIDEO_PLAYBACK_THREAD_H
 
-#include "../ReaderBase.h"
-#include "../RendererBase.h"
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 namespace openshot
 {
+    class Frame;
+    class RendererBase;
     using juce::Thread;
     using juce::WaitableEvent;
 

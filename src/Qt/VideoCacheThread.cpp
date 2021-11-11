@@ -11,7 +11,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "VideoCacheThread.h"
+
+#include "CacheBase.h"
 #include "Exceptions.h"
+#include "Frame.h"
+#include "OpenMPUtilities.h"
 #include "ZmqLogger.h"
 
 #include <algorithm>

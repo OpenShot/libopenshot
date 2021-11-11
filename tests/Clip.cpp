@@ -21,10 +21,12 @@
 
 #include "Clip.h"
 #include "Enums.h"
+#include "Exceptions.h"
 #include "Frame.h"
 #include "Fraction.h"
 #include "Timeline.h"
 #include "Json.h"
+#include "effects/Negate.h"
 
 using namespace openshot;
 

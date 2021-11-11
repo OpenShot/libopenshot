@@ -468,7 +468,7 @@ int64_t Timeline::GetMaxFrame() {
 void Timeline::apply_mapper_to_clip(Clip* clip)
 {
     // Get lock (prevent getting frames while this happens)
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Determine type of reader
 	ReaderBase* clip_reader = NULL;
@@ -773,7 +773,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	else
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Check for open reader (or throw exception)
 		if (!is_open)
@@ -1005,7 +1005,7 @@ Json::Value Timeline::JsonValue() const {
 void Timeline::SetJson(const std::string value) {
 
 	// Get lock (prevent getting frames while this happens)
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1047,7 +1047,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
 			// allows attaching it to an object when exporting the project (because)
-			// the exporter script initializes the clip and it's effects 
+			// the exporter script initializes the clip and it's effects
 			// before setting its parent timeline.
 			c->ParentTimeline(this);
 
@@ -1101,7 +1101,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 void Timeline::ApplyJsonDiff(std::string value) {
 
     // Get lock (prevent getting frames while this happens)
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1480,7 +1480,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 void Timeline::ClearAllCache() {
 
     // Get lock (prevent getting frames while this happens)
-    const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Clear primary cache
     final_cache->Clear();

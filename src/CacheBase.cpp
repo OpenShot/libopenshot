@@ -16,15 +16,12 @@ using namespace std;
 using namespace openshot;
 
 // Default constructor, no max frames
-CacheBase::CacheBase() : max_bytes(0) {
-	// Init the critical section
-	cacheCriticalSection = new CriticalSection();
-}
+CacheBase::CacheBase() : CacheBase::CacheBase(0) { }
 
 // Constructor that sets the max frames to cache
 CacheBase::CacheBase(int64_t max_bytes) : max_bytes(max_bytes) {
-	// Init the critical section
-	cacheCriticalSection = new CriticalSection();
+	// Init the mutex
+	cacheMutex = new std::recursive_mutex();
 }
 
 // Set maximum bytes to a different amount based on a ReaderInfo struct

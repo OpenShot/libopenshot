@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Compressor audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -12,18 +12,16 @@
 
 #include "Compressor.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Compressor::Compressor() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
-	// Init effect properties
-	init_effect_details();
-}
+Compressor::Compressor() : Compressor::Compressor(-10, 1, 1, 1, 1, false) {}
 
-// Default constructor
-Compressor::Compressor(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
-					   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
+Compressor::Compressor(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) :
+    threshold(new_threshold), ratio(new_ratio), attack(new_attack),
+    release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass),
+    input_level(0.0), yl_prev(0.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -41,9 +39,6 @@ void Compressor::init_effect_details()
 	info.description = "Reduce the volume of loud sounds or amplify quiet sounds.";
 	info.has_audio = true;
 	info.has_video = false;
-
-    input_level = 0.0f;
-    yl_prev = 0.0f;
 }
 
 // This method is required for all derived classes of EffectBase, and returns a
@@ -58,7 +53,7 @@ std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::
     mixed_down_input.setSize(1, num_samples);
 	inverse_sample_rate = 1.0f / frame->SampleRate();
     inverseE = 1.0f / M_E;
-	
+
 	if ((bool)bypass.GetValue(frame_number))
         return frame;
 
@@ -74,7 +69,7 @@ std::shared_ptr<openshot::Frame> Compressor::GetFrame(std::shared_ptr<openshot::
         float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
         float gain = makeup_gain.GetValue(frame_number);
 		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
-        
+
 		input_level = input_squared;
 
         xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
