@@ -1,7 +1,7 @@
 /**
  * @file
  * @brief Source file for Distortion audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
@@ -15,15 +15,13 @@
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Distortion::Distortion() : distortion_type(HARD_CLIPPING), input_gain(10), output_gain(-10), tone(5) {
-	// Init effect properties
-	init_effect_details();
-}
+Distortion::Distortion(): Distortion::Distortion(HARD_CLIPPING, 10, -10, 5) { }
 
-// Default constructor
-Distortion::Distortion(openshot::DistortionType new_distortion_type, Keyframe new_input_gain, Keyframe new_output_gain, Keyframe new_tone) : 
-					   distortion_type(new_distortion_type), input_gain(new_input_gain), output_gain(new_output_gain), tone(new_tone)
+Distortion::Distortion(openshot::DistortionType distortion_type,
+                       Keyframe input_gain, Keyframe output_gain,
+                       Keyframe tone):
+    distortion_type(distortion_type), input_gain(input_gain),
+    output_gain(output_gain), tone(tone)
 {
 	// Init effect properties
 	init_effect_details();
@@ -69,10 +67,10 @@ std::shared_ptr<openshot::Frame> Distortion::GetFrame(std::shared_ptr<openshot::
 			const int input_gain_value = (int)input_gain.GetValue(frame_number);
 			const int output_gain_value = (int)output_gain.GetValue(frame_number);
 			const float in = channel_data[sample]*powf(10.0f, input_gain_value * 0.05f);
-			
+
 			// Use the current distortion type
 			switch (distortion_type) {
-				
+
 				case HARD_CLIPPING: {
 					float threshold = 0.5f;
                     if (in > threshold)

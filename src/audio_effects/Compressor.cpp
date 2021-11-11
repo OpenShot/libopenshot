@@ -18,9 +18,11 @@ using namespace openshot;
 
 Compressor::Compressor() : Compressor::Compressor(-10, 1, 1, 1, 1, false) {}
 
-Compressor::Compressor(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) :
-    threshold(new_threshold), ratio(new_ratio), attack(new_attack),
-    release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass),
+Compressor::Compressor(Keyframe threshold, Keyframe ratio, Keyframe attack,
+                       Keyframe release, Keyframe makeup_gain,
+                       Keyframe bypass):
+    threshold(threshold), ratio(ratio), attack(attack),
+    release(release), makeup_gain(makeup_gain), bypass(bypass),
     input_level(0.0), yl_prev(0.0)
 {
 	// Init effect properties
