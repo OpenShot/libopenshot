@@ -359,7 +359,10 @@ add_feature_info("FFmpeg ${resample_lib}" TRUE "Audio resampling uses ${resample
 set(FFMPEG_USE_SWRESAMPLE ${USE_SW} CACHE BOOL "libswresample used for audio resampling" FORCE)
 mark_as_advanced(FFMPEG_USE_SWRESAMPLE)
 
-# Version check for hardware-acceleration code
+# Version check / enablement for hardware-acceleration code
+if(APPIMAGE_BUILD)
+  set(USE_HW_ACCEL FALSE)
+endif()
 if(USE_HW_ACCEL AND FFmpeg_avcodec_VERSION)
   if(${FFmpeg_avcodec_VERSION} VERSION_GREATER "57.106")
     set(HAVE_HW_ACCEL TRUE)
