@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <memory>
 
 #include "WriterBase.h"
 #include "Exceptions.h"
