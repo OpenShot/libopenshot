@@ -151,7 +151,7 @@ void FFmpegWriter::initialize_streams() {
 void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate) {
 	// Set the video options
 	if (codec.length() > 0) {
-		AVCodec *new_codec;
+		const AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if USE_HW_ACCEL
 #if defined(__linux__)
@@ -273,7 +273,7 @@ void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fr
 void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate) {
 	// Set audio options
 	if (codec.length() > 0) {
-		AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
+		const AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
 		if (new_codec == NULL)
 			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 		else {
@@ -1033,7 +1033,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	AVStream *st;
 
 	// Find the audio codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
@@ -1118,7 +1118,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	AVStream *st;
 
 	// Find the video codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
@@ -1302,7 +1302,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 // open audio codec
 void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
@@ -1373,7 +1373,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 
 // open video codec
 void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, video_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
