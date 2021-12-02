@@ -241,10 +241,10 @@ void FFmpegReader::Open() {
 			pStream = pFormatCtx->streams[videoStream];
 
 			// Find the codec ID from stream
-			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(pStream);
+			const AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(pStream);
 
 			// Get codec and codec context from stream
-			AVCodec *pCodec = avcodec_find_decoder(codecId);
+			const AVCodec *pCodec = avcodec_find_decoder(codecId);
 			AVDictionary *opts = NULL;
 			int retry_decode_open = 2;
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
@@ -498,7 +498,7 @@ void FFmpegReader::Open() {
 			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(aStream);
 
 			// Get codec and codec context from stream
-			AVCodec *aCodec = avcodec_find_decoder(codecId);
+			const AVCodec *aCodec = avcodec_find_decoder(codecId);
 			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
