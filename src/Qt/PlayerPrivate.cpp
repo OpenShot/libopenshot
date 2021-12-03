@@ -74,6 +74,7 @@ namespace openshot
                 || (video_position > reader->info.video_length)
                ) {
                 speed = 0;
+                std::cout << "A: " << frame_duration.count() << std::endl;
                 std::this_thread::sleep_for(frame_duration);
                 continue;
             }
@@ -132,6 +133,7 @@ namespace openshot
             // and shutting down, the video_frame_diff can jump to a crazy big number, and we don't
             // want to sleep too long (max of X seconds)
             if (sleep_time > sleep_time.zero() && sleep_time.count() < max_sleep_ms) {
+                std::cout << "B: " << sleep_time.count() << std::endl;
                 std::this_thread::sleep_for(sleep_time);
             }
 
