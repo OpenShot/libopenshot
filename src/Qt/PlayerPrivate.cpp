@@ -59,10 +59,10 @@ namespace openshot
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
-        // Calculate on-screen time for a single frame in milliseconds
-        const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
-
         while (!threadShouldExit()) {
+            // Calculate on-screen time for a single frame in milliseconds
+            const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+
             // Get the start time (to track how long a frame takes to render)
             const auto time1 = std::chrono::high_resolution_clock::now();
 
@@ -111,6 +111,7 @@ namespace openshot
             ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
 
             // Adjust drift (if more than a few frames off between audio and video)
+            std::cout << "VD: " << video_frame_diff << std::endl;
             if (video_frame_diff > 0 && reader->info.has_audio && reader->info.has_video) {
                 // Since the audio and video threads are running independently,
                 // they will quickly get out of sync. To fix this, we calculate
@@ -119,11 +120,13 @@ namespace openshot
                 // If a frame is ahead of the audio, we sleep for longer.
                 // If a frame is behind the audio, we sleep less (or not at all),
                 // in order for the video to catch up.
+                std::cout << "D: " << duration_cast<ms>(video_frame_diff * frame_duration).count() << std::endl;
                 sleep_time += duration_cast<ms>(video_frame_diff * frame_duration);
             }
 
             else if (video_frame_diff < -10 && reader->info.has_audio && reader->info.has_video) {
                 // Skip frame(s) to catch up to the audio (if more than 10 frames behind)
+                std::cout << "L: " << std::fabs(video_frame_diff) / 2 << std::endl;
                 video_position += std::fabs(video_frame_diff) / 2; // Seek forward 1/2 the difference
                 sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
             }

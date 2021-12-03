@@ -77,10 +77,9 @@ namespace openshot
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
-        // Calculate on-screen time for a single frame in milliseconds
-        const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
-
 		while (!threadShouldExit() && is_playing) {
+            // Calculate on-screen time for a single frame in milliseconds
+            const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
 
 			// Cache frames before the other threads need them
 			// Cache frames up to the max frames. Reset to current position
