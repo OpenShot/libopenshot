@@ -3,36 +3,21 @@
  * @brief Source file for FFmpegWriter class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @ref License
- */
-
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
  * This file is originally based on the Libavformat API example, and then modified
  * by the libopenshot project.
  *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ * @ref License
  */
+
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include "FFmpegUtilities.h"
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 #include <iostream>
 
@@ -166,7 +151,7 @@ void FFmpegWriter::initialize_streams() {
 void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction fps, int width, int height, Fraction pixel_ratio, bool interlaced, bool top_field_first, int bit_rate) {
 	// Set the video options
 	if (codec.length() > 0) {
-		AVCodec *new_codec;
+		const AVCodec *new_codec;
 		// Check if the codec selected is a hardware accelerated codec
 #if USE_HW_ACCEL
 #if defined(__linux__)
@@ -288,7 +273,7 @@ void FFmpegWriter::SetVideoOptions(std::string codec, int width, int height,  Fr
 void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample_rate, int channels, ChannelLayout channel_layout, int bit_rate) {
 	// Set audio options
 	if (codec.length() > 0) {
-		AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
+		const AVCodec *new_codec = avcodec_find_encoder_by_name(codec.c_str());
 		if (new_codec == NULL)
 			throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 		else {
@@ -673,7 +658,7 @@ void FFmpegWriter::WriteHeader() {
 }
 
 // Add a frame to the queue waiting to be encoded.
-void FFmpegWriter::WriteFrame(std::shared_ptr<Frame> frame) {
+void FFmpegWriter::WriteFrame(std::shared_ptr<openshot::Frame> frame) {
 	// Check for open reader (or throw exception)
 	if (!is_open)
 		throw WriterClosed("The FFmpegWriter is closed.  Call Open() before calling this method.", path);
@@ -1048,7 +1033,7 @@ AVStream *FFmpegWriter::add_audio_stream() {
 	AVStream *st;
 
 	// Find the audio codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
@@ -1133,7 +1118,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	AVStream *st;
 
 	// Find the video codec
-	AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
+	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
@@ -1142,6 +1127,10 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
+
+	// Set sample aspect ratio
+    c->sample_aspect_ratio.num = info.pixel_ratio.num;
+    c->sample_aspect_ratio.den = info.pixel_ratio.den;
 
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000
@@ -1219,7 +1208,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 		}
 	}
 
-//TODO: Implement variable bitrate feature (which actually works). This implementation throws
+    //TODO: Implement variable bitrate feature (which actually works). This implementation throws
 	//invalid bitrate errors and rc buffer underflow errors, etc...
 	//c->rc_min_rate = info.video_bit_rate;
 	//c->rc_max_rate = info.video_bit_rate;
@@ -1313,7 +1302,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 // open audio codec
 void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, audio_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
@@ -1384,7 +1373,7 @@ void FFmpegWriter::open_audio(AVFormatContext *oc, AVStream *st) {
 
 // open video codec
 void FFmpegWriter::open_video(AVFormatContext *oc, AVStream *st) {
-	AVCodec *codec;
+	const AVCodec *codec;
 	AV_GET_CODEC_FROM_STREAM(st, video_codec_ctx)
 
 	// Set number of threads equal to number of processors (not to exceed 16)
@@ -1672,7 +1661,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         );
 
         // Copy audio samples over original samples
-        memcpy(all_resampled_samples, audio_converted->data[0], nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
+        memcpy(all_resampled_samples, audio_converted->data[0],
+               static_cast<size_t>(nb_samples)
+                   * info.channels
+                   * av_get_bytes_per_sample(output_sample_fmt));
 
         // Remove converted audio
         av_freep(&(audio_frame->data[0]));
@@ -1706,7 +1698,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
                        av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
                 ),
                 all_resampled_samples + samples_position,
-                diff * av_get_bytes_per_sample(output_sample_fmt)
+                static_cast<size_t>(diff)
+                    * av_get_bytes_per_sample(output_sample_fmt)
             );
 
         // Increment counters
@@ -1760,7 +1753,10 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             );
 
             // Copy audio into buffer for frame
-            memcpy(final_samples_planar, samples, audio_frame->nb_samples * info.channels * av_get_bytes_per_sample(output_sample_fmt));
+            memcpy(final_samples_planar, samples,
+                   static_cast<size_t>(audio_frame->nb_samples)
+                       * info.channels
+                       * av_get_bytes_per_sample(output_sample_fmt));
 
             // Fill input frame with sample data
             avcodec_fill_audio_frame(audio_frame, info.channels, output_sample_fmt,
@@ -1786,10 +1782,12 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
             );
 
             // Copy audio samples over original samples
-            if (nb_samples > 0) {
-                memcpy(samples, frame_final->data[0],
-                    nb_samples * av_get_bytes_per_sample(audio_codec_ctx->sample_fmt) * info.channels);
-            }
+            const auto copy_length = static_cast<size_t>(nb_samples)
+                * av_get_bytes_per_sample(audio_codec_ctx->sample_fmt)
+                * info.channels;
+
+            if (nb_samples > 0)
+                memcpy(samples, frame_final->data[0], copy_length);
 
             // deallocate AVFrame
             av_freep(&(audio_frame->data[0]));
@@ -1800,11 +1798,12 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
 
         } else {
             // Create a new array
-            final_samples = (int16_t *) av_malloc(
-                sizeof(int16_t) * audio_input_position
+            const auto buf_size = static_cast<size_t>(audio_input_position)
                 * (av_get_bytes_per_sample(audio_codec_ctx->sample_fmt) /
-                   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) )
-            );
+                   av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
+                );
+            final_samples = reinterpret_cast<int16_t*>(
+                    av_malloc(sizeof(int16_t) * buf_size));
 
             // Copy audio into buffer for frame
             memcpy(final_samples, samples,

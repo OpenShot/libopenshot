@@ -5,32 +5,24 @@
  * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_MAGICK_UTILITIES_H
 #define OPENSHOT_MAGICK_UTILITIES_H
 
 #ifdef USE_IMAGEMAGICK
+
+    // Avoid a bug in the interaction between ImageMagick
+    // and the standard C insertion headers, which can
+    // cause functions used by macros in the standard C
+    // assertion code to be put in an ImageMagick library
+    // namespace instead of the global namespace
+    #include <cassert>
+
+    #include <memory>
+    #include <QImage>
 
 // Exclude a warning message with IM6 headers
 #pragma GCC diagnostic push
@@ -41,8 +33,8 @@
     // Determine ImageMagick version, as IM7 isn't fully
     // backwards compatible
     #ifndef NEW_MAGICK
-	   #define NEW_MAGICK (MagickLibVersion >= 0x700)
-	#endif
+        #define NEW_MAGICK (MagickLibVersion >= 0x700)
+    #endif
 
     // IM7: <Magick::Image>->alpha(bool)
     // IM6: <Magick::Image>->matte(bool)
@@ -61,5 +53,17 @@
         #define MAGICK_DRAWABLE std::list<Magick::Drawable>
     #endif
 
-#endif
-#endif
+namespace openshot {
+
+    /// Convert QImage to Magick::Image
+    std::shared_ptr<Magick::Image>
+    QImage2Magick(std::shared_ptr<QImage>);
+
+    /// Convert Magick::Image to QImage
+    std::shared_ptr<QImage>
+    Magick2QImage(std::shared_ptr<Magick::Image>);
+
+}  // namespace
+
+#endif  // USE_IMAGEMAGICK
+#endif  // OPENSHOT_MAGICK_UTILITIES_H

@@ -6,35 +6,18 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <catch2/catch.hpp>
 
 #include <QGuiApplication>
 
 #include "QtImageReader.h"
-#include "Frame.h"
 #include "Clip.h"
+#include "Exceptions.h"
+#include "Frame.h"
 #include "Timeline.h"
 
 using namespace openshot;
@@ -50,7 +33,7 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
 	// Create a reader
 	std::stringstream path;
 	path << TEST_MEDIA_PATH << "front.png";
-    QtImageReader r(path.str());
+	QtImageReader r(path.str());
 
 	// Check invalid path
 	CHECK_THROWS_AS(r.GetFrame(1), ReaderClosed);
@@ -58,15 +41,15 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
 
 TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
 {
-	// Create a reader
-	std::stringstream path;
-	path << TEST_MEDIA_PATH << "1F0CF.svg";
+    // Create a reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "1F0CF.svg";
     QtImageReader r(path.str());
-	r.Open();
+    r.Open();
 
-	// Get frame, with no Timeline or Clip
-	// Size should be equal to default SVG size
-	std::shared_ptr<Frame> f = r.GetFrame(1);
+    // Get frame, with no Timeline or Clip
+    // Size should be equal to default SVG size
+    std::shared_ptr<Frame> f = r.GetFrame(1);
     CHECK(f->GetImage()->width() == 72);
     CHECK(f->GetImage()->height() == 72);
 
@@ -97,7 +80,7 @@ TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )
     CHECK(f->GetImage()->width() == 480 * 2);
     CHECK(f->GetImage()->height() == 480 * 2);
 
-	// Close reader
-	t1.Close();
-	r.Close();
+    // Close reader
+    t1.Close();
+    r.Close();
 }

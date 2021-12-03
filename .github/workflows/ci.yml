@@ -1,73 +1,213 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 name: libopenshot CI Build
 on: [push, pull_request]
+
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.sys.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04]
-        compiler: [gcc, clang]
+        sys:
+          - { os: ubuntu-18.04, shell: bash }
+          - { os: ubuntu-latest, shell: bash }
+          - { os: macos-latest, shell: bash }
+          - { os: windows-latest, shell: 'msys2 {0}' }
+        compiler:
+          - { cc: gcc, cxx: g++ }
+          - { cc: clang, cxx: clang++ }
+        exclude:
+          # Windows clang isn't being our friend,
+          # JUCE seems to think it can use _get_tzname there
+          # (it can't)
+          - sys: { os: windows-latest, shell: 'msys2 {0}' }
+            compiler: { cc: clang, cxx: clang++ }
+    defaults:
+      run:
+        shell: "${{ matrix.sys.shell }}"
     env:
-      CC: ${{ matrix.compiler }}
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
-    - uses: actions/checkout@v2
-      # Work around a codecov issue detecting commit SHAs
-      # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v2
+        with:
+          # Work around a codecov issue detecting commit SHAs
+          # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
+          fetch-depth: 0
 
-    - uses: haya14busa/action-cond@v1
-      id: coverage
-      with:
-        cond: ${{ matrix.compiler == 'clang' }}
-        if_true: "-DENABLE_COVERAGE:BOOL=1"
-        if_false: "-DENABLE_COVERAGE:BOOL=0"
+      - name: Checkout OpenShotAudio
+        uses: actions/checkout@v2
+        with:
+          repository: OpenShot/libopenshot-audio
+          path: audio
 
-    - name: Install dependencies
-      shell: bash
-      run: |
-        sudo add-apt-repository ppa:openshot.developers/libopenshot-daily
-        sudo apt update
-        sudo apt remove libzmq5  # See actions/virtual-environments#3317
-        sudo apt install \
-          cmake swig doxygen graphviz curl lcov \
-          libopenshot-audio-dev libasound2-dev \
-          qtbase5-dev qtbase5-dev-tools \
-          libfdk-aac-dev libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libpostproc-dev libswresample-dev \
-          libzmq3-dev libmagick++-dev \
-          libopencv-dev libprotobuf-dev protobuf-compiler
-        # Install catch2 package from Ubuntu 20.10, since for some reason
-        # even 20.04 only has Catch 1.12.1 available.
-        wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
-        sudo dpkg -i catch2_2.13.0-1_all.deb
+      - name: Checkout Resvg
+        if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
+        uses: actions/checkout@v2
+        with:
+          repository: RazrFalcon/resvg
+          path: resvg
+          ref: v0.19.0
 
+      - uses: haya14busa/action-cond@v1
+        id: generator
+        with:
+          cond: ${{ runner.os == 'Windows' }}
+          if_true: "MinGW Makefiles"
+          if_false: "Unix Makefiles"
 
-    - name: Build libopenshot
-      shell: bash
-      run: |
-        mkdir build
-        pushd build
-        cmake -B . -S .. -DCMAKE_INSTALL_PREFIX:PATH="dist" -DCMAKE_BUILD_TYPE="Debug" "${{ steps.coverage.outputs.value }}"
-        cmake --build . -- VERBOSE=1
-        popd
+      - uses: haya14busa/action-cond@v1
+        id: coverage
+        with:
+          cond: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
+          if_true: "-DENABLE_COVERAGE:BOOL=1"
 
-    - name: Test libopenshot
-      shell: bash
-      run: |
-        pushd build
-        cmake --build . --target coverage -- VERBOSE=1
-        popd
+      - uses: haya14busa/action-cond@v1
+        id: use-resvg
+        with:
+          cond: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
+          if_true: "-DResvg_ROOT:PATH=./resvg"
 
-    - name: Install libopenshot
-      shell: bash
-      run: |
-        pushd build
-        cmake --build . --target install -- VERBOSE=1
-        popd
+      - name: Install Linux dependencies
+        if: ${{ runner.os == 'linux' }}
+        run: |
+          sudo apt update
+          sudo apt remove libzmq5  # See actions/virtual-environments#3317
+          sudo apt install \
+            cmake swig doxygen graphviz curl lcov \
+            libasound2-dev \
+            qtbase5-dev qtbase5-dev-tools libqt5svg5-dev \
+            libfdk-aac-dev libavcodec-dev libavformat-dev \
+            libavutil-dev libswscale-dev libswresample-dev \
+            libzmq3-dev libmagick++-dev libbabl-dev \
+            libopencv-dev libprotobuf-dev protobuf-compiler \
+            cargo
+          # Install catch2 package from Ubuntu 20.10, since for some reason
+          # even 20.04 only has Catch 1.12.1 available.
+          wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb
+          sudo dpkg -i catch2_2.13.0-1_all.deb
 
-    - uses: codecov/codecov-action@v2.0.2
-      if: ${{ matrix.compiler == 'clang' }}
-      with:
-        file: build/coverage.info
+      - name: Install macOS dependencies
+        if: ${{ runner.os == 'macos' }}
+        run: |
+          brew install \
+            qt5 ffmpeg zeromq cppzmq libomp opencv protobuf babl \
+            python3 swig catch2 doxygen graphviz
+
+      - name: Set up MSYS and install Windows dependencies
+        if: ${{ runner.os == 'Windows' }}
+        uses: msys2/setup-msys2@v2
+        with:
+          release: false
+          update: true
+          install: >-
+              mingw-w64-x86_64-gcc
+              mingw-w64-x86_64-clang
+              mingw-w64-x86_64-lld
+              mingw-w64-x86_64-make
+              mingw-w64-x86_64-cmake
+              mingw-w64-x86_64-pkgconf
+              mingw-w64-x86_64-qt5
+              mingw-w64-x86_64-libvpx
+              mingw-w64-x86_64-ffmpeg
+              mingw-w64-x86_64-zeromq
+              mingw-w64-x86_64-opencv
+              mingw-w64-x86_64-protobuf
+              mingw-w64-x86_64-babl
+              mingw-w64-x86_64-catch
+              mingw-w64-x86_64-python3
+              mingw-w64-x86_64-swig
+
+      - uses: actions/cache@v2
+        name: Import OpenShotAudio cache
+        id: cache-audio
+        with:
+          path: audio/build
+          key: audio-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('audio/CMakeLists.txt') }}
+
+      - uses: actions/cache@v2
+        name: Import Resvg cache
+        if: ${{ steps.use-resvg.outputs.value }}
+        id: cache-resvg
+        with:
+          path: resvg/target
+          key: resvg-${{ matrix.sys.os }}-${{ matrix.compiler.cxx }}-${{ hashFiles('resvg/Cargo.toml') }}
+
+      - name: Build OpenShotAudio (if not cached)
+        if: steps.cache-audio.outputs.cache-hit != 'true'
+        run: |
+          pushd audio
+          if [ ! -d build ]; then
+            mkdir build
+            if [ "_${{ runner.os }}" == "_macOS" ]; then
+              export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9"
+            fi
+            if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
+              export CMAKE_EXTRA="${CMAKE_EXTRA} \
+                -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
+                -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
+                -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
+            fi
+            cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
+              -DCMAKE_BUILD_TYPE="Debug" \
+              -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+              ${CMAKE_EXTRA}
+          fi
+          cmake --build build
+          popd
+
+      - name: Build Resvg (if enabled and not cached)
+        if: steps.cache-resvg && (steps.cache-resvg.outputs.cache-hit != 'true')
+        run: |
+          if [ -d "resvg/c-api" ]; then
+            pushd resvg/c-api
+            cargo build --release
+            popd
+          fi
+
+      - name: Build libopenshot
+        run: |
+          if [ "_${{ runner.os }}" == "_macOS" ]; then
+            export CMAKE_EXTRA="${CMAKE_EXTRA} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
+            -DQt5_DIR=/usr/local/opt/qt@5/lib/cmake/Qt5 \
+            -DENABLE_RUBY=0";
+            export PATH="/usr/local/opt/qt@5/bin:$PATH";
+          fi
+          if [ "_${{ runner.os }}_${{ matrix.compiler.cc }}" == "_macOS_clang" ]; then
+            export CMAKE_EXTRA="${CMAKE_EXTRA} \
+            -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
+            -DCMAKE_MODULE_LINKER_FLAGS=-stdlib=libc++ \
+            -DCMAKE_SHARED_LINKER_FLAGS=-stdlib=libc++";
+          fi
+          if [ "_${{ runner.os }}" == "_Windows" ]; then
+            export CMAKE_EXTRA="${CMAKE_EXTRA} \
+              -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+              -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld \
+              -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          fi
+          mkdir build
+          cmake -B build -S . -G "${{ steps.generator.outputs.value }}" \
+            -DCMAKE_BUILD_TYPE="Debug" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+            -DOpenShotAudio_ROOT="./audio/build" \
+            ${CMAKE_EXTRA} \
+            "${{ steps.coverage.outputs.value }}" \
+            "${{ steps.use-resvg.outputs.value }}"
+          cmake --build build -- VERBOSE=1
+
+      - name: Test libopenshot
+        run: |
+          cmake --build build --target coverage -- VERBOSE=1
+
+      - name: Install libopenshot
+        run: |
+          cmake --build build --target install -- VERBOSE=1
+
+      - uses: codecov/codecov-action@v2.1.0
+        if: ${{ steps.coverage.outputs.value }}
+        with:
+          file: build/coverage.info

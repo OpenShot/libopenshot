@@ -1,47 +1,28 @@
 /**
  * @file
  * @brief Source file for Expander audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Expander.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Expander::Expander() : threshold(-10), ratio(1), attack(1), release(1), makeup_gain(1), bypass(false) {
-	// Init effect properties
-	init_effect_details();
-}
+Expander::Expander(): Expander::Expander(-10, 1, 1, 1, 1, false) { }
 
 // Default constructor
-Expander::Expander(Keyframe new_threshold, Keyframe new_ratio, Keyframe new_attack, Keyframe new_release, Keyframe new_makeup_gain, Keyframe new_bypass) : 
-				   threshold(new_threshold), ratio(new_ratio), attack(new_attack), release(new_release), makeup_gain(new_makeup_gain), bypass(new_bypass)
+Expander::Expander(Keyframe threshold, Keyframe ratio, Keyframe attack,
+                   Keyframe release, Keyframe makeup_gain, Keyframe bypass) :
+    threshold(threshold), ratio(ratio), attack(attack),
+    release(release), makeup_gain(makeup_gain), bypass(bypass)
 {
 	// Init effect properties
 	init_effect_details();
@@ -78,7 +59,7 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
     mixed_down_input.setSize(1, num_samples);
 	inverse_sample_rate = 1.0f / frame->SampleRate();
     inverseE = 1.0f / M_E;
-	
+
 	if ((bool)bypass.GetValue(frame_number))
         return frame;
 
@@ -94,12 +75,12 @@ std::shared_ptr<openshot::Frame> Expander::GetFrame(std::shared_ptr<openshot::Fr
         float alphaR = calculateAttackOrRelease(release.GetValue(frame_number));
         float gain = makeup_gain.GetValue(frame_number);
 		float input_squared = powf(mixed_down_input.getSample(0, sample), 2.0f);
-        
+
 		const float average_factor = 0.9999f;
 		input_level = average_factor * input_level + (1.0f - average_factor) * input_squared;
 
         xg = (input_level <= 1e-6f) ? -60.0f : 10.0f * log10f(input_level);
-		
+
 		if (xg > T)
 			yg = xg;
 		else

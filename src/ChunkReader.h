@@ -6,42 +6,23 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_CHUNK_READER_H
 #define OPENSHOT_CHUNK_READER_H
 
-#include "ReaderBase.h"
 #include <string>
 #include <memory>
 
-#include "Frame.h"
+#include "ReaderBase.h"
 #include "Json.h"
-#include "CacheMemory.h"
 
 namespace openshot
 {
-
+	class CacheBase;
+	class Frame;
 	/**
 	 * @brief This struct holds the location of a frame within a chunk.
 	 *
@@ -137,7 +118,7 @@ namespace openshot
 		void SetChunkSize(int64_t new_size) { chunk_size = new_size; };
 
 		/// Get the cache object used by this reader (always return NULL for this reader)
-		openshot::CacheMemory* GetCache() override { return NULL; };
+		openshot::CacheBase* GetCache() override { return nullptr; };
 
 		/// @brief Get an openshot::Frame object for a specific frame number of this reader.
 		/// @returns				The requested frame (containing the image and audio)

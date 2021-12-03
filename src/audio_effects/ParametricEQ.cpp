@@ -1,48 +1,27 @@
 /**
  * @file
  * @brief Source file for ParametricEQ audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "ParametricEQ.h"
 #include "Exceptions.h"
 
 using namespace openshot;
+using namespace juce;
 
-/// Blank constructor, useful when using Json to load the effect properties
-ParametricEQ::ParametricEQ() : filter_type(LOW_PASS), frequency(500), gain(0), q_factor(0) {
-	// Init effect properties
-	init_effect_details();
-}
+ParametricEQ::ParametricEQ(): ParametricEQ::ParametricEQ(LOW_PASS, 500, 0, 0) {}
 
-
-// Default constructor
-ParametricEQ::ParametricEQ(openshot::FilterType new_filter_type, Keyframe new_frequency, Keyframe new_gain, Keyframe new_q_factor) : 
-					   	   filter_type(new_filter_type), frequency(new_frequency), gain(new_gain), q_factor(new_q_factor)
+ParametricEQ::ParametricEQ(openshot::FilterType filter_type,
+                           Keyframe frequency, Keyframe gain, Keyframe q_factor) :
+    filter_type(filter_type),
+    frequency(frequency), gain(gain), q_factor(q_factor)
 {
 	// Init effect properties
 	init_effect_details();
@@ -253,7 +232,7 @@ void ParametricEQ::SetJsonValue(const Json::Value root) {
 // Get all properties for a specific frame
 std::string ParametricEQ::PropertiesJSON(int64_t requested_frame) const {
 
-	// Generate JSON properties list	
+	// Generate JSON properties list
 	Json::Value root;
 	root["id"] = add_property_json("ID", 0.0, "string", Id(), NULL, -1, -1, true, requested_frame);
 	root["layer"] = add_property_json("Track", Layer(), "int", "", NULL, 0, 20, false, requested_frame);

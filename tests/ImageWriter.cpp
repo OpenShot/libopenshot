@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifdef USE_IMAGEMAGICK
 
@@ -42,6 +24,26 @@
 #include "Frame.h"
 
 using namespace openshot;
+
+TEST_CASE( "conversions", "[libopenshot][imagewriter]" )
+{
+    auto magick1 = openshot::QImage2Magick(nullptr);
+    CHECK_FALSE(magick1);
+
+    auto qimage1 = openshot::Magick2QImage(nullptr);
+    CHECK_FALSE(qimage1);
+
+    std::stringstream path_overlay;
+    path_overlay << TEST_MEDIA_PATH << "front3.png";
+    openshot::Clip overlay(path_overlay.str());
+    overlay.Open();
+    auto frame = overlay.Reader()->GetFrame(1);
+    auto qimage = frame->GetImage();
+
+    auto magick = openshot::QImage2Magick(qimage);
+    auto qimage_out = openshot::Magick2QImage(magick);
+    CHECK(qimage->pixelColor(100, 100) == qimage_out->pixelColor(100, 100));
+}
 
 TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 {
@@ -67,16 +69,18 @@ TEST_CASE( "Gif", "[libopenshot][imagewriter]" )
 	CHECK_FALSE(w.IsOpen());
 
 	// Check for exception on write-before-open
-	CHECK_THROWS_AS(w.WriteFrame(&r, 500, 504), WriterClosed);
+	CHECK_THROWS_AS(w.WriteFrame(&r, 500, 509), WriterClosed);
 
-	// Set the image output settings (format, fps, width, height, quality, loops, combine)
-	w.SetVideoOptions("GIF", r.info.fps, r.info.width, r.info.height, 70, 1, true);
+	// Set the image output settings
+        // (format, fps, width, height, quality, loops, combine)
+        // loops=0 == infinite looping
+	w.SetVideoOptions("GIF", r.info.fps, r.info.width, r.info.height, 70, 0, true);
 
 	// Open writer
 	w.Open();
 
-	// Write some frames (start on frame 500 and go to frame 510)
-	w.WriteFrame(&r, 500, 504);
+	// Write some frames
+	w.WriteFrame(&r, 500, 509);
 
 	// Close writer & reader
 	w.Close();

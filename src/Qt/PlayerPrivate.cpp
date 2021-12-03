@@ -7,30 +7,13 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "PlayerPrivate.h"
 #include "Exceptions.h"
+#include "ZmqLogger.h"
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono milliseconds, high_resolution_clock
@@ -43,13 +26,13 @@ namespace openshot
     , audioPlayback(new openshot::AudioPlaybackThread())
     , videoPlayback(new openshot::VideoPlaybackThread(rb))
     , videoCache(new openshot::VideoCacheThread())
-    , speed(1), reader(NULL), last_video_position(1)
+    , speed(1), reader(NULL), last_video_position(1), max_sleep_ms(3000)
     { }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
     {
-        stopPlayback(1000);
+        stopPlayback();
         delete audioPlayback;
         delete videoCache;
         delete videoPlayback;
@@ -145,7 +128,10 @@ namespace openshot
             }
 
             // Sleep (leaving the video frame on the screen for the correct amount of time)
-            if (sleep_time > sleep_time.zero()) {
+            // Don't sleep too long though (in some extreme cases, for example when stopping threads
+            // and shutting down, the video_frame_diff can jump to a crazy big number, and we don't
+            // want to sleep too long (max of X seconds)
+            if (sleep_time > sleep_time.zero() && sleep_time.count() < max_sleep_ms) {
                 std::this_thread::sleep_for(sleep_time);
             }
 
@@ -186,18 +172,18 @@ namespace openshot
     {
         if (video_position < 0) return false;
 
-        stopPlayback(-1);
+        stopPlayback();
         startThread(1);
         return true;
     }
 
     // Stop video/audio playback
-    void PlayerPrivate::stopPlayback(int timeOutMilliseconds)
+    void PlayerPrivate::stopPlayback()
     {
-        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(timeOutMilliseconds);
-        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(timeOutMilliseconds);
-        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(timeOutMilliseconds);
-        if (isThreadRunning()) stopThread(timeOutMilliseconds);
+        if (audioPlayback->isThreadRunning() && reader->info.has_audio) audioPlayback->stopThread(max_sleep_ms);
+        if (videoCache->isThreadRunning() && reader->info.has_video) videoCache->stopThread(max_sleep_ms);
+        if (videoPlayback->isThreadRunning() && reader->info.has_video) videoPlayback->stopThread(max_sleep_ms);
+        if (isThreadRunning()) stopThread(max_sleep_ms);
     }
 
 }

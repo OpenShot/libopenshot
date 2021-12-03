@@ -1,48 +1,25 @@
 /**
  * @file
  * @brief Source file for Delay audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Delay.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Delay::Delay() : delay_time(1) {
-	// Init effect properties
-	init_effect_details();
-}
+Delay::Delay() : Delay::Delay(1) { }
 
-// Default constructor
-Delay::Delay(Keyframe new_delay_time) : delay_time(new_delay_time)
+Delay::Delay(Keyframe delay_time) : delay_time(delay_time)
 {
-	// Init effect properties
 	init_effect_details();
 }
 
@@ -102,7 +79,7 @@ std::shared_ptr<openshot::Frame> Delay::GetFrame(std::shared_ptr<openshot::Frame
             float read_position = fmodf((float)local_write_position - delay_time_value + (float)delay_buffer_samples, delay_buffer_samples);
             int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position) 
+            if (local_read_position != local_write_position)
 			{
                 float fraction = read_position - (float)local_read_position;
                 float delayed1 = delay_data[(local_read_position + 0)];

@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Caption.h"
 #include "Exceptions.h"
@@ -38,6 +20,8 @@
 #include <QRect>
 #include <QPen>
 #include <QBrush>
+#include <QPainter>
+#include <QPainterPath>
 
 using namespace openshot;
 
@@ -129,7 +113,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	Timeline* timeline = NULL;
 	Fraction fps;
 	double scale_factor = 1.0; // amount of scaling needed for text (based on preview window size)
-	if (clip->ParentTimeline() != NULL) {
+	if (clip && clip->ParentTimeline() != NULL) {
 		timeline = (Timeline*) clip->ParentTimeline();
 	} else if (this->ParentTimeline() != NULL) {
 		timeline = (Timeline*) this->ParentTimeline();

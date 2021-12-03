@@ -1,3 +1,9 @@
+<!--
+© OpenShot Studios, LLC
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
 # Building libopenshot for MacOS
 
 ## Getting Started
@@ -145,6 +151,7 @@ brew install unittest-cpp --cc=gcc-4.8. You must specify the c++ compiler with t
 brew install qt5
 brew install cmake
 brew install zeromq
+brew install babl
 ```
 
 ## Mac Build Instructions (libopenshot-audio)

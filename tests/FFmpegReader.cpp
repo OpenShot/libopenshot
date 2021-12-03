@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <sstream>
 #include <memory>
@@ -39,7 +21,6 @@
 #include "Timeline.h"
 #include "Json.h"
 
-using namespace std;
 using namespace openshot;
 
 TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
@@ -51,7 +32,7 @@ TEST_CASE( "Invalid_Path", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
 	FFmpegReader r(path.str());
 
@@ -62,7 +43,7 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "piano.wav";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -92,7 +73,7 @@ TEST_CASE( "Check_Audio_File", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "test.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -138,7 +119,7 @@ TEST_CASE( "Check_Video_File", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -195,7 +176,7 @@ TEST_CASE( "Seek", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -211,7 +192,7 @@ TEST_CASE( "Frame_Rate", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -247,7 +228,7 @@ TEST_CASE( "Multiple_Open_and_Close", "[libopenshot][ffmpegreader]" )
 TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 {
 	// Create a reader
-	stringstream path;
+	std::stringstream path;
 	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
 	FFmpegReader r(path.str());
 	r.Open();
@@ -272,4 +253,34 @@ TEST_CASE( "verify parent Timeline", "[libopenshot][ffmpegreader]" )
 	// Check size of frame image (it should now match the parent timeline)
 	CHECK(r.GetFrame(1)->GetImage()->width() == 640);
 	CHECK(r.GetFrame(1)->GetImage()->height() == 360);
+}
+
+TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
+{
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
+
+	std::string expected(R"(----------------------------
+----- File Information -----
+----------------------------
+--> Has Video: true
+--> Has Audio: true
+--> Has Single Image: false
+--> Duration: 51.95 Seconds
+--> File Size: 7.26 MB
+----------------------------
+----- Video Attributes -----
+----------------------------
+--> Width: 1280
+--> Height: 720)");
+
+	// Store the DisplayInfo() text in 'output'
+	std::stringstream output;
+	r.DisplayInfo(&output);
+
+	// Compare a [0, expected.size()) substring of output to expected
+	CHECK(output.str().substr(0, expected.size()) == expected);
 }

@@ -1,11 +1,19 @@
+// © OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #pragma once
 
 #ifndef OPENSHOT_STFT_AUDIO_EFFECT_H
 #define OPENSHOT_STFT_AUDIO_EFFECT_H
 #define _USE_MATH_DEFINES
 
-#include "../EffectBase.h"
-#include "../Enums.h"
+#include "EffectBase.h"
+#include "Enums.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
 
 namespace openshot
 {

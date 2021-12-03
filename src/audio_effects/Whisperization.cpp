@@ -1,47 +1,30 @@
 /**
  * @file
  * @brief Source file for Whisperization audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Whisperization.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
+using namespace juce;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Whisperization::Whisperization() : fft_size(FFT_SIZE_512), hop_size(HOP_SIZE_8), window_type(RECTANGULAR), stft(*this) {
-	// Init effect properties
-	init_effect_details();
-}
+Whisperization::Whisperization():
+    Whisperization::Whisperization(FFT_SIZE_512, HOP_SIZE_8, RECTANGULAR) {}
 
-// Default constructor
-Whisperization::Whisperization(openshot::FFTSize new_fft_size, openshot::HopSize new_hop_size, openshot::WindowType new_window_type) : 
-			 fft_size(new_fft_size), hop_size(new_hop_size), window_type(new_window_type), stft(*this)
+Whisperization::Whisperization(openshot::FFTSize fft_size,
+                               openshot::HopSize hop_size,
+                               openshot::WindowType window_type) :
+    fft_size(fft_size), hop_size(hop_size),
+    window_type(window_type), stft(*this)
 {
 	// Init effect properties
 	init_effect_details();
@@ -65,14 +48,14 @@ void Whisperization::init_effect_details()
 // modified openshot::Frame object
 std::shared_ptr<openshot::Frame> Whisperization::GetFrame(std::shared_ptr<openshot::Frame> frame, int64_t frame_number)
 {
-	const ScopedLock sl (lock);
+    const std::lock_guard<std::recursive_mutex> lock(mutex);
     ScopedNoDenormals noDenormals;
 
     const int num_input_channels = frame->audio->getNumChannels();
     const int num_output_channels = frame->audio->getNumChannels();
     const int num_samples = frame->audio->getNumSamples();
-    const int hop_size_value = 1 << ((int)hop_size + 1); 
-	const int fft_size_value = 1 << ((int)fft_size + 5); 
+    const int hop_size_value = 1 << ((int)hop_size + 1);
+	const int fft_size_value = 1 << ((int)fft_size + 5);
 
     stft.setup(num_output_channels);
     stft.updateParameters((int)fft_size_value,
@@ -95,7 +78,7 @@ void Whisperization::WhisperizationEffect::modification(const int channel)
 
 		frequency_domain_buffer[index].real(magnitude * cosf(phase));
 		frequency_domain_buffer[index].imag(magnitude * sinf(phase));
-		
+
 		if (index > 0 && index < fft_size / 2) {
 			frequency_domain_buffer[fft_size - index].real(magnitude * cosf (phase));
 			frequency_domain_buffer[fft_size - index].imag(magnitude * sinf (-phase));
@@ -182,7 +165,7 @@ std::string Whisperization::PropertiesJSON(int64_t requested_frame) const {
 	root["fft_size"]["choices"].append(add_property_choice_json("512", FFT_SIZE_512, fft_size));
 	root["fft_size"]["choices"].append(add_property_choice_json("1024", FFT_SIZE_1024, fft_size));
 	root["fft_size"]["choices"].append(add_property_choice_json("2048", FFT_SIZE_2048, fft_size));
-	
+
 	// Add hop_size choices (dropdown style)
 	root["hop_size"]["choices"].append(add_property_choice_json("1/2", HOP_SIZE_2, hop_size));
 	root["hop_size"]["choices"].append(add_property_choice_json("1/4", HOP_SIZE_4, hop_size));
@@ -193,7 +176,7 @@ std::string Whisperization::PropertiesJSON(int64_t requested_frame) const {
 	root["window_type"]["choices"].append(add_property_choice_json("Bart Lett", BART_LETT, window_type));
 	root["window_type"]["choices"].append(add_property_choice_json("Hann", HANN, window_type));
 	root["window_type"]["choices"].append(add_property_choice_json("Hamming", HAMMING, window_type));
-	
+
 
 	// Return formatted string
 	return root.toStyledString();

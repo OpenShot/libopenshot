@@ -6,31 +6,18 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <cmath>
+#include <iostream>
+#include <iomanip>
 
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
+#include "ZmqLogger.h"
 
 using namespace std;
 using namespace openshot;
@@ -404,7 +391,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	if (final_frame) return final_frame;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Find parent properties (if any)
     Clip *parent = (Clip *) ParentClip();
@@ -517,7 +504,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
 			int samples_per_end_frame =
 				Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
-										  reader->info.sample_rate, reader->info.channels);
+				                          reader->info.sample_rate, reader->info.channels);
 			if (copy_samples.sample_end >= samples_per_end_frame)
 			{
 				// check for wrapping
@@ -533,7 +520,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 				copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
 				int samples_per_start_frame =
 					Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
-											  reader->info.sample_rate, reader->info.channels);
+					                          reader->info.sample_rate, reader->info.channels);
 				if (copy_samples.sample_start >= samples_per_start_frame)
 				{
 					// check for wrapping
@@ -611,7 +598,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	return final_cache.GetFrame(requested_frame);
 }
 
-void FrameMapper::PrintMapping()
+void FrameMapper::PrintMapping(std::ostream* out)
 {
 	// Check if mappings are dirty (and need to be recalculated)
 	if (is_dirty)
@@ -622,8 +609,16 @@ void FrameMapper::PrintMapping()
 	for (float map = 1; map <= frames.size(); map++)
 	{
 		MappedFrame frame = frames[map - 1];
-		cout << "Target frame #: " << map << " mapped to original frame #:\t(" << frame.Odd.Frame << " odd, " << frame.Even.Frame << " even)" << endl;
-		cout << "  - Audio samples mapped to frame " << frame.Samples.frame_start << ":" << frame.Samples.sample_start << " to frame " << frame.Samples.frame_end << ":" << frame.Samples.sample_end << endl;
+		*out << "Target frame #: " << map
+		     << " mapped to original frame #:\t("
+		     << frame.Odd.Frame << " odd, "
+		     << frame.Even.Frame << " even)" << std::endl;
+
+		*out << "  - Audio samples mapped to frame "
+		     << frame.Samples.frame_start << ":"
+		     << frame.Samples.sample_start << " to frame "
+		     << frame.Samples.frame_end << ":"
+		     << frame.Samples.sample_end << endl;
 	}
 
 }
@@ -654,7 +649,7 @@ void FrameMapper::Close()
 	if (reader)
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const GenericScopedLock<CriticalSection> lock(getFrameCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::Close");
 
@@ -733,7 +728,14 @@ void FrameMapper::SetJsonValue(const Json::Value root) {
 // Change frame rate or audio mapping details
 void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldown,  int target_sample_rate, int target_channels, ChannelLayout target_channel_layout)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ChangeMapping", "target_fps.num", target_fps.num, "target_fps.den", target_fps.den, "target_pulldown", target_pulldown, "target_sample_rate", target_sample_rate, "target_channels", target_channels, "target_channel_layout", target_channel_layout);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ChangeMapping",
+		"target_fps.num", target_fps.num,
+		"target_fps.den", target_fps.den,
+		"target_pulldown", target_pulldown,
+		"target_sample_rate", target_sample_rate,
+		"target_channels", target_channels,
+		"target_channel_layout", target_channel_layout);
 
 	// Mark as dirty
 	is_dirty = true;
@@ -779,7 +781,13 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	int samples_in_frame = frame->GetAudioSamplesCount();
 	ChannelLayout channel_layout_in_frame = frame->ChannelsLayout();
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio", "frame->number", frame->number, "original_frame_number", original_frame_number, "channels_in_frame", channels_in_frame, "samples_in_frame", samples_in_frame, "sample_rate_in_frame", sample_rate_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ResampleMappedAudio",
+		"frame->number", frame->number,
+		"original_frame_number", original_frame_number,
+		"channels_in_frame", channels_in_frame,
+		"samples_in_frame", samples_in_frame,
+		"sample_rate_in_frame", sample_rate_in_frame);
 
 	// Get audio sample array
 	float* frame_samples_float = NULL;
@@ -815,7 +823,14 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	delete[] frame_samples_float;
 	frame_samples_float = NULL;
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (got sample data from frame)", "frame->number", frame->number, "total_frame_samples", total_frame_samples, "target channels", info.channels, "channels_in_frame", channels_in_frame, "target sample_rate", info.sample_rate, "samples_in_frame", samples_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ResampleMappedAudio (got sample data from frame)",
+		"frame->number", frame->number,
+		"total_frame_samples", total_frame_samples,
+		"target channels", info.channels,
+		"channels_in_frame", channels_in_frame,
+		"target sample_rate", info.sample_rate,
+		"samples_in_frame", samples_in_frame);
 
 
 	// Create input frame (and allocate arrays)
@@ -823,8 +838,10 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	AV_RESET_FRAME(audio_frame);
 	audio_frame->nb_samples = total_frame_samples / channels_in_frame;
 
-	int error_code = avcodec_fill_audio_frame(audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16, (uint8_t *) frame_samples,
-			audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame, 1);
+	int buf_size = audio_frame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * channels_in_frame;
+	int error_code = avcodec_fill_audio_frame(
+		audio_frame, channels_in_frame, AV_SAMPLE_FMT_S16,
+		(uint8_t *) frame_samples, buf_size, 1);
 
 	if (error_code < 0)
 	{
@@ -837,7 +854,14 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	// Update total samples & input frame size (due to bigger or smaller data types)
 	total_frame_samples = Frame::GetSamplesPerFrame(AdjustFrameNumber(frame->number), target, info.sample_rate, info.channels);
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (adjust # of samples)", "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "sample_rate_in_frame", sample_rate_in_frame, "info.channels", info.channels, "channels_in_frame", channels_in_frame, "original_frame_number", original_frame_number);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ResampleMappedAudio (adjust # of samples)",
+		"total_frame_samples", total_frame_samples,
+		"info.sample_rate", info.sample_rate,
+		"sample_rate_in_frame", sample_rate_in_frame,
+		"info.channels", info.channels,
+		"channels_in_frame", channels_in_frame,
+		"original_frame_number", original_frame_number);
 
 	// Create output frame (and allocate arrays)
 	AVFrame *audio_converted = AV_ALLOCATE_FRAME();
@@ -845,32 +869,39 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	audio_converted->nb_samples = total_frame_samples;
 	av_samples_alloc(audio_converted->data, audio_converted->linesize, info.channels, total_frame_samples, AV_SAMPLE_FMT_S16, 0);
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (preparing for resample)", "in_sample_fmt", AV_SAMPLE_FMT_S16, "out_sample_fmt", AV_SAMPLE_FMT_S16, "in_sample_rate", sample_rate_in_frame, "out_sample_rate", info.sample_rate, "in_channels", channels_in_frame, "out_channels", info.channels);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ResampleMappedAudio (preparing for resample)",
+		"in_sample_fmt", AV_SAMPLE_FMT_S16,
+		"out_sample_fmt", AV_SAMPLE_FMT_S16,
+		"in_sample_rate", sample_rate_in_frame,
+		"out_sample_rate", info.sample_rate,
+		"in_channels", channels_in_frame,
+		"out_channels", info.channels);
 
 	int nb_samples = 0;
 
     // setup resample context
     if (!avr) {
         avr = SWR_ALLOC();
-        av_opt_set_int(avr,  "in_channel_layout", channel_layout_in_frame, 0);
-        av_opt_set_int(avr, "out_channel_layout", info.channel_layout, 0);
-        av_opt_set_int(avr,  "in_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
-        av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,     0);
-        av_opt_set_int(avr,  "in_sample_rate",    sample_rate_in_frame,    0);
-        av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,    0);
-        av_opt_set_int(avr,  "in_channels",       channels_in_frame,    0);
-        av_opt_set_int(avr, "out_channels",       info.channels,    0);
+        av_opt_set_int(avr, "in_channel_layout",  channel_layout_in_frame, 0);
+        av_opt_set_int(avr, "out_channel_layout", info.channel_layout,     0);
+        av_opt_set_int(avr, "in_sample_fmt",      AV_SAMPLE_FMT_S16,       0);
+        av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,       0);
+        av_opt_set_int(avr, "in_sample_rate",     sample_rate_in_frame,    0);
+        av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,        0);
+        av_opt_set_int(avr, "in_channels",        channels_in_frame,       0);
+        av_opt_set_int(avr, "out_channels",       info.channels,           0);
         SWR_INIT(avr);
     }
 
     // Convert audio samples
-    nb_samples = SWR_CONVERT(avr, 	// audio resample context
-            audio_converted->data, 			// output data pointers
-            audio_converted->linesize[0], 	// output plane size, in bytes. (0 if unknown)
-            audio_converted->nb_samples,	// maximum number of samples that the output buffer can hold
-            audio_frame->data,				// input data pointers
-            audio_frame->linesize[0],		// input plane size, in bytes (0 if unknown)
-            audio_frame->nb_samples);		// number of input samples to convert
+    nb_samples = SWR_CONVERT(avr,      // audio resample context
+        audio_converted->data,         // output data pointers
+        audio_converted->linesize[0],  // output plane size, in bytes. (0 if unknown)
+        audio_converted->nb_samples,   // maximum number of samples that the output buffer can hold
+        audio_frame->data,             // input data pointers
+        audio_frame->linesize[0],      // input plane size, in bytes (0 if unknown)
+        audio_frame->nb_samples);      // number of input samples to convert
 
 	// Create a new array (to hold all resampled S16 audio samples)
 	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels)];
@@ -889,7 +920,14 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 	int channel_buffer_size = nb_samples;
 	frame->ResizeAudio(info.channels, channel_buffer_size, info.sample_rate, info.channel_layout);
 
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (Audio successfully resampled)", "nb_samples", nb_samples, "total_frame_samples", total_frame_samples, "info.sample_rate", info.sample_rate, "channels_in_frame", channels_in_frame, "info.channels", info.channels, "info.channel_layout", info.channel_layout);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::ResampleMappedAudio (Audio successfully resampled)",
+		"nb_samples", nb_samples,
+		"total_frame_samples", total_frame_samples,
+		"info.sample_rate", info.sample_rate,
+		"channels_in_frame", channels_in_frame,
+		"info.channels", info.channels,
+		"info.channel_layout", info.channel_layout);
 
 	// Array of floats (to hold samples for each channel)
 	float *channel_buffer = new float[channel_buffer_size];
@@ -929,7 +967,10 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 		// Add samples to frame for this channel
 		frame->AddAudio(true, channel_filter, 0, channel_buffer, position, 1.0f);
 
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::ResampleMappedAudio (Add audio to channel)", "number of samples", position, "channel_filter", channel_filter);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FrameMapper::ResampleMappedAudio (Add audio to channel)",
+			"number of samples", position,
+			"channel_filter", channel_filter);
 	}
 
 	// Update frame's audio meta data
@@ -957,9 +998,10 @@ int64_t FrameMapper::AdjustFrameNumber(int64_t clip_frame_number) {
 		start = parent->Start();
 	}
 
-	// Adjust start frame and position based on parent clip. This prevents ensures the same
-	// frame # is used by mapped readers and clips, when calculating samples per frame. Thus,
-	// this prevents gaps and mismatches in # of samples.
+	// Adjust start frame and position based on parent clip.
+	// This ensures the same frame # is used by mapped readers and clips,
+	// when calculating samples per frame.
+	// Thus, this prevents gaps and mismatches in # of samples.
 	int64_t clip_start_frame = (start * info.fps.ToDouble()) + 1;
 	int64_t clip_start_position = round(position * info.fps.ToDouble()) + 1;
 	int64_t frame_number = clip_frame_number + clip_start_position - clip_start_frame;

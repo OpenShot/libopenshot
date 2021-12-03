@@ -6,30 +6,13 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "ZmqLogger.h"
 #include "Exceptions.h"
+#include "Settings.h"
 
 #if USE_RESVG == 1
 	#include "ResvgQt.h"
@@ -80,7 +63,7 @@ ZmqLogger *ZmqLogger::Instance()
 void ZmqLogger::Connection(std::string new_connection)
 {
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 	// Does anything need to happen?
 	if (new_connection == connection)
@@ -124,7 +107,7 @@ void ZmqLogger::Log(std::string message)
 		return;
 
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
-	const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 	// Send message over socket (ZeroMQ)
 	zmq::message_t reply (message.length());
@@ -201,7 +184,7 @@ void ZmqLogger::AppendDebugMethod(std::string method_name,
 
 	{
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
-		const juce::GenericScopedLock<juce::CriticalSection> lock(loggerCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(loggerMutex);
 
 		std::stringstream message;
 		message << std::fixed << std::setprecision(4);

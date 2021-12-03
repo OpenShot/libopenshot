@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_TIMELINE_H
 #define OPENSHOT_TIMELINE_H
@@ -108,10 +90,10 @@ namespace openshot {
 	 * The <b>following graphic</b> displays a timeline, and how clips can be arranged, scaled, and layered together. It
 	 * also demonstrates how the viewport can be scaled smaller than the canvas, which can be used to zoom and pan around the
 	 * canvas (i.e. pan & scan).
-	 * \image html /doc/images/Timeline_Layers.png
+	 * \image html Timeline_Layers.png
 	 *
 	 * The <b>following graphic</b> displays how the playhead determines which frames to combine and layer.
-	 * \image html /doc/images/Playhead.png
+	 * \image html Playhead.png
 	 *
 	 * Lets take a look at what the code looks like:
 	 * @code
@@ -181,7 +163,7 @@ namespace openshot {
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
-		
+
 		/// Process a new layer of video or audio
 		void add_layer(std::shared_ptr<openshot::Frame> new_frame, openshot::Clip* source_clip, int64_t clip_frame_number, bool is_top_clip, float max_volume);
 
@@ -246,7 +228,7 @@ namespace openshot {
 
         virtual ~Timeline();
 
-		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox) 
+		/// Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
 		void AddTrackedObject(std::shared_ptr<openshot::TrackedObjectBase> trackedObject);
 		/// Return tracked object pointer by it's id
 		std::shared_ptr<openshot::TrackedObjectBase> GetTrackedObject(std::string id) const;
@@ -281,7 +263,7 @@ namespace openshot {
         void ClearAllCache();
 
 		/// Return a list of clips on the timeline
-		std::list<openshot::Clip*> Clips() { return clips; };
+		std::list<openshot::Clip*> Clips() override { return clips; };
 
 		/// Look up a single clip by ID
 		openshot::Clip* GetClip(const std::string& id);

@@ -6,30 +6,23 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+#include <sstream>
+#include <iomanip>
 
 #include "Frame.h"
-#include <OpenShotAudio.h>
+#include "AudioBufferSource.h"
+#include "AudioResampler.h"
+#include "QtUtilities.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 #include <QApplication>
 #include <QImage>
@@ -45,9 +38,6 @@
 #include <QPointF>
 #include <QWidget>
 
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
-
 using namespace std;
 using namespace openshot;
 
@@ -55,7 +45,7 @@ using namespace openshot;
 Frame::Frame(int64_t number, int width, int height, std::string color, int samples, int channels)
 	: audio(std::make_shared<juce::AudioBuffer<float>>(channels, samples)),
 	  number(number), width(width), height(height),
-	  pixel_ratio(1,1), color(color), qbuffer(NULL),
+	  pixel_ratio(1,1), color(color),
 	  channels(channels), channel_layout(LAYOUT_STEREO),
 	  sample_rate(44100),
 	  has_audio_data(false), has_image_data(false),
@@ -66,15 +56,15 @@ Frame::Frame(int64_t number, int width, int height, std::string color, int sampl
 }
 
 // Delegating Constructor - blank frame
-Frame::Frame() : Frame::Frame(1, 1, 1, "#000000", 0, 2) {};
+Frame::Frame() : Frame::Frame(1, 1, 1, "#000000", 0, 2) {}
 
 // Delegating Constructor - image only
 Frame::Frame(int64_t number, int width, int height, std::string color)
-	: Frame::Frame(number, width, height, color, 0, 2) {};
+	: Frame::Frame(number, width, height, color, 0, 2) {}
 
 // Delegating Constructor - audio only
 Frame::Frame(int64_t number, int samples, int channels)
-	: Frame::Frame(number, 1, 1, "#000000", samples, channels) {};
+	: Frame::Frame(number, 1, 1, "#000000", samples, channels) {}
 
 
 // Copy constructor
@@ -139,17 +129,14 @@ void Frame::Display()
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
 
-	// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
-	if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-	{
-		// Calculate correct DAR (display aspect ratio)
-		int new_width = previewImage->size().width();
-		int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-		// Resize to fix DAR
-		previewImage = std::make_shared<QImage>(previewImage->scaled(
-			new_width, new_height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-	}
+    // Update the image to reflect the correct pixel aspect ration (i.e. to fix non-square pixels)
+    if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+    {
+        // Resize to fix DAR
+        previewImage = std::make_shared<QImage>(previewImage->scaled(
+                previewImage->size().width(), previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble(),
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
 
 	// Create window
 	QWidget previewWindow;
@@ -187,6 +174,7 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		int height_padding = 20 * (audio->getNumChannels() - 1);
 		int total_height = new_height + height_padding;
 		int total_width = 0;
+		float zero_height = 1.0; // Used to clamp near-zero vales to this value to prevent gaps
 
 		// Loop through each audio channel
 		float Y = 100.0;
@@ -202,9 +190,17 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 				// Sample value (scaled to -100 to 100)
 				float value = samples[sample] * 100.0;
 
+				// Set threshold near zero (so we don't allow near-zero values)
+				// This prevents empty gaps from appearing in the waveform
+				if (value > -zero_height && value < 0.0) {
+				    value = -zero_height;
+				} else if (value > 0.0 && value < zero_height) {
+                    value = zero_height;
+				}
+
 				// Append a line segment for each sample
-                lines.push_back(QPointF(X,Y+1.0));
-                lines.push_back(QPointF(X,(Y-value)+1.0));
+                lines.push_back(QPointF(X, Y));
+                lines.push_back(QPointF(X, Y - value));
 			}
 
 			// Add Channel Label Coordinate
@@ -233,12 +229,6 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		// Draw the waveform
 		painter.drawLines(lines);
 		painter.end();
-
-		// Resize Image (if requested)
-		if (width != total_width || height != total_height) {
-			QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-			wave_image = std::make_shared<QImage>(scaled_wave_image);
-		}
 	}
 	else
 	{
@@ -246,6 +236,12 @@ std::shared_ptr<QImage> Frame::GetWaveform(int width, int height, int Red, int G
 		wave_image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 		wave_image->fill(QColor(QString::fromStdString("#000000")));
 	}
+
+    // Resize Image (if needed)
+    if (wave_image->width() != width || wave_image->height() != height) {
+        QImage scaled_wave_image = wave_image->scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        wave_image = std::make_shared<QImage>(scaled_wave_image);
+    }
 
 	// Return new image
 	return wave_image;
@@ -324,7 +320,7 @@ float* Frame::GetAudioSamples(int channel)
 // Get a planar array of sample data, using any sample rate
 float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
-	float *output = nullptr;
+	float *output = NULL;
 	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
@@ -370,7 +366,7 @@ float* Frame::GetPlanarAudioSamples(int new_sample_rate, AudioResampler* resampl
 // Get an array of sample data (all channels interleaved together), using any sample rate
 float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* resampler, int* sample_count)
 {
-	float *output = nullptr;
+	float *output = NULL;
 	juce::AudioBuffer<float> *buffer(audio.get());
 	int num_of_channels = audio->getNumChannels();
 	int num_of_samples = GetAudioSamplesCount();
@@ -415,7 +411,7 @@ float* Frame::GetInterleavedAudioSamples(int new_sample_rate, AudioResampler* re
 // Get number of audio channels
 int Frame::GetAudioChannelsCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 	if (audio)
 		return audio->getNumChannels();
 	else
@@ -425,7 +421,7 @@ int Frame::GetAudioChannelsCount()
 // Get number of audio samples
 int Frame::GetAudioSamplesCount()
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 	return max_audio_sample;
 }
 
@@ -438,8 +434,10 @@ juce::AudioBuffer<float> *Frame::GetAudioSampleBuffer()
 int64_t Frame::GetBytes()
 {
 	int64_t total_bytes = 0;
-	if (image)
-		total_bytes += (width * height * sizeof(char) * 4);
+	if (image) {
+		total_bytes += static_cast<int64_t>(
+		    width * height * sizeof(char) * 4);
+	}
 	if (audio) {
 		// approximate audio size (sample rate / 24 fps)
 		total_bytes += (sample_rate / 24.0) * sizeof(float);
@@ -569,29 +567,22 @@ void Frame::Save(std::string path, float scale, std::string format, int quality)
 	// Get preview image
 	std::shared_ptr<QImage> previewImage = GetImage();
 
+    // Update the image to reflect the correct pixel aspect ration (i.e. to fix non-square pixels)
+    if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
+    {
+        // Resize to fix DAR
+        previewImage = std::make_shared<QImage>(previewImage->scaled(
+                previewImage->size().width(), previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble(),
+                Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    }
+
 	// scale image if needed
 	if (fabs(scale) > 1.001 || fabs(scale) < 0.999)
 	{
-		int new_width = width;
-		int new_height = height;
-
-		// Update the image to reflect the correct pixel aspect ration (i.e. to fix non-squar pixels)
-		if (pixel_ratio.num != 1 || pixel_ratio.den != 1)
-		{
-			// Calculate correct DAR (display aspect ratio)
-			int new_width = previewImage->size().width();
-			int new_height = previewImage->size().height() * pixel_ratio.Reciprocal().ToDouble();
-
-			// Resize to fix DAR
-			previewImage = std::make_shared<QImage>(previewImage->scaled(
-				new_width, new_height,
-				Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-		}
-
 		// Resize image
 		previewImage = std::make_shared<QImage>(previewImage->scaled(
-			new_width * scale, new_height * scale,
-			Qt::KeepAspectRatio, Qt::SmoothTransformation));
+		        previewImage->size().width() * scale, previewImage->size().height() * scale,
+		        Qt::KeepAspectRatio, Qt::SmoothTransformation));
 	}
 
 	// Save image
@@ -733,22 +724,25 @@ int Frame::constrain(int color_value)
 	return color_value;
 }
 
-// Add (or replace) pixel data to the frame (based on a solid color)
 void Frame::AddColor(int new_width, int new_height, std::string new_color)
 {
-	// Set color
-	color = new_color;
+     const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+     // Update parameters
+    width = new_width;
+    height = new_height;
+    color = new_color;
+    AddColor(QColor(QString::fromStdString(new_color)));
+}
 
+// Add (or replace) pixel data to the frame (based on a solid color)
+void Frame::AddColor(const QColor& new_color)
+{
 	// Create new image object, and fill with pixel data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-	image = std::make_shared<QImage>(new_width, new_height, QImage::Format_RGBA8888_Premultiplied);
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
+	image = std::make_shared<QImage>(width, height, QImage::Format_RGBA8888_Premultiplied);
 
 	// Fill with solid color
-	image->fill(QColor(QString::fromStdString(color)));
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
+	image->fill(new_color);
 	has_image_data = true;
 }
 
@@ -757,20 +751,15 @@ void Frame::AddImage(
 	int new_width, int new_height, int bytes_per_pixel,
 	QImage::Format type, const unsigned char *pixels_)
 {
-	// Create new buffer
-	{
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
-		qbuffer = pixels_;
-	}  // Release addingImageSection lock
 
-	// Create new image object from pixel data
+  // Create new image object from pixel data
 	auto new_image = std::make_shared<QImage>(
-		qbuffer,
+		pixels_,
 		new_width, new_height,
 		new_width * bytes_per_pixel,
 		type,
-		(QImageCleanupFunction) &openshot::Frame::cleanUpBuffer,
-		(void*) qbuffer
+		(QImageCleanupFunction) &openshot::cleanUpBuffer,
+		(void*) pixels_
 	);
 	AddImage(new_image);
 }
@@ -783,7 +772,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image)
 		return;
 
 	// assign image data
-	const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+	const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
 	image = new_image;
 
 	// Always convert to Format_RGBA8888_Premultiplied (if different)
@@ -823,7 +812,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 		}
 
 		// Get the frame's image
-		const GenericScopedLock<juce::CriticalSection> lock(addingImageSection);
+		const std::lock_guard<std::recursive_mutex> lock(addingImageMutex);
 		unsigned char *pixels = image->bits();
 		const unsigned char *new_pixels = new_image->constBits();
 
@@ -848,7 +837,7 @@ void Frame::AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines)
 // Resize audio container to hold more (or less) samples and channels
 void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Resize JUCE audio buffer
 	audio->setSize(channels, length, true, true, false);
@@ -861,7 +850,7 @@ void Frame::ResizeAudio(int channels, int length, int rate, ChannelLayout layout
 
 // Add audio samples to a specific channel
 void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource = 1.0f) {
-	const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+	const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
 	// Clamp starting sample to 0
 	int destStartSampleAdjusted = max(destStartSample, 0);
@@ -890,7 +879,7 @@ void Frame::AddAudio(bool replaceSamples, int destChannel, int destStartSample, 
 // Apply gain ramp (i.e. fading volume)
 void Frame::ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain = 0.0f, float final_gain = 1.0f)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Apply gain ramp
 	audio->applyGainRamp(destChannel, destStartSample, numSamples, initial_gain, final_gain);
@@ -904,7 +893,7 @@ std::shared_ptr<QImage> Frame::GetImage()
 		// Fill with black
 		AddColor(width, height, color);
 
-	return image;
+    return image;
 }
 
 #ifdef USE_OPENCV
@@ -918,7 +907,7 @@ cv::Mat Frame::Qimage2mat( std::shared_ptr<QImage>& qimage) {
     cv::mixChannels( &mat, 1, &mat2, 1, from_to, 3 );
 	cv::cvtColor(mat2, mat2, cv::COLOR_RGB2BGR);
     return mat2;
-};
+}
 
 // Get pointer to OpenCV image object
 cv::Mat Frame::GetImageCV()
@@ -953,60 +942,6 @@ void Frame::SetImageCV(cv::Mat _image)
 {
 	imagecv = _image;
 	image = Mat2Qimage(_image);
-}
-#endif
-
-#ifdef USE_IMAGEMAGICK
-// Get pointer to ImageMagick image object
-std::shared_ptr<Magick::Image> Frame::GetMagickImage()
-{
-	// Check for blank image
-	if (!image)
-		// Fill with black
-		AddColor(width, height, "#000000");
-
-	// Get the pixels from the frame image
-	const QRgb *tmpBits = (const QRgb*)image->constBits();
-
-	// Create new image object, and fill with pixel data
-	auto magick_image = std::make_shared<Magick::Image>(
-		image->width(), image->height(),"RGBA", Magick::CharPixel, tmpBits);
-
-	// Give image a transparent background color
-	magick_image->backgroundColor(Magick::Color("none"));
-	magick_image->virtualPixelMethod(Magick::TransparentVirtualPixelMethod);
-	MAGICK_IMAGE_ALPHA(magick_image, true);
-
-	return magick_image;
-}
-#endif
-
-#ifdef USE_IMAGEMAGICK
-// Get pointer to QImage of frame
-void Frame::AddMagickImage(std::shared_ptr<Magick::Image> new_image)
-{
-	const int BPP = 4;
-	const std::size_t bufferSize = new_image->columns() * new_image->rows() * BPP;
-
-	/// Use realloc for fast memory allocation.
-	/// TODO: consider locking the buffer for mt safety
-	//qbuffer = reinterpret_cast<unsigned char*>(realloc(qbuffer, bufferSize));
-	qbuffer = new unsigned char[bufferSize]();
-	unsigned char *buffer = (unsigned char*)qbuffer;
-
-	MagickCore::ExceptionInfo exception;
-	// TODO: Actually do something, if we get an exception here
-	MagickCore::ExportImagePixels(new_image->constImage(), 0, 0, new_image->columns(), new_image->rows(), "RGBA", Magick::CharPixel, buffer, &exception);
-
-	// Create QImage of frame data
-	image = std::make_shared<QImage>(
-		qbuffer, width, height, width * BPP, QImage::Format_RGBA8888_Premultiplied,
-		(QImageCleanupFunction) &cleanUpBuffer, (void*) qbuffer);
-
-	// Update height and width
-	width = image->width();
-	height = image->height();
-	has_image_data = true;
 }
 #endif
 
@@ -1081,21 +1016,10 @@ void Frame::Play()
 
 }
 
-// Clean up buffer after QImage is deleted
-void Frame::cleanUpBuffer(void *info)
-{
-	if (info)
-	{
-		// Remove buffer since QImage tells us to
-		unsigned char* ptr_to_qbuffer = (unsigned char*) info;
-		delete[] ptr_to_qbuffer;
-	}
-}
-
 // Add audio silence
 void Frame::AddAudioSilence(int numSamples)
 {
-    const GenericScopedLock<juce::CriticalSection> lock(addingAudioSection);
+    const std::lock_guard<std::recursive_mutex> lock(addingAudioMutex);
 
     // Resize audio container
 	audio->setSize(channels, numSamples, false, true, false);

@@ -6,36 +6,21 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
- * This file is originally based on the Libavformat API example, and then modified
- * by the libopenshot project.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 //Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
+#include "MagickUtilities.h"
+#include "QtUtilities.h"
+
 #include "ImageWriter.h"
 #include "Exceptions.h"
+#include "Frame.h"
+#include "ReaderBase.h"
+#include "ZmqLogger.h"
 
 using namespace openshot;
 
@@ -43,47 +28,51 @@ ImageWriter::ImageWriter(std::string path) :
 		path(path), cache_size(8), write_video_count(0), image_quality(75), number_of_loops(1),
 		combine_frames(true), is_open(false)
 {
-	// Disable audio & video (so they can be independently enabled)
 	info.has_audio = false;
 	info.has_video = true;
 }
 
 // Set video export options
-void ImageWriter::SetVideoOptions(std::string format, Fraction fps, int width, int height,
-		int quality, int loops, bool combine)
+void ImageWriter::SetVideoOptions(
+    std::string format, Fraction fps, int width, int height,
+    int quality, int loops, bool combine)
 {
-	// Set frames per second (if provided)
-	info.fps.num = fps.num;
-	info.fps.den = fps.den;
+    // Set frames per second (if provided)
+    info.fps = fps;
 
-	// Set image magic properties
-	image_quality = quality;
-	number_of_loops = loops;
-	combine_frames = combine;
-	info.vcodec = format;
+    // Set image magic properties
+    image_quality = quality;
+    number_of_loops = loops;
+    combine_frames = combine;
+    info.vcodec = format;
 
-	// Set the timebase (inverse of fps)
-	info.video_timebase.num = info.fps.den;
-	info.video_timebase.den = info.fps.num;
+    // Set the timebase (inverse of fps)
+    info.video_timebase = fps.Reciprocal();
 
-	if (width >= 1)
-		info.width = width;
-	if (height >= 1)
-		info.height = height;
+    info.width = std::max(1, width);
+    info.height = std::max(1, height);
 
-	info.video_bit_rate = quality;
+    info.video_bit_rate = quality;
 
-	// Calculate the DAR (display aspect ratio)
-	Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
+    // Calculate the DAR (display aspect ratio)
+    Fraction size(
+        info.width * info.pixel_ratio.num,
+        info.height * info.pixel_ratio.den);
 
-	// Reduce size fraction
-	size.Reduce();
+    // Reduce size fraction
+    size.Reduce();
 
-	// Set the ratio based on the reduced fraction
-	info.display_ratio.num = size.num;
-	info.display_ratio.den = size.den;
+    // Set the ratio based on the reduced fraction
+    info.display_ratio = size;
 
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::SetVideoOptions (" + format + ")", "width", width, "height", height, "size.num", size.num, "size.den", size.den, "fps.num", fps.num, "fps.den", fps.den);
+    ZmqLogger::Instance()->AppendDebugMethod(
+        "ImageWriter::SetVideoOptions (" + format + ")",
+        "width", width,
+        "height", height,
+        "size.num", size.num,
+        "size.den", size.den,
+        "fps.num", fps.num,
+        "fps.den", fps.den);
 }
 
 // Open the writer
@@ -96,12 +85,15 @@ void ImageWriter::Open()
 void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 {
 	// Check for open reader (or throw exception)
-	if (!is_open)
-		throw WriterClosed("The ImageWriter is closed.  Call Open() before calling this method.", path);
-
+	if (!is_open) {
+		throw WriterClosed(
+			"The ImageWriter is closed. "
+			"Call Open() before calling this method.", path);
+	}
 
 	// Copy and resize image
-	std::shared_ptr<Magick::Image> frame_image = frame->GetMagickImage();
+	auto qimage = frame->GetImage();
+	auto frame_image = openshot::QImage2Magick(qimage);
 	frame_image->magick( info.vcodec );
 	frame_image->backgroundColor(Magick::Color("none"));
 	MAGICK_IMAGE_ALPHA(frame_image, true);
@@ -110,11 +102,10 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 	frame_image->animationIterations(number_of_loops);
 
 	// Calculate correct DAR (display aspect ratio)
-	int new_width = info.width;
 	int new_height = info.height * frame->GetPixelRatio().Reciprocal().ToDouble();
 
 	// Resize image
-	Magick::Geometry new_size(new_width, new_height);
+	Magick::Geometry new_size(info.width, new_height);
 	new_size.aspect(true);
 	frame_image->resize(new_size);
 
@@ -129,7 +120,10 @@ void ImageWriter::WriteFrame(std::shared_ptr<Frame> frame)
 // Write a block of frames from a reader
 void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 {
-	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::WriteFrame (from Reader)", "start", start, "length", length);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"ImageWriter::WriteFrame (from Reader)",
+		"start", start,
+		"length", length);
 
 	// Loop through each frame (and encoded it)
 	for (int64_t number = start; number <= length; number++)
@@ -145,16 +139,12 @@ void ImageWriter::WriteFrame(ReaderBase* reader, int64_t start, int64_t length)
 // Close the writer and encode/output final image to the disk.
 void ImageWriter::Close()
 {
-	// Write frame's image to file
+	// Write frame images to file
 	Magick::writeImages(frames.begin(), frames.end(), path, combine_frames);
 
-	// Clear frames vector
+	// Clear frames vector & counters, close writer
 	frames.clear();
-
-	// Reset frame counters
 	write_video_count = 0;
-
-	// Close writer
 	is_open = false;
 
 	ZmqLogger::Instance()->AppendDebugMethod("ImageWriter::Close");

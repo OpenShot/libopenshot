@@ -1,0 +1,28 @@
+# © OpenShot Studios, LLC
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+# Workflow to run 'reuse lint' via the reuse-action script,
+# which will flag any files added or changed in the repo
+# that don't have valid, verifiable license data associated
+# with them. See the .reuse/ directory in the repo, and
+# for more information visit https://reuse.software/
+
+name: Validate source licensing
+
+on:
+  # Triggers the workflow on push or pull request events but only for the develop branch
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@v1.1.1

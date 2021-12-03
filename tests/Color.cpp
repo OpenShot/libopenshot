@@ -6,32 +6,16 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <string>
 #include <vector>
 
 #include <catch2/catch.hpp>
+
+#include <QColor>
 
 #include "Color.h"
 #include "Exceptions.h"
@@ -101,7 +85,18 @@ TEST_CASE( "HEX_Value", "[libopenshot][color]" )
 
 }
 
-TEST_CASE( "HEX_Constructor", "[libopenshot][color]" )
+TEST_CASE( "QColor ctor", "[libopenshot][color]" )
+{
+    QColor qc(Qt::red);
+    openshot::Color c(qc);
+
+    CHECK(c.red.GetLong(1) == Approx(255.0).margin(0.0001));
+    CHECK(c.green.GetLong(1) == Approx(0.0).margin(0.0001));
+    CHECK(c.blue.GetLong(1) == Approx(0.0).margin(0.0001));
+    CHECK(c.alpha.GetLong(1) == Approx(255.0).margin(0.0001));
+}
+
+TEST_CASE( "std::string construction", "[libopenshot][color]" )
 {
 	// Color
 	openshot::Color c("#4586db");

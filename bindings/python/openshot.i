@@ -1,29 +1,13 @@
-/* ####################### src/openshot.i (libopenshot) ########################
-# @brief SWIG configuration for libopenshot (to generate Python SWIG bindings)
-# @author Jonathan Thomas <jonathan@openshot.org>
-#
-# @section LICENSE
-#
-# Copyright (c) 2008-2019 OpenShot Studios, LLC
-# <http://www.openshotstudios.com/>. This file is part of
-# OpenShot Library (libopenshot), an open-source project dedicated to
-# delivering high quality video editing and animation solutions to the
-# world. For more information visit <http://www.openshot.org/>.
-#
-# OpenShot Library (libopenshot) is free software: you can redistribute it
-# and/or modify it under the terms of the GNU Lesser General Public License
-# as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# OpenShot Library (libopenshot) is distributed in the hope that it will be
-# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
-################################################################################ */
-
+/**
+ * @file
+ * @brief SWIG configuration for libopenshot (to generate Python SWIG bindings)
+ * @author Jonathan Thomas <jonathan@openshot.org>
+ *
+ * @section LICENSE
+*/
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 %module openshot
 
@@ -108,13 +92,6 @@
 
 %}
 
-#ifdef USE_BLACKMAGIC
-	%{
-		#include "DecklinkReader.h"
-		#include "DecklinkWriter.h"
-	%}
-#endif
-
 #ifdef USE_IMAGEMAGICK
 	%{
 		#include "ImageReader.h"
@@ -139,6 +116,9 @@
 %exception {
 	try {
 		$action
+	}
+	catch (openshot::ExceptionBase &e) {
+		SWIG_exception_fail(SWIG_RuntimeError, e.py_message().c_str());
 	}
 	catch (std::exception &e) {
 		SWIG_exception_fail(SWIG_RuntimeError, e.what());
@@ -238,6 +218,31 @@
 		def values(self):
 			_items = self.GetMap()
 			return _items.values()
+		def __mul__(self, other):
+			if isinstance(other, Fraction):
+				return Fraction(self.num * other.num, self.den * other.den)
+			return float(self) * other
+		def __rmul__(self, other):
+			return other * float(self)
+		def __truediv__(self, other):
+			if isinstance(other, Fraction):
+				return Fraction(self.num * other.den, self.den * other.num)
+			return float(self) / other;
+		def __rtruediv__(self, other):
+			return other / float(self)
+		def __format__(self, format_spec):
+			integer_fmt = "bcdoxX"
+			float_fmt = "eEfFgGn%"
+			all_fmt = "".join(["s", integer_fmt, float_fmt])
+			if not format_spec or format_spec[-1] not in all_fmt:
+			  value = str(self)
+			elif format_spec[-1] in integer_fmt:
+				value = int(self)
+			elif format_spec[-1] in float_fmt:
+				value = float(self)
+			else:
+				value = str(self)
+			return "{value:{spec}}".format(value=value, spec=format_spec)
 	%}
 }
 
@@ -268,10 +273,6 @@
 %include "Clip.h"
 %include "Coordinate.h"
 %include "Color.h"
-#ifdef USE_BLACKMAGIC
-	%include "DecklinkReader.h"
-	%include "DecklinkWriter.h"
-#endif
 %include "DummyReader.h"
 %include "EffectBase.h"
 %include "Effects.h"

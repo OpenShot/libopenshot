@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_CLIP_H
 #define OPENSHOT_CLIP_H
@@ -43,24 +25,23 @@
 
 #include <memory>
 #include <string>
-#include <QtGui/QImage>
 
-#include "AudioResampler.h"
 #include "ClipBase.h"
+#include "ReaderBase.h"
+
 #include "Color.h"
 #include "Enums.h"
 #include "EffectBase.h"
-#include "Effects.h"
 #include "EffectInfo.h"
-#include "Frame.h"
 #include "KeyFrame.h"
 #include "TrackedObjectBase.h"
-#include "ReaderBase.h"
-#include <OpenShotAudio.h>
 
+#include <QImage>
 
 namespace openshot {
+	class AudioResampler;
 	class EffectInfo;
+	class Frame;
 
 	/// Comparison method for sorting effect pointers (by Position, Layer, and Order). Effects are sorted
 	/// from lowest layer to top layer (since that is sequence clips are combined), and then by
@@ -108,8 +89,8 @@ namespace openshot {
 	 */
 	class Clip : public openshot::ClipBase, public openshot::ReaderBase {
 	protected:
-		/// Section lock for multiple threads
-	    juce::CriticalSection getFrameCriticalSection;
+		/// Mutex for multiple threads
+	    std::recursive_mutex getFrameMutex;
 
 		/// Init default settings for a clip
 		void init_settings();
@@ -219,7 +200,7 @@ namespace openshot {
 		std::shared_ptr<openshot::TrackedObjectBase> GetAttachedObject() const { return parentTrackedObject; };
 		/// Return a pointer to the clip this clip is attached to
 		Clip* GetAttachedClip() const { return parentClipObject; };
-		
+
 		/// Return the type name of the class
 		std::string Name() override { return "Clip"; };
 

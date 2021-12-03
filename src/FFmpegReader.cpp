@@ -3,40 +3,26 @@
  * @brief Source file for FFmpegReader class
  * @author Jonathan Thomas <jonathan@openshot.org>, Fabrice Bellard
  *
- * @ref License
- */
-
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
  * This file is originally based on the Libavformat API example, and then modified
  * by the libopenshot project.
  *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
+ * @ref License
  */
+
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <thread>    // for std::this_thread::sleep_for
+#include <chrono>    // for std::chrono::milliseconds
+#include <unistd.h>
+
+#include "FFmpegUtilities.h"
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
 #include "Timeline.h"
-
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
+#include "ZmqLogger.h"
 
 #define ENABLE_VAAPI 0
 
@@ -255,10 +241,10 @@ void FFmpegReader::Open() {
 			pStream = pFormatCtx->streams[videoStream];
 
 			// Find the codec ID from stream
-			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(pStream);
+			const AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(pStream);
 
 			// Get codec and codec context from stream
-			AVCodec *pCodec = avcodec_find_decoder(codecId);
+			const AVCodec *pCodec = avcodec_find_decoder(codecId);
 			AVDictionary *opts = NULL;
 			int retry_decode_open = 2;
 			// If hw accel is selected but hardware cannot handle repeat with software decoding
@@ -512,7 +498,7 @@ void FFmpegReader::Open() {
 			AVCodecID codecId = AV_FIND_DECODER_CODEC_ID(aStream);
 
 			// Get codec and codec context from stream
-			AVCodec *aCodec = avcodec_find_decoder(codecId);
+			const AVCodec *aCodec = avcodec_find_decoder(codecId);
 			aCodecCtx = AV_GET_CODEC_CONTEXT(aStream, aCodec);
 
 			// Set number of threads equal to number of processors (not to exceed 16)
@@ -598,7 +584,7 @@ void FFmpegReader::Close() {
 
 		// Clear processed lists
 		{
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processed_video_frames.clear();
 			processed_audio_frames.clear();
 			processing_video_frames.clear();
@@ -645,14 +631,29 @@ void FFmpegReader::UpdateAudioInfo() {
 	info.channel_layout = (ChannelLayout) AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->channel_layout;
 	info.sample_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->sample_rate;
 	info.audio_bit_rate = AV_GET_CODEC_ATTRIBUTES(aStream, aCodecCtx)->bit_rate;
+	if (info.audio_bit_rate <= 0) {
+	    // Get bitrate from format
+        info.audio_bit_rate = pFormatCtx->bit_rate;
+	}
 
 	// Set audio timebase
 	info.audio_timebase.num = aStream->time_base.num;
 	info.audio_timebase.den = aStream->time_base.den;
 
 	// Get timebase of audio stream (if valid) and greater than the current duration
-	if (aStream->duration > 0.0f && aStream->duration > info.duration)
-		info.duration = aStream->duration * info.audio_timebase.ToDouble();
+	if (aStream->duration > 0 && aStream->duration > info.duration) {
+	    // Get duration from audio stream
+        info.duration = aStream->duration * info.audio_timebase.ToDouble();
+    } else if (pFormatCtx->duration > 0 && info.duration <= 0.0f) {
+        // Use the format's duration
+        info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+    }
+
+    // Calculate duration from filesize and bitrate (if any)
+    if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
+        // Estimate from bitrate, total bytes, and framerate
+        info.duration = float(info.file_size) / info.video_bit_rate;
+    }
 
 	// Check for an invalid video length
 	if (info.has_video && info.video_length <= 0) {
@@ -767,14 +768,16 @@ void FFmpegReader::UpdateVideoInfo() {
 	info.duration = pStream->duration * info.video_timebase.ToDouble();
 
 	// Check for valid duration (if found)
-	if (info.duration <= 0.0f && pFormatCtx->duration >= 0)
-		// Use the format's duration
-		info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+	if (info.duration <= 0.0f && pFormatCtx->duration >= 0) {
+        // Use the format's duration
+        info.duration = float(pFormatCtx->duration) / AV_TIME_BASE;
+    }
 
 	// Calculate duration from filesize and bitrate (if any)
-	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0)
-		// Estimate from bitrate, total bytes, and framerate
-		info.duration = float(info.file_size) / info.video_bit_rate;
+	if (info.duration <= 0.0f && info.video_bit_rate > 0 && info.file_size > 0) {
+        // Estimate from bitrate, total bytes, and framerate
+        info.duration = float(info.file_size) / info.video_bit_rate;
+    }
 
 	// No duration found in stream of file
 	if (info.duration <= 0.0f) {
@@ -902,7 +905,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 		int processing_video_frames_size = 0;
 		int processing_audio_frames_size = 0;
 		{
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processing_video_frames_size = processing_video_frames.size();
 			processing_audio_frames_size = processing_audio_frames.size();
 		}
@@ -910,7 +913,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 		// Wait if too many frames are being processed
 		while (processing_video_frames_size + processing_audio_frames_size >= minimum_packets) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			processing_video_frames_size = processing_video_frames.size();
 			processing_audio_frames_size = processing_audio_frames.size();
 		}
@@ -1234,7 +1237,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	pFrame = NULL;
 
 	// Add video frame to list of processing video frames
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	processing_video_frames[current_frame] = current_frame;
 
 	// Create variables for a RGB Frame (since most videos are not in RGB, we must convert it)
@@ -1268,7 +1271,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 			max_width = std::max(float(max_width), max_width * max_scale_x);
 			max_height = std::max(float(max_height), max_height * max_scale_y);
 
-		} else if (parent->scale == SCALE_CROP) {
+        } else if (parent->scale == SCALE_CROP) {
 			// Cropping scale mode (based on max timeline size * cropped size * scaling keyframes)
 			float max_scale_x = parent->scale_x.GetMaxPoint().co.Y;
 			float max_scale_y = parent->scale_y.GetMaxPoint().co.Y;
@@ -1366,7 +1369,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Remove video frame from list of processing video frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames.erase(current_frame);
 		processed_video_frames[current_frame] = current_frame;
 	}
@@ -1465,7 +1468,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// Add audio frame to list of processing audio frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 	}
 
@@ -1488,7 +1491,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 			// Add audio frame to list of processing audio frames
 			{
-				const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+				const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 				processing_audio_frames.insert(std::pair<int, int>(previous_packet_location.frame, previous_packet_location.frame));
 			}
 
@@ -1535,7 +1538,12 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 							 audio_frame->nb_samples);       // number of input samples to convert
 
 	// Copy audio samples over original samples
-	memcpy(audio_buf, audio_converted->data[0], audio_converted->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) * info.channels);
+	memcpy(audio_buf,
+	       audio_converted->data[0],
+	       static_cast<size_t>(audio_converted->nb_samples)
+	           * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
+	           * info.channels
+	      );
 
 	// Deallocate resample buffer
 	SWR_CLOSE(avr);
@@ -1638,7 +1646,7 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame, int64_t target_fr
 
 	// Remove audio frame from list of processing audio frames
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		// Update all frames as completed
 		for (int64_t f = target_frame; f < starting_frame_number; f++) {
 			// Remove the frame # from the processing list. NOTE: If more than one thread is
@@ -1678,7 +1686,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	int processing_video_frames_size = 0;
 	int processing_audio_frames_size = 0;
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
 	}
@@ -1689,7 +1697,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	// Wait for any processing frames to complete
 	while (processing_video_frames_size + processing_audio_frames_size > 0) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_video_frames_size = processing_video_frames.size();
 		processing_audio_frames_size = processing_audio_frames.size();
 	}
@@ -1700,7 +1708,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 	// Clear processed lists
 	{
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		processing_audio_frames.clear();
 		processing_video_frames.clear();
 		processed_video_frames.clear();
@@ -1837,20 +1845,25 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 		// VIDEO PACKET
 		if (video_pts_offset == 99999) // Has the offset been set yet?
 		{
-			// Find the difference between PTS and frame number
-			video_pts_offset = 0 - GetVideoPTS();
+            if (pStream->start_time != AV_NOPTS_VALUE && pStream->start_time > 0) {
+                // Adjust all PTS by start_time (if available)
+                video_pts_offset = 0 - pStream->start_time;
+            } else {
+                // Find the difference between PTS and frame number
+                video_pts_offset = 0 - GetVideoPTS();
 
-			// Find the difference between PTS and frame number
-			// Also, determine if PTS is invalid (too far away from zero)
-			// We compare the PTS to the timebase value equal to 1 second (which means the PTS
-			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
-			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
-			// for ideas to improve this logic.
-			int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
-			if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
-				// Ignore PTS, it seems invalid
-				video_pts_offset = 0;
-			}
+                // Find the difference between PTS and frame number
+                // Also, determine if PTS is invalid (too far away from zero)
+                // We compare the PTS to the timebase value equal to 1 second (which means the PTS
+                // must be within the -1 second to +1 second of zero, otherwise we ignore it)
+                // TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
+                // for ideas to improve this logic.
+                int64_t max_offset = info.video_timebase.Reciprocal().ToFloat();
+                if (video_pts_offset < -max_offset || video_pts_offset > max_offset) {
+                    // Ignore PTS, it seems invalid
+                    video_pts_offset = 0;
+                }
+            }
 
 			// debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::UpdatePTSOffset (Video)", "video_pts_offset", video_pts_offset, "is_video", is_video);
@@ -1865,11 +1878,19 @@ void FFmpegReader::UpdatePTSOffset(bool is_video) {
 			// must be within the -1 second to +1 second of zero, otherwise we ignore it)
 			// TODO: Please see https://github.com/OpenShot/libopenshot/pull/565#issuecomment-690985272
 			// for ideas to improve this logic.
-			audio_pts_offset = 0 - packet->pts;
-			int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
-			if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
-				// Ignore PTS, it seems invalid
-				audio_pts_offset = 0;
+			if (aStream->start_time != AV_NOPTS_VALUE && aStream->start_time > 0) {
+			    // Adjust all PTS by start_time (if available)
+                audio_pts_offset = 0 - aStream->start_time;
+			} else {
+			    // Determine if PTS is sane
+                audio_pts_offset = 0 - packet->pts;
+                int64_t max_offset = info.audio_timebase.Reciprocal().ToFloat();
+                if (audio_pts_offset < -max_offset || audio_pts_offset > max_offset) {
+                    // Ignore PTS, it seems invalid
+                    // Assuming the start_time is not set or not valid, then the PTS should be near the
+                    // beginning of the stream
+                    audio_pts_offset = 0;
+                }
 			}
 
 			// debug output
@@ -1910,7 +1931,7 @@ int64_t FFmpegReader::ConvertVideoPTStoFrame(int64_t pts) {
 
 		// Sometimes frames are missing due to varying timestamps, or they were dropped. Determine
 		// if we are missing a video frame.
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 		while (current_video_frame < frame) {
 			if (!missing_video_frames.count(current_video_frame)) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ConvertVideoPTStoFrame (tracking missing frame)", "current_video_frame", current_video_frame, "previous_video_frame", previous_video_frame);
@@ -2003,7 +2024,7 @@ AudioLocation FFmpegReader::GetAudioPTSLocation(int64_t pts) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (Audio Gap Ignored - too big)", "Previous location frame", previous_packet_location.frame, "Target Frame", location.frame, "Target Audio Sample", location.sample_start, "pts", pts);
 
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			for (int64_t audio_frame = previous_packet_location.frame; audio_frame < location.frame; audio_frame++) {
 				if (!missing_audio_frames.count(audio_frame)) {
 					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAudioPTSLocation (tracking missing frame)", "missing_audio_frame", audio_frame, "previous_audio_frame", previous_packet_location.frame, "new location frame", location.frame);
@@ -2027,7 +2048,7 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 
 	if (!output) {
 		// Lock
-		const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 		// (re-)Check working cache
 		output = working_cache.GetFrame(requested_frame);
@@ -2069,7 +2090,7 @@ bool FFmpegReader::IsPartialFrame(int64_t requested_frame) {
 // Check if a frame is missing and attempt to replace its frame image (and
 bool FFmpegReader::CheckMissingFrame(int64_t requested_frame) {
 	// Lock
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 	// Increment check count for this frame (or init to 1)
 	++checked_frames[requested_frame];
@@ -2185,7 +2206,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 		bool is_video_ready = false;
 		bool is_audio_ready = false;
 		{ // limit scope of next few lines
-			const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+			const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 			is_video_ready = processed_video_frames.count(f->number);
 			is_audio_ready = processed_audio_frames.count(f->number);
 
@@ -2248,7 +2269,7 @@ void FFmpegReader::CheckWorkingFrames(bool end_of_stream, int64_t requested_fram
 
 				// Add to missing cache (if another frame depends on it)
 				{
-					const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+					const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 					if (missing_video_frames_source.count(f->number)) {
 						// Debug output
 						ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (add frame to missing cache)", "f->number", f->number, "is_seek_trash", is_seek_trash, "Missing Cache Count", missing_frames.Count(), "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count());
@@ -2400,7 +2421,7 @@ int64_t FFmpegReader::GetSmallestVideoFrame() {
 	// Loop through frame numbers
 	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	for (itr = processing_video_frames.begin(); itr != processing_video_frames.end(); ++itr) {
 		if (itr->first < smallest_frame || smallest_frame == -1)
 			smallest_frame = itr->first;
@@ -2415,7 +2436,7 @@ int64_t FFmpegReader::GetSmallestAudioFrame() {
 	// Loop through frame numbers
 	std::map<int64_t, int64_t>::iterator itr;
 	int64_t smallest_frame = -1;
-	const GenericScopedLock <CriticalSection> lock(processingCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 	for (itr = processing_audio_frames.begin(); itr != processing_audio_frames.end(); ++itr) {
 		if (itr->first < smallest_frame || smallest_frame == -1)
 			smallest_frame = itr->first;

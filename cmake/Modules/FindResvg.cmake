@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 # vim: ts=2 sw=2
 #[=======================================================================[.rst:
 FindResvg
@@ -41,6 +43,28 @@ Copyright (c) 2020, FeRD (Frank Dana) <ferdnyc@gmail.com>
 #]=======================================================================]
 include(FindPackageHandleStandardArgs)
 
+### Macro: parse_resvg_version
+#
+# Read the resvg.h file and extract the definition
+# for RESVG_VERSION, to use as our version string.
+macro (parse_resvg_version)
+  set(_header "${Resvg_INCLUDE_DIRS}/resvg.h")
+  if(EXISTS "${_header}")
+    #message(STATUS "Parsing Resvg version from ${_header}")
+    file(STRINGS "${_header}" _version_def
+      REGEX "^#define[ \t]+RESVG_VERSION[ \t]+\".*\"[ \t]*$")
+    string(REGEX REPLACE
+      "^.*RESVG_VERSION[ \t]+\"(.*)\".*$"
+      "\\1"
+      Resvg_VERSION "${_version_def}")
+    #message(STATUS "Found Resvg version: ${Resvg_VERSION}")
+  endif()
+endmacro()
+
+###
+### Begin discovery
+###
+
 # CMake 3.4+ only: Convert relative paths to absolute
 if(DEFINED RESVGDIR AND CMAKE_VERSION VERSION_GREATER 3.4)
   get_filename_component(RESVGDIR "${RESVGDIR}" ABSOLUTE
@@ -58,8 +82,11 @@ find_path(Resvg_INCLUDE_DIRS
     /usr/include
     /usr/local/include
   PATH_SUFFIXES
-    resvg
+    c-api
     capi/include
+    resvg
+    resvg/include
+    resvg/c-api
     resvg/capi/include
 )
 
@@ -82,20 +109,24 @@ find_library(Resvg_LIBRARIES
 if (Resvg_INCLUDE_DIRS AND Resvg_LIBRARIES)
   set(Resvg_FOUND TRUE)
 endif()
+parse_resvg_version()
+
 set(Resvg_LIBRARIES ${Resvg_LIBRARIES} CACHE STRING "The Resvg library link path")
 set(Resvg_INCLUDE_DIRS ${Resvg_INCLUDE_DIRS} CACHE STRING "The Resvg include directories")
 set(Resvg_DEFINITIONS "" CACHE STRING "The Resvg CFLAGS")
+set(Resvg_VERSION ${Resvg_VERSION} CACHE STRING "The Resvg version in use")
 
 mark_as_advanced(Resvg_LIBRARIES Resvg_INCLUDE_DIRS Resvg_DEFINITIONS)
 
 # Give a nice error message if some of the required vars are missing.
 find_package_handle_standard_args(Resvg
-  "Could NOT find Resvg, using Qt SVG parsing instead"
-  Resvg_LIBRARIES Resvg_INCLUDE_DIRS )
+  REQUIRED_VARS Resvg_LIBRARIES Resvg_INCLUDE_DIRS
+  VERSION_VAR Resvg_VERSION
+)
 
 # Export target
 if(Resvg_FOUND AND NOT TARGET Resvg::Resvg)
-  message(STATUS "Creating IMPORTED target Resvg::Resvg")
+  #message(STATUS "Creating IMPORTED target Resvg::Resvg")
   if (WIN32)
     # Windows mis-links SHARED library targets
     add_library(Resvg::Resvg UNKNOWN IMPORTED)

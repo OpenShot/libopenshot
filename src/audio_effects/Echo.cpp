@@ -1,47 +1,25 @@
 /**
  * @file
  * @brief Source file for Echo audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Echo.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Echo::Echo() : echo_time(0.1), feedback(0.5), mix(0.5) {
-	// Init effect properties
-	init_effect_details();
-}
+Echo::Echo() : Echo::Echo(0.1, 0.5, 0.5) { }
 
-// Default constructor
-Echo::Echo(Keyframe new_echo_time, Keyframe new_feedback, Keyframe new_mix) : 
-			 echo_time(new_echo_time), feedback(new_feedback), mix(new_mix)
+Echo::Echo(Keyframe echo_time, Keyframe feedback, Keyframe mix) :
+    echo_time(echo_time), feedback(feedback), mix(mix)
 {
 	// Init effect properties
 	init_effect_details();
@@ -105,7 +83,7 @@ std::shared_ptr<openshot::Frame> Echo::GetFrame(std::shared_ptr<openshot::Frame>
             float read_position = fmodf((float)local_write_position - echo_time_value + (float)echo_buffer_samples, echo_buffer_samples);
             int local_read_position = floorf(read_position);
 
-            if (local_read_position != local_write_position) 
+            if (local_read_position != local_write_position)
 			{
                 float fraction = read_position - (float)local_read_position;
                 float echoed1 = echo_data[(local_read_position + 0)];

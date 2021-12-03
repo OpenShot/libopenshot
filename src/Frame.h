@@ -6,27 +6,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */  
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_FRAME_H
 #define OPENSHOT_FRAME_H
@@ -39,26 +21,27 @@
 	#undef int64
 #endif
 
-
-#include <iomanip>
+#include <memory>
+#include <mutex>
 #include <sstream>
 #include <queue>
-#include <QApplication>
-#include <QImage>
-#include <memory>
-#include <unistd.h>
-#include "ZmqLogger.h"
+
 #include "ChannelLayouts.h"
-#include "AudioBufferSource.h"
-#include "AudioResampler.h"
 #include "Fraction.h"
-#include <OpenShotAudio.h>
-#ifdef USE_IMAGEMAGICK
-	#include "MagickUtilities.h"
-#endif
+
+#include <QColor>
+#include <QImage>
+
+class QApplication;
+
+namespace juce {
+    template <typename Type> class AudioBuffer;
+}
 
 namespace openshot
 {
+	class AudioBufferSource;
+	class AudioResampler;
 	/**
 	 * @brief This class represents a single frame of video (i.e. image & audio data)
 	 *
@@ -111,9 +94,8 @@ namespace openshot
 		std::shared_ptr<QImage> wave_image;
 
 		std::shared_ptr<QApplication> previewApp;
-		juce::CriticalSection addingImageSection;
-        juce::CriticalSection addingAudioSection;
-		const unsigned char *qbuffer;
+		std::recursive_mutex addingImageMutex;
+		std::recursive_mutex addingAudioMutex;
 		openshot::Fraction pixel_ratio;
 		int channels;
 		ChannelLayout channel_layout;
@@ -161,19 +143,17 @@ namespace openshot
 		/// Add (or replace) pixel data to the frame (based on a solid color)
 		void AddColor(int new_width, int new_height, std::string new_color);
 
+		/// Add (or replace) pixel data (filled with new_color)
+		void AddColor(const QColor& new_color);
+
 		/// Add (or replace) pixel data to the frame
 		void AddImage(int new_width, int new_height, int bytes_per_pixel, QImage::Format type, const unsigned char *pixels_);
- 
+
 		/// Add (or replace) pixel data to the frame
 		void AddImage(std::shared_ptr<QImage> new_image);
 
 		/// Add (or replace) pixel data to the frame (for only the odd or even lines)
 		void AddImage(std::shared_ptr<QImage> new_image, bool only_odd_lines);
-
-#ifdef USE_IMAGEMAGICK
-		/// Add (or replace) pixel data to the frame from an ImageMagick Image
-		void AddMagickImage(std::shared_ptr<Magick::Image> new_image);
-#endif
 
 		/// Add audio samples to a specific channel
 		void AddAudio(bool replaceSamples, int destChannel, int destStartSample, const float* source, int numSamples, float gainToApplyToSource);
@@ -190,9 +170,6 @@ namespace openshot
 
 		// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
 		void ChannelsLayout(openshot::ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
-
-		/// Clean up buffer after QImage is deleted
-		static void cleanUpBuffer(void *info);
 
 		/// Clear the waveform image (and deallocate its memory)
 		void ClearWaveform();
@@ -231,11 +208,6 @@ namespace openshot
 
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
-
-#ifdef USE_IMAGEMAGICK
-		/// Get pointer to ImageMagick image object
-		std::shared_ptr<Magick::Image> GetMagickImage();
-#endif
 
 		/// Set Pixel Aspect Ratio
 		openshot::Fraction GetPixelRatio() { return pixel_ratio; };

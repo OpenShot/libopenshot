@@ -6,51 +6,29 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_READER_BASE_H
 #define OPENSHOT_READER_BASE_H
 
-#include <iostream>
-#include <iomanip>
+#include <map>
 #include <memory>
-#include <cstdlib>
-#include <sstream>
-#include "CacheMemory.h"
+#include <mutex>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include "ChannelLayouts.h"
-#include "ClipBase.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "Json.h"
-#include "ZmqLogger.h"
-#include <QString>
-#include <QGraphicsItem>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
-#include <QPixmap>
 
 namespace openshot
 {
+	class CacheBase;
+	class ClipBase;
+	class Frame;
 	/**
 	 * @brief This struct contains info about a media file, such as height, width, frames per second, etc...
 	 *
@@ -97,9 +75,9 @@ namespace openshot
 	class ReaderBase
 	{
 	protected:
-		/// Section lock for multiple threads
-		juce::CriticalSection getFrameCriticalSection;
-		juce::CriticalSection processingCriticalSection;
+		/// Mutex for multiple threads
+		std::recursive_mutex getFrameMutex;
+		std::recursive_mutex processingMutex;
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:
@@ -120,7 +98,7 @@ namespace openshot
 		virtual void Close() = 0;
 
 		/// Display file information in the standard output stream (stdout)
-		void DisplayInfo();
+		void DisplayInfo(std::ostream* out=&std::cout);
 
 		/// Get the cache object used by this reader (note: not all readers use cache)
 		virtual openshot::CacheBase* GetCache() = 0;

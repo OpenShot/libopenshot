@@ -1,47 +1,35 @@
 /**
  * @file
- * @brief Source file for Crop effect class
+ * @brief Source file for Crop effect class (cropping any side, with x/y offsets)
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Crop.h"
 #include "Exceptions.h"
+#include "KeyFrame.h"
+
+#include <QImage>
+#include <QPainter>
+#include <QRectF>
+#include <QRect>
+#include <QSize>
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Crop::Crop() : left(0.1), top(0.1), right(0.1), bottom(0.1) {
-	// Init effect properties
-	init_effect_details();
-}
+/// Default constructor, useful when using Json to load the effect properties
+Crop::Crop() : Crop::Crop(0.0, 0.0, 0.0, 0.0, 0.0, 0.0) {}
 
-// Default constructor
-Crop::Crop(Keyframe left, Keyframe top, Keyframe right, Keyframe bottom) :
-		left(left), top(top), right(right), bottom(bottom)
+Crop::Crop(
+    Keyframe left, Keyframe top,
+    Keyframe right, Keyframe bottom,
+    Keyframe x, Keyframe y) :
+		left(left), top(top), right(right), bottom(bottom), x(x), y(y)
 {
 	// Init effect properties
 	init_effect_details();
@@ -68,48 +56,57 @@ std::shared_ptr<openshot::Frame> Crop::GetFrame(std::shared_ptr<openshot::Frame>
 	// Get the frame's image
 	std::shared_ptr<QImage> frame_image = frame->GetImage();
 
-	// Get transparent color (and create small transparent image)
-	auto tempColor = std::make_shared<QImage>(
-		frame_image->width(), 1, QImage::Format_RGBA8888_Premultiplied);
-	tempColor->fill(QColor(QString::fromStdString("transparent")));
-
 	// Get current keyframe values
 	double left_value = left.GetValue(frame_number);
 	double top_value = top.GetValue(frame_number);
 	double right_value = right.GetValue(frame_number);
 	double bottom_value = bottom.GetValue(frame_number);
 
-	// Get pixel array pointers
-	unsigned char *pixels = (unsigned char *) frame_image->bits();
-	unsigned char *color_pixels = (unsigned char *) tempColor->bits();
+    // Get the current shift amount
+    double x_shift = x.GetValue(frame_number);
+    double y_shift = y.GetValue(frame_number);
 
-	// Get pixels sizes of all crop sides
-	int top_bar_height = top_value * frame_image->height();
-	int bottom_bar_height = bottom_value * frame_image->height();
-	int left_bar_width = left_value * frame_image->width();
-	int right_bar_width = right_value * frame_image->width();
+	QSize sz = frame_image->size();
 
-	// Loop through rows
-	for (int row = 0; row < frame_image->height(); row++) {
+    // Compute destination rectangle to paint into
+    QRectF paint_r(
+            left_value * sz.width(), top_value * sz.height(),
+            std::max(0.0, 1.0 - left_value - right_value) * sz.width(),
+            std::max(0.0, 1.0 - top_value - bottom_value) * sz.height());
 
-		// Top & Bottom Crop
-		if ((top_bar_height > 0.0 && row <= top_bar_height) || (bottom_bar_height > 0.0 && row >= frame_image->height() - bottom_bar_height)) {
-			memcpy(&pixels[row * frame_image->width() * 4], color_pixels, sizeof(char) * frame_image->width() * 4);
-		} else {
-			// Left Crop
-			if (left_bar_width > 0.0) {
-				memcpy(&pixels[row * frame_image->width() * 4], color_pixels, sizeof(char) * left_bar_width * 4);
-			}
+    // Copy rectangle is destination translated by offsets
+    QRectF copy_r = paint_r;
+    copy_r.translate(x_shift * sz.width(), y_shift * sz.height());
 
-			// Right Crop
-			if (right_bar_width > 0.0) {
-				memcpy(&pixels[((row * frame_image->width()) + (frame_image->width() - right_bar_width)) * 4], color_pixels, sizeof(char) * right_bar_width * 4);
-			}
-		}
-	}
+    // Constrain offset copy rect to stay within image borders
+    if (copy_r.left() < 0) {
+        paint_r.setLeft(paint_r.left() - copy_r.left());
+        copy_r.setLeft(0);
+    }
+    if (copy_r.right() > sz.width()) {
+        paint_r.setRight(paint_r.right() - (copy_r.right() - sz.width()));
+        copy_r.setRight(sz.width());
+    }
+    if (copy_r.top() < 0) {
+        paint_r.setTop(paint_r.top() - copy_r.top());
+        copy_r.setTop(0);
+    }
+    if (copy_r.bottom() > sz.height()) {
+        paint_r.setBottom(paint_r.bottom() - (copy_r.bottom() - sz.height()));
+        copy_r.setBottom(sz.height());
+    }
 
-	// Cleanup colors and arrays
-	tempColor.reset();
+    QImage cropped(sz, QImage::Format_RGBA8888_Premultiplied);
+    cropped.fill(Qt::transparent);
+
+    const QImage src(*frame_image);
+
+    QPainter p(&cropped);
+    p.drawImage(paint_r, src, copy_r);
+    p.end();
+
+	// Set frame image
+	frame->AddImage(std::make_shared<QImage>(cropped.copy()));
 
 	// return the modified frame
 	return frame;
@@ -132,6 +129,8 @@ Json::Value Crop::JsonValue() const {
 	root["top"] = top.JsonValue();
 	root["right"] = right.JsonValue();
 	root["bottom"] = bottom.JsonValue();
+    root["x"] = x.JsonValue();
+    root["y"] = y.JsonValue();
 
 	// return JsonValue
 	return root;
@@ -169,6 +168,10 @@ void Crop::SetJsonValue(const Json::Value root) {
 		right.SetJsonValue(root["right"]);
 	if (!root["bottom"].isNull())
 		bottom.SetJsonValue(root["bottom"]);
+    if (!root["x"].isNull())
+        x.SetJsonValue(root["x"]);
+    if (!root["y"].isNull())
+        y.SetJsonValue(root["y"]);
 }
 
 // Get all properties for a specific frame
@@ -188,6 +191,8 @@ std::string Crop::PropertiesJSON(int64_t requested_frame) const {
 	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
 	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 1.0, false, requested_frame);
 	root["bottom"] = add_property_json("Bottom Size", bottom.GetValue(requested_frame), "float", "", &bottom, 0.0, 1.0, false, requested_frame);
+    root["x"] = add_property_json("X Offset", x.GetValue(requested_frame), "float", "", &x, -1.0, 1.0, false, requested_frame);
+    root["y"] = add_property_json("Y Offset", y.GetValue(requested_frame), "float", "", &y, -1.0, 1.0, false, requested_frame);
 
 	// Set the parent effect which properties this effect will inherit
 	root["parent_effect_id"] = add_property_json("Parent", 0.0, "string", info.parent_effect_id, NULL, -1, -1, false, requested_frame);

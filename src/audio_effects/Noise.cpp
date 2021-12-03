@@ -1,46 +1,27 @@
 /**
  * @file
  * @brief Source file for Noise audio effect class
- * @author 
+ * @author
  *
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Noise.h"
 #include "Exceptions.h"
+#include "Frame.h"
+
+#include <AppConfig.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 using namespace openshot;
 
-/// Blank constructor, useful when using Json to load the effect properties
-Noise::Noise() : level(30) {
-	// Init effect properties
-	init_effect_details();
-}
+Noise::Noise(): Noise::Noise(30) { }
 
-// Default constructor
-Noise::Noise(Keyframe new_level) : level(new_level)
+Noise::Noise(Keyframe level) : level(level)
 {
 	// Init effect properties
 	init_effect_details();
@@ -77,7 +58,7 @@ std::shared_ptr<openshot::Frame> Noise::GetFrame(std::shared_ptr<openshot::Frame
 			buffer[sample] = buffer[sample]*(1 - (1+(float)noise)/100) + buffer[sample]*0.0001*(rand()%100+1)*noise;
 		}
 	}
-	
+
 
 	// return the modified frame
 	return frame;

@@ -6,33 +6,19 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 // Require ImageMagick support
 #ifdef USE_IMAGEMAGICK
 
+#include "QtUtilities.h"
+#include "MagickUtilities.h"
+
 #include "TextReader.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace openshot;
 
@@ -169,14 +155,15 @@ std::shared_ptr<Frame> TextReader::GetFrame(int64_t requested_frame)
 	{
 		// Create or get frame object
 		auto image_frame = std::make_shared<Frame>(
-			requested_frame, image->size().width(), image->size().height(),
+			requested_frame,
+			image->size().width(), image->size().height(),
 			"#000000", 0, 2);
 
 		// Add Image data to frame
 		auto copy_image = std::make_shared<Magick::Image>(*image.get());
 		copy_image->modifyImage(); // actually copy the image data to this object
-		//TODO: Reimplement this with QImage
-		image_frame->AddMagickImage(copy_image);
+		auto qimage = openshot::Magick2QImage(copy_image);
+		image_frame->AddImage(qimage);
 
 		// return frame object
 		return image_frame;

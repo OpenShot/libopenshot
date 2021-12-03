@@ -1,0 +1,17 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: libopenshot
+Upstream-Contact: Jonathan Thomas <jonathan@openshot.org>
+Source: https://github.com/OpenShot/libopenshot
+
+Files: examples/*.png examples/*.svg examples/*.wav examples/*.mp4 examples/*.avi doc/images/*
+Copyright: OpenShot Studios, LLC
+License: LGPL-3.0-or-later
+
+Files: examples/sintel_trailer-720p.mp4
+Copyright: © copyright Blender Foundation | durian.blender.org
+License: CC-BY-3.0
+
+Files: thirdparty/jsoncpp/*
+Copyright: Copyright (c) 2007-2010 by Baptiste Lepilleur and
+The JsonCpp Authors
+License: CC0-1.0 or MIT

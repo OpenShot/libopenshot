@@ -6,27 +6,12 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <iostream>
+#include <iomanip>
 
 #include "EffectBase.h"
 
@@ -57,16 +42,16 @@ void EffectBase::InitEffectInfo()
 }
 
 // Display file information
-void EffectBase::DisplayInfo() {
-	std::cout << std::fixed << std::setprecision(2) << std::boolalpha;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "----- Effect Information -----" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--> Name: " << info.name << std::endl;
-	std::cout << "--> Description: " << info.description << std::endl;
-	std::cout << "--> Has Video: " << info.has_video << std::endl;
-	std::cout << "--> Has Audio: " << info.has_audio << std::endl;
-	std::cout << "----------------------------" << std::endl;
+void EffectBase::DisplayInfo(std::ostream* out) {
+	*out << std::fixed << std::setprecision(2) << std::boolalpha;
+	*out << "----------------------------" << std::endl;
+	*out << "----- Effect Information -----" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--> Name: " << info.name << std::endl;
+	*out << "--> Description: " << info.description << std::endl;
+	*out << "--> Has Video: " << info.has_video << std::endl;
+	*out << "--> Has Audio: " << info.has_audio << std::endl;
+	*out << "----------------------------" << std::endl;
 }
 
 // Constrain a color value from 0 to 255

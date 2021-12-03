@@ -6,32 +6,19 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "VideoCacheThread.h"
-#include "Exceptions.h"
-#include <algorithm>
 
+#include "CacheBase.h"
+#include "Exceptions.h"
+#include "Frame.h"
+#include "OpenMPUtilities.h"
+#include "ZmqLogger.h"
+
+#include <algorithm>
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
 
@@ -86,6 +73,7 @@ namespace openshot
     void VideoCacheThread::run()
     {
         // Types for storing time durations in whole and fractional milliseconds
+        std::shared_ptr<openshot::Frame> smallest_frame = NULL;
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
@@ -107,13 +95,11 @@ namespace openshot
 						ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_concurrent_frames", max_concurrent_frames, "needed_frames", (position - current_display_frame));
 
 						// Force the frame to be generated
-						if (reader->GetCache()->GetSmallestFrame()) {
-							int64_t smallest_cached_frame = reader->GetCache()->GetSmallestFrame()->number;
-							if (smallest_cached_frame > current_display_frame) {
-								// Cache position has gotten too far away from current display frame.
-								// Reset the position to the current display frame.
-								position = current_display_frame;
-							}
+                        smallest_frame = reader->GetCache()->GetSmallestFrame();
+                        if (smallest_frame && smallest_frame->number > current_display_frame) {
+                            // Cache position has gotten too far away from current display frame.
+                            // Reset the position to the current display frame.
+                            position = current_display_frame;
 						}
 						reader->GetFrame(position);
 					}

@@ -7,27 +7,9 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <fstream>
 #include <iomanip>
@@ -37,6 +19,8 @@
 
 #include "OpenCVUtilities.h"
 #include "CVTracker.h"
+#include "trackerdata.pb.h"
+#include "Exceptions.h"
 
 using namespace openshot;
 using google::protobuf::util::TimeUtil;
@@ -207,7 +191,7 @@ cv::Rect2d CVTracker::filter_box_jitter(size_t frameId){
     float curr_box_height  = bbox.height;
     // keep the last width and height if the difference is less than 1%
     float threshold = 0.01;
-    
+
     cv::Rect2d filtered_box = bbox;
     if(std::abs(1-(curr_box_width/last_box_width)) <= threshold){
         filtered_box.width = last_box_width;
@@ -299,13 +283,13 @@ void CVTracker::SetJson(const std::string value) {
 // Load Json::Value into this object
 void CVTracker::SetJsonValue(const Json::Value root) {
 
-	// Set data from Json (if key is found)
-	if (!root["protobuf_data_path"].isNull()){
-		protobuf_data_path = (root["protobuf_data_path"].asString());
-	}
+    // Set data from Json (if key is found)
+    if (!root["protobuf_data_path"].isNull()){
+        protobuf_data_path = (root["protobuf_data_path"].asString());
+    }
     if (!root["tracker-type"].isNull()){
-		trackerType = (root["tracker-type"].asString());
-	}
+        trackerType = (root["tracker-type"].asString());
+    }
 
     if (!root["region"].isNull()){
         double x = root["region"]["normalized_x"].asDouble();
@@ -314,20 +298,22 @@ void CVTracker::SetJsonValue(const Json::Value root) {
         double h = root["region"]["normalized_height"].asDouble();
         cv::Rect2d prev_bbox(x,y,w,h);
         bbox = prev_bbox;
+
+        if (!root["region"]["first-frame"].isNull()){
+            start = root["region"]["first-frame"].asInt64();
+            json_interval = true;
+        }
+        else{
+            processingController->SetError(true, "No first-frame");
+            error = true;
+        }
+
 	}
     else{
         processingController->SetError(true, "No initial bounding box selected");
         error = true;
     }
 
-    if (!root["region"]["first-frame"].isNull()){
-        start = root["region"]["first-frame"].asInt64();
-        json_interval = true;
-    }
-    else{
-        processingController->SetError(true, "No first-frame");
-        error = true;
-    }
 }
 
 /*

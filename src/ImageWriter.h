@@ -6,54 +6,28 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
- * (http://www.openshotstudios.com). This file is part of
- * OpenShot Library (http://www.openshot.org), an open-source project
- * dedicated to delivering high quality video editing and animation solutions
- * to the world.
- *
- * This file is originally based on the Libavformat API example, and then modified
- * by the libopenshot project.
- *
- * OpenShot Library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC, Fabrice Bellard
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_IMAGE_WRITER_H
 #define OPENSHOT_IMAGE_WRITER_H
 
 #ifdef USE_IMAGEMAGICK
 
-#include "ReaderBase.h"
-#include "WriterBase.h"
-
 #include <string>
 #include <vector>
-#include "CacheMemory.h"
-#include "Exceptions.h"
-#include "Fraction.h"
 
-#include "OpenMPUtilities.h"
+#include "WriterBase.h"
 #include "MagickUtilities.h"
+
+#include "Fraction.h"
 
 namespace openshot
 {
+	// Forward decls
+	class Frame;
+	class ReaderBase;
 
 	/**
 	 * @brief This class uses the ImageMagick library to write image files (including animated GIFs)
@@ -94,7 +68,7 @@ namespace openshot
 		int number_of_loops;
 		bool combine_frames;
 
-	    std::shared_ptr<Frame> last_frame;
+		std::shared_ptr<Frame> last_frame;
 
 	public:
 
@@ -127,8 +101,9 @@ namespace openshot
 		/// @param quality Quality of image (0 to 100, 70 is default)
 		/// @param loops Number of times to repeat the image (used on certain multi-frame image formats, such as GIF)
 		/// @param combine Combine frames into a single image (if possible), or save each frame as its own image
-		void SetVideoOptions(std::string format, Fraction fps, int width, int height,
-				int quality, int loops, bool combine);
+		void SetVideoOptions(
+			std::string format, Fraction fps, int width, int height,
+			int quality, int loops, bool combine);
 
 		/// @brief Add a frame to the stack waiting to be encoded.
 		/// @param frame The openshot::Frame object to write to this image
@@ -142,7 +117,7 @@ namespace openshot
 
 	};
 
-}
+}  // namespace
 
-#endif //USE_IMAGEMAGICK
-#endif //OPENSHOT_IMAGE_WRITER_H
+#endif  //USE_IMAGEMAGICK
+#endif  //OPENSHOT_IMAGE_WRITER_H

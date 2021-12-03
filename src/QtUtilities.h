@@ -4,27 +4,9 @@
  * @author FeRD (Frank Dana) <ferdnyc@gmail.com>
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2020 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2020 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_QT_UTILITIES_H
 #define OPENSHOT_QT_UTILITIES_H
@@ -40,5 +22,18 @@ namespace Qt {
   constexpr TextStreamFunction endl = ::endl;
 }
 #endif
+
+
+namespace openshot {
+    // Clean up buffer after QImage is deleted
+    static inline void cleanUpBuffer(void *info)
+    {
+        if (!info)
+            return;
+        // Remove buffer since QImage tells us to
+        auto* qbuffer = reinterpret_cast<unsigned char*>(info);
+        delete[] qbuffer;
+    }
+}  // namespace
 
 #endif // OPENSHOT_QT_UTILITIES_H

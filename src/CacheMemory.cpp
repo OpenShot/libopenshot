@@ -6,30 +6,13 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "CacheMemory.h"
 #include "Exceptions.h"
+#include "Frame.h"
 
 using namespace std;
 using namespace openshot;
@@ -57,9 +40,8 @@ CacheMemory::~CacheMemory()
 	frame_numbers.clear();
 	ordered_frame_numbers.clear();
 
-	// remove critical section
-	delete cacheCriticalSection;
-	cacheCriticalSection = NULL;
+	// remove mutex
+	delete cacheMutex;
 }
 
 
@@ -69,7 +51,7 @@ void CacheMemory::CalculateRanges() {
 	if (needs_range_processing) {
 
 		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 		// Sort ordered frame #s, and calculate JSON ranges
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
@@ -126,7 +108,7 @@ void CacheMemory::CalculateRanges() {
 void CacheMemory::Add(std::shared_ptr<Frame> frame)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 	int64_t frame_number = frame->number;
 
 	// Freshen frame if it already exists
@@ -151,7 +133,7 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Does frame exists in cache?
 	if (frames.count(frame_number))
@@ -167,8 +149,7 @@ std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
-	std::shared_ptr<openshot::Frame> f;
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -179,17 +160,19 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 			smallest_frame = *itr;
 	}
 
-	// Return frame
-	f = GetFrame(smallest_frame);
-
-	return f;
+	// Return frame (if any)
+	if (smallest_frame != -1) {
+        return GetFrame(smallest_frame);
+    } else {
+	    return NULL;
+	}
 }
 
 // Gets the maximum bytes value
 int64_t CacheMemory::GetBytes()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	int64_t total_bytes = 0;
 
@@ -213,7 +196,7 @@ void CacheMemory::Remove(int64_t frame_number)
 void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Loop through frame numbers
 	std::deque<int64_t>::iterator itr;
@@ -248,7 +231,7 @@ void CacheMemory::Remove(int64_t start_frame_number, int64_t end_frame_number)
 void CacheMemory::MoveToFront(int64_t frame_number)
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Does frame exists in cache?
 	if (frames.count(frame_number))
@@ -274,7 +257,7 @@ void CacheMemory::MoveToFront(int64_t frame_number)
 void CacheMemory::Clear()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	frames.clear();
 	frame_numbers.clear();
@@ -286,7 +269,7 @@ void CacheMemory::Clear()
 int64_t CacheMemory::Count()
 {
 	// Create a scoped lock, to protect the cache from multiple threads
-	const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Return the number of frames in the cache
 	return frames.size();
@@ -299,7 +282,7 @@ void CacheMemory::CleanUp()
 	if (max_bytes > 0)
 	{
 		// Create a scoped lock, to protect the cache from multiple threads
-		const GenericScopedLock<CriticalSection> lock(*cacheCriticalSection);
+		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 		while (GetBytes() > max_bytes && frame_numbers.size() > 20)
 		{

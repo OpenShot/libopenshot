@@ -6,44 +6,51 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifndef OPENSHOT_QIMAGE_READER_H
 #define OPENSHOT_QIMAGE_READER_H
 
-#include <cmath>
-#include <ctime>
-#include <iostream>
-#include <omp.h>
-#include <stdio.h>
 #include <memory>
+#include <string>
+
+#include <QString>
+#include <QSize>
 
 #include "ReaderBase.h"
+#include "Json.h"
+
+#if USE_RESVG == 1
+	// If defined and found in CMake, utilize the libresvg for parsing
+	// SVG files and rasterizing them to QImages.
+	#include "ResvgQt.h"
+
+    #define RESVG_VERSION_MIN(a, b) (\
+        RESVG_MAJOR_VERSION > a \
+        || (RESVG_MAJOR_VERSION == a && RESVG_MINOR_VERSION >= b) \
+    )
+#else
+    #define RESVG_VERSION_MIN(a, b) 0
+#endif
+
+class QImage;
+
+#include <QImage>
+#include <QSize>
+#include <QString>
+
+#include <QSize>
+#include <QString>
+
+class QImage;
 
 namespace openshot
 {
-	// Forward decl
-	class CacheBase;
+    // Forward decl
+    class CacheBase;
+    class Frame;
 
 	/**
 	 * @brief This class uses the Qt library, to open image files, and return
@@ -72,6 +79,10 @@ namespace openshot
 		std::shared_ptr<QImage> cached_image;	///> Scaled for performance
 		bool is_open;	///> Is Reader opened
 		QSize max_size;	///> Current max_size as calculated with Clip properties
+
+#if RESVG_VERSION_MIN(0, 11)
+        ResvgOptions resvg_options;
+#endif
 
 		/// Load an SVG file with Resvg or fallback with Qt
         ///

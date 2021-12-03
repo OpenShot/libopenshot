@@ -6,33 +6,18 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <catch2/catch.hpp>
 
+#include <map>
+#include <vector>
+#include <sstream>
+
 #include "Fraction.h"
 
-using namespace std;
 using namespace openshot;
 
 TEST_CASE( "Constructors", "[libopenshot][fraction]" )
@@ -147,4 +132,112 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	CHECK(f1.den == 720);
 	CHECK(f1.ToFloat() == Approx(1.77777f).margin(0.00001));
 	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
+}
+
+TEST_CASE( "Fraction operations", "[libopenshot][fraction]" ) {
+    openshot::Fraction f1(30, 1);
+    openshot::Fraction f2(3, 9);
+
+    // Multiply two Fractions
+    auto f3 = f1 * f2;
+    CHECK(f3.num == 90);
+    CHECK(f3.den == 9);
+
+    // Divide a Fraction by a Fraction
+    auto f4 = f1 / f2;
+    CHECK(f4.num == 270);
+    CHECK(f4.den == 3);
+}
+
+TEST_CASE( "Numeric multiplication", "[libopenshot][fraction]" )
+{
+    openshot::Fraction f1(30000, 1001);
+    const int64_t num1 = 12;
+    const double num2 = 13.6;
+    const float num3 = 14.1;
+    const int num4 = 15;
+
+    // operator* with Fraction on LHS
+    CHECK(f1 * num1 == static_cast<int64_t>(f1.ToDouble() * num1));
+    CHECK_FALSE(f1 * num1 == f1.ToDouble() * num1);
+    CHECK_FALSE(f1 * num1 == f1.ToInt() * num1);
+
+    CHECK(f1 * num2 == Approx(static_cast<double>(f1.ToDouble() * num2))
+                       .margin(0.0001));
+    CHECK(f1 * num3 == Approx(static_cast<float>(f1.ToDouble() * num3))
+                       .margin(0.0001));
+
+    CHECK(f1 * num4 == static_cast<int>(f1.ToDouble() * num4));
+    CHECK_FALSE(f1 * num4 == f1.ToDouble() * num4);
+    CHECK_FALSE(f1 * num4 == f1.ToInt() * num4);
+
+    // operator* with Fraction on RHS
+    CHECK(num1 * f1 == static_cast<int64_t>(f1.ToDouble() * num1));
+    CHECK_FALSE(num1 * f1 == num1 * f1.ToDouble());
+    CHECK_FALSE(num1 * f1 == num1 * f1.ToInt());
+
+    CHECK(num2 * f1 == Approx(static_cast<double>(f1.ToDouble() * num2))
+                       .margin(0.0001));
+    CHECK(num3 * f1 == Approx(static_cast<float>(f1.ToDouble() * num3))
+                       .margin(0.0001));
+
+    CHECK(num4 * f1 == static_cast<int>(f1.ToDouble() * num4));
+    CHECK_FALSE(num4 * f1 == num4 * f1.ToDouble());
+    CHECK_FALSE(num4 * f1 == num4 * f1.ToInt());
+
+    // Transposition
+    CHECK(num1 * f1 == f1 * num1);
+    CHECK(num2 * f1 == Approx(f1 * num2).margin(0.0001));
+    CHECK(num3 * f1 == Approx(f1 * num3).margin(0.0001));
+    CHECK(num4 * f1 == f1 * num4);
+}
+
+TEST_CASE( "Numeric division", "[libopenshot][fraction]" )
+{
+    openshot::Fraction f1(24000, 1001);
+    openshot::Fraction f2(1001, 30000);
+    const int64_t num1 = 2;
+    const double num2 = 3.5;
+    const float num3 = 4.99;
+    const int num4 = 5;
+
+
+    // operator* with Fraction on LHS
+    CHECK(f1 / num1 == static_cast<int64_t>(f1.ToDouble() / num1));
+    CHECK(f1 / num2 == Approx(static_cast<double>(f1.ToDouble() / num2))
+                       .margin(0.0001));
+    CHECK(f1 / num3 == Approx(static_cast<float>(f1.ToDouble() / num3))
+                       .margin(0.0001));
+    CHECK(f1 / num4 == static_cast<int>(f1.ToDouble() / num4));
+
+    CHECK(f2 / num1 == static_cast<int64_t>(f2.ToDouble() / num1));
+    CHECK(f2 / num2 == Approx(static_cast<double>(f2.ToDouble() / num2))
+                       .margin(0.0001));
+    CHECK(f2 / num3 == Approx(static_cast<float>(f2.ToDouble() / num3))
+                       .margin(0.0001));
+    CHECK(f2 / num4 == static_cast<int>(f2.ToDouble() / num4));
+
+    // operator* with Fraction on RHS
+    CHECK(num1 / f1 == static_cast<int64_t>(num1 / f1.ToDouble()));
+    CHECK(num2 / f1 == Approx(static_cast<double>(num2 / f1.ToDouble()))
+                       .margin(0.0001));
+    CHECK(num3 / f1 == Approx(static_cast<float>(num3 / f1.ToDouble()))
+                       .margin(0.0001));
+    CHECK(num4 / f1 == static_cast<int>(num4 / f1.ToDouble()));
+
+    CHECK(num1 / f2 == static_cast<int64_t>(num1 / f2.ToDouble()));
+    CHECK(num2 / f2 == Approx(static_cast<double>(num2 / f2.ToDouble()))
+                       .margin(0.0001));
+    CHECK(num3 / f2 == Approx(static_cast<float>(num3 / f2.ToDouble()))
+                       .margin(0.0001));
+    CHECK(num4 / f2 == static_cast<int>(num4 / f2.ToDouble()));
+}
+
+TEST_CASE( "Operator ostream", "[libopenshot][fraction]" )
+{
+	std::stringstream output;
+	openshot::Fraction f3(30000, 1001);
+
+	output << f3;
+	CHECK(output.str() == "Fraction(30000, 1001)");
 }

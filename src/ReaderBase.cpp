@@ -6,29 +6,20 @@
  * @ref License
  */
 
-/* LICENSE
- *
- * Copyright (c) 2008-2019 OpenShot Studios, LLC
- * <http://www.openshotstudios.com/>. This file is part of
- * OpenShot Library (libopenshot), an open-source project dedicated to
- * delivering high quality video editing and animation solutions to the
- * world. For more information visit <http://www.openshot.org/>.
- *
- * OpenShot Library (libopenshot) is free software: you can redistribute it
- * and/or modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * OpenShot Library (libopenshot) is distributed in the hope that it will be
- * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with OpenShot Library. If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2008-2019 OpenShot Studios, LLC
+//
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 #include "ReaderBase.h"
+#include "ClipBase.h"
+#include "Frame.h"
+
+#include "Json.h"
+
 
 using namespace openshot;
 
@@ -67,49 +58,49 @@ ReaderBase::ReaderBase()
 }
 
 // Display file information
-void ReaderBase::DisplayInfo() {
-	std::cout << std::fixed << std::setprecision(2) << std::boolalpha;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "----- File Information -----" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--> Has Video: " << info.has_video << std::endl;
-	std::cout << "--> Has Audio: " << info.has_audio << std::endl;
-	std::cout << "--> Has Single Image: " << info.has_single_image << std::endl;
-	std::cout << "--> Duration: " << info.duration << " Seconds" << std::endl;
-	std::cout << "--> File Size: " << double(info.file_size) / 1024 / 1024 << " MB" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "----- Video Attributes -----" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--> Width: " << info.width << std::endl;
-	std::cout << "--> Height: " << info.height << std::endl;
-	std::cout << "--> Pixel Format: " << info.pixel_format << std::endl;
-	std::cout << "--> Frames Per Second: " << info.fps.ToDouble() << " (" << info.fps.num << "/" << info.fps.den << ")" << std::endl;
-	std::cout << "--> Video Bit Rate: " << info.video_bit_rate/1000 << " kb/s" << std::endl;
-	std::cout << "--> Pixel Ratio: " << info.pixel_ratio.ToDouble() << " (" << info.pixel_ratio.num << "/" << info.pixel_ratio.den << ")" << std::endl;
-	std::cout << "--> Display Aspect Ratio: " << info.display_ratio.ToDouble() << " (" << info.display_ratio.num << "/" << info.display_ratio.den << ")" << std::endl;
-	std::cout << "--> Video Codec: " << info.vcodec << std::endl;
-	std::cout << "--> Video Length: " << info.video_length << " Frames" << std::endl;
-	std::cout << "--> Video Stream Index: " << info.video_stream_index << std::endl;
-	std::cout << "--> Video Timebase: " << info.video_timebase.ToDouble() << " (" << info.video_timebase.num << "/" << info.video_timebase.den << ")" << std::endl;
-	std::cout << "--> Interlaced: " << info.interlaced_frame << std::endl;
-	std::cout << "--> Interlaced: Top Field First: " << info.top_field_first << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "----- Audio Attributes -----" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--> Audio Codec: " << info.acodec << std::endl;
-	std::cout << "--> Audio Bit Rate: " << info.audio_bit_rate/1000 << " kb/s" << std::endl;
-	std::cout << "--> Sample Rate: " << info.sample_rate << " Hz" << std::endl;
-	std::cout << "--> # of Channels: " << info.channels << std::endl;
-	std::cout << "--> Channel Layout: " << info.channel_layout << std::endl;
-	std::cout << "--> Audio Stream Index: " << info.audio_stream_index << std::endl;
-	std::cout << "--> Audio Timebase: " << info.audio_timebase.ToDouble() << " (" << info.audio_timebase.num << "/" << info.audio_timebase.den << ")" << std::endl;
-	std::cout << "----------------------------" << std::endl;
-	std::cout << "--------- Metadata ---------" << std::endl;
-	std::cout << "----------------------------" << std::endl;
+void ReaderBase::DisplayInfo(std::ostream* out) {
+	*out << std::fixed << std::setprecision(2) << std::boolalpha;
+	*out << "----------------------------" << std::endl;
+	*out << "----- File Information -----" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--> Has Video: " << info.has_video << std::endl;
+	*out << "--> Has Audio: " << info.has_audio << std::endl;
+	*out << "--> Has Single Image: " << info.has_single_image << std::endl;
+	*out << "--> Duration: " << info.duration << " Seconds" << std::endl;
+	*out << "--> File Size: " << double(info.file_size) / 1024 / 1024 << " MB" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "----- Video Attributes -----" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--> Width: " << info.width << std::endl;
+	*out << "--> Height: " << info.height << std::endl;
+	*out << "--> Pixel Format: " << info.pixel_format << std::endl;
+	*out << "--> Frames Per Second: " << info.fps.ToDouble() << " (" << info.fps.num << "/" << info.fps.den << ")" << std::endl;
+	*out << "--> Video Bit Rate: " << info.video_bit_rate/1000 << " kb/s" << std::endl;
+	*out << "--> Pixel Ratio: " << info.pixel_ratio.ToDouble() << " (" << info.pixel_ratio.num << "/" << info.pixel_ratio.den << ")" << std::endl;
+	*out << "--> Display Aspect Ratio: " << info.display_ratio.ToDouble() << " (" << info.display_ratio.num << "/" << info.display_ratio.den << ")" << std::endl;
+	*out << "--> Video Codec: " << info.vcodec << std::endl;
+	*out << "--> Video Length: " << info.video_length << " Frames" << std::endl;
+	*out << "--> Video Stream Index: " << info.video_stream_index << std::endl;
+	*out << "--> Video Timebase: " << info.video_timebase.ToDouble() << " (" << info.video_timebase.num << "/" << info.video_timebase.den << ")" << std::endl;
+	*out << "--> Interlaced: " << info.interlaced_frame << std::endl;
+	*out << "--> Interlaced: Top Field First: " << info.top_field_first << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "----- Audio Attributes -----" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--> Audio Codec: " << info.acodec << std::endl;
+	*out << "--> Audio Bit Rate: " << info.audio_bit_rate/1000 << " kb/s" << std::endl;
+	*out << "--> Sample Rate: " << info.sample_rate << " Hz" << std::endl;
+	*out << "--> # of Channels: " << info.channels << std::endl;
+	*out << "--> Channel Layout: " << info.channel_layout << std::endl;
+	*out << "--> Audio Stream Index: " << info.audio_stream_index << std::endl;
+	*out << "--> Audio Timebase: " << info.audio_timebase.ToDouble() << " (" << info.audio_timebase.num << "/" << info.audio_timebase.den << ")" << std::endl;
+	*out << "----------------------------" << std::endl;
+	*out << "--------- Metadata ---------" << std::endl;
+	*out << "----------------------------" << std::endl;
 
 	// Iterate through metadata
 	for (auto it : info.metadata)
-		std::cout << "--> " << it.first << ": " << it.second << std::endl;
+		*out << "--> " << it.first << ": " << it.second << std::endl;
 }
 
 // Generate Json::Value for this object
