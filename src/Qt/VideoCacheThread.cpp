@@ -114,7 +114,6 @@ namespace openshot
 			}
 
 			// Sleep for 1 frame length
-            std::cout << "C: " << frame_duration.count() << std::endl;
 			std::this_thread::sleep_for(frame_duration);
 		}
 

@@ -161,7 +161,6 @@ juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioBuffer<fl
 // Get the next block of audio samples
 void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& info)
 {
-    std::cout << "R: getNext " << info.numSamples << std::endl;
 	int buffer_samples = buffer->getNumSamples();
 	int buffer_channels = buffer->getNumChannels();
 
@@ -225,9 +224,7 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 }
 
 // Prepare to play this audio source
-void AudioReaderSource::prepareToPlay(int, double) {
-    std::cout << "R: prepare" << std::endl;
-}
+void AudioReaderSource::prepareToPlay(int, double) {}
 
 // Release all resources
 void AudioReaderSource::releaseResources() { }
