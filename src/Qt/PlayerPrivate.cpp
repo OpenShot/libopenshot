@@ -26,7 +26,7 @@ namespace openshot
     , audioPlayback(new openshot::AudioPlaybackThread())
     , videoPlayback(new openshot::VideoPlaybackThread(rb))
     , videoCache(new openshot::VideoCacheThread())
-    , speed(1), reader(NULL), last_video_position(1), max_sleep_ms(1500)
+    , speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000)
     { }
 
     // Destructor
@@ -56,12 +56,12 @@ namespace openshot
         using std::chrono::duration_cast;
 
         // Types for storing time durations in whole and fractional milliseconds
-        using ms = std::chrono::milliseconds;
-        using double_ms = std::chrono::duration<double, ms::period>;
+        using micro_sec = std::chrono::microseconds;
+        using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
         while (!threadShouldExit()) {
             // Calculate on-screen time for a single frame in milliseconds
-            const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+            const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
 
             // Get the start time (to track how long a frame takes to render)
             const auto time1 = std::chrono::high_resolution_clock::now();
@@ -101,10 +101,10 @@ namespace openshot
             const auto time2 = std::chrono::high_resolution_clock::now();
 
             // Determine how many milliseconds it took to render the frame
-            const auto render_time = double_ms(time2 - time1);
+            const auto render_time = double_micro_sec(time2 - time1);
 
             // Calculate the amount of time to sleep (by subtracting the render time)
-            auto sleep_time = duration_cast<ms>(frame_duration - render_time);
+            auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time);
 
             // Debug
             ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
@@ -119,12 +119,23 @@ namespace openshot
                 // If a frame is ahead of the audio, we sleep for longer.
                 // If a frame is behind the audio, we sleep less (or not at all),
                 // in order for the video to catch up.
-                sleep_time += duration_cast<ms>((video_frame_diff / 2) * frame_duration);
+                sleep_time += duration_cast<micro_sec>((video_frame_diff / 2) * frame_duration);
             }
-
-            else if (video_frame_diff < -6 && reader->info.has_audio && reader->info.has_video) {
-                // Skip frame(s) to catch up to the audio (if more than 10 frames behind)
-                video_position += std::fabs(video_frame_diff) / 2; // Seek forward 1/2 the difference
+            else if (video_frame_diff < -3 && reader->info.has_audio && reader->info.has_video) {
+                // Video frames are a bit behind, sleep less, we need to display frames more quickly
+                std::cout << " - sleep: " << sleep_time.count() * 0.75 << std::endl;
+                sleep_time = duration_cast<micro_sec>(sleep_time * 0.75); // Sleep a little less
+            }
+            else if (video_frame_diff < -9 && reader->info.has_audio && reader->info.has_video) {
+                // Video frames are very behind, no sleep, we need to display frames more quickly
+                std::cout << " -- sleep: " << sleep_time.zero().count() << std::endl;
+                sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
+            }
+            else if (video_frame_diff < -12 && reader->info.has_audio && reader->info.has_video) {
+                // Video frames are very behind, jump forward the entire distance (catch up with the audio position)
+                // Skip frame(s) to catch up to the audio (if more than X frames behind)
+                std::cout << " --- sleep 0: jump += " << std::fabs(video_frame_diff) << std::endl;
+                video_position += std::fabs(video_frame_diff);
                 sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
             }
 
