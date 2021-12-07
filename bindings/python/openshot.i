@@ -41,10 +41,20 @@
 %shared_ptr(juce::AudioBuffer<float>)
 %shared_ptr(openshot::Frame)
 
+/* Instantiate the required template specializations */
+%template() std::map<std::string, int>;
+%template() std::pair<int, int>;
+%template() std::vector<int>;
+%template() std::pair<double, double>;
+%template() std::pair<float, float>;
+%template() std::pair<std::string, std::string>;
+%template() std::vector<std::pair<std::string, std::string>>;
+
 %{
 #include "OpenShotVersion.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"
+#include "AudioDevices.h"
 #include "CacheBase.h"
 #include "CacheDisk.h"
 #include "CacheMemory.h"
@@ -79,7 +89,6 @@
 #include "TimelineBase.h"
 #include "Timeline.h"
 #include "ZmqLogger.h"
-#include "AudioDeviceInfo.h"
 
 %}
 
@@ -116,12 +125,7 @@
 	}
 }
 
-/* Instantiate the required template specializations */
-%template() std::map<std::string, int>;
-%template() std::pair<int, int>;
-%template() std::vector<int>;
-%template() std::pair<double, double>;
-%template() std::pair<float, float>;
+
 
 /* Wrap std templates (list, vector, etc...) */
 %template(ClipList) std::list<openshot::Clip *>;
@@ -131,6 +135,8 @@
 %template(FieldVector) std::vector<openshot::Field>;
 %template(MappedFrameVector) std::vector<openshot::MappedFrame>;
 %template(MetadataMap) std::map<std::string, std::string>;
+
+/* Deprecated */
 %template(AudioDeviceInfoVector) std::vector<openshot::AudioDeviceInfo>;
 
 /* Make openshot.Fraction more Pythonic */
@@ -256,6 +262,7 @@
 %include "OpenShotVersion.h"
 %include "ReaderBase.h"
 %include "WriterBase.h"
+%include "AudioDevices.h"
 %include "CacheBase.h"
 %include "CacheDisk.h"
 %include "CacheMemory.h"
@@ -290,7 +297,6 @@
 %include "TimelineBase.h"
 %include "Timeline.h"
 %include "ZmqLogger.h"
-%include "AudioDeviceInfo.h"
 
 #ifdef USE_OPENCV
 	%include "ClipProcessingJobs.h"

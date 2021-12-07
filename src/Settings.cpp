@@ -34,6 +34,7 @@ Settings *Settings::Instance()
 		m_pInstance->HW_DE_DEVICE_SET = 0;
 		m_pInstance->HW_EN_DEVICE_SET = 0;
 		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
+		m_pInstance->PLAYBACK_AUDIO_DEVICE_TYPE = "";
 		m_pInstance->DEBUG_TO_STDERR = false;
 		auto env_debug = std::getenv("LIBOPENSHOT_DEBUG");
 		if (env_debug != nullptr)

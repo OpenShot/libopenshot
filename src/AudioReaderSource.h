@@ -47,7 +47,7 @@ namespace openshot
 		void GetMoreSamplesFromReader();
 
 		/// Reverse an audio buffer (for backwards audio)
-		juce::AudioBuffer<float>* reverse_buffer(juce::AudioSampleBuffer* buffer);
+		juce::AudioBuffer<float>* reverse_buffer(juce::AudioBuffer<float>* buffer);
 
 	public:
 

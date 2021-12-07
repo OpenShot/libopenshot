@@ -14,6 +14,12 @@
 #include "AudioPlaybackThread.h"
 #include "Settings.h"
 
+#include "../ReaderBase.h"
+#include "../RendererBase.h"
+#include "../AudioReaderSource.h"
+#include "../AudioDevices.h"
+#include "../Settings.h"
+
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
 
@@ -31,38 +37,45 @@ namespace openshot
 		if (!m_pInstance) {
 			// Create the actual instance of device manager only once
 			m_pInstance = new AudioDeviceManagerSingleton;
+			auto* mgr = &m_pInstance->audioDeviceManager;
 
-			// Get preferred audio device name (if any)
-			juce::String preferred_audio_device = juce::String(Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME.c_str());
+			// Get preferred audio device name and type (if any)
+			auto selected_device = juce::String(
+				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME);
+			auto selected_type = juce::String(
+				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE);
+
+			if (selected_type.isEmpty() && !selected_device.isEmpty()) {
+				// Look up type for the selected device
+				for (const auto t : mgr->getAvailableDeviceTypes()) {
+					for (const auto n : t->getDeviceNames()) {
+						if (selected_device.trim().equalsIgnoreCase(n.trim())) {
+							selected_type = t->getTypeName();
+							break;
+						}
+					}
+					if(!selected_type.isEmpty())
+						break;
+				}
+			}
+
+			if (!selected_type.isEmpty())
+				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
 
 			// Initialize audio device only 1 time
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
-					0, /* number of input channels */
-					2, /* number of output channels */
-					0, /* no XML settings.. */
-					true,  /* select default device on failure */
-					preferred_audio_device /* preferredDefaultDeviceName */);
+				0,       // number of input channels
+				2,       // number of output channels
+				nullptr, // no XML settings..
+				true,    // select default device on failure
+				selected_device // preferredDefaultDeviceName
+			);
 
 			// Persist any errors detected
 			if (audio_error.isNotEmpty()) {
-				m_pInstance->initialise_error = audio_error.toRawUTF8();
+				m_pInstance->initialise_error = audio_error.toStdString();
 			} else {
 				m_pInstance->initialise_error = "";
-			}
-
-			// Get all audio device names
-			for (int i = 0; i < m_pInstance->audioDeviceManager.getAvailableDeviceTypes().size(); ++i)
-			{
-				const AudioIODeviceType* t = m_pInstance->audioDeviceManager.getAvailableDeviceTypes()[i];
-				const juce::StringArray deviceNames = t->getDeviceNames ();
-
-				for (int j = 0; j < deviceNames.size (); ++j )
-				{
-					juce::String deviceName = deviceNames[j];
-					juce::String typeName = t->getTypeName();
-					openshot::AudioDeviceInfo deviceInfo = {deviceName.toRawUTF8(), typeName.toRawUTF8()};
-					m_pInstance->audio_device_names.push_back(deviceInfo);
-				}
 			}
 		}
 

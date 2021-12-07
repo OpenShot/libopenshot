@@ -19,19 +19,14 @@ using namespace std;
 using namespace openshot;
 
 // Constructor that reads samples from a reader
-AudioReaderSource::AudioReaderSource(
-    ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size
-) :
-    position(0),
-    size(buffer_size),
-    buffer(new juce::AudioBuffer<float>(audio_reader->info.channels, buffer_size)),
-    speed(1),
-    reader(audio_reader),
-    frame_number(starting_frame_number),
-    frame_position(0),
-    estimated_frame(0)
-{
-	// Zero the buffer contents
+AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
+	: reader(audio_reader), frame_number(starting_frame_number),
+	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
+
+	// Initialize an audio buffer (based on reader)
+	buffer = new juce::AudioBuffer<float>(reader->info.channels, size);
+
+	// initialize the audio samples to zero (silence)
 	buffer->clear();
 }
 
@@ -61,7 +56,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 	estimated_frame = frame_number;
 
 	// Init new buffer
-	juce::AudioBuffer<float> *new_buffer = new juce::AudioSampleBuffer(reader->info.channels, size);
+	auto *new_buffer = new juce::AudioBuffer<float>(reader->info.channels, size);
 	new_buffer->clear();
 
 	// Move the remaining samples into new buffer (if any)
@@ -130,7 +125,7 @@ void AudioReaderSource::GetMoreSamplesFromReader()
 }
 
 // Reverse an audio buffer
-juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioSampleBuffer* buffer)
+juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioBuffer<float>* buffer)
 {
 	int number_of_samples = buffer->getNumSamples();
 	int channels = buffer->getNumChannels();
@@ -139,7 +134,7 @@ juce::AudioBuffer<float>* AudioReaderSource::reverse_buffer(juce::AudioSampleBuf
 	ZmqLogger::Instance()->AppendDebugMethod("AudioReaderSource::reverse_buffer", "number_of_samples", number_of_samples, "channels", channels);
 
 	// Reverse array (create new buffer to hold the reversed version)
-	juce::AudioBuffer<float> *reversed = new juce::AudioSampleBuffer(channels, number_of_samples);
+	auto *reversed = new juce::AudioBuffer<float>(channels, number_of_samples);
 	reversed->clear();
 
 	for (int channel = 0; channel < channels; channel++)
@@ -229,7 +224,7 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 }
 
 // Prepare to play this audio source
-void AudioReaderSource::prepareToPlay(int, double) { }
+void AudioReaderSource::prepareToPlay(int, double) {}
 
 // Release all resources
 void AudioReaderSource::releaseResources() { }
