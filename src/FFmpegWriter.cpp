@@ -828,17 +828,17 @@ void FFmpegWriter::flush_encoders() {
 #endif
 
 	// FLUSH VIDEO ENCODER
-	if (info.has_video)
+	if (info.has_video) {
 		for (;;) {
 
 			// Increment PTS (in frames and scaled to the codec's timebase)
-            video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
+			video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
 #if IS_FFMPEG_3_2
-            AVPacket* pkt = av_packet_alloc();
+			AVPacket* pkt = av_packet_alloc();
 #else
-            AVPacket* pkt;
-            av_init_packet(pkt);
+			AVPacket* pkt;
+			av_init_packet(pkt);
 #endif
 			pkt->data = NULL;
 			pkt->size = 0;
@@ -878,7 +878,7 @@ void FFmpegWriter::flush_encoders() {
 			}
 
 			// set the timestamp
-            av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
+			av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
 			pkt->stream_index = video_st->index;
 
 			// Write packet
@@ -887,6 +887,7 @@ void FFmpegWriter::flush_encoders() {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + av_err2string(error_code) + "]", "error_code", error_code);
 			}
 		}
+	}
 
 	// FLUSH AUDIO ENCODER
 	if (info.has_audio) {
@@ -1007,8 +1008,8 @@ void FFmpegWriter::Close() {
 	}
 
 	// Reset frame counters
-    video_timestamp = 0;
-    audio_timestamp = 0;
+	video_timestamp = 0;
+	audio_timestamp = 0;
 
 	// Free the context which frees the streams too
 	avformat_free_context(oc);
@@ -1137,8 +1138,8 @@ AVStream *FFmpegWriter::add_video_stream() {
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
 
 	// Set sample aspect ratio
-    c->sample_aspect_ratio.num = info.pixel_ratio.num;
-    c->sample_aspect_ratio.den = info.pixel_ratio.den;
+	c->sample_aspect_ratio.num = info.pixel_ratio.num;
+	c->sample_aspect_ratio.den = info.pixel_ratio.den;
 
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000
@@ -1955,23 +1956,23 @@ AVFrame *FFmpegWriter::allocate_avframe(PixelFormat pix_fmt, int width, int heig
 
 // process video frame
 void FFmpegWriter::process_video_packet(std::shared_ptr<Frame> frame) {
-	// Determine the height & width of the source image
-	int source_image_width = frame->GetWidth();
-	int source_image_height = frame->GetHeight();
+    // Determine the height & width of the source image
+    int source_image_width = frame->GetWidth();
+    int source_image_height = frame->GetHeight();
 
-	// Do nothing if size is 1x1 (i.e. no image in this frame)
-	if (source_image_height == 1 && source_image_width == 1)
-		return;
+    // Do nothing if size is 1x1 (i.e. no image in this frame)
+    if (source_image_height == 1 && source_image_width == 1)
+        return;
 
-	// Init rescalers (if not initialized yet)
-	if (image_rescalers.size() == 0)
-		InitScalers(source_image_width, source_image_height);
+    // Init rescalers (if not initialized yet)
+    if (image_rescalers.size() == 0)
+        InitScalers(source_image_width, source_image_height);
 
-	// Get a unique rescaler (for this thread)
-	SwsContext *scaler = image_rescalers[rescaler_position];
-	rescaler_position++;
-	if (rescaler_position == num_of_rescalers)
-		rescaler_position = 0;
+    // Get a unique rescaler (for this thread)
+    SwsContext *scaler = image_rescalers[rescaler_position];
+    rescaler_position++;
+    if (rescaler_position == num_of_rescalers)
+        rescaler_position = 0;
 
     // Allocate an RGB frame & final output frame
     int bytes_source = 0;
@@ -2033,10 +2034,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 #endif
 		// Raw video case.
 #if IS_FFMPEG_3_2
-        AVPacket* pkt = av_packet_alloc();
+		AVPacket* pkt = av_packet_alloc();
 #else
-        AVPacket* pkt;
-        av_init_packet(pkt);
+		AVPacket* pkt;
+		av_init_packet(pkt);
 #endif
 
 		pkt->flags |= AV_PKT_FLAG_KEY;
@@ -2061,10 +2062,10 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 	{
 
 #if IS_FFMPEG_3_2
-        AVPacket* pkt = av_packet_alloc();
+		AVPacket* pkt = av_packet_alloc();
 #else
-        AVPacket* pkt;
-        av_init_packet(pkt);
+		AVPacket* pkt;
+		av_init_packet(pkt);
 #endif
 		pkt->data = NULL;
 		pkt->size = 0;
@@ -2145,7 +2146,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
 			// set the timestamp
-            av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
+			av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
 			pkt->stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
@@ -2168,8 +2169,8 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 #endif // USE_HW_ACCEL
 	}
 
-    // Increment PTS (in frames and scaled to the codec's timebase)
-    video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
+	// Increment PTS (in frames and scaled to the codec's timebase)
+	video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
 	// Success
 	return true;
