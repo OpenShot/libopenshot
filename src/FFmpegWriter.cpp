@@ -834,10 +834,14 @@ void FFmpegWriter::flush_encoders() {
 			// Increment PTS (in frames and scaled to the codec's timebase)
             video_timestamp += av_rescale_q(1, av_make_q(info.fps.den, info.fps.num), video_codec_ctx->time_base);
 
-			AVPacket pkt;
-			av_init_packet(&pkt);
-			pkt.data = NULL;
-			pkt.size = 0;
+#if IS_FFMPEG_3_2
+            AVPacket* pkt = av_packet_alloc();
+#else
+            AVPacket* pkt;
+            av_init_packet(pkt);
+#endif
+			pkt->data = NULL;
+			pkt->size = 0;
 
 			/* encode the image */
 			int got_packet = 0;
@@ -848,21 +852,21 @@ void FFmpegWriter::flush_encoders() {
             error_code = avcodec_send_frame(video_codec_ctx, NULL);
             got_packet = 0;
             while (error_code >= 0) {
-                error_code = avcodec_receive_packet(video_codec_ctx, &pkt);
+                error_code = avcodec_receive_packet(video_codec_ctx, pkt);
                 if (error_code == AVERROR(EAGAIN)|| error_code == AVERROR_EOF) {
                     got_packet = 0;
                     // Write packet
                     avcodec_flush_buffers(video_codec_ctx);
                     break;
                 }
-                av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
-                pkt.stream_index = video_st->index;
-                error_code = av_interleaved_write_frame(oc, &pkt);
+                av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
+                pkt->stream_index = video_st->index;
+                error_code = av_interleaved_write_frame(oc, pkt);
             }
 #else // IS_FFMPEG_3_2
 
 			// Encode video packet (older than FFmpeg 3.2)
-			error_code = avcodec_encode_video2(video_codec_ctx, &pkt, NULL, &got_packet);
+			error_code = avcodec_encode_video2(video_codec_ctx, pkt, NULL, &got_packet);
 
 #endif // IS_FFMPEG_3_2
 
@@ -874,11 +878,11 @@ void FFmpegWriter::flush_encoders() {
 			}
 
 			// set the timestamp
-            av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
-			pkt.stream_index = video_st->index;
+            av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
+			pkt->stream_index = video_st->index;
 
 			// Write packet
-			error_code = av_interleaved_write_frame(oc, &pkt);
+			error_code = av_interleaved_write_frame(oc, pkt);
 			if (error_code < 0) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::flush_encoders ERROR [" + av_err2string(error_code) + "]", "error_code", error_code);
 			}
@@ -887,11 +891,15 @@ void FFmpegWriter::flush_encoders() {
 	// FLUSH AUDIO ENCODER
 	if (info.has_audio) {
         for (;;) {
-            AVPacket pkt;
-            av_init_packet(&pkt);
-            pkt.data = NULL;
-            pkt.size = 0;
-            pkt.pts = pkt.dts = audio_timestamp;
+#if IS_FFMPEG_3_2
+            AVPacket* pkt = av_packet_alloc();
+#else
+            AVPacket* pkt;
+            av_init_packet(pkt);
+#endif
+            pkt->data = NULL;
+            pkt->size = 0;
+            pkt->pts = pkt->dts = audio_timestamp;
 
             /* encode the image */
             int error_code = 0;
@@ -899,7 +907,7 @@ void FFmpegWriter::flush_encoders() {
 #if IS_FFMPEG_3_2
             error_code = avcodec_send_frame(audio_codec_ctx, NULL);
 #else
-            error_code = avcodec_encode_audio2(audio_codec_ctx, &pkt, NULL, &got_packet);
+            error_code = avcodec_encode_audio2(audio_codec_ctx, pkt, NULL, &got_packet);
 #endif
             if (error_code < 0) {
                 ZmqLogger::Instance()->AppendDebugMethod(
@@ -912,17 +920,17 @@ void FFmpegWriter::flush_encoders() {
 
             // Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
             // but it fixes lots of PTS related issues when I do this.
-            pkt.pts = pkt.dts = audio_timestamp;
+            pkt->pts = pkt->dts = audio_timestamp;
 
             // Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
-            av_packet_rescale_ts(&pkt, audio_codec_ctx->time_base, audio_st->time_base);
+            av_packet_rescale_ts(pkt, audio_codec_ctx->time_base, audio_st->time_base);
 
             // set stream
-            pkt.stream_index = audio_st->index;
-            pkt.flags |= AV_PKT_FLAG_KEY;
+            pkt->stream_index = audio_st->index;
+            pkt->flags |= AV_PKT_FLAG_KEY;
 
             // Write packet
-            error_code = av_interleaved_write_frame(oc, &pkt);
+            error_code = av_interleaved_write_frame(oc, pkt);
             if (error_code < 0) {
                 ZmqLogger::Instance()->AppendDebugMethod(
                         "FFmpegWriter::flush_encoders ERROR [" + av_err2string(error_code) + "]",
@@ -930,10 +938,10 @@ void FFmpegWriter::flush_encoders() {
             }
 
             // Increment PTS by duration of packet
-            audio_timestamp += pkt.duration;
+            audio_timestamp += pkt->duration;
 
             // deallocate memory for packet
-            AV_FREE_PACKET(&pkt);
+            AV_FREE_PACKET(pkt);
         }
     }
 
@@ -1822,13 +1830,17 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         frame_final->pts = audio_timestamp;
 
         // Init the packet
-        AVPacket pkt;
-        av_init_packet(&pkt);
-        pkt.data = audio_encoder_buffer;
-        pkt.size = audio_encoder_buffer_size;
+#if IS_FFMPEG_3_2
+        AVPacket* pkt = av_packet_alloc();
+#else
+        AVPacket* pkt;
+        av_init_packet(pkt);
+#endif
+        pkt->data = audio_encoder_buffer;
+        pkt->size = audio_encoder_buffer_size;
 
         // Set the packet's PTS prior to encoding
-        pkt.pts = pkt.dts = audio_timestamp;
+        pkt->pts = pkt->dts = audio_timestamp;
 
         /* encode the audio samples */
         int got_packet_ptr = 0;
@@ -1844,8 +1856,8 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         }
         else {
             if (ret >= 0)
-                pkt.size = 0;
-            ret =  avcodec_receive_packet(audio_codec_ctx, &pkt);
+                pkt->size = 0;
+            ret =  avcodec_receive_packet(audio_codec_ctx, pkt);
             if (ret >= 0)
                 frame_finished = 1;
             if(ret == AVERROR(EINVAL) || ret == AVERROR_EOF) {
@@ -1856,31 +1868,31 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
                 ret = frame_finished;
             }
         }
-        if (!pkt.data && !frame_finished)
+        if (!pkt->data && !frame_finished)
         {
             ret = -1;
         }
         got_packet_ptr = ret;
 #else
         // Encode audio (older versions of FFmpeg)
-        int error_code = avcodec_encode_audio2(audio_codec_ctx, &pkt, frame_final, &got_packet_ptr);
+        int error_code = avcodec_encode_audio2(audio_codec_ctx, pkt, frame_final, &got_packet_ptr);
 #endif
         /* if zero size, it means the image was buffered */
         if (error_code == 0 && got_packet_ptr) {
 
             // Since the PTS can change during encoding, set the value again.  This seems like a huge hack,
             // but it fixes lots of PTS related issues when I do this.
-            pkt.pts = pkt.dts = audio_timestamp;
+            pkt->pts = pkt->dts = audio_timestamp;
 
             // Scale the PTS to the audio stream timebase (which is sometimes different than the codec's timebase)
-            av_packet_rescale_ts(&pkt, audio_codec_ctx->time_base, audio_st->time_base);
+            av_packet_rescale_ts(pkt, audio_codec_ctx->time_base, audio_st->time_base);
 
             // set stream
-            pkt.stream_index = audio_st->index;
-            pkt.flags |= AV_PKT_FLAG_KEY;
+            pkt->stream_index = audio_st->index;
+            pkt->flags |= AV_PKT_FLAG_KEY;
 
             /* write the compressed frame in the media file */
-            error_code = av_interleaved_write_frame(oc, &pkt);
+            error_code = av_interleaved_write_frame(oc, pkt);
         }
 
         if (error_code < 0) {
@@ -1895,7 +1907,7 @@ void FFmpegWriter::write_audio_packets(bool is_final) {
         AV_FREE_FRAME(&frame_final);
 
         // deallocate memory for packet
-        AV_FREE_PACKET(&pkt);
+        AV_FREE_PACKET(pkt);
 
         // Reset position
         audio_input_position = 0;
@@ -2020,35 +2032,43 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 #endif
 		// Raw video case.
-		AVPacket pkt;
-		av_init_packet(&pkt);
+#if IS_FFMPEG_3_2
+        AVPacket* pkt = av_packet_alloc();
+#else
+        AVPacket* pkt;
+        av_init_packet(pkt);
+#endif
 
-		pkt.flags |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = video_st->index;
-		pkt.data = (uint8_t *) frame_final->data;
-		pkt.size = sizeof(AVPicture);
+		pkt->flags |= AV_PKT_FLAG_KEY;
+		pkt->stream_index = video_st->index;
+		pkt->data = (uint8_t *) frame_final->data;
+		pkt->size = sizeof(AVPicture);
 
 		// Set PTS (in frames and scaled to the codec's timebase)
-		pkt.pts = video_timestamp;
+		pkt->pts = video_timestamp;
 
 		/* write the compressed frame in the media file */
-		int error_code = av_interleaved_write_frame(oc, &pkt);
+		int error_code = av_interleaved_write_frame(oc, pkt);
 		if (error_code < 0) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + av_err2string(error_code) + "]", "error_code", error_code);
 			return false;
 		}
 
 		// Deallocate packet
-		AV_FREE_PACKET(&pkt);
+		AV_FREE_PACKET(pkt);
 
 	} else
 	{
 
-		AVPacket pkt;
-		av_init_packet(&pkt);
-		pkt.data = NULL;
-		pkt.size = 0;
-		pkt.pts = pkt.dts = AV_NOPTS_VALUE;
+#if IS_FFMPEG_3_2
+        AVPacket* pkt = av_packet_alloc();
+#else
+        AVPacket* pkt;
+        av_init_packet(pkt);
+#endif
+		pkt->data = NULL;
+		pkt->size = 0;
+		pkt->pts = pkt->dts = AV_NOPTS_VALUE;
 
 		// Assign the initial AVFrame PTS from the frame counter
 		frame_final->pts = video_timestamp;
@@ -2098,7 +2118,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 		else {
 			while (ret >= 0) {
-				ret = avcodec_receive_packet(video_codec_ctx, &pkt);
+				ret = avcodec_receive_packet(video_codec_ctx, pkt);
 
 				if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 					avcodec_flush_buffers(video_codec_ctx);
@@ -2113,7 +2133,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 #else
 		// Write video packet (older than FFmpeg 3.2)
-		error_code = avcodec_encode_video2(video_codec_ctx, &pkt, frame_final, &got_packet_ptr);
+		error_code = avcodec_encode_video2(video_codec_ctx, pkt, frame_final, &got_packet_ptr);
 		if (error_code != 0) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + av_err2string(error_code) + "]", "error_code", error_code);
 		}
@@ -2125,11 +2145,11 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		/* if zero size, it means the image was buffered */
 		if (error_code == 0 && got_packet_ptr) {
 			// set the timestamp
-            av_packet_rescale_ts(&pkt, video_codec_ctx->time_base, video_st->time_base);
-			pkt.stream_index = video_st->index;
+            av_packet_rescale_ts(pkt, video_codec_ctx->time_base, video_st->time_base);
+			pkt->stream_index = video_st->index;
 
 			/* write the compressed frame in the media file */
-			int result = av_interleaved_write_frame(oc, &pkt);
+			int result = av_interleaved_write_frame(oc, pkt);
 			if (result < 0) {
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegWriter::write_video_packet ERROR [" + av_err2string(result) + "]", "result", result);
 				return false;
@@ -2137,7 +2157,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 
 		// Deallocate packet
-		AV_FREE_PACKET(&pkt);
+		AV_FREE_PACKET(pkt);
 #if USE_HW_ACCEL
 		if (hw_en_on && hw_en_supported) {
 			if (hw_frame) {
