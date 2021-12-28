@@ -16,10 +16,11 @@
 #include "ZmqLogger.h"
 
 #include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono milliseconds, high_resolution_clock
+#include <chrono>    // for std::chrono microseconds, high_resolution_clock
 
 namespace openshot
 {
+    int skipFrames = 0;
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
     : renderer(rb), Thread("player"), video_position(1), audio_position(0)
@@ -55,12 +56,16 @@ namespace openshot
 
         using std::chrono::duration_cast;
 
-        // Types for storing time durations in whole and fractional milliseconds
+        // Types for storing time durations in whole and fractional microseconds
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
         while (!threadShouldExit()) {
-            // Calculate on-screen time for a single frame in milliseconds
+            if (skipFrames > 0) {
+                skipFrames--;
+                continue;
+            }
+            // Calculate on-screen time for a single frame in microseconds
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
 
             // Get the start time (to track how long a frame takes to render)
@@ -100,40 +105,23 @@ namespace openshot
             // Get the end time (to track how long a frame takes to render)
             const auto time2 = std::chrono::high_resolution_clock::now();
 
-            // Determine how many milliseconds it took to render the frame
+            // Determine how many microseconds it took to render the frame
             const auto render_time = double_micro_sec(time2 - time1);
 
             // Calculate the amount of time to sleep (by subtracting the render time)
-            auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time);
+//            auto sleep_time = duration_cast<micro_sec>( (frame_duration - render_time));
+            auto correction_factor = video_frame_diff * video_frame_diff * video_frame_diff * video_frame_diff * video_frame_diff;
+//            auto sleep_time_no_correction = duration_cast<micro_sec>((frame_duration - render_time));
+            auto sleep_micro_seconds = (frame_duration - render_time) + double_micro_sec (correction_factor);
+            auto sleep_time = (sleep_micro_seconds.count() > 0) ? duration_cast<micro_sec>(double_micro_sec(sleep_micro_seconds)) : duration_cast<micro_sec>(double_micro_sec(0.0));
+            if (- (sleep_micro_seconds) > render_time) {
+                skipFrames = floor((-sleep_micro_seconds)/render_time);
+                if (skipFrames * 1.0 > reader->info.fps.ToDouble())
+                    skipFrames = floor(reader->info.fps.ToDouble());
+            }
 
             // Debug
             ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
-
-            // Adjust drift (if more than a few frames off between audio and video)
-            if (video_frame_diff > 6 && reader->info.has_audio && reader->info.has_video) {
-                // Since the audio and video threads are running independently,
-                // they will quickly get out of sync. To fix this, we calculate
-                // how far ahead or behind the video frame is, and adjust the amount
-                // of time the frame is displayed on the screen (i.e. the sleep time).
-                // If a frame is ahead of the audio, we sleep for longer.
-                // If a frame is behind the audio, we sleep less (or not at all),
-                // in order for the video to catch up.
-                sleep_time += duration_cast<micro_sec>((video_frame_diff / 2) * frame_duration);
-            }
-            else if (video_frame_diff < -3 && reader->info.has_audio && reader->info.has_video) {
-                // Video frames are a bit behind, sleep less, we need to display frames more quickly
-                sleep_time = duration_cast<micro_sec>(sleep_time * 0.75); // Sleep a little less
-            }
-            else if (video_frame_diff < -9 && reader->info.has_audio && reader->info.has_video) {
-                // Video frames are very behind, no sleep, we need to display frames more quickly
-                sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
-            }
-            else if (video_frame_diff < -12 && reader->info.has_audio && reader->info.has_video) {
-                // Video frames are very behind, jump forward the entire distance (catch up with the audio position)
-                // Skip frame(s) to catch up to the audio
-                video_position += std::fabs(video_frame_diff);
-                sleep_time = sleep_time.zero(); // Don't sleep now... immediately go to next position
-            }
 
             // Sleep (leaving the video frame on the screen for the correct amount of time)
             // Don't sleep too long though (in some extreme cases, for example when stopping threads
