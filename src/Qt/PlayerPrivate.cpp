@@ -109,15 +109,14 @@ namespace openshot
             const auto render_time = double_micro_sec(time2 - time1);
 
             // Calculate the amount of time to sleep (by subtracting the render time)
-//            auto sleep_time = duration_cast<micro_sec>( (frame_duration - render_time));
-            auto correction_factor = video_frame_diff * video_frame_diff * video_frame_diff * video_frame_diff * video_frame_diff;
-//            auto sleep_time_no_correction = duration_cast<micro_sec>((frame_duration - render_time));
+            auto correction_factor = video_frame_diff * video_frame_diff * video_frame_diff;
             auto sleep_micro_seconds = (frame_duration - render_time) + double_micro_sec (correction_factor);
             auto sleep_time = (sleep_micro_seconds.count() > 0) ? duration_cast<micro_sec>(double_micro_sec(sleep_micro_seconds)) : duration_cast<micro_sec>(double_micro_sec(0.0));
-            if (- (sleep_micro_seconds) > render_time) {
-                skipFrames = floor((-sleep_micro_seconds)/render_time);
-                if (skipFrames * 1.0 > reader->info.fps.ToDouble())
-                    skipFrames = floor(reader->info.fps.ToDouble());
+            if ( - (sleep_micro_seconds.count()) > frame_duration.count()) {
+                skipFrames = floor( (-sleep_micro_seconds.count()) / frame_duration.count());
+                skipFrames = (skipFrames / 2) + 1;
+                skipFrames = (float)skipFrames > reader->info.fps.ToDouble() ? reader->info.fps.ToDouble() : skipFrames;
+                continue;
             }
 
             // Debug
