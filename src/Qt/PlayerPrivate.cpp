@@ -105,6 +105,9 @@ namespace openshot
             const auto render_time = double_micro_sec(time2-time1);
             const auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time) + (correction);
 
+            // Debug
+            ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
+
             if (sleep_time.count() > 0) {
                 if (sleep_time > max_sleep ) {
                     std::this_thread::sleep_for(max_sleep);
