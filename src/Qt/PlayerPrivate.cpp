@@ -17,10 +17,11 @@
 
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono microseconds, high_resolution_clock
+#include <cmath>
 
 namespace openshot
 {
-    int skipFrames = 0;
+    const auto max_sleep = std::chrono::seconds(1);
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
     : renderer(rb), Thread("player"), video_position(1), audio_position(0)
@@ -61,20 +62,9 @@ namespace openshot
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
         while (!threadShouldExit()) {
-            if (skipFrames > 0) {
-                skipFrames--;
-                continue;
-            }
-            // Calculate on-screen time for a single frame in microseconds
-            const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
-
-            // Get the start time (to track how long a frame takes to render)
             const auto time1 = std::chrono::high_resolution_clock::now();
-
-            // Get the current video frame (if it's different)
+            const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             frame = getFrame();
-
-            // Experimental Pausing Code (if frame has not changed)
             if ((speed == 0 && video_position == last_video_position)
                 || (video_position > reader->info.video_length)
                ) {
@@ -82,12 +72,9 @@ namespace openshot
                 std::this_thread::sleep_for(frame_duration);
                 continue;
             }
-
-            // Set the video frame on the video thread and render frame
+            //Display the frame
             videoPlayback->frame = frame;
             videoPlayback->render.signal();
-
-            // Keep track of the last displayed frame
             last_video_position = video_position;
 
             // How many frames ahead or behind is the video thread?
@@ -102,34 +89,29 @@ namespace openshot
                 video_frame_diff = video_position - audio_position;
             }
 
-            // Get the end time (to track how long a frame takes to render)
+            // how far ahead or behind (negative) the video is
+            // relative to the audio
+            // (Cubed so that the higher the error, the more extreme the correction
+            auto correction = micro_sec((long)frame_duration.count() * (long)powf(video_frame_diff,3));
+
+            // If we're more than a whole frame behind, skip frames
+            int frames_behind = correction.count() / frame_duration.count();
+            if (frames_behind > 0) {
+                videoPlayback->frame->number += frames_behind;
+            }
+
+            /* SLEEP CALCULATIONS */
             const auto time2 = std::chrono::high_resolution_clock::now();
+            const auto render_time = double_micro_sec(time2-time1);
+            const auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time) + (correction);
 
-            // Determine how many microseconds it took to render the frame
-            const auto render_time = double_micro_sec(time2 - time1);
-
-            // Calculate the amount of time to sleep (by subtracting the render time)
-            auto correction_factor = video_frame_diff * video_frame_diff * video_frame_diff;
-            auto sleep_micro_seconds = (frame_duration - render_time) + double_micro_sec (correction_factor);
-            auto sleep_time = (sleep_micro_seconds.count() > 0) ? duration_cast<micro_sec>(double_micro_sec(sleep_micro_seconds)) : duration_cast<micro_sec>(double_micro_sec(0.0));
-            if ( - (sleep_micro_seconds.count()) > frame_duration.count()) {
-                skipFrames = floor( (-sleep_micro_seconds.count()) / frame_duration.count());
-                skipFrames = (skipFrames / 2) + 1;
-                skipFrames = (float)skipFrames > reader->info.fps.ToDouble() ? reader->info.fps.ToDouble() : skipFrames;
-                continue;
+            if (sleep_time.count() > 0) {
+                if (sleep_time > max_sleep ) {
+                    std::this_thread::sleep_for(max_sleep);
+                } else {
+                    std::this_thread::sleep_for(sleep_time);
+                }
             }
-
-            // Debug
-            ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
-
-            // Sleep (leaving the video frame on the screen for the correct amount of time)
-            // Don't sleep too long though (in some extreme cases, for example when stopping threads
-            // and shutting down, the video_frame_diff can jump to a crazy big number, and we don't
-            // want to sleep too long (max of X seconds)
-            if (sleep_time > sleep_time.zero() && sleep_time.count() < max_sleep_ms) {
-                std::this_thread::sleep_for(sleep_time);
-            }
-
         }
     }
 
