@@ -183,8 +183,17 @@ namespace openshot
 		/// Display the wave form
 		void DisplayWaveform();
 
-		/// Get magnitude of range of samples (if channel is -1, return average of all channels for that sample)
-		float GetAudioSample(int channel, int sample, int magnitude_range);
+		/// Get highest value within a range of samples
+		/// 
+		/// @param channel Channel number to scan, or -1 for all channels
+		/// @param sample The starting sample for the range
+		/// @param sample_count The length of the sample range
+		/// @returns The maximum sample value within the range of samples on
+		///          the specified channel, or all channels if channel == -1
+		float GetPeakLevel(int channel, int sample, int sample_count);
+
+		/// Deprecated alias for GetPeakLevel
+		float GetAudioSample(int channel, int sample, int sample_count);
 
 		/// Get an array of sample data
 		float* GetAudioSamples(int channel);
