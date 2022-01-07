@@ -13,7 +13,6 @@
 #ifndef OPENSHOT_ENUMS_H
 #define OPENSHOT_ENUMS_H
 
-
 namespace openshot
 {
 
@@ -131,6 +130,35 @@ enum ChromaKeyMethod
     CHROMAKEY_CIE_DISTANCE, ///< CIEDE2000 perceptual difference
     CHROMAKEY_YCBCR,        ///< YCbCr vector difference of CbCr
     CHROMAKEY_LAST_METHOD = CHROMAKEY_YCBCR
+};
+
+/// This enumeration determines how clips are blended with lower layers
+enum BlendMode
+{
+    BLEND_SOURCE_OVER,      ///< This is the default mode. The alpha of the current clip is used to blend the pixel on top of the lower layer.
+    BLEND_DESTINATION_OVER, ///< The alpha of the lower layer is used to blend it on top of the current clip pixels. This mode is the inverse of BLEND_SOURCEOVER.
+    BLEND_CLEAR,            ///< The pixels in the lower layer are cleared (set to fully transparent) independent of the current clip.
+    BLEND_SOURCE,           ///< The output is the current clip pixel. (This means a basic copy operation and is identical to SourceOver when the current clip pixel is opaque).
+    BLEND_DESTINATION,      ///< The output is the lower layer pixel. This means that the blending has no effect. This mode is the inverse of BLEND_SOURCE.
+    BLEND_SOURCE_IN,        ///< The output is the current clip,where the alpha is reduced by that of the lower layer.
+    BLEND_DESTINATION_IN,   ///< The output is the lower layer,where the alpha is reduced by that of the current clip.  This mode is the inverse of BLEND_SOURCEIN.
+    BLEND_SOURCE_OUT,       ///< The output is the current clip,where the alpha is reduced by the inverse of lower layer.
+    BLEND_DESTINATION_OUT,  ///< The output is the lower layer,where the alpha is reduced by the inverse of the current clip. This mode is the inverse of BLEND_SOURCEOUT.
+    BLEND_SOURCE_ATOP,      ///< The current clip pixel is blended on top of the lower layer,with the alpha of the current clip pixel reduced by the alpha of the lower layer pixel.
+    BLEND_DESTINATION_ATOP, ///< The lower layer pixel is blended on top of the current clip,with the alpha of the lower layer pixel is reduced by the alpha of the lower layer pixel. This mode is the inverse of BLEND_SOURCEATOP.
+    BLEND_XOR,              ///< The current clip,whose alpha is reduced with the inverse of the lower layer alpha,is merged with the lower layer,whose alpha is reduced by the inverse of the current clip alpha. BLEND_XOR is not the same as the bitwise Xor.
+    BLEND_PLUS,             ///< Both the alpha and color of the current clip and lower layer pixels are added together.
+    BLEND_MULTIPLY,         ///< The output is the current clip color multiplied by the lower layer. Multiplying a color with white leaves the color unchanged,while multiplying a color with black produces black.
+    BLEND_SCREEN,           ///< The current clip and lower layer colors are inverted and then multiplied. Screening a color with white produces white,whereas screening a color with black leaves the color unchanged.
+    BLEND_OVERLAY,          ///< Multiplies or screens the colors depending on the lower layer color. The lower layer color is mixed with the current clip color to reflect the lightness or darkness of the lower layer.
+    BLEND_DARKEN,           ///< The darker of the current clip and lower layer colors is selected.
+    BLEND_LIGHTEN,          ///< The lighter of the current clip and lower layer colors is selected.
+    BLEND_COLOR_DODGE,      ///< The lower layer color is brightened to reflect the current clip color. A black current clip color leaves the lower layer color unchanged.
+    BLEND_COLOR_BURN,       ///< The lower layer color is darkened to reflect the current clip color. A white current clip color leaves the lower layer color unchanged.
+    BLEND_HARD_LIGHT,       ///< Multiplies or screens the colors depending on the current clip color. A light current clip color will lighten the lower layer color,whereas a dark current clip color will darken the lower layer color.
+    BLEND_SOFT_LIGHT,       ///< Darkens or lightens the colors depending on the current clip color. Similar to BLEND_HARDLIGHT.
+    BLEND_DIFFERENCE,       ///< Subtracts the darker of the colors from the lighter. Painting with white inverts the lower layer color,whereas painting with black leaves the lower layer color unchanged.
+    BLEND_EXCLUSION         ///< Similar to BLEND_DIFFERENCE,but with a lower contrast. Painting with white inverts the lower layer color,whereas painting with black leaves the lower layer color unchanged.
 };
 
 }  // namespace openshot
