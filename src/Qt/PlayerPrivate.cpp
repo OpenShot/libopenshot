@@ -107,7 +107,14 @@ namespace openshot
             auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time);
 
             // Debug
-            ZmqLogger::Instance()->AppendDebugMethod("PlayerPrivate::run (determine sleep)", "video_frame_diff", video_frame_diff, "video_position", video_position, "audio_position", audio_position, "speed", speed, "render_time(ms)", render_time.count(), "sleep_time(ms)", sleep_time.count());
+            ZmqLogger::Instance()->AppendDebugMethod(
+                "PlayerPrivate::run (determine sleep)",
+                "video_frame_diff", video_frame_diff,
+                "video_position", video_position,
+                "audio_position", audio_position,
+                "speed", speed,
+                "render_time(ms)", render_time.count(),
+                "sleep_time(ms)", sleep_time.count());
 
             // Adjust drift (if more than a few frames off between audio and video)
             if (video_frame_diff > 6 && reader->info.has_audio && reader->info.has_video) {
