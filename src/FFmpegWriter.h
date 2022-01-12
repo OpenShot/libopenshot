@@ -22,15 +22,6 @@
 // Include FFmpeg headers and macros
 #include "FFmpegUtilities.h"
 
-#include <cmath>
-#include <ctime>
-#include <unistd.h>
-#include "CacheMemory.h"
-#include "OpenMPUtilities.h"
-#include "ZmqLogger.h"
-#include "Settings.h"
-
-
 namespace openshot {
 
 	/// This enumeration designates the type of stream when encoding (video or audio)
