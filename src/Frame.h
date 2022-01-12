@@ -164,11 +164,15 @@ namespace openshot
 		/// Apply gain ramp (i.e. fading volume)
 		void ApplyGainRamp(int destChannel, int destStartSample, int numSamples, float initial_gain, float final_gain);
 
-		/// Channel Layout of audio samples. A frame needs to keep track of this, since Writers do not always
-		/// know the original channel layout of a frame's audio samples (i.e. mono, stereo, 5 point surround, etc...)
+		/// Channel Layout for the Frame's audio samples.
+		///
+		/// A frame needs to keep track of this, since Writers
+		/// do not always know the original layout of a frame's
+		/// audio channels.
+		/// (i.e. mono, stereo, 5.1 surround, etc...)
 		openshot::ChannelLayout ChannelsLayout();
 
-		// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
+		/// Set the channel layout of audio samples (i.e. mono, stereo, 5 point surround, etc...)
 		void ChannelsLayout(openshot::ChannelLayout new_channel_layout) { channel_layout = new_channel_layout; };
 
 		/// Clear the waveform image (and deallocate its memory)
@@ -202,6 +206,8 @@ namespace openshot
 		float GetAudioSample(int channel, int sample, int sample_count);
 
 		/// Get an array of sample data
+		///
+		/// @returns A pointer to the first element in the array
 		float* GetAudioSamples(int channel);
 
 		/// Get an array of sample data (all channels interleaved together), using any sample rate
@@ -216,7 +222,9 @@ namespace openshot
 		/// Get number of audio samples
 		int GetAudioSamplesCount();
 
-	    juce::AudioBuffer<float> *GetAudioSampleBuffer();
+		/// Get the underlying storage buffer for the
+		/// frame's audio sample data
+		juce::AudioBuffer<float> *GetAudioSampleBuffer();
 
 		/// Get the size in bytes of this frame (rough estimate)
 		int64_t GetBytes();
@@ -224,10 +232,13 @@ namespace openshot
 		/// Get pointer to Qt QImage image object
 		std::shared_ptr<QImage> GetImage();
 
-		/// Set Pixel Aspect Ratio
+		/// Get Pixel Aspect Ratio
 		openshot::Fraction GetPixelRatio() { return pixel_ratio; };
 
-		/// Get pixel data (as packets)
+		/// Get pixel data
+		///
+		/// @returns A pointer to a two-dimensional array
+		///          of scanlines containing pixel values.
 		const unsigned char* GetPixels();
 
 		/// Get pixel data (for only a single scan-line)
@@ -248,7 +259,7 @@ namespace openshot
 		/// Get an audio waveform image
 		std::shared_ptr<QImage> GetWaveform(int width, int height, int Red, int Green, int Blue, int Alpha);
 
-		/// Get an audio waveform image pixels
+		/// Get the raw pixels of an audio waveform image
 		const unsigned char* GetWaveformPixels(int width, int height, int Red, int Green, int Blue, int Alpha);
 
 		/// Get height of image
