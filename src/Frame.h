@@ -184,15 +184,21 @@ namespace openshot
 		void DisplayWaveform();
 
 		/// Get highest value within a range of samples
-		/// 
-		/// @param channel Channel number to scan, or -1 for all channels
-		/// @param sample The starting sample for the range
-		/// @param sample_count The length of the sample range
-		/// @returns The maximum sample value within the range of samples on
-		///          the specified channel, or all channels if channel == -1
-		float GetPeakLevel(int channel, int sample, int sample_count);
+		//
+		/// @since 0.2.8
+		///
+		/// @returns The maximum sample value within the given range
+		///          of samples, on the channel(s) specified
+		float
+		GetPeakSampleLevel(
+			int channel, ///< channel number, or -1 for all channels
+			int sample, ///< starting sample for the range
+			int sample_count ///< length of the range
+		);
 
-		/// Deprecated alias for GetPeakLevel
+		/// Alias for GetSampleLevel()
+		///
+		/// @deprecated use Frame::GetPeakSampleLevel
 		float GetAudioSample(int channel, int sample, int sample_count);
 
 		/// Get an array of sample data

@@ -298,7 +298,7 @@ void Frame::DisplayWaveform()
 }
 
 // Get highest sample value in range
-float Frame::GetPeakLevel(int channel, int sample, int sample_count)
+float Frame::GetPeakSampleLevel(int channel, int sample, int sample_count)
 {
 	if (channel < 0) {
 		// Return magnitude across all channels
@@ -309,7 +309,7 @@ float Frame::GetPeakLevel(int channel, int sample, int sample_count)
 
 // Alias (Deprecated)
 float Frame::GetAudioSample(int channel, int sample, int sample_count) {
-    return GetPeakLevel(channel, sample, sample_count);
+    return GetPeakSampleLevel(channel, sample, sample_count);
 }
 
 // Get an array of sample data
