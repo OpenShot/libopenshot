@@ -253,6 +253,7 @@ if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
     "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
     "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/*"
     "audio/*"
+    "tests/test_utils.h"
   )
   setup_target_for_coverage_lcov(
     NAME coverage

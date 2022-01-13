@@ -81,6 +81,9 @@ foreach(tname ${OPENSHOT_TESTS})
   target_compile_definitions(openshot-${tname}-test PRIVATE
     TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
   )
+  target_include_directories(openshot-${tname}-test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+  )
   target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
 
   # Automatically configure CTest targets from Catch2 test cases

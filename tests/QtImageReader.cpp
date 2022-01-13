@@ -12,6 +12,7 @@
 
 #include <catch2/catch.hpp>
 
+#include "test_utils.h"
 #include <QGuiApplication>
 
 #include "QtImageReader.h"

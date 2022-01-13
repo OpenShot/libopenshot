@@ -17,16 +17,10 @@
 #include "Frame.h"
 #include "effects/ChromaKey.h"
 
+#include "test_utils.h"
+
 #include <QColor>
 #include <QImage>
-
-// Stream output formatter for QColor, needed so Catch2 can display
-// values when CHECK(qcolor1 == qcolor2) comparisons fail
-std::ostream& operator << ( std::ostream& os, QColor const& value ) {
-    os << "QColor(" << value.red() << ", " << value.green() << ", "
-       << value.blue() << ", " << value.alpha() << ")";
-    return os;
-}
 
 #include <catch2/catch.hpp>
 
