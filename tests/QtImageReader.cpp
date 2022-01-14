@@ -105,13 +105,21 @@ TEST_CASE( "Set path or image", "[libopenshot][qtimagereader]" )
     QImage imgB(QString::fromStdString(pathB.str()));
     openshot::QtImageReader r(pathB.str());
     r.Open();
+#if QT_VERSION > QT_VERSION_CHECK(5, 10, 0)
     CHECK(r.info.file_size == imgB.sizeInBytes());
+#else
+    CHECK(r.info.file_size == imgB.byteCount());
+#endif
     CHECK(imgB.size() == QSize(r.info.width, r.info.height));
 
     // Ignored update with bad input
     r.SetPath("");
     CHECK(r.IsOpen());
+#if QT_VERSION > QT_VERSION_CHECK(5, 10, 0)
     CHECK(r.info.file_size == imgB.sizeInBytes());
+#else
+    CHECK(r.info.file_size == imgB.byteCount());
+#endif
 
     // Update with new path
     r.SetPath(pathA.str());
