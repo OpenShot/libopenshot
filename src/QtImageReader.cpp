@@ -60,15 +60,14 @@ void QtImageReader::Open()
 
     if (path.isEmpty() && image && !image->isNull()) {
         // We already have an image
-        loaded = true;
         image_size = image->size();
     } else {
+	bool loaded = false;
         // Check for SVG files and rasterizing them to QImages
-        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+        const auto path_check = path.toLower();
+        if (path_check.endsWith(".svg") || path_check.endsWith(".svgz")) {
             image_size = load_svg_path(path);
-            if (!image_size.isEmpty()) {
-                loaded = true;
-            }
+	    loaded = !image_size.isEmpty();
         }
 
         if (!loaded) {
@@ -91,12 +90,12 @@ void QtImageReader::Open()
     info.has_audio = false;
     info.has_video = true;
     info.has_single_image = true;
-    #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-        // byteCount() is deprecated from Qt 5.10
-        info.file_size = image->sizeInBytes();
-    #else
-        info.file_size = image->byteCount();
-    #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    // byteCount() is deprecated from Qt 5.10
+    info.file_size = image->sizeInBytes();
+#else
+    info.file_size = image->byteCount();
+#endif
     info.vcodec = "QImage";
 
     if (!image_size.isEmpty()) {
