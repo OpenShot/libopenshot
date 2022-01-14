@@ -26,8 +26,8 @@ namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
-	: Thread("video-cache"), speed(1), is_playing(false), position(1)
-	, reader(NULL), max_concurrent_frames(OPEN_MP_NUM_PROCESSORS * 4), current_display_frame(1)
+	: Thread("video-cache"), speed(1), is_playing(false),
+	reader(NULL), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
     {
     }
 
@@ -36,25 +36,10 @@ namespace openshot
     {
     }
 
-    // Get the currently playing frame number (if any)
-    int64_t VideoCacheThread::getCurrentFramePosition()
-    {
-    	if (frame)
-    		return frame->number;
-    	else
-    		return 0;
-    }
-
-    // Set the currently playing frame number (if any)
-    void VideoCacheThread::setCurrentFramePosition(int64_t current_frame_number)
-    {
-    	current_display_frame = current_frame_number;
-    }
-
 	// Seek the reader to a particular frame number
 	void VideoCacheThread::Seek(int64_t new_position)
 	{
-		position = new_position;
+		current_display_frame = new_position;
 	}
 
 	// Play the video
@@ -73,7 +58,6 @@ namespace openshot
     void VideoCacheThread::run()
     {
         // Types for storing time durations in whole and fractional milliseconds
-        std::shared_ptr<openshot::Frame> smallest_frame = NULL;
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
@@ -81,37 +65,52 @@ namespace openshot
             // Calculate on-screen time for a single frame in milliseconds
             const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
 
-			// Cache frames before the other threads need them
-			// Cache frames up to the max frames. Reset to current position
-			// if cache gets too far away from display frame. Cache frames
-			// even when player is paused (i.e. speed 0).
-			while (((position - current_display_frame) < max_concurrent_frames) && is_playing)
-			{
-				// Only cache up till the max_concurrent_frames amount... then sleep
-				try
-				{
-					if (reader) {
-						ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_concurrent_frames", max_concurrent_frames, "needed_frames", (position - current_display_frame));
+            // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
+            // window can be smaller, can thus reduce the bytes per frame)
+            int64_t bytes_per_frame = (reader->info.height * reader->info.width * 4) +
+                    (reader->info.sample_rate * reader->info.channels * 4);
+            if (last_cached_frame && last_cached_frame->has_image_data && last_cached_frame->has_audio_data) {
+                bytes_per_frame = last_cached_frame->GetBytes();
+            }
 
-						// Force the frame to be generated
-                        smallest_frame = reader->GetCache()->GetSmallestFrame();
-                        if (smallest_frame && smallest_frame->number > current_display_frame) {
-                            // Cache position has gotten too far away from current display frame.
-                            // Reset the position to the current display frame.
-                            position = current_display_frame;
-						}
-						reader->GetFrame(position);
-					}
+            // Calculate # of frames on Timeline cache
+            if (reader->GetCache() && reader->GetCache()->GetMaxBytes() > 0) {
+                // Use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
+                max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
+                if (max_frames_ahead > 1000) {
+                    // Ignore values that are too large, and default to a safer value
+                    max_frames_ahead = OPEN_MP_NUM_PROCESSORS * 2;
+                }
+            }
 
-				}
-				catch (const OutOfBoundsFrame & e)
-				{
-					// Ignore out of bounds frame exceptions
-				}
+            // Calculate increment (based on speed)
+            // Support caching in both directions
+            int16_t increment = 1;
+            if (speed < 0) {
+                increment = -1;
+            }
 
-				// Increment frame number
-				position++;
-			}
+			// Always cache frames from the current display position to our maximum (based on the cache size).
+			// Frames which are already cached are basically free. Only uncached frames have a big CPU cost.
+			// By always looping through the expected frame range, we can fill-in missing frames caused by a
+			// fragmented cache object (i.e. the user clicking all over the timeline).
+            int64_t starting_frame = current_display_frame;
+            int64_t ending_frame = starting_frame + max_frames_ahead;
+            if (speed < 0) {
+                ending_frame = starting_frame - max_frames_ahead;
+            }
+
+            for (int64_t cache_frame = starting_frame; cache_frame != ending_frame; cache_frame += increment) {
+                if (reader && reader->GetCache() && !reader->GetCache()->Contains(cache_frame)) {
+                    try
+                    {
+                        // This frame is not already cached... so request it again (to force the creation & caching)
+                        // This will also re-order the missing frame to the front of the cache
+                        last_cached_frame = reader->GetFrame(cache_frame);
+                    }
+                    catch (const OutOfBoundsFrame & e) {  }
+                }
+            }
 
 			// Sleep for 1 frame length
 			std::this_thread::sleep_for(frame_duration);

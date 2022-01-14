@@ -129,6 +129,15 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 	}
 }
 
+// Check if frame is already contained in cache
+bool CacheMemory::Contains(int64_t frame_number) {
+    if (frames.count(frame_number) > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
 std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 {

@@ -28,24 +28,18 @@ namespace openshot
      */
     class VideoCacheThread : Thread
     {
-	private:
-	std::atomic_int position;
-
 	protected:
-	std::shared_ptr<Frame> frame;
+	std::shared_ptr<Frame> last_cached_frame;
 	int speed;
 	bool is_playing;
 	int64_t current_display_frame;
 	ReaderBase *reader;
-	int max_concurrent_frames;
+	int max_frames_ahead;
 
 	/// Constructor
 	VideoCacheThread();
 	/// Destructor
 	~VideoCacheThread();
-
-	/// Get the currently playing frame number (if any)
-	int64_t getCurrentFramePosition();
 
     /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     int getSpeed() const { return speed; }
@@ -55,9 +49,6 @@ namespace openshot
 
 	/// Seek the reader to a particular frame number
 	void Seek(int64_t new_position);
-
-	/// Set the currently displaying frame number
-	void setCurrentFramePosition(int64_t current_frame_number);
 
     /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     void setSpeed(int new_speed) { speed = new_speed; }
