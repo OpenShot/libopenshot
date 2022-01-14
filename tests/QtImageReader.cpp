@@ -13,7 +13,11 @@
 #include <catch2/catch.hpp>
 
 #include "test_utils.h"
+
+#include <Qt>
 #include <QGuiApplication>
+#include <QColor>
+#include <QImage>
 
 #include "QtImageReader.h"
 #include "Clip.h"
@@ -23,10 +27,61 @@
 
 using namespace openshot;
 
-TEST_CASE( "Default_Constructor", "[libopenshot][qtimagereader]" )
+TEST_CASE( "Default constructor", "[libopenshot][qtimagereader]" )
+{
+    openshot::QtImageReader r("", false);
+    CHECK_FALSE(r.IsOpen());
+    CHECK_THROWS_AS(r.Open(), openshot::InvalidFile);
+}
+
+TEST_CASE( "Construct from a QImage", "[libopenshot][qtimagereader]" )
+{
+    QImage i(1280, 720, QImage::Format_RGBA8888_Premultiplied);
+    i.fill(Qt::red);
+    openshot::QtImageReader r(i);
+
+    CHECK_FALSE(r.IsOpen());
+    CHECK(r.info.width == 1280);
+    CHECK(r.info.height == 720);
+
+    r.Open();
+    CHECK(r.IsOpen());
+
+    auto f = r.GetFrame(1);
+    CHECK(f->GetWidth() == 1280);
+    CHECK(f->GetHeight() == 720);
+    CHECK(f->number == 1);
+
+    auto frame_img = f->GetImage();
+    CHECK(*frame_img == i);
+}
+
+TEST_CASE( "Exceptions and protections", "[libopenshot][qtimagereader]" )
 {
 	// Check invalid path
 	CHECK_THROWS_AS(QtImageReader(""), InvalidFile);
+
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "front.png";
+	openshot::QtImageReader r(path.str());
+
+	// Double open
+	r.Open();
+	CHECK(r.IsOpen());
+	r.Open();
+	CHECK(r.IsOpen());
+
+	// Double close
+	r.Close();
+	CHECK_FALSE(r.IsOpen());
+	r.Close();
+	CHECK_FALSE(r.IsOpen());
+
+	// Load bad path
+	CHECK_THROWS_AS(
+		openshot::QtImageReader("filethatdoesnotexist.png"),
+		openshot::InvalidFile);
 }
 
 TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
@@ -38,6 +93,46 @@ TEST_CASE( "GetFrame_Before_Opening", "[libopenshot][qtimagereader]" )
 
 	// Check invalid path
 	CHECK_THROWS_AS(r.GetFrame(1), ReaderClosed);
+}
+
+TEST_CASE( "Set path or image", "[libopenshot][qtimagereader]" )
+{
+    std::stringstream pathA;
+    pathA << TEST_MEDIA_PATH << "1F0CF.svg";
+    std::stringstream pathB;
+    pathB << TEST_MEDIA_PATH << "front.png";
+
+    QImage imgB(QString::fromStdString(pathB.str()));
+    openshot::QtImageReader r(pathB.str());
+    r.Open();
+    CHECK(r.info.file_size == imgB.sizeInBytes());
+    CHECK(imgB.size() == QSize(r.info.width, r.info.height));
+
+    // Ignored update with bad input
+    r.SetPath("");
+    CHECK(r.IsOpen());
+    CHECK(r.info.file_size == imgB.sizeInBytes());
+
+    // Update with new path
+    r.SetPath(pathA.str());
+    CHECK(r.IsOpen());
+    CHECK(r.info.width == r.info.height);
+    CHECK(r.info.vcodec == "QImage");
+
+    // Change to existing QImage
+    r.SetQImage(imgB);
+    auto f = r.GetFrame(1);
+    auto i = f->GetImage();
+    CHECK(i->size() == imgB.size());
+    CHECK(i->pixelColor(10, 10) == imgB.pixelColor(10, 10));
+    r.Close();
+
+    // Ignored attempt to supply unusable image
+    r.SetQImage(QImage());
+    CHECK_FALSE(r.IsOpen());
+    r.Open();
+    CHECK(r.IsOpen());
+    CHECK(r.info.width == i->width());
 }
 
 TEST_CASE( "Check_SVG_Loading", "[libopenshot][qtimagereader]" )

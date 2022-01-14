@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 
+#include <QImage>
 #include <QString>
 #include <QSize>
 
@@ -34,17 +35,6 @@
 #else
     #define RESVG_VERSION_MIN(a, b) 0
 #endif
-
-class QImage;
-
-#include <QImage>
-#include <QSize>
-#include <QString>
-
-#include <QSize>
-#include <QString>
-
-class QImage;
 
 namespace openshot
 {
@@ -91,20 +81,31 @@ namespace openshot
         QSize load_svg_path(QString path);
 
 		/// Calculate the max_size QSize, based on parent timeline and parent clip settings
-        QSize calculate_max_size();
+		QSize calculate_max_size();
+
+		/// Cycle the reader through the open/closed states
+		///
+		/// This will cause it to re-read the image file from disk
+		/// (if a \a path was set), and re-compute metadata properties
+        ///
+        /// @param leave_open Whether the final state should be open or closed
+		void Reload(bool leave_open);
 
 	public:
 		/// @brief Constructor for QtImageReader.
 		///
 		/// Opens the media file to inspect its properties and loads frame 1,
-		/// iff inspect_reader == true (the default). Pass a false value in
+		/// iff \a inspect_reader == true (the default). Pass a false value in
 		/// the optional parameter to defer this initial Open()/Close() cycle.
 		///
 		/// When not inspecting the media file, it's much faster, and useful
 		/// when you are inflating the object using JSON after instantiation.
 		QtImageReader(std::string path, bool inspect_reader=true);
 
-		virtual ~QtImageReader();
+		/// Constructor which takes an existing QImage
+		explicit QtImageReader(const QImage&, bool inspect=true);
+
+		virtual ~QtImageReader() = default;
 
 		/// Close File
 		void Close() override;
@@ -118,6 +119,12 @@ namespace openshot
 		/// @returns The requested frame (containing the image)
 		/// @param requested_frame The frame number that is requested.
 		std::shared_ptr<Frame> GetFrame(int64_t requested_frame) override;
+
+		/// Provide a new image file path to the Reader
+		void SetPath(const std::string& new_path);
+
+		/// Supply (or replace) the QImage used as the image source
+		void SetQImage(const QImage& new_image);
 
 		/// Determine if reader is open or closed
 		bool IsOpen() override { return is_open; };

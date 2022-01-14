@@ -25,37 +25,48 @@
 
 using namespace openshot;
 
-QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
+QtImageReader::QtImageReader(std::string path, bool inspect_reader)
+    : path{QString::fromStdString(path)}, is_open(false)
 {
 
 #if RESVG_VERSION_MIN(0, 11)
     // Initialize the Resvg options
     resvg_options.loadSystemFonts();
 #endif
-    // Open and Close the reader, to populate its attributes (such as height, width, etc...)
-    if (inspect_reader) {
-        Open();
-        Close();
-    }
+    // Reset reader to populate its attributes (height, width, etc...)
+    if (inspect_reader)
+        Reload(false);
 }
 
-QtImageReader::~QtImageReader()
+QtImageReader::QtImageReader(const QImage& in, bool inspect)
+    : image(new QImage(in)), path(""), is_open(false)
 {
+    if (inspect)
+        Reload(false);
 }
 
 // Open image file
 void QtImageReader::Open()
 {
     // Open reader if not already open
-    if (!is_open)
-    {
-        bool loaded = false;
-        QSize default_svg_size;
+    if (is_open) {
+        return;
+    }
+    if (path.isEmpty() && (!image || image->isNull()))
+        throw InvalidFile("No image or file path supplied to reader", "");
 
+    QSize image_size;
+    bool loaded = false;
+
+    if (path.isEmpty() && image && !image->isNull()) {
+        // We already have an image
+        loaded = true;
+        image_size = image->size();
+    } else {
         // Check for SVG files and rasterizing them to QImages
         if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
-            default_svg_size = load_svg_path(path);
-            if (!default_svg_size.isEmpty()) {
+            image_size = load_svg_path(path);
+            if (!image_size.isEmpty()) {
                 loaded = true;
             }
         }
@@ -75,70 +86,62 @@ void QtImageReader::Open()
             // raise exception
             throw InvalidFile("File could not be opened.", path.toStdString());
         }
-
-        // Update image properties
-        info.has_audio = false;
-        info.has_video = true;
-        info.has_single_image = true;
-        #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-            // byteCount() is deprecated from Qt 5.10
-            info.file_size = image->sizeInBytes();
-        #else
-            info.file_size = image->byteCount();
-        #endif
-        info.vcodec = "QImage";
-        if (!default_svg_size.isEmpty()) {
-            // Use default SVG size (if detected)
-            info.width = default_svg_size.width();
-            info.height = default_svg_size.height();
-        } else {
-            // Use Qt Image size as a fallback
-            info.width = image->width();
-            info.height = image->height();
-        }
-        info.pixel_ratio.num = 1;
-        info.pixel_ratio.den = 1;
-        info.duration = 60 * 60 * 1;  // 1 hour duration
-        info.fps.num = 30;
-        info.fps.den = 1;
-        info.video_timebase.num = 1;
-        info.video_timebase.den = 30;
-        info.video_length = round(info.duration * info.fps.ToDouble());
-
-        // Calculate the DAR (display aspect ratio)
-        Fraction size(info.width * info.pixel_ratio.num, info.height * info.pixel_ratio.den);
-
-        // Reduce size fraction
-        size.Reduce();
-
-        // Set the ratio based on the reduced fraction
-        info.display_ratio.num = size.num;
-        info.display_ratio.den = size.den;
-
-        // Set current max size
-        max_size.setWidth(info.width);
-        max_size.setHeight(info.height);
-
-        // Mark as "open"
-        is_open = true;
     }
+    // Update image properties
+    info.has_audio = false;
+    info.has_video = true;
+    info.has_single_image = true;
+    #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+        // byteCount() is deprecated from Qt 5.10
+        info.file_size = image->sizeInBytes();
+    #else
+        info.file_size = image->byteCount();
+    #endif
+    info.vcodec = "QImage";
+
+    if (!image_size.isEmpty()) {
+        // Use loaded file's true size (if detected)
+        info.width = image_size.width();
+        info.height = image_size.height();
+        max_size = image_size;
+    } else {
+        // Use size of buffer image as a fallback
+        info.width = image->width();
+        info.height = image->height();
+        max_size = image->size();
+    }
+    info.pixel_ratio.num = 1;
+    info.pixel_ratio.den = 1;
+    info.duration = 60 * 60 * 1;  // 1 hour duration
+    info.fps.num = 30;
+    info.fps.den = 1;
+    info.video_timebase.num = 1;
+    info.video_timebase.den = 30;
+    info.video_length = round(info.duration * info.fps.ToDouble());
+
+    // Calculate the DAR (display aspect ratio) from the dimensions
+    info.display_ratio = Fraction(info.width, info.height);
+    info.display_ratio.Reduce();
+
+    // Mark as "open"
+    is_open = true;
 }
 
 // Close image file
 void QtImageReader::Close()
 {
-    // Close all objects, if reader is 'open'
-    if (is_open)
-    {
-        // Mark as "closed"
-        is_open = false;
+    if (!is_open)
+        return;
 
-        // Delete the image
+    // Delete the cache, and the image if it was loaded from disk
+    cached_image.reset();
+    if (!path.isEmpty())
         image.reset();
 
-        info.vcodec = "";
-        info.acodec = "";
-    }
+    info.vcodec = "";
+    info.acodec = "";
+
+    is_open = false;
 }
 
 // Get an openshot::Frame object for a specific frame number of this reader.
@@ -157,7 +160,11 @@ std::shared_ptr<Frame> QtImageReader::GetFrame(int64_t requested_frame)
     // Scale image smaller (or use a previous scaled image)
     if (!cached_image || max_size != current_max_size) {
         // Check for SVG files and rasterize them to QImages
-        if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+        if (!path.isEmpty() &&
+            (path.toLower().endsWith(QStringLiteral(".svg"))
+             || path.toLower().endsWith(QStringLiteral(".svgz")))
+           )
+        {
             load_svg_path(path);
         }
 
@@ -290,8 +297,7 @@ QSize QtImageReader::load_svg_path(QString) {
 
         if (loaded) {
             // Set default SVG size
-            default_size.setWidth(image->width());
-            default_size.setHeight(image->height());
+            default_size = image->size();
 
             if (image->width() < current_max_size.width() || image->height() < current_max_size.height()) {
                 // Load SVG into larger/project size (so image is not blurry)
@@ -311,6 +317,19 @@ QSize QtImageReader::load_svg_path(QString) {
     }
 
     return default_size;
+}
+
+// Re-read from path if set, and re-init metadata
+void QtImageReader::Reload(bool leave_open)
+{
+    // Either direction we're going, cycle the reader's state
+    if (leave_open) {
+        Close();
+        Open();
+    } else {
+        Open();
+        Close();
+    }
 }
 
 // Generate JSON string of this object
@@ -357,12 +376,26 @@ void QtImageReader::SetJsonValue(const Json::Value root) {
 
     // Set data from Json (if key is found)
     if (!root["path"].isNull())
-        path = QString::fromStdString(root["path"].asString());
+        SetPath(root["path"].asString());
+}
 
-    // Re-Open path, and re-init everything (if needed)
-    if (is_open)
-    {
-        Close();
-        Open();
+void QtImageReader::SetPath(const std::string& new_path)
+{
+    if (new_path == "")
+        return;
+
+    if (image && !image->isNull()) {
+        image.reset();
     }
+    path = QString::fromStdString(new_path);
+    Reload(is_open);
+}
+
+void QtImageReader::SetQImage(const QImage& new_image)
+{
+    if (new_image.isNull())
+        return;
+    image = std::make_shared<QImage>(new_image);
+    path = QStringLiteral("");
+    Reload(is_open);
 }
