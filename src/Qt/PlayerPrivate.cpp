@@ -19,6 +19,11 @@
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono milliseconds, high_resolution_clock
 
+#include <fstream>
+#include <cstring>
+#include <sstream>
+#include <ctime>
+
 namespace openshot
 {
     int close_to_sync = 5;
@@ -68,6 +73,19 @@ namespace openshot
         bool enable_adjustment = false;     ///< Toggle desync adjustments ON & OFF (i.e. only adjust when needed)
         float video_diff_threshold = 1.0;   ///< Number of frames difference to trigger an adjustment
 
+        std::ofstream data_file;
+        time_t now = time(0);
+        std::tm *t = std::localtime(&now);
+        std::stringstream file_name;
+        file_name << "Timing_data " << t->tm_hour << " "
+                  << t->tm_min << " " << t->tm_sec << ".csv";
+        data_file.open(file_name.str());
+        data_file << "Jonathan's code" << std::endl;
+        data_file << "video_position, audio_position, video_frame_diff, avg_error" << std::endl;
+        t = NULL;
+        delete t;
+
+
         while (!threadShouldExit()) {
             // Get the start time (to track how long a frame takes to render)
             const auto time1 = std::chrono::high_resolution_clock::now();
@@ -113,6 +131,7 @@ namespace openshot
                 if (speed != 1) {
                     audioPlayback->Seek(video_position);
                 }
+                data_file << video_position << "," << audio_position << "," << video_frame_diff << "," << average_video_diff << std::endl;
             }
 
             // Add video diff to history (for averaging sync delays over time)
@@ -167,6 +186,7 @@ namespace openshot
                 }
             }
         }
+        data_file.close();
     }
 
     // Get the next displayed frame (based on speed and direction)
