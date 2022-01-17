@@ -160,9 +160,6 @@ namespace openshot
             // Calculate the amount of time to sleep (by subtracting the render time)
             auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time + sleep_adjustment);
 
-            // DEBUG
-            std::cout << average_video_diff << "\t" << sleep_adjustment.count() << "\t" << sleep_time.count() << std::endl;
-
             // Sleep if sleep_time is greater than zero after correction
             // (leaving the video frame on the screen for the correct amount of time)
             if (sleep_time > sleep_time.zero() ) {
