@@ -65,8 +65,11 @@ namespace openshot
 
         // Init sleep adjustment code
         float average_video_diff = 0;       ///< Average number of frames difference between audio and video thread
-        bool enable_adjustment = false;     ///< Toggle desync adjustments ON & OFF (i.e. only adjust when needed)
+        bool enable_adjustment = false;     ///< Toggle de-sync adjustments ON & OFF (i.e. only adjust when needed)
         float video_diff_threshold = 1.0;   ///< Number of frames difference to trigger an adjustment
+
+        // DEBUG
+        std::cout << "average_video_diff\tsleep_adjustment\tsleep_time" << std::endl;
 
         while (!threadShouldExit()) {
             // Get the start time (to track how long a frame takes to render)
@@ -75,7 +78,7 @@ namespace openshot
             // Calculate on-screen time for a single frame in microseconds
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             const auto max_sleep = frame_duration * 4; ///< Don't sleep longer than X times a frame duration
-            const auto sleep_adjustment_increment = frame_duration / 100000; ///< Tiny fraction of frame duration
+            const auto sleep_adjustment_increment = frame_duration / 10000; ///< Tiny fraction of frame duration
 
             // Adjust size used in averaging desync calculation
             auto history_size = reader->info.fps.ToInt(); ///< How many values should we average together (i.e. use FPS)
@@ -156,6 +159,9 @@ namespace openshot
 
             // Calculate the amount of time to sleep (by subtracting the render time)
             auto sleep_time = duration_cast<micro_sec>(frame_duration - render_time + sleep_adjustment);
+
+            // DEBUG
+            std::cout << average_video_diff << "\t" << sleep_adjustment.count() << "\t" << sleep_time.count() << std::endl;
 
             // Sleep if sleep_time is greater than zero after correction
             // (leaving the video frame on the screen for the correct amount of time)
