@@ -110,7 +110,10 @@ jobs:
               mingw-w64-x86_64-make
               mingw-w64-x86_64-cmake
               mingw-w64-x86_64-pkgconf
-              mingw-w64-x86_64-qt5
+              mingw-w64-x86_64-qt5-base
+              mingw-w64-x86_64-qt5-svg
+              mingw-w64-x86_64-qt5-winextras
+              mingw-w64-x86_64-qt5-tools
               mingw-w64-x86_64-libvpx
               mingw-w64-x86_64-ffmpeg
               mingw-w64-x86_64-zeromq
