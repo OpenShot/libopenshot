@@ -77,46 +77,48 @@ namespace openshot
         using ms = std::chrono::milliseconds;
         using double_ms = std::chrono::duration<double, ms::period>;
 
-		while (!threadShouldExit() && is_playing) {
+        while (!threadShouldExit() && is_playing) {
             // Calculate on-screen time for a single frame in milliseconds
             const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
 
-			// Cache frames before the other threads need them
-			// Cache frames up to the max frames. Reset to current position
-			// if cache gets too far away from display frame. Cache frames
-			// even when player is paused (i.e. speed 0).
-			while (((position - current_display_frame) < max_concurrent_frames) && is_playing)
-			{
-				// Only cache up till the max_concurrent_frames amount... then sleep
-				try
-				{
-					if (reader) {
-						ZmqLogger::Instance()->AppendDebugMethod("VideoCacheThread::run (cache frame)", "position", position, "current_display_frame", current_display_frame, "max_concurrent_frames", max_concurrent_frames, "needed_frames", (position - current_display_frame));
+            // Cache frames before the other threads need them
+            // Cache frames up to the max frames. Reset to current position
+            // if cache gets too far away from display frame. Cache frames
+            // even when player is paused (i.e. speed 0).
+            while (((position - current_display_frame) < max_concurrent_frames) && is_playing)
+            {
+                // Only cache up till the max_concurrent_frames amount... then sleep
+                try
+                {
+                    if (reader) {
+                        ZmqLogger::Instance()->AppendDebugMethod(
+                            "VideoCacheThread::run (cache frame)",
+                            "position", position,
+                            "current_display_frame", current_display_frame,
+                            "max_concurrent_frames", max_concurrent_frames,
+                            "needed_frames", (position - current_display_frame));
 
-						// Force the frame to be generated
+                        // Force the frame to be generated
                         smallest_frame = reader->GetCache()->GetSmallestFrame();
                         if (smallest_frame && smallest_frame->number > current_display_frame) {
                             // Cache position has gotten too far away from current display frame.
                             // Reset the position to the current display frame.
                             position = current_display_frame;
-						}
-						reader->GetFrame(position);
-					}
+                        }
+                        reader->GetFrame(position);
+                    }
+                }
+                // Ignore out of bounds frame exceptions
+                catch (const OutOfBoundsFrame & e) { }
 
-				}
-				catch (const OutOfBoundsFrame & e)
-				{
-					// Ignore out of bounds frame exceptions
-				}
+                // Increment frame number
+                position++;
+            }
 
-				// Increment frame number
-				position++;
-			}
+            // Sleep for 1 frame length
+            std::this_thread::sleep_for(frame_duration);
+        }
 
-			// Sleep for 1 frame length
-			std::this_thread::sleep_for(frame_duration);
-		}
-
-	return;
+    return;
     }
 }
