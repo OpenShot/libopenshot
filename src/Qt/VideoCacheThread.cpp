@@ -20,7 +20,7 @@
 
 #include <algorithm>
 #include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
+#include <chrono>    // for std::chrono::microseconds
 
 namespace openshot
 {
@@ -57,13 +57,13 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-        // Types for storing time durations in whole and fractional milliseconds
-        using ms = std::chrono::milliseconds;
-        using double_ms = std::chrono::duration<double, ms::period>;
+        // Types for storing time durations in whole and fractional microseconds
+        using micro_sec = std::chrono::microseconds;
+        using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
 		while (!threadShouldExit() && is_playing) {
-            // Calculate on-screen time for a single frame in milliseconds
-            const auto frame_duration = double_ms(1000.0 / reader->info.fps.ToDouble());
+            // Calculate on-screen time for a single frame
+            const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
 
             // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
             // window can be smaller, can thus reduce the bytes per frame)
@@ -112,8 +112,8 @@ namespace openshot
                 }
             }
 
-			// Sleep for 1 frame length
-			std::this_thread::sleep_for(frame_duration);
+			// Sleep for a fraction of frame duration
+			std::this_thread::sleep_for(frame_duration / 4);
 		}
 
 	return;

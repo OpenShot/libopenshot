@@ -100,7 +100,7 @@ namespace openshot
 	, source(NULL)
 	, sampleRate(0.0)
 	, numChannels(0)
-    , buffer_size(12000)
+    , buffer_size(7000)
     , is_playing(false)
 	, time_thread("audio-buffer")
     {

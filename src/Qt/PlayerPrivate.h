@@ -30,6 +30,7 @@ namespace openshot
     class PlayerPrivate : juce::Thread
     {
     std::shared_ptr<openshot::Frame> frame; /// The current frame
+    int64_t playback_frames = 0; /// The # of frames since playback started
 	int64_t video_position; /// The current frame position.
 	int64_t audio_position; /// The current frame position.
 	openshot::ReaderBase *reader; /// The reader which powers this player
