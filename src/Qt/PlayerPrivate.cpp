@@ -21,7 +21,7 @@
 
 namespace openshot
 {
-    int close_to_sync = 5;
+    bool paused = true; // Used to know when the first 'un-paused' loop is.
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
     : renderer(rb), Thread("player"), video_position(1), audio_position(0)
@@ -75,6 +75,7 @@ namespace openshot
             // Pausing Code (if frame has not changed)
             if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length))
             {
+                paused = true;
                 // Set start time to prepare for next playback period and reset frame counter
                 start_time = std::chrono::high_resolution_clock::now();
                 playback_frames = 0;
@@ -82,6 +83,11 @@ namespace openshot
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
                 continue;
+            } else if (paused) {
+                start_time = std::chrono::high_resolution_clock::now();
+                auto adjustment = std::chrono::milliseconds(int(audioPlayback->source->getReaderInfo().duration));
+                start_time += adjustment;
+                paused = false;
             }
 
             // Set the video frame on the video thread and render frame
