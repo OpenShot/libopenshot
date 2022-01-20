@@ -62,6 +62,8 @@ namespace openshot
 	/// Set the current thread's reader
 	void Reader(ReaderBase *new_reader) { reader=new_reader; Play(); };
 
+    int MaxFramesAhead();
+
 	/// Parent class of VideoCacheThread
 	friend class PlayerPrivate;
 	friend class QtPlayer;
