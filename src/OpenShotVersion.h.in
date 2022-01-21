@@ -34,6 +34,7 @@
 #cmakedefine01 HAVE_IMAGEMAGICK
 #cmakedefine01 HAVE_RESVG
 #cmakedefine01 HAVE_OPENCV
+#cmakedefine01 HAVE_OPENMP
 #cmakedefine01 FFMPEG_USE_SWRESAMPLE
 #cmakedefine01 APPIMAGE_BUILD
 

@@ -18,6 +18,7 @@
 #include "CrashHandler.h"
 #include "FrameMapper.h"
 #include "Exceptions.h"
+#include "Settings.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -824,10 +825,16 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		nearby_clips = find_intersecting_clips(requested_frame, 1, true);
 
         // Debug output
+    #ifdef USE_OMP
         ZmqLogger::Instance()->AppendDebugMethod(
             "Timeline::GetFrame (processing frame)",
             "requested_frame", requested_frame,
             "omp_get_thread_num()", omp_get_thread_num());
+    #else
+        ZmqLogger::Instance()->AppendDebugMethod(
+            "Timeline::GetFrame (processing frame)",
+            "requested_frame", requested_frame);
+    #endif
 
         // Init some basic properties about this frame
         int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, info.fps, info.sample_rate, info.channels);

@@ -74,6 +74,7 @@ option(DISABLE_BUNDLED_JSONCPP "Don't fall back to bundled JsonCpp" OFF)
 option(ENABLE_BABL "Use the babl colorspace library, if available" ON)
 option(ENABLE_MAGICK "Use ImageMagick, if available" ON)
 option(ENABLE_OPENCV "Build with OpenCV algorithms (requires Boost, Protobuf 3)" ON)
+option(ENABLE_OPENMP "Use OpenMP parallelism" ON)
 option(ENABLE_RESVG "Use the Rust SVG renderer Resvg (set Resvg_ROOT to dir)" ON)
 option(USE_HW_ACCEL "Enable hardware-accelerated encoding-decoding with FFmpeg 3.4+" ON)
 

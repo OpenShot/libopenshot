@@ -396,18 +396,31 @@ endif()
 ################### OPENMP #####################
 # Check for OpenMP (used for multi-core processing)
 
-# OpenMP is required by FFmpegReader/Writer
-find_package(OpenMP REQUIRED)
+if(NOT DEFINED REQUIRED_OPENMP_OVERRIDE OR NOT REQUIRED_OPENMP_OVERRIDE)
+  # OpenMP is required unless explicitly disabled
+  set_package_properties(OpenMP PROPERTIES TYPE REQUIRED)
+  set(ENABLE_OPENMP TRUE)
+endif()
 
-if(NOT TARGET OpenMP::OpenMP_CXX)
+if(ENABLE_OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_FOUND AND NOT TARGET OpenMP::OpenMP_CXX)
     # Older CMake versions (< 3.9) don't create find targets.
     add_library(OpenMP_TARGET INTERFACE)
     add_library(OpenMP::OpenMP_CXX ALIAS OpenMP_TARGET)
     target_compile_options(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
     target_link_libraries(OpenMP_TARGET INTERFACE ${OpenMP_CXX_FLAGS})
+  endif()
+  if(TARGET OpenMP::OpenMP_CXX)
+    target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+    target_compile_definitions(openshot PUBLIC USE_OPENMP=1)
+  endif()
+else()
+  set(OpenMP_FOUND FALSE)
 endif()
 
-target_link_libraries(openshot PUBLIC OpenMP::OpenMP_CXX)
+set(HAVE_OPENMP ${OpenMP_FOUND} CACHE BOOL "Build with support for parllel algorithms" FORCE)
+mark_as_advanced(HAVE_OPENMP)
 
 ###
 ### ZeroMQ

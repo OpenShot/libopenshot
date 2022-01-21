@@ -13,22 +13,29 @@
 #ifndef OPENSHOT_OPENMP_UTILITIES_H
 #define OPENSHOT_OPENMP_UTILITIES_H
 
-#include <omp.h>
-#include <algorithm>
-#include <string>
+#ifdef USE_OPENMP
+  #include <omp.h>
+  #include <algorithm>
+  #include <string>
 
-#include "Settings.h"
+  #include "Settings.h"
 
-// Calculate the # of OpenMP Threads to allow
-#define OPEN_MP_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->OMP_THREADS) ))
-#define FF_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->FF_THREADS) ))
+  // Calculate the # of OpenMP Threads to allow
+  #define OPEN_MP_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->OMP_THREADS) ))
+  #define FF_NUM_PROCESSORS (std::min(omp_get_num_procs(), std::max(2, openshot::Settings::Instance()->FF_THREADS) ))
 
-// Set max-active-levels to the max supported, if possible
-// (supported_active_levels is OpenMP 5.0 (November 2018) or later, only.)
-#if (_OPENMP >= 201811)
-  #define OPEN_MP_MAX_ACTIVE omp_get_supported_active_levels()
-#else
-  #define OPEN_MP_MAX_ACTIVE OPEN_MP_NUM_PROCESSORS
-#endif
+  // Set max-active-levels to the max supported, if possible
+  // (supported_active_levels is OpenMP 5.0 (November 2018) or later, only.)
+  #if (_OPENMP >= 201811)
+    #define OPEN_MP_MAX_ACTIVE omp_get_supported_active_levels()
+  #else
+    #define OPEN_MP_MAX_ACTIVE OPEN_MP_NUM_PROCESSORS
+  #endif
+
+#else  // USE_OPENMP
+  #define OPEN_MP_NUM_PROCESSORS 1
+  #define FF_NUM_PROCESSORS 1
+  #define OPEN_MP_MAX_ACTIVE 1
+#endif  // USE_OPENMP
 
 #endif
