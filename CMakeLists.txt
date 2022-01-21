@@ -106,9 +106,9 @@ IF (WIN32)
 ENDIF(WIN32)
 
 ############## Code Coverage #########################
-if (ENABLE_COVERAGE AND NOT ENABLE_TESTS)
-  message(WARNING "ENABLE_COVERAGE requires unit tests, forcing ENABLE_TESTS")
-  set(ENABLE_TESTS ON CACHE BOOL "Build unit tests (requires Catch2 or UnitTest++)" FORCE)
+if (ENABLE_COVERAGE AND NOT BUILD_TESTING)
+  message(WARNING "ENABLE_COVERAGE requires unit tests, forcing BUILD_TESTING")
+  set(BUILD_TESTING ON CACHE BOOL "Build unit tests (requires Catch2 or UnitTest++)" FORCE)
 endif()
 
 if (ENABLE_COVERAGE)
@@ -247,11 +247,13 @@ add_feature_info("Unit tests" ${BUILD_TESTING} "Compile unit tests for library f
 ############## COVERAGE REPORTING #################
 if (ENABLE_COVERAGE AND DEFINED UNIT_TEST_TARGETS)
   set(COVERAGE_EXCLUDES
-    "bindings/*"
+    "**/*_wrap.cxx"
     "examples/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/bindings/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/*_autogen/*"
-    "${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_messages/*"
+    "**/moc_*.cpp"
+    "*.pb.cc"
+    "*.pb.h"
+    "src/*.pb.cc"
+    "src/*.pb.h"
     "audio/*"
   )
   setup_target_for_coverage_lcov(
