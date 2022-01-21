@@ -230,10 +230,12 @@ if (ENABLE_MAGICK)
     # Link with ImageMagick library
     target_link_libraries(openshot PUBLIC ImageMagick::Magick++)
 
-    set(HAVE_IMAGEMAGICK TRUE CACHE BOOL "Building with ImageMagick support" FORCE)
-    mark_as_advanced(HAVE_IMAGEMAGICK)
   endif()
+else()
+  set(ImageMagick_FOUND FALSE)
 endif()
+set(HAVE_IMAGEMAGICK ${ImageMagick_FOUND} CACHE BOOL "Building with ImageMagick support" FORCE)
+mark_as_advanced(HAVE_IMAGEMAGICK)
 
 ################### JSONCPP #####################
 # Include jsoncpp headers (needed for JSON parsing)
@@ -294,10 +296,10 @@ if (TARGET Resvg::Resvg)
   target_compile_definitions(openshot PUBLIC USE_RESVG=1)
 
   set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
-  mark_as_advanced(HAVE_RESVG)
 else()
   set(HAVE_RESVG FALSE CACHE BOOL "Building with Resvg support" FORCE)
 endif()
+mark_as_advanced(HAVE_RESVG)
 
 ###
 ### Qt Toolkit
@@ -432,10 +434,8 @@ endif()
 # Find babl library for colourspace conversion (used for advanced chroma keying
 find_package(babl)
 
-if (babl_FOUND)
-  set(HAVE_BABL TRUE CACHE BOOL "Building with babl support" FORCE)
-  mark_as_advanced(HAVE_BABL)
-endif()
+set(HAVE_BABL ${babl_FOUND} CACHE BOOL "Building with babl support" FORCE)
+mark_as_advanced(HAVE_BABL)
 
 if (TARGET babl_lib)
   target_compile_definitions(openshot PUBLIC USE_BABL=1)
@@ -455,6 +455,7 @@ OpenCV version 4.5.1 contains header errors which make it unable to be used with
 See https://github.com/opencv/opencv/issues/19260]])
     set(ENABLE_OPENCV FALSE CACHE BOOL
       "Build with OpenCV algorithms (requires Protobuf 3)" FORCE)
+    set(OpenCV_FOUND FALSE)
   else()
     ###
     ### Protocol Buffers
@@ -497,8 +498,6 @@ See https://github.com/opencv/opencv/issues/19260]])
       opencv_dnn
       opencv_tracking
     )
-    set(HAVE_OPENCV TRUE CACHE BOOL "Building with OpenCV effects" FORCE)
-    mark_as_advanced(HAVE_OPENCV)
 
     # Keep track of OpenCV version, to embed in our version header
     set(OPENCV_VERSION_STR "${OpenCV_VERSION}" CACHE STRING "OpenCV version linked with" FORCE)
@@ -510,7 +509,12 @@ See https://github.com/opencv/opencv/issues/19260]])
     endif()
 
   endif()
+else()
+  set(OpenCV_FOUND FALSE)
 endif()  # ENABLE_OPENCV
+
+set(HAVE_OPENCV ${OpenCV_FOUND} CACHE BOOL "Building with OpenCV effects" FORCE)
+mark_as_advanced(HAVE_OPENCV)
 add_feature_info("OpenCV algorithms" ENABLE_OPENCV "Use OpenCV algorithms")
 
 ###############  LINK LIBRARY  #################
