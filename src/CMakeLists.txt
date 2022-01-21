@@ -285,20 +285,22 @@ if(DEFINED ENV{RESVGDIR} AND NOT DEFINED Resvg_ROOT)
   set(Resvg_ROOT $ENV{RESVGDIR})
 endif()
 
-# Find resvg library (used for rendering svg files)
-find_package(Resvg)
+if(ENABLE_RESVG)
+  # Find resvg library (used for rendering svg files)
+  find_package(Resvg)
 
-# Include resvg headers (optional SVG library)
-if (TARGET Resvg::Resvg)
-  #include_directories(${Resvg_INCLUDE_DIRS})
-  target_link_libraries(openshot PUBLIC Resvg::Resvg)
+  # Include resvg headers (optional SVG library)
+  if (TARGET Resvg::Resvg)
+    #include_directories(${Resvg_INCLUDE_DIRS})
+    target_link_libraries(openshot PUBLIC Resvg::Resvg)
 
-  target_compile_definitions(openshot PUBLIC USE_RESVG=1)
-
-  set(HAVE_RESVG TRUE CACHE BOOL "Building with Resvg support" FORCE)
+    target_compile_definitions(openshot PUBLIC USE_RESVG=1)
+  endif()
 else()
-  set(HAVE_RESVG FALSE CACHE BOOL "Building with Resvg support" FORCE)
+  set(Resvg_FOUND FALSE)
 endif()
+
+set(HAVE_RESVG ${Resvg_FOUND} CACHE BOOL "Building with Resvg support" FORCE)
 mark_as_advanced(HAVE_RESVG)
 
 ###
@@ -431,16 +433,20 @@ endif()
 ### Babl
 ###
 
-# Find babl library for colourspace conversion (used for advanced chroma keying
-find_package(babl)
+if (ENABLE_BABL)
+  # Find babl colourspace conversion lib (used for advanced chroma keying
+  find_package(babl)
+
+  if (TARGET babl_lib)
+    target_compile_definitions(openshot PUBLIC USE_BABL=1)
+    target_link_libraries(openshot PUBLIC babl_lib)
+  endif ()
+else()
+  set(babl_FOUND FALSE)
+endif()
 
 set(HAVE_BABL ${babl_FOUND} CACHE BOOL "Building with babl support" FORCE)
 mark_as_advanced(HAVE_BABL)
-
-if (TARGET babl_lib)
-  target_compile_definitions(openshot PUBLIC USE_BABL=1)
-  target_link_libraries(openshot PUBLIC babl_lib)
-endif ()
 
 ################## OPENCV ###################
 if(ENABLE_OPENCV)
