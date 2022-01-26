@@ -343,7 +343,6 @@ void Timeline::AddClip(Clip* clip)
 	clip->ParentTimeline(this);
 
 	// Clear cache of clip and nested reader (if any)
-	clip->cache.Clear();
 	if (clip->Reader() && clip->Reader()->GetCache())
 		clip->Reader()->GetCache()->Clear();
 
@@ -734,9 +733,8 @@ void Timeline::Close()
 	// Mark timeline as closed
 	is_open = false;
 
-	// Clear cache
-	if (final_cache)
-		final_cache->Clear();
+	// Clear all cache
+    ClearAllCache();
 }
 
 // Open the reader (and start consuming resources)
@@ -754,7 +752,6 @@ bool Timeline::isEqual(double a, double b)
 // Get an openshot::Frame object for a specific frame number of this reader.
 std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 {
-
 	// Adjust out of bounds frame number
 	if (requested_frame < 1)
 		requested_frame = 1;
@@ -788,9 +785,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 			// Return cached frame
 			return frame;
 		}
-
-		// Minimum number of frames to process (for performance reasons)
-		int minimum_frames = OPEN_MP_NUM_PROCESSORS;
 
 		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
@@ -1474,7 +1468,9 @@ void Timeline::ClearAllCache() {
     const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Clear primary cache
-    final_cache->Clear();
+    if (final_cache) {
+        final_cache->Clear();
+    }
 
     // Loop through all clips
     for (auto clip : clips)

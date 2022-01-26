@@ -19,6 +19,7 @@
 #include "AudioReaderSource.h"
 #include "AudioDevices.h"
 #include "AudioReaderSource.h"
+#include "Qt/VideoCacheThread.h"
 
 #include <OpenShotAudio.h>
 #include <AppConfig.h>
@@ -75,19 +76,21 @@ public:
 		int buffer_size;
 		bool is_playing;
 		juce::TimeSliceThread time_thread;
+        openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
+
 		/// Constructor
-		AudioPlaybackThread();
+		AudioPlaybackThread(openshot::VideoCacheThread* cache);
 		/// Destructor
 		~AudioPlaybackThread();
 
 		/// Set the current thread's reader
 		void Reader(openshot::ReaderBase *reader);
 
+		/// Return the current audio transport buffer size (to determine latency)
+		int getBufferSize() { return buffer_size; }
+
 		/// Get the current frame object (which is filling the buffer)
 		std::shared_ptr<openshot::Frame> getFrame();
-
-		/// Get the current frame number being played
-		int64_t getCurrentFramePosition();
 
 		/// Play the audio
 		void Play();

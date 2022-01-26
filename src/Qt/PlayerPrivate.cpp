@@ -17,19 +17,20 @@
 
 #include <queue>
 #include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono milliseconds, high_resolution_clock
+#include <chrono>    // for std::chrono microseconds, high_resolution_clock
 
 namespace openshot
 {
     int close_to_sync = 5;
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
-    : renderer(rb), Thread("player"), video_position(1), audio_position(0)
-    , audioPlayback(new openshot::AudioPlaybackThread())
-    , videoPlayback(new openshot::VideoPlaybackThread(rb))
-    , videoCache(new openshot::VideoCacheThread())
-    , speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000)
-    { }
+    : renderer(rb), Thread("player"), video_position(1), audio_position(0),
+      speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000), playback_frames(0)
+    {
+        videoCache = new openshot::VideoCacheThread();
+        audioPlayback = new openshot::AudioPlaybackThread(videoCache);
+        videoPlayback = new openshot::VideoPlaybackThread(rb);
+    }
 
     // Destructor
     PlayerPrivate::~PlayerPrivate()
@@ -61,26 +62,34 @@ namespace openshot
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
-        // Time-based video sync
-        auto start_time = std::chrono::high_resolution_clock::now(); ///< timestamp playback starts
+        // Calculate latency of audio thread (i.e. how many microseconds before samples are audible)
+        // TODO: This is the experimental amount of latency I have on my system audio playback
+        //const auto audio_latency = double_micro_sec(1000000.0 * (audioPlayback->getBufferSize() / reader->info.sample_rate));
+        const auto audio_latency = double_micro_sec(240000);
+
+        // Init start_time of playback
+        std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> start_time;
+        start_time = std::chrono::time_point_cast<micro_sec>(std::chrono::high_resolution_clock::now()); ///< timestamp playback starts
 
         while (!threadShouldExit()) {
             // Calculate on-screen time for a single frame
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             const auto max_sleep = frame_duration * 4; ///< Don't sleep longer than X times a frame duration
 
-            // Get the current video frame (if it's different)
+            // Get the current video frame
             frame = getFrame();
 
             // Pausing Code (if frame has not changed)
-            if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length))
+            if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length) || !videoCache->isReady())
             {
-                // Set start time to prepare for next playback period and reset frame counter
-                start_time = std::chrono::high_resolution_clock::now();
-                playback_frames = 0;
-
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
+                audioPlayback->Seek(video_position);
+
+                // Reset current playback start time
+                start_time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now());
+                playback_frames = 0;
+
                 continue;
             }
 
@@ -91,21 +100,10 @@ namespace openshot
             // Keep track of the last displayed frame
             last_video_position = video_position;
 
-            // How many frames ahead or behind is the video thread?
-            // Only calculate this if a reader contains both an audio and video thread
-            int64_t video_frame_diff = 0;
-            if (reader->info.has_audio && reader->info.has_video) {
-                audio_position = audioPlayback->getCurrentFramePosition();
-                video_frame_diff = video_position - audio_position;
-                // Seek to audio frame again (since we are not in normal speed, and not paused)
-                if (speed != 1) {
-                    audioPlayback->Seek(video_position);
-                }
-            }
-
             // Calculate the diff between 'now' and the predicted frame end time
             const auto current_time = std::chrono::high_resolution_clock::now();
-            const auto remaining_time = double_micro_sec(start_time + (frame_duration * playback_frames) - current_time);
+            const auto remaining_time = double_micro_sec(start_time + audio_latency +
+                    (frame_duration * playback_frames) - current_time);
 
             // Sleep to display video image on screen
             if (remaining_time > remaining_time.zero() ) {
@@ -149,6 +147,13 @@ namespace openshot
         // ...
     }
     return std::shared_ptr<openshot::Frame>();
+    }
+
+    // Seek to a new position
+    void PlayerPrivate::Seek(int64_t new_position)
+    {
+        video_position = new_position;
+        last_video_position = 0;
     }
 
     // Start video/audio playback

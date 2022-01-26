@@ -655,24 +655,24 @@ void FrameMapper::Close()
 
 		// Close internal reader
 		reader->Close();
-
-		// Clear the fields & frames lists
-		fields.clear();
-		frames.clear();
-
-		// Mark as dirty
-		is_dirty = true;
-
-		// Clear cache
-		final_cache.Clear();
-
-		// Deallocate resample buffer
-		if (avr) {
-			SWR_CLOSE(avr);
-			SWR_FREE(&avr);
-			avr = NULL;
-		}
 	}
+
+    // Clear the fields & frames lists
+    fields.clear();
+    frames.clear();
+
+    // Mark as dirty
+    is_dirty = true;
+
+    // Clear cache
+    final_cache.Clear();
+
+    // Deallocate resample buffer
+    if (avr) {
+        SWR_CLOSE(avr);
+        SWR_FREE(&avr);
+        avr = NULL;
+    }
 }
 
 

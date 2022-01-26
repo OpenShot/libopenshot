@@ -47,8 +47,6 @@ namespace openshot {
 		Json::Value add_property_choice_json(std::string name, int value, int selected_value) const;
 
 	public:
-		CacheMemory cache;
-
 		/// Constructor for the base clip
 		ClipBase() :
 			position(0.0),

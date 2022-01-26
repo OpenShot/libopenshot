@@ -27,7 +27,8 @@ namespace openshot
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false),
-	reader(NULL), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 2), current_display_frame(1)
+	reader(NULL), current_display_frame(1), cached_frame_count(0),
+	min_frames_ahead(12), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
     {
     }
 
@@ -39,8 +40,17 @@ namespace openshot
 	// Seek the reader to a particular frame number
 	void VideoCacheThread::Seek(int64_t new_position)
 	{
-		current_display_frame = new_position;
+        requested_display_frame = new_position;
 	}
+
+    // Seek the reader to a particular frame number and optionally start the pre-roll
+    void VideoCacheThread::Seek(int64_t new_position, bool start_preroll)
+    {
+	    if (start_preroll && reader && reader->GetCache() && !reader->GetCache()->Contains(new_position)) {
+            cached_frame_count = 0;
+	    }
+        Seek(new_position);
+    }
 
 	// Play the video
 	void VideoCacheThread::Play() {
@@ -52,6 +62,11 @@ namespace openshot
 	void VideoCacheThread::Stop() {
 		// Stop playing
 		is_playing = false;
+	}
+
+	// Is cache ready for playback (pre-roll)
+    bool VideoCacheThread::isReady() {
+	    return (cached_frame_count > min_frames_ahead);
 	}
 
     // Start the thread
@@ -73,13 +88,18 @@ namespace openshot
                 bytes_per_frame = last_cached_frame->GetBytes();
             }
 
-            // Calculate # of frames on Timeline cache
+            // Calculate # of frames on Timeline cache (when paused)
             if (reader->GetCache() && reader->GetCache()->GetMaxBytes() > 0) {
-                // Use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
-                max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
-                if (max_frames_ahead > 1000) {
-                    // Ignore values that are too large, and default to a safer value
-                    max_frames_ahead = OPEN_MP_NUM_PROCESSORS * 2;
+                if (speed == 0) {
+                    // When paused, use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
+                    max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
+                    if (max_frames_ahead > 300) {
+                        // Ignore values that are too large, and default to a safer value
+                        max_frames_ahead = 300;
+                    }
+                } else {
+                    // When playing back video (speed == 1), keep cache # small
+                    max_frames_ahead = min_frames_ahead;
                 }
             }
 
@@ -100,7 +120,9 @@ namespace openshot
                 ending_frame = starting_frame - max_frames_ahead;
             }
 
+            // Loop through range of frames (and cache them)
             for (int64_t cache_frame = starting_frame; cache_frame != ending_frame; cache_frame += increment) {
+                cached_frame_count++;
                 if (reader && reader->GetCache() && !reader->GetCache()->Contains(cache_frame)) {
                     try
                     {
@@ -110,7 +132,19 @@ namespace openshot
                     }
                     catch (const OutOfBoundsFrame & e) {  }
                 }
+                // Check if the user has seeked outside the cache range
+                if (requested_display_frame != current_display_frame) {
+                    // cache will restart at a new position
+                    if (speed >= 0 && (requested_display_frame < starting_frame || requested_display_frame > ending_frame)) {
+                        break;
+                    } else if (speed < 0 && (requested_display_frame > starting_frame || requested_display_frame < ending_frame)) {
+                        break;
+                    }
+                }
             }
+
+            // Update current display frame
+            current_display_frame = requested_display_frame;
 
 			// Sleep for a fraction of frame duration
 			std::this_thread::sleep_for(frame_duration / 4);

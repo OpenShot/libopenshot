@@ -155,7 +155,7 @@ namespace openshot
     	// Check for seek
     	if (reader && threads_started && new_frame > 0) {
     		// Notify cache thread that seek has occurred
-    		p->videoCache->Seek(new_frame);
+    		p->videoCache->Seek(new_frame, true);
 
             // Notify audio thread that seek has occurred
             p->audioPlayback->Seek(new_frame);

@@ -92,7 +92,7 @@ namespace openshot
     }
 
     // Constructor
-    AudioPlaybackThread::AudioPlaybackThread()
+    AudioPlaybackThread::AudioPlaybackThread(openshot::VideoCacheThread* cache)
 	: juce::Thread("audio-playback")
 	, player()
 	, transport()
@@ -103,6 +103,7 @@ namespace openshot
     , buffer_size(7000)
     , is_playing(false)
 	, time_thread("audio-buffer")
+	, videoCache(cache)
     {
 	}
 
@@ -125,8 +126,8 @@ namespace openshot
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
-		// TODO: Update transport or audio source's sample rate, incase the sample rate
-		// is different than the original Reader
+		// Set video cache thread
+		source->setVideoCache(videoCache);
 
 		// Mark as 'playing'
 		Play();
@@ -137,12 +138,6 @@ namespace openshot
     {
 	if (source) return source->getFrame();
 	return std::shared_ptr<openshot::Frame>();
-    }
-
-    // Get the currently playing frame number
-    int64_t AudioPlaybackThread::getCurrentFramePosition()
-    {
-	return source ? source->getEstimatedFrame() : 0;
     }
 
 	// Seek the audio thread

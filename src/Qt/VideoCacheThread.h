@@ -32,9 +32,13 @@ namespace openshot
 	std::shared_ptr<Frame> last_cached_frame;
 	int speed;
 	bool is_playing;
+	int64_t requested_display_frame;
 	int64_t current_display_frame;
+	int64_t cached_frame_count = 0;
 	ReaderBase *reader;
+	int min_frames_ahead;
 	int max_frames_ahead;
+
 
 	/// Constructor
 	VideoCacheThread();
@@ -47,8 +51,11 @@ namespace openshot
 	/// Play the video
 	void Play();
 
-	/// Seek the reader to a particular frame number
-	void Seek(int64_t new_position);
+    /// Seek the reader to a particular frame number
+    void Seek(int64_t new_position);
+
+	/// Seek the reader to a particular frame number and optionally start the pre-roll
+	void Seek(int64_t new_position, bool start_preroll);
 
     /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     void setSpeed(int new_speed) { speed = new_speed; }
@@ -65,8 +72,11 @@ namespace openshot
 	/// Parent class of VideoCacheThread
 	friend class PlayerPrivate;
 	friend class QtPlayer;
-    };
 
+    public:
+        /// Is cache ready for video/audio playback
+        bool isReady();
+    };
 }
 
 #endif // OPENSHOT_VIDEO_CACHE_THREAD_H

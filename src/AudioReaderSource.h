@@ -14,6 +14,7 @@
 #define OPENSHOT_AUDIOREADERSOURCE_H
 
 #include "ReaderBase.h"
+#include "Qt/VideoCacheThread.h"
 
 #include <AppConfig.h>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -42,6 +43,7 @@ namespace openshot
 		int64_t frame_position; /// The position of the current frame's buffer
 		double estimated_frame; /// The estimated frame position of the currently playing buffer
 		int estimated_samples_per_frame; /// The estimated samples per frame of video
+        openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
 
 		/// Get more samples from the reader
 		void GetMoreSamplesFromReader();
@@ -102,6 +104,9 @@ namespace openshot
 	    void setSpeed(int new_speed) { speed = new_speed; }
 	    /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	    int getSpeed() const { return speed; }
+
+	    /// Set playback video cache thread (for pre-roll reference)
+	    void setVideoCache(openshot::VideoCacheThread *newCache) { videoCache = newCache; }
 
 	    /// Set Reader
 	    void Reader(ReaderBase *audio_reader) { reader = audio_reader; }

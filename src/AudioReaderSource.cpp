@@ -20,7 +20,7 @@ using namespace openshot;
 
 // Constructor that reads samples from a reader
 AudioReaderSource::AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size)
-	: reader(audio_reader), frame_number(starting_frame_number),
+	: reader(audio_reader), frame_number(starting_frame_number), videoCache(NULL),
 	  size(buffer_size), position(0), frame_position(0), estimated_frame(0), speed(1) {
 
 	// Initialize an audio buffer (based on reader)
@@ -168,7 +168,7 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 		int number_to_copy = 0;
 
 		// Do we need more samples?
-		if (speed == 1) {
+		if (speed == 1 && videoCache->isReady()) {
 			// Only refill buffers if speed is normal
 			if ((reader && reader->IsOpen() && !frame) or
 				(reader && reader->IsOpen() && buffer_samples - position < info.numSamples))
@@ -177,6 +177,10 @@ void AudioReaderSource::getNextAudioBlock(const juce::AudioSourceChannelInfo& in
 		} else {
 			// Fill buffer with silence and clear current frame
 			info.buffer->clear();
+
+			// Empty internal buffer also
+            buffer->clear();
+            position = 0;
 			return;
 		}
 
