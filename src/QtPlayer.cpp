@@ -69,6 +69,20 @@ namespace openshot
         return devs.getNames();
     }
 
+    // Set the source JSON of an openshot::Timelime
+    void QtPlayer::SetTimelineSource(const std::string &json) {
+        // Create timeline instance (720p, since we have no re-scaling in this player yet)
+        reader = new Timeline(1280, 720, openshot::Fraction(30, 1), 44100, 2, openshot::LAYOUT_STEREO);
+
+        Timeline* tm = (Timeline*)reader;
+        tm->SetJson(json);
+        tm->DisplayInfo();
+        tm->Open();
+
+        // Set the reader
+        Reader(reader);
+    }
+
     void QtPlayer::SetSource(const std::string &source)
     {
     	FFmpegReader *ffreader = new FFmpegReader(source);
@@ -143,14 +157,11 @@ namespace openshot
     		// Notify cache thread that seek has occurred
     		p->videoCache->Seek(new_frame);
 
+            // Notify audio thread that seek has occurred
+            p->audioPlayback->Seek(new_frame);
+
     		// Update current position
-    		p->video_position = new_frame;
-
-    		// Clear last position (to force refresh)
-    		p->last_video_position = 0;
-
-    		// Notify audio thread that seek has occurred
-    		p->audioPlayback->Seek(new_frame);
+    		p->Seek(new_frame);
     	}
     }
 

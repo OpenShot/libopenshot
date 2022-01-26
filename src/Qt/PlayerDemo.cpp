@@ -136,8 +136,23 @@ void PlayerDemo::open(bool checked)
     const QString filename = QFileDialog::getOpenFileName(this, "Open Video File");
     if (filename.isEmpty()) return;
 
-    // Create FFmpegReader and open file
-    player->SetSource(filename.toStdString());
+    // Open *.osp file (read JSON into variable)
+    QString project_json = "";
+    if (filename.endsWith(".osp")) {
+        QFile file(filename);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+        while (!file.atEnd()) {
+            QByteArray line = file.readLine();
+            project_json += line;
+        }
+
+        // Set source from project JSON
+        player->SetTimelineSource(project_json.toStdString());
+    } else {
+        // Set source from filepath
+        player->SetSource(filename.toStdString());
+    }
 
     // Set aspect ratio of widget
     video->SetAspectRatio(player->Reader()->info.display_ratio, player->Reader()->info.pixel_ratio);
