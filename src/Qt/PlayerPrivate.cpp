@@ -62,11 +62,6 @@ namespace openshot
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
-        // Calculate latency of audio thread (i.e. how many microseconds before samples are audible)
-        // TODO: This is the experimental amount of latency I have on my system audio playback
-        //const auto audio_latency = double_micro_sec(1000000.0 * (audioPlayback->getBufferSize() / reader->info.sample_rate));
-        const auto audio_latency = double_micro_sec(240000);
-
         // Init start_time of playback
         std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> start_time;
         start_time = std::chrono::time_point_cast<micro_sec>(std::chrono::high_resolution_clock::now()); ///< timestamp playback starts
@@ -102,7 +97,7 @@ namespace openshot
 
             // Calculate the diff between 'now' and the predicted frame end time
             const auto current_time = std::chrono::high_resolution_clock::now();
-            const auto remaining_time = double_micro_sec(start_time + audio_latency +
+            const auto remaining_time = double_micro_sec(start_time +
                     (frame_duration * playback_frames) - current_time);
 
             // Sleep to display video image on screen

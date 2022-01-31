@@ -31,33 +31,21 @@ namespace openshot
 	class AudioReaderSource : public juce::PositionableAudioSource
 	{
 	private:
-		int position; /// The position of the audio source (index of buffer)
-		bool repeat; /// Repeat the audio source when finished
-		int size; /// The size of the internal buffer
-		juce::AudioBuffer<float> *buffer; /// The audio sample buffer
-		int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	    int stream_position; /// The absolute stream position (required by PositionableAudioSource, but ignored)
+		int frame_position; /// The frame position (current frame for audio playback)
+		int speed;          /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 
 		ReaderBase *reader; /// The reader to pull samples from
-		int64_t frame_number; /// The current frame number
 		std::shared_ptr<Frame> frame; /// The current frame object that is being read
-		int64_t frame_position; /// The position of the current frame's buffer
-		double estimated_frame; /// The estimated frame position of the currently playing buffer
-		int estimated_samples_per_frame; /// The estimated samples per frame of video
+		int64_t sample_position; /// The position of the current frame's audio buffer
         openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
-
-		/// Get more samples from the reader
-		void GetMoreSamplesFromReader();
-
-		/// Reverse an audio buffer (for backwards audio)
-		juce::AudioBuffer<float>* reverse_buffer(juce::AudioBuffer<float>* buffer);
 
 	public:
 
 		/// @brief Constructor that reads samples from a reader
 		/// @param audio_reader This reader provides constant samples from a ReaderBase derived class
 		/// @param starting_frame_number This is the frame number to start reading samples from the reader.
-		/// @param buffer_size The max number of samples to keep in the buffer at one time.
-		AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number, int buffer_size);
+		AudioReaderSource(ReaderBase *audio_reader, int64_t starting_frame_number);
 
 		/// Destructor
 		~AudioReaderSource();
@@ -74,31 +62,23 @@ namespace openshot
 
 		/// @brief Set the next read position of this source
 		/// @param newPosition The sample # to start reading from
-		void setNextReadPosition (juce::int64 newPosition);
+		void setNextReadPosition (juce::int64 newPosition) { stream_position = newPosition; };
 
 		/// Get the next read position of this source
-		juce::int64 getNextReadPosition() const;
+		juce::int64 getNextReadPosition() const { return stream_position; };
 
 		/// Get the total length (in samples) of this audio source
 		juce::int64 getTotalLength() const;
 
-		/// Determines if this audio source should repeat when it reaches the end
-		bool isLooping() const;
+		/// Looping is not support in OpenShot audio playback (this is always false)
+		bool isLooping() const { return false; };
 
-		/// @brief Set if this audio source should repeat when it reaches the end
+		/// @brief This method is ignored (we do not support looping audio playback)
 		/// @param shouldLoop Determines if the audio source should repeat when it reaches the end
-		void setLooping (bool shouldLoop);
-
-		/// Update the internal buffer used by this source
-		void setBuffer (juce::AudioBuffer<float> *audio_buffer);
-
-	    const ReaderInfo & getReaderInfo() const { return reader->info; }
+		void setLooping (bool shouldLoop) {  };
 
 	    /// Return the current frame object
 	    std::shared_ptr<Frame> getFrame() const { return frame; }
-
-	    /// Get the estimate frame that is playing at this moment
-	    int64_t getEstimatedFrame() const { return int64_t(estimated_frame); }
 
 	    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 	    void setSpeed(int new_speed) { speed = new_speed; }
@@ -114,7 +94,7 @@ namespace openshot
 	    ReaderBase* Reader() const { return reader; }
 
 	    /// Seek to a specific frame
-	    void Seek(int64_t new_position) { frame_number = new_position; estimated_frame = new_position; }
+	    void Seek(int64_t new_position) { frame_position = new_position; sample_position=0; }
 
 	};
 

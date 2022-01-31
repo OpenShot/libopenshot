@@ -44,14 +44,18 @@ private:
 		AudioDeviceManagerSingleton(){ initialise_error=""; };
 
 		/// Private variable to keep track of singleton instance
-		static AudioDeviceManagerSingleton * m_pInstance;
+		static AudioDeviceManagerSingleton* m_pInstance;
 
 public:
 		/// Error found during JUCE initialise method
 		std::string initialise_error;
 
-		/// Override with no channels and no preferred audio device
-		static AudioDeviceManagerSingleton * Instance();
+		/// Override with default sample rate & channels (44100, 2) and no preferred audio device
+		static AudioDeviceManagerSingleton* Instance();
+
+        /// Override with custom sample rate & channels and no preferred audio device
+        /// sample rate and channels are only set on 1st call (when singleton is created)
+        static AudioDeviceManagerSingleton* Instance(int rate, int channels);
 
 		/// Public device manager property
 		juce::AudioDeviceManager audioDeviceManager;
@@ -72,8 +76,6 @@ public:
 		double sampleRate;
 		int numChannels;
 		juce::WaitableEvent play;
-		juce::WaitableEvent played;
-		int buffer_size;
 		bool is_playing;
 		juce::TimeSliceThread time_thread;
         openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
@@ -85,9 +87,6 @@ public:
 
 		/// Set the current thread's reader
 		void Reader(openshot::ReaderBase *reader);
-
-		/// Return the current audio transport buffer size (to determine latency)
-		int getBufferSize() { return buffer_size; }
 
 		/// Get the current frame object (which is filling the buffer)
 		std::shared_ptr<openshot::Frame> getFrame();
