@@ -64,7 +64,7 @@ namespace openshot
 
         // Init start_time of playback
         std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> start_time;
-        start_time = std::chrono::time_point_cast<micro_sec>(std::chrono::high_resolution_clock::now()); ///< timestamp playback starts
+        start_time = std::chrono::time_point_cast<micro_sec>(std::chrono::system_clock::now()); ///< timestamp playback starts
 
         while (!threadShouldExit()) {
             // Calculate on-screen time for a single frame
@@ -82,7 +82,7 @@ namespace openshot
                 audioPlayback->Seek(video_position);
 
                 // Reset current playback start time
-                start_time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now());
+                start_time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now());
                 playback_frames = 0;
 
                 continue;
@@ -96,7 +96,7 @@ namespace openshot
             last_video_position = video_position;
 
             // Calculate the diff between 'now' and the predicted frame end time
-            const auto current_time = std::chrono::high_resolution_clock::now();
+            const auto current_time = std::chrono::system_clock::now();
             const auto remaining_time = double_micro_sec(start_time +
                     (frame_duration * playback_frames) - current_time);
 
