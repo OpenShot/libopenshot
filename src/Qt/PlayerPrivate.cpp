@@ -75,7 +75,11 @@ namespace openshot
             frame = getFrame();
 
             // Pausing Code (if frame has not changed)
-            if ((speed == 0 && video_position == last_video_position) || (video_position > reader->info.video_length) || !videoCache->isReady())
+            // Also pause at end of timeline, and pause if 'playing' and
+            // the pre-roll is not yet ready
+            if ((speed == 0 && video_position == last_video_position) ||
+                (video_position > reader->info.video_length) ||
+                (speed == 1 && !videoCache->isReady()))
             {
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
