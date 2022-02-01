@@ -16,7 +16,6 @@
 #include "Exceptions.h"
 #include "Frame.h"
 #include "OpenMPUtilities.h"
-#include "ZmqLogger.h"
 
 #include <algorithm>
 #include <thread>    // for std::this_thread::sleep_for
@@ -28,7 +27,7 @@ namespace openshot
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(1), is_playing(false),
 	reader(NULL), current_display_frame(1), cached_frame_count(0),
-	min_frames_ahead(24), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
+	min_frames_ahead(12), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
     {
     }
 
