@@ -71,9 +71,6 @@ namespace openshot
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             const auto max_sleep = frame_duration * 4; ///< Don't sleep longer than X times a frame duration
 
-            // Get the current video frame
-            frame = getFrame();
-
             // Pausing Code (if frame has not changed)
             // Also pause at end of timeline, and pause if 'playing' and
             // the pre-roll is not yet ready
@@ -91,6 +88,9 @@ namespace openshot
 
                 continue;
             }
+
+            // Get the current video frame
+            frame = getFrame();
 
             // Set the video frame on the video thread and render frame
             videoPlayback->frame = frame;

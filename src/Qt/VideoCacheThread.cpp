@@ -79,6 +79,7 @@ namespace openshot
 		while (!threadShouldExit() && is_playing) {
             // Calculate on-screen time for a single frame
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
+            int current_speed = speed;
 
             // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
             // window can be smaller, can thus reduce the bytes per frame)
@@ -140,6 +141,10 @@ namespace openshot
                     } else if (speed < 0 && (requested_display_frame > starting_frame || requested_display_frame < ending_frame)) {
                         break;
                     }
+                }
+                // Check if playback speed changed (if so, break out of cache loop)
+                if (current_speed != speed) {
+                    break;
                 }
             }
 
