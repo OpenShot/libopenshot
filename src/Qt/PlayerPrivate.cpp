@@ -80,7 +80,6 @@ namespace openshot
             {
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
-                audioPlayback->Seek(video_position);
 
                 // Reset current playback start time
                 start_time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now());
