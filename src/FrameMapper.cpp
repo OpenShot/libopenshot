@@ -82,6 +82,15 @@ void FrameMapper::AddField(Field field)
 	field_toggle = (field_toggle ? false : true);
 }
 
+// Clear both the fields & frames lists
+void FrameMapper::Clear() {
+    // Clear the fields & frames lists
+    fields.clear();
+    fields.shrink_to_fit();
+    frames.clear();
+    frames.shrink_to_fit();
+}
+
 // Use the original and target frame rates and a pull-down technique to create
 // a mapping between the original fields and frames or a video to a new frame rate.
 // This might repeat or skip fields and frames of the original video, depending on
@@ -96,8 +105,7 @@ void FrameMapper::Init()
 		return;
 
 	// Clear the fields & frames lists
-	fields.clear();
-	frames.clear();
+	Clear();
 
 	// Find parent position (if any)
     Clip *parent = (Clip *) ParentClip();
@@ -309,6 +317,7 @@ void FrameMapper::Init()
 
 	// Clear the internal fields list (no longer needed)
 	fields.clear();
+	fields.shrink_to_fit();
 }
 
 MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
@@ -658,8 +667,7 @@ void FrameMapper::Close()
 	}
 
     // Clear the fields & frames lists
-    fields.clear();
-    frames.clear();
+    Clear();
 
     // Mark as dirty
     is_dirty = true;

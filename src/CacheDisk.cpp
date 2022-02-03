@@ -135,9 +135,7 @@ void CacheDisk::CalculateRanges() {
 // Default destructor
 CacheDisk::~CacheDisk()
 {
-	frames.clear();
-	frame_numbers.clear();
-	ordered_frame_numbers.clear();
+    Clear();
 
 	// remove mutex
 	delete cacheMutex;
@@ -408,9 +406,11 @@ void CacheDisk::Clear()
 	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Clear all containers
-	frames.clear();
-	frame_numbers.clear();
-	ordered_frame_numbers.clear();
+    frames.clear();
+    frame_numbers.clear();
+    frame_numbers.shrink_to_fit();
+    ordered_frame_numbers.clear();
+    ordered_frame_numbers.shrink_to_fit();
 	needs_range_processing = true;
 	frame_size_bytes = 0;
 

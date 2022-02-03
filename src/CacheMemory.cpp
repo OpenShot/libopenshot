@@ -36,11 +36,9 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 // Default destructor
 CacheMemory::~CacheMemory()
 {
-	frames.clear();
-	frame_numbers.clear();
-	ordered_frame_numbers.clear();
+    Clear();
 
-	// remove mutex
+    // remove mutex
 	delete cacheMutex;
 }
 
@@ -270,7 +268,9 @@ void CacheMemory::Clear()
 
 	frames.clear();
 	frame_numbers.clear();
+	frame_numbers.shrink_to_fit();
 	ordered_frame_numbers.clear();
+	ordered_frame_numbers.shrink_to_fit();
 	needs_range_processing = true;
 }
 
