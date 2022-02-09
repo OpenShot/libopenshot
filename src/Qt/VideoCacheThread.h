@@ -31,13 +31,14 @@ namespace openshot
 	protected:
 	std::shared_ptr<Frame> last_cached_frame;
 	int speed;
+	int last_speed;
 	bool is_playing;
 	int64_t requested_display_frame;
 	int64_t current_display_frame;
 	int64_t cached_frame_count = 0;
 	ReaderBase *reader;
-	int min_frames_ahead;
-	int max_frames_ahead;
+	int64_t min_frames_ahead;
+    int64_t max_frames_ahead;
 
 
 	/// Constructor

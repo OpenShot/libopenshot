@@ -758,7 +758,6 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 	// Check cache
 	std::shared_ptr<Frame> frame;
-	std::lock_guard<std::mutex> guard(get_frame_mutex);
 	frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
 		// Debug output
@@ -772,21 +771,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 		// Create a scoped lock, allowing only a single thread to run the following code at one time
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
-		// Check for open reader (or throw exception)
-		if (!is_open)
-			throw ReaderClosed("The Timeline is closed.  Call Open() before calling this method.");
-
-		// Check cache again (due to locking)
-		frame = final_cache->GetFrame(requested_frame);
-		if (frame) {
-			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Timeline::GetFrame (Cached frame found on 2nd look)", "requested_frame", requested_frame);
-
-			// Return cached frame
-			return frame;
-		}
-
-		// Get a list of clips that intersect with the requested section of timeline
+        // Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
 		std::vector<Clip*> nearby_clips;
 		nearby_clips = find_intersecting_clips(requested_frame, 1, true);

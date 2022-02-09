@@ -13,7 +13,6 @@
 
 #include "PlayerPrivate.h"
 #include "Exceptions.h"
-#include "ZmqLogger.h"
 
 #include <queue>
 #include <thread>    // for std::this_thread::sleep_for
@@ -68,15 +67,16 @@ namespace openshot
 
         while (!threadShouldExit()) {
             // Calculate on-screen time for a single frame
-            const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
+            int frame_speed = std::max(abs(speed), 1);
+            const auto frame_duration = double_micro_sec(1000000.0 / (reader->info.fps.ToDouble() * frame_speed));
             const auto max_sleep = frame_duration * 4; ///< Don't sleep longer than X times a frame duration
 
             // Pausing Code (if frame has not changed)
             // Also pause at end of timeline, and pause if 'playing' and
             // the pre-roll is not yet ready
             if ((speed == 0 && video_position == last_video_position) ||
-                (video_position > reader->info.video_length) ||
-                (speed == 1 && !videoCache->isReady()))
+                (speed != 0 && last_speed != speed) ||
+                !videoCache->isReady())
             {
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
@@ -84,6 +84,10 @@ namespace openshot
                 // Reset current playback start time
                 start_time = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now());
                 playback_frames = 0;
+                last_speed = speed;
+
+                // Seek audio thread (since audio is also paused)
+                audioPlayback->Seek(video_position);
 
                 continue;
             }
@@ -97,6 +101,7 @@ namespace openshot
 
             // Keep track of the last displayed frame
             last_video_position = video_position;
+            last_speed = speed;
 
             // Calculate the diff between 'now' and the predicted frame end time
             const auto current_time = std::chrono::system_clock::now();
@@ -111,6 +116,15 @@ namespace openshot
                     // Protect against invalid or too-long sleep times
                     std::this_thread::sleep_for(max_sleep);
                 }
+            } else {
+                // DEBUG: DELETE THIS SOON
+                // Video position is running too far behind (negative sleep duration)
+                auto num_frames_to_advance = roundToInt(fabs(double_micro_sec(remaining_time / frame_duration).count()));
+                if (speed > 0 && num_frames_to_advance > 1) {
+                    std::cout << "frames behind ++: " << num_frames_to_advance << ", playback_frames: " << playback_frames << std::endl;
+                } else if (speed < 0 && num_frames_to_advance > 1) {
+                    std::cout << "frames behind --: " << num_frames_to_advance << ", playback_frames: " << playback_frames << std::endl;
+                }
             }
         }
     }
@@ -120,8 +134,18 @@ namespace openshot
     {
     try {
         // Get the next frame (based on speed)
-        if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length)
+        if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length) {
             video_position = video_position + speed;
+
+        } else if (video_position + speed < 1) {
+            // Start of reader (prevent negative frame number and pause playback)
+            video_position = 1;
+            speed = 0;
+        } else if (video_position + speed > reader->info.video_length) {
+            // End of reader (prevent negative frame number and pause playback)
+            video_position = reader->info.video_length;
+            speed = 0;
+        }
 
         if (frame && frame->number == video_position && video_position == last_video_position) {
             // return cached frame
@@ -129,8 +153,8 @@ namespace openshot
         }
         else
         {
-            // Increment playback frames
-            playback_frames += speed;
+            // Increment playback frames (always in the positive direction)
+            playback_frames += std::abs(speed);
 
             // Update cache on which frame was retrieved
             videoCache->Seek(video_position);

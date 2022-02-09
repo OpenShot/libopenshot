@@ -38,6 +38,7 @@ namespace openshot
 	openshot::VideoPlaybackThread *videoPlayback; /// The video thread
 	openshot::VideoCacheThread *videoCache; /// The cache thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	int last_speed; /// The previous speed and direction (used to detect a change)
 	openshot::RendererBase *renderer;
 	int64_t last_video_position; /// The last frame actually displayed
 	int max_sleep_ms; /// The max milliseconds to sleep (when syncing audio and video)

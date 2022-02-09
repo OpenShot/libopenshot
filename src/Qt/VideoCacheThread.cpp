@@ -25,9 +25,9 @@ namespace openshot
 {
 	// Constructor
 	VideoCacheThread::VideoCacheThread()
-	: Thread("video-cache"), speed(1), is_playing(false),
+	: Thread("video-cache"), speed(0), last_speed(1), is_playing(false),
 	reader(NULL), current_display_frame(1), cached_frame_count(0),
-	min_frames_ahead(12), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
+	min_frames_ahead(24), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
     {
     }
 
@@ -105,9 +105,15 @@ namespace openshot
 
             // Calculate increment (based on speed)
             // Support caching in both directions
-            int16_t increment = 1;
-            if (speed < 0) {
-                increment = -1;
+            int16_t increment = speed;
+            if (speed == 0) {
+                // When paused, we still want to increment our cache position
+                // to fully cache frames while paused
+                if (last_speed > 0) {
+                    increment = 1;
+                } else {
+                    increment = -1;
+                }
             }
 
 			// Always cache frames from the current display position to our maximum (based on the cache size).
@@ -116,11 +122,20 @@ namespace openshot
 			// fragmented cache object (i.e. the user clicking all over the timeline).
             int64_t starting_frame = current_display_frame;
             int64_t ending_frame = starting_frame + max_frames_ahead;
+
+            // Adjust ending frame for cache loop
             if (speed < 0) {
+                // Reverse loop (if we are going backwards)
                 ending_frame = starting_frame - max_frames_ahead;
+            }
+            if (ending_frame < 0) {
+                // Don't allow negative frame number caching
+                ending_frame = 0;
             }
 
             // Loop through range of frames (and cache them)
+            int64_t uncached_frame_count = 0;
+            int64_t already_cached_frame_count = 0;
             for (int64_t cache_frame = starting_frame; cache_frame != ending_frame; cache_frame += increment) {
                 cached_frame_count++;
                 if (reader && reader->GetCache() && !reader->GetCache()->Contains(cache_frame)) {
@@ -129,9 +144,13 @@ namespace openshot
                         // This frame is not already cached... so request it again (to force the creation & caching)
                         // This will also re-order the missing frame to the front of the cache
                         last_cached_frame = reader->GetFrame(cache_frame);
+                        uncached_frame_count++;
                     }
                     catch (const OutOfBoundsFrame & e) {  }
+                } else if (reader && reader->GetCache() && reader->GetCache()->Contains(cache_frame)) {
+                    already_cached_frame_count++;
                 }
+
                 // Check if the user has seeked outside the cache range
                 if (requested_display_frame != current_display_frame) {
                     // cache will restart at a new position
@@ -147,11 +166,20 @@ namespace openshot
                 }
             }
 
-            // Update current display frame
+            // Update cache counts
+            if (cached_frame_count > max_frames_ahead && uncached_frame_count > (min_frames_ahead / 4)) {
+                // start cached count again (we have too many uncached frames)
+                cached_frame_count = 0;
+            }
+
+            // Update current display frame & last non-paused speed
             current_display_frame = requested_display_frame;
+            if (current_speed != 0) {
+                last_speed = current_speed;
+            }
 
 			// Sleep for a fraction of frame duration
-			std::this_thread::sleep_for(frame_duration / 4);
+			std::this_thread::sleep_for(frame_duration / 8);
 		}
 
 	return;
