@@ -70,12 +70,8 @@ namespace openshot
 			// Settings for audio device playback
             AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
             deviceSetup.sampleRate = rate;
-            deviceSetup.inputChannels = channels;
+            deviceSetup.inputChannels = 0;
             deviceSetup.outputChannels = channels;
-
-            m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
-            double default_rate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
-            std::cout << "default_rate: " << default_rate << ", requested rate: " << rate << std::endl;
 
             // Initialize audio device only 1 time
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
