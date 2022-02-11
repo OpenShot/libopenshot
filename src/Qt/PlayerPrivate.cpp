@@ -71,12 +71,12 @@ namespace openshot
             const auto frame_duration = double_micro_sec(1000000.0 / (reader->info.fps.ToDouble() * frame_speed));
             const auto max_sleep = frame_duration * 4; ///< Don't sleep longer than X times a frame duration
 
-            // Pausing Code (if frame has not changed)
-            // Also pause at end of timeline, and pause if 'playing' and
-            // the pre-roll is not yet ready
+            // Pausing Code (which re-syncs audio/video times)
+            // - If speed is zero or speed changes
+            // - If pre-roll is not ready (This should allow scrubbing of the timeline without waiting on pre-roll)
             if ((speed == 0 && video_position == last_video_position) ||
                 (speed != 0 && last_speed != speed) ||
-                !videoCache->isReady())
+                (speed != 0 && !videoCache->isReady()))
             {
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
