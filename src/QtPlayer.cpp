@@ -56,11 +56,19 @@ namespace openshot
     // Return any error string during initialization
     std::string QtPlayer::GetError() {
     	if (reader && threads_started) {
-    		// Get error from audio thread (if any)
     		return p->audioPlayback->getError();
     	} else {
     		return "";
     	}
+    }
+
+    // Return the default audio sample rate (from the system)
+    double QtPlayer::GetDefaultSampleRate() {
+        if (reader && threads_started) {
+            return p->audioPlayback->getDefaultSampleRate();
+        } else {
+            return 0;
+        }
     }
 
     /// Get Audio Devices from JUCE

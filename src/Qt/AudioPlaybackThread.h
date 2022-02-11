@@ -50,6 +50,9 @@ public:
 		/// Error found during JUCE initialise method
 		std::string initialise_error;
 
+		/// Default sample rate (as detected)
+        double defaultSampleRate;
+
 		/// Override with default sample rate & channels (44100, 2) and no preferred audio device
 		static AudioDeviceManagerSingleton* Instance();
 
@@ -114,6 +117,12 @@ public:
 		{
 		    return AudioDeviceManagerSingleton::Instance()->initialise_error;
 		}
+
+		/// Get detected audio sample rate (from default device)
+		double getDefaultSampleRate()
+        {
+            return AudioDeviceManagerSingleton::Instance()->defaultSampleRate;
+        }
 
 		/// Get Audio Device Names (if any)
 		std::vector<std::pair<std::string, std::string>> getAudioDeviceNames()

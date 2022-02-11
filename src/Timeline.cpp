@@ -758,6 +758,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 
 	// Check cache
 	std::shared_ptr<Frame> frame;
+	std::lock_guard<std::mutex> guard(get_frame_mutex);
 	frame = final_cache->GetFrame(requested_frame);
 	if (frame) {
 		// Debug output

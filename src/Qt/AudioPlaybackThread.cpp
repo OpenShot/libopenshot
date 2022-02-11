@@ -73,10 +73,14 @@ namespace openshot
             deviceSetup.inputChannels = 0;
             deviceSetup.outputChannels = channels;
 
-            // Initialize audio device only 1 time
+            // Detect default sample rate (of default device)
+            m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
+            m_pInstance->defaultSampleRate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
+
+            // Initialize audio device with specific sample rate
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
 				0,       // number of input channels
-				2,       // number of output channels
+                channels,       // number of output channels
 				nullptr, // no XML settings..
 				true,    // select default device on failure
 				selected_device, // preferredDefaultDeviceName

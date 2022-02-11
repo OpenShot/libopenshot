@@ -48,6 +48,9 @@ namespace openshot
 	/// Get Error (if any)
 	std::string GetError();
 
+    /// Return the default audio sample rate (from the system)
+    double GetDefaultSampleRate();
+
 	/// Get Audio Devices from JUCE
 	AudioDeviceList GetAudioDeviceNames();
 
