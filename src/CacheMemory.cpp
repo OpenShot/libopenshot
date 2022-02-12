@@ -169,7 +169,7 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 
 	// Return frame (if any)
 	if (smallest_frame != -1) {
-        return GetFrame(smallest_frame);
+        return frames[smallest_frame];
     } else {
 	    return NULL;
 	}

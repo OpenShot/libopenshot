@@ -158,7 +158,9 @@ namespace openshot
 	// Seek the audio thread
 	void AudioPlaybackThread::Seek(int64_t new_position)
 	{
-		source->Seek(new_position);
+        if (source) {
+            source->Seek(new_position);
+        }
 	}
 
 	// Play the audio

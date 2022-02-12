@@ -179,7 +179,7 @@ namespace openshot
             }
 
 			// Sleep for a fraction of frame duration
-			std::this_thread::sleep_for(frame_duration / 8);
+			std::this_thread::sleep_for(frame_duration / 4);
 		}
 
 	return;

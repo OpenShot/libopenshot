@@ -159,7 +159,6 @@ namespace openshot {
 		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
-		std::mutex get_frame_mutex; ///< Mutex to protect GetFrame method from different threads calling it
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
