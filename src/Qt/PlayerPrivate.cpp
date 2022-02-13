@@ -116,15 +116,6 @@ namespace openshot
                     // Protect against invalid or too-long sleep times
                     std::this_thread::sleep_for(max_sleep);
                 }
-            } else {
-                // DEBUG: DELETE THIS SOON
-                // Video position is running too far behind (negative sleep duration)
-                auto num_frames_to_advance = roundToInt(fabs(double_micro_sec(remaining_time / frame_duration).count()));
-                if (speed > 0 && num_frames_to_advance > 1) {
-                    std::cout << "frames behind ++: " << num_frames_to_advance << ", playback_frames: " << playback_frames << std::endl;
-                } else if (speed < 0 && num_frames_to_advance > 1) {
-                    std::cout << "frames behind --: " << num_frames_to_advance << ", playback_frames: " << playback_frames << std::endl;
-                }
             }
         }
     }
