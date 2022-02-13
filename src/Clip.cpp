@@ -1203,9 +1203,6 @@ void Clip::AddEffect(EffectBase* effect)
 		}
 	}
     #endif
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Remove an effect from the clip
