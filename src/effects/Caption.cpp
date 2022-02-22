@@ -202,6 +202,9 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 							   match->captured(3).toFloat() + (match->captured(4).toFloat() / 1000.0)) * fps.ToFloat();
 		int64_t end_frame = ((match->captured(5).toFloat() * 60.0 * 60.0 ) + (match->captured(6).toFloat() * 60.0 ) +
 							 match->captured(7).toFloat() + (match->captured(8).toFloat() / 1000.0)) * fps.ToFloat();
+		// Times are relative to the start of the clip. Add the clip's position to the times.
+		start_frame += clip->Position();
+		end_frame += clip->Position();
 
 		// Split multiple lines into separate paths
 		QStringList lines = match->captured(9).split("\n");
