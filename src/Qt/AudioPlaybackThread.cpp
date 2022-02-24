@@ -30,10 +30,10 @@ namespace openshot
 	// Global reference to device manager
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::m_pInstance = NULL;
 
-    // Create or Get audio device singleton with default settings (44100, 2)
+    // Create or Get audio device singleton with default settings (48000, 2)
     AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
     {
-        return AudioDeviceManagerSingleton::Instance(44100, 2);
+        return AudioDeviceManagerSingleton::Instance(48000, 2);
     }
 
 	// Create or Get an instance of the device manager singleton (with custom sample rate & channels)
