@@ -783,7 +783,7 @@ void FFmpegWriter::write_queued_frames() {
             // Get AVFrame
             AVFrame *av_frame = av_frames[frame];
 
-            // Deallocate AVPicture and AVFrame
+            // Deallocate buffer and AVFrame
             av_freep(&(av_frame->data[0]));
             AV_FREE_FRAME(&av_frame);
             av_frames.erase(frame);
@@ -2131,19 +2131,19 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 #endif
 		// Raw video case.
-		AVPacket pkt;
-		av_init_packet(&pkt);
+		AVPacket* pkt;
+		av_packet_from_data(
+            pkt, frame_final->data[0],
+            frame_final->linesize[0] * frame_final->height);
 
-		pkt.flags |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = video_st->index;
-		pkt.data = (uint8_t *) frame_final->data;
-		pkt.size = sizeof(AVPicture);
+		pkt->flags |= AV_PKT_FLAG_KEY;
+		pkt->stream_index = video_st->index;
 
 		// Set PTS (in frames and scaled to the codec's timebase)
-		pkt.pts = video_timestamp;
+		pkt->pts = video_timestamp;
 
 		/* write the compressed frame in the media file */
-		int error_code = av_interleaved_write_frame(oc, &pkt);
+		int error_code = av_interleaved_write_frame(oc, pkt);
 		if (error_code < 0) {
 			ZmqLogger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet ERROR ["
@@ -2153,7 +2153,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 
 		// Deallocate packet
-		AV_FREE_PACKET(&pkt);
+		AV_FREE_PACKET(pkt);
 
 	} else
 	{
