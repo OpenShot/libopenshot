@@ -27,7 +27,7 @@ namespace openshot
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(0), last_speed(1), is_playing(false),
 	reader(NULL), current_display_frame(1), cached_frame_count(0),
-	min_frames_ahead(24), max_frames_ahead(OPEN_MP_NUM_PROCESSORS * 6)
+	min_frames_ahead(4), max_frames_ahead(8)
     {
     }
 
@@ -80,40 +80,12 @@ namespace openshot
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             int current_speed = speed;
 
-            // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
-            // window can be smaller, can thus reduce the bytes per frame)
-            int64_t bytes_per_frame = (reader->info.height * reader->info.width * 4) +
-                    (reader->info.sample_rate * reader->info.channels * 4);
-            if (last_cached_frame && last_cached_frame->has_image_data && last_cached_frame->has_audio_data) {
-                bytes_per_frame = last_cached_frame->GetBytes();
-            }
-
-            // Calculate # of frames on Timeline cache (when paused)
-            if (reader->GetCache() && reader->GetCache()->GetMaxBytes() > 0) {
-                if (speed == 0) {
-                    // When paused, use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
-                    max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
-                    if (max_frames_ahead > 300) {
-                        // Ignore values that are too large, and default to a safer value
-                        max_frames_ahead = 300;
-                    }
-                } else {
-                    // When playing back video (speed == 1), keep cache # small
-                    max_frames_ahead = min_frames_ahead;
-                }
-            }
-
             // Calculate increment (based on speed)
             // Support caching in both directions
             int16_t increment = speed;
             if (speed == 0) {
-                // When paused, we still want to increment our cache position
-                // to fully cache frames while paused
-                if (last_speed > 0) {
-                    increment = 1;
-                } else {
-                    increment = -1;
-                }
+                std::this_thread::sleep_for(frame_duration / 4);
+                continue;
             }
 
 			// Always cache frames from the current display position to our maximum (based on the cache size).
