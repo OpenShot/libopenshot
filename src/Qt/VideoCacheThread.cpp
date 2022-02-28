@@ -74,6 +74,7 @@ namespace openshot
         // Types for storing time durations in whole and fractional microseconds
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
+        bool should_pause = false;
 
 		while (!threadShouldExit() && is_playing) {
             // Calculate on-screen time for a single frame
@@ -83,9 +84,46 @@ namespace openshot
             // Calculate increment (based on speed)
             // Support caching in both directions
             int16_t increment = speed;
-            if (speed == 0) {
+            if (current_speed == 0 && should_pause) {
+                // Sleep during pause (after caching additional frames when paused)
                 std::this_thread::sleep_for(frame_duration / 4);
                 continue;
+
+            } else if (current_speed == 0) {
+                // Allow 'max frames' to increase when pause is detected (based on cache)
+                // To allow the cache to fill-up only on the initial pause.
+                should_pause = true;
+
+                // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
+                // window can be smaller, can thus reduce the bytes per frame)
+                int64_t bytes_per_frame = (reader->info.height * reader->info.width * 4) +
+                                          (reader->info.sample_rate * reader->info.channels * 4);
+                if (last_cached_frame && last_cached_frame->has_image_data && last_cached_frame->has_audio_data) {
+                    bytes_per_frame = last_cached_frame->GetBytes();
+                }
+
+                // Calculate # of frames on Timeline cache (when paused)
+                if (reader->GetCache() && reader->GetCache()->GetMaxBytes() > 0) {
+                    // When paused, use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
+                    max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
+                    if (max_frames_ahead > 300) {
+                        // Ignore values that are too large, and default to a safer value
+                        max_frames_ahead = 300;
+                    }
+                }
+
+                // Overwrite the increment to our cache position
+                // to fully cache frames while paused (support forward and rewind)
+                if (last_speed > 0) {
+                    increment = 1;
+                } else {
+                    increment = -1;
+                }
+
+            } else {
+                // Default max frames ahead (normal playback)
+                max_frames_ahead = 8;
+                should_pause = false;
             }
 
 			// Always cache frames from the current display position to our maximum (based on the cache size).
