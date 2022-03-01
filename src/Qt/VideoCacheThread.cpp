@@ -74,7 +74,7 @@ namespace openshot
         // Types for storing time durations in whole and fractional microseconds
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
-        bool should_pause = false;
+        bool should_pause_cache = false;
 
 		while (!threadShouldExit() && is_playing) {
             // Calculate on-screen time for a single frame
@@ -84,7 +84,7 @@ namespace openshot
             // Calculate increment (based on speed)
             // Support caching in both directions
             int16_t increment = speed;
-            if (current_speed == 0 && should_pause) {
+            if (current_speed == 0 && should_pause_cache) {
                 // Sleep during pause (after caching additional frames when paused)
                 std::this_thread::sleep_for(frame_duration / 4);
                 continue;
@@ -92,7 +92,7 @@ namespace openshot
             } else if (current_speed == 0) {
                 // Allow 'max frames' to increase when pause is detected (based on cache)
                 // To allow the cache to fill-up only on the initial pause.
-                should_pause = true;
+                should_pause_cache = true;
 
                 // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
                 // window can be smaller, can thus reduce the bytes per frame)
@@ -123,7 +123,7 @@ namespace openshot
             } else {
                 // Default max frames ahead (normal playback)
                 max_frames_ahead = 8;
-                should_pause = false;
+                should_pause_cache = false;
             }
 
 			// Always cache frames from the current display position to our maximum (based on the cache size).
