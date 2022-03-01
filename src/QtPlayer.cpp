@@ -227,8 +227,9 @@ namespace openshot
     	speed = new_speed;
     	p->speed = new_speed;
     	p->videoCache->setSpeed(new_speed);
-    	if (p->reader->info.has_audio)
-    		p->audioPlayback->setSpeed(new_speed);
+    	if (p->reader && p->reader->info.has_audio) {
+            p->audioPlayback->setSpeed(new_speed);
+    	}
     }
 
     // Get the Volume
