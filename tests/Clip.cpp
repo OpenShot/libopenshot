@@ -20,6 +20,7 @@
 #include <QSize>
 
 #include "Clip.h"
+#include "DummyReader.h"
 #include "Enums.h"
 #include "Exceptions.h"
 #include "Frame.h"
@@ -276,4 +277,63 @@ TEST_CASE( "has_video", "[libopenshot][clip]" )
     QSize f3_size(f3->GetWidth(), f3->GetHeight());
     CHECK(i3->size() == f3_size);
     CHECK(i3->pixelColor(20, 20) != trans_color);
+}
+
+TEST_CASE( "access frames past reader length", "[libopenshot][clip]" )
+{
+    // Create cache object to hold test frames
+    openshot::CacheMemory cache;
+
+    // Let's create some test frames
+    for (int64_t frame_number = 1; frame_number <= 30; frame_number++) {
+        // Create blank frame (with specific frame #, samples, and channels)
+        // Sample count should be 44100 / 30 fps = 1470 samples per frame
+        int sample_count = 1470;
+        auto f = std::make_shared<openshot::Frame>(frame_number, sample_count, 2);
+
+        // Create test samples with incrementing value
+        float *audio_buffer = new float[sample_count];
+        for (int64_t sample_number = 0; sample_number < sample_count; sample_number++) {
+            // Generate an incrementing audio sample value (just as an example)
+            audio_buffer[sample_number] = float(frame_number) + (float(sample_number) / float(sample_count));
+        }
+
+        // Add custom audio samples to Frame (bool replaceSamples, int destChannel, int destStartSample, const float* source,
+        f->AddAudio(true, 0, 0, audio_buffer, sample_count, 1.0); // add channel 1
+        f->AddAudio(true, 1, 0, audio_buffer, sample_count, 1.0); // add channel 2
+
+        // Add test frame to dummy reader
+        cache.Add(f);
+
+        delete[] audio_buffer;
+    }
+
+    // Create a dummy reader, with a pre-existing cache
+    openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 1.0, &cache);
+    r.Open(); // Open the reader
+
+    openshot::Clip c1;
+    c1.Reader(&r);
+    c1.Open();
+
+    // Get the last valid frame #
+    std::shared_ptr<openshot::Frame> frame = c1.GetFrame(30);
+
+    CHECK(frame->GetAudioSamples(0)[0] == Approx(30.0).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[600] == Approx(30.4081631).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[1200] == Approx(30.8163261).margin(0.00001));
+
+    // Get the +1 past the end of the reader (should be audio silence)
+    frame = c1.GetFrame(31);
+
+    CHECK(frame->GetAudioSamples(0)[0] == Approx(0.0).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[600] == Approx(0.0).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[1200] == Approx(0.0).margin(0.00001));
+
+    // Get the +2 past the end of the reader (should be audio silence)
+    frame = c1.GetFrame(32);
+
+    CHECK(frame->GetAudioSamples(0)[0] == Approx(0.0).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[600] == Approx(0.0).margin(0.00001));
+    CHECK(frame->GetAudioSamples(0)[1200] == Approx(0.0).margin(0.00001));
 }

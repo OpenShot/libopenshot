@@ -87,6 +87,7 @@ namespace openshot
 	private:
 		CacheBase* dummy_cache;
 		std::shared_ptr<openshot::Frame> image_frame;
+        std::shared_ptr<openshot::Frame> last_cached_frame;
 		bool is_open;
 
 		/// Initialize variables used by constructor

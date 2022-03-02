@@ -243,7 +243,7 @@ TEST_CASE( "resample_audio_mapper", "[libopenshot][framemapper]" ) {
 		delete[] audio_buffer;
 	}
 
-	// Create a default fraction (should be 1/1)
+	// Create a dummy reader, with a pre-existing cache
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1, 1, 44100, 2, 30.0, &cache);
 	r.Open(); // Open the reader
 
@@ -383,7 +383,7 @@ TEST_CASE( "redistribute_samples_per_frame", "[libopenshot][framemapper]" ) {
 		delete[] audio_buffer;
 	}
 
-	// Create a default fraction (should be 1/1)
+	// Create a dummy reader, with a pre-existing cache
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
 	r.Open(); // Open the reader
 

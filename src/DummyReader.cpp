@@ -47,21 +47,23 @@ void DummyReader::init(Fraction fps, int width, int height, int sample_rate, int
 }
 
 // Blank constructor for DummyReader, with default settings.
-DummyReader::DummyReader() : dummy_cache(NULL), is_open(false) {
+DummyReader::DummyReader() : dummy_cache(NULL), last_cached_frame(NULL), image_frame(NULL), is_open(false) {
 
 	// Initialize important variables
 	init(Fraction(24,1), 1280, 768, 44100, 2, 30.0);
 }
 
 // Constructor for DummyReader.  Pass a framerate and samplerate.
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) : dummy_cache(NULL), is_open(false) {
+DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration) :
+    dummy_cache(NULL), last_cached_frame(NULL), image_frame(NULL), is_open(false) {
 
 	// Initialize important variables
 	init(fps, width, height, sample_rate, channels, duration);
 }
 
 // Constructor which also takes a cache object
-DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration, CacheBase* cache) : is_open(false) {
+DummyReader::DummyReader(Fraction fps, int width, int height, int sample_rate, int channels, float duration,
+                         CacheBase* cache) :  last_cached_frame(NULL), image_frame(NULL), is_open(false) {
 
 	// Initialize important variables
 	init(fps, width, height, sample_rate, channels, duration);
@@ -117,6 +119,7 @@ std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 
 		// Always return same frame (regardless of which frame number was requested)
 		image_frame->number = requested_frame;
+		last_cached_frame = image_frame;
 		return image_frame;
 
 	} else if (dummy_cache_count > 0) {
@@ -126,8 +129,12 @@ std::shared_ptr<Frame> DummyReader::GetFrame(int64_t requested_frame)
 		// Get a frame from the dummy cache
 		std::shared_ptr<openshot::Frame> f = dummy_cache->GetFrame(requested_frame);
 		if (f) {
-			// return frame from cache (if found)
-			return f;
+            // return frame from cache (if found)
+            last_cached_frame = f;
+            return f;
+        } else if (last_cached_frame) {
+		    // If available, return last cached frame
+            return last_cached_frame;
 		} else {
 			// No cached frame found
 			throw InvalidFile("Requested frame not found. You can only access Frame numbers that exist in the Cache object.", "dummy");
