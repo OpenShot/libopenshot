@@ -712,10 +712,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
-                        if (has_video.GetInt(number) == 0)
-                            reader_copy->AddColor(QColor(Qt::transparent));
-                        if (has_audio.GetInt(number) == 0)
-                            reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
+            if (has_video.GetInt(number) == 0) {
+                // No video, so add transparent pixels
+                reader_copy->AddColor(QColor(Qt::transparent));
+            }
+            if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
+                // No audio, so include silence (also, mute audio if past end of reader)
+                reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
+            }
 			return reader_copy;
 		}
 
