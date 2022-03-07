@@ -33,21 +33,21 @@ jobs:
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           # Work around a codecov issue detecting commit SHAs
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
           fetch-depth: 0
 
       - name: Checkout OpenShotAudio
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: OpenShot/libopenshot-audio
           path: audio
 
       - name: Checkout Resvg
         if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: RazrFalcon/resvg
           path: resvg
