@@ -65,15 +65,29 @@ public:
 	/// Return the reciprocal as a Fraction
 	Fraction Reciprocal() const;
 
+    /// Equality test for two Fractions
+    ///
+    /// Fractions are equal if the left-hand Fraction multiplied by
+    /// the right-hand reciprocal produces the Fraction x/x for some x.
+    bool operator==(const openshot::Fraction& other) const {
+        const auto result = *this * other.Reciprocal();
+        return static_cast<bool>(result.num == result.den);
+    }
+
+    /// Inequality test for two Fractions
+    bool operator!=(const openshot::Fraction& other) const {
+        return static_cast<bool>(!(*this == other));
+    }
+
     // Multiplication and division
 
     /// Multiply two Fraction objects together
-    openshot::Fraction operator*(openshot::Fraction other) {
+    openshot::Fraction operator*(openshot::Fraction other) const {
         return openshot::Fraction(num * other.num, den * other.den);
     }
 
     /// Divide a Fraction by another Fraction
-    openshot::Fraction operator/(openshot::Fraction other) {
+    openshot::Fraction operator/(openshot::Fraction other) const {
         return *this * other.Reciprocal();
     }
 

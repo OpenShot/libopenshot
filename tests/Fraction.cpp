@@ -134,6 +134,31 @@ TEST_CASE( "Reciprocal", "[libopenshot][fraction]" )
 	CHECK(f1.ToDouble() == Approx(1.77777f).margin(0.00001));
 }
 
+TEST_CASE( "Equality tests", "[libopenshot][fraction]" ) {
+    openshot::Fraction f1(30, 1);
+    openshot::Fraction f2(30000, 1000);
+    openshot::Fraction f3(30000, 1001);
+    openshot::Fraction f4(1001, 30000);
+    openshot::Fraction f5((30000.0/1001), 1.0);
+
+    CHECK(f1 == f1);
+    CHECK(f3 == f3);
+
+    CHECK(f1 == f2);
+    CHECK(f2 == f1);
+
+    CHECK(f2 != f3);
+    CHECK(f3 != f2);
+
+    CHECK(f3 != f4);
+    CHECK(f4 != f3);
+
+    CHECK(f3 == f4.Reciprocal());
+
+    CHECK(f5 != f3);
+    CHECK(f5 == openshot::Fraction(29, 1));
+}
+
 TEST_CASE( "Fraction operations", "[libopenshot][fraction]" ) {
     openshot::Fraction f1(30, 1);
     openshot::Fraction f2(3, 9);
