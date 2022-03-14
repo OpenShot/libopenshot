@@ -2133,8 +2133,8 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		// Raw video case.
 		AVPacket* pkt;
 		av_packet_from_data(
-            pkt, frame_final->data[0],
-            frame_final->linesize[0] * frame_final->height);
+			pkt, frame_final->data[0],
+			frame_final->linesize[0] * frame_final->height);
 
 		pkt->flags |= AV_PKT_FLAG_KEY;
 		pkt->stream_index = video_st->index;
