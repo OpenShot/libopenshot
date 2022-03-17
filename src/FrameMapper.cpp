@@ -82,6 +82,15 @@ void FrameMapper::AddField(Field field)
 	field_toggle = (field_toggle ? false : true);
 }
 
+// Clear both the fields & frames lists
+void FrameMapper::Clear() {
+    // Clear the fields & frames lists
+    fields.clear();
+    fields.shrink_to_fit();
+    frames.clear();
+    frames.shrink_to_fit();
+}
+
 // Use the original and target frame rates and a pull-down technique to create
 // a mapping between the original fields and frames or a video to a new frame rate.
 // This might repeat or skip fields and frames of the original video, depending on
@@ -96,8 +105,7 @@ void FrameMapper::Init()
 		return;
 
 	// Clear the fields & frames lists
-	fields.clear();
-	frames.clear();
+	Clear();
 
 	// Find parent position (if any)
     Clip *parent = (Clip *) ParentClip();
@@ -309,6 +317,7 @@ void FrameMapper::Init()
 
 	// Clear the internal fields list (no longer needed)
 	fields.clear();
+	fields.shrink_to_fit();
 }
 
 MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
@@ -342,7 +351,12 @@ MappedFrame FrameMapper::GetMappedFrame(int64_t TargetFrameNumber)
 		TargetFrameNumber = frames.size();
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetMappedFrame", "TargetFrameNumber", TargetFrameNumber, "frames.size()", frames.size(), "frames[...].Odd", frames[TargetFrameNumber - 1].Odd.Frame, "frames[...].Even", frames[TargetFrameNumber - 1].Even.Frame);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::GetMappedFrame",
+		"TargetFrameNumber", TargetFrameNumber,
+		"frames.size()", frames.size(),
+		"frames[...].Odd", frames[TargetFrameNumber - 1].Odd.Frame,
+		"frames[...].Even", frames[TargetFrameNumber - 1].Even.Frame);
 
 	// Return frame
 	return frames[TargetFrameNumber - 1];
@@ -358,7 +372,10 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (from reader)", "number", number, "samples_in_frame", samples_in_frame);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FrameMapper::GetOrCreateFrame (from reader)",
+			"number", number,
+			"samples_in_frame", samples_in_frame);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		new_frame = reader->GetFrame(number);
@@ -373,7 +390,10 @@ std::shared_ptr<Frame> FrameMapper::GetOrCreateFrame(int64_t number)
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetOrCreateFrame (create blank)", "number", number, "samples_in_frame", samples_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::GetOrCreateFrame (create blank)",
+		"number", number,
+		"samples_in_frame", samples_in_frame);
 
 	// Create blank frame
 	new_frame = std::make_shared<Frame>(number, info.width, info.height, "#000000", samples_in_frame, reader->info.channels);
@@ -418,14 +438,21 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	int minimum_frames = 1;
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (Loop through frames)", "requested_frame", requested_frame, "minimum_frames", minimum_frames);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"FrameMapper::GetFrame (Loop through frames)",
+		"requested_frame", requested_frame,
+		"minimum_frames", minimum_frames);
 
 	// Loop through all requested frames
 	for (int64_t frame_number = requested_frame; frame_number < requested_frame + minimum_frames; frame_number++)
 	{
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FrameMapper::GetFrame (inside omp for loop)", "frame_number", frame_number, "minimum_frames", minimum_frames, "requested_frame", requested_frame);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"FrameMapper::GetFrame (inside omp for loop)",
+			"frame_number", frame_number,
+			"minimum_frames", minimum_frames,
+			"requested_frame", requested_frame);
 
 		// Get the mapped frame
 		MappedFrame mapped = GetMappedFrame(frame_number);
@@ -655,24 +682,23 @@ void FrameMapper::Close()
 
 		// Close internal reader
 		reader->Close();
-
-		// Clear the fields & frames lists
-		fields.clear();
-		frames.clear();
-
-		// Mark as dirty
-		is_dirty = true;
-
-		// Clear cache
-		final_cache.Clear();
-
-		// Deallocate resample buffer
-		if (avr) {
-			SWR_CLOSE(avr);
-			SWR_FREE(&avr);
-			avr = NULL;
-		}
 	}
+
+    // Clear the fields & frames lists
+    Clear();
+
+    // Mark as dirty
+    is_dirty = true;
+
+    // Clear cache
+    final_cache.Clear();
+
+    // Deallocate resample buffer
+    if (avr) {
+        SWR_CLOSE(avr);
+        SWR_FREE(&avr);
+        avr = NULL;
+    }
 }
 
 

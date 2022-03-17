@@ -48,6 +48,9 @@ namespace openshot
 	/// Get Error (if any)
 	std::string GetError();
 
+    /// Return the default audio sample rate (from the system)
+    double GetDefaultSampleRate();
+
 	/// Get Audio Devices from JUCE
 	AudioDeviceList GetAudioDeviceNames();
 
@@ -71,6 +74,9 @@ namespace openshot
 
 	/// Set the source URL/path of this player (which will create an internal Reader)
 	void SetSource(const std::string &source);
+
+	/// Set the source JSON of an openshot::Timelime
+    void SetTimelineSource(const std::string &json);
 
 	/// Set the QWidget which will be used as the display (note: QLabel works well). This does not take a
 	/// normal pointer, but rather a LONG pointer id (and it re-casts the QWidget pointer inside libopenshot).

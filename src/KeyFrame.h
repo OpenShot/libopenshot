@@ -67,6 +67,9 @@ namespace openshot {
 		/// Constructor which adds a supplied vector of Points
 		Keyframe(const std::vector<openshot::Point>& points);
 
+        /// Destructor
+        ~Keyframe();
+
 		/// Add a new point on the key-frame.  Each point has a primary coordinate, a left handle, and a right handle.
 		void AddPoint(Point p);
 

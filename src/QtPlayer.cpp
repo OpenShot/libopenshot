@@ -56,17 +56,39 @@ namespace openshot
     // Return any error string during initialization
     std::string QtPlayer::GetError() {
     	if (reader && threads_started) {
-    		// Get error from audio thread (if any)
     		return p->audioPlayback->getError();
     	} else {
     		return "";
     	}
     }
 
+    // Return the default audio sample rate (from the system)
+    double QtPlayer::GetDefaultSampleRate() {
+        if (reader && threads_started) {
+            return p->audioPlayback->getDefaultSampleRate();
+        } else {
+            return 0;
+        }
+    }
+
     /// Get Audio Devices from JUCE
     AudioDeviceList QtPlayer::GetAudioDeviceNames() {
         AudioDevices devs;
         return devs.getNames();
+    }
+
+    // Set the source JSON of an openshot::Timelime
+    void QtPlayer::SetTimelineSource(const std::string &json) {
+        // Create timeline instance (720p, since we have no re-scaling in this player yet)
+        reader = new Timeline(1280, 720, openshot::Fraction(30, 1), 44100, 2, openshot::LAYOUT_STEREO);
+
+        Timeline* tm = (Timeline*)reader;
+        tm->SetJson(json);
+        tm->DisplayInfo();
+        tm->Open();
+
+        // Set the reader
+        Reader(reader);
     }
 
     void QtPlayer::SetSource(const std::string &source)
@@ -141,16 +163,13 @@ namespace openshot
     	// Check for seek
     	if (reader && threads_started && new_frame > 0) {
     		// Notify cache thread that seek has occurred
-    		p->videoCache->Seek(new_frame);
+    		p->videoCache->Seek(new_frame, true);
+
+            // Notify audio thread that seek has occurred
+            p->audioPlayback->Seek(new_frame);
 
     		// Update current position
-    		p->video_position = new_frame;
-
-    		// Clear last position (to force refresh)
-    		p->last_video_position = 0;
-
-    		// Notify audio thread that seek has occurred
-    		p->audioPlayback->Seek(new_frame);
+    		p->Seek(new_frame);
     	}
     }
 
@@ -208,8 +227,9 @@ namespace openshot
     	speed = new_speed;
     	p->speed = new_speed;
     	p->videoCache->setSpeed(new_speed);
-    	if (p->reader->info.has_audio)
-    		p->audioPlayback->setSpeed(new_speed);
+    	if (p->reader && p->reader->info.has_audio) {
+            p->audioPlayback->setSpeed(new_speed);
+    	}
     }
 
     // Get the Volume

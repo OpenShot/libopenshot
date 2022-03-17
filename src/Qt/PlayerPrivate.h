@@ -30,6 +30,7 @@ namespace openshot
     class PlayerPrivate : juce::Thread
     {
     std::shared_ptr<openshot::Frame> frame; /// The current frame
+    int64_t playback_frames; /// The # of frames since playback started
 	int64_t video_position; /// The current frame position.
 	int64_t audio_position; /// The current frame position.
 	openshot::ReaderBase *reader; /// The reader which powers this player
@@ -37,6 +38,7 @@ namespace openshot
 	openshot::VideoPlaybackThread *videoPlayback; /// The video thread
 	openshot::VideoCacheThread *videoCache; /// The cache thread
 	int speed; /// The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	int last_speed; /// The previous speed and direction (used to detect a change)
 	openshot::RendererBase *renderer;
 	int64_t last_video_position; /// The last frame actually displayed
 	int max_sleep_ms; /// The max milliseconds to sleep (when syncing audio and video)
@@ -51,6 +53,9 @@ namespace openshot
 
 	/// Start the video/audio playback
 	bool startPlayback();
+
+	/// Seek to a new frame #
+	void Seek(int64_t new_position);
 
 	/// Stop the video/audio playback
 	void stopPlayback();

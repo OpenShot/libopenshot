@@ -699,7 +699,9 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 {
 	try {
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (from reader)", "number", number);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"Clip::GetOrCreateFrame (from reader)",
+			"number", number);
 
 		// Attempt to get a frame (but this could fail if a reader has just been closed)
 		auto reader_frame = reader->GetFrame(number);
@@ -710,10 +712,14 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 			// This allows a clip to modify the pixels and audio of this frame without
 			// changing the underlying reader's frame data
 			auto reader_copy = std::make_shared<Frame>(*reader_frame.get());
-                        if (has_video.GetInt(number) == 0)
-                            reader_copy->AddColor(QColor(Qt::transparent));
-                        if (has_audio.GetInt(number) == 0)
-                            reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
+            if (has_video.GetInt(number) == 0) {
+                // No video, so add transparent pixels
+                reader_copy->AddColor(QColor(Qt::transparent));
+            }
+            if (has_audio.GetInt(number) == 0 || number > reader->info.video_length) {
+                // No audio, so include silence (also, mute audio if past end of reader)
+                reader_copy->AddAudioSilence(reader_copy->GetAudioSamplesCount());
+            }
 			return reader_copy;
 		}
 
@@ -727,7 +733,10 @@ std::shared_ptr<Frame> Clip::GetOrCreateFrame(int64_t number)
 	int estimated_samples_in_frame = Frame::GetSamplesPerFrame(number, reader->info.fps, reader->info.sample_rate, reader->info.channels);
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::GetOrCreateFrame (create blank)", "number", number, "estimated_samples_in_frame", estimated_samples_in_frame);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"Clip::GetOrCreateFrame (create blank)",
+		"number", number,
+		"estimated_samples_in_frame", estimated_samples_in_frame);
 
 	// Create blank frame
 	auto new_frame = std::make_shared<Frame>(
@@ -1198,9 +1207,6 @@ void Clip::AddEffect(EffectBase* effect)
 		}
 	}
     #endif
-
-	// Clear cache
-	cache.Clear();
 }
 
 // Remove an effect from the clip
@@ -1242,7 +1248,12 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     if (Waveform())
     {
         // Debug output
-        ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Generate Waveform Image)", "frame->number", frame->number, "Waveform()", Waveform(), "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
+        ZmqLogger::Instance()->AppendDebugMethod(
+            "Clip::get_transform (Generate Waveform Image)",
+            "frame->number", frame->number,
+            "Waveform()", Waveform(),
+            "background_canvas->width()", background_canvas->width(),
+            "background_canvas->height()", background_canvas->height());
 
         // Get the color of the waveform
         int red = wave_color.red.GetInt(frame->number);
@@ -1259,7 +1270,11 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
 
     // Debug output
-    ZmqLogger::Instance()->AppendDebugMethod("Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)", "frame->number", frame->number, "background_canvas->width()", background_canvas->width(), "background_canvas->height()", background_canvas->height());
+    ZmqLogger::Instance()->AppendDebugMethod(
+        "Clip::ApplyKeyframes (Transform: Composite Image Layer: Prepare)",
+        "frame->number", frame->number,
+        "background_canvas->width()", background_canvas->width(),
+        "background_canvas->height()", background_canvas->height());
 
     // Load timeline's new frame image into a QPainter
     QPainter painter(background_canvas.get());
@@ -1333,7 +1348,10 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		}
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Set Alpha & Opacity)", "alpha_value", alpha_value, "frame->number", frame->number);
+		ZmqLogger::Instance()->AppendDebugMethod(
+			"Clip::get_transform (Set Alpha & Opacity)",
+			"alpha_value", alpha_value,
+			"frame->number", frame->number);
 	}
 
 	/* RESIZE SOURCE IMAGE - based on scale type */
@@ -1350,29 +1368,45 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 			source_size.scale(width, height, Qt::KeepAspectRatio);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_FIT)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod(
+				"Clip::get_transform (Scale: SCALE_FIT)",
+				"frame->number", frame->number,
+				"source_width", source_size.width(),
+				"source_height", source_size.height());
 			break;
 		}
 		case (SCALE_STRETCH): {
 			source_size.scale(width, height, Qt::IgnoreAspectRatio);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_STRETCH)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod(
+				"Clip::get_transform (Scale: SCALE_STRETCH)",
+				"frame->number", frame->number,
+				"source_width", source_size.width(),
+				"source_height", source_size.height());
 			break;
 		}
 		case (SCALE_CROP): {
 			source_size.scale(width, height, Qt::KeepAspectRatioByExpanding);
 
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_CROP)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod(
+				"Clip::get_transform (Scale: SCALE_CROP)",
+				"frame->number", frame->number,
+				"source_width", source_size.width(),
+				"source_height", source_size.height());
 			break;
 		}
 		case (SCALE_NONE): {
-		    // Image is already the original size (i.e. no scaling mode) relative
-		    // to the preview window size (i.e. timeline / preview ratio). No further
-		    // scaling is needed here.
+			// Image is already the original size (i.e. no scaling mode) relative
+			// to the preview window size (i.e. timeline / preview ratio). No further
+			// scaling is needed here.
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Scale: SCALE_NONE)", "frame->number", frame->number, "source_width", source_size.width(), "source_height", source_size.height());
+			ZmqLogger::Instance()->AppendDebugMethod(
+				"Clip::get_transform (Scale: SCALE_NONE)",
+				"frame->number", frame->number,
+				"source_width", source_size.width(),
+				"source_height", source_size.height());
 			break;
 		}
 	}
@@ -1498,7 +1532,12 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	}
 
 	// Debug output
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Gravity)", "frame->number", frame->number, "source_clip->gravity", gravity, "scaled_source_width", scaled_source_width, "scaled_source_height", scaled_source_height);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"Clip::get_transform (Gravity)",
+		"frame->number", frame->number,
+		"source_clip->gravity", gravity,
+		"scaled_source_width", scaled_source_width,
+		"scaled_source_height", scaled_source_height);
 
 	QTransform transform;
 
@@ -1512,7 +1551,12 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	float origin_y_value = origin_y.GetValue(frame->number);
 
 	// Transform source image (if needed)
-	ZmqLogger::Instance()->AppendDebugMethod("Clip::get_transform (Build QTransform - if needed)", "frame->number", frame->number, "x", x, "y", y, "r", r, "sx", sx, "sy", sy);
+	ZmqLogger::Instance()->AppendDebugMethod(
+		"Clip::get_transform (Build QTransform - if needed)",
+		"frame->number", frame->number,
+		"x", x, "y", y,
+		"r", r,
+		"sx", sx, "sy", sy);
 
 	if (!isEqual(x, 0) || !isEqual(y, 0)) {
 		// TRANSLATE/MOVE CLIP

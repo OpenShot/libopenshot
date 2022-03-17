@@ -134,6 +134,9 @@ namespace openshot
 		void AddField(int64_t frame);
 		void AddField(Field field);
 
+		// Clear both the fields & frames lists
+		void Clear();
+
 		// Get Frame or Generate Blank Frame
 		std::shared_ptr<Frame> GetOrCreateFrame(int64_t number);
 

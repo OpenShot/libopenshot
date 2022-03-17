@@ -27,12 +27,17 @@ using namespace juce;
 
 namespace openshot
 {
-
 	// Global reference to device manager
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::m_pInstance = NULL;
 
-	// Create or Get an instance of the device manager singleton
-	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
+    // Create or Get audio device singleton with default settings (44100, 2)
+    AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
+    {
+        return AudioDeviceManagerSingleton::Instance(44100, 2);
+    }
+
+	// Create or Get an instance of the device manager singleton (with custom sample rate & channels)
+	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance(int rate, int channels)
 	{
 		if (!m_pInstance) {
 			// Create the actual instance of device manager only once
@@ -62,13 +67,24 @@ namespace openshot
 			if (!selected_type.isEmpty())
 				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
 
-			// Initialize audio device only 1 time
+			// Settings for audio device playback
+            AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
+            deviceSetup.sampleRate = rate;
+            deviceSetup.inputChannels = 0;
+            deviceSetup.outputChannels = channels;
+
+            // Detect default sample rate (of default device)
+            m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
+            m_pInstance->defaultSampleRate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
+
+            // Initialize audio device with specific sample rate
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
 				0,       // number of input channels
-				2,       // number of output channels
+                channels,       // number of output channels
 				nullptr, // no XML settings..
 				true,    // select default device on failure
-				selected_device // preferredDefaultDeviceName
+				selected_device, // preferredDefaultDeviceName
+                &deviceSetup // sample_rate & channels
 			);
 
 			// Persist any errors detected
@@ -92,17 +108,17 @@ namespace openshot
     }
 
     // Constructor
-    AudioPlaybackThread::AudioPlaybackThread()
+    AudioPlaybackThread::AudioPlaybackThread(openshot::VideoCacheThread* cache)
 	: juce::Thread("audio-playback")
 	, player()
 	, transport()
 	, mixer()
 	, source(NULL)
 	, sampleRate(0.0)
-	, numChannels(0)
-    , buffer_size(12000)
+    , numChannels(0)
     , is_playing(false)
 	, time_thread("audio-buffer")
+	, videoCache(cache)
     {
 	}
 
@@ -117,16 +133,16 @@ namespace openshot
 			source->Reader(reader);
 		else {
 			// Create new audio source reader
-			source = new AudioReaderSource(reader, 1, buffer_size);
-			source->setLooping(true); // prevent this source from terminating when it reaches the end
+			auto starting_frame = 1;
+			source = new AudioReaderSource(reader, starting_frame);
 		}
 
 		// Set local vars
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
-		// TODO: Update transport or audio source's sample rate, incase the sample rate
-		// is different than the original Reader
+		// Set video cache thread
+		source->setVideoCache(videoCache);
 
 		// Mark as 'playing'
 		Play();
@@ -139,16 +155,12 @@ namespace openshot
 	return std::shared_ptr<openshot::Frame>();
     }
 
-    // Get the currently playing frame number
-    int64_t AudioPlaybackThread::getCurrentFramePosition()
-    {
-	return source ? source->getEstimatedFrame() : 0;
-    }
-
 	// Seek the audio thread
 	void AudioPlaybackThread::Seek(int64_t new_position)
 	{
-		source->Seek(new_position);
+        if (source) {
+            source->Seek(new_position);
+        }
 	}
 
 	// Play the audio
@@ -171,8 +183,10 @@ namespace openshot
     		if (source && !transport.isPlaying() && is_playing) {
 
     			// Start new audio device (or get existing one)
-    			// Add callback
-				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.addAudioCallback(&player);
+                AudioDeviceManagerSingleton *audioInstance = AudioDeviceManagerSingleton::Instance(sampleRate,
+                                                                                                   numChannels);
+                // Add callback
+                audioInstance->audioDeviceManager.addAudioCallback(&player);
 
     			// Create TimeSliceThread for audio buffering
 				time_thread.startThread();
@@ -180,10 +194,10 @@ namespace openshot
     			// Connect source to transport
     			transport.setSource(
     			    source,
-    			    buffer_size, // tells it to buffer this many samples ahead
+    			    0, // No read ahead buffer
     			    &time_thread,
-    			    sampleRate,
-    			    numChannels);
+    			    0, // Sample rate correction (none)
+                    numChannels); // max channels
     			transport.setPosition(0);
     			transport.setGain(1.0);
 
@@ -205,7 +219,7 @@ namespace openshot
 				transport.setSource(NULL);
 
 				player.setSource(NULL);
-				AudioDeviceManagerSingleton::Instance()->audioDeviceManager.removeAudioCallback(&player);
+                audioInstance->audioDeviceManager.removeAudioCallback(&player);
 
 				// Remove source
 				delete source;

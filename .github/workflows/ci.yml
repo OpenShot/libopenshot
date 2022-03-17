@@ -14,7 +14,7 @@ jobs:
           - { os: ubuntu-18.04, shell: bash }
           - { os: ubuntu-latest, shell: bash }
           - { os: macos-latest, shell: bash }
-          - { os: windows-latest, shell: 'msys2 {0}' }
+          - { os: windows-2022, shell: 'msys2 {0}' }
         compiler:
           - { cc: gcc, cxx: g++ }
           - { cc: clang, cxx: clang++ }
@@ -22,7 +22,7 @@ jobs:
           # Windows clang isn't being our friend,
           # JUCE seems to think it can use _get_tzname there
           # (it can't)
-          - sys: { os: windows-latest, shell: 'msys2 {0}' }
+          - sys: { os: windows-2022, shell: 'msys2 {0}' }
             compiler: { cc: clang, cxx: clang++ }
     defaults:
       run:
@@ -33,21 +33,21 @@ jobs:
       CODECOV_TOKEN: 'dc94d508-39d3-4369-b1c6-321749f96f7c'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           # Work around a codecov issue detecting commit SHAs
           # see: https://community.codecov.io/t/issue-detecting-commit-sha-please-run-actions-checkout-with-fetch-depth-1-or-set-to-0/2571
           fetch-depth: 0
 
       - name: Checkout OpenShotAudio
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: OpenShot/libopenshot-audio
           path: audio
 
       - name: Checkout Resvg
         if: ${{ matrix.compiler.cc == 'clang' && runner.os == 'linux' }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: RazrFalcon/resvg
           path: resvg
@@ -63,7 +63,7 @@ jobs:
       - uses: haya14busa/action-cond@v1
         id: coverage
         with:
-          cond: ${{ matrix.compiler.cc == 'gcc' && runner.os == 'linux' }}
+          cond: ${{ (matrix.compiler.cc == 'gcc' && runner.os == 'linux') || (matrix.compiler.cc == 'clang' && runner.os == 'macos') }}
           if_true: "-DENABLE_COVERAGE:BOOL=1"
 
       - uses: haya14busa/action-cond@v1
@@ -96,22 +96,24 @@ jobs:
         run: |
           brew install \
             qt5 ffmpeg zeromq cppzmq libomp opencv protobuf babl \
-            python3 swig catch2 doxygen graphviz
+            python3 swig catch2 doxygen graphviz lcov
 
       - name: Set up MSYS and install Windows dependencies
         if: ${{ runner.os == 'Windows' }}
         uses: msys2/setup-msys2@v2
         with:
-          release: false
+          release: true
           update: true
           install: >-
               mingw-w64-x86_64-gcc
-              mingw-w64-x86_64-clang
               mingw-w64-x86_64-lld
               mingw-w64-x86_64-make
               mingw-w64-x86_64-cmake
               mingw-w64-x86_64-pkgconf
-              mingw-w64-x86_64-qt5
+              mingw-w64-x86_64-qt5-base
+              mingw-w64-x86_64-qt5-svg
+              mingw-w64-x86_64-qt5-winextras
+              mingw-w64-x86_64-qt5-tools
               mingw-w64-x86_64-libvpx
               mingw-w64-x86_64-ffmpeg
               mingw-w64-x86_64-zeromq

@@ -36,11 +36,9 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 // Default destructor
 CacheMemory::~CacheMemory()
 {
-	frames.clear();
-	frame_numbers.clear();
-	ordered_frame_numbers.clear();
+    Clear();
 
-	// remove mutex
+    // remove mutex
 	delete cacheMutex;
 }
 
@@ -129,6 +127,15 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 	}
 }
 
+// Check if frame is already contained in cache
+bool CacheMemory::Contains(int64_t frame_number) {
+    if (frames.count(frame_number) > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
 std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 {
@@ -162,7 +169,7 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 
 	// Return frame (if any)
 	if (smallest_frame != -1) {
-        return GetFrame(smallest_frame);
+        return frames[smallest_frame];
     } else {
 	    return NULL;
 	}
@@ -261,7 +268,9 @@ void CacheMemory::Clear()
 
 	frames.clear();
 	frame_numbers.clear();
+	frame_numbers.shrink_to_fit();
 	ordered_frame_numbers.clear();
+	ordered_frame_numbers.shrink_to_fit();
 	needs_range_processing = true;
 }
 

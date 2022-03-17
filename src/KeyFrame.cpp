@@ -120,6 +120,12 @@ Keyframe::Keyframe(double value) {
 // Constructor which takes a vector of Points
 Keyframe::Keyframe(const std::vector<openshot::Point>& points) : Points(points) {};
 
+// Destructor
+Keyframe::~Keyframe() {
+    Points.clear();
+    Points.shrink_to_fit();
+}
+
 // Add a new point on the key-frame.  Each point has a primary coordinate,
 // a left handle, and a right handle.
 void Keyframe::AddPoint(Point p) {
@@ -352,6 +358,7 @@ void Keyframe::SetJson(const std::string value) {
 void Keyframe::SetJsonValue(const Json::Value root) {
 	// Clear existing points
 	Points.clear();
+	Points.shrink_to_fit();
 
 	if (!root["Points"].isNull())
 		// loop through points

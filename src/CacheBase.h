@@ -53,6 +53,10 @@ namespace openshot {
 		/// Clear the cache of all frames
 		virtual void Clear() = 0;
 
+        /// @brief Check if frame is already contained in cache
+        /// @param frame_number The frame number to be checked
+        virtual bool Contains(int64_t frame_number) = 0;
+
 		/// Count the frames in the queue
 		virtual int64_t Count() = 0;
 

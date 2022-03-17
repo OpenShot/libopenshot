@@ -19,6 +19,7 @@
 #include "AudioReaderSource.h"
 #include "AudioDevices.h"
 #include "AudioReaderSource.h"
+#include "Qt/VideoCacheThread.h"
 
 #include <OpenShotAudio.h>
 #include <AppConfig.h>
@@ -43,14 +44,21 @@ private:
 		AudioDeviceManagerSingleton(){ initialise_error=""; };
 
 		/// Private variable to keep track of singleton instance
-		static AudioDeviceManagerSingleton * m_pInstance;
+		static AudioDeviceManagerSingleton* m_pInstance;
 
 public:
 		/// Error found during JUCE initialise method
 		std::string initialise_error;
 
-		/// Override with no channels and no preferred audio device
-		static AudioDeviceManagerSingleton * Instance();
+		/// Default sample rate (as detected)
+        double defaultSampleRate;
+
+		/// Override with default sample rate & channels (44100, 2) and no preferred audio device
+		static AudioDeviceManagerSingleton* Instance();
+
+        /// Override with custom sample rate & channels and no preferred audio device
+        /// sample rate and channels are only set on 1st call (when singleton is created)
+        static AudioDeviceManagerSingleton* Instance(int rate, int channels);
 
 		/// Public device manager property
 		juce::AudioDeviceManager audioDeviceManager;
@@ -71,12 +79,12 @@ public:
 		double sampleRate;
 		int numChannels;
 		juce::WaitableEvent play;
-		juce::WaitableEvent played;
-		int buffer_size;
 		bool is_playing;
 		juce::TimeSliceThread time_thread;
+        openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
+
 		/// Constructor
-		AudioPlaybackThread();
+		AudioPlaybackThread(openshot::VideoCacheThread* cache);
 		/// Destructor
 		~AudioPlaybackThread();
 
@@ -85,9 +93,6 @@ public:
 
 		/// Get the current frame object (which is filling the buffer)
 		std::shared_ptr<openshot::Frame> getFrame();
-
-		/// Get the current frame number being played
-		int64_t getCurrentFramePosition();
 
 		/// Play the audio
 		void Play();
@@ -112,6 +117,12 @@ public:
 		{
 		    return AudioDeviceManagerSingleton::Instance()->initialise_error;
 		}
+
+		/// Get detected audio sample rate (from default device)
+		double getDefaultSampleRate()
+        {
+            return AudioDeviceManagerSingleton::Instance()->defaultSampleRate;
+        }
 
 		/// Get Audio Device Names (if any)
 		std::vector<std::pair<std::string, std::string>> getAudioDeviceNames()

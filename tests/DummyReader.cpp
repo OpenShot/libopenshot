@@ -21,7 +21,6 @@
 #include "Frame.h"
 
 TEST_CASE( "Default constructor", "[libopenshot][dummyreader]" ) {
-	// Create a default fraction (should be 1/1)
 	openshot::DummyReader r;
 	r.Open(); // Open the reader
 
@@ -41,7 +40,6 @@ TEST_CASE( "Default constructor", "[libopenshot][dummyreader]" ) {
 }
 
 TEST_CASE( "Constructor", "[libopenshot][dummyreader]" ) {
-	// Create a default fraction (should be 1/1)
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 60.0);
 	r.Open(); // Open the reader
 
@@ -56,7 +54,6 @@ TEST_CASE( "Constructor", "[libopenshot][dummyreader]" ) {
 }
 
 TEST_CASE( "Blank_Frame", "[libopenshot][dummyreader]" ) {
-	// Create a default fraction (should be 1/1)
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0);
 	r.Open(); // Open the reader
 
@@ -96,7 +93,7 @@ TEST_CASE( "Fake_Frame", "[libopenshot][dummyreader]" ) {
 		delete[] audio_buffer;
 	}
 
-	// Create a default fraction (should be 1/1)
+	// Create a dummy reader, with a pre-existing cache
 	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
 	r.Open(); // Open the reader
 
@@ -108,30 +105,6 @@ TEST_CASE( "Fake_Frame", "[libopenshot][dummyreader]" ) {
 	CHECK(r.GetFrame(2)->GetAudioSamples(0)[0] == 2);
 	CHECK(r.GetFrame(2)->GetAudioSamples(0)[1] == Approx(2.00068033).margin(0.00001));
 	CHECK(r.GetFrame(2)->GetAudioSamples(0)[2] == Approx(2.00136054).margin(0.00001));
-
-	// Clean up
-	cache.Clear();
-	r.Close();
-}
-
-TEST_CASE( "Invalid_Fake_Frame", "[libopenshot][dummyreader]" ) {
-	// Create fake frames (with specific frame #, samples, and channels)
-	auto f1 = std::make_shared<openshot::Frame>(1, 1470, 2);
-	auto f2 = std::make_shared<openshot::Frame>(2, 1470, 2);
-
-	// Add test frames to cache object
-	openshot::CacheMemory cache;
-	cache.Add(f1);
-	cache.Add(f2);
-
-	// Create a default fraction (should be 1/1)
-	openshot::DummyReader r(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 30.0, &cache);
-	r.Open();
-
-	// Verify exception
-	CHECK(r.GetFrame(1)->number == 1);
-	CHECK(r.GetFrame(2)->number == 2);
-	CHECK_THROWS_AS(r.GetFrame(3)->number, openshot::InvalidFile);
 
 	// Clean up
 	cache.Clear();
