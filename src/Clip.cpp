@@ -401,16 +401,13 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 
 		// Is a time map detected
 		int64_t new_frame_number = frame_number;
-		int64_t time_mapped_number = adjust_frame_number_minimum(time.GetLong(frame_number));
-		if (time.GetLength() > 1)
-			new_frame_number = time_mapped_number;
 
 		// Now that we have re-mapped what frame number is needed, go and get the frame pointer
 		std::shared_ptr<Frame> original_frame = GetOrCreateFrame(new_frame_number);
 
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
-		get_time_mapped_frame(original_frame, new_frame_number);
+		get_time_mapped_frame(original_frame, frame_number);
 
 		// Apply local effects to the frame (if any)
 		apply_effects(original_frame);
