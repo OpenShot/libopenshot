@@ -126,8 +126,7 @@ namespace openshot {
 		bool write_header;
 		bool write_trailer;
 
-		AVOutputFormat *fmt;
-		AVFormatContext *oc;
+		AVFormatContext* oc;
 		AVStream *audio_st, *video_st;
 		AVCodecContext *video_codec_ctx;
 		AVCodecContext *audio_codec_ctx;

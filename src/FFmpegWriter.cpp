@@ -73,7 +73,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 #endif // USE_HW_ACCEL
 
 FFmpegWriter::FFmpegWriter(const std::string& path) :
-		path(path), fmt(NULL), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
+		path(path), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
 		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
 		rescaler_position(0), video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
@@ -115,45 +115,46 @@ void FFmpegWriter::Open() {
 
 // auto detect format (from path)
 void FFmpegWriter::auto_detect_format() {
-	// Auto detect the output format from the name. default is mpeg.
-	fmt = av_guess_format(NULL, path.c_str(), NULL);
-	if (!fmt)
-		throw InvalidFormat("Could not deduce output format from file extension.", path);
 
 	// Allocate the output media context
 	AV_OUTPUT_CONTEXT(&oc, path.c_str());
-	if (!oc)
-		throw OutOfMemory("Could not allocate memory for AVFormatContext.", path);
+	if (!oc) {
+		throw OutOfMemory(
+			"Could not allocate memory for AVFormatContext.", path);
+	}
 
-	// Set the AVOutputFormat for the current AVFormatContext
-	oc->oformat = fmt;
+	// Determine what format to use when encoding this output filename
+	oc->oformat = av_guess_format(NULL, path.c_str(), NULL);
+	if (oc->oformat == nullptr) {
+		throw InvalidFormat(
+			"Could not deduce output format from file extension.", path);
+	}
 
-	// Update codec names
-	if (fmt->video_codec != AV_CODEC_ID_NONE && info.has_video)
-		// Update video codec name
-		info.vcodec = avcodec_find_encoder(fmt->video_codec)->name;
+	// Update video codec name
+	if (oc->oformat->video_codec != AV_CODEC_ID_NONE && info.has_video)
+		info.vcodec = avcodec_find_encoder(oc->oformat->video_codec)->name;
 
-	if (fmt->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
-		// Update audio codec name
-		info.acodec = avcodec_find_encoder(fmt->audio_codec)->name;
+	// Update audio codec name
+	if (oc->oformat->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
+		info.acodec = avcodec_find_encoder(oc->oformat->audio_codec)->name;
 }
 
 // initialize streams
 void FFmpegWriter::initialize_streams() {
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::initialize_streams",
-		"fmt->video_codec", fmt->video_codec,
-		"fmt->audio_codec", fmt->audio_codec,
+		"oc->oformat->video_codec", oc->oformat->video_codec,
+		"oc->oformat->audio_codec", oc->oformat->audio_codec,
 		"AV_CODEC_ID_NONE", AV_CODEC_ID_NONE);
 
 	// Add the audio and video streams using the default format codecs and initialize the codecs
 	video_st = NULL;
 	audio_st = NULL;
-	if (fmt->video_codec != AV_CODEC_ID_NONE && info.has_video)
+	if (oc->oformat->video_codec != AV_CODEC_ID_NONE && info.has_video)
 		// Add video stream
 		video_st = add_video_stream();
 
-	if (fmt->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
+	if (oc->oformat->audio_codec != AV_CODEC_ID_NONE && info.has_audio)
 		// Add audio stream
 		audio_st = add_audio_stream();
 }
@@ -224,9 +225,6 @@ void FFmpegWriter::SetVideoOptions(bool has_video, std::string codec, Fraction f
 		else {
 			// Set video codec
 			info.vcodec = new_codec->name;
-
-			// Update video codec in fmt
-			fmt->video_codec = new_codec->id;
 		}
 	}
 	if (fps.num > 0) {
@@ -294,9 +292,6 @@ void FFmpegWriter::SetAudioOptions(bool has_audio, std::string codec, int sample
 		else {
 			// Set audio codec
 			info.acodec = new_codec->name;
-
-			// Update audio codec in fmt
-			fmt->audio_codec = new_codec->id;
 		}
 	}
 	if (sample_rate > 7999)
@@ -639,7 +634,7 @@ void FFmpegWriter::WriteHeader() {
 		throw InvalidOptions("No video or audio options have been set.  You must set has_video or has_audio (or both).", path);
 
 	// Open the output file, if needed
-	if (!(fmt->flags & AVFMT_NOFILE)) {
+	if (!(oc->oformat->flags & AVFMT_NOFILE)) {
 		if (avio_open(&oc->pb, path.c_str(), AVIO_FLAG_WRITE) < 0)
 			throw InvalidFile("Could not open or write file.", path);
 	}
@@ -788,7 +783,7 @@ void FFmpegWriter::write_queued_frames() {
             // Get AVFrame
             AVFrame *av_frame = av_frames[frame];
 
-            // Deallocate AVPicture and AVFrame
+            // Deallocate buffer and AVFrame
             av_freep(&(av_frame->data[0]));
             AV_FREE_FRAME(&av_frame);
             av_frames.erase(frame);
@@ -801,9 +796,9 @@ void FFmpegWriter::write_queued_frames() {
     // Done writing
     is_writing = false;
 
-	// Raise exception from main thread
-	if (has_error_encoding_video)
-		throw ErrorEncodingVideo("Error while writing raw video frame", -1);
+    // Raise exception from main thread
+    if (has_error_encoding_video)
+        throw ErrorEncodingVideo("Error while writing raw video frame", -1);
 }
 
 // Write a block of frames from a reader
@@ -1034,7 +1029,7 @@ void FFmpegWriter::Close() {
 	if (image_rescalers.size() > 0)
 		RemoveScalers();
 
-	if (!(fmt->flags & AVFMT_NOFILE)) {
+	if (!(oc->oformat->flags & AVFMT_NOFILE)) {
 		/* close the output file */
 		avio_close(oc->pb);
 	}
@@ -1070,21 +1065,27 @@ void FFmpegWriter::add_avframe(std::shared_ptr<Frame> frame, AVFrame *av_frame) 
 
 // Add an audio output stream
 AVStream *FFmpegWriter::add_audio_stream() {
-	AVCodecContext *c;
-	AVStream *st;
-
 	// Find the audio codec
 	const AVCodec *codec = avcodec_find_encoder_by_name(info.acodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid audio codec could not be found for this file.", path);
 
 	// Free any previous memory allocations
-	if (audio_codec_ctx != NULL) {
+	if (audio_codec_ctx != nullptr) {
 		AV_FREE_CONTEXT(audio_codec_ctx);
 	}
 
 	// Create a new audio stream
-	AV_FORMAT_NEW_STREAM(oc, audio_codec_ctx, codec, st)
+	AVStream* st = avformat_new_stream(oc, codec);
+	if (!st)
+		throw OutOfMemory("Could not allocate memory for the video stream.", path);
+
+	// Allocate a new codec context for the stream
+	ALLOC_CODEC_CTX(audio_codec_ctx, codec, st)
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	st->codecpar->codec_id = codec->id;
+#endif
+	AVCodecContext* c = audio_codec_ctx;
 
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -1163,23 +1164,35 @@ AVStream *FFmpegWriter::add_audio_stream() {
 
 // Add a video output stream
 AVStream *FFmpegWriter::add_video_stream() {
-	AVCodecContext *c;
-	AVStream *st;
-
 	// Find the video codec
 	const AVCodec *codec = avcodec_find_encoder_by_name(info.vcodec.c_str());
 	if (codec == NULL)
 		throw InvalidCodec("A valid video codec could not be found for this file.", path);
 
+	// Free any previous memory allocations
+	if (video_codec_ctx != nullptr) {
+		AV_FREE_CONTEXT(video_codec_ctx);
+	}
+
 	// Create a new video stream
-	AV_FORMAT_NEW_STREAM(oc, video_codec_ctx, codec, st)
+	AVStream* st = avformat_new_stream(oc, codec);
+	if (!st)
+		throw OutOfMemory("Could not allocate memory for the video stream.", path);
+
+	// Allocate a new codec context for the stream
+	ALLOC_CODEC_CTX(video_codec_ctx, codec, st)
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
+	st->codecpar->codec_id = codec->id;
+#endif
+
+	AVCodecContext* c = video_codec_ctx;
 
 	c->codec_id = codec->id;
 	c->codec_type = AVMEDIA_TYPE_VIDEO;
 
 	// Set sample aspect ratio
-    c->sample_aspect_ratio.num = info.pixel_ratio.num;
-    c->sample_aspect_ratio.den = info.pixel_ratio.den;
+	c->sample_aspect_ratio.num = info.pixel_ratio.num;
+	c->sample_aspect_ratio.den = info.pixel_ratio.den;
 
 	/* Init video encoder options */
 	if (info.video_bit_rate >= 1000
@@ -1283,13 +1296,6 @@ AVStream *FFmpegWriter::add_video_stream() {
 	st->avg_frame_rate = av_inv_q(c->time_base);
 	st->time_base.num = info.video_timebase.num;
 	st->time_base.den = info.video_timebase.den;
-#if (LIBAVFORMAT_VERSION_MAJOR >= 58)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	st->codec->time_base.num = info.video_timebase.num;
-	st->codec->time_base.den = info.video_timebase.den;
-	#pragma GCC diagnostic pop
-#endif
 
 	c->gop_size = 12; /* TODO: add this to "info"... emit one intra frame every twelve frames at most */
 	c->max_b_frames = 10;
@@ -1321,13 +1327,13 @@ AVStream *FFmpegWriter::add_video_stream() {
 
 	// Codec doesn't have any pix formats?
 	if (c->pix_fmt == PIX_FMT_NONE) {
-		if (fmt->video_codec == AV_CODEC_ID_RAWVIDEO) {
+		if (oc->oformat->video_codec == AV_CODEC_ID_RAWVIDEO) {
 			// Raw video should use RGB24
 			c->pix_fmt = PIX_FMT_RGB24;
 
 #if (LIBAVFORMAT_VERSION_MAJOR < 58)
 			// FFmpeg < 4.0
-			if (strcmp(fmt->name, "gif") != 0)
+			if (strcmp(oc->oformat->name, "gif") != 0)
 				// If not GIF format, skip the encoding process
 				// Set raw picture flag (so we don't encode this video)
 				oc->oformat->flags |= AVFMT_RAWPICTURE;
@@ -1341,7 +1347,7 @@ AVStream *FFmpegWriter::add_video_stream() {
 	AV_COPY_PARAMS_FROM_CONTEXT(st, c);
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"FFmpegWriter::add_video_stream ("
-			+ (std::string)fmt->name + " : "
+			+ (std::string)oc->oformat->name + " : "
 			+ (std::string)av_get_pix_fmt_name(c->pix_fmt) + ")",
 		"c->codec_id", c->codec_id,
 		"c->bit_rate", c->bit_rate,
@@ -2125,19 +2131,19 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 	if (oc->oformat->flags & AVFMT_RAWPICTURE) {
 #endif
 		// Raw video case.
-		AVPacket pkt;
-		av_init_packet(&pkt);
+		AVPacket* pkt;
+		av_packet_from_data(
+			pkt, frame_final->data[0],
+			frame_final->linesize[0] * frame_final->height);
 
-		pkt.flags |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = video_st->index;
-		pkt.data = (uint8_t *) frame_final->data;
-		pkt.size = sizeof(AVPicture);
+		pkt->flags |= AV_PKT_FLAG_KEY;
+		pkt->stream_index = video_st->index;
 
 		// Set PTS (in frames and scaled to the codec's timebase)
-		pkt.pts = video_timestamp;
+		pkt->pts = video_timestamp;
 
 		/* write the compressed frame in the media file */
-		int error_code = av_interleaved_write_frame(oc, &pkt);
+		int error_code = av_interleaved_write_frame(oc, pkt);
 		if (error_code < 0) {
 			ZmqLogger::Instance()->AppendDebugMethod(
 				"FFmpegWriter::write_video_packet ERROR ["
@@ -2147,7 +2153,7 @@ bool FFmpegWriter::write_video_packet(std::shared_ptr<Frame> frame, AVFrame *fra
 		}
 
 		// Deallocate packet
-		AV_FREE_PACKET(&pkt);
+		AV_FREE_PACKET(pkt);
 
 	} else
 	{
