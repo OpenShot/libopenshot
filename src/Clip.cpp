@@ -411,6 +411,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
 		get_time_mapped_frame(original_frame, new_frame_number);
+		original_frame->number = frame_number;
 
 		// Apply local effects to the frame (if any)
 		apply_effects(original_frame);
@@ -425,7 +426,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
         }
 
 		// Apply keyframe / transforms
-		apply_keyframes(original_frame, background_frame->GetImage(), frame_number);
+		apply_keyframes(original_frame, background_frame->GetImage());
 
 		// Return processed 'frame'
 		return original_frame;
@@ -1234,7 +1235,7 @@ bool Clip::isEqual(double a, double b)
 }
 
 // Apply keyframes to the source frame (if any)
-void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas, uint unmapped_frame_number) {
+void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage> background_canvas) {
     // Skip out if video was disabled or only an audio frame (no visualisation in use)
     if (!Waveform() && !Reader()->info.has_video) {
         // Skip the rest of the image processing for performance reasons
@@ -1256,10 +1257,10 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
             "background_canvas->height()", background_canvas->height());
 
         // Get the color of the waveform
-        int red = wave_color.red.GetInt(unmapped_frame_number);
-        int green = wave_color.green.GetInt(unmapped_frame_number);
-        int blue = wave_color.blue.GetInt(unmapped_frame_number);
-        int alpha = wave_color.alpha.GetInt(unmapped_frame_number);
+        int red = wave_color.red.GetInt(frame->number);
+        int green = wave_color.green.GetInt(frame->number);
+        int blue = wave_color.blue.GetInt(frame->number);
+        int alpha = wave_color.alpha.GetInt(frame->number);
 
         // Generate Waveform Dynamically (the size of the timeline)
         source_image = frame->GetWaveform(background_canvas->width(), background_canvas->height(), red, green, blue, alpha);
@@ -1267,7 +1268,7 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
     }
 
     // Get transform from clip's keyframes
-    QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height(), unmapped_frame_number);
+    QTransform transform = get_transform(frame, background_canvas->width(), background_canvas->height());
 
     // Debug output
     ZmqLogger::Instance()->AppendDebugMethod(
@@ -1323,15 +1324,15 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
 }
 
 // Apply keyframes to the source frame (if any)
-QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int height, uint unmapped_frame_number)
+QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int height)
 {
     // Get image from clip
     std::shared_ptr<QImage> source_image = frame->GetImage();
 
     /* ALPHA & OPACITY */
-	if (alpha.GetValue(unmapped_frame_number) != 1.0)
+	if (alpha.GetValue(frame->number) != 1.0)
 	{
-		float alpha_value = alpha.GetValue(unmapped_frame_number);
+		float alpha_value = alpha.GetValue(frame->number);
 
 		// Get source image's pixels
 		unsigned char *pixels = source_image->bits();
@@ -1426,7 +1427,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
-		double timeline_frame_number = unmapped_frame_number + clip_start_position - clip_start_frame;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parent object's properties (Clip)
 		parentObject_location_x = parentClipObject->location_x.GetValue(timeline_frame_number);
@@ -1444,7 +1445,7 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 		// Convert Clip's frame position to Timeline's frame position
 		long clip_start_position = round(Position() * info.fps.ToDouble()) + 1;
 		long clip_start_frame = (Start() * info.fps.ToDouble()) + 1;
-		double timeline_frame_number = unmapped_frame_number + clip_start_position - clip_start_frame;
+		double timeline_frame_number = frame->number + clip_start_position - clip_start_frame;
 
 		// Get parentTrackedObject's parent clip's properties
 		std::map<std::string, float> trackedObjectParentClipProperties = parentTrackedObject->GetParentClipProperties(timeline_frame_number);
@@ -1484,8 +1485,8 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	float y = 0.0; // top
 
 	// Adjust size for scale x and scale y
-	float sx = scale_x.GetValue(unmapped_frame_number); // percentage X scale
-	float sy = scale_y.GetValue(unmapped_frame_number); // percentage Y scale
+	float sx = scale_x.GetValue(frame->number); // percentage X scale
+	float sy = scale_y.GetValue(frame->number); // percentage Y scale
 
 	// Change clip's scale to parentObject's scale
 	if(parentObject_scale_x != 0.0 && parentObject_scale_y != 0.0){
@@ -1542,13 +1543,13 @@ QTransform Clip::get_transform(std::shared_ptr<Frame> frame, int width, int heig
 	QTransform transform;
 
 	/* LOCATION, ROTATION, AND SCALE */
-	float r = rotation.GetValue(unmapped_frame_number) + parentObject_rotation; // rotate in degrees
-	x += (width * (location_x.GetValue(unmapped_frame_number) + parentObject_location_x )); // move in percentage of final width
-	y += (height * (location_y.GetValue(unmapped_frame_number) + parentObject_location_y )); // move in percentage of final height
-	float shear_x_value = shear_x.GetValue(unmapped_frame_number) + parentObject_shear_x;
-	float shear_y_value = shear_y.GetValue(unmapped_frame_number) + parentObject_shear_y;
-	float origin_x_value = origin_x.GetValue(unmapped_frame_number);
-	float origin_y_value = origin_y.GetValue(unmapped_frame_number);
+	float r = rotation.GetValue(frame->number) + parentObject_rotation; // rotate in degrees
+	x += (width * (location_x.GetValue(frame->number) + parentObject_location_x )); // move in percentage of final width
+	y += (height * (location_y.GetValue(frame->number) + parentObject_location_y )); // move in percentage of final height
+	float shear_x_value = shear_x.GetValue(frame->number) + parentObject_shear_x;
+	float shear_y_value = shear_y.GetValue(frame->number) + parentObject_shear_y;
+	float origin_x_value = origin_x.GetValue(frame->number);
+	float origin_y_value = origin_y.GetValue(frame->number);
 
 	// Transform source image (if needed)
 	ZmqLogger::Instance()->AppendDebugMethod(
