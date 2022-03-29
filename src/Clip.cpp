@@ -411,6 +411,7 @@ std::shared_ptr<Frame> Clip::GetFrame(std::shared_ptr<openshot::Frame> backgroun
 		// Get time mapped frame number (used to increase speed, change direction, etc...)
 		// TODO: Handle variable # of samples, since this resamples audio for different speeds (only when time curve is set)
 		get_time_mapped_frame(original_frame, new_frame_number);
+		// Return the frame's number so the correct keyframes are applied.
 		original_frame->number = frame_number;
 
 		// Apply local effects to the frame (if any)
