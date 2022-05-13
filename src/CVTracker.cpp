@@ -98,8 +98,8 @@ void CVTracker::trackClip(openshot::Clip& video, size_t _start, size_t _end, boo
 
         if(frame == start){
             // Take the normalized inital bounding box and multiply to the current video shape
-            bbox = cv::Rect2d(bbox.x*cvimage.cols,bbox.y*cvimage.rows,bbox.width*cvimage.cols,
-                                        bbox.height*cvimage.rows);
+            bbox = cv::Rect2d(int(bbox.x*cvimage.cols), int(bbox.y*cvimage.rows),
+                              int(bbox.width*cvimage.cols), int(bbox.height*cvimage.rows));
         }
 
         // Pass the first frame to initialize the tracker
