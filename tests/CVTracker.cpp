@@ -102,7 +102,7 @@ TEST_CASE( "Track_Video", "[libopenshot][opencv][tracker]" )
 
     // Compare if tracked data is equal to pre-tested ones
     CHECK(x == Approx(256).margin(1));
-    CHECK(y == Approx(134).margin(1));
+    CHECK(y == Approx(132).margin(1));
     CHECK(width == Approx(180).margin(1));
     CHECK(height == Approx(166).margin(2));
 }
