@@ -247,7 +247,7 @@ Json::Value Tracker::JsonValue() const {
 	// Save the effect's properties on root
 	root["type"] = info.class_name;
 	root["protobuf_data_path"] = protobuf_data_path;
-    root["BaseFPS"]["num"] = BaseFPS.num;
+	root["BaseFPS"]["num"] = BaseFPS.num;
 	root["BaseFPS"]["den"] = BaseFPS.den;
 	root["TimeScale"] = this->TimeScale;
 
@@ -287,9 +287,6 @@ void Tracker::SetJsonValue(const Json::Value root) {
 
 	// Set parent data
 	EffectBase::SetJsonValue(root);
-
-	if(!root["type"].isNull())
-		info.class_name = root["type"].asString();
 
 	if (!root["BaseFPS"].isNull() && root["BaseFPS"].isObject())
 	{
