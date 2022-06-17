@@ -68,20 +68,37 @@ if(NOT BUILD_TESTING)
   return()
 endif()
 
-# Create object library for test executable main(),
-# to avoid recompiling for every test
-add_library(catch-main OBJECT catch_main.cpp)
-target_link_libraries(catch-main PUBLIC Catch2::Catch2)
+add_library(openshot_catch2 INTERFACE)
+target_include_directories(openshot_catch2 INTERFACE
+  "${CMAKE_CURRENT_BINARY_DIR}"
+)
+target_compile_definitions(openshot_catch2 INTERFACE
+  TEST_MEDIA_PATH="${TEST_MEDIA_PATH}")
+
+if(TARGET Catch2::Catch2WithMain)
+  # Catch2 v3 works a bit differently
+  configure_file(catch2v3.h.in openshot_catch.h)
+  target_link_libraries(openshot_catch2 INTERFACE Catch2::Catch2WithMain)
+else()
+  configure_file(catch2v2.h.in openshot_catch.h)
+  # Create object library for test executable main(),
+  # to avoid recompiling for every test
+  add_library(catch-main OBJECT catch_main.cpp)
+  target_link_libraries(catch-main PUBLIC Catch2::Catch2)
+  target_include_directories(catch-main PUBLIC
+    "${CMAKE_CURRENT_BINARY_DIR}")
+  target_link_libraries(openshot_catch2 INTERFACE Catch2::Catch2)
+  target_sources(openshot_catch2 INTERFACE $<TARGET_OBJECTS:catch-main>)
+endif()
 
 foreach(tname ${OPENSHOT_TESTS})
   add_executable(openshot-${tname}-test
     ${tname}.cpp
-    $<TARGET_OBJECTS:catch-main>
   )
-  target_compile_definitions(openshot-${tname}-test PRIVATE
-    TEST_MEDIA_PATH="${TEST_MEDIA_PATH}"
+  target_link_libraries(openshot-${tname}-test
+    openshot_catch2
+    openshot
   )
-  target_link_libraries(openshot-${tname}-test Catch2::Catch2 openshot)
 
   # Automatically configure CTest targets from Catch2 test cases
   catch_discover_tests(
