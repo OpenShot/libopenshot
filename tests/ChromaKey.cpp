@@ -28,7 +28,7 @@ std::ostream& operator << ( std::ostream& os, QColor const& value ) {
     return os;
 }
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 using namespace openshot;
 

@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "Settings.h"
 

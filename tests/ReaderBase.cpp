@@ -13,7 +13,7 @@
 #include <memory>
 #include <string>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "ReaderBase.h"
 #include "CacheBase.h"

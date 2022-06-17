@@ -13,7 +13,7 @@
 #include <memory>
 #include <QDir>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "CacheDisk.h"
 #include "Frame.h"
