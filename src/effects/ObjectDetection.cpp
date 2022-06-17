@@ -57,7 +57,7 @@ void ObjectDetection::init_effect_details()
     InitEffectInfo();
 
     /// Set the effect info
-    info.class_name = "Object Detector";
+    info.class_name = "ObjectDetection";
     info.name = "Object Detector";
     info.description = "Detect objects through the video.";
     info.has_audio = false;
