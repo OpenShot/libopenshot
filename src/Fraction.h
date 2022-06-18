@@ -17,6 +17,7 @@
 #include <utility>   // for std::pair
 #include <map>       // for std::map
 #include <vector>    // for std::vector
+#include <cmath>     // for std::round
 
 namespace openshot {
 
@@ -29,65 +30,82 @@ namespace openshot {
  */
 class Fraction {
 public:
-	int num; ///<Numerator for the fraction
-	int den; ///<Denominator for the fraction
+    int num{1};  ///< Numerator for the fraction
+    int den{1};  ///< Denominator for the fraction
+    std::string type{"Fraction"};  ///< Type name for the class (overridable)
 
-	/// Default Constructor
-	Fraction();
+    /// Default Constructor
+    Fraction() = default;
 
-	/// Constructor with numerator and denominator
-	Fraction(int num, int den);
+    // Copy constructor
+    Fraction(const Fraction&) = default;
 
-	/// Constructor that accepts a (num, den) pair
-	Fraction(std::pair<int, int> pair);
+    /// Constructor with numerator and denominator
+    Fraction(int num, int den) : num(num), den(den) {}
 
-	/// Constructor that takes a vector of length 2 (containing {num, den})
-	Fraction(std::vector<int> vector);
+    /// Constructor that accepts a (num, den) pair
+    Fraction(std::pair<int, int> pair) : num(pair.first), den(pair.second) {}
 
-	/// Constructor that takes a key-value mapping (keys: 'num'. 'den')
-	Fraction(std::map<std::string, int> mapping);
+    /// Constructor that takes a vector of length 2 (containing {num, den})
+    Fraction(std::vector<int> vector)
+        : Fraction::Fraction(vector[0], vector[1]) {}
 
-	/// Calculate the greatest common denominator
-	int GreatestCommonDenominator();
+    /// Constructor that takes a key-value mapping (keys: 'num'. 'den')
+    Fraction(std::map<std::string, int> mapping)
+        : Fraction::Fraction(mapping["num"], mapping["den"]) {}
 
-	/// Reduce this fraction (i.e. 640/480 = 4/3)
-	void Reduce();
+    /// Calculate the greatest common denominator
+    virtual int GreatestCommonDenominator();
 
-	/// Return this fraction as a float (i.e. 1/2 = 0.5)
-	float ToFloat();
+    /// Reduce this fraction (i.e. 640/480 = 4/3)
+    virtual void Reduce();
 
-	/// Return this fraction as a double (i.e. 1/2 = 0.5)
-	double ToDouble() const;
+    /// Return this fraction as a float (i.e. 1/2 = 0.5)
+    virtual float ToFloat() {
+        return float(num) / float(den);
+    }
 
-	/// Return a rounded integer of the fraction (for example 30000/1001 returns 30)
-	int ToInt();
+    /// Return this fraction as a double (i.e. 1/2 = 0.5)
+    virtual double ToDouble() const {
+        return double(num) / double(den);
+    }
 
-	/// Return the reciprocal as a Fraction
-	Fraction Reciprocal() const;
+    /// Return a rounded integer of the fraction (for example 30000/1001 returns 30)
+    virtual int ToInt() {
+        return std::round((double) num / den);
+    }
+
+    /// Return the reciprocal as a Fraction
+    Fraction Reciprocal() const {
+        return Fraction(den, num);
+    };
 
     // Multiplication and division
 
     /// Multiply two Fraction objects together
-    openshot::Fraction operator*(openshot::Fraction other) {
-        return openshot::Fraction(num * other.num, den * other.den);
+    Fraction operator*(Fraction other) {
+        return Fraction(num * other.num, den * other.den);
     }
 
     /// Divide a Fraction by another Fraction
-    openshot::Fraction operator/(openshot::Fraction other) {
+    Fraction operator/(Fraction other) {
         return *this * other.Reciprocal();
     }
 
     /// Multiplication in the form (openshot_Fraction * numeric_value)
     template<class numT>
     numT operator*(const numT& other) const {
-        return static_cast<numT>(ToDouble() * other);
+        return static_cast<numT>(this->ToDouble() * other);
     }
 
     /// Division in the form (openshot_Fraction / numeric_value)
     template<class numT>
     numT operator/(const numT& other) const {
-        return static_cast<numT>(ToDouble() / other);
+        return static_cast<numT>(this->ToDouble() / other);
     }
+
+    /// Destructor for virtual dispatch (defaulted)
+    virtual ~Fraction() = default;
 };
 
 /// Multiplication in the form (numeric_value * openshot_Fraction)
@@ -110,7 +128,7 @@ operator<<(std::basic_ostream<charT, traits>& o, const openshot::Fraction& frac)
     s.flags(o.flags());
     s.imbue(o.getloc());
     s.precision(o.precision());
-    s << "Fraction(" << frac.num << ", " << frac.den << ")";
+    s << frac.type << '(' << frac.num << ", " << frac.den << ')';
     return o << s.str();
 }
 
