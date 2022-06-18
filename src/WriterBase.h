@@ -17,6 +17,7 @@
 
 #include "ChannelLayouts.h"
 #include "Fraction.h"
+#include "FPS.h"
 #include "Json.h"
 
 namespace openshot
@@ -39,14 +40,14 @@ namespace openshot
 		int height;					///< The height of the video (in pixels)
 		int width;					///< The width of the video (in pixels)
 		int pixel_format;			///< The pixel format (i.e. YUV420P, RGB24, etc...)
-		openshot::Fraction fps;				///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
+		openshot::FPS fps;				///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
 		int video_bit_rate;		///< The bit rate of the video stream (in bytes)
 		openshot::Fraction pixel_ratio;		///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
 		openshot::Fraction display_ratio;		///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
 		std::string vcodec;				///< The name of the video codec used to encode / decode the video stream
 		int64_t video_length;		///< The number of frames in the video stream
 		int video_stream_index;		///< The index of the video stream
-		openshot::Fraction video_timebase;	///< The video timebase determines how long each frame stays on the screen
+		openshot::FPS video_timebase;	///< The video timebase determines how long each frame stays on the screen
 		bool interlaced_frame;		///< Are the contents of this frame interlaced
 		bool top_field_first;		///< Which interlaced field should be displayed first
 		std::string acodec;				///< The name of the audio codec used to encode / decode the video stream
@@ -55,7 +56,7 @@ namespace openshot
 		int channels;				///< The number of audio channels used in the audio stream
 		openshot::ChannelLayout channel_layout;	///< The channel layout (mono, stereo, 5 point surround, etc...)
 		int audio_stream_index;		///< The index of the audio stream
-		openshot::Fraction audio_timebase;	///< The audio timebase determines how long each audio packet should be played
+		openshot::FPS audio_timebase;	///< The audio timebase determines how long each audio packet should be played
 		std::map<std::string, std::string> metadata;	///< An optional map/dictionary of video & audio metadata
 	};
 

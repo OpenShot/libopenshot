@@ -21,6 +21,8 @@
 
 #include "FFmpegReader.h"
 #include "Exceptions.h"
+#include "Fraction.h"
+#include "FPS.h"
 #include "Timeline.h"
 #include "ZmqLogger.h"
 
@@ -2362,7 +2364,7 @@ void FFmpegReader::CheckFPS() {
 		int avg_fps = round(sum_fps / 4.0f);
 
 		// Update FPS
-		info.fps = Fraction(avg_fps, 1);
+		info.fps = FPS(avg_fps, 1);
 
 		// Update Duration and Length
 		info.video_length = frames_detected;
@@ -2375,7 +2377,7 @@ void FFmpegReader::CheckFPS() {
 		int sum_fps = second_second_counter;
 
 		// Update FPS
-		info.fps = Fraction(sum_fps, 1);
+		info.fps = FPS(sum_fps, 1);
 
 		// Update Duration and Length
 		info.video_length = frames_detected;

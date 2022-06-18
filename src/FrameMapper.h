@@ -120,8 +120,8 @@ namespace openshot
 	class FrameMapper : public ReaderBase {
 	private:
 		bool field_toggle;		// Internal odd / even toggle (used when building the mapping)
-		Fraction original;		// The original frame rate
-		Fraction target;		// The target frame rate
+		FPS original;		// The original frame rate
+		FPS target;		// The target frame rate
 		PulldownType pulldown;	// The pull-down technique
 		ReaderBase *reader;		// The source video reader
 		CacheMemory final_cache; 		// Cache of actual Frame objects

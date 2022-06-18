@@ -16,6 +16,8 @@
 
 #include "ReaderBase.h"
 #include "ClipBase.h"
+#include "Fraction.h"
+#include "FPS.h"
 #include "Frame.h"
 
 #include "Json.h"
@@ -35,14 +37,14 @@ ReaderBase::ReaderBase()
 	info.height = 0;
 	info.width = 0;
 	info.pixel_format = -1;
-	info.fps = Fraction();
+	info.fps = FPS();
 	info.video_bit_rate = 0;
 	info.pixel_ratio = Fraction();
 	info.display_ratio = Fraction();
 	info.vcodec = "";
 	info.video_length = 0;
 	info.video_stream_index = -1;
-	info.video_timebase = Fraction();
+	info.video_timebase = FPS();
 	info.interlaced_frame = false;
 	info.top_field_first = true;
 	info.acodec = "";
@@ -51,7 +53,7 @@ ReaderBase::ReaderBase()
 	info.channels = 0;
 	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
-	info.audio_timebase = Fraction();
+	info.audio_timebase = FPS();
 
 	// Init parent clip
 	clip = NULL;
@@ -182,7 +184,7 @@ void ReaderBase::SetJsonValue(const Json::Value root) {
 		if (!root["fps"]["num"].isNull())
 			info.fps.num = root["fps"]["num"].asInt();
 		if (!root["fps"]["den"].isNull())
-		info.fps.den = root["fps"]["den"].asInt();
+			info.fps.den = root["fps"]["den"].asInt();
 	}
 	if (!root["video_bit_rate"].isNull())
 		info.video_bit_rate = root["video_bit_rate"].asInt();

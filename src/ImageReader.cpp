@@ -18,6 +18,8 @@
 
 #include "ImageReader.h"
 #include "Exceptions.h"
+#include "Fraction.h"
+#include "FPS.h"
 #include "Frame.h"
 
 using namespace openshot;
@@ -62,7 +64,7 @@ void ImageReader::Open()
 		info.height = image->size().height();
 		info.pixel_ratio = openshot::Fraction(1, 1);
 		info.duration = 60 * 60 * 1;  // 1 hour duration
-		info.fps = openshot::Fraction(30, 1);
+		info.fps = openshot::FPS(30, 1);
 		info.video_timebase = info.fps.Reciprocal();
 		info.video_length = std::round(info.duration * info.fps.ToDouble());
 

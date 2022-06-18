@@ -66,6 +66,7 @@ set(OPENSHOT_SOURCES
   EffectInfo.cpp
   FFmpegReader.cpp
   FFmpegWriter.cpp
+  FPS.cpp
   Fraction.cpp
   Frame.cpp
   FrameMapper.cpp

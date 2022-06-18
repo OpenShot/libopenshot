@@ -19,6 +19,11 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 
+#ifdef HAVE_OPENCV
+    #include "TrackedObjectBBox.h"
+#endif
+#include "TrackedObjectBase.h"
+
 #include <QDir>
 #include <QFileInfo>
 

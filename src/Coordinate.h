@@ -14,7 +14,6 @@
 #define OPENSHOT_COORDINATE_H
 
 #include <iostream>
-#include "Fraction.h"
 #include "Json.h"
 
 namespace openshot {

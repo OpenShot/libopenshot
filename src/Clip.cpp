@@ -28,6 +28,11 @@
     #include "TextReader.h"
 #endif
 
+#ifdef HAVE_OPENCV
+    #include "TrackedObjectBBox.h"
+#endif
+#include "TrackedObjectBase.h"
+
 #include <Qt>
 
 using namespace openshot;

@@ -13,17 +13,8 @@
 #ifndef OPENSHOT_PROFILE_H
 #define OPENSHOT_PROFILE_H
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <QtCore/QString>
-#include <QtCore/QStringList>
-#include <QtCore/QFile>
-#include <QTextStream>
-#include <cstdio>
-#include <cstdlib>
 #include "Fraction.h"
+#include "FPS.h"
 #include "Json.h"
 
 namespace openshot
@@ -41,7 +32,7 @@ namespace openshot
 		int height;		///< The height of the video (in pixels)
 		int width;		///< The width of the video (in pixels)
 		int pixel_format;	///< The pixel format (i.e. YUV420P, RGB24, etc...)
-		Fraction fps;		///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
+		FPS fps;		///< Frames per second, as a fraction (i.e. 24/1 = 24 fps)
 		Fraction pixel_ratio;	///< The pixel ratio of the video stream as a fraction (i.e. some pixels are not square)
 		Fraction display_ratio;	///< The ratio of width to height of the video stream (i.e. 640x480 has a ratio of 4/3)
 		bool interlaced_frame;	// Are the contents of this frame interlaced

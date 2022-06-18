@@ -16,6 +16,8 @@
 
 #include "WriterBase.h"
 #include "Exceptions.h"
+#include "Fraction.h"
+#include "FPS.h"
 #include "Frame.h"
 #include "ReaderBase.h"
 
@@ -33,14 +35,14 @@ WriterBase::WriterBase()
 	info.height = 0;
 	info.width = 0;
 	info.pixel_format = -1;
-	info.fps = Fraction();
+	info.fps = FPS();
 	info.video_bit_rate = 0;
 	info.pixel_ratio = Fraction();
 	info.display_ratio = Fraction();
 	info.vcodec = "";
 	info.video_length = 0;
 	info.video_stream_index = -1;
-	info.video_timebase = Fraction();
+	info.video_timebase = FPS();
 	info.interlaced_frame = false;
 	info.top_field_first = true;
 	info.acodec = "";
@@ -49,7 +51,7 @@ WriterBase::WriterBase()
 	info.channels = 0;
 	info.channel_layout = LAYOUT_MONO;
 	info.audio_stream_index = -1;
-	info.audio_timebase = Fraction();
+	info.audio_timebase = FPS();
 }
 
 // This method copy's the info struct of a reader, and sets the writer with the same info
@@ -63,18 +65,14 @@ void WriterBase::CopyReaderInfo(ReaderBase* reader)
 	info.height = reader->info.height;
 	info.width = reader->info.width;
 	info.pixel_format = reader->info.pixel_format;
-	info.fps.num = reader->info.fps.num;
-	info.fps.den = reader->info.fps.den;
+	info.fps = reader->info.fps;
 	info.video_bit_rate = reader->info.video_bit_rate;
-	info.pixel_ratio.num = reader->info.pixel_ratio.num;
-	info.pixel_ratio.den = reader->info.pixel_ratio.den;
-	info.display_ratio.num = reader->info.display_ratio.num;
-	info.display_ratio.den = reader->info.display_ratio.den;
+	info.pixel_ratio = reader->info.pixel_ratio;
+	info.display_ratio = reader->info.display_ratio;
 	info.vcodec = reader->info.vcodec;
 	info.video_length = reader->info.video_length;
 	info.video_stream_index = reader->info.video_stream_index;
-	info.video_timebase.num = reader->info.video_timebase.num;
-	info.video_timebase.den = reader->info.video_timebase.den;
+	info.video_timebase = reader->info.video_timebase;
 	info.interlaced_frame = reader->info.interlaced_frame;
 	info.top_field_first = reader->info.top_field_first;
 	info.acodec = reader->info.acodec;
@@ -83,8 +81,7 @@ void WriterBase::CopyReaderInfo(ReaderBase* reader)
 	info.channels = reader->info.channels;
 	info.channel_layout = reader->info.channel_layout;
 	info.audio_stream_index = reader->info.audio_stream_index;
-	info.audio_timebase.num = reader->info.audio_timebase.num;
-	info.audio_timebase.den = reader->info.audio_timebase.den;
+	info.audio_timebase = reader->info.audio_timebase;
 }
 
 // Display file information

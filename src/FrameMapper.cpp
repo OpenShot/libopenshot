@@ -17,6 +17,8 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 #include "Clip.h"
+#include "Fraction.h"
+#include "FPS.h"
 #include "ZmqLogger.h"
 
 using namespace std;
@@ -26,14 +28,12 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 		reader(reader), target(target), pulldown(target_pulldown), is_dirty(true), avr(NULL), parent_position(0.0)
 {
 	// Set the original frame rate from the reader
-	original = Fraction(reader->info.fps.num, reader->info.fps.den);
+	original = FPS(reader->info.fps);
 
 	// Set all info struct members equal to the internal reader
 	info = reader->info;
-	info.fps.num = target.num;
-	info.fps.den = target.den;
-	info.video_timebase.num = target.den;
-	info.video_timebase.den = target.num;
+	info.fps = target;
+	info.video_timebase = target.Reciprocal();
 	info.video_length = round(info.duration * info.fps.ToDouble());
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
@@ -767,12 +767,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	is_dirty = true;
 
 	// Update mapping details
-	target.num = target_fps.num;
-	target.den = target_fps.den;
-	info.fps.num = target_fps.num;
-	info.fps.den = target_fps.den;
-	info.video_timebase.num = target_fps.den;
-	info.video_timebase.den = target_fps.num;
+	target = target_fps;
+	info.fps = target_fps;
+	info.video_timebase = target_fps.Reciprocal();
 	pulldown = target_pulldown;
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;

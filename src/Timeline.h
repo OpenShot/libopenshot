@@ -28,20 +28,15 @@
 #include "Clip.h"
 #include "EffectBase.h"
 #include "Fraction.h"
-#include "Frame.h"
 #include "KeyFrame.h"
-#ifdef USE_OPENCV
-#include "TrackedObjectBBox.h"
-#endif
-#include "TrackedObjectBase.h"
-
-
 
 namespace openshot {
 
 	// Forward decls
+        class Frame;
 	class FrameMapper;
 	class CacheBase;
+        class TrackedObjectBase;
 
 	/// Comparison method for sorting clip pointers (by Layer and then Position). Clips are sorted
 	/// from lowest layer to top layer (since that is the sequence they need to be combined), and then
@@ -187,7 +182,7 @@ namespace openshot {
 		std::vector<openshot::Clip*> find_intersecting_clips(int64_t requested_frame, int number_of_frames, bool include);
 
 		/// Get a clip's frame or generate a blank frame
-		std::shared_ptr<openshot::Frame> GetOrCreateFrame(std::shared_ptr<Frame> background_frame, openshot::Clip* clip, int64_t number, openshot::TimelineInfoStruct* options);
+		std::shared_ptr<openshot::Frame> GetOrCreateFrame(std::shared_ptr<openshot::Frame> background_frame, openshot::Clip* clip, int64_t number, openshot::TimelineInfoStruct* options);
 
 		/// Compare 2 floating point numbers for equality
 		bool isEqual(double a, double b);

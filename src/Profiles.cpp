@@ -13,6 +13,11 @@
 #include "Profiles.h"
 #include "Exceptions.h"
 
+#include <QString>
+#include <QStringList>
+#include <QFile>
+#include <QTextStream>
+
 using namespace openshot;
 
 
