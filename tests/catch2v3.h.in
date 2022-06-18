@@ -15,5 +15,6 @@
 #define OPENSHOT_CATCH2_H
 
 #include <catch2/catch_all.hpp>
+using namespace Catch;
 
 #endif
