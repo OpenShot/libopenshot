@@ -59,7 +59,7 @@
   #define RB_RSHIFT(a, b) RSHIFT(a, b)
   #undef RSHIFT
 #endif
-include "OpenShotVersion.h"
+#include "OpenShotVersion.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"
     #include "ChunkReader.h"
