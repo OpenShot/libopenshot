@@ -59,43 +59,44 @@
   #define RB_RSHIFT(a, b) RSHIFT(a, b)
   #undef RSHIFT
 #endif
-#include "OpenShotVersion.h"
+include "OpenShotVersion.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"
-#include "AudioDevices.h"
-#include "CacheBase.h"
-#include "CacheDisk.h"
-#include "CacheMemory.h"
-#include "ChannelLayouts.h"
-#include "ChunkReader.h"
-#include "ChunkWriter.h"
+    #include "ChunkReader.h"
+    #include "ChunkWriter.h"
+    #include "DummyReader.h"
+    #include "FFmpegReader.h"
+    #include "FFmpegWriter.h"
+    #include "FrameMapper.h"
+    #include "QtHtmlReader.h"
+    #include "QtImageReader.h"
+    #include "QtTextReader.h"
+#include "Fraction.h"
+    #include "FPS.h"
 #include "ClipBase.h"
-#include "Clip.h"
+    #include "Clip.h"
+#include "CacheBase.h"
+    #include "CacheDisk.h"
+    #include "CacheMemory.h"
+#include "AudioDevices.h"
+#include "ChannelLayouts.h"
 #include "Coordinate.h"
 #include "Color.h"
-#include "DummyReader.h"
 #include "EffectBase.h"
-#include "Effects.h"
-#include "EffectInfo.h"
+    #include "Effects.h"
+    #include "EffectInfo.h"
 #include "Enums.h"
 #include "Exceptions.h"
-#include "FFmpegReader.h"
-#include "FFmpegWriter.h"
-#include "Fraction.h"
 #include "Frame.h"
-#include "FrameMapper.h"
 #include "PlayerBase.h"
+    #include "QtPlayer.h"
 #include "Point.h"
 #include "Profiles.h"
-#include "QtHtmlReader.h"
-#include "QtImageReader.h"
-#include "QtPlayer.h"
-#include "QtTextReader.h"
 #include "KeyFrame.h"
 #include "RendererBase.h"
 #include "Settings.h"
 #include "TimelineBase.h"
-#include "Timeline.h"
+    #include "Timeline.h"
 #include "ZmqLogger.h"
 
 /* Move FFmpeg's RSHIFT to FF_RSHIFT, if present */
@@ -114,6 +115,18 @@
 		#include "ImageReader.h"
 		#include "ImageWriter.h"
 		#include "TextReader.h"
+	%}
+#endif
+
+
+#ifdef USE_OPENCV
+	%{
+		#include "ClipProcessingJobs.h"
+		#include "effects/Stabilizer.h"
+		#include "effects/Tracker.h"
+		#include "effects/ObjectDetection.h"
+		#include "TrackedObjectBase.h"
+		#include "TrackedObjectBBox.h"
 	%}
 #endif
 
@@ -173,6 +186,7 @@
 #endif
 
 %include "Fraction.h"
+    %include "FPS.h"
 %include "Frame.h"
 %include "FrameMapper.h"
 %include "PlayerBase.h"
@@ -188,6 +202,12 @@
 %include "TimelineBase.h"
 %include "Timeline.h"
 %include "ZmqLogger.h"
+
+#ifdef USE_OPENCV
+	%include "ClipProcessingJobs.h"
+	%include "TrackedObjectBase.h"
+	%include "TrackedObjectBBox.h"
+#endif
 
 #ifdef USE_IMAGEMAGICK
 	%include "ImageReader.h"
@@ -211,5 +231,8 @@
 %include "effects/Saturation.h"
 %include "effects/Shift.h"
 %include "effects/Wave.h"
-
-
+#ifdef USE_OPENCV
+	%include "effects/Stabilizer.h"
+	%include "effects/Tracker.h"
+	%include "effects/ObjectDetection.h"
+#endif

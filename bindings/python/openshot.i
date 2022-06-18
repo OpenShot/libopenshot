@@ -54,40 +54,41 @@
 #include "OpenShotVersion.h"
 #include "ReaderBase.h"
 #include "WriterBase.h"
-#include "AudioDevices.h"
-#include "CacheBase.h"
-#include "CacheDisk.h"
-#include "CacheMemory.h"
-#include "ChannelLayouts.h"
-#include "ChunkReader.h"
-#include "ChunkWriter.h"
+    #include "ChunkReader.h"
+    #include "ChunkWriter.h"
+    #include "DummyReader.h"
+    #include "FFmpegReader.h"
+    #include "FFmpegWriter.h"
+    #include "FrameMapper.h"
+    #include "QtHtmlReader.h"
+    #include "QtImageReader.h"
+    #include "QtTextReader.h"
+#include "Fraction.h"
+    #include "FPS.h"
 #include "ClipBase.h"
-#include "Clip.h"
+    #include "Clip.h"
+#include "CacheBase.h"
+    #include "CacheDisk.h"
+    #include "CacheMemory.h"
+#include "AudioDevices.h"
+#include "ChannelLayouts.h"
 #include "Coordinate.h"
 #include "Color.h"
-#include "DummyReader.h"
 #include "EffectBase.h"
-#include "Effects.h"
-#include "EffectInfo.h"
+    #include "Effects.h"
+    #include "EffectInfo.h"
 #include "Enums.h"
 #include "Exceptions.h"
-#include "FFmpegReader.h"
-#include "FFmpegWriter.h"
-#include "Fraction.h"
 #include "Frame.h"
-#include "FrameMapper.h"
 #include "PlayerBase.h"
+    #include "QtPlayer.h"
 #include "Point.h"
 #include "Profiles.h"
-#include "QtHtmlReader.h"
-#include "QtImageReader.h"
-#include "QtPlayer.h"
-#include "QtTextReader.h"
 #include "KeyFrame.h"
 #include "RendererBase.h"
 #include "Settings.h"
 #include "TimelineBase.h"
-#include "Timeline.h"
+    #include "Timeline.h"
 #include "ZmqLogger.h"
 
 %}
@@ -202,7 +203,7 @@
     }
     const std::string __repr__() {
         std::ostringstream result;
-        result << "Fraction(" << $self->num << ", " << $self->den << ")";
+        result << *$self;
         return result.str();
     }
     /* Implement dict methods in Python */
@@ -245,6 +246,19 @@
             return "{value:{spec}}".format(value=value, spec=format_spec)
     %}
 }
+%extend openshot::FPS {
+	const std::string __str__() {
+		std::ostringstream result;
+		result << $self->num << "/" << $self->den;
+		return result.str();
+	}
+    const std::string __repr__() {
+        std::ostringstream result;
+        result << *$self;
+        return result.str();
+    }
+}
+
 
 %extend openshot::OpenShotVersion {
         // Give the struct a string representation
@@ -282,6 +296,7 @@
 %include "FFmpegReader.h"
 %include "FFmpegWriter.h"
 %include "Fraction.h"
+    %include "FPS.h"
 %include "Frame.h"
 %include "FrameMapper.h"
 %include "PlayerBase.h"
