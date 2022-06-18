@@ -28,7 +28,7 @@
     #include "TextReader.h"
 #endif
 
-#ifdef HAVE_OPENCV
+#ifdef USE_OPENCV
     #include "TrackedObjectBBox.h"
 #endif
 #include "TrackedObjectBase.h"

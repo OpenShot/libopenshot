@@ -19,7 +19,7 @@
 #include "FrameMapper.h"
 #include "Exceptions.h"
 
-#ifdef HAVE_OPENCV
+#ifdef USE_OPENCV
     #include "TrackedObjectBBox.h"
 #endif
 #include "TrackedObjectBase.h"
