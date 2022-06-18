@@ -13,7 +13,7 @@
 #include <sstream>
 #include <memory>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "FFmpegWriter.h"
 #include "Exceptions.h"

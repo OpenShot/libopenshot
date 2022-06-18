@@ -12,7 +12,7 @@
 
 #include <memory>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "DummyReader.h"
 #include "Exceptions.h"

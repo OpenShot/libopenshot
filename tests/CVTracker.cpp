@@ -14,7 +14,7 @@
 #include <sstream>
 #include <memory>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "Clip.h"
 #include "CVTracker.h"  // for FrameData, CVTracker

@@ -15,7 +15,7 @@
 #include <sstream>
 #include <memory>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "ImageWriter.h"
 #include "Exceptions.h"

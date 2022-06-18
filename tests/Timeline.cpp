@@ -15,7 +15,7 @@
 #include <memory>
 #include <list>
 
-#include <catch2/catch.hpp>
+#include "openshot_catch.h"
 
 #include "Timeline.h"
 #include "Clip.h"
