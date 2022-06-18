@@ -69,3 +69,12 @@ TEST_CASE( "threshold", "[libopenshot][effect][chromakey]" )
     CHECK(pix_e == expected);
 }
 
+TEST_CASE( "QColor stream operator", "[libopenshot][tests][internal][chromakey]" )
+{
+    QColor c("red");
+    std::stringstream stream;
+    stream << c;
+    std::string expected("QColor(255, 0, 0, 255)");
+    CHECK(stream.str() == expected);
+}
+
