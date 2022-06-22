@@ -30,7 +30,7 @@ void ClipProcessingJobs::processClip(Clip& clip, std::string json){
     if(processingType == "Tracker"){
         t = std::thread(&ClipProcessingJobs::trackClip, this, std::ref(clip), std::ref(this->processingController));
     }
-    if(processingType == "Object Detector"){
+    if(processingType == "ObjectDetection"){
         t = std::thread(&ClipProcessingJobs::detectObjectsClip, this, std::ref(clip), std::ref(this->processingController));
     }
 }

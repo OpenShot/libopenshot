@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
         objectDetection.SaveObjDetectedData();
 
         // Create a object detector effect
-        EffectBase* e = EffectInfo().CreateEffect("Object Detector");
+        EffectBase* e = EffectInfo().CreateEffect("ObjectDetection");
 
         // Pass a JSON string with the saved detections data
         // The effect will read and save the detections in a map::<frame,data_struct>

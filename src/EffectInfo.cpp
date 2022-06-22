@@ -104,7 +104,7 @@ EffectBase* EffectInfo::CreateEffect(std::string effect_type) {
 	else if(effect_type == "Tracker")
 		return new Tracker();
 
-	else if(effect_type == "Object Detector")
+	else if(effect_type == "ObjectDetection")
 		return new ObjectDetection();
 	#endif
 
