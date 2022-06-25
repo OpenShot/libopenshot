@@ -219,7 +219,7 @@ void FrameMapper::Init()
 		int64_t new_length = reader->info.video_length * rate_diff;
 
 		// Calculate the value difference
-		double value_increment = (reader->info.video_length + 1) / (double) (new_length);
+		double value_increment = reader->info.video_length / (double) (new_length);
 
 		// Loop through curve, and build list of frames
 		double original_frame_num = 1.0f;
