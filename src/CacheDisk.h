@@ -93,6 +93,9 @@ namespace openshot {
 		/// @param frame_number The frame number of the cached frame
 		std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number);
 
+        /// @brief Get an array of all Frames
+        std::vector<std::shared_ptr<openshot::Frame>> GetFrames();
+
 		/// Gets the maximum bytes value
 		int64_t GetBytes();
 
