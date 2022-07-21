@@ -1746,7 +1746,6 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 		} else {
 			// seek failed
-			is_seeking = false;
 			seeking_pts = 0;
 			seeking_frame = 0;
 
@@ -1802,7 +1801,6 @@ void FFmpegReader::UpdatePTSOffset() {
     }
 
     // Loop through the stream (until a packet from all streams is found)
-    int64_t pts = 0;
     while (!has_video_pts || !has_audio_pts) {
         // Get the next packet (if any)
         if (GetNextPacket() < 0)
@@ -1810,7 +1808,7 @@ void FFmpegReader::UpdatePTSOffset() {
             break;
 
         // Get PTS of this packet
-        pts = GetPacketPTS();
+        int64_t pts = GetPacketPTS();
 
         // Video packet
         if (!has_video_pts && packet->stream_index == videoStream) {
@@ -2021,7 +2019,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
         std::shared_ptr<Frame> f = *working_itr;
 
 		// Was a frame found? Is frame requested yet?
-		if (!f || (f && f->number > requested_frame)) {
+		if (!f || f && f->number > requested_frame) {
 		    // If not, skip to next one
             continue;
         }
@@ -2147,7 +2145,7 @@ void FFmpegReader::CheckFPS() {
 
 	// Calculate FPS (based on the first few seconds of video packets)
 	float avg_fps = 30.0;
-	if (starting_frames_detected > 0 && fps_index > 0 && max_fps_index > 0) {
+	if (starting_frames_detected > 0 && fps_index > 0) {
         avg_fps = float(starting_frames_detected) / std::min(fps_index, max_fps_index);
     }
 
