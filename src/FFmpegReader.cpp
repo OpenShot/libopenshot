@@ -34,27 +34,27 @@
 #include "libavutil/hwcontext_vaapi.h"
 
 typedef struct VAAPIDecodeContext {
-	 VAProfile			 va_profile;
-	 VAEntrypoint		  va_entrypoint;
-	 VAConfigID			va_config;
-	 VAContextID		   va_context;
+	 VAProfile va_profile;
+	 VAEntrypoint va_entrypoint;
+	 VAConfigID va_config;
+	 VAContextID va_context;
 
 #if FF_API_STRUCT_VAAPI_CONTEXT
 	 // FF_DISABLE_DEPRECATION_WARNINGS
-		 int				   have_old_context;
+		 int have_old_context;
 		 struct vaapi_context *old_context;
-		 AVBufferRef		  *device_ref;
+		 AVBufferRef *device_ref;
 	 // FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
-	 AVHWDeviceContext	*device;
+	 AVHWDeviceContext *device;
 	 AVVAAPIDeviceContext *hwctx;
 
-	 AVHWFramesContext	*frames;
+	 AVHWFramesContext *frames;
 	 AVVAAPIFramesContext *hwfc;
 
-	 enum AVPixelFormat	surface_format;
-	 int				   surface_count;
+	 enum AVPixelFormat surface_format;
+	 int surface_count;
  } VAAPIDecodeContext;
 #endif // ENABLE_VAAPI
 #endif // USE_HW_ACCEL
@@ -2032,8 +2032,8 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 		bool is_video_ready = false;
 		bool is_audio_ready = false;
 		double recent_pts_diff = recent_pts_seconds - frame_pts_seconds;
-		if ((video_pts_seconds != NO_PTS_OFFSET && frame_pts_seconds <= video_pts_seconds)
-			|| (video_pts_seconds != NO_PTS_OFFSET && recent_pts_diff > 1.5)
+		if ((frame_pts_seconds <= video_pts_seconds)
+			|| (recent_pts_diff > 1.5)
 			|| video_eof || end_of_file) {
 			// Video stream is past this frame (so it must be done)
 			// OR video stream is too far behind, missing, or end-of-file
@@ -2061,8 +2061,8 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 		}
 
 		double audio_pts_diff = audio_pts_seconds - frame_pts_seconds;
-		if ((audio_pts_seconds != NO_PTS_OFFSET && frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 1.0)
-		   || (audio_pts_seconds != NO_PTS_OFFSET && recent_pts_diff > 1.5)
+		if ((frame_pts_seconds < audio_pts_seconds && audio_pts_diff > 1.0)
+		   || (recent_pts_diff > 1.5)
 		   || audio_eof || end_of_file) {
 			// Audio stream is past this frame (so it must be done)
 			// OR audio stream is too far behind, missing, or end-of-file
