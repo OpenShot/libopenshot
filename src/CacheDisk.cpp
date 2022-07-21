@@ -81,7 +81,7 @@ void CacheDisk::CalculateRanges() {
 	if (needs_range_processing) {
 
 		// Create a scoped lock, to protect the cache from multiple threads
-                const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
+		const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 		// Sort ordered frame #s, and calculate JSON ranges
 		std::sort(ordered_frame_numbers.begin(), ordered_frame_numbers.end());
@@ -135,7 +135,7 @@ void CacheDisk::CalculateRanges() {
 // Default destructor
 CacheDisk::~CacheDisk()
 {
-    Clear();
+	Clear();
 
 	// remove mutex
 	delete cacheMutex;
@@ -202,11 +202,11 @@ void CacheDisk::Add(std::shared_ptr<Frame> frame)
 
 // Check if frame is already contained in cache
 bool CacheDisk::Contains(int64_t frame_number) {
-    if (frames.count(frame_number) > 0) {
-        return true;
-    } else {
-        return false;
-    }
+	if (frames.count(frame_number) > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
@@ -286,10 +286,10 @@ std::vector<std::shared_ptr<openshot::Frame>> CacheDisk::GetFrames()
 	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	std::vector<std::shared_ptr<openshot::Frame>> all_frames;
-    std::vector<int64_t>::iterator itr_ordered;
-    for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered)
-    {
-        int64_t frame_number = *itr_ordered;
+	std::vector<int64_t>::iterator itr_ordered;
+	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered)
+	{
+		int64_t frame_number = *itr_ordered;
 		all_frames.push_back(GetFrame(frame_number));
 	}
 
@@ -311,12 +311,12 @@ std::shared_ptr<Frame> CacheDisk::GetSmallestFrame()
 			smallest_frame = *itr;
 	}
 
-    // Return frame (if any)
-    if (smallest_frame != -1) {
-        return GetFrame(smallest_frame);
-    } else {
-        return NULL;
-    }
+	// Return frame (if any)
+	if (smallest_frame != -1) {
+		return GetFrame(smallest_frame);
+	} else {
+		return NULL;
+	}
 }
 
 // Gets the maximum bytes value
@@ -423,11 +423,11 @@ void CacheDisk::Clear()
 	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
 
 	// Clear all containers
-    frames.clear();
-    frame_numbers.clear();
-    frame_numbers.shrink_to_fit();
-    ordered_frame_numbers.clear();
-    ordered_frame_numbers.shrink_to_fit();
+	frames.clear();
+	frame_numbers.clear();
+	frame_numbers.shrink_to_fit();
+	ordered_frame_numbers.clear();
+	ordered_frame_numbers.shrink_to_fit();
 	needs_range_processing = true;
 	frame_size_bytes = 0;
 

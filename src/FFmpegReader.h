@@ -109,24 +109,24 @@ namespace openshot {
 		int64_t seek_audio_frame_found;
 		int64_t seek_video_frame_found;
 
-        int64_t last_frame;
-        int64_t largest_frame_processed;
-        int64_t current_video_frame;
+		int64_t last_frame;
+		int64_t largest_frame_processed;
+		int64_t current_video_frame;
 
 		int64_t audio_pts;
-        int64_t video_pts;
+		int64_t video_pts;
 		double pts_offset_seconds;
 		double audio_pts_seconds;
-        double video_pts_seconds;
+		double video_pts_seconds;
 		int64_t NO_PTS_OFFSET;
 		bool video_eof;
 		bool audio_eof;
-        bool packets_eof;
-        bool end_of_file;
-        int64_t packets_read;
-        int64_t packets_decoded;
+		bool packets_eof;
+		bool end_of_file;
+		int64_t packets_read;
+		int64_t packets_decoded;
 
-        int hw_de_supported = 0;    // Is set by FFmpegReader
+		int hw_de_supported = 0;	// Is set by FFmpegReader
 #if USE_HW_ACCEL
 		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
