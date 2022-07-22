@@ -590,6 +590,8 @@ void FFmpegReader::Close() {
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close");
 
 		if (packet) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove Packet)");
+
 			// Remove previous packet before getting next one
 			RemoveAVPacket(packet);
 			packet = NULL;
@@ -597,17 +599,20 @@ void FFmpegReader::Close() {
 
 		// Close the codec
 		if (info.has_video) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
 			avcodec_flush_buffers(pCodecCtx);
 
 			// Delete video stream
-			pStream->discard = AVDISCARD_ALL;
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear video stream)");
 			pStream = NULL;
 			videoStream = -1;
 
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
 			AV_FREE_CONTEXT(pCodecCtx);
 #if USE_HW_ACCEL
 			if (hw_de_on) {
 				if (hw_device_ctx) {
+                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free hw context)");
 					av_buffer_unref(&hw_device_ctx);
 					hw_device_ctx = NULL;
 				}
@@ -615,25 +620,30 @@ void FFmpegReader::Close() {
 #endif // USE_HW_ACCEL
 		}
 		if (info.has_audio) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
 			avcodec_flush_buffers(aCodecCtx);
 
 			// Delete audio stream
-			aStream->discard = AVDISCARD_ALL;
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear audio stream)");
 			aStream = NULL;
 			audioStream = -1;
 
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
 			AV_FREE_CONTEXT(aCodecCtx);
 		}
 
 		// Clear final cache
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear cache)");
 		final_cache.Clear();
 		working_cache.Clear();
 
 		// Close the video file
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Close format context)");
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
 
 		// Reset some variables
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear variables)");
 		last_frame = 0;
 		largest_frame_processed = 0;
 		seek_audio_frame_found = 0;
@@ -641,6 +651,7 @@ void FFmpegReader::Close() {
 		current_video_frame = 0;
 		last_video_frame.reset();
 	}
+    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (End)");
 }
 
 bool FFmpegReader::HasAlbumArt() {
