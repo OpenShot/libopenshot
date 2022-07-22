@@ -602,11 +602,6 @@ void FFmpegReader::Close() {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
 			avcodec_flush_buffers(pCodecCtx);
 
-			// Delete video stream
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear video stream)");
-			pStream = NULL;
-			videoStream = -1;
-
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
 			AV_FREE_CONTEXT(pCodecCtx);
 #if USE_HW_ACCEL
@@ -622,11 +617,6 @@ void FFmpegReader::Close() {
 		if (info.has_audio) {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
 			avcodec_flush_buffers(aCodecCtx);
-
-			// Delete audio stream
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear audio stream)");
-			aStream = NULL;
-			audioStream = -1;
 
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
 			AV_FREE_CONTEXT(aCodecCtx);
