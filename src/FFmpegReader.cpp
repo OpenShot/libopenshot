@@ -587,15 +587,7 @@ void FFmpegReader::Close() {
 		// Mark as "closed"
 		is_open = false;
 
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close");
-
-		if (packet) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove Packet)");
-
-			// Remove previous packet before getting next one
-			RemoveAVPacket(packet);
-			packet = NULL;
-		}
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Start)");
 
 		// Close the codec
 		if (info.has_video) {
@@ -621,6 +613,12 @@ void FFmpegReader::Close() {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
 			AV_FREE_CONTEXT(aCodecCtx);
 		}
+
+        if (packet) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove packet)");
+            RemoveAVPacket(packet);
+            packet = NULL;
+        }
 
 		// Clear final cache
         ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear cache)");
