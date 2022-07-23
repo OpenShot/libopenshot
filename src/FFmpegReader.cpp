@@ -591,8 +591,11 @@ void FFmpegReader::Close() {
 
 		// Close the codec
 		if (info.has_video) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
-			avcodec_flush_buffers(pCodecCtx);
+            //ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
+            if(avcodec_is_open(pCodecCtx)) {
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Skipping flush video context)");
+                //avcodec_flush_buffers(pCodecCtx);
+            }
 
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
 			AV_FREE_CONTEXT(pCodecCtx);
@@ -607,8 +610,11 @@ void FFmpegReader::Close() {
 #endif // USE_HW_ACCEL
 		}
 		if (info.has_audio) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
-			avcodec_flush_buffers(aCodecCtx);
+            //ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
+            if(avcodec_is_open(aCodecCtx)) {
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Skipping flush audio context)");
+                //avcodec_flush_buffers(aCodecCtx);
+            }
 
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
 			AV_FREE_CONTEXT(aCodecCtx);
