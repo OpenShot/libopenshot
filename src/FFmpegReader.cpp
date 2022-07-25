@@ -586,62 +586,83 @@ void FFmpegReader::Close() {
 	if (is_open) {
 		// Mark as "closed"
 		is_open = false;
-
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Start)");
 
-		// Close the codec
-//		if (info.has_video) {
-//            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
-//            if(avcodec_is_open(pCodecCtx)) {
-//                avcodec_flush_buffers(pCodecCtx);
-//            }
-//
-//            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
-//			AV_FREE_CONTEXT(pCodecCtx);
-//#if USE_HW_ACCEL
-//			if (hw_de_on) {
-//				if (hw_device_ctx) {
-//                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free hw context)");
-//					av_buffer_unref(&hw_device_ctx);
-//					hw_device_ctx = NULL;
-//				}
-//			}
-//#endif // USE_HW_ACCEL
-//		}
-//		if (info.has_audio) {
-//            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
-//            if(avcodec_is_open(aCodecCtx)) {
-//                avcodec_flush_buffers(aCodecCtx);
-//            }
-//
-//            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
-//			AV_FREE_CONTEXT(aCodecCtx);
-//		}
-//
-//        if (packet) {
-//            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove packet)");
-//            RemoveAVPacket(packet);
-//            packet = NULL;
-//        }
-//
-//		// Clear final cache
-//        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear cache)");
-//		final_cache.Clear();
-//		working_cache.Clear();
-//
-//		// Close the video file
-//        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Close format context)");
-//		avformat_close_input(&pFormatCtx);
-//		av_freep(&pFormatCtx);
-//
-//		// Reset some variables
-//        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear variables)");
-//		last_frame = 0;
-//		largest_frame_processed = 0;
-//		seek_audio_frame_found = 0;
-//		seek_video_frame_found = 0;
-//		current_video_frame = 0;
-//		last_video_frame.reset();
+		// Keep track of most recent packet
+        AVPacket *recent_packet = packet;
+
+		// Drain any packets from the decoder
+        packet = NULL;
+        int attempts = 0;
+		while (packets_decoded < packets_read && attempts < 256) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
+                                                     "packets_read", packets_read,
+                                                     "packets_decoded", packets_decoded,
+                                                     "attempts", attempts);
+            if (info.has_video) {
+                ProcessVideoPacket(info.video_length);
+            }
+            if (info.has_audio) {
+                ProcessAudioPacket(info.video_length);
+            }
+            attempts++;
+		}
+
+		// Remove packet
+        if (recent_packet) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove packet)");
+            RemoveAVPacket(recent_packet);
+        }
+
+		// Close the video codec
+		if (info.has_video) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
+            if(avcodec_is_open(pCodecCtx)) {
+                avcodec_flush_buffers(pCodecCtx);
+            }
+
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
+			AV_FREE_CONTEXT(pCodecCtx);
+#if USE_HW_ACCEL
+			if (hw_de_on) {
+				if (hw_device_ctx) {
+                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free hw context)");
+					av_buffer_unref(&hw_device_ctx);
+					hw_device_ctx = NULL;
+				}
+			}
+#endif // USE_HW_ACCEL
+		}
+
+        // Close the audio codec
+		if (info.has_audio) {
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
+            if(avcodec_is_open(aCodecCtx)) {
+                avcodec_flush_buffers(aCodecCtx);
+            }
+
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
+			AV_FREE_CONTEXT(aCodecCtx);
+		}
+
+		// Clear final cache
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear cache)");
+		final_cache.Clear();
+		working_cache.Clear();
+
+		// Close the video file
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Close format context)");
+		avformat_close_input(&pFormatCtx);
+		av_freep(&pFormatCtx);
+
+		// Reset some variables
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear variables)");
+		last_frame = 0;
+		largest_frame_processed = 0;
+		seek_audio_frame_found = 0;
+		seek_video_frame_found = 0;
+		current_video_frame = 0;
+		last_video_frame.reset();
 	}
     ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (End)");
 }
