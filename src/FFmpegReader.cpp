@@ -2077,7 +2077,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					if (previous_frame_instance && previous_frame_instance->has_image_data) {
 						// Copy image from last decoded frame
                         ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video A)", "frame_number", f->number, "previous_frame_instance", previous_frame_instance->number);
-						f->AddImage(std::make_shared<QImage>(*previous_frame_instance->GetImage()));
+						f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
 						break;
 					}
 				}
@@ -2085,7 +2085,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 				if (last_video_frame && !f->has_image_data) {
 					// Copy image from last decoded frame
                     ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video B)", "frame_number", f->number, "last_video_frame", last_video_frame->number);
-					f->AddImage(std::make_shared<QImage>(*last_video_frame->GetImage()));
+					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
 				} else if (!f->has_image_data) {
                     ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video C)", "frame_number", f->number, "solid_color", 0.0);
 					f->AddColor("#000000");
