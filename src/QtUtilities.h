@@ -36,7 +36,7 @@ namespace openshot {
         std::cout << "--> reinterpret cast, info: " << info << std::endl;
         auto* qbuffer = reinterpret_cast<unsigned char*>(info);
         std::cout << "--> delete pointer, info: " << info << std::endl;
-        delete[] qbuffer;
+        //delete[] qbuffer;
     }
 }  // namespace
 
