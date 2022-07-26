@@ -108,6 +108,8 @@ void Frame::DeepCopy(const Frame& other)
 
 // Destructor
 Frame::~Frame() {
+    std::cout << "Frame::~Frame, number: " << number << ", has_image_data: " << has_image_data << std::endl;
+
 	// Clear all pointers
 	image.reset();
 	audio.reset();

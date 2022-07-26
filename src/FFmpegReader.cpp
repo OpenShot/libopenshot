@@ -1465,6 +1465,12 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 	// Estimate the # of samples and the end of this packet's location (to prevent GAPS for the next timestamp)
 	int pts_remaining_samples = packet_samples / info.channels; // Adjust for zero based array
 
+	// Bail if no samples found
+	if (pts_remaining_samples == 0) {
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (No samples, bailing)", "packet_samples", packet_samples, "info.channels", info.channels, "pts_remaining_samples", pts_remaining_samples);
+	    return;
+    }
+
 	// DEBUG (FOR AUDIO ISSUES) - Get the audio packet start time (in seconds)
 	int64_t adjusted_pts = audio_pts;
 	double audio_seconds = (double(adjusted_pts) * info.audio_timebase.ToDouble()) + pts_offset_seconds;

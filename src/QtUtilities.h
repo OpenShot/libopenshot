@@ -11,6 +11,7 @@
 #ifndef OPENSHOT_QT_UTILITIES_H
 #define OPENSHOT_QT_UTILITIES_H
 
+#include <iostream>
 #include <Qt>
 #include <QTextStream>
 
@@ -28,10 +29,13 @@ namespace openshot {
     // Clean up buffer after QImage is deleted
     static inline void cleanUpBuffer(void *info)
     {
+        std::cout << "--> cleanUpBuffer, info: " << info << std::endl;
         if (!info)
             return;
         // Remove buffer since QImage tells us to
+        std::cout << "--> reinterpret cast, info: " << info << std::endl;
         auto* qbuffer = reinterpret_cast<unsigned char*>(info);
+        std::cout << "--> delete pointer, info: " << info << std::endl;
         delete[] qbuffer;
     }
 }  // namespace
