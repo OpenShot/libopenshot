@@ -584,6 +584,8 @@ void FFmpegReader::Open() {
 void FFmpegReader::Close() {
 	// Close all objects, if reader is 'open'
 	if (is_open) {
+        const std::lock_guard<std::recursive_mutex> lock(processingMutex);
+
 		// Mark as "closed"
 		is_open = false;
 		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Start)");
@@ -1335,7 +1337,7 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 
 	// Determine required buffer size and allocate buffer
 	const int bytes_per_pixel = 4;
-	int buffer_size = width * height * bytes_per_pixel;
+	int buffer_size = (width * height * bytes_per_pixel) + 128;
 	buffer = new unsigned char[buffer_size]();
 
 	// Copy picture data from one AVFrame (or AVPicture) to another one.
@@ -2135,6 +2137,10 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 
 		}
 	}
+
+	// Clear vector of frames
+    working_frames.clear();
+    working_frames.shrink_to_fit();
 }
 
 // Check for the correct frames per second (FPS) value by scanning the 1st few seconds of video packets.

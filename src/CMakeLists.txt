@@ -19,6 +19,8 @@ if (POLICY CMP0057)
 endif()
 
 ###############  PROFILING  #################
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+#set (CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
 #set(PROFILER "/usr/lib/x86_64-linux-gnu/libprofiler.so.0")
 #set(PROFILER "/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4")
 
@@ -176,6 +178,8 @@ if(NOT TARGET OpenShot::Audio)
   find_package(OpenShotAudio 0.2.0 REQUIRED)
 endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
+
+#find_package(FindAsan)
 
 ###
 ### ImageMagick
