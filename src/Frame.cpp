@@ -763,6 +763,7 @@ void Frame::AddImage(
 		(QImageCleanupFunction) &openshot::cleanUpBuffer,
 		(void*) pixels_
 	);
+	std::cout << "Frame::AddImage, number: " << number << ", Cleanup buffer: " << ( void * )&pixels_[0] << ", width: " << new_width << ", height: " << new_height << std::endl;
 	AddImage(new_image);
 }
 

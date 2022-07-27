@@ -29,14 +29,14 @@ namespace openshot {
     // Clean up buffer after QImage is deleted
     static inline void cleanUpBuffer(void *info)
     {
-        std::cout << "--> cleanUpBuffer, info: " << info << std::endl;
+        std::cout << "--> cleanUpBuffer" << std::endl;
         if (!info)
             return;
         // Remove buffer since QImage tells us to
-        std::cout << "--> reinterpret cast, info: " << info << std::endl;
-        auto* qbuffer = reinterpret_cast<unsigned char*>(info);
-        std::cout << "--> delete pointer, info: " << info << std::endl;
-        //delete[] qbuffer;
+        std::cout << "--> reinterpret cast" << std::endl;
+        uint8_t *qbuffer = reinterpret_cast<uint8_t *>(info);
+        std::cout << "--> delete pointer, buffer: " << ( void * )&qbuffer[0] << std::endl;
+        delete[] qbuffer;
     }
 }  // namespace
 

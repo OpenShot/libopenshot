@@ -1358,9 +1358,11 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Add Image data to frame
 	if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
 		// Add image with no alpha channel, Speed optimization
+		std::cout << "FFmpegReader::ProcessVideoPacket (A AddImage for frame: " << f->number << ", buffer: " << ( void * )&buffer[0] << ")" << std::endl;
 		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888_Premultiplied, buffer);
 	} else {
 		// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
+        std::cout << "FFmpegReader::ProcessVideoPacket (B AddImage for frame: " << f->number << ", buffer: " << ( void * )&buffer[0] << ")" << std::endl;
 		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888, buffer);
 	}
 
