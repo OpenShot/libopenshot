@@ -584,7 +584,7 @@ void FFmpegReader::Open() {
 void FFmpegReader::Close() {
 	// Close all objects, if reader is 'open'
 	if (is_open) {
-	    // Prevent calls to GetFrame when Closing
+		// Prevent calls to GetFrame when Closing
 		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 		// Mark as "closed"
@@ -1536,11 +1536,10 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 	// Copy audio samples over original samples
 	memcpy(audio_buf,
-		   audio_converted->data[0],
-		   static_cast<size_t>(audio_converted->nb_samples)
-			   * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
-			   * info.channels
-		  );
+		audio_converted->data[0],
+		static_cast<size_t>(audio_converted->nb_samples)
+		* av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)
+		* info.channels);
 
 	// Deallocate resample buffer
 	SWR_CLOSE(avr);
@@ -2058,7 +2057,11 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			// Video stream is past this frame (so it must be done)
 			// OR video stream is too far behind, missing, or end-of-file
 			is_video_ready = true;
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (video ready)", "frame_number", f->number, "frame_pts_seconds", frame_pts_seconds, "video_pts_seconds", video_pts_seconds, "recent_pts_diff", recent_pts_diff);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (video ready)",
+											"frame_number", f->number, 
+											"frame_pts_seconds", frame_pts_seconds, 
+											"video_pts_seconds", video_pts_seconds, 
+											"recent_pts_diff", recent_pts_diff);
 			if (info.has_video && !f->has_image_data) {
 				// Frame has no image data (copy from previous frame)
 				// Loop backwards through final frames (looking for the nearest, previous frame image)
@@ -2088,7 +2091,12 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 			// OR audio stream is too far behind, missing, or end-of-file
 			// Adding a bit of margin here, to allow for partial audio packets
 			is_audio_ready = true;
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (audio ready)", "frame_number", f->number, "frame_pts_seconds", frame_pts_seconds, "audio_pts_seconds", audio_pts_seconds, "audio_pts_diff", audio_pts_diff, "recent_pts_diff", recent_pts_diff);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (audio ready)",
+											"frame_number", f->number, 
+											"frame_pts_seconds", frame_pts_seconds, 
+											"audio_pts_seconds", audio_pts_seconds, 
+											"audio_pts_diff", audio_pts_diff, 
+											"recent_pts_diff", recent_pts_diff);
 		}
 		bool is_seek_trash = IsPartialFrame(f->number);
 
@@ -2097,12 +2105,24 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 		if (!info.has_audio) is_audio_ready = true;
 
 		// Debug output
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames", "frame_number", f->number, "is_video_ready", is_video_ready, "is_audio_ready", is_audio_ready, "video_eof", video_eof, "audio_eof", audio_eof, "end_of_file", end_of_file);
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames",
+										   "frame_number", f->number, 
+										   "is_video_ready", is_video_ready, 
+										   "is_audio_ready", is_audio_ready, 
+										   "video_eof", video_eof, 
+										   "audio_eof", audio_eof, 
+										   "end_of_file", end_of_file);
 
 		// Check if working frame is final
 		if ((!end_of_file && is_video_ready && is_audio_ready) || end_of_file || is_seek_trash) {
 			// Debug output
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", "requested_frame", requested_frame, "f->number", f->number, "is_seek_trash", is_seek_trash, "Working Cache Count", working_cache.Count(), "Final Cache Count", final_cache.Count(), "end_of_file", end_of_file);
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (mark frame as final)", 
+											"requested_frame", requested_frame, 
+											"f->number", f->number, 
+											"is_seek_trash", is_seek_trash, 
+											"Working Cache Count", working_cache.Count(), 
+											"Final Cache Count", final_cache.Count(), 
+											"end_of_file", end_of_file);
 
 			if (!is_seek_trash) {
 				// Move frame to final cache
