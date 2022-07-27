@@ -179,8 +179,6 @@ if(NOT TARGET OpenShot::Audio)
 endif()
 target_link_libraries(openshot PUBLIC OpenShot::Audio)
 
-#find_package(FindAsan)
-
 ###
 ### ImageMagick
 ###
