@@ -40,11 +40,11 @@ typedef struct VAAPIDecodeContext {
 	 VAContextID va_context;
 
 #if FF_API_STRUCT_VAAPI_CONTEXT
-	 // FF_DISABLE_DEPRECATION_WARNINGS
-		 int have_old_context;
-		 struct vaapi_context *old_context;
-		 AVBufferRef *device_ref;
-	 // FF_ENABLE_DEPRECATION_WARNINGS
+	// FF_DISABLE_DEPRECATION_WARNINGS
+	int have_old_context;
+	struct vaapi_context *old_context;
+	AVBufferRef *device_ref;
+	// FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
 	 AVHWDeviceContext *device;
@@ -584,51 +584,46 @@ void FFmpegReader::Open() {
 void FFmpegReader::Close() {
 	// Close all objects, if reader is 'open'
 	if (is_open) {
-        const std::lock_guard<std::recursive_mutex> lock(processingMutex);
+	    // Prevent calls to GetFrame when Closing
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
 
 		// Mark as "closed"
 		is_open = false;
-		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Start)");
 
 		// Keep track of most recent packet
-        AVPacket *recent_packet = packet;
+		AVPacket *recent_packet = packet;
 
 		// Drain any packets from the decoder
-        packet = NULL;
-        int attempts = 0;
+		packet = NULL;
+		int attempts = 0;
 		while (packets_decoded < packets_read && attempts < 256) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
-                                                     "packets_read", packets_read,
-                                                     "packets_decoded", packets_decoded,
-                                                     "attempts", attempts);
-            if (info.has_video) {
-                ProcessVideoPacket(info.video_length);
-            }
-            if (info.has_audio) {
-                ProcessAudioPacket(info.video_length);
-            }
-            attempts++;
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
+													 "packets_read", packets_read,
+													 "packets_decoded", packets_decoded,
+													 "attempts", attempts);
+			if (info.has_video) {
+				ProcessVideoPacket(info.video_length);
+			}
+			if (info.has_audio) {
+				ProcessAudioPacket(info.video_length);
+			}
+			attempts++;
 		}
 
 		// Remove packet
-        if (recent_packet) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Remove packet)");
-            RemoveAVPacket(recent_packet);
-        }
+		if (recent_packet) {
+			RemoveAVPacket(recent_packet);
+		}
 
 		// Close the video codec
 		if (info.has_video) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush video context)");
-            if(avcodec_is_open(pCodecCtx)) {
-                avcodec_flush_buffers(pCodecCtx);
-            }
-
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free video context)");
+			if(avcodec_is_open(pCodecCtx)) {
+				avcodec_flush_buffers(pCodecCtx);
+			}
 			AV_FREE_CONTEXT(pCodecCtx);
 #if USE_HW_ACCEL
 			if (hw_de_on) {
 				if (hw_device_ctx) {
-                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free hw context)");
 					av_buffer_unref(&hw_device_ctx);
 					hw_device_ctx = NULL;
 				}
@@ -636,29 +631,23 @@ void FFmpegReader::Close() {
 #endif // USE_HW_ACCEL
 		}
 
-        // Close the audio codec
+		// Close the audio codec
 		if (info.has_audio) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Flush audio context)");
-            if(avcodec_is_open(aCodecCtx)) {
-                avcodec_flush_buffers(aCodecCtx);
-            }
-
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Free audio context)");
+			if(avcodec_is_open(aCodecCtx)) {
+				avcodec_flush_buffers(aCodecCtx);
+			}
 			AV_FREE_CONTEXT(aCodecCtx);
 		}
 
 		// Clear final cache
-        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear cache)");
 		final_cache.Clear();
 		working_cache.Clear();
 
 		// Close the video file
-        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Close format context)");
 		avformat_close_input(&pFormatCtx);
 		av_freep(&pFormatCtx);
 
 		// Reset some variables
-        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Clear variables)");
 		last_frame = 0;
 		largest_frame_processed = 0;
 		seek_audio_frame_found = 0;
@@ -666,7 +655,6 @@ void FFmpegReader::Close() {
 		current_video_frame = 0;
 		last_video_frame.reset();
 	}
-    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (End)");
 }
 
 bool FFmpegReader::HasAlbumArt() {
@@ -1360,11 +1348,9 @@ void FFmpegReader::ProcessVideoPacket(int64_t requested_frame) {
 	// Add Image data to frame
 	if (!ffmpeg_has_alpha(AV_GET_CODEC_PIXEL_FORMAT(pStream, pCodecCtx))) {
 		// Add image with no alpha channel, Speed optimization
-		std::cout << "FFmpegReader::ProcessVideoPacket (A AddImage for frame: " << f->number << ", buffer: " << ( void * )&buffer[0] << ")" << std::endl;
 		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888_Premultiplied, buffer);
 	} else {
 		// Add image with alpha channel (this will be converted to premultipled when needed, but is slower)
-        std::cout << "FFmpegReader::ProcessVideoPacket (B AddImage for frame: " << f->number << ", buffer: " << ( void * )&buffer[0] << ")" << std::endl;
 		f->AddImage(width, height, bytes_per_pixel, QImage::Format_RGBA8888, buffer);
 	}
 
@@ -1471,9 +1457,9 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 	// Bail if no samples found
 	if (pts_remaining_samples == 0) {
-        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (No samples, bailing)", "packet_samples", packet_samples, "info.channels", info.channels, "pts_remaining_samples", pts_remaining_samples);
-	    return;
-    }
+		ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ProcessAudioPacket (No samples, bailing)", "packet_samples", packet_samples, "info.channels", info.channels, "pts_remaining_samples", pts_remaining_samples);
+		return;
+	}
 
 	// DEBUG (FOR AUDIO ISSUES) - Get the audio packet start time (in seconds)
 	int64_t adjusted_pts = audio_pts;
@@ -2053,7 +2039,7 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 		std::shared_ptr<Frame> f = *working_itr;
 
 		// Was a frame found? Is frame requested yet?
-		if (!f || f && f->number > requested_frame) {
+		if (!f || f->number > requested_frame) {
 			// If not, skip to next one
 			continue;
 		}
@@ -2080,7 +2066,6 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 					std::shared_ptr<Frame> previous_frame_instance = final_cache.GetFrame(previous_frame);
 					if (previous_frame_instance && previous_frame_instance->has_image_data) {
 						// Copy image from last decoded frame
-                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video A)", "frame_number", f->number, "previous_frame_instance", previous_frame_instance->number);
 						f->AddImage(std::make_shared<QImage>(previous_frame_instance->GetImage()->copy()));
 						break;
 					}
@@ -2088,10 +2073,8 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 				
 				if (last_video_frame && !f->has_image_data) {
 					// Copy image from last decoded frame
-                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video B)", "frame_number", f->number, "last_video_frame", last_video_frame->number);
 					f->AddImage(std::make_shared<QImage>(last_video_frame->GetImage()->copy()));
 				} else if (!f->has_image_data) {
-                    ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::CheckWorkingFrames (override video C)", "frame_number", f->number, "solid_color", 0.0);
 					f->AddColor("#000000");
 				}
 			}
@@ -2139,8 +2122,8 @@ void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
 	}
 
 	// Clear vector of frames
-    working_frames.clear();
-    working_frames.shrink_to_fit();
+	working_frames.clear();
+	working_frames.shrink_to_fit();
 }
 
 // Check for the correct frames per second (FPS) value by scanning the 1st few seconds of video packets.

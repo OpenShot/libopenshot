@@ -108,8 +108,6 @@ void Frame::DeepCopy(const Frame& other)
 
 // Destructor
 Frame::~Frame() {
-    std::cout << "Frame::~Frame, number: " << number << ", has_image_data: " << has_image_data << std::endl;
-
 	// Clear all pointers
 	image.reset();
 	audio.reset();
@@ -753,12 +751,12 @@ void Frame::AddImage(
 	int new_width, int new_height, int bytes_per_pixel,
 	QImage::Format type, const unsigned char *pixels_)
 {
-    if (has_image_data) {
-        // Delete the previous QImage
-        image.reset();
-    }
+	if (has_image_data) {
+		// Delete the previous QImage
+		image.reset();
+	}
 
-  // Create new image object from pixel data
+	// Create new image object from pixel data
 	auto new_image = std::make_shared<QImage>(
 		pixels_,
 		new_width, new_height,
@@ -767,7 +765,6 @@ void Frame::AddImage(
 		(QImageCleanupFunction) &openshot::cleanUpBuffer,
 		(void*) pixels_
 	);
-	std::cout << "Frame::AddImage, number: " << number << ", Cleanup buffer: " << ( void * )&pixels_[0] << ", width: " << new_width << ", height: " << new_height << std::endl;
 	AddImage(new_image);
 }
 
