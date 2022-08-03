@@ -773,6 +773,7 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.fps.den = target_fps.den;
 	info.video_timebase.num = target_fps.den;
 	info.video_timebase.den = target_fps.num;
+    info.video_length = round(info.duration * info.fps.ToDouble());
 	pulldown = target_pulldown;
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
