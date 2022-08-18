@@ -11,6 +11,7 @@
 #ifndef OPENSHOT_QT_UTILITIES_H
 #define OPENSHOT_QT_UTILITIES_H
 
+#include <iostream>
 #include <Qt>
 #include <QTextStream>
 
@@ -31,7 +32,7 @@ namespace openshot {
         if (!info)
             return;
         // Remove buffer since QImage tells us to
-        auto* qbuffer = reinterpret_cast<unsigned char*>(info);
+        uint8_t *qbuffer = reinterpret_cast<uint8_t *>(info);
         delete[] qbuffer;
     }
 }  // namespace

@@ -152,9 +152,9 @@ TEST_CASE( "two-track video", "[libopenshot][timeline]" )
 	f = t.GetFrame(24);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(186).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(106).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(176).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(0).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(186).margin(5));
 	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
 
 	f = t.GetFrame(5);
@@ -168,9 +168,9 @@ TEST_CASE( "two-track video", "[libopenshot][timeline]" )
 	f = t.GetFrame(25);
 
 	// Check image properties
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(0).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(94).margin(5));
-	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(186).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index] == Approx(20).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 1] == Approx(190).margin(5));
+	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 2] == Approx(0).margin(5));
 	CHECK((int)f->GetPixels(pixel_row)[pixel_index + 3] == Approx(255).margin(5));
 
 	f = t.GetFrame(4);

@@ -77,7 +77,7 @@ namespace openshot {
 		std::string path;
 
 		AVFormatContext *pFormatCtx;
-		int i, videoStream, audioStream;
+		int videoStream, audioStream;
 		AVCodecContext *pCodecCtx, *aCodecCtx;
 #if USE_HW_ACCEL
 		AVBufferRef *hw_device_ctx = NULL; //PM
@@ -89,20 +89,9 @@ namespace openshot {
 		bool is_duration_known;
 		bool check_interlace;
 		bool check_fps;
-		bool has_missing_frames;
 		int max_concurrent_frames;
 
 		CacheMemory working_cache;
-		CacheMemory missing_frames;
-		std::map<int64_t, int64_t> processing_video_frames;
-		std::multimap<int64_t, int64_t> processing_audio_frames;
-		std::map<int64_t, int64_t> processed_video_frames;
-		std::map<int64_t, int64_t> processed_audio_frames;
-		std::multimap<int64_t, int64_t> missing_video_frames;
-		std::multimap<int64_t, int64_t> missing_video_frames_source;
-		std::multimap<int64_t, int64_t> missing_audio_frames;
-		std::multimap<int64_t, int64_t> missing_audio_frames_source;
-		std::map<int64_t, int> checked_frames;
 		AudioLocation previous_packet_location;
 
 		// DEBUG VARIABLES (FOR AUDIO ISSUES)
@@ -110,8 +99,6 @@ namespace openshot {
 		int64_t prev_pts;
 		int64_t pts_total;
 		int64_t pts_counter;
-		int64_t num_packets_since_video_frame;
-		int64_t num_checks_since_final;
 		std::shared_ptr<openshot::Frame> last_video_frame;
 
 		bool is_seeking;
@@ -122,13 +109,24 @@ namespace openshot {
 		int64_t seek_audio_frame_found;
 		int64_t seek_video_frame_found;
 
-		int64_t audio_pts_offset;
-		int64_t video_pts_offset;
 		int64_t last_frame;
 		int64_t largest_frame_processed;
-		int64_t current_video_frame;    // can't reliably use PTS of video to determine this
+		int64_t current_video_frame;
 
-		int hw_de_supported = 0;    // Is set by FFmpegReader
+		int64_t audio_pts;
+		int64_t video_pts;
+		double pts_offset_seconds;
+		double audio_pts_seconds;
+		double video_pts_seconds;
+		int64_t NO_PTS_OFFSET;
+		bool video_eof;
+		bool audio_eof;
+		bool packets_eof;
+		bool end_of_file;
+		int64_t packets_read;
+		int64_t packets_decoded;
+
+		int hw_de_supported = 0;	// Is set by FFmpegReader
 #if USE_HW_ACCEL
 		AVPixelFormat hw_de_av_pix_fmt = AV_PIX_FMT_NONE;
 		AVHWDeviceType hw_de_av_device_type = AV_HWDEVICE_TYPE_NONE;
@@ -141,11 +139,8 @@ namespace openshot {
 		/// Check the current seek position and determine if we need to seek again
 		bool CheckSeek(bool is_video);
 
-		/// Check if a frame is missing and attempt to replace its frame image (and
-		bool CheckMissingFrame(int64_t requested_frame);
-
 		/// Check the working queue, and move finished frames to the finished queue
-		void CheckWorkingFrames(bool end_of_stream, int64_t requested_frame);
+		void CheckWorkingFrames(int64_t requested_frame);
 
 		/// Convert Frame Number into Audio PTS
 		int64_t ConvertFrameToAudioPTS(int64_t frame_number);
@@ -168,14 +163,8 @@ namespace openshot {
 		/// Get the next packet (if any)
 		int GetNextPacket();
 
-		/// Get the smallest video frame that is still being processed
-		int64_t GetSmallestVideoFrame();
-
-		/// Get the smallest audio frame that is still being processed
-		int64_t GetSmallestAudioFrame();
-
-		/// Get the PTS for the current video packet
-		int64_t GetVideoPTS();
+		/// Get the PTS for the current packet
+		int64_t GetPacketPTS();
 
 		/// Check if there's an album art
 		bool HasAlbumArt();
@@ -187,7 +176,7 @@ namespace openshot {
 		void ProcessVideoPacket(int64_t requested_frame);
 
 		/// Process an audio packet
-		void ProcessAudioPacket(int64_t requested_frame, int64_t target_frame, int starting_sample);
+		void ProcessAudioPacket(int64_t requested_frame);
 
 		/// Read the stream until we find the requested Frame
 		std::shared_ptr<openshot::Frame> ReadStream(int64_t requested_frame);
@@ -201,8 +190,10 @@ namespace openshot {
 		/// Seek to a specific Frame.  This is not always frame accurate, it's more of an estimation on many codecs.
 		void Seek(int64_t requested_frame);
 
-		/// Update PTS Offset (if any)
-		void UpdatePTSOffset(bool is_video);
+		/// Update PTS Offset (presentation time stamp). This shifts timestamps for all streams, so the first timestamp
+		/// is always zero. If one stream starts first, it will always be zero, and the other streams shifted
+		/// to maintain the correct relative time distance.
+		void UpdatePTSOffset();
 
 		/// Update File Info for audio streams
 		void UpdateAudioInfo();

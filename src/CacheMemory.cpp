@@ -36,9 +36,9 @@ CacheMemory::CacheMemory(int64_t max_bytes) : CacheBase(max_bytes) {
 // Default destructor
 CacheMemory::~CacheMemory()
 {
-    Clear();
+	Clear();
 
-    // remove mutex
+	// remove mutex
 	delete cacheMutex;
 }
 
@@ -129,11 +129,11 @@ void CacheMemory::Add(std::shared_ptr<Frame> frame)
 
 // Check if frame is already contained in cache
 bool CacheMemory::Contains(int64_t frame_number) {
-    if (frames.count(frame_number) > 0) {
-        return true;
-    } else {
-        return false;
-    }
+	if (frames.count(frame_number) > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 // Get a frame from the cache (or NULL shared_ptr if no frame is found)
@@ -150,6 +150,23 @@ std::shared_ptr<Frame> CacheMemory::GetFrame(int64_t frame_number)
 	else
 		// no Frame found
 		return std::shared_ptr<Frame>();
+}
+
+// @brief Get an array of all Frames
+std::vector<std::shared_ptr<openshot::Frame>> CacheMemory::GetFrames()
+{
+	// Create a scoped lock, to protect the cache from multiple threads
+	const std::lock_guard<std::recursive_mutex> lock(*cacheMutex);
+
+	std::vector<std::shared_ptr<openshot::Frame>> all_frames;
+	std::vector<int64_t>::iterator itr_ordered;
+	for(itr_ordered = ordered_frame_numbers.begin(); itr_ordered != ordered_frame_numbers.end(); ++itr_ordered)
+	{
+		int64_t frame_number = *itr_ordered;
+		all_frames.push_back(GetFrame(frame_number));
+	}
+
+	return all_frames;
 }
 
 // Get the smallest frame number (or NULL shared_ptr if no frame is found)
@@ -169,9 +186,9 @@ std::shared_ptr<Frame> CacheMemory::GetSmallestFrame()
 
 	// Return frame (if any)
 	if (smallest_frame != -1) {
-        return frames[smallest_frame];
-    } else {
-	    return NULL;
+		return frames[smallest_frame];
+	} else {
+		return NULL;
 	}
 }
 

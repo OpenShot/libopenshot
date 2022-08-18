@@ -861,8 +861,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
         for (auto clip : nearby_clips)
         {
             long clip_start_position = round(clip->Position() * info.fps.ToDouble()) + 1;
-            long clip_end_position = round((clip->Position() + clip->Duration()) * info.fps.ToDouble()) + 1;
-
+            long clip_end_position = round((clip->Position() + clip->Duration()) * info.fps.ToDouble());
             bool does_clip_intersect = (clip_start_position <= requested_frame && clip_end_position >= requested_frame);
 
             // Debug output

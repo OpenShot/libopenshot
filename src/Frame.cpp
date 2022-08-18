@@ -751,8 +751,12 @@ void Frame::AddImage(
 	int new_width, int new_height, int bytes_per_pixel,
 	QImage::Format type, const unsigned char *pixels_)
 {
+	if (has_image_data) {
+		// Delete the previous QImage
+		image.reset();
+	}
 
-  // Create new image object from pixel data
+	// Create new image object from pixel data
 	auto new_image = std::make_shared<QImage>(
 		pixels_,
 		new_width, new_height,

@@ -219,7 +219,7 @@ void FrameMapper::Init()
 		int64_t new_length = reader->info.video_length * rate_diff;
 
 		// Calculate the value difference
-		double value_increment = (reader->info.video_length + 1) / (double) (new_length);
+		double value_increment = reader->info.video_length / (double) (new_length);
 
 		// Loop through curve, and build list of frames
 		double original_frame_num = 1.0f;
@@ -773,6 +773,7 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.fps.den = target_fps.den;
 	info.video_timebase.num = target_fps.den;
 	info.video_timebase.den = target_fps.num;
+	info.video_length = round(info.duration * info.fps.ToDouble());
 	pulldown = target_pulldown;
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;

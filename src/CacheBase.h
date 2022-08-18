@@ -53,9 +53,9 @@ namespace openshot {
 		/// Clear the cache of all frames
 		virtual void Clear() = 0;
 
-        /// @brief Check if frame is already contained in cache
-        /// @param frame_number The frame number to be checked
-        virtual bool Contains(int64_t frame_number) = 0;
+		/// @brief Check if frame is already contained in cache
+		/// @param frame_number The frame number to be checked
+		virtual bool Contains(int64_t frame_number) = 0;
 
 		/// Count the frames in the queue
 		virtual int64_t Count() = 0;
@@ -63,6 +63,9 @@ namespace openshot {
 		/// @brief Get a frame from the cache
 		/// @param frame_number The frame number of the cached frame
 		virtual std::shared_ptr<openshot::Frame> GetFrame(int64_t frame_number) = 0;
+
+		/// @brief Get an vector of all Frames
+		virtual std::vector<std::shared_ptr<openshot::Frame>> GetFrames() = 0;
 
 		/// Gets the maximum bytes value
 		virtual int64_t GetBytes() = 0;
