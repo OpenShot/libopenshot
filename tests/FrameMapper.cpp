@@ -198,7 +198,7 @@ TEST_CASE( "resample_audio_48000_to_41000", "[libopenshot][framemapper]" )
 	CHECK(map.GetFrame(1)->GetAudioSamplesCount() == Approx(882).margin(10.0));
 	CHECK(map.GetFrame(2)->GetAudioSamplesCount() == Approx(882).margin(10.0));
 	CHECK(map.GetFrame(50)->GetAudioSamplesCount() == Approx(882).margin(10.0));
-    CHECK(map.info.video_length == 1299);
+	CHECK(map.info.video_length == 1299);
 
 	// Close mapper
 	map.Close();
