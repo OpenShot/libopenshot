@@ -26,9 +26,9 @@
 using namespace openshot;
 
 /// Blank constructor, useful when using Json to load the effect properties
-Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.25), top(0.7), right(0.1),
+Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0), left(0.15), top(0.7), right(0.15),
 					 stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"), font(NULL), metrics(NULL),
-					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0)
+					 fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -37,8 +37,8 @@ Caption::Caption() : color("#ffffff"), stroke("#a9a9a9"), background("#ff000000"
 // Default constructor
 Caption::Caption(std::string captions) :
 		color("#ffffff"), caption_text(captions), stroke("#a9a9a9"), background("#ff000000"), background_alpha(0.0),
-		left(0.25), top(0.7), right(0.1), stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
-		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0)
+		left(0.15), top(0.7), right(0.15), stroke_width(0.5), font_size(30.0), font_alpha(1.0), is_dirty(true), font_name("sans"),
+		font(NULL), metrics(NULL), fade_in(0.35), fade_out(0.35), background_corner(10.0), background_padding(20.0), line_spacing(1.0)
 {
 	// Init effect properties
 	init_effect_details();
@@ -153,46 +153,28 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 	double fade_in_value = fade_in.GetValue(frame_number) * fps.ToDouble();
 	double fade_out_value = fade_out.GetValue(frame_number) * fps.ToDouble();
 	double right_value = right.GetValue(frame_number);
-	double background_corner_value = background_corner.GetValue(frame_number);
-	double padding_value = background_padding.GetValue(frame_number);
+	double background_corner_value = background_corner.GetValue(frame_number) * scale_factor;
+	double padding_value = background_padding.GetValue(frame_number) * scale_factor;
+	double stroke_width_value = stroke_width.GetValue(frame_number) * scale_factor;
+	double line_spacing_value = line_spacing.GetValue(frame_number);
+	double metrics_line_spacing = metrics.lineSpacing();
 
 	// Calculate caption area (based on left, top, and right margin)
 	double left_margin_x = frame_image->width() * left_value;
-	double starting_y = (frame_image->height() * top_value) + (metrics.lineSpacing() * scale_factor);
+	double starting_y = (frame_image->height() * top_value) + metrics_line_spacing;
+	double current_y = starting_y;
+	double bottom_y = starting_y;
+	double top_y = starting_y;
+	double max_text_width = 0.0;
 	double right_margin_x = frame_image->width() - (frame_image->width() * right_value);
 	double caption_area_width = right_margin_x - left_margin_x;
 	QRectF caption_area = QRectF(left_margin_x, starting_y, caption_area_width, frame_image->height());
-	QRectF caption_area_with_padding = QRectF(left_margin_x - (padding_value / 2.0), starting_y - (padding_value / 2.0), caption_area_width + padding_value, frame_image->height() + padding_value);
 
-	// Set background color of caption
-	QBrush brush;
-	QColor background_qcolor = QColor(QString(background.GetColorHex(frame_number).c_str()));
-	background_qcolor.setAlphaF(background_alpha.GetValue(frame_number));
-	brush.setColor(background_qcolor);
-	brush.setStyle(Qt::SolidPattern);
-	painter.setBrush(brush);
-	painter.setPen(Qt::NoPen);
-	painter.drawRoundedRect(caption_area_with_padding, background_corner_value, background_corner_value);
-
-	// Set text color of caption
-	QPen pen;
-	QColor stroke_qcolor;
-	if (stroke_width.GetValue(frame_number) <= 0.0) {
-		// No stroke
-		painter.setPen(Qt::NoPen);
-	} else {
-		// Stroke color
-		stroke_qcolor = QColor(QString(stroke.GetColorHex(frame_number).c_str()));
-		stroke_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
-		pen.setColor(stroke_qcolor);
-		pen.setWidthF(stroke_width.GetValue(frame_number) * scale_factor);
-		painter.setPen(pen);
-	}
-	// Fill color of text
-	QColor font_qcolor = QColor(QString(color.GetColorHex(frame_number).c_str()));
-	font_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
-	brush.setColor(font_qcolor);
-	painter.setBrush(brush);
+	// Keep track of all required text paths
+	std::vector<QPainterPath> text_paths;
+	double fade_in_percentage = 0.0;
+	double fade_out_percentage = 0.0;
+	double line_height = metrics_line_spacing * line_spacing_value;
 
 	// Loop through matches and find text to display (if any)
 	for (auto match = matchedCaptions.begin(); match != matchedCaptions.end(); match++) {
@@ -210,25 +192,11 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 			QString line = lines[index];
 			// Ignore lines that start with NOTE, or are <= 1 char long
 			if (!line.startsWith(QStringLiteral("NOTE")) &&
-				!line.isEmpty() && frame_number >= start_frame && frame_number <= end_frame &&
-				line.length() > 1) {
+				!line.isEmpty() && frame_number >= start_frame && frame_number <= end_frame && line.length() > 1) {
 
 				// Calculate fade in/out ranges
-				double fade_in_percentage = ((float) frame_number - (float) start_frame) / fade_in_value;
-				double fade_out_percentage = 1.0 - (((float) frame_number - ((float) end_frame - fade_out_value)) / fade_out_value);
-				if (fade_in_percentage < 1.0) {
-					// Fade in
-					font_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
-					stroke_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
-				} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
-					// Fade out
-					font_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
-					stroke_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
-				}
-				pen.setColor(stroke_qcolor);
-				brush.setColor(font_qcolor);
-				painter.setPen(pen);
-				painter.setBrush(brush);
+				fade_in_percentage = ((float) frame_number - (float) start_frame) / fade_in_value;
+				fade_out_percentage = 1.0 - (((float) frame_number - ((float) end_frame - fade_out_value)) / fade_out_value);
 
 				// Loop through words, and find word-wrap boundaries
 				QStringList words = line.split(" ");
@@ -243,26 +211,41 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 						QRectF textRect = metrics.boundingRect(caption_area, Qt::TextSingleLine, fitting_line);
 						if (textRect.width() <= caption_area.width()) {
 							// Location for text
-							QPoint p(left_margin_x, starting_y);
+							QPoint p(left_margin_x, current_y);
 
-							// Draw text onto path (for correct border and fill)
+							// Create path and add text to it (for correct border and fill)
 							QPainterPath path1;
 							QString fitting_line = words.mid(0, word_index).join(" ");
 							path1.addText(p, font, fitting_line);
-							painter.drawPath(path1);
-
-							// Increment QPoint to height of text (for next line) + padding
-							starting_y += path1.boundingRect().height() + (metrics.lineSpacing() * scale_factor);
+							text_paths.push_back(path1);
 
 							// Update line (to remove words already drawn
 							words = words.mid(word_index, words.length());
 							words_remaining = words.length();
 							words_displayed = true;
+
+							// Increment y-coordinate of text (for next line) + padding
+							if (words_remaining > 0) {
+								current_y += line_height;
+							}
+
+							// Detect max width (of widest text line)
+							if (path1.boundingRect().width() > max_text_width) {
+								max_text_width = path1.boundingRect().width();
+							}
+							// Detect top most y coordinate of text
+							if (path1.boundingRect().top() < top_y) {
+								top_y = path1.boundingRect().top();
+							}
+							// Detect bottom most y coordinate of text
+							if (path1.boundingRect().bottom() > bottom_y) {
+								bottom_y = path1.boundingRect().bottom();
+							}
 							break;
 						}
 					}
 
-					if (words_displayed == false) {
+					if (!words_displayed) {
 						// Exit loop if no words displayed
 						words_remaining = 0;
 					}
@@ -270,6 +253,77 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 
 			}
 		}
+	}
+
+	// Calculate background size w/padding (based on actual text-wrapping)
+	QRectF caption_area_with_padding = QRectF(left_margin_x - (padding_value / 2.0),
+											  top_y - (padding_value / 2.0),
+											  max_text_width + padding_value,
+											  (bottom_y - top_y) + padding_value);
+
+	// Calculate alignment offset on X axis (force center alignment of the caption area)
+	double alignment_offset = std::max((caption_area_width - max_text_width) / 2.0, 0.0);
+
+	// Set background color of caption
+	QBrush background_brush;
+	QColor background_qcolor = QColor(QString(background.GetColorHex(frame_number).c_str()));
+	// Align background center
+	caption_area_with_padding.translate(alignment_offset, 0.0);
+	if (fade_in_percentage < 1.0) {
+		// Fade in background
+		background_qcolor.setAlphaF(fade_in_percentage * background_alpha.GetValue(frame_number));
+	} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
+		// Fade out background
+		background_qcolor.setAlphaF(fade_out_percentage * background_alpha.GetValue(frame_number));
+	} else {
+		background_qcolor.setAlphaF(background_alpha.GetValue(frame_number));
+	}
+	background_brush.setColor(background_qcolor);
+	background_brush.setStyle(Qt::SolidPattern);
+	painter.setBrush(background_brush);
+	painter.setPen(Qt::NoPen);
+	painter.drawRoundedRect(caption_area_with_padding, background_corner_value, background_corner_value);
+
+	// Set fill-color of text
+	QBrush font_brush;
+	QColor font_qcolor = QColor(QString(color.GetColorHex(frame_number).c_str()));
+	font_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
+	font_brush.setStyle(Qt::SolidPattern);
+
+	// Set stroke/border color of text
+	QPen pen;
+	QColor stroke_qcolor;
+	stroke_qcolor = QColor(QString(stroke.GetColorHex(frame_number).c_str()));
+	stroke_qcolor.setAlphaF(font_alpha.GetValue(frame_number));
+	pen.setColor(stroke_qcolor);
+	pen.setWidthF(std::max(stroke_width_value, 0.0));
+	painter.setPen(pen);
+
+	// Loop through text paths
+	for(QPainterPath path : text_paths) {
+		// Align text center (relative to background)
+		path.translate(alignment_offset, 0.0);
+		if (fade_in_percentage < 1.0) {
+			// Fade in text
+			font_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
+			stroke_qcolor.setAlphaF(fade_in_percentage * font_alpha.GetValue(frame_number));
+		} else if (fade_out_percentage >= 0.0 && fade_out_percentage <= 1.0) {
+			// Fade out text
+			font_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
+			stroke_qcolor.setAlphaF(fade_out_percentage * font_alpha.GetValue(frame_number));
+		}
+		pen.setColor(stroke_qcolor);
+		font_brush.setColor(font_qcolor);
+
+		// Set stroke pen
+		if (stroke_width_value <= 0.0) {
+			painter.setPen(Qt::NoPen);
+		} else {
+			painter.setPen(pen);
+		}
+
+		painter.setBrush(font_brush);
+		painter.drawPath(path);
 	}
 
 	// End painter
@@ -303,6 +357,7 @@ Json::Value Caption::JsonValue() const {
 	root["font_alpha"] = font_alpha.JsonValue();
 	root["fade_in"] = fade_in.JsonValue();
 	root["fade_out"] = fade_out.JsonValue();
+	root["line_spacing"] = line_spacing.JsonValue();
 	root["left"] = left.JsonValue();
 	root["top"] = top.JsonValue();
 	root["right"] = right.JsonValue();
@@ -359,6 +414,8 @@ void Caption::SetJsonValue(const Json::Value root) {
 		fade_in.SetJsonValue(root["fade_in"]);
 	if (!root["fade_out"].isNull())
 		fade_out.SetJsonValue(root["fade_out"]);
+	if (!root["line_spacing"].isNull())
+		line_spacing.SetJsonValue(root["line_spacing"]);
 	if (!root["left"].isNull())
 		left.SetJsonValue(root["left"]);
 	if (!root["top"].isNull())
@@ -407,6 +464,7 @@ std::string Caption::PropertiesJSON(int64_t requested_frame) const {
 	root["font_alpha"] = add_property_json("Font Alpha", font_alpha.GetValue(requested_frame), "float", "", &font_alpha, 0.0, 1.0, false, requested_frame);
 	root["fade_in"] = add_property_json("Fade In (Seconds)", fade_in.GetValue(requested_frame), "float", "", &fade_in, 0.0, 3.0, false, requested_frame);
 	root["fade_out"] = add_property_json("Fade Out (Seconds)", fade_out.GetValue(requested_frame), "float", "", &fade_out, 0.0, 3.0, false, requested_frame);
+	root["line_spacing"] = add_property_json("Line Spacing", line_spacing.GetValue(requested_frame), "float", "", &line_spacing, 0.0, 5.0, false, requested_frame);
 	root["left"] = add_property_json("Left Size", left.GetValue(requested_frame), "float", "", &left, 0.0, 0.5, false, requested_frame);
 	root["top"] = add_property_json("Top Size", top.GetValue(requested_frame), "float", "", &top, 0.0, 1.0, false, requested_frame);
 	root["right"] = add_property_json("Right Size", right.GetValue(requested_frame), "float", "", &right, 0.0, 0.5, false, requested_frame);
