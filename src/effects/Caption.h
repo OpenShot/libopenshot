@@ -61,6 +61,7 @@ public:
 	Keyframe stroke_width;  ///< Width of text border / stroke
 	Keyframe font_size;     ///< Font size in points
 	Keyframe font_alpha;     ///< Font color alpha
+	Keyframe line_spacing;	 ///< Distance between lines (1.0 default / 100%)
 	Keyframe left;		 ///< Size of left bar
 	Keyframe top;		 ///< Size of top bar
 	Keyframe right;		 ///< Size of right bar
