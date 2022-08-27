@@ -528,7 +528,7 @@ std::shared_ptr<Frame> Timeline::apply_effects(std::shared_ptr<Frame> frame, int
 	{
 		// Does clip intersect the current requested time
 		long effect_start_position = round(effect->Position() * info.fps.ToDouble()) + 1;
-		long effect_end_position = round((effect->Position() + (effect->Duration())) * info.fps.ToDouble()) + 1;
+		long effect_end_position = round((effect->Position() + (effect->Duration())) * info.fps.ToDouble());
 
 		bool does_effect_intersect = (effect_start_position <= timeline_frame_number && effect_end_position >= timeline_frame_number && effect->Layer() == layer);
 
