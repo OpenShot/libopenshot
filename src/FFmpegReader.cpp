@@ -822,7 +822,8 @@ void FFmpegReader::UpdateVideoInfo() {
 	}
 
 	// Get the # of video frames (if found in stream)
-	if (pStream->nb_frames > 0) {
+	// Only set this 1 time (this method can be called multiple times)
+	if (pStream->nb_frames > 0 && info.video_length <= 0) {
 		info.video_length = pStream->nb_frames;
 	}
 
@@ -837,6 +838,7 @@ void FFmpegReader::UpdateVideoInfo() {
 		is_duration_known = true;
 
 		// Calculate number of frames (if not already found in metadata)
+		// Only set this 1 time (this method can be called multiple times)
 		if (info.video_length <= 0) {
 			info.video_length = round(info.duration * info.fps.ToDouble());
 		}
