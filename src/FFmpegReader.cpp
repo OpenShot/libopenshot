@@ -821,6 +821,12 @@ void FFmpegReader::UpdateVideoInfo() {
 		info.duration = float(info.file_size) / info.video_bit_rate;
 	}
 
+	// Get the # of video frames (if found in stream)
+	// Only set this 1 time (this method can be called multiple times)
+	if (pStream->nb_frames > 0 && info.video_length <= 0) {
+		info.video_length = pStream->nb_frames;
+	}
+
 	// No duration found in stream of file
 	if (info.duration <= 0.0f) {
 		// No duration is found in the video stream
@@ -831,8 +837,11 @@ void FFmpegReader::UpdateVideoInfo() {
 		// Yes, a duration was found
 		is_duration_known = true;
 
-		// Calculate number of frames
-		info.video_length = round(info.duration * info.fps.ToDouble());
+		// Calculate number of frames (if not already found in metadata)
+		// Only set this 1 time (this method can be called multiple times)
+		if (info.video_length <= 0) {
+			info.video_length = round(info.duration * info.fps.ToDouble());
+		}
 	}
 
 	// Add video metadata (if any)
