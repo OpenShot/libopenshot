@@ -1305,11 +1305,11 @@ void Clip::apply_keyframes(std::shared_ptr<Frame> frame, std::shared_ptr<QImage>
                     break;
 
                 case (FRAME_DISPLAY_TIMELINE):
-                    frame_number_str << (position * t->info.fps.ToFloat()) + frame->number;
+                    frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number;
                     break;
 
                 case (FRAME_DISPLAY_BOTH):
-                    frame_number_str << (position * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
+                    frame_number_str << round((Position() - Start()) * t->info.fps.ToFloat()) + frame->number << " (" << frame->number << ")";
                     break;
             }
 
