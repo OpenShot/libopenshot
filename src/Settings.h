@@ -82,6 +82,18 @@ namespace openshot {
 		/// Which GPU to use to encode (0 is the first)
 		int HW_EN_DEVICE_SET = 0;
 
+		/// Minimum number of frames to cache before playback begins
+		int VIDEO_CACHE_MIN_PREROLL_FRAMES = 2;
+
+		/// Max number of frames (ahead of playhead) to cache during playback
+		int VIDEO_CACHE_MAX_PREROLL_FRAMES = 8;
+
+		/// Max number of frames (when paused) to cache for playback
+		int VIDEO_CACHE_MAX_FRAMES = 30 * 3;
+
+		/// Enable/Disable the cache thread to pre-fetch and cache video frames before we need them
+		bool ENABLE_PLAYBACK_CACHING = true;
+
 		/// The audio device name to use during playback
 		std::string PLAYBACK_AUDIO_DEVICE_NAME = "";
 

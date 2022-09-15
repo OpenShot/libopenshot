@@ -33,6 +33,10 @@ Settings *Settings::Instance()
 		m_pInstance->DE_LIMIT_WIDTH_MAX = 1950;
 		m_pInstance->HW_DE_DEVICE_SET = 0;
 		m_pInstance->HW_EN_DEVICE_SET = 0;
+		m_pInstance->VIDEO_CACHE_MIN_PREROLL_FRAMES = 2;
+		m_pInstance->VIDEO_CACHE_MAX_PREROLL_FRAMES = 8;
+		m_pInstance->VIDEO_CACHE_MAX_FRAMES = 30 * 3;
+		m_pInstance->ENABLE_PLAYBACK_CACHING = true;
 		m_pInstance->PLAYBACK_AUDIO_DEVICE_NAME = "";
 		m_pInstance->PLAYBACK_AUDIO_DEVICE_TYPE = "";
 		m_pInstance->DEBUG_TO_STDERR = false;
