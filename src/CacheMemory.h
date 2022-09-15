@@ -13,10 +13,6 @@
 #ifndef OPENSHOT_CACHE_MEMORY_H
 #define OPENSHOT_CACHE_MEMORY_H
 
-#include <map>
-#include <deque>
-#include <memory>
-
 #include "CacheBase.h"
 
 namespace openshot {
@@ -35,17 +31,8 @@ namespace openshot {
 		std::map<int64_t, std::shared_ptr<openshot::Frame> > frames;	///< This map holds the frame number and Frame objects
 		std::deque<int64_t> frame_numbers;	///< This queue holds a sequential list of cached Frame numbers
 
-		bool needs_range_processing; ///< Something has changed, and the range data needs to be re-calculated
-		std::string json_ranges; ///< JSON ranges of frame numbers
-		std::vector<int64_t> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
-		std::map<int64_t, int64_t> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
-		int64_t range_version; ///< The version of the JSON range data (incremented with each change)
-
 		/// Clean up cached frames that exceed the max number of bytes
 		void CleanUp();
-
-		/// Calculate ranges of frames
-		void CalculateRanges();
 
 	public:
 		/// Default constructor, no max bytes

@@ -13,8 +13,11 @@
 #ifndef OPENSHOT_CACHE_BASE_H
 #define OPENSHOT_CACHE_BASE_H
 
+#include <map>
+#include <vector>
 #include <memory>
 #include <mutex>
+#include <algorithm>
 
 #include "Json.h"
 
@@ -34,9 +37,17 @@ namespace openshot {
 		std::string cache_type; ///< This is a friendly type name of the derived cache instance
 		int64_t max_bytes; ///< This is the max number of bytes to cache (0 = no limit)
 
+		bool needs_range_processing; ///< Something has changed, and the range data needs to be re-calculated
+		std::string json_ranges; ///< JSON ranges of frame numbers
+		std::vector<int64_t> ordered_frame_numbers; ///< Ordered list of frame numbers used by cache
+		std::map<int64_t, int64_t> frame_ranges;	///< This map holds the ranges of frames, useful for quickly displaying the contents of the cache
+		int64_t range_version; ///< The version of the JSON range data (incremented with each change)
+        
 		/// Mutex for multiple threads
 		std::recursive_mutex *cacheMutex;
 
+		/// Calculate ranges of frames
+		void CalculateRanges();
 
 	public:
 		/// Default constructor, no max bytes
