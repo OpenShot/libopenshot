@@ -38,8 +38,8 @@ namespace openshot
 	int64_t cached_frame_count = 0;
 	ReaderBase *reader;
 	int64_t min_frames_ahead;
-    int64_t max_frames_ahead;
-    bool should_pause_cache;
+	int64_t max_frames_ahead;
+	bool should_pause_cache;
 
 	/// Constructor
 	VideoCacheThread();
