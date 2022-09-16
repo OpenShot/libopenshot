@@ -105,7 +105,7 @@ namespace openshot
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
-		while (!threadShouldExit() && is_playing) {
+        while (!threadShouldExit() && is_playing) {
             // init local vars
             min_frames_ahead = s->VIDEO_CACHE_MIN_PREROLL_FRAMES;
             max_frames_ahead = s->VIDEO_CACHE_MAX_PREROLL_FRAMES;
