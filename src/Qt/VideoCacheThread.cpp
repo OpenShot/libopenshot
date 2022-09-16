@@ -62,19 +62,19 @@ namespace openshot
         }
 
         // Clear cache if previous frame outside the cached range, which means we are
-        // requesting a non-contiguous frame compared to our current cache range
+        // requesting a non-contigous frame compared to our current cache range
         if (!reader->GetCache()->Contains(previous_frame)) {
             Timeline *t = (Timeline *) reader;
             t->ClearAllCache();
         }
 
         // Reset pre-roll when requested frame is not currently cached
-	    if (start_preroll && reader && reader->GetCache() && !reader->GetCache()->Contains(new_position)) {
+        if (start_preroll && reader && reader->GetCache() && !reader->GetCache()->Contains(new_position)) {
             cached_frame_count = 0;
             if (speed == 0) {
                 should_pause_cache = false;
             }
-	    }
+        }
         Seek(new_position);
     }
 
