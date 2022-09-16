@@ -81,21 +81,21 @@ void CacheBase::CalculateRanges() {
             }
         }
 
-		// APPEND FINAL VALUE
-		Json::Value range;
+        // APPEND FINAL VALUE
+        Json::Value range;
 
-		// Add JSON object with start/end attributes
-		// Use strings, since int64_ts are not supported in JSON
-		range["start"] = std::to_string(starting_frame);
-		range["end"] = std::to_string(ending_frame);
-		ranges.append(range);
+        // Add JSON object with start/end attributes
+        // Use strings, since int64_ts are not supported in JSON
+        range["start"] = std::to_string(starting_frame);
+        range["end"] = std::to_string(ending_frame);
+        ranges.append(range);
 
-		// Cache range JSON as string
-		json_ranges = ranges.toStyledString();
+        // Cache range JSON as string
+        json_ranges = ranges.toStyledString();
 
-		// Reset needs_range_processing
-		needs_range_processing = false;
-	}
+        // Reset needs_range_processing
+        needs_range_processing = false;
+    }
 }
 
 // Generate Json::Value for this object
