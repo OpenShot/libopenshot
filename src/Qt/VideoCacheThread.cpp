@@ -78,6 +78,19 @@ namespace openshot
         Seek(new_position);
     }
 
+    // Get the size in bytes of a frame (rough estimate)
+    int64_t VideoCacheThread::getBytes(int width, int height, int sample_rate, int channels, float fps)
+    {
+        int64_t total_bytes = 0;
+        total_bytes += static_cast<int64_t>(width * height * sizeof(char) * 4);
+
+        // approximate audio size (sample rate / 24 fps)
+        total_bytes += ((sample_rate * channels) / fps) * sizeof(float);
+
+        // return size of this frame
+        return total_bytes;
+    }
+
 	// Play the video
 	void VideoCacheThread::Play() {
 		// Start playing
@@ -98,14 +111,14 @@ namespace openshot
     // Start the thread
     void VideoCacheThread::run()
     {
-        // Get settings
-        Settings *s = Settings::Instance();
-
         // Types for storing time durations in whole and fractional microseconds
         using micro_sec = std::chrono::microseconds;
         using double_micro_sec = std::chrono::duration<double, micro_sec::period>;
 
         while (!threadShouldExit() && is_playing) {
+            // Get settings
+            Settings *s = Settings::Instance();
+
             // init local vars
             min_frames_ahead = s->VIDEO_CACHE_MIN_PREROLL_FRAMES;
             max_frames_ahead = s->VIDEO_CACHE_MAX_PREROLL_FRAMES;
@@ -137,18 +150,24 @@ namespace openshot
                 // To allow the cache to fill-up only on the initial pause.
                 should_pause_cache = true;
 
-                // Calculate bytes per frame. If we have a reference openshot::Frame, use that instead (the preview
-                // window can be smaller, can thus reduce the bytes per frame)
-                int64_t bytes_per_frame = (reader->info.height * reader->info.width * 4) +
-                                          (reader->info.sample_rate * reader->info.channels * 4);
-                if (last_cached_frame && last_cached_frame->has_image_data && last_cached_frame->has_audio_data) {
-                    bytes_per_frame = last_cached_frame->GetBytes();
+                // Calculate bytes per frame
+                int64_t bytes_per_frame = getBytes(reader->info.width, reader->info.height,
+                                                   reader->info.sample_rate, reader->info.channels,
+                                                   reader->info.fps.ToFloat());
+                Timeline *t = (Timeline *) reader;
+                if (t->preview_width != reader->info.width || t->preview_height != reader->info.height) {
+                    // If we have a different timeline preview size, use that instead (the preview
+                    // window can be smaller, can thus reduce the bytes per frame)
+                    bytes_per_frame = getBytes(t->preview_width, t->preview_height,
+                                                   reader->info.sample_rate, reader->info.channels,
+                                                   reader->info.fps.ToFloat());
                 }
 
                 // Calculate # of frames on Timeline cache (when paused)
                 if (reader->GetCache() && reader->GetCache()->GetMaxBytes() > 0) {
-                    // When paused, use 1/2 the cache size (so our cache will be 50% before the play-head, and 50% after it)
-                    max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) / 2;
+                    // When paused, limit the cached frames to the following % of total cache size.
+                    // This allows for us to leave some cache behind the plahead, and some in front of the playhead.
+                    max_frames_ahead = (reader->GetCache()->GetMaxBytes() / bytes_per_frame) * s->VIDEO_CACHE_PERCENT_AHEAD;
                     if (max_frames_ahead > s->VIDEO_CACHE_MAX_FRAMES) {
                         // Ignore values that are too large, and default to a safer value
                         max_frames_ahead = s->VIDEO_CACHE_MAX_FRAMES;
@@ -222,7 +241,7 @@ namespace openshot
                 if (current_speed != speed) {
                     break;
                 }
-                // Check if playback has stopped
+                // Check if thread has stopped
                 if (!is_playing) {
                     break;
                 }
