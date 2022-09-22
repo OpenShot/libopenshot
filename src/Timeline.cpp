@@ -778,8 +778,8 @@ void Timeline::Close()
 	// Mark timeline as closed
 	is_open = false;
 
-	// Clear all cache
-    ClearAllCache();
+	// Clear all cache (deep clear, including nested Readers)
+	ClearAllCache(true);
 }
 
 // Open the reader (and start consuming resources)
@@ -818,7 +818,7 @@ std::shared_ptr<Frame> Timeline::GetFrame(int64_t requested_frame)
 	}
 	else
 	{
-    // Get a list of clips that intersect with the requested section of timeline
+		// Get a list of clips that intersect with the requested section of timeline
 		// This also opens the readers for intersecting clips, and marks non-intersecting clips as 'needs closing'
 		std::vector<Clip*> nearby_clips;
 		nearby_clips = find_intersecting_clips(requested_frame, 1, true);
@@ -1525,7 +1525,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 }
 
 // Clear all caches
-void Timeline::ClearAllCache() {
+void Timeline::ClearAllCache(bool deep) {
 
     // Clear primary cache
     if (final_cache) {
@@ -1538,8 +1538,8 @@ void Timeline::ClearAllCache() {
         // Clear cache on clip
         clip->Reader()->GetCache()->Clear();
 
-        // Clear nested Reader (if any)
-        if (clip->Reader()->Name() == "FrameMapper") {
+        // Clear nested Reader (if deep clear requested)
+        if (deep && clip->Reader()->Name() == "FrameMapper") {
           FrameMapper* nested_reader = (FrameMapper*) clip->Reader();
           if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
             nested_reader->Reader()->GetCache()->Clear();

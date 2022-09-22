@@ -38,13 +38,16 @@ namespace openshot
 	int64_t cached_frame_count = 0;
 	ReaderBase *reader;
 	int64_t min_frames_ahead;
-    int64_t max_frames_ahead;
-
+	int64_t max_frames_ahead;
+	bool should_pause_cache;
 
 	/// Constructor
 	VideoCacheThread();
 	/// Destructor
 	~VideoCacheThread();
+
+    /// Get the size in bytes of a frame (rough estimate)
+    int64_t getBytes(int width, int height, int sample_rate, int channels, float fps);
 
     /// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
     int getSpeed() const { return speed; }

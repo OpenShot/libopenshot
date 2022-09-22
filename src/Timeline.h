@@ -258,8 +258,9 @@ namespace openshot {
 		/// @brief Automatically map all clips to the timeline's framerate and samplerate
 		void AutoMapClips(bool auto_map) { auto_map_clips = auto_map; };
 
-        /// Clear all cache for this timeline instance, and all clips, mappers, and readers under it
-        void ClearAllCache();
+        /// Clear all cache for this timeline instance, including all clips' cache
+        /// @param deep If True, clear all FrameMappers and nested Readers (QtImageReader, FFmpegReader, etc...)
+        void ClearAllCache(bool deep=false);
 
 		/// Return a list of clips on the timeline
 		std::list<openshot::Clip*> Clips() override { return clips; };
