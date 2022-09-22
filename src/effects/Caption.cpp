@@ -225,9 +225,7 @@ std::shared_ptr<openshot::Frame> Caption::GetFrame(std::shared_ptr<openshot::Fra
 							words_displayed = true;
 
 							// Increment y-coordinate of text (for next line) + padding
-							if (words_remaining > 0) {
-								current_y += line_height;
-							}
+							current_y += line_height;
 
 							// Detect max width (of widest text line)
 							if (path1.boundingRect().width() > max_text_width) {
