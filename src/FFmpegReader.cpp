@@ -595,7 +595,8 @@ void FFmpegReader::Close() {
 		// Drain any packets from the decoder
 		packet = NULL;
 		int attempts = 0;
-		while (packets_decoded < packets_read && attempts < 256) {
+		int max_attempts = 128;
+		while (packets_decoded < packets_read && attempts < max_attempts) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Close (Drain decoder loop)",
 													 "packets_read", packets_read,
 													 "packets_decoded", packets_decoded,
@@ -926,11 +927,18 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 	bool check_seek = false;
 	int packet_error = -1;
 
+	// Seeking can sometimes cause us to be quite far away from the requested
+	// frame, and thus, we need to iterate a large number of packets to find
+	// the requested position. This is mostly to prevent infinite loops when
+	// no more packets can be found though.
+	int attempts = 0;
+	int max_attempts = 30 * 30 * 60;
+
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "max_concurrent_frames", max_concurrent_frames);
 
 	// Loop through the stream until the correct frame is found
-	while (true) {
+	while (attempts < max_attempts) {
 		// Check if working frames are 'finished'
 		if (!is_seeking) {
 			// Check for final frames
@@ -978,7 +986,16 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 			// Process Audio Packet
 			ProcessAudioPacket(requested_frame);
 		}
-		
+
+		// Remove unused packets (sometimes we purposely ignore video or audio packets,
+		// if the has_video or has_audio properties are manually overridden)
+		if ((!info.has_video && packet && packet->stream_index == videoStream) ||
+			(!info.has_audio && packet && packet->stream_index == audioStream)) {
+			RemoveAVPacket(packet);
+			packet = NULL;
+			packets_decoded++;
+		}
+
 		// Determine end-of-stream (waiting until final decoder threads finish)
 		// Force end-of-stream in some situations
 		end_of_file = packets_eof && video_eof && audio_eof;
@@ -995,6 +1012,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 			end_of_file = true;
 			break;
 		}
+        attempts++;
 	} // end while
 
 	// Debug output
