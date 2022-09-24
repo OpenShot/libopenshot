@@ -989,13 +989,13 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 		// Remove unused packets (sometimes we purposely ignore video or audio packets,
 		// if the has_video or has_audio properties are manually overridden)
-        if ((!info.has_video && packet && packet->stream_index == videoStream) ||
-            (!info.has_audio && packet && packet->stream_index == audioStream)) {
-            RemoveAVPacket(packet);
-            packet = NULL;
-            packets_decoded++;
-        }
-		
+		if ((!info.has_video && packet && packet->stream_index == videoStream) ||
+			(!info.has_audio && packet && packet->stream_index == audioStream)) {
+			RemoveAVPacket(packet);
+			packet = NULL;
+			packets_decoded++;
+		}
+
 		// Determine end-of-stream (waiting until final decoder threads finish)
 		// Force end-of-stream in some situations
 		end_of_file = packets_eof && video_eof && audio_eof;
