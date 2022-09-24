@@ -926,8 +926,13 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 	// Allocate video frame
 	bool check_seek = false;
 	int packet_error = -1;
+
+	// Seeking can sometimes cause us to be quite far away from the requested
+	// frame, and thus, we need to iterate a large number of packets to find
+	// the requested position. This is mostly to prevent infinite loops when
+	// no more packets can be found though.
 	int attempts = 0;
-	int max_attempts = 128;
+	int max_attempts = 30 * 30 * 60;
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::ReadStream", "requested_frame", requested_frame, "max_concurrent_frames", max_concurrent_frames);
