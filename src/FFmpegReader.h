@@ -47,6 +47,44 @@ namespace openshot {
 	};
 
 	/**
+	 * @brief This struct holds the packet counts and end-of-file detection for an openshot::FFmpegReader.
+	 *
+	 * Keeping track of each packet that is read & decoded helps ensure we process
+	 * each packet before EOF is determined. For example, some packets are read async
+	 * and decoded later, and tracking the counts makes it easy to continue checking
+	 * for a decoded packet until it's ready.
+	 */
+	struct PacketStatus {
+		// Track counts of video and audio packets read & decoded
+		int64_t video_read = 0;
+		int64_t video_decoded = 0;
+		int64_t audio_read = 0;
+		int64_t audio_decoded = 0;
+
+		// Track end-of-file detection on video/audio and overall
+		bool video_eof = true;
+		bool audio_eof = true;
+		bool packets_eof = true;
+		bool end_of_file = true;
+
+		int64_t packets_read() {
+			// Return total packets read
+			return video_read + audio_read;
+		}
+
+		int64_t packets_decoded() {
+			// Return total packets decoded
+			return video_decoded + audio_decoded;
+		}
+
+		void reset(bool eof) {
+			// Reset counts and EOF detection for packets
+			video_read = 0; video_decoded = 0; audio_read = 0; audio_decoded = 0;
+			video_eof = eof; audio_eof = eof; packets_eof = eof; end_of_file = eof;
+		}
+	};
+
+	/**
 	 * @brief This class uses the FFmpeg libraries, to open video files and audio files, and return
 	 * openshot::Frame objects for any frame in the file.
 	 *
@@ -119,12 +157,7 @@ namespace openshot {
 		double audio_pts_seconds;
 		double video_pts_seconds;
 		int64_t NO_PTS_OFFSET;
-		bool video_eof;
-		bool audio_eof;
-		bool packets_eof;
-		bool end_of_file;
-		int64_t packets_read;
-		int64_t packets_decoded;
+		PacketStatus packet_status;
 
 		int hw_de_supported = 0;	// Is set by FFmpegReader
 #if USE_HW_ACCEL
