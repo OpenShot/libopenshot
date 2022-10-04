@@ -29,7 +29,8 @@ namespace openshot
 	VideoCacheThread::VideoCacheThread()
 	: Thread("video-cache"), speed(0), last_speed(1), is_playing(false),
 	reader(NULL), current_display_frame(1), cached_frame_count(0),
-	min_frames_ahead(4), max_frames_ahead(8), should_pause_cache(false)
+	min_frames_ahead(4), max_frames_ahead(8), should_pause_cache(false),
+	timeline_max_frame(0), should_break(false)
     {
     }
 
@@ -47,7 +48,13 @@ namespace openshot
     // Seek the reader to a particular frame number and optionally start the pre-roll
     void VideoCacheThread::Seek(int64_t new_position, bool start_preroll)
     {
-        // Determine previous frame number (depending on speed)
+        // Get timeline instance
+        Timeline *t = (Timeline *) reader;
+
+        // Calculate last frame # on timeline (to prevent caching past this point)
+        timeline_max_frame = t->GetMaxFrame();
+
+        // Determine previous frame number (depending on last non-zero/non-paused speed)
         int64_t previous_frame = new_position;
         if (last_speed < 0) {
             // backwards
@@ -63,19 +70,40 @@ namespace openshot
 
         // Clear cache if previous frame outside the cached range, which means we are
         // requesting a non-contigous frame compared to our current cache range
-        if (!reader->GetCache()->Contains(previous_frame)) {
-            Timeline *t = (Timeline *) reader;
+        if (new_position >= 1 && new_position <= timeline_max_frame && !reader->GetCache()->Contains(previous_frame)) {
+            // Clear cache
             t->ClearAllCache();
+
+            // Break out of any existing cache loop
+            should_break = true;
+
+            // Force cache direction back to forward
+            last_speed = 1;
         }
 
         // Reset pre-roll when requested frame is not currently cached
         if (start_preroll && reader && reader->GetCache() && !reader->GetCache()->Contains(new_position)) {
+            // Break out of any existing cache loop
+            should_break = true;
+
+            // Reset stats and allow cache to rebuild (if paused)
             cached_frame_count = 0;
             if (speed == 0) {
                 should_pause_cache = false;
             }
         }
+
+        // Actually update seek position
         Seek(new_position);
+    }
+
+    // Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+    void VideoCacheThread::setSpeed(int new_speed) {
+        if (new_speed != 0) {
+            // Track last non-zero speed
+            last_speed = new_speed;
+        }
+        speed = new_speed;
     }
 
     // Get the size in bytes of a frame (rough estimate)
@@ -127,6 +155,9 @@ namespace openshot
             const auto frame_duration = double_micro_sec(1000000.0 / reader->info.fps.ToDouble());
             int current_speed = speed;
             
+            // Increment and direction for cache loop
+            int64_t increment = 1;
+
             // Check for empty cache (and re-trigger preroll)
             // This can happen when the user manually empties the timeline cache
             if (reader->GetCache()->Count() == 0) {
@@ -134,14 +165,12 @@ namespace openshot
                 cached_frame_count = 0;
             }
 
-            // Calculate increment (based on current_speed)
-            // Support caching in both directions
-            int16_t increment = current_speed;
+            // Update current display frame
+            current_display_frame = requested_display_frame;
 
             if (current_speed == 0 && should_pause_cache || !s->ENABLE_PLAYBACK_CACHING) {
                 // Sleep during pause (after caching additional frames when paused)
                 // OR sleep when playback caching is disabled
-                current_display_frame = requested_display_frame;
                 std::this_thread::sleep_for(frame_duration / 2);
                 continue;
 
@@ -176,9 +205,8 @@ namespace openshot
 
                 // Overwrite the increment to our cache position
                 // to fully cache frames while paused (support forward and rewind caching)
-                if (last_speed > 0) {
-                    increment = 1;
-                } else {
+                // Use `last_speed` which is the last non-zero/non-paused speed
+                if (last_speed < 0) {
                     increment = -1;
                 }
 
@@ -191,11 +219,11 @@ namespace openshot
 			// Frames which are already cached are basically free. Only uncached frames have a big CPU cost.
 			// By always looping through the expected frame range, we can fill-in missing frames caused by a
 			// fragmented cache object (i.e. the user clicking all over the timeline).
-            int64_t starting_frame = current_display_frame;
-            int64_t ending_frame = starting_frame + max_frames_ahead;
+            int64_t starting_frame = std::min(current_display_frame, timeline_max_frame);
+            int64_t ending_frame = std::min(starting_frame + max_frames_ahead, timeline_max_frame);
 
             // Adjust ending frame for cache loop
-            if (last_speed < 0) {
+            if (increment < 0) {
                 // Reverse loop (if we are going backwards)
                 ending_frame = starting_frame - max_frames_ahead;
             }
@@ -208,9 +236,10 @@ namespace openshot
                 ending_frame = 1;
             }
 
+            // Reset cache break-loop flag
+            should_break = false;
+
             // Loop through range of frames (and cache them)
-            int64_t uncached_frame_count = 0;
-            int64_t already_cached_frame_count = 0;
             for (int64_t cache_frame = starting_frame; cache_frame != (ending_frame + increment); cache_frame += increment) {
                 cached_frame_count++;
                 if (reader && reader->GetCache() && !reader->GetCache()->Contains(cache_frame)) {
@@ -219,44 +248,16 @@ namespace openshot
                         // This frame is not already cached... so request it again (to force the creation & caching)
                         // This will also re-order the missing frame to the front of the cache
                         last_cached_frame = reader->GetFrame(cache_frame);
-                        uncached_frame_count++;
                     }
                     catch (const OutOfBoundsFrame & e) {  }
-                } else if (reader && reader->GetCache() && reader->GetCache()->Contains(cache_frame)) {
-                    already_cached_frame_count++;
                 }
 
-                // Check if the user has seeked outside the cache range
-                if (requested_display_frame != current_display_frame) {
-                    // cache will restart at a new position
-                    if (speed >= 0 && (requested_display_frame < starting_frame || requested_display_frame > ending_frame)) {
-                        should_pause_cache = false;
-                        break;
-                    } else if (speed < 0 && (requested_display_frame > starting_frame || requested_display_frame < ending_frame)) {
-                        should_pause_cache = false;
-                        break;
-                    }
-                }
-                // Check if playback speed changed (if so, break out of cache loop)
-                if (current_speed != speed) {
+                // Check if thread has stopped OR should_break is triggered
+                if (!is_playing || should_break) {
+                    should_break = false;
                     break;
                 }
-                // Check if thread has stopped
-                if (!is_playing) {
-                    break;
-                }
-            }
 
-            // Update cache counts
-            if (current_speed == 1 && cached_frame_count > max_frames_ahead && uncached_frame_count > min_frames_ahead) {
-                // start cached count again (we have too many uncached frames)
-                cached_frame_count = 0;
-            }
-
-            // Update current display frame & last non-paused speed
-            current_display_frame = requested_display_frame;
-            if (current_speed != 0) {
-                last_speed = current_speed;
             }
 
 			// Sleep for a fraction of frame duration
