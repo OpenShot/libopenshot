@@ -208,23 +208,14 @@ Timeline::~Timeline() {
 		// Auto Close if not already
 		Close();
 
-	// Free all allocated frame mappers
-	std::set<FrameMapper *>::iterator it;
-	for (it = allocated_frame_mappers.begin(); it != allocated_frame_mappers.end(); ) {
-		// Dereference and clean up FrameMapper object
-		FrameMapper *mapper = (*it);
-		mapper->Reader(NULL);
-		mapper->Close();
-		delete mapper;
-		// Remove reference and proceed to next element
-		it = allocated_frame_mappers.erase(it);
-	}
+        // Remove all clips, effects, and frame mappers
+        Clear();
 
-	// Destroy previous cache (if managed by timeline)
-	if (managed_cache && final_cache) {
-		delete final_cache;
-		final_cache = NULL;
-	}
+        // Destroy previous cache (if managed by timeline)
+        if (managed_cache && final_cache) {
+            delete final_cache;
+            final_cache = NULL;
+        }
 }
 
 // Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
@@ -375,12 +366,26 @@ void Timeline::AddEffect(EffectBase* effect)
 void Timeline::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
+
+    // Delete effect object (if timeline allocated it)
+    bool allocated = allocated_effects.count(effect);
+    if (allocated) {
+        delete effect;
+        effect = NULL;
+    }
 }
 
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {
 	clips.remove(clip);
+    
+    // Delete clip object (if timeline allocated it)
+    bool allocated = allocated_clips.count(clip);
+    if (allocated) {
+        delete clip;
+        clip = NULL;
+    }
 }
 
 // Look up a clip
@@ -473,6 +478,10 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 		// Get the existing reader
 		clip_reader = (ReaderBase*) clip->Reader();
 
+        // Update the mapping
+        FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
+        clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+
 	} else {
 
 		// Create a new FrameMapper to wrap the current reader
@@ -480,10 +489,6 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 		allocated_frame_mappers.insert(mapper);
 		clip_reader = (ReaderBase*) mapper;
 	}
-
-	// Update the mapping
-	FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
-	clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 
 	// Update clip reader
 	clip->Reader(clip_reader);
@@ -761,6 +766,49 @@ void Timeline::sort_effects()
 {
 	// sort clips
 	effects.sort(CompareEffects());
+}
+
+// Clear all clips from timeline
+void Timeline::Clear()
+{
+    ZmqLogger::Instance()->AppendDebugMethod("Timeline::Clear");
+    
+	// Close all open clips
+	for (auto clip : clips)
+	{
+        update_open_clips(clip, false);
+
+        // Delete clip object (if timeline allocated it)
+        bool allocated = allocated_clips.count(clip);
+        if (allocated) {
+            delete clip;
+            clip = NULL;
+        }
+	}
+    // Clear all clips
+    clips.clear();
+
+    // Close all effects
+    for (auto effect : effects)
+    {
+        // Delete effect object (if timeline allocated it)
+        bool allocated = allocated_effects.count(effect);
+        if (allocated) {
+            delete effect;
+            effect = NULL;
+        }
+    }
+    // Clear all effects
+    effects.clear();
+
+    // Delete all FrameMappers
+    for (auto mapper : allocated_frame_mappers)
+    {
+        mapper->Reader(NULL);
+        mapper->Close();
+        delete mapper;
+    }
+    allocated_frame_mappers.clear();
 }
 
 // Close the reader (and any resources it was consuming)
@@ -1072,7 +1120,7 @@ void Timeline::SetJson(const std::string value) {
 // Load Json::Value into this object
 void Timeline::SetJsonValue(const Json::Value root) {
 
-	// Close timeline before we do anything (this also removes all open and closing clips)
+	// Close timeline before we do anything (this closes all clips)
 	bool was_open = is_open;
 	Close();
 
@@ -1091,6 +1139,9 @@ void Timeline::SetJsonValue(const Json::Value root) {
 		for (const Json::Value existing_clip : root["clips"]) {
 			// Create Clip
 			Clip *c = new Clip();
+
+			// Keep track of allocated clip objects
+            allocated_clips.insert(c);
 
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
@@ -1119,6 +1170,9 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			if (!existing_effect["type"].isNull()) {
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
+
+				    // Keep track of allocated effect objects
+                    allocated_effects.insert(e);
 
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
@@ -1255,9 +1309,14 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 	// Determine type of change operation
 	if (change_type == "insert") {
 
-		// Create new clip
+		// Create clip
 		Clip *clip = new Clip();
-		clip->SetJsonValue(change["value"]); // Set properties of new clip from JSON
+
+        // Keep track of allocated clip objects
+        allocated_clips.insert(clip);
+
+        // Set properties of clip from JSON
+		clip->SetJsonValue(change["value"]);
 		AddClip(clip); // Add clip to timeline
 
 		// Apply framemapper (or update existing framemapper)
@@ -1362,6 +1421,9 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 		// Init the matching effect object
 		if ( (e = EffectInfo().CreateEffect(effect_type)) ) {
+
+            // Keep track of allocated effect objects
+            allocated_effects.insert(e);
 
 			// Load Json into Effect
 			e->SetJsonValue(change["value"]);

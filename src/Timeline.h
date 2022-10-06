@@ -154,7 +154,9 @@ namespace openshot {
 		std::list<openshot::Clip*> clips; ///<List of clips on this timeline
 		std::list<openshot::Clip*> closing_clips; ///<List of clips that need to be closed
 		std::map<openshot::Clip*, openshot::Clip*> open_clips; ///<List of 'opened' clips on this timeline
+        std::set<openshot::Clip*> allocated_clips; ///<List of clips that were allocated by this timeline
 		std::list<openshot::EffectBase*> effects; ///<List of clips on this timeline
+        std::set<openshot::EffectBase*> allocated_effects; ///<List of effects that were allocated by this timeline
 		openshot::CacheBase *final_cache; ///<Final cache of timeline frames
 		std::set<openshot::FrameMapper*> allocated_frame_mappers; ///< all the frame mappers we allocated and must free
 		bool managed_cache; ///< Does this timeline instance manage the cache object
@@ -258,6 +260,9 @@ namespace openshot {
 		/// @brief Automatically map all clips to the timeline's framerate and samplerate
 		void AutoMapClips(bool auto_map) { auto_map_clips = auto_map; };
 
+        /// Clear all clips, effects, and frame mappers from timeline (and free memory)
+        void Clear();
+        
         /// Clear all cache for this timeline instance, including all clips' cache
         /// @param deep If True, clear all FrameMappers and nested Readers (QtImageReader, FFmpegReader, etc...)
         void ClearAllCache(bool deep=false);
