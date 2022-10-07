@@ -206,6 +206,9 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 void FFmpegReader::Open() {
 	// Open reader if not already open
 	if (!is_open) {
+		// Prevent calls to GetFrame when Closing
+		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
+
 		// Initialize format context
 		pFormatCtx = NULL;
 		{
@@ -2035,9 +2038,6 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 	std::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
 
 	if (!output) {
-		// Lock
-		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
-
 		// (re-)Check working cache
 		output = working_cache.GetFrame(requested_frame);
 		if(output) return output;

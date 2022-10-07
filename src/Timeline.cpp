@@ -772,7 +772,10 @@ void Timeline::sort_effects()
 void Timeline::Clear()
 {
     ZmqLogger::Instance()->AppendDebugMethod("Timeline::Clear");
-    
+
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	// Close all open clips
 	for (auto clip : clips)
 	{
@@ -1100,9 +1103,6 @@ Json::Value Timeline::JsonValue() const {
 // Load JSON string into this object
 void Timeline::SetJson(const std::string value) {
 
-	// Get lock (prevent getting frames while this happens)
-	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
-
 	// Parse JSON string into JSON objects
 	try
 	{
@@ -1119,6 +1119,9 @@ void Timeline::SetJson(const std::string value) {
 
 // Load Json::Value into this object
 void Timeline::SetJsonValue(const Json::Value root) {
+
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Close timeline before we do anything (this closes all clips)
 	bool was_open = is_open;
