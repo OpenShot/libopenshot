@@ -204,18 +204,19 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 }
 
 Timeline::~Timeline() {
-	if (is_open)
-		// Auto Close if not already
-		Close();
+	if (is_open) {
+        // Auto Close if not already
+        Close();
+    }
 
-        // Remove all clips, effects, and frame mappers
-        Clear();
+    // Remove all clips, effects, and frame mappers
+    Clear();
 
-        // Destroy previous cache (if managed by timeline)
-        if (managed_cache && final_cache) {
-            delete final_cache;
-            final_cache = NULL;
-        }
+    // Destroy previous cache (if managed by timeline)
+    if (managed_cache && final_cache) {
+        delete final_cache;
+        final_cache = NULL;
+    }
 }
 
 // Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
@@ -372,6 +373,7 @@ void Timeline::RemoveEffect(EffectBase* effect)
     if (allocated) {
         delete effect;
         effect = NULL;
+        allocated_effects.erase(effect);
     }
 }
 
@@ -385,6 +387,7 @@ void Timeline::RemoveClip(Clip* clip)
     if (allocated) {
         delete clip;
         clip = NULL;
+        allocated_clips.erase(clip);
     }
 }
 
@@ -790,6 +793,7 @@ void Timeline::Clear()
 	}
     // Clear all clips
     clips.clear();
+    allocated_clips.clear();
 
     // Close all effects
     for (auto effect : effects)
@@ -803,6 +807,7 @@ void Timeline::Clear()
     }
     // Clear all effects
     effects.clear();
+    allocated_effects.clear();
 
     // Delete all FrameMappers
     for (auto mapper : allocated_frame_mappers)
