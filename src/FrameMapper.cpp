@@ -84,6 +84,9 @@ void FrameMapper::AddField(Field field)
 
 // Clear both the fields & frames lists
 void FrameMapper::Clear() {
+	// Prevent async calls to the following code
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+
     // Clear the fields & frames lists
     fields.clear();
     fields.shrink_to_fit();
@@ -103,6 +106,9 @@ void FrameMapper::Init()
 	if (info.has_video and !info.has_audio and info.has_single_image)
 		// Skip initialization
 		return;
+
+	// Prevent async calls to the following code
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Clear the fields & frames lists
 	Clear();

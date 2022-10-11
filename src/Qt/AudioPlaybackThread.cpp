@@ -152,7 +152,7 @@ namespace openshot
     std::shared_ptr<openshot::Frame> AudioPlaybackThread::getFrame()
     {
 	if (source) return source->getFrame();
-	return std::shared_ptr<openshot::Frame>();
+		return std::shared_ptr<openshot::Frame>();
     }
 
 	// Seek the audio thread
