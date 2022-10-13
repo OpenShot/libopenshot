@@ -1163,7 +1163,7 @@ void Timeline::SetJsonValue(const Json::Value root) {
 			Clip *c = new Clip();
 
 			// Keep track of allocated clip objects
-            allocated_clips.insert(c);
+			allocated_clips.insert(c);
 
 			// When a clip is attached to an object, it searches for the object
 			// on it's parent timeline. Setting the parent timeline of the clip here
@@ -1193,8 +1193,8 @@ void Timeline::SetJsonValue(const Json::Value root) {
 				// Create instance of effect
 				if ( (e = EffectInfo().CreateEffect(existing_effect["type"].asString())) ) {
 
-				    // Keep track of allocated effect objects
-                    allocated_effects.insert(e);
+					// Keep track of allocated effect objects
+					allocated_effects.insert(e);
 
 					// Load Json into Effect
 					e->SetJsonValue(existing_effect);
@@ -1224,8 +1224,8 @@ void Timeline::SetJsonValue(const Json::Value root) {
 // Apply a special formatted JSON object, which represents a change to the timeline (insert, update, delete)
 void Timeline::ApplyJsonDiff(std::string value) {
 
-    // Get lock (prevent getting frames while this happens)
-    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1334,10 +1334,10 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 		// Create clip
 		Clip *clip = new Clip();
 
-        // Keep track of allocated clip objects
-        allocated_clips.insert(clip);
+		// Keep track of allocated clip objects
+		allocated_clips.insert(clip);
 
-        // Set properties of clip from JSON
+		// Set properties of clip from JSON
 		clip->SetJsonValue(change["value"]);
 		AddClip(clip); // Add clip to timeline
 
@@ -1354,9 +1354,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			int64_t old_ending_frame = ((existing_clip->Position() + existing_clip->Duration()) * info.fps.ToDouble()) + 1;
 			final_cache->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
-            // Remove cache on clip's Reader (if found)
-            if (existing_clip->Reader() && existing_clip->Reader()->GetCache())
-                existing_clip->Reader()->GetCache()->Remove(old_starting_frame - 8, old_ending_frame + 8);
+			// Remove cache on clip's Reader (if found)
+			if (existing_clip->Reader() && existing_clip->Reader()->GetCache())
+				existing_clip->Reader()->GetCache()->Remove(old_starting_frame - 8, old_ending_frame + 8);
 
 			// Update clip properties from JSON
 			existing_clip->SetJsonValue(change["value"]);
@@ -1611,29 +1611,29 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 // Clear all caches
 void Timeline::ClearAllCache(bool deep) {
 
-    // Clear primary cache
-    if (final_cache) {
-        final_cache->Clear();
-    }
+	// Clear primary cache
+	if (final_cache) {
+		final_cache->Clear();
+	}
 
-    // Loop through all clips
-    try {
-        if (is_open) {
-            for (auto clip : clips) {
-                // Clear cache on clip
-                clip->Reader()->GetCache()->Clear();
+	// Loop through all clips
+	try {
+		if (is_open) {
+			for (auto clip : clips) {
+				// Clear cache on clip
+				clip->Reader()->GetCache()->Clear();
 
-                // Clear nested Reader (if deep clear requested)
-                if (deep && clip->Reader()->Name() == "FrameMapper") {
-                    FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
-                    if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
-                        nested_reader->Reader()->GetCache()->Clear();
-                }
-            }
-        }
-    } catch (const ReaderClosed & e) {
-        // ...
-    }
+				// Clear nested Reader (if deep clear requested)
+				if (deep && clip->Reader()->Name() == "FrameMapper") {
+					FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
+					if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+						nested_reader->Reader()->GetCache()->Clear();
+				}
+			}
+		}
+	} catch (const ReaderClosed & e) {
+		// ...
+	}
 }
 
 // Set Max Image Size (used for performance optimization). Convenience function for setting
