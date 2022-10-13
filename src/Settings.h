@@ -83,16 +83,16 @@ namespace openshot {
 		int HW_EN_DEVICE_SET = 0;
 
 		/// Percentage of cache in front of the playhead (0.0 to 1.0)
-		float VIDEO_CACHE_PERCENT_AHEAD = 0.75;
+		float VIDEO_CACHE_PERCENT_AHEAD = 0.7;
 
 		/// Minimum number of frames to cache before playback begins
-		int VIDEO_CACHE_MIN_PREROLL_FRAMES = 30;
+		int VIDEO_CACHE_MIN_PREROLL_FRAMES = 24;
 
 		/// Max number of frames (ahead of playhead) to cache during playback
-		int VIDEO_CACHE_MAX_PREROLL_FRAMES = 30;
+		int VIDEO_CACHE_MAX_PREROLL_FRAMES = 48;
 
 		/// Max number of frames (when paused) to cache for playback
-		int VIDEO_CACHE_MAX_FRAMES = 30 * 20;
+		int VIDEO_CACHE_MAX_FRAMES = 30 * 10;
 
 		/// Enable/Disable the cache thread to pre-fetch and cache video frames before we need them
 		bool ENABLE_PLAYBACK_CACHING = true;
