@@ -368,27 +368,27 @@ void Timeline::RemoveEffect(EffectBase* effect)
 {
 	effects.remove(effect);
 
-    // Delete effect object (if timeline allocated it)
-    bool allocated = allocated_effects.count(effect);
-    if (allocated) {
-        delete effect;
-        effect = NULL;
-        allocated_effects.erase(effect);
-    }
+	// Delete effect object (if timeline allocated it)
+	bool allocated = allocated_effects.count(effect);
+	if (allocated) {
+		delete effect;
+		effect = NULL;
+		allocated_effects.erase(effect);
+	}
 }
 
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {
 	clips.remove(clip);
-    
-    // Delete clip object (if timeline allocated it)
-    bool allocated = allocated_clips.count(clip);
-    if (allocated) {
-        delete clip;
-        clip = NULL;
-        allocated_clips.erase(clip);
-    }
+	
+	// Delete clip object (if timeline allocated it)
+	bool allocated = allocated_clips.count(clip);
+	if (allocated) {
+		delete clip;
+		clip = NULL;
+		allocated_clips.erase(clip);
+	}
 }
 
 // Look up a clip
