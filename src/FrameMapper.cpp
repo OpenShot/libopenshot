@@ -84,8 +84,8 @@ void FrameMapper::AddField(Field field)
 
 // Clear both the fields & frames lists
 void FrameMapper::Clear() {
-	// Prevent async calls to the following code
-	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+    // Prevent async calls to the following code
+    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
     // Clear the fields & frames lists
     fields.clear();

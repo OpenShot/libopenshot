@@ -774,7 +774,7 @@ void Timeline::sort_effects()
 // Clear all clips from timeline
 void Timeline::Clear()
 {
-    ZmqLogger::Instance()->AppendDebugMethod("Timeline::Clear");
+	ZmqLogger::Instance()->AppendDebugMethod("Timeline::Clear");
 
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
@@ -785,41 +785,41 @@ void Timeline::Clear()
 	// Close all open clips
 	for (auto clip : clips)
 	{
-        update_open_clips(clip, false);
+		update_open_clips(clip, false);
 
-        // Delete clip object (if timeline allocated it)
-        bool allocated = allocated_clips.count(clip);
-        if (allocated) {
-            delete clip;
-            clip = NULL;
-        }
+		// Delete clip object (if timeline allocated it)
+		bool allocated = allocated_clips.count(clip);
+		if (allocated) {
+			delete clip;
+			clip = NULL;
+		}
 	}
-    // Clear all clips
-    clips.clear();
-    allocated_clips.clear();
+	// Clear all clips
+	clips.clear();
+	allocated_clips.clear();
 
-    // Close all effects
-    for (auto effect : effects)
-    {
-        // Delete effect object (if timeline allocated it)
-        bool allocated = allocated_effects.count(effect);
-        if (allocated) {
-            delete effect;
-            effect = NULL;
-        }
-    }
-    // Clear all effects
-    effects.clear();
-    allocated_effects.clear();
+	// Close all effects
+	for (auto effect : effects)
+	{
+		// Delete effect object (if timeline allocated it)
+		bool allocated = allocated_effects.count(effect);
+		if (allocated) {
+			delete effect;
+			effect = NULL;
+		}
+	}
+	// Clear all effects
+	effects.clear();
+	allocated_effects.clear();
 
-    // Delete all FrameMappers
-    for (auto mapper : allocated_frame_mappers)
-    {
-        mapper->Reader(NULL);
-        mapper->Close();
-        delete mapper;
-    }
-    allocated_frame_mappers.clear();
+	// Delete all FrameMappers
+	for (auto mapper : allocated_frame_mappers)
+	{
+		mapper->Reader(NULL);
+		mapper->Close();
+		delete mapper;
+	}
+	allocated_frame_mappers.clear();
 }
 
 // Close the reader (and any resources it was consuming)
