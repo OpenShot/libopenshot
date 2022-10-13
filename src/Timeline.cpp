@@ -205,18 +205,18 @@ Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) 
 
 Timeline::~Timeline() {
 	if (is_open) {
-        // Auto Close if not already
-        Close();
-    }
+		// Auto Close if not already
+		Close();
+	}
 
-    // Remove all clips, effects, and frame mappers
-    Clear();
+	// Remove all clips, effects, and frame mappers
+	Clear();
 
-    // Destroy previous cache (if managed by timeline)
-    if (managed_cache && final_cache) {
-        delete final_cache;
-        final_cache = NULL;
-    }
+	// Destroy previous cache (if managed by timeline)
+	if (managed_cache && final_cache) {
+		delete final_cache;
+		final_cache = NULL;
+	}
 }
 
 // Add to the tracked_objects map a pointer to a tracked object (TrackedObjectBBox)
