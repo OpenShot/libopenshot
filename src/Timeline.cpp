@@ -481,9 +481,9 @@ void Timeline::apply_mapper_to_clip(Clip* clip)
 		// Get the existing reader
 		clip_reader = (ReaderBase*) clip->Reader();
 
-        // Update the mapping
-        FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
-        clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
+		// Update the mapping
+		FrameMapper* clip_mapped_reader = (FrameMapper*) clip_reader;
+		clip_mapped_reader->ChangeMapping(info.fps, PULLDOWN_NONE, info.sample_rate, info.channels, info.channel_layout);
 
 	} else {
 
