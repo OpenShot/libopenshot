@@ -1486,6 +1486,11 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 	if (frame_finished) {
 		packet_status.audio_decoded++;
 
+		// Mark EOF (if all packets decoded)
+		if (packet_status.audio_decoded == packet_status.audio_read) {
+		    packet_status.audio_eof = true;
+		}
+
 		// This can be different than the current packet, so we need to look
 		// at the current AVFrame from the audio decoder. This timestamp should
 		// be used for the remainder of this function
