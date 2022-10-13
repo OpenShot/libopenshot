@@ -77,7 +77,6 @@ namespace openshot
 	protected:
 		/// Mutex for multiple threads
 		std::recursive_mutex getFrameMutex;
-		std::recursive_mutex processingMutex;
 		openshot::ClipBase* clip; ///< Pointer to the parent clip instance (if any)
 
 	public:

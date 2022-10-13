@@ -27,11 +27,6 @@ using namespace openshot;
 
 QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QString::fromStdString(path)}, is_open(false)
 {
-
-#if RESVG_VERSION_MIN(0, 11)
-    // Initialize the Resvg options
-    resvg_options.loadSystemFonts();
-#endif
     // Open and Close the reader, to populate its attributes (such as height, width, etc...)
     if (inspect_reader) {
         Open();
@@ -41,6 +36,7 @@ QtImageReader::QtImageReader(std::string path, bool inspect_reader) : path{QStri
 
 QtImageReader::~QtImageReader()
 {
+    Close();
 }
 
 // Open image file
@@ -54,6 +50,12 @@ void QtImageReader::Open()
 
         // Check for SVG files and rasterizing them to QImages
         if (path.toLower().endsWith(".svg") || path.toLower().endsWith(".svgz")) {
+            #if RESVG_VERSION_MIN(0, 11)
+                // Initialize the Resvg options
+                resvg_options.loadSystemFonts();
+            #endif
+            
+            // Parse SVG file
             default_svg_size = load_svg_path(path);
             if (!default_svg_size.isEmpty()) {
                 loaded = true;
@@ -135,6 +137,7 @@ void QtImageReader::Close()
 
         // Delete the image
         image.reset();
+        cached_image.reset();
 
         info.vcodec = "";
         info.acodec = "";

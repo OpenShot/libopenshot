@@ -15,13 +15,11 @@
 
 #define OPENSHOT_VERSION_ALL "@PROJECT_VERSION@"        /// A string of the entire version "Major.Minor.Build"
 #define OPENSHOT_VERSION_FULL "@PROJECT_VERSION_FULL@"   /// A string of the full version identifier, including suffixes (e.g. "0.0.0-dev0")
-
-#define OPENSHOT_VERSION_MAJOR_MINOR "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@" /// A string of the "Major.Minor" version
+#define OPENSHOT_VERSION_MAJOR_MINOR "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@"  /// A string of the "Major.Minor" version
 
 #define OPENSHOT_VERSION_MAJOR @PROJECT_VERSION_MAJOR@   /// Major version number is incremented when huge features are added or improved.
 #define OPENSHOT_VERSION_MINOR @PROJECT_VERSION_MINOR@   /// Minor version is incremented when smaller (but still very important) improvements are added.
 #define OPENSHOT_VERSION_BUILD @PROJECT_VERSION_PATCH@   /// Build number is incremented when minor bug fixes and less important improvements are added.
-
 #define OPENSHOT_VERSION_SO @PROJECT_SO_VERSION@         /// Shared object version number. This increments any time the API and ABI changes (so old apps will no longer link)
 
 // Useful dependency versioning / feature availability

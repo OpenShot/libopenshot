@@ -221,6 +221,7 @@ Clip::~Clip()
 	if (allocated_reader) {
 		delete allocated_reader;
 		allocated_reader = NULL;
+		reader = NULL;
 	}
 
 	// Close the resampler

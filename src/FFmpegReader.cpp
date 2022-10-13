@@ -206,6 +206,9 @@ int FFmpegReader::IsHardwareDecodeSupported(int codecid)
 void FFmpegReader::Open() {
 	// Open reader if not already open
 	if (!is_open) {
+		// Prevent async calls to the following code
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+
 		// Initialize format context
 		pFormatCtx = NULL;
 		{
@@ -577,8 +580,8 @@ void FFmpegReader::Open() {
 void FFmpegReader::Close() {
 	// Close all objects, if reader is 'open'
 	if (is_open) {
-		// Prevent calls to GetFrame when Closing
-		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
+		// Prevent async calls to the following code
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Mark as "closed"
 		is_open = false;
@@ -878,13 +881,16 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 		// Return the cached frame
 		return frame;
 	} else {
-		// Check the cache a 2nd time (due to a potential previous lock)
+
+		// Prevent async calls to the remainder of this code
+		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+
+		// Check the cache a 2nd time (due to the potential previous lock)
 		frame = final_cache.GetFrame(requested_frame);
 		if (frame) {
 			// Debug output
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetFrame", "returned cached frame on 2nd look", requested_frame);
 
-			// Return the cached frame
 		} else {
 			// Frame is not in cache
 			// Reset seek count
@@ -2035,9 +2041,6 @@ std::shared_ptr<Frame> FFmpegReader::CreateFrame(int64_t requested_frame) {
 	std::shared_ptr<Frame> output = working_cache.GetFrame(requested_frame);
 
 	if (!output) {
-		// Lock
-		const std::lock_guard<std::recursive_mutex> lock(processingMutex);
-
 		// (re-)Check working cache
 		output = working_cache.GetFrame(requested_frame);
 		if(output) return output;
@@ -2077,6 +2080,9 @@ bool FFmpegReader::IsPartialFrame(int64_t requested_frame) {
 
 // Check the working queue, and move finished frames to the finished queue
 void FFmpegReader::CheckWorkingFrames(int64_t requested_frame) {
+
+	// Prevent async calls to the following code
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Get a list of current working queue frames in the cache (in-progress frames)
 	std::vector<std::shared_ptr<openshot::Frame>> working_frames = working_cache.GetFrames();
