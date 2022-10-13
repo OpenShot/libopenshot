@@ -215,10 +215,10 @@ namespace openshot
                 should_pause_cache = false;
             }
 
-			// Always cache frames from the current display position to our maximum (based on the cache size).
-			// Frames which are already cached are basically free. Only uncached frames have a big CPU cost.
-			// By always looping through the expected frame range, we can fill-in missing frames caused by a
-			// fragmented cache object (i.e. the user clicking all over the timeline).
+            // Always cache frames from the current display position to our maximum (based on the cache size).
+            // Frames which are already cached are basically free. Only uncached frames have a big CPU cost.
+            // By always looping through the expected frame range, we can fill-in missing frames caused by a
+            // fragmented cache object (i.e. the user clicking all over the timeline).
             int64_t starting_frame = std::min(current_display_frame, timeline_max_frame);
             int64_t ending_frame = std::min(starting_frame + max_frames_ahead, timeline_max_frame);
 

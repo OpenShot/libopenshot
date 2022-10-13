@@ -63,8 +63,8 @@ namespace openshot
 	/// Seek the reader to a particular frame number and optionally start the pre-roll
 	void Seek(int64_t new_position, bool start_preroll);
 
-    /// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
-    void setSpeed(int new_speed);
+	/// Set Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
+	void setSpeed(int new_speed);
 
 	/// Stop the audio playback
 	void Stop();

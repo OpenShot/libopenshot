@@ -882,7 +882,7 @@ std::shared_ptr<Frame> FFmpegReader::GetFrame(int64_t requested_frame) {
 		return frame;
 	} else {
 
-	    // Prevent async calls to the remainder of this code
+		// Prevent async calls to the remainder of this code
 		const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 		// Check the cache a 2nd time (due to the potential previous lock)
