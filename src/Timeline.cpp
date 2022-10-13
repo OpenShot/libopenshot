@@ -779,6 +779,9 @@ void Timeline::Clear()
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
+	// Clear all cache (deep clear, including nested Readers)
+	ClearAllCache(true);
+
 	// Close all open clips
 	for (auto clip : clips)
 	{
@@ -1614,17 +1617,22 @@ void Timeline::ClearAllCache(bool deep) {
     }
 
     // Loop through all clips
-    for (auto clip : clips)
-    {
-        // Clear cache on clip
-        clip->Reader()->GetCache()->Clear();
+    try {
+        if (is_open) {
+            for (auto clip : clips) {
+                // Clear cache on clip
+                clip->Reader()->GetCache()->Clear();
 
-        // Clear nested Reader (if deep clear requested)
-        if (deep && clip->Reader()->Name() == "FrameMapper") {
-          FrameMapper* nested_reader = (FrameMapper*) clip->Reader();
-          if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
-            nested_reader->Reader()->GetCache()->Clear();
+                // Clear nested Reader (if deep clear requested)
+                if (deep && clip->Reader()->Name() == "FrameMapper") {
+                    FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
+                    if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+                        nested_reader->Reader()->GetCache()->Clear();
+                }
+            }
         }
+    } catch (const ReaderClosed & e) {
+        // ...
     }
 }
 
