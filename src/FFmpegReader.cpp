@@ -969,13 +969,15 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 		// Video packet
 		if ((info.has_video && packet && packet->stream_index == videoStream) ||
-			(info.has_video && !packet && packet_status.video_decoded < packet_status.video_read)) {
+			(info.has_video && !packet && packet_status.video_decoded < packet_status.video_read) ||
+			(info.has_video && !packet && !packet_status.video_eof)) {
 			// Process Video Packet
 			ProcessVideoPacket(requested_frame);
 		}
 		// Audio packet
 		if ((info.has_audio && packet && packet->stream_index == audioStream) ||
-			(info.has_audio && !packet && packet_status.audio_decoded < packet_status.audio_read)) {
+			(info.has_audio && !packet && packet_status.audio_decoded < packet_status.audio_read) ||
+			(info.has_audio && !packet && !packet_status.audio_eof)) {
 			// Process Audio Packet
 			ProcessAudioPacket(requested_frame);
 		}
@@ -1485,11 +1487,6 @@ void FFmpegReader::ProcessAudioPacket(int64_t requested_frame) {
 
 	if (frame_finished) {
 		packet_status.audio_decoded++;
-
-		// Mark EOF (if all packets decoded)
-		if (packet_status.audio_decoded == packet_status.audio_read) {
-		    packet_status.audio_eof = true;
-		}
 
 		// This can be different than the current packet, so we need to look
 		// at the current AVFrame from the audio decoder. This timestamp should
