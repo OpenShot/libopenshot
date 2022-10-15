@@ -253,7 +253,7 @@ namespace openshot
                 }
 
                 // Check if thread has stopped OR should_break is triggered
-                if (!is_playing || should_break) {
+                if (!is_playing || should_break || !s->ENABLE_PLAYBACK_CACHING) {
                     should_break = false;
                     break;
                 }
