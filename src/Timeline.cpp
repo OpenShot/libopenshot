@@ -779,9 +779,6 @@ void Timeline::Clear()
 	// Get lock (prevent getting frames while this happens)
 	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
-	// Clear all cache (deep clear, including nested Readers)
-	ClearAllCache(true);
-
 	// Close all open clips
 	for (auto clip : clips)
 	{
