@@ -643,8 +643,8 @@ TEST_CASE( "Multi-threaded Timeline GetFrame", "[libopenshot][timeline]" )
     t->SetJson(project_json.str());
     t->Open();
 
-    // A successful test will not crash - since this causes many threads to
-    // call the same Timeline::GetFrame method, to verify mutexes and multi-threaded
+    // A successful test will NOT crash - since this causes many threads to
+    // call the same Timeline methods asynchronously, to verify mutexes and multi-threaded
     // access does not seg fault or crash this test.
 #pragma omp parallel
     {
@@ -652,12 +652,17 @@ TEST_CASE( "Multi-threaded Timeline GetFrame", "[libopenshot][timeline]" )
         int64_t frame_count = 60;
         for (long int frame = 1; frame <= frame_count; frame++) {
             std::shared_ptr<Frame> f = t->GetFrame(frame);
-        }
 
+            // Clear cache after every frame
+            // This is designed to test the mutex for ClearAllCache()
+            t->ClearAllCache();
+        }
+        // Clear all clips after loop is done
+        // This is designed to test the mutex for Clear()
+        t->Clear();
     }
 
     // Close and delete timeline object
-    t->Clear();
     t->Close();
     delete t;
     t = NULL;

@@ -1021,9 +1021,6 @@ std::vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, in
 	float min_requested_frame = requested_frame;
 	float max_requested_frame = requested_frame + (number_of_frames - 1);
 
-	// Re-Sort Clips (since they likely changed)
-	sort_clips();
-
 	// Find Clips at this time
 	for (auto clip : clips)
 	{
@@ -1378,6 +1375,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 	}
 
+    // Re-Sort Clips (since they likely changed)
+	sort_clips();
 }
 
 // Apply JSON diff to effects
@@ -1411,9 +1410,10 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 	}
 
 	// Now that we found the effect, apply the change to it
-	if (existing_effect || change_type == "insert")
-		// Apply change to effect
-		apply_json_to_effects(change, existing_effect);
+	if (existing_effect || change_type == "insert") {
+        // Apply change to effect
+        apply_json_to_effects(change, existing_effect);
+    }
 }
 
 // Apply JSON diff to effects (if you already know which effect needs to be updated)
@@ -1480,6 +1480,9 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		}
 
 	}
+
+    // Re-Sort Effects (since they likely changed)
+    sort_effects();
 }
 
 // Apply JSON diff to timeline properties
@@ -1615,19 +1618,17 @@ void Timeline::ClearAllCache(bool deep) {
 
 	// Loop through all clips
 	try {
-		if (is_open) {
-			for (auto clip : clips) {
-				// Clear cache on clip
-				clip->Reader()->GetCache()->Clear();
+        for (const auto clip : clips) {
+            // Clear cache on clip
+            clip->Reader()->GetCache()->Clear();
 
-				// Clear nested Reader (if deep clear requested)
-				if (deep && clip->Reader()->Name() == "FrameMapper") {
-					FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
-					if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
-						nested_reader->Reader()->GetCache()->Clear();
-				}
-			}
-		}
+            // Clear nested Reader (if deep clear requested)
+            if (deep && clip->Reader()->Name() == "FrameMapper") {
+                FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
+                if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+                    nested_reader->Reader()->GetCache()->Clear();
+            }
+        }
 	} catch (const ReaderClosed & e) {
 		// ...
 	}
