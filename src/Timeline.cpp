@@ -1375,7 +1375,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 	}
 
-    // Re-Sort Clips (since they likely changed)
+	// Re-Sort Clips (since they likely changed)
 	sort_clips();
 }
 
@@ -1411,9 +1411,9 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 
 	// Now that we found the effect, apply the change to it
 	if (existing_effect || change_type == "insert") {
-        // Apply change to effect
-        apply_json_to_effects(change, existing_effect);
-    }
+		// Apply change to effect
+		apply_json_to_effects(change, existing_effect);
+	}
 }
 
 // Apply JSON diff to effects (if you already know which effect needs to be updated)
@@ -1481,8 +1481,8 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 	}
 
-    // Re-Sort Effects (since they likely changed)
-    sort_effects();
+	// Re-Sort Effects (since they likely changed)
+	sort_effects();
 }
 
 // Apply JSON diff to timeline properties
