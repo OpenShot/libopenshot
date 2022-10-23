@@ -11,8 +11,54 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "ClipBase.h"
+#include "Timeline.h"
 
 using namespace openshot;
+
+// Set position on timeline (in seconds)
+void ClipBase::Position(float value) {
+
+	position = value;
+
+	if (ParentTimeline()) {
+		// Resort timeline items (internal clips/effects arrays)
+		Timeline *parentTimeline = (Timeline *) ParentTimeline();
+		parentTimeline->SortTimeline();
+	}
+}
+
+// Set layer of clip on timeline (lower number is covered by higher numbers)
+void ClipBase::Layer(int value) {
+	layer = value;
+
+	if (ParentTimeline()) {
+		// Resort timeline items (internal clips/effects arrays)
+		Timeline *parentTimeline = (Timeline *) ParentTimeline();
+		parentTimeline->SortTimeline();
+	}
+}
+
+// Set start position (in seconds) of clip (trim start of video)
+void ClipBase::Start(float value) {
+	start = value;
+
+	if (ParentTimeline()) {
+		// Resort timeline items (internal clips/effects arrays)
+		Timeline *parentTimeline = (Timeline *) ParentTimeline();
+		parentTimeline->SortTimeline();
+	}
+}
+
+// Set end position (in seconds) of clip (trim end of video)
+void ClipBase::End(float value) {
+	end = value;
+
+	if (ParentTimeline()) {
+		// Resort timeline items (internal clips/effects arrays)
+		Timeline *parentTimeline = (Timeline *) ParentTimeline();
+		parentTimeline->SortTimeline();
+	}
+}
 
 // Generate Json::Value for this object
 Json::Value ClipBase::JsonValue() const {

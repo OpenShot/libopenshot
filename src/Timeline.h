@@ -162,6 +162,7 @@ namespace openshot {
 		bool managed_cache; ///< Does this timeline instance manage the cache object
 		std::string path; ///< Optional path of loaded UTF-8 OpenShot JSON project file
 		int max_concurrent_frames; ///< Max concurrent frames to process at one time
+		double max_time; ///> The max duration (in seconds) of the timeline, based on all the clips
 
 		std::map<std::string, std::shared_ptr<openshot::TrackedObjectBase>> tracked_objects; ///< map of TrackedObjectBBoxes and their IDs
 
@@ -176,6 +177,9 @@ namespace openshot {
 		void apply_json_to_effects(Json::Value change); ///< Apply JSON diff to effects
 		void apply_json_to_effects(Json::Value change, openshot::EffectBase* existing_effect); ///<Apply JSON diff to a specific effect
 		void apply_json_to_timeline(Json::Value change); ///<Apply JSON diff to timeline properties
+
+		/// Calculate the max duration (in seconds) of the timeline, based on all the clips, and cache the value
+		void calculate_max_duration();
 
 		/// Calculate time of a frame number, based on a framerate
 		double calculate_time(int64_t number, openshot::Fraction rate);
@@ -346,6 +350,10 @@ namespace openshot {
 		/// @brief Remove an effect from the timeline
 		/// @param effect Remove an effect from the timeline.
 		void RemoveEffect(openshot::EffectBase* effect);
+
+		/// @brief Sort all clips and effects on timeline - which affects the internal order of clips and effects arrays
+		/// This is called automatically when Clips or Effects modify the Layer(), Position(), Start(), or End().
+		void SortTimeline() { sort_clips(); sort_effects(); }
 	};
 
 }

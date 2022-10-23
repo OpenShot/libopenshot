@@ -27,7 +27,7 @@ using namespace openshot;
 // Default Constructor for the timeline (which sets the canvas width and height)
 Timeline::Timeline(int width, int height, Fraction fps, int sample_rate, int channels, ChannelLayout channel_layout) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(""),
-		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS)
+		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS), max_time(0.0)
 {
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -78,7 +78,7 @@ Timeline::Timeline(const ReaderInfo info) : Timeline::Timeline(
 // Constructor for the timeline (which loads a JSON structure from a file path, and initializes a timeline)
 Timeline::Timeline(const std::string& projectPath, bool convert_absolute_paths) :
 		is_open(false), auto_map_clips(true), managed_cache(true), path(projectPath),
-		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS) {
+		max_concurrent_frames(OPEN_MP_NUM_PROCESSORS), max_time(0.0) {
 
 	// Create CrashHandler and Attach (incase of errors)
 	CrashHandler::Instance();
@@ -331,6 +331,9 @@ std::string Timeline::GetTrackedObjectValues(std::string id, int64_t frame_numbe
 // Add an openshot::Clip to the timeline
 void Timeline::AddClip(Clip* clip)
 {
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	// Assign timeline to clip
 	clip->ParentTimeline(this);
 
@@ -375,11 +378,17 @@ void Timeline::RemoveEffect(EffectBase* effect)
 		effect = NULL;
 		allocated_effects.erase(effect);
 	}
+
+	// Sort effects
+	sort_effects();
 }
 
 // Remove an openshot::Clip to the timeline
 void Timeline::RemoveClip(Clip* clip)
 {
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	clips.remove(clip);
 	
 	// Delete clip object (if timeline allocated it)
@@ -389,6 +398,9 @@ void Timeline::RemoveClip(Clip* clip)
 		clip = NULL;
 		allocated_clips.erase(clip);
 	}
+
+	// Sort clips
+	sort_clips();
 }
 
 // Look up a clip
@@ -448,20 +460,8 @@ std::list<openshot::EffectBase*> Timeline::ClipEffects() const {
 
 // Compute the end time of the latest timeline element
 double Timeline::GetMaxTime() {
-	double last_clip = 0.0;
-	double last_effect = 0.0;
-
-	if (!clips.empty()) {
-		const auto max_clip = std::max_element(
-				clips.begin(), clips.end(), CompareClipEndFrames());
-		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
-	}
-	if (!effects.empty()) {
-		const auto max_effect = std::max_element(
-				effects.begin(), effects.end(), CompareEffectEndFrames());
-		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
-	}
-	return std::max(last_clip, last_effect);
+    // Return cached max_time variable (threadsafe)
+    return max_time;
 }
 
 // Compute the highest frame# based on the latest time and FPS
@@ -712,6 +712,9 @@ void Timeline::add_layer(std::shared_ptr<Frame> new_frame, Clip* source_clip, in
 // Update the list of 'opened' clips
 void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 {
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"Timeline::update_open_clips (before)",
 		"does_clip_intersect", does_clip_intersect,
@@ -752,9 +755,30 @@ void Timeline::update_open_clips(Clip *clip, bool does_clip_intersect)
 		"open_clips.size()", open_clips.size());
 }
 
+// Calculate the max duration (in seconds) of the timeline, based on all the clips, and cache the value
+void Timeline::calculate_max_duration() {
+	double last_clip = 0.0;
+	double last_effect = 0.0;
+
+	if (!clips.empty()) {
+		const auto max_clip = std::max_element(
+				clips.begin(), clips.end(), CompareClipEndFrames());
+		last_clip = (*max_clip)->Position() + (*max_clip)->Duration();
+	}
+	if (!effects.empty()) {
+		const auto max_effect = std::max_element(
+				effects.begin(), effects.end(), CompareEffectEndFrames());
+		last_effect = (*max_effect)->Position() + (*max_effect)->Duration();
+	}
+	max_time = std::max(last_clip, last_effect);
+}
+
 // Sort clips by position on the timeline
 void Timeline::sort_clips()
 {
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod(
 		"Timeline::SortClips",
@@ -762,13 +786,22 @@ void Timeline::sort_clips()
 
 	// sort clips
 	clips.sort(CompareClips());
+
+	// calculate max timeline duration
+	calculate_max_duration();
 }
 
 // Sort effects by position on the timeline
 void Timeline::sort_effects()
 {
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+
 	// sort clips
 	effects.sort(CompareEffects());
+
+	// calculate max timeline duration
+	calculate_max_duration();
 }
 
 // Clear all clips from timeline
@@ -1020,9 +1053,6 @@ std::vector<Clip*> Timeline::find_intersecting_clips(int64_t requested_frame, in
 	// Calculate time of frame
 	float min_requested_frame = requested_frame;
 	float max_requested_frame = requested_frame + (number_of_frames - 1);
-
-	// Re-Sort Clips (since they likely changed)
-	sort_clips();
 
 	// Find Clips at this time
 	for (auto clip : clips)
@@ -1378,6 +1408,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 	}
 
+	// Re-Sort Clips (since they likely changed)
+	sort_clips();
 }
 
 // Apply JSON diff to effects
@@ -1411,9 +1443,10 @@ void Timeline::apply_json_to_effects(Json::Value change) {
 	}
 
 	// Now that we found the effect, apply the change to it
-	if (existing_effect || change_type == "insert")
+	if (existing_effect || change_type == "insert") {
 		// Apply change to effect
 		apply_json_to_effects(change, existing_effect);
+	}
 }
 
 // Apply JSON diff to effects (if you already know which effect needs to be updated)
@@ -1480,6 +1513,9 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 		}
 
 	}
+
+	// Re-Sort Effects (since they likely changed)
+	sort_effects();
 }
 
 // Apply JSON diff to timeline properties
@@ -1615,19 +1651,17 @@ void Timeline::ClearAllCache(bool deep) {
 
 	// Loop through all clips
 	try {
-		if (is_open) {
-			for (auto clip : clips) {
-				// Clear cache on clip
-				clip->Reader()->GetCache()->Clear();
+        for (const auto clip : clips) {
+            // Clear cache on clip
+            clip->Reader()->GetCache()->Clear();
 
-				// Clear nested Reader (if deep clear requested)
-				if (deep && clip->Reader()->Name() == "FrameMapper") {
-					FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
-					if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
-						nested_reader->Reader()->GetCache()->Clear();
-				}
-			}
-		}
+            // Clear nested Reader (if deep clear requested)
+            if (deep && clip->Reader()->Name() == "FrameMapper") {
+                FrameMapper *nested_reader = (FrameMapper *) clip->Reader();
+                if (nested_reader->Reader() && nested_reader->Reader()->GetCache())
+                    nested_reader->Reader()->GetCache()->Clear();
+            }
+        }
 	} catch (const ReaderClosed & e) {
 		// ...
 	}

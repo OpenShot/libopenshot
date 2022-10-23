@@ -42,6 +42,7 @@ namespace openshot
 	openshot::RendererBase *renderer;
 	int64_t last_video_position; /// The last frame actually displayed
 	int max_sleep_ms; /// The max milliseconds to sleep (when syncing audio and video)
+	bool is_dirty; /// Detect if a frame needs to be refreshed (calls to Seek() set this to true)
 
 	/// Constructor
 	PlayerPrivate(openshot::RendererBase *rb);

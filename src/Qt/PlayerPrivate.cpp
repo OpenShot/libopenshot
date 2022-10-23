@@ -24,7 +24,7 @@ namespace openshot
     // Constructor
     PlayerPrivate::PlayerPrivate(openshot::RendererBase *rb)
     : renderer(rb), Thread("player"), video_position(1), audio_position(0),
-      speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000), playback_frames(0)
+      speed(1), reader(NULL), last_video_position(1), max_sleep_ms(125000), playback_frames(0), is_dirty(true)
     {
         videoCache = new openshot::VideoCacheThread();
         audioPlayback = new openshot::AudioPlaybackThread(videoCache);
@@ -76,7 +76,7 @@ namespace openshot
             // - If pre-roll is not ready (This should allow scrubbing of the timeline without waiting on pre-roll)
             if ((speed == 0 && video_position == last_video_position) ||
                 (speed != 0 && last_speed != speed) ||
-                (speed != 0 && !videoCache->isReady()))
+                (speed != 0 && !is_dirty && !videoCache->isReady()))
             {
                 // Sleep for a fraction of frame duration
                 std::this_thread::sleep_for(frame_duration / 4);
@@ -124,6 +124,9 @@ namespace openshot
     std::shared_ptr<openshot::Frame> PlayerPrivate::getFrame()
     {
     try {
+        // Getting new frame, so clear this flag
+        is_dirty = false;
+
         // Get the next frame (based on speed)
         if (video_position + speed >= 1 && video_position + speed <= reader->info.video_length) {
             video_position = video_position + speed;
@@ -167,6 +170,7 @@ namespace openshot
     {
         video_position = new_position;
         last_video_position = 0;
+        is_dirty = true;
     }
 
     // Start video/audio playback
