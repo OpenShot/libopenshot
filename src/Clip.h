@@ -260,9 +260,9 @@ namespace openshot {
 		/// Get the current reader
 		openshot::ReaderBase* Reader();
 
-		// Override End() method
-		float End() const; ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
-		void End(float value) { end = value; } ///< Set end position (in seconds) of clip (trim end of video)
+		// Override End() position (in seconds) of clip (trim end of video)
+		float End() const override; ///< Get end position (in seconds) of clip (trim end of video), which can be affected by the time curve.
+		void End(float value) override; ///< Set end position (in seconds) of clip (trim end of video)
 
 		// Get and Set JSON methods
 		std::string Json() const override; ///< Generate JSON string of this object

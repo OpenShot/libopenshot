@@ -39,7 +39,7 @@ void Clip::init_settings()
 	Position(0.0);
 	Layer(0);
 	Start(0.0);
-	End(0.0);
+	ClipBase::End(0.0);
 	gravity = GRAVITY_CENTER;
 	scale = SCALE_FIT;
 	anchor = ANCHOR_CANVAS;
@@ -147,7 +147,7 @@ Clip::Clip(ReaderBase* new_reader) : resampler(NULL), reader(new_reader), alloca
 
 	// Update duration and set parent
 	if (reader) {
-		End(reader->info.duration);
+		ClipBase::End(reader->info.duration);
 		reader->ParentClip(this);
 		// Init reader info struct
 		init_reader_settings();
@@ -206,7 +206,7 @@ Clip::Clip(std::string path) : resampler(NULL), reader(NULL), allocated_reader(N
 
 	// Update duration and set parent
 	if (reader) {
-		End(reader->info.duration);
+		ClipBase::End(reader->info.duration);
 		reader->ParentClip(this);
 		allocated_reader = reader;
 		// Init reader info struct
@@ -302,7 +302,7 @@ void Clip::Open()
 
 		// Set some clip properties from the file reader
 		if (end == 0.0)
-			End(reader->info.duration);
+			ClipBase::End(reader->info.duration);
 	}
 	else
 		// Throw error if reader not initialized
@@ -344,6 +344,11 @@ float Clip::End() const
 	else
 		// just use the duration (as detected by the reader)
 		return end;
+}
+
+// Override End() position
+void Clip::End(float value) {
+	ClipBase::End(value);
 }
 
 // Create an openshot::Frame object for a specific frame number of this reader.
