@@ -1857,17 +1857,17 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 // Get the PTS for the current video packet
 int64_t FFmpegReader::GetPacketPTS() {
-    if (packet) {
-        int64_t current_pts = packet->pts;
-        if (current_pts == AV_NOPTS_VALUE && packet->dts != AV_NOPTS_VALUE)
-            current_pts = packet->dts;
+	if (packet) {
+		int64_t current_pts = packet->pts;
+		if (current_pts == AV_NOPTS_VALUE && packet->dts != AV_NOPTS_VALUE)
+			current_pts = packet->dts;
 
-        // Return adjusted PTS
-        return current_pts;
-    } else {
-        // No packet, return NO PTS
-        return AV_NOPTS_VALUE;
-    }
+		// Return adjusted PTS
+		return current_pts;
+	} else {
+		// No packet, return NO PTS
+		return AV_NOPTS_VALUE;
+	}
 }
 
 // Update PTS Offset (if any)
