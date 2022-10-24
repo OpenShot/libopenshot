@@ -821,10 +821,10 @@ void FFmpegReader::UpdateVideoInfo() {
 
 	// Certain "image" formats do not have a valid duration
 	if (info.duration <= 0.0f && pStream->duration == AV_NOPTS_VALUE && pFormatCtx->duration == AV_NOPTS_VALUE) {
-	    // Force an "image" duration
-        info.duration = 60 * 60 * 1;  // 1 hour duration
-        info.video_length = 1;
-        info.has_single_image = true;
+		// Force an "image" duration
+		info.duration = 60 * 60 * 1;  // 1 hour duration
+		info.video_length = 1;
+		info.has_single_image = true;
 	}
 
 	// Get the # of video frames (if found in stream)
