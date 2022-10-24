@@ -819,6 +819,14 @@ void FFmpegReader::UpdateVideoInfo() {
 		info.duration = float(info.file_size) / info.video_bit_rate;
 	}
 
+	// Certain "image" formats do not have a valid duration
+	if (info.duration <= 0.0f && pStream->duration == AV_NOPTS_VALUE && pFormatCtx->duration == AV_NOPTS_VALUE) {
+	    // Force an "image" duration
+        info.duration = 60 * 60 * 1;  // 1 hour duration
+        info.video_length = 1;
+        info.has_single_image = true;
+	}
+
 	// Get the # of video frames (if found in stream)
 	// Only set this 1 time (this method can be called multiple times)
 	if (pStream->nb_frames > 0 && info.video_length <= 0) {
@@ -1849,12 +1857,17 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 
 // Get the PTS for the current video packet
 int64_t FFmpegReader::GetPacketPTS() {
-	int64_t current_pts = packet->pts;
-	if (current_pts == AV_NOPTS_VALUE && packet->dts != AV_NOPTS_VALUE)
-		current_pts = packet->dts;
+    if (packet) {
+        int64_t current_pts = packet->pts;
+        if (current_pts == AV_NOPTS_VALUE && packet->dts != AV_NOPTS_VALUE)
+            current_pts = packet->dts;
 
-	// Return adjusted PTS
-	return current_pts;
+        // Return adjusted PTS
+        return current_pts;
+    } else {
+        // No packet, return NO PTS
+        return AV_NOPTS_VALUE;
+    }
 }
 
 // Update PTS Offset (if any)
