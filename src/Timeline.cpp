@@ -342,9 +342,10 @@ void Timeline::AddClip(Clip* clip)
 		clip->Reader()->GetCache()->Clear();
 
 	// All clips should be converted to the frame rate of this timeline
-	if (auto_map_clips)
-		// Apply framemapper (or update existing framemapper)
-		apply_mapper_to_clip(clip);
+	if (auto_map_clips) {
+        // Apply framemapper (or update existing framemapper)
+        apply_mapper_to_clip(clip);
+    }
 
 	// Add clip to list
 	clips.push_back(clip);
@@ -821,7 +822,6 @@ void Timeline::Clear()
 		bool allocated = allocated_clips.count(clip);
 		if (allocated) {
 			delete clip;
-			clip = NULL;
 		}
 	}
 	// Clear all clips
@@ -835,7 +835,6 @@ void Timeline::Clear()
 		bool allocated = allocated_effects.count(effect);
 		if (allocated) {
 			delete effect;
-			effect = NULL;
 		}
 	}
 	// Clear all effects
@@ -1372,10 +1371,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 		// Set properties of clip from JSON
 		clip->SetJsonValue(change["value"]);
-		AddClip(clip); // Add clip to timeline
 
-		// Apply framemapper (or update existing framemapper)
-		apply_mapper_to_clip(clip);
+        // Add clip to timeline
+		AddClip(clip);
 
 	} else if (change_type == "update") {
 
@@ -1395,7 +1393,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			existing_clip->SetJsonValue(change["value"]);
 
 			// Apply framemapper (or update existing framemapper)
-			apply_mapper_to_clip(existing_clip);
+			if (auto_map_clips) {
+                apply_mapper_to_clip(existing_clip);
+            }
 		}
 
 	} else if (change_type == "delete") {
