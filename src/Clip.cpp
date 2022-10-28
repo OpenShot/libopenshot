@@ -270,8 +270,8 @@ void Clip::Reader(ReaderBase* new_reader)
 {
     // Delete previously allocated reader (if not related to new reader)
     // FrameMappers that point to the same allocated reader are ignored
-    if (reader && reader == allocated_reader) {
-        bool is_same_reader = false;
+    bool is_same_reader = false;
+    if (new_reader && allocated_reader) {
         if (new_reader->Name() == "FrameMapper") {
             // Determine if FrameMapper is pointing at the same allocated ready
             FrameMapper* clip_mapped_reader = (FrameMapper*) new_reader;
@@ -279,13 +279,14 @@ void Clip::Reader(ReaderBase* new_reader)
                 is_same_reader = true;
             }
         }
-        // Clear existing allocated reader (if different)
-        if (!is_same_reader) {
-            reader->Close();
-            delete reader;
-            reader = NULL;
-            allocated_reader = NULL;
-        }
+    }
+    // Clear existing allocated reader (if different)
+    if (allocated_reader && !is_same_reader) {
+        reader->Close();
+        allocated_reader->Close();
+        delete allocated_reader;
+        reader = NULL;
+        allocated_reader = NULL;
     }
 
 	// set reader pointer
