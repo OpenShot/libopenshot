@@ -1526,6 +1526,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 // Apply JSON diff to timeline properties
 void Timeline::apply_json_to_timeline(Json::Value change) {
+    bool cache_dirty = true;
 
 	// Get key and type of change
 	std::string change_type = change["type"].asString();
@@ -1533,9 +1534,6 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 	std::string sub_key = "";
 	if (change["key"].size() >= 2)
 		sub_key = change["key"][(uint)1].asString();
-
-	// Clear entire cache
-	ClearAllCache();
 
 	// Determine type of change operation
 	if (change_type == "insert" || change_type == "update") {
@@ -1558,6 +1556,9 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 			// Update duration of timeline
 			info.duration = change["value"].asDouble();
 			info.video_length = info.fps.ToFloat() * info.duration;
+
+			// We don't want to clear cache for duration adjustments
+            cache_dirty = false;
 		}
 		else if (root_key == "width") {
 			// Set width
@@ -1645,6 +1646,10 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 
 	}
 
+	if (cache_dirty) {
+        // Clear entire cache
+        ClearAllCache();
+	}
 }
 
 // Clear all caches
