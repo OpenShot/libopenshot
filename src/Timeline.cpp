@@ -1372,7 +1372,7 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 		// Set properties of clip from JSON
 		clip->SetJsonValue(change["value"]);
 
-        // Add clip to timeline
+		// Add clip to timeline
 		AddClip(clip);
 
 	} else if (change_type == "update") {
