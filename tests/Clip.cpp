@@ -337,3 +337,35 @@ TEST_CASE( "access frames past reader length", "[libopenshot][clip]" )
     CHECK(frame->GetAudioSamples(0)[600] == Approx(0.0).margin(0.00001));
     CHECK(frame->GetAudioSamples(0)[1200] == Approx(0.0).margin(0.00001));
 }
+
+TEST_CASE( "setting and clobbering readers", "[libopenshot][clip]" )
+{
+    // Create a dummy reader #1, with a pre-existing cache
+    openshot::DummyReader r1(openshot::Fraction(24, 1), 1920, 1080, 44100, 2, 1.0);
+    r1.Open(); // Open the reader
+
+    // Create a dummy reader #2, with a pre-existing cache
+    openshot::DummyReader r2(openshot::Fraction(30, 1), 1920, 1080, 44100, 2, 1.0);
+    r2.Open(); // Open the reader
+
+    // Create a clip with constructor (and an allocated internal reader A)
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "piano.wav";
+    Clip c1(path.str());
+    c1.Open();
+
+    // Clobber allocated reader A with reader #1
+    c1.Reader(&r1);
+
+    // Clobber reader #1 with reader #2
+    c1.Reader(&r2);
+
+    // Clobber reader #2 with SetJson (allocated reader B)
+    c1.SetJson("{\"reader\":{\"acodec\":\"raw\",\"audio_bit_rate\":0,\"audio_stream_index\":-1,\"audio_timebase\":{\"den\":1,\"num\":1},\"channel_layout\":4,\"channels\":2,\"display_ratio\":{\"den\":9,\"num\":16},\"duration\":1.0,\"file_size\":\"8294400\",\"fps\":{\"den\":1,\"num\":30},\"has_audio\":false,\"has_single_image\":false,\"has_video\":true,\"height\":1080,\"interlaced_frame\":false,\"metadata\":{},\"pixel_format\":-1,\"pixel_ratio\":{\"den\":1,\"num\":1},\"sample_rate\":44100,\"top_field_first\":true,\"type\":\"DummyReader\",\"vcodec\":\"raw\",\"video_bit_rate\":0,\"video_length\":\"30\",\"video_stream_index\":-1,\"video_timebase\":{\"den\":30,\"num\":1},\"width\":1920}}");
+
+    // Clobber allocated reader B with reader 2
+    c1.Reader(&r2);
+
+    // Clobber reader 2 with reader 1
+    c1.Reader(&r1);
+}

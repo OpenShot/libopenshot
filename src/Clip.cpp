@@ -268,14 +268,37 @@ void Clip::SetAttachedClip(Clip* clipObject){
 /// Set the current reader
 void Clip::Reader(ReaderBase* new_reader)
 {
+    // Delete previously allocated reader (if not related to new reader)
+    // FrameMappers that point to the same allocated reader are ignored
+    bool is_same_reader = false;
+    if (new_reader && allocated_reader) {
+        if (new_reader->Name() == "FrameMapper") {
+            // Determine if FrameMapper is pointing at the same allocated ready
+            FrameMapper* clip_mapped_reader = (FrameMapper*) new_reader;
+            if (allocated_reader == clip_mapped_reader->Reader()) {
+                is_same_reader = true;
+            }
+        }
+    }
+    // Clear existing allocated reader (if different)
+    if (allocated_reader && !is_same_reader) {
+        reader->Close();
+        allocated_reader->Close();
+        delete allocated_reader;
+        reader = NULL;
+        allocated_reader = NULL;
+    }
+
 	// set reader pointer
 	reader = new_reader;
 
 	// set parent
-	reader->ParentClip(this);
+	if (reader) {
+        reader->ParentClip(this);
 
-	// Init reader info struct
-	init_reader_settings();
+        // Init reader info struct
+        init_reader_settings();
+    }
 }
 
 /// Get the current reader
@@ -1098,10 +1121,8 @@ void Clip::SetJsonValue(const Json::Value root) {
 				// Track if reader was open
 				already_open = reader->IsOpen();
 
-				// Close and delete existing reader (if any)
-				reader->Close();
-				delete reader;
-				reader = NULL;
+				// Close and delete existing allocated reader (if any)
+                Reader(NULL);
 			}
 
 			// Create new reader (and load properties)

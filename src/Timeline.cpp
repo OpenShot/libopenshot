@@ -342,9 +342,10 @@ void Timeline::AddClip(Clip* clip)
 		clip->Reader()->GetCache()->Clear();
 
 	// All clips should be converted to the frame rate of this timeline
-	if (auto_map_clips)
+	if (auto_map_clips) {
 		// Apply framemapper (or update existing framemapper)
 		apply_mapper_to_clip(clip);
+	}
 
 	// Add clip to list
 	clips.push_back(clip);
@@ -821,7 +822,6 @@ void Timeline::Clear()
 		bool allocated = allocated_clips.count(clip);
 		if (allocated) {
 			delete clip;
-			clip = NULL;
 		}
 	}
 	// Clear all clips
@@ -835,7 +835,6 @@ void Timeline::Clear()
 		bool allocated = allocated_effects.count(effect);
 		if (allocated) {
 			delete effect;
-			effect = NULL;
 		}
 	}
 	// Clear all effects
@@ -856,6 +855,9 @@ void Timeline::Clear()
 void Timeline::Close()
 {
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::Close");
+
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
 	// Close all open clips
 	for (auto clip : clips)
@@ -1149,6 +1151,9 @@ Json::Value Timeline::JsonValue() const {
 // Load JSON string into this object
 void Timeline::SetJson(const std::string value) {
 
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+
 	// Parse JSON string into JSON objects
 	try
 	{
@@ -1366,10 +1371,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 		// Set properties of clip from JSON
 		clip->SetJsonValue(change["value"]);
-		AddClip(clip); // Add clip to timeline
 
-		// Apply framemapper (or update existing framemapper)
-		apply_mapper_to_clip(clip);
+		// Add clip to timeline
+		AddClip(clip);
 
 	} else if (change_type == "update") {
 
@@ -1389,7 +1393,9 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 			existing_clip->SetJsonValue(change["value"]);
 
 			// Apply framemapper (or update existing framemapper)
-			apply_mapper_to_clip(existing_clip);
+			if (auto_map_clips) {
+				apply_mapper_to_clip(existing_clip);
+			}
 		}
 
 	} else if (change_type == "delete") {
@@ -1520,6 +1526,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 // Apply JSON diff to timeline properties
 void Timeline::apply_json_to_timeline(Json::Value change) {
+	bool cache_dirty = true;
 
 	// Get key and type of change
 	std::string change_type = change["type"].asString();
@@ -1527,9 +1534,6 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 	std::string sub_key = "";
 	if (change["key"].size() >= 2)
 		sub_key = change["key"][(uint)1].asString();
-
-	// Clear entire cache
-	ClearAllCache();
 
 	// Determine type of change operation
 	if (change_type == "insert" || change_type == "update") {
@@ -1552,6 +1556,9 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 			// Update duration of timeline
 			info.duration = change["value"].asDouble();
 			info.video_length = info.fps.ToFloat() * info.duration;
+
+			// We don't want to clear cache for duration adjustments
+			cache_dirty = false;
 		}
 		else if (root_key == "width") {
 			// Set width
@@ -1639,6 +1646,10 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 
 	}
 
+	if (cache_dirty) {
+	    // Clear entire cache
+	    ClearAllCache();
+	}
 }
 
 // Clear all caches
