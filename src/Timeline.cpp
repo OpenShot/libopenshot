@@ -343,9 +343,9 @@ void Timeline::AddClip(Clip* clip)
 
 	// All clips should be converted to the frame rate of this timeline
 	if (auto_map_clips) {
-        // Apply framemapper (or update existing framemapper)
-        apply_mapper_to_clip(clip);
-    }
+		// Apply framemapper (or update existing framemapper)
+		apply_mapper_to_clip(clip);
+	}
 
 	// Add clip to list
 	clips.push_back(clip);
@@ -856,8 +856,8 @@ void Timeline::Close()
 {
 	ZmqLogger::Instance()->AppendDebugMethod("Timeline::Close");
 
-    // Get lock (prevent getting frames while this happens)
-    const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> guard(getFrameMutex);
 
 	// Close all open clips
 	for (auto clip : clips)
@@ -1151,8 +1151,8 @@ Json::Value Timeline::JsonValue() const {
 // Load JSON string into this object
 void Timeline::SetJson(const std::string value) {
 
-    // Get lock (prevent getting frames while this happens)
-    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+	// Get lock (prevent getting frames while this happens)
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
 	// Parse JSON string into JSON objects
 	try
@@ -1394,8 +1394,8 @@ void Timeline::apply_json_to_clips(Json::Value change) {
 
 			// Apply framemapper (or update existing framemapper)
 			if (auto_map_clips) {
-                apply_mapper_to_clip(existing_clip);
-            }
+				apply_mapper_to_clip(existing_clip);
+			}
 		}
 
 	} else if (change_type == "delete") {
@@ -1526,7 +1526,7 @@ void Timeline::apply_json_to_effects(Json::Value change, EffectBase* existing_ef
 
 // Apply JSON diff to timeline properties
 void Timeline::apply_json_to_timeline(Json::Value change) {
-    bool cache_dirty = true;
+	bool cache_dirty = true;
 
 	// Get key and type of change
 	std::string change_type = change["type"].asString();
@@ -1558,7 +1558,7 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 			info.video_length = info.fps.ToFloat() * info.duration;
 
 			// We don't want to clear cache for duration adjustments
-            cache_dirty = false;
+			cache_dirty = false;
 		}
 		else if (root_key == "width") {
 			// Set width
@@ -1647,8 +1647,8 @@ void Timeline::apply_json_to_timeline(Json::Value change) {
 	}
 
 	if (cache_dirty) {
-        // Clear entire cache
-        ClearAllCache();
+	    // Clear entire cache
+	    ClearAllCache();
 	}
 }
 
