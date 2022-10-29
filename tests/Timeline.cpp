@@ -717,10 +717,10 @@ TEST_CASE( "Multi-threaded Timeline Add/Remove Clip", "[libopenshot][timeline]" 
 			Clip* clip_video = new Clip(path.str());
 			clip_video->Layer(omp_get_thread_num());
 
-			 // Add clip to timeline
- 			t->AddClip(clip_video);
+			// Add clip to timeline
+			t->AddClip(clip_video);
 
-			 // Loop through all timeline frames - each new clip makes the timeline longer
+			// Loop through all timeline frames - each new clip makes the timeline longer
 			for (long int frame = 10; frame >= 1; frame--) {
 				std::shared_ptr<Frame> f = t->GetFrame(frame);
 				t->GetMaxFrame();
