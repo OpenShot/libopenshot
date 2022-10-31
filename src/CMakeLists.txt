@@ -50,6 +50,7 @@ set(OPENSHOT_SOURCES
   AudioDevices.cpp
   AudioReaderSource.cpp
   AudioResampler.cpp
+  AudioWaveformer.cpp
   CacheBase.cpp
   CacheDisk.cpp
   CacheMemory.cpp
