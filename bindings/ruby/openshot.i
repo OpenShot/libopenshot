@@ -9,7 +9,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-%module openshot
+%module("threads"=1) openshot
 
 /* Suppress warnings about ignored operator= */
 %warnfilter(362);
@@ -45,6 +45,7 @@
 %template() std::map<std::string, int>;
 %template() std::pair<int, int>;
 %template() std::vector<int>;
+%template() std::vector<float>;
 %template() std::pair<double, double>;
 %template() std::pair<float, float>;
 %template() std::pair<std::string, std::string>;
