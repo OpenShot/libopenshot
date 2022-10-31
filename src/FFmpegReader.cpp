@@ -1180,6 +1180,9 @@ bool FFmpegReader::GetAVFrame() {
 					// This is the current decoded frame (and should be the pts used) for
 					// processing this data
 					video_pts = next_frame->pts;
+				} else if (next_frame->pkt_dts != AV_NOPTS_VALUE) {
+					// Some videos only set this timestamp (fallback)
+					video_pts = next_frame->pkt_dts;
 				}
 
 				// break out of loop after each successful image returned
