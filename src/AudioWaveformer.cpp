@@ -67,12 +67,19 @@ AudioWaveformData AudioWaveformer::ExtractSamples(int channel, int num_per_secon
             // Get next frame
             shared_ptr<openshot::Frame> frame = reader->GetFrame(f);
 
+            // Cache channels for this frame, to reduce # of calls to frame->GetAudioSamples
+            float* channels[channel_count];
+            for (auto channel_index = 0; channel_index < reader->info.channels; channel_index++) {
+                if (channel == channel_index || channel == -1) {
+                    channels[channel_index] = frame->GetAudioSamples(channel_index);
+                }
+            }
+
             // Get sample value from a specific channel (or all channels)
             for (auto s = 0; s < frame->GetAudioSamplesCount(); s++) {
-
                 for (auto channel_index = 0; channel_index < reader->info.channels; channel_index++) {
                     if (channel == channel_index || channel == -1) {
-                        float *samples = frame->GetAudioSamples(channel_index);
+                        float *samples = channels[channel_index];
                         float rms_sample_value = std::sqrt(samples[s] * samples[s]);
 
                         // Accumulate sample averages
