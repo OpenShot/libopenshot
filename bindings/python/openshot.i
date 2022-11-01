@@ -50,6 +50,7 @@
 %template() std::pair<float, float>;
 %template() std::pair<std::string, std::string>;
 %template() std::vector<std::pair<std::string, std::string>>;
+%template() std::vector<std::vector<float>>;
 
 %{
 #include "OpenShotVersion.h"

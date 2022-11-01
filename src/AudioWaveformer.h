@@ -20,31 +20,81 @@
 
 namespace openshot {
 
-	/**
-	 * @brief This class is used to extra audio data used for generating waveforms.
-	 *
-	 * Pass in a ReaderBase* with audio data, and this class will iterate the reader,
-	 * and sample down the dataset to a much smaller set - more useful for generating
-	 * waveforms. For example, take 44100 samples per second, and reduce it to 20
-	 * "average" samples per second - much easier to graph.
-	 */
-	class AudioWaveformer {
-	private:
+    /**
+     * @brief This struct holds the extracted waveform data (both the RMS root-mean-squared average, and the max values)
+     *
+     * Because we extract 2 different datasets from the audio, we return this struct with access to both sets of data,
+     * the average root mean squared values, and the max sample values.
+     */
+    struct AudioWaveformData
+    {
+        std::vector<float> max_samples;
+        std::vector<float> rms_samples;
+
+        /// Resize both datasets
+        void resize(int total_samples) {
+            max_samples.resize(total_samples);
+            rms_samples.resize(total_samples);
+        }
+
+        /// Zero out # of values in both datasets
+        void zero(int total_samples) {
+            for (auto s = 0; s < total_samples; s++) {
+                max_samples[s] = 0.0;
+                rms_samples[s] = 0.0;
+            }
+        }
+
+        /// Scale # of values by some factor
+        void scale(int total_samples, float factor) {
+            for (auto s = 0; s < total_samples; s++) {
+                max_samples[s] *= factor;
+                rms_samples[s] *= factor;
+            }
+        }
+
+        /// Clear and free memory of both datasets
+        void clear() {
+            max_samples.clear();
+            max_samples.shrink_to_fit();
+            rms_samples.clear();
+            rms_samples.shrink_to_fit();
+        }
+
+        /// Return a vector of vectors (containing both datasets)
+        std::vector<std::vector<float>> vectors() {
+            std::vector<std::vector<float>> output;
+            output.push_back(max_samples);
+            output.push_back(rms_samples);
+            return output;
+        }
+    };
+
+    /**
+     * @brief This class is used to extra audio data used for generating waveforms.
+     *
+     * Pass in a ReaderBase* with audio data, and this class will iterate the reader,
+     * and sample down the dataset to a much smaller set - more useful for generating
+     * waveforms. For example, take 44100 samples per second, and reduce it to 20
+     * "max" or "average" samples per second - much easier to graph.
+     */
+    class AudioWaveformer {
+    private:
         ReaderBase* reader;
 
-	public:
-		/// Default constructor
+    public:
+        /// Default constructor
         AudioWaveformer(ReaderBase* reader);
 
         /// @brief Extract audio samples from any ReaderBase class
-        /// @param channel Which audio channel should we extract data from
+        /// @param channel Which audio channel should we extract data from (-1 == all channels)
         /// @param num_per_second How many samples per second to return
         /// @param normalize Should we scale the data range so the largest value is 1.0
-		std::vector<float> ExtractSamples(int channel, int num_per_second, bool normalize);
+        AudioWaveformData ExtractSamples(int channel, int num_per_second, bool normalize);
 
-		/// Destructor
-		~AudioWaveformer();
-	};
+        /// Destructor
+        ~AudioWaveformer();
+    };
 
 }
 

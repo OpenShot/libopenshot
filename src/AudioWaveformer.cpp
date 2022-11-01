@@ -30,8 +30,8 @@ AudioWaveformer::~AudioWaveformer()
 }
 
 // Extract audio samples from any ReaderBase class
-std::vector<float> AudioWaveformer::ExtractSamples(int channel, int num_per_second, bool normalize) {
-    std::vector<float> extracted_data(0);
+AudioWaveformData AudioWaveformer::ExtractSamples(int channel, int num_per_second, bool normalize) {
+    AudioWaveformData data;
 
     if (reader) {
         // Open reader (if needed)
@@ -45,44 +45,58 @@ std::vector<float> AudioWaveformer::ExtractSamples(int channel, int num_per_seco
         int sample_rate = reader->info.sample_rate;
         int sample_divisor = sample_rate / num_per_second;
         int total_samples = num_per_second * (reader->info.duration + 1.0);
-
-        // Size audio buffer (for smaller dataset)
-        extracted_data.resize(total_samples);
         int extracted_index = 0;
 
-        // Clear audio buffer
-        for (auto s = 0; s < total_samples; s++) {
-            extracted_data[s] = 0.0;
-        }
+        // Resize and clear audio buffers
+        data.resize(total_samples);
+        data.zero(total_samples);
 
         // Loop through all frames
         int sample_index = 0;
-        float samples_total = 0.0;
         float samples_max = 0.0;
-        float samples_min = 0.0;
+        float chunk_max = 0.0;
+        float chunk_squared_sum = 0.0;
+
+        // How many channels are we using
+        int channel_count = 1;
+        if (channel == -1) {
+            channel_count = reader->info.channels;
+        }
 
         for (auto f = 1; f <= reader->info.video_length; f++) {
             // Get next frame
             shared_ptr<openshot::Frame> frame = reader->GetFrame(f);
 
-            float* samples = frame->GetAudioSamples(channel);
+            // Get sample value from a specific channel (or all channels)
             for (auto s = 0; s < frame->GetAudioSamplesCount(); s++) {
-                samples_total += samples[s];
+
+                for (auto channel_index = 0; channel_index < reader->info.channels; channel_index++) {
+                    if (channel == channel_index || channel == -1) {
+                        float *samples = frame->GetAudioSamples(channel_index);
+                        float rms_sample_value = std::sqrt(samples[s] * samples[s]);
+
+                        // Accumulate sample averages
+                        chunk_squared_sum += rms_sample_value;
+                        chunk_max = std::max(chunk_max, rms_sample_value);
+                    }
+                }
+
                 sample_index += 1;
 
                 // Cut-off reached
                 if (sample_index % sample_divisor == 0) {
-                    float avg_sample_value = samples_total / sample_divisor;
-                    extracted_data[extracted_index] = avg_sample_value;
+                    float avg_squared_sum = chunk_squared_sum / (sample_divisor * channel_count);
+                    data.max_samples[extracted_index] = chunk_max;
+                    data.rms_samples[extracted_index] = avg_squared_sum;
                     extracted_index++;
 
                     // Track max/min values
-                    samples_max = std::max(samples_max, avg_sample_value);
-                    samples_min = std::min(samples_min, avg_sample_value);
+                    samples_max = std::max(samples_max, chunk_max);
 
                     // reset sample total and index
                     sample_index = 0;
-                    samples_total = 0.0;
+                    chunk_max = 0.0;
+                    chunk_squared_sum = 0.0;
                 }
             }
         }
@@ -90,15 +104,14 @@ std::vector<float> AudioWaveformer::ExtractSamples(int channel, int num_per_seco
         // Scale all values to the -1 to +1 range (regardless of how small or how large the
         // original audio sample values are)
         if (normalize) {
-            float scale = std::min(1.0f / samples_max, 1.0f / std::fabs(samples_min));
-            for (auto s = 0; s < total_samples; s++) {
-                extracted_data[s] *= scale;
-            }
+            float scale = 1.0f / samples_max;
+            data.scale(total_samples, scale);
         }
 
         // Resume previous has_video value
         reader->info.has_video = does_reader_have_video;
     }
 
-    return extracted_data;
+
+    return data;
 }

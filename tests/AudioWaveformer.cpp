@@ -6,7 +6,7 @@
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2022 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
@@ -28,22 +28,18 @@ TEST_CASE( "Extract waveform data piano.wav", "[libopenshot][audiowaveformer]" )
     // Create AudioWaveformer and extract a smaller "average" sample set of audio data
     AudioWaveformer waveformer(&r);
     for (auto channel = 0; channel < r.info.channels; channel++) {
-        std::vector<float> waveform = waveformer.ExtractSamples(channel, 20, false);
+        AudioWaveformData waveform = waveformer.ExtractSamples(channel, 20, false);
 
         if (channel == 0) {
-            CHECK(waveform.size() == 107);
-            CHECK(waveform[0] == Approx(0.000820312474f).margin(0.00001));
-            CHECK(waveform[86] == Approx(-0.00144531252f).margin(0.00001));
-            CHECK(waveform[87] == Approx(0.0f).margin(0.00001));
-
-            for (auto sample = 0; sample < waveform.size(); sample++) {
-                std::cout << waveform[sample] << std::endl;
-            }
+            CHECK(waveform.rms_samples.size() == 107);
+            CHECK(waveform.rms_samples[0] == Approx(0.04879f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Approx(0.13578f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
         } else if (channel == 1) {
-            CHECK(waveform.size() == 107);
-            CHECK(waveform[0] == Approx(0.000820312474f).margin(0.00001));
-            CHECK(waveform[86] == Approx(-0.00144531252f).margin(0.00001));
-            CHECK(waveform[87] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples.size() == 107);
+            CHECK(waveform.rms_samples[0] == Approx(0.04879f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Approx(0.13578f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
@@ -63,22 +59,45 @@ TEST_CASE( "Extract waveform data sintel", "[libopenshot][audiowaveformer]" )
     // Create AudioWaveformer and extract a smaller "average" sample set of audio data
     AudioWaveformer waveformer(&r);
     for (auto channel = 0; channel < r.info.channels; channel++) {
-        std::vector<float> waveform = waveformer.ExtractSamples(channel, 20, false);
+        AudioWaveformData waveform = waveformer.ExtractSamples(channel, 20, false);
 
         if (channel == 0) {
-            CHECK(waveform.size() == 1058);
-            CHECK(waveform[0] == Approx(-1.48391728e-05f).margin(0.00001));
-            CHECK(waveform[1037] == Approx(6.79016102e-06f).margin(0.00001));
-            CHECK(waveform[1038] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples.size() == 1058);
+            CHECK(waveform.rms_samples[0] == Approx(0.00001f).margin(0.00001));
+            CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
+            CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
         } else if (channel == 1) {
-            CHECK(waveform.size() == 1058);
-            CHECK(waveform[0] == Approx(-1.43432617e-05f).margin(0.00001));
-            CHECK(waveform[1037] == Approx(6.79016102e-06f).margin(0.00001));
-            CHECK(waveform[1038] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples.size() == 1058);
+            CHECK(waveform.rms_samples[0] == Approx(0.00001f ).margin(0.00001));
+            CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
+            CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
     }
+
+    // Clean up
+    r.Close();
+}
+
+
+TEST_CASE( "Extract waveform data sintel (all channels)", "[libopenshot][audiowaveformer]" )
+{
+    // Create a reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+    FFmpegReader r(path.str());
+
+    // Create AudioWaveformer and extract a smaller "average" sample set of audio data
+    AudioWaveformer waveformer(&r);
+    AudioWaveformData waveform = waveformer.ExtractSamples(-1, 20, false);
+
+    CHECK(waveform.rms_samples.size() == 1058);
+    CHECK(waveform.rms_samples[0] == Approx(0.00001f).margin(0.00001));
+    CHECK(waveform.rms_samples[1037] == Approx(0.00003f).margin(0.00001));
+    CHECK(waveform.rms_samples[1038] == Approx(0.0f).margin(0.00001));
+
+    waveform.clear();
 
     // Clean up
     r.Close();
@@ -95,14 +114,14 @@ TEST_CASE( "Normalize & scale waveform data piano.wav", "[libopenshot][audiowave
     AudioWaveformer waveformer(&r);
     for (auto channel = 0; channel < r.info.channels; channel++) {
         // Normalize values and scale them between -1 and +1
-        std::vector<float> waveform = waveformer.ExtractSamples(channel, 20, true);
+        AudioWaveformData waveform = waveformer.ExtractSamples(channel, 20, true);
 
         if (channel == 0) {
-            CHECK(waveform.size() == 107);
-            CHECK(waveform[0] == Approx(0.113821134).margin(0.00001));
-            CHECK(waveform[35] == Approx(-1.0f).margin(0.00001));
-            CHECK(waveform[86] == Approx(-0.200542003f).margin(0.00001));
-            CHECK(waveform[87] == Approx(0.0f).margin(0.00001));
+            CHECK(waveform.rms_samples.size() == 107);
+            CHECK(waveform.rms_samples[0] == Approx(0.07524f).margin(0.00001));
+            CHECK(waveform.rms_samples[35] == Approx(0.20063f).margin(0.00001));
+            CHECK(waveform.rms_samples[86] == Approx(0.2094f).margin(0.00001));
+            CHECK(waveform.rms_samples[87] == Approx(0.0f).margin(0.00001));
         }
 
         waveform.clear();
