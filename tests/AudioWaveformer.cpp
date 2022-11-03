@@ -130,3 +130,75 @@ TEST_CASE( "Normalize & scale waveform data piano.wav", "[libopenshot][audiowave
     // Clean up
     r.Close();
 }
+
+TEST_CASE( "Extract waveform from image (no audio)", "[libopenshot][audiowaveformer]" )
+{
+    // Create a reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "front.png";
+    FFmpegReader r(path.str());
+
+    // Create AudioWaveformer and extract a smaller "average" sample set of audio data
+    AudioWaveformer waveformer(&r);
+    AudioWaveformData waveform = waveformer.ExtractSamples(-1, 20, false);
+
+    CHECK(waveform.rms_samples.size() == 0);
+    CHECK(waveform.max_samples.size() == 0);
+
+    // Clean up
+    r.Close();
+}
+
+TEST_CASE( "AudioWaveformData struct methods", "[libopenshot][audiowaveformer]" )
+{
+    // Create a reader
+    AudioWaveformData waveform;
+
+    // Resize data to 10 elements
+    waveform.resize(10);
+    CHECK(waveform.rms_samples.size() == 10);
+    CHECK(waveform.max_samples.size() == 10);
+
+    // Set all values = 1.0
+    for (auto s = 0; s < waveform.rms_samples.size(); s++) {
+        waveform.rms_samples[s] = 1.0;
+        waveform.max_samples[s] = 1.0;
+    }
+    CHECK(waveform.rms_samples[0] == Approx(1.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Approx(1.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Approx(1.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Approx(1.0f).margin(0.00001));
+
+    // Scale all values by 2
+    waveform.scale(10, 2.0);
+    CHECK(waveform.rms_samples.size() == 10);
+    CHECK(waveform.max_samples.size() == 10);
+    CHECK(waveform.rms_samples[0] == Approx(2.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Approx(2.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Approx(2.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Approx(2.0f).margin(0.00001));
+
+    // Zero out all values
+    waveform.zero(10);
+    CHECK(waveform.rms_samples.size() == 10);
+    CHECK(waveform.max_samples.size() == 10);
+    CHECK(waveform.rms_samples[0] == Approx(0.0f).margin(0.00001));
+    CHECK(waveform.rms_samples[9] == Approx(0.0f).margin(0.00001));
+    CHECK(waveform.max_samples[0] == Approx(0.0f).margin(0.00001));
+    CHECK(waveform.max_samples[9] == Approx(0.0f).margin(0.00001));
+
+    // Access vectors and verify size
+    std::vector<std::vector<float>> vectors = waveform.vectors();
+    CHECK(vectors.size() == 2);
+    CHECK(vectors[0].size() == 10);
+    CHECK(vectors[0].size() == 10);
+
+    // Clear and verify internal data is empty
+    waveform.clear();
+    CHECK(waveform.rms_samples.size() == 0);
+    CHECK(waveform.max_samples.size() == 0);
+    vectors = waveform.vectors();
+    CHECK(vectors.size() == 2);
+    CHECK(vectors[0].size() == 0);
+    CHECK(vectors[0].size() == 0);
+}

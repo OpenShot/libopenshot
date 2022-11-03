@@ -39,10 +39,8 @@ namespace openshot {
 
         /// Zero out # of values in both datasets
         void zero(int total_samples) {
-            for (auto s = 0; s < total_samples; s++) {
-                max_samples[s] = 0.0;
-                rms_samples[s] = 0.0;
-            }
+            std::fill(max_samples.begin(), max_samples.end(), 0);
+            std::fill(rms_samples.begin(), rms_samples.end(), 0);
         }
 
         /// Scale # of values by some factor

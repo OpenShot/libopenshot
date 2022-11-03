@@ -47,9 +47,19 @@ AudioWaveformData AudioWaveformer::ExtractSamples(int channel, int num_per_secon
         int total_samples = num_per_second * (reader->info.duration + 1.0);
         int extracted_index = 0;
 
+        // Force output to zero elements for non-audio readers
+        if (!reader->info.has_audio) {
+            total_samples = 0;
+        }
+
         // Resize and clear audio buffers
         data.resize(total_samples);
         data.zero(total_samples);
+
+        // Bail out, if no samples needed
+        if (total_samples == 0 || reader->info.channels == 0) {
+            return data;
+        }
 
         // Loop through all frames
         int sample_index = 0;
