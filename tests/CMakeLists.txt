@@ -20,6 +20,7 @@ file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/examples/" TEST_MEDIA_PATH)
 ###  TEST SOURCE FILES
 ###
 set(OPENSHOT_TESTS
+  AudioWaveformer
   CacheDisk
   CacheMemory
   Clip
