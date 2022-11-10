@@ -1114,97 +1114,112 @@ bool FFmpegReader::GetAVFrame() {
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
             ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "send_packet_err", send_packet_err);
             if (send_packet_err == AVERROR(EAGAIN)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EAGAIN) user must read output with avcodec_receive_frame()");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EAGAIN): user must read output with avcodec_receive_frame()");
             }
             if (send_packet_err == AVERROR(EINVAL)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EINVAL) codec not opened, it is an encoder, or requires flush");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EINVAL): codec not opened, it is an encoder, or requires flush");
             }
             if (send_packet_err == AVERROR(ENOMEM)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERRORAVERROR(ENOMEM) failed to add packet to internal queue, or similar other errors: legitimate decoding errors");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(ENOMEM): failed to add packet to internal queue, or legitimate decoding errors");
             }
 		}
-		if (send_packet_err != AVERROR_EOF) {
-		    // Always try and receive a packet, if not EOF.
-		    // Even if the above avcodec_send_packet failed to send,
-		    // we might still need to receive a packet.
-			int receive_frame_err = 0;
-			AVFrame *next_frame2;
-	#if USE_HW_ACCEL
-			if (hw_de_on && hw_de_supported) {
-				next_frame2 = AV_ALLOCATE_FRAME();
-			}
-			else
+
+        // Always try and receive a packet, if not EOF.
+        // Even if the above avcodec_send_packet failed to send,
+        // we might still need to receive a packet.
+        int receive_frame_err = 0;
+        AVFrame *next_frame2;
+#if USE_HW_ACCEL
+        if (hw_de_on && hw_de_supported) {
+            next_frame2 = AV_ALLOCATE_FRAME();
+        }
+        else
+#endif // USE_HW_ACCEL
+        {
+            next_frame2 = next_frame;
+        }
+        pFrame = AV_ALLOCATE_FRAME();
+        while (receive_frame_err >= 0) {
+            receive_frame_err = avcodec_receive_frame(pCodecCtx, next_frame2);
+
+            if (receive_frame_err != 0) {
+                ZmqLogger::Instance()->AppendDebugMethod(
+                        "FFmpegReader::GetAVFrame (frame not ready yet from decoder)", "receive_frame_err", receive_frame_err);
+
+                if (receive_frame_err == AVERROR_EOF) {
+                    ZmqLogger::Instance()->AppendDebugMethod(
+                            "FFmpegReader::GetAVFrame (AVERROR_EOF: EOF detected from decoder, flushing buffers)");
+                    avcodec_flush_buffers(pCodecCtx);
+                    packet_status.video_eof = true;
+                }
+                if (receive_frame_err == AVERROR(EINVAL)) {
+                    ZmqLogger::Instance()->AppendDebugMethod(
+                            "FFmpegReader::GetAVFrame (AVERROR(EINVAL): invalid frame received, flushing buffers)");
+                    avcodec_flush_buffers(pCodecCtx);
+                }
+                if (receive_frame_err == AVERROR(EAGAIN)) {
+                    ZmqLogger::Instance()->AppendDebugMethod(
+                            "FFmpegReader::GetAVFrame (AVERROR(EAGAIN): output is not available in this state - user must try to send new input)");
+                }
+                if (receive_frame_err == AVERROR_INPUT_CHANGED) {
+                    ZmqLogger::Instance()->AppendDebugMethod(
+                            "FFmpegReader::GetAVFrame (AVERROR_INPUT_CHANGED: current decoded frame has changed parameters with respect to first decoded frame)");
+                }
+
+                // Break out of decoding loop
+                // Nothing ready for decoding yet
+                break;
+            }
+
+#if USE_HW_ACCEL
+            if (hw_de_on && hw_de_supported) {
+                int err;
+                if (next_frame2->format == hw_de_av_pix_fmt) {
+                    next_frame->format = AV_PIX_FMT_YUV420P;
+                    if ((err = av_hwframe_transfer_data(next_frame,next_frame2,0)) < 0) {
+                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)");
+                    }
+                    if ((err = av_frame_copy_props(next_frame,next_frame2)) < 0) {
+                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to copy props to output frame)");
+                    }
+                }
+            }
+            else
+#endif // USE_HW_ACCEL
+            {	// No hardware acceleration used -> no copy from GPU memory needed
+                next_frame = next_frame2;
+            }
+
+            // TODO also handle possible further frames
+            // Use only the first frame like avcodec_decode_video2
+            frameFinished = 1;
+            packet_status.video_decoded++;
+
+            av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
+            av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
+                                        (AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
+
+            // Get display PTS from video frame, often different than packet->pts.
+            // Sending packets to the decoder (i.e. packet->pts) is async,
+            // and retrieving packets from the decoder (frame->pts) is async. In most decoders
+            // sending and retrieving are separated by multiple calls to this method.
+            if (next_frame->pts != AV_NOPTS_VALUE) {
+                // This is the current decoded frame (and should be the pts used) for
+                // processing this data
+                video_pts = next_frame->pts;
+            } else if (next_frame->pkt_dts != AV_NOPTS_VALUE) {
+                // Some videos only set this timestamp (fallback)
+                video_pts = next_frame->pkt_dts;
+            }
+
+            // break out of loop after each successful image returned
+            break;
+        }
+#if USE_HW_ACCEL
+        if (hw_de_on && hw_de_supported) {
+            AV_FREE_FRAME(&next_frame2);
+        }
 	#endif // USE_HW_ACCEL
-			{
-				next_frame2 = next_frame;
-			}
-			pFrame = AV_ALLOCATE_FRAME();
-			while (receive_frame_err >= 0) {
-				receive_frame_err = avcodec_receive_frame(pCodecCtx, next_frame2);
-
-				if (receive_frame_err == AVERROR_EOF) {
-					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (EOF detected from decoder)");
-					packet_status.video_eof = true;
-				}
-				if (receive_frame_err == AVERROR(EINVAL) || receive_frame_err == AVERROR_EOF) {
-					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (invalid frame received or EOF from decoder)");
-					avcodec_flush_buffers(pCodecCtx);
-				}
-				if (receive_frame_err != 0) {
-					ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (frame not ready yet from decoder)");
-					break;
-				}
-
-	#if USE_HW_ACCEL
-				if (hw_de_on && hw_de_supported) {
-					int err;
-					if (next_frame2->format == hw_de_av_pix_fmt) {
-						next_frame->format = AV_PIX_FMT_YUV420P;
-						if ((err = av_hwframe_transfer_data(next_frame,next_frame2,0)) < 0) {
-							ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)");
-						}
-						if ((err = av_frame_copy_props(next_frame,next_frame2)) < 0) {
-							ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to copy props to output frame)");
-						}
-					}
-				}
-				else
-	#endif // USE_HW_ACCEL
-				{	// No hardware acceleration used -> no copy from GPU memory needed
-					next_frame = next_frame2;
-				}
-
-				// TODO also handle possible further frames
-				// Use only the first frame like avcodec_decode_video2
-				frameFinished = 1;
-				packet_status.video_decoded++;
-
-				av_image_alloc(pFrame->data, pFrame->linesize, info.width, info.height, (AVPixelFormat)(pStream->codecpar->format), 1);
-				av_image_copy(pFrame->data, pFrame->linesize, (const uint8_t**)next_frame->data, next_frame->linesize,
-											(AVPixelFormat)(pStream->codecpar->format), info.width, info.height);
-
-				// Get display PTS from video frame, often different than packet->pts.
-				// Sending packets to the decoder (i.e. packet->pts) is async,
-				// and retrieving packets from the decoder (frame->pts) is async. In most decoders
-				// sending and retrieving are separated by multiple calls to this method.
-				if (next_frame->pts != AV_NOPTS_VALUE) {
-					// This is the current decoded frame (and should be the pts used) for
-					// processing this data
-					video_pts = next_frame->pts;
-				} else if (next_frame->pkt_dts != AV_NOPTS_VALUE) {
-					// Some videos only set this timestamp (fallback)
-					video_pts = next_frame->pkt_dts;
-				}
-
-				// break out of loop after each successful image returned
-				break;
-			}
-	#if USE_HW_ACCEL
-			if (hw_de_on && hw_de_supported) {
-				AV_FREE_FRAME(&next_frame2);
-			}
-	#endif // USE_HW_ACCEL
-		}
 #else
 		avcodec_decode_video2(pCodecCtx, next_frame, &frameFinished, packet);
 
