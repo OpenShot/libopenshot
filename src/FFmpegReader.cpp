@@ -1112,8 +1112,16 @@ bool FFmpegReader::GetAVFrame() {
 		hw_de_av_device_type = hw_de_av_device_type_global;
 	#endif // USE_HW_ACCEL
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)",
-											"send_packet_err", send_packet_err);
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "send_packet_err", send_packet_err);
+            if (send_packet_err == AVERROR(EAGAIN)) {
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EAGAIN) user must read output with avcodec_receive_frame()");
+            }
+            if (send_packet_err == AVERROR(EINVAL)) {
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EINVAL) codec not opened, it is an encoder, or requires flush");
+            }
+            if (send_packet_err == AVERROR(ENOMEM)) {
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERRORAVERROR(ENOMEM) failed to add packet to internal queue, or similar other errors: legitimate decoding errors");
+            }
 		}
 		else {
 			int receive_frame_err = 0;
