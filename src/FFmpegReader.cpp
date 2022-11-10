@@ -213,6 +213,7 @@ void FFmpegReader::Open() {
 		pFormatCtx = NULL;
 		{
 			hw_de_on = (openshot::Settings::Instance()->HARDWARE_DECODER == 0 ? 0 : 1);
+            ZmqLogger::Instance()->AppendDebugMethod("Decode hardware acceleration settings", "hw_de_on", hw_de_on, "HARDWARE_DECODER", openshot::Settings::Instance()->HARDWARE_DECODER);
 		}
 
 		// Open video file
@@ -1177,10 +1178,10 @@ bool FFmpegReader::GetAVFrame() {
                 if (next_frame2->format == hw_de_av_pix_fmt) {
                     next_frame->format = AV_PIX_FMT_YUV420P;
                     if ((err = av_hwframe_transfer_data(next_frame,next_frame2,0)) < 0) {
-                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)");
+                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to transfer data to output frame)", "hw_de_on", hw_de_on);
                     }
                     if ((err = av_frame_copy_props(next_frame,next_frame2)) < 0) {
-                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to copy props to output frame)");
+                        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Failed to copy props to output frame)", "hw_de_on", hw_de_on);
                     }
                 }
             }
