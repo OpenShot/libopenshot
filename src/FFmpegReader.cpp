@@ -1123,7 +1123,10 @@ bool FFmpegReader::GetAVFrame() {
                 ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERRORAVERROR(ENOMEM) failed to add packet to internal queue, or similar other errors: legitimate decoding errors");
             }
 		}
-		else {
+		if (send_packet_err != AVERROR_EOF) {
+		    // Always try and receive a packet, if not EOF.
+		    // Even if the above avcodec_send_packet failed to send,
+		    // we might still need to receive a packet.
 			int receive_frame_err = 0;
 			AVFrame *next_frame2;
 	#if USE_HW_ACCEL
