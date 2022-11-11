@@ -9,62 +9,6 @@ stages:
 variables:
   GIT_LOG_FORMAT: "- %h %ad %s [%aN]"
 
-linux-builder:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build/install-x64/*
-  script:
-    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=linux-builder"
-    - if [ ! -f artifacts.zip ]; then
-    -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=linux-builder"
-    - fi
-    - unzip artifacts.zip
-    - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
-    - mkdir -p build; cd build;
-    - cmake -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -D"PYTHON_MODULE_PATH=python" -D"RUBY_MODULE_PATH=ruby" -DCMAKE_BUILD_TYPE:STRING=Release -DAPPIMAGE_BUILD=1 -DUSE_SYSTEM_JSONCPP=0 ../
-    - make -j 4
-    - make install
-    - make doc
-    - ~/auto-update-docs "$CI_PROJECT_DIR/build" "$CI_COMMIT_REF_NAME"
-    - PROJECT_VERSION=$(grep -E '^set\(PROJECT_VERSION_FULL "(.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d '")')
-    - PROJECT_SO=$(grep -E '^set\(PROJECT_SO_VERSION (.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d ')')
-    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID\nCI_PIPELINE_ID:$CI_PIPELINE_ID\nVERSION:$PROJECT_VERSION\nSO:$PROJECT_SO" > "install-x64/share/$CI_PROJECT_NAME.env"
-    - git log $(git describe --tags --abbrev=0 @^)..@ --oneline --pretty=format:"- %C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
-  when: always
-  except:
-  - tags
-  tags:
-    - linux-bionic
-
-mac-builder:
-  stage: build-libopenshot
-  artifacts:
-    expire_in: 6 months
-    paths:
-    - build/install-x64/*
-  script:
-    - "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/$CI_COMMIT_REF_NAME/download?job=mac-builder"
-    - if [ ! -f artifacts.zip ]; then
-    -    "curl -O -J -L --header PRIVATE-TOKEN:$ACCESS_TOKEN http://gitlab.openshot.org/OpenShot/libopenshot-audio/-/jobs/artifacts/develop/download?job=mac-builder"
-    - fi
-    - unzip artifacts.zip
-    - export LIBOPENSHOT_AUDIO_DIR=$CI_PROJECT_DIR/build/install-x64
-    - mkdir -p build; cd build;
-    - cmake -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++" -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -D"CMAKE_INSTALL_PREFIX:PATH=$CI_PROJECT_DIR/build/install-x64" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -D"CMAKE_BUILD_TYPE:STRING=Release" -D"CMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk" -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.9" -DCMAKE_PREFIX_PATH=/usr/local/qt5.15.X/qt5.15/5.15.0/clang_64/ -D"CMAKE_INSTALL_RPATH_USE_LINK_PATH=1" -D"ENABLE_RUBY=0" ../
-    - make -j 9
-    - make install
-    - PROJECT_VERSION=$(grep -E '^set\(PROJECT_VERSION_FULL "(.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d '")')
-    - PROJECT_SO=$(grep -E '^set\(PROJECT_SO_VERSION (.*)' ../CMakeLists.txt | awk '{print $2}' | tr -d ')')
-    - echo -e "CI_PROJECT_NAME:$CI_PROJECT_NAME\nCI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME\nCI_COMMIT_SHA:$CI_COMMIT_SHA\nCI_JOB_ID:$CI_JOB_ID\nCI_PIPELINE_ID:$CI_PIPELINE_ID\nVERSION:$PROJECT_VERSION\nSO:$PROJECT_SO" > "install-x64/share/$CI_PROJECT_NAME.env"
-    - git log $(git describe --tags --abbrev=0 @^)..@ --oneline --pretty=format:"- %C(auto,yellow)%h%C(auto,magenta)% %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(25,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D" --date=short > "install-x64/share/$CI_PROJECT_NAME.log"
-  when: always
-  except:
-  - tags
-  tags:
-    - mac
-
 windows-builder-x64:
   stage: build-libopenshot
   artifacts:
@@ -90,7 +34,7 @@ windows-builder-x64:
   except:
   - tags
   tags:
-    - windows
+    - windows-v2
 
 windows-builder-x86:
   stage: build-libopenshot
@@ -117,7 +61,7 @@ windows-builder-x86:
   except:
   - tags
   tags:
-    - windows
+    - windows-v2
 
 trigger-pipeline:
   stage: trigger-openshot-qt
