@@ -1107,21 +1107,27 @@ bool FFmpegReader::GetAVFrame() {
 #if IS_FFMPEG_3_2
 	int send_packet_err = avcodec_send_packet(pCodecCtx, packet);
 
+	int64_t send_packet_pts = -1;
+	if (packet) {
+        send_packet_pts = packet->pts;
+        ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet)", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
+    }
+
 	#if USE_HW_ACCEL
 		// Get the format from the variables set in get_hw_dec_format
 		hw_de_av_pix_fmt = hw_de_av_pix_fmt_global;
 		hw_de_av_device_type = hw_de_av_device_type_global;
 	#endif // USE_HW_ACCEL
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
-            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "send_packet_err", send_packet_err);
+            ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (Packet not sent)", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
             if (send_packet_err == AVERROR(EAGAIN)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EAGAIN): user must read output with avcodec_receive_frame()");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EAGAIN): user must read output with avcodec_receive_frame()", "send_packet_pts", send_packet_pts);
             }
             if (send_packet_err == AVERROR(EINVAL)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EINVAL): codec not opened, it is an encoder, or requires flush");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(EINVAL): codec not opened, it is an encoder, or requires flush", "send_packet_pts", send_packet_pts);
             }
             if (send_packet_err == AVERROR(ENOMEM)) {
-                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(ENOMEM): failed to add packet to internal queue, or legitimate decoding errors");
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (AVERROR(ENOMEM): failed to add packet to internal queue, or legitimate decoding errors", "send_packet_pts", send_packet_pts);
             }
 		}
 
@@ -1144,27 +1150,26 @@ bool FFmpegReader::GetAVFrame() {
             receive_frame_err = avcodec_receive_frame(pCodecCtx, next_frame2);
 
             if (receive_frame_err != 0) {
-                ZmqLogger::Instance()->AppendDebugMethod(
-                        "FFmpegReader::GetAVFrame (frame not ready yet from decoder)", "receive_frame_err", receive_frame_err);
+                ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (frame not ready yet from decoder)", "receive_frame_err", receive_frame_err, "send_packet_pts", send_packet_pts);
 
                 if (receive_frame_err == AVERROR_EOF) {
                     ZmqLogger::Instance()->AppendDebugMethod(
-                            "FFmpegReader::GetAVFrame (AVERROR_EOF: EOF detected from decoder, flushing buffers)");
+                            "FFmpegReader::GetAVFrame (AVERROR_EOF: EOF detected from decoder, flushing buffers)", "send_packet_pts", send_packet_pts);
                     avcodec_flush_buffers(pCodecCtx);
                     packet_status.video_eof = true;
                 }
                 if (receive_frame_err == AVERROR(EINVAL)) {
                     ZmqLogger::Instance()->AppendDebugMethod(
-                            "FFmpegReader::GetAVFrame (AVERROR(EINVAL): invalid frame received, flushing buffers)");
+                            "FFmpegReader::GetAVFrame (AVERROR(EINVAL): invalid frame received, flushing buffers)", "send_packet_pts", send_packet_pts);
                     avcodec_flush_buffers(pCodecCtx);
                 }
                 if (receive_frame_err == AVERROR(EAGAIN)) {
                     ZmqLogger::Instance()->AppendDebugMethod(
-                            "FFmpegReader::GetAVFrame (AVERROR(EAGAIN): output is not available in this state - user must try to send new input)");
+                            "FFmpegReader::GetAVFrame (AVERROR(EAGAIN): output is not available in this state - user must try to send new input)", "send_packet_pts", send_packet_pts);
                 }
                 if (receive_frame_err == AVERROR_INPUT_CHANGED) {
                     ZmqLogger::Instance()->AppendDebugMethod(
-                            "FFmpegReader::GetAVFrame (AVERROR_INPUT_CHANGED: current decoded frame has changed parameters with respect to first decoded frame)");
+                            "FFmpegReader::GetAVFrame (AVERROR_INPUT_CHANGED: current decoded frame has changed parameters with respect to first decoded frame)", "send_packet_pts", send_packet_pts);
                 }
 
                 // Break out of decoding loop
@@ -1212,6 +1217,9 @@ bool FFmpegReader::GetAVFrame() {
                 // Some videos only set this timestamp (fallback)
                 video_pts = next_frame->pkt_dts;
             }
+
+            ZmqLogger::Instance()->AppendDebugMethod(
+                    "FFmpegReader::GetAVFrame (Successful frame received)", "video_pts", video_pts, "send_packet_pts", send_packet_pts);
 
             // break out of loop after each successful image returned
             break;
