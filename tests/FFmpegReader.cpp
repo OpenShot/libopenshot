@@ -284,3 +284,24 @@ TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
 	// Compare a [0, expected.size()) substring of output to expected
 	CHECK(output.str().substr(0, expected.size()) == expected);
 }
+
+TEST_CASE( "Decode_AV1_to_PNG", "[libopenshot][ffmpegreader]" )
+{
+    // Create a reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "test_video_sync.mp4";
+    FFmpegReader r(path.str());
+    r.Open();
+
+    for (long int frame = 1; frame <= 200; frame++)
+    {
+        std::cout << "Requesting Frame: #: " << frame << std::endl;
+        std::stringstream output;
+        output << "frame-" << frame << ".png";
+        std::shared_ptr<Frame> f = r.GetFrame(frame);
+        f->Save(output.str(), 1.0, "PNG");
+    }
+
+    // Close reader
+    r.Close();
+}
