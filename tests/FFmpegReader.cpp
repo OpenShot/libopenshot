@@ -287,60 +287,60 @@ TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegreader]" )
 
 TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 {
-    // Create a reader
-    std::stringstream path;
-    path << TEST_MEDIA_PATH << "test_video_sync.mp4";
-    FFmpegReader r(path.str());
-    r.Open();
+	// Create a reader
+	std::stringstream path;
+	path << TEST_MEDIA_PATH << "test_video_sync.mp4";
+	FFmpegReader r(path.str());
+	r.Open();
 
-    std::shared_ptr<Frame> f = r.GetFrame(1);
+	std::shared_ptr<Frame> f = r.GetFrame(1);
 
-    // Get the image data
-    const unsigned char* pixels = f->GetPixels(10);
-    int pixel_index = 112 * 4;
+	// Get the image data
+	const unsigned char* pixels = f->GetPixels(10);
+	int pixel_index = 112 * 4;
 
-    // Check image properties on scanline 10, pixel 112
-    CHECK((int)pixels[pixel_index] == Approx(0).margin(5));
-    CHECK((int)pixels[pixel_index + 1] == Approx(0).margin(5));
-    CHECK((int)pixels[pixel_index + 2] == Approx(0).margin(5));
-    CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	// Check image properties on scanline 10, pixel 112
+	CHECK((int)pixels[pixel_index] == Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(0).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
-    f = r.GetFrame(90);
+	f = r.GetFrame(90);
 
-    // Get the image data
-    pixels = f->GetPixels(820);
-    pixel_index = 930 * 4;
+	// Get the image data
+	pixels = f->GetPixels(820);
+	pixel_index = 930 * 4;
 
-    // Check image properties on scanline 820, pixel 930
-    CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	// Check image properties on scanline 820, pixel 930
+	CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
-    f = r.GetFrame(160);
+	f = r.GetFrame(160);
 
-    // Get the image data
-    pixels = f->GetPixels(420);
-    pixel_index = 930 * 4;
+	// Get the image data
+	pixels = f->GetPixels(420);
+	pixel_index = 930 * 4;
 
-    // Check image properties on scanline 820, pixel 930
-    CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	// Check image properties on scanline 820, pixel 930
+	CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
-    f = r.GetFrame(240);
+	f = r.GetFrame(240);
 
-    // Get the image data
-    pixels = f->GetPixels(624);
-    pixel_index = 930 * 4;
+	// Get the image data
+	pixels = f->GetPixels(624);
+	pixel_index = 930 * 4;
 
-    // Check image properties on scanline 820, pixel 930
-    CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
-    CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
+	// Check image properties on scanline 820, pixel 930
+	CHECK((int)pixels[pixel_index] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 1] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 2] == Approx(255).margin(5));
+	CHECK((int)pixels[pixel_index + 3] == Approx(255).margin(5));
 
-    // Close reader
-    r.Close();
+	// Close reader
+	r.Close();
 }
