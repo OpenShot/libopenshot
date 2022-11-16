@@ -345,6 +345,8 @@ TEST_CASE( "Decoding AV1 Video", "[libopenshot][ffmpegreader]" )
 		// Close reader
 		r.Close();
 
+	} catch (const InvalidCodec & e) {
+		// Ignore older FFmpeg versions which don't support AV1
 	} catch (const InvalidFile & e) {
 		// Ignore older FFmpeg versions which don't support AV1
 	}
