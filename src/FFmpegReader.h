@@ -153,7 +153,7 @@ namespace openshot {
 
 		int64_t audio_pts;
 		int64_t video_pts;
-		bool resend_packet;
+		bool hold_packet;
 		double pts_offset_seconds;
 		double audio_pts_seconds;
 		double video_pts_seconds;

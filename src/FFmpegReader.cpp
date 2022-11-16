@@ -75,7 +75,7 @@ FFmpegReader::FFmpegReader(const std::string &path, bool inspect_reader)
 		  current_video_frame(0), packet(NULL), max_concurrent_frames(OPEN_MP_NUM_PROCESSORS), audio_pts(0),
 		  video_pts(0), pFormatCtx(NULL), videoStream(-1), audioStream(-1), pCodecCtx(NULL), aCodecCtx(NULL),
 		  pStream(NULL), aStream(NULL), pFrame(NULL), previous_packet_location{-1,0},
-		  resend_packet(false) {
+		  hold_packet(false) {
 
 	// Initialize FFMpeg, and register all formats and codecs
 	AV_REGISTER_ALL
@@ -648,7 +648,7 @@ void FFmpegReader::Close() {
 
 		// Reset some variables
 		last_frame = 0;
-		resend_packet = false;
+		hold_packet = false;
 		largest_frame_processed = 0;
 		seek_audio_frame_found = 0;
 		seek_video_frame_found = 0;
@@ -955,7 +955,7 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 			break;
 		}
 
-		if (!resend_packet || !packet) {
+		if (!hold_packet || !packet) {
 			// Get the next packet
 			packet_error = GetNextPacket();
 			if (packet_error < 0 && !packet) {
@@ -1111,15 +1111,13 @@ bool FFmpegReader::GetAVFrame() {
 #if IS_FFMPEG_3_2
 	int send_packet_err = 0;
 	int64_t send_packet_pts = 0;
-	if ((packet && packet->stream_index == videoStream && !resend_packet) || !packet) {
+	if ((packet && packet->stream_index == videoStream && !hold_packet) || !packet) {
 		send_packet_err = avcodec_send_packet(pCodecCtx, packet);
 
 		if (packet && send_packet_err >= 0) {
 			send_packet_pts = GetPacketPTS();
-			resend_packet = false;
-			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet succeeded)",
-													 "send_packet_err", send_packet_err, "send_packet_pts",
-													 send_packet_pts);
+			hold_packet = false;
+			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet succeeded)", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
 		}
 	}
 
@@ -1131,7 +1129,7 @@ bool FFmpegReader::GetAVFrame() {
 		if (send_packet_err < 0 && send_packet_err != AVERROR_EOF) {
 			ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet: Not sent [" + av_err2string(send_packet_err) + "])", "send_packet_err", send_packet_err, "send_packet_pts", send_packet_pts);
 			if (send_packet_err == AVERROR(EAGAIN)) {
-				resend_packet = true;
+				hold_packet = true;
 				ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::GetAVFrame (send packet: AVERROR(EAGAIN): user must read output with avcodec_receive_frame()", "send_packet_pts", send_packet_pts);
 			}
 			if (send_packet_err == AVERROR(EINVAL)) {
@@ -1790,7 +1788,7 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 	video_pts_seconds = NO_PTS_OFFSET;
 	audio_pts = 0.0;
 	audio_pts_seconds = NO_PTS_OFFSET;
-	resend_packet = false;
+	hold_packet = false;
 	last_frame = 0;
 	current_video_frame = 0;
 	largest_frame_processed = 0;
