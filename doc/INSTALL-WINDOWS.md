@@ -193,6 +193,7 @@ pacman -Syu
 ```
 pacman -S --needed base-devel mingw-w64-x86_64-toolchain
 pacman -S mingw64/mingw-w64-x86_64-ffmpeg
+pacman -S mingw64/mingw-w64-x86_64-qt5
 pacman -S mingw64/mingw-w64-x86_64-python3-pyqt5
 pacman -S mingw64/mingw-w64-x86_64-swig
 pacman -S mingw64/mingw-w64-x86_64-cmake
@@ -202,6 +203,11 @@ pacman -S mingw32/mingw-w64-i686-zeromq
 pacman -S mingw64/mingw-w64-x86_64-python3-pyzmq
 pacman -S mingw64/mingw-w64-x86_64-python3-cx_Freeze
 pacman -S mingw64/mingw-w64-x86_64-ninja
+pacman -S mingw64/mingw-w64-x86_64-catch
+pacman -S mingw-w64-x86_64-python3-pyopengl
+pacman -S mingw-w64-clang-x86_64-python-pyopengl-accelerate
+pacman -S mingw-w64-x86_64-python-pyopengl-accelerate
+pacman -S mingw-w64-x86_64-python-pywin32
 pacman -S git
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
@@ -213,6 +219,7 @@ pacman -S mingw64/mingw-w64-x86_64-imagemagick
 ```
 pacman -S --needed base-devel mingw32/mingw-w64-i686-toolchain
 pacman -S mingw32/mingw-w64-i686-ffmpeg
+pacman -S mingw32/mingw-w64-i686-qt5
 pacman -S mingw32/mingw-w64-i686-python3-pyqt5
 pacman -S mingw32/mingw-w64-i686-swig
 pacman -S mingw32/mingw-w64-i686-cmake
@@ -222,6 +229,10 @@ pacman -S mingw32/mingw-w64-i686-zeromq
 pacman -S mingw32/mingw-w64-i686-python3-pyzmq
 pacman -S mingw32/mingw-w64-i686-python3-cx_Freeze
 pacman -S mingw32/mingw-w64-i686-ninja
+pacman -S mingw32/mingw-w64-i686-catch
+pacman -S mingw-w64-i686-python-pyopengl
+pacman -S mingw-w64-i686-python-pyopengl-accelerate
+pacman -S mingw-w64-i686-python-pywin32
 pacman -S git
 
 # Install ImageMagick if needed (OPTIONAL and NOT NEEDED)
@@ -237,6 +248,8 @@ pip3 install tinys3
 pip3 install github3.py
 pip3 install requests
 pip3 install meson
+pip3 install PyOpenGL
+pip3 install PyOpenGL-accelerate
 ```  
 
 7) Download Unittest++ (https://github.com/unittest-cpp/unittest-cpp) into /MSYS2/[USER]/unittest-cpp-master/
@@ -251,12 +264,50 @@ mingw32-make install
 ``` 
 git clone https://gitlab.gnome.org/GNOME/babl.git
 cd babl
-meson build --prefix=C:/msys64/mingw32
+meson build --prefix=C:/msys64/mingw64    (or `--prefix=C:/msys64/mingw32` for a 32 bit build)
 cd build
 meson install
 ```
 
-9) ZMQ++ Header (This might not be needed anymore)
+9) Install opencv (used for AI and computer vision effects)
+
+Note: Had to edit 1 header file and add a missing typedef: `typedef unsigned int uint;`
+
+``` 
+git clone https://github.com/opencv/opencv
+cd opencv/
+git checkout '4.3.0'
+cd ..
+git clone https://github.com/opencv/opencv_contrib
+cd opencv_contrib/
+git checkout '4.3.0'
+cd ..
+cd opencv
+mkdir build
+cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D WITH_TBB=OFF -D WITH_QT=ON -D WITH_OPENGL=ON -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -D OPENCV_GENERATE_PKGCONFIG=ON -D BUILD_opencv_python2=OFF -D BUILD_opencv_python3=ON -G "MSYS Makefiles" .. 
+make -j4 -i    (-i ignores errors on MSYS2 which happens for some reason)
+make install -i
+```
+
+10) Install ReSVG (SVG rasterizing)
+
+``` 
+git clone https://github.com/RazrFalcon/resvg
+cd resvg/c-api
+QT_DIR="C:\\msys64\\mingw64\\" cargo build --verbose --release
+  **OR**
+QT_DIR="C:\\msys64\\mingw32\\" cargo build --verbose --release
+
+cd ../
+
+# copy all required files into the system directories
+cp target/release/resvg.dll /usr/lib/
+mkdir -p /usr/include/resvg/
+cp c-api/*.h /usr/include/resvg/
+```
+
+11) ZMQ++ Header (This might not be needed anymore)
   NOTE: Download and copy zmq.hpp into the /c/msys64/mingw64/include/ folder
 
 ## Manual Dependencies
