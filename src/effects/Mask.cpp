@@ -110,8 +110,8 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 		// Get the average luminosity
 		int gray_value = qGray(R, G, B);
 
-        // Adjust the brightness
-        gray_value += (255 * brightness_value);
+		// Adjust the brightness
+		gray_value += (255 * brightness_value);
 
 		// Adjust the contrast
 		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
