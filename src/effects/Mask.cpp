@@ -114,7 +114,7 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 		gray_value += (255 * brightness_value);
 
 		// Adjust the contrast
-		float factor = (20 / (20 - contrast_value));
+		float factor = (20 / std::fmax(0.00001, 20.0 - contrast_value));
 		gray_value = (factor * (gray_value - 128) + 128);
 
 		// Calculate the % change in alpha
