@@ -24,7 +24,7 @@ using namespace openshot;
 int main(int argc, char* argv[]) {
 
     // FFmpeg Reader performance test
-    FFmpegReader r9("/home/jonathan/Downloads/pts-test-files/broken-files/lady-talking-1.mp4");
+    FFmpegReader r9("/home/jonathan/Downloads/project-29/f5b6c409-1ecc-49cd-8660-478acf152dce.webm");
     r9.Open();
     for (long int frame = 1; frame <= r9.info.video_length; frame++)
     {

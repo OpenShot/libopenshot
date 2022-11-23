@@ -1773,6 +1773,10 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 		requested_frame = 1;
 	if (requested_frame > info.video_length)
 		requested_frame = info.video_length;
+	if (requested_frame > largest_frame_processed && packet_status.end_of_file) {
+	    // Not possible to search past largest_frame once EOF is reached (no more packets)
+	    return;
+	}
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek",
