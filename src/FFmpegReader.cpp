@@ -1057,13 +1057,26 @@ std::shared_ptr<Frame> FFmpegReader::ReadStream(int64_t requested_frame) {
 
 		// Check if largest frame is still cached
 		frame = final_cache.GetFrame(largest_frame_processed);
+		int samples_in_frame = Frame::GetSamplesPerFrame(requested_frame, info.fps,
+														 info.sample_rate, info.channels);
 		if (frame) {
-			// return the largest processed frame (assuming it was the last in the video file)
+			// Copy and return the largest processed frame (assuming it was the last in the video file)
+			std::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
+
+			// Use solid color (if no image data found)
+			if (!frame->has_image_data) {
+				// Use solid black frame if no image data available
+				f->AddColor(info.width, info.height, "#000");
+			}
+			// Silence audio data (if any), since we are repeating the last frame
+			frame->AddAudioSilence(samples_in_frame);
+
 			return frame;
 		} else {
 			// The largest processed frame is no longer in cache, return a blank frame
 			std::shared_ptr<Frame> f = CreateFrame(largest_frame_processed);
 			f->AddColor(info.width, info.height, "#000");
+			f->AddAudioSilence(samples_in_frame);
 			return f;
 		}
 	}
@@ -1773,6 +1786,10 @@ void FFmpegReader::Seek(int64_t requested_frame) {
 		requested_frame = 1;
 	if (requested_frame > info.video_length)
 		requested_frame = info.video_length;
+	if (requested_frame > largest_frame_processed && packet_status.end_of_file) {
+		// Not possible to search past largest_frame once EOF is reached (no more packets)
+		return;
+	}
 
 	// Debug output
 	ZmqLogger::Instance()->AppendDebugMethod("FFmpegReader::Seek",
