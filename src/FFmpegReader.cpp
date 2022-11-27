@@ -426,8 +426,12 @@ void FFmpegReader::Open() {
 				}
 
 				// Open video codec
-				if (avcodec_open2(pCodecCtx, pCodec, &opts) < 0)
-					throw InvalidCodec("A video codec was found, but could not be opened.", path);
+				int avcodec_return = avcodec_open2(pCodecCtx, pCodec, &opts);
+				if (avcodec_return < 0) {
+					std::stringstream avcodec_error_msg;
+					avcodec_error_msg << "A video codec was found, but could not be opened. Error: " << av_err2string(avcodec_return);
+					throw InvalidCodec(avcodec_error_msg.str(), path);
+				}
 
 #if USE_HW_ACCEL
 				if (hw_de_on && hw_de_supported) {
@@ -569,13 +573,13 @@ void FFmpegReader::Open() {
 			CheckFPS();
 		}
 
+		// Mark as "open"
+		is_open = true;
+
 		// Seek back to beginning of file (if not already seeking)
 		if (!is_seeking) {
 			Seek(1);
 		}
-
-		// Mark as "open"
-		is_open = true;
 	}
 }
 
