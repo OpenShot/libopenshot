@@ -573,8 +573,8 @@ void FFmpegReader::Open() {
 			CheckFPS();
 		}
 
-        // Mark as "open"
-        is_open = true;
+		// Mark as "open"
+		is_open = true;
 
 		// Seek back to beginning of file (if not already seeking)
 		if (!is_seeking) {
