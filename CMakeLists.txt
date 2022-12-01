@@ -24,8 +24,8 @@ For more information, please visit <http://www.openshot.org/>.
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 ################ PROJECT VERSION ####################
-set(PROJECT_VERSION_FULL "0.2.8-dev")
-set(PROJECT_SO_VERSION 22)
+set(PROJECT_VERSION_FULL "0.3.0")
+set(PROJECT_SO_VERSION 23)
 
 # Remove the dash and anything following, to get the #.#.# version for project()
 STRING(REGEX REPLACE "\-.*$" "" VERSION_NUM "${PROJECT_VERSION_FULL}")
