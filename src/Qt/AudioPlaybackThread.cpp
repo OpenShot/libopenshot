@@ -20,6 +20,7 @@
 #include "../AudioDevices.h"
 #include "../Settings.h"
 
+#include <mutex>
 #include <thread>    // for std::this_thread::sleep_for
 #include <chrono>    // for std::chrono::milliseconds
 
@@ -39,6 +40,10 @@ namespace openshot
 	// Create or Get an instance of the device manager singleton (with custom sample rate & channels)
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance(int rate, int channels)
 	{
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        std::cout << "-> AudioDeviceManagerSingleton:: start" << std::endl;
 		if (!m_pInstance) {
 		    std::cout << "-> AudioDeviceManagerSingleton:: A" << std::endl;
 			// Create the actual instance of device manager only once
@@ -69,10 +74,12 @@ namespace openshot
 				}
 			}
 
-            std::cout << "-> AudioDeviceManagerSingleton:: D" << std::endl;
+            std::cout << "-> AudioDeviceManagerSingleton:: D: selected_type: " << selected_type.toStdString() << std::endl;
 
-			if (!selected_type.isEmpty())
-				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
+			if (!selected_type.isEmpty()) {
+                std::cout << "-> AudioDeviceManagerSingleton:: D.1: selected_type: " << selected_type.toStdString() << std::endl;
+                m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
+            }
 
             std::cout << "-> AudioDeviceManagerSingleton:: E" << std::endl;
 
@@ -82,10 +89,13 @@ namespace openshot
             deviceSetup.inputChannels = 0;
             deviceSetup.outputChannels = channels;
 
-            std::cout << "-> AudioDeviceManagerSingleton:: F" << std::endl;
+            std::cout << "-> AudioDeviceManagerSingleton:: F: rate: " << rate << ", channels: " << channels << std::endl;
 
             // Detect default sample rate (of default device)
             m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
+
+            std::cout << "-> AudioDeviceManagerSingleton:: F.1" << std::endl;
+
             m_pInstance->defaultSampleRate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
 
             std::cout << "-> AudioDeviceManagerSingleton:: G" << std::endl;
@@ -112,7 +122,7 @@ namespace openshot
             std::cout << "-> AudioDeviceManagerSingleton:: I" << std::endl;
 		}
 
-        std::cout << "-> AudioDeviceManagerSingleton:: J" << std::endl;
+        std::cout << "-> AudioDeviceManagerSingleton:: end" << std::endl;
 		return m_pInstance;
 	}
 
