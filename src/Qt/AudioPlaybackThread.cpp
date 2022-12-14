@@ -40,15 +40,20 @@ namespace openshot
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance(int rate, int channels)
 	{
 		if (!m_pInstance) {
+		    std::cout << "-> AudioDeviceManagerSingleton:: A" << std::endl;
 			// Create the actual instance of device manager only once
 			m_pInstance = new AudioDeviceManagerSingleton;
 			auto* mgr = &m_pInstance->audioDeviceManager;
+
+            std::cout << "-> AudioDeviceManagerSingleton:: B" << std::endl;
 
 			// Get preferred audio device name and type (if any)
 			auto selected_device = juce::String(
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME);
 			auto selected_type = juce::String(
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE);
+
+            std::cout << "-> AudioDeviceManagerSingleton:: C" << std::endl;
 
 			if (selected_type.isEmpty() && !selected_device.isEmpty()) {
 				// Look up type for the selected device
@@ -64,8 +69,12 @@ namespace openshot
 				}
 			}
 
+            std::cout << "-> AudioDeviceManagerSingleton:: D" << std::endl;
+
 			if (!selected_type.isEmpty())
 				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
+
+            std::cout << "-> AudioDeviceManagerSingleton:: E" << std::endl;
 
 			// Settings for audio device playback
             AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
@@ -73,9 +82,13 @@ namespace openshot
             deviceSetup.inputChannels = 0;
             deviceSetup.outputChannels = channels;
 
+            std::cout << "-> AudioDeviceManagerSingleton:: F" << std::endl;
+
             // Detect default sample rate (of default device)
             m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
             m_pInstance->defaultSampleRate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
+
+            std::cout << "-> AudioDeviceManagerSingleton:: G" << std::endl;
 
             // Initialize audio device with specific sample rate
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
@@ -87,14 +100,19 @@ namespace openshot
                 &deviceSetup // sample_rate & channels
 			);
 
+            std::cout << "-> AudioDeviceManagerSingleton:: H" << std::endl;
+
 			// Persist any errors detected
 			if (audio_error.isNotEmpty()) {
 				m_pInstance->initialise_error = audio_error.toStdString();
 			} else {
 				m_pInstance->initialise_error = "";
 			}
+
+            std::cout << "-> AudioDeviceManagerSingleton:: I" << std::endl;
 		}
 
+        std::cout << "-> AudioDeviceManagerSingleton:: J" << std::endl;
 		return m_pInstance;
 	}
 
@@ -178,18 +196,28 @@ namespace openshot
 	// Start audio thread
     void AudioPlaybackThread::run()
     {
+        std::cout << "-> AudioPlaybackThread::run() A" << std::endl;
     	while (!threadShouldExit())
     	{
+            std::cout << "-> AudioPlaybackThread::run() B" << std::endl;
     		if (source && !transport.isPlaying() && is_playing) {
+                std::cout << "-> AudioPlaybackThread::run() C" << std::endl;
 
     			// Start new audio device (or get existing one)
                 AudioDeviceManagerSingleton *audioInstance = AudioDeviceManagerSingleton::Instance(sampleRate,
                                                                                                    numChannels);
+
+                std::cout << "-> AudioPlaybackThread::run() D" << std::endl;
+
                 // Add callback
                 audioInstance->audioDeviceManager.addAudioCallback(&player);
 
+                std::cout << "-> AudioPlaybackThread::run() E" << std::endl;
+
     			// Create TimeSliceThread for audio buffering
 				time_thread.startThread();
+
+                std::cout << "-> AudioPlaybackThread::run() F" << std::endl;
 
     			// Connect source to transport
     			transport.setSource(
@@ -201,12 +229,18 @@ namespace openshot
     			transport.setPosition(0);
     			transport.setGain(1.0);
 
+                std::cout << "-> AudioPlaybackThread::run() G" << std::endl;
+
     			// Connect transport to mixer and player
     			mixer.addInputSource(&transport, false);
     			player.setSource(&mixer);
 
+                std::cout << "-> AudioPlaybackThread::run() H" << std::endl;
+
     			// Start the transport
     			transport.start();
+
+                std::cout << "-> AudioPlaybackThread::run() I" << std::endl;
 
     			while (!threadShouldExit() && transport.isPlaying() && is_playing)
 					std::this_thread::sleep_for(std::chrono::milliseconds(2));
