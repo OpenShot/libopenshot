@@ -96,9 +96,16 @@ namespace openshot
 
             std::cout << "-> AudioDeviceManagerSingleton:: F.1" << std::endl;
 
-            m_pInstance->defaultSampleRate = m_pInstance->audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate();
+            // Set current sample rate (from audio device)
+            double currentSampleRate = 44100;
+            AudioIODevice* currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
+            if (currentDevice) {
+                std::cout << "-> AudioDeviceManagerSingleton:: F.2" << std::endl;
+                currentSampleRate = currentDevice->getCurrentSampleRate();
+            }
+            m_pInstance->defaultSampleRate = currentSampleRate;
 
-            std::cout << "-> AudioDeviceManagerSingleton:: G" << std::endl;
+            std::cout << "-> AudioDeviceManagerSingleton:: G, currentSampleRate: " << currentSampleRate << std::endl;
 
             // Initialize audio device with specific sample rate
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
