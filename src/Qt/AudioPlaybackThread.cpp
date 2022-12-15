@@ -54,6 +54,9 @@ namespace openshot
 			auto selected_type = juce::String(
 				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE);
 
+			std::cout << "selected_device (before): " << selected_device.toStdString() << std::endl;
+            std::cout << "selected_type (before): " << selected_type.toStdString() << std::endl;
+
 			if (selected_type.isEmpty() && !selected_device.isEmpty()) {
 				// Look up type for the selected device
 				for (const auto t : mgr->getAvailableDeviceTypes()) {
@@ -68,7 +71,11 @@ namespace openshot
 				}
 			}
 
+            std::cout << "selected_device (after): " << selected_device.toStdString() << std::endl;
+            std::cout << "selected_type (after): " << selected_type.toStdString() << std::endl;
+
 			if (!selected_type.isEmpty()) {
+                std::cout << "setCurrentAudioDeviceType: " << selected_type.toStdString() << std::endl;
 				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
 			}
 
@@ -94,7 +101,7 @@ namespace openshot
 				// Update the audio device setup for the current sample rate
 				m_pInstance->defaultSampleRate = attempt_rate;
 				deviceSetup.sampleRate = attempt_rate;
-				m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, false);
+				m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, true);
 
 				// Open the audio device with specific sample rate (if possible)
 				// Not all sample rates are supported by audio devices
@@ -121,6 +128,10 @@ namespace openshot
 				if (currentDevice && currentDevice->getCurrentSampleRate() == attempt_rate) {
 					std::cout << "SUCCESS: rate: " << currentDevice->getCurrentSampleRate() << std::endl;
 					break;
+				} else if (currentDevice) {
+                    std::cout << "FAILED: rate does not match: " << currentDevice->getCurrentSampleRate() << std::endl;
+				} else {
+                    std::cout << "FAILED: no device found" << std::endl;
 				}
 			}
 		}
