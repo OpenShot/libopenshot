@@ -21,8 +21,8 @@
 #include "../Settings.h"
 
 #include <mutex>
-#include <thread>    // for std::this_thread::sleep_for
-#include <chrono>    // for std::chrono::milliseconds
+#include <thread>	// for std::this_thread::sleep_for
+#include <chrono>	// for std::chrono::milliseconds
 
 using namespace juce;
 
@@ -31,17 +31,17 @@ namespace openshot
 	// Global reference to device manager
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::m_pInstance = NULL;
 
-    // Create or Get audio device singleton with default settings (44100, 2)
-    AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
-    {
-        return AudioDeviceManagerSingleton::Instance(44100, 2);
-    }
+	// Create or Get audio device singleton with default settings (44100, 2)
+	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance()
+	{
+		return AudioDeviceManagerSingleton::Instance(44100, 2);
+	}
 
 	// Create or Get an instance of the device manager singleton (with custom sample rate & channels)
 	AudioDeviceManagerSingleton *AudioDeviceManagerSingleton::Instance(int rate, int channels)
 	{
-        static std::mutex mutex;
-        std::lock_guard<std::mutex> lock(mutex);
+		static std::mutex mutex;
+		std::lock_guard<std::mutex> lock(mutex);
 
 		if (!m_pInstance) {
 			// Create the actual instance of device manager only once
@@ -69,34 +69,34 @@ namespace openshot
 			}
 
 			if (!selected_type.isEmpty()) {
-                m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
-            }
+				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
+			}
 
 			// Settings for audio device playback
-            AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
-            deviceSetup.sampleRate = rate;
-            deviceSetup.inputChannels = 0;
-            deviceSetup.outputChannels = channels;
+			AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
+			deviceSetup.sampleRate = rate;
+			deviceSetup.inputChannels = 0;
+			deviceSetup.outputChannels = channels;
 
-            // Detect default sample rate (of default device)
-            m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
+			// Detect default sample rate (of default device)
+			m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
 
-            // Set current sample rate (from audio device)
-            double currentSampleRate = 44100;
-            AudioIODevice* currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
-            if (currentDevice) {
-                currentSampleRate = currentDevice->getCurrentSampleRate();
-            }
-            m_pInstance->defaultSampleRate = currentSampleRate;
+			// Set current sample rate (from audio device)
+			double currentSampleRate = 44100;
+			AudioIODevice* currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
+			if (currentDevice) {
+				currentSampleRate = currentDevice->getCurrentSampleRate();
+			}
+			m_pInstance->defaultSampleRate = currentSampleRate;
 
-            // Initialize audio device with specific sample rate
+			// Initialize audio device with specific sample rate
 			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
-				0,       // number of input channels
-                channels,       // number of output channels
+				0,	   // number of input channels
+				channels,	   // number of output channels
 				nullptr, // no XML settings..
-				true,    // select default device on failure
+				true,	// select default device on failure
 				selected_device, // preferredDefaultDeviceName
-                &deviceSetup // sample_rate & channels
+				&deviceSetup // sample_rate & channels
 			);
 
 			// Persist any errors detected
@@ -109,37 +109,37 @@ namespace openshot
 		return m_pInstance;
 	}
 
-    // Close audio device
-    void AudioDeviceManagerSingleton::CloseAudioDevice()
-    {
-        // Close Audio Device
-        audioDeviceManager.closeAudioDevice();
-        audioDeviceManager.removeAllChangeListeners();
-        audioDeviceManager.dispatchPendingMessages();
-    }
+	// Close audio device
+	void AudioDeviceManagerSingleton::CloseAudioDevice()
+	{
+		// Close Audio Device
+		audioDeviceManager.closeAudioDevice();
+		audioDeviceManager.removeAllChangeListeners();
+		audioDeviceManager.dispatchPendingMessages();
+	}
 
-    // Constructor
-    AudioPlaybackThread::AudioPlaybackThread(openshot::VideoCacheThread* cache)
+	// Constructor
+	AudioPlaybackThread::AudioPlaybackThread(openshot::VideoCacheThread* cache)
 	: juce::Thread("audio-playback")
 	, player()
 	, transport()
 	, mixer()
 	, source(NULL)
 	, sampleRate(0.0)
-    , numChannels(0)
-    , is_playing(false)
+	, numChannels(0)
+	, is_playing(false)
 	, time_thread("audio-buffer")
 	, videoCache(cache)
-    {
+	{
 	}
 
-    // Destructor
-    AudioPlaybackThread::~AudioPlaybackThread()
-    {
-    }
+	// Destructor
+	AudioPlaybackThread::~AudioPlaybackThread()
+	{
+	}
 
-    // Set the reader object
-    void AudioPlaybackThread::Reader(openshot::ReaderBase *reader) {
+	// Set the reader object
+	void AudioPlaybackThread::Reader(openshot::ReaderBase *reader) {
 		if (source)
 			source->Reader(reader);
 		else {
@@ -159,19 +159,19 @@ namespace openshot
 		Play();
 	}
 
-    // Get the current frame object (which is filling the buffer)
-    std::shared_ptr<openshot::Frame> AudioPlaybackThread::getFrame()
-    {
+	// Get the current frame object (which is filling the buffer)
+	std::shared_ptr<openshot::Frame> AudioPlaybackThread::getFrame()
+	{
 	if (source) return source->getFrame();
 		return std::shared_ptr<openshot::Frame>();
-    }
+	}
 
 	// Seek the audio thread
 	void AudioPlaybackThread::Seek(int64_t new_position)
 	{
-        if (source) {
-            source->Seek(new_position);
-        }
+		if (source) {
+			source->Seek(new_position);
+		}
 	}
 
 	// Play the audio
@@ -187,38 +187,38 @@ namespace openshot
 	}
 
 	// Start audio thread
-    void AudioPlaybackThread::run()
-    {
-    	while (!threadShouldExit())
-    	{
-    		if (source && !transport.isPlaying() && is_playing) {
-    			// Start new audio device (or get existing one)
-                AudioDeviceManagerSingleton *audioInstance = AudioDeviceManagerSingleton::Instance(sampleRate,
+	void AudioPlaybackThread::run()
+	{
+		while (!threadShouldExit())
+		{
+			if (source && !transport.isPlaying() && is_playing) {
+				// Start new audio device (or get existing one)
+				AudioDeviceManagerSingleton *audioInstance = AudioDeviceManagerSingleton::Instance(sampleRate,
 
-                // Add callback
-                audioInstance->audioDeviceManager.addAudioCallback(&player);
+				// Add callback
+				audioInstance->audioDeviceManager.addAudioCallback(&player);
 
-    			// Create TimeSliceThread for audio buffering
+				// Create TimeSliceThread for audio buffering
 				time_thread.startThread();
 
-    			// Connect source to transport
-    			transport.setSource(
-    			    source,
-    			    0, // No read ahead buffer
-    			    &time_thread,
-    			    0, // Sample rate correction (none)
-                    numChannels); // max channels
-    			transport.setPosition(0);
-    			transport.setGain(1.0);
+				// Connect source to transport
+				transport.setSource(
+					source,
+					0, // No read ahead buffer
+					&time_thread,
+					0, // Sample rate correction (none)
+					numChannels); // max channels
+				transport.setPosition(0);
+				transport.setGain(1.0);
 
-    			// Connect transport to mixer and player
-    			mixer.addInputSource(&transport, false);
-    			player.setSource(&mixer);
+				// Connect transport to mixer and player
+				mixer.addInputSource(&transport, false);
+				player.setSource(&mixer);
 
-    			// Start the transport
-    			transport.start();
+				// Start the transport
+				transport.start();
 
-    			while (!threadShouldExit() && transport.isPlaying() && is_playing)
+				while (!threadShouldExit() && transport.isPlaying() && is_playing)
 					std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
 				// Stop audio and shutdown transport
@@ -229,7 +229,7 @@ namespace openshot
 				transport.setSource(NULL);
 
 				player.setSource(NULL);
-                audioInstance->audioDeviceManager.removeAudioCallback(&player);
+				audioInstance->audioDeviceManager.removeAudioCallback(&player);
 
 				// Remove source
 				delete source;
@@ -237,8 +237,8 @@ namespace openshot
 
 				// Stop time slice thread
 				time_thread.stopThread(-1);
-    		}
-    	}
+			}
+		}
 
-    }
+	}
 }
