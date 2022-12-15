@@ -193,7 +193,8 @@ namespace openshot
 		{
 			if (source && !transport.isPlaying() && is_playing) {
 				// Start new audio device (or get existing one)
-				AudioDeviceManagerSingleton *audioInstance = AudioDeviceManagerSingleton::Instance(sampleRate,
+				AudioDeviceManagerSingleton *audioInstance = 
+						AudioDeviceManagerSingleton::Instance(sampleRate, numChannels);
 
 				// Add callback
 				audioInstance->audioDeviceManager.addAudioCallback(&player);
