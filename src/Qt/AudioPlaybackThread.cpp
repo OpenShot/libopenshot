@@ -74,36 +74,50 @@ namespace openshot
 
 			// Settings for audio device playback
 			AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
-			deviceSetup.sampleRate = rate;
 			deviceSetup.inputChannels = 0;
 			deviceSetup.outputChannels = channels;
 
-			// Detect default sample rate (of default device)
-			m_pInstance->audioDeviceManager.initialiseWithDefaultDevices (0, 2);
+			// Loop through common sample rates, starting with the user's requested rate
+			// Not all sample rates are supported by audio devices, for example, many VMs
+			// do not support 48000 causing no audio device to be found.
+			int possible_rates[] = { rate, 48000, 44100, 22050 };
+			for(int attempt_rate : possible_rates) {
+				// Resets everything to a default device setup
+				m_pInstance->audioDeviceManager.initialiseWithDefaultDevices(0, channels);
 
-			// Set current sample rate (from audio device)
-			double currentSampleRate = 44100;
-			AudioIODevice* currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
-			if (currentDevice) {
-				currentSampleRate = currentDevice->getCurrentSampleRate();
-			}
-			m_pInstance->defaultSampleRate = currentSampleRate;
+				// Update the audio device setup for the current sample rate
+				m_pInstance->defaultSampleRate = attempt_rate;
+				deviceSetup.sampleRate = attempt_rate;
+				m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, false);
 
-			// Initialize audio device with specific sample rate
-			juce::String audio_error = m_pInstance->audioDeviceManager.initialise (
-				0,	   // number of input channels
-				channels,	   // number of output channels
-				nullptr, // no XML settings..
-				true,	// select default device on failure
-				selected_device, // preferredDefaultDeviceName
-				&deviceSetup // sample_rate & channels
-			);
+				std::cout << "testing rate: " << attempt_rate << std::endl;
 
-			// Persist any errors detected
-			if (audio_error.isNotEmpty()) {
-				m_pInstance->initialise_error = audio_error.toStdString();
-			} else {
-				m_pInstance->initialise_error = "";
+				// Open the audio device with specific sample rate (if possible)
+				// Not all sample rates are supported by audio devices
+				juce::String audio_error = m_pInstance->audioDeviceManager.initialise(
+						0,	   // number of input channels
+						channels,	   // number of output channels
+						nullptr, // no XML settings..
+						true,	// select default device on failure
+						selected_device, // preferredDefaultDeviceName
+						&deviceSetup // sample_rate & channels
+				);
+
+				// Persist any errors detected
+				if (audio_error.isNotEmpty()) {
+					std::cout << "audio_error: " << audio_error.toStdString() << std::endl;
+					m_pInstance->initialise_error = audio_error.toStdString();
+				} else {
+					m_pInstance->initialise_error = "";
+				}
+
+				// Determine if audio device was opened successfully, and matches the attempted sample rate
+				// If all rates fail to match, a default audio device and sample rate will be opened if possible
+				AudioIODevice *currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
+				if (currentDevice && currentDevice->getCurrentSampleRate() == attempt_rate) {
+					std::cout << "SUCCESS: rate: " << currentDevice->getCurrentSampleRate() << std::endl;
+					break;
+				}
 			}
 		}
 		return m_pInstance;
