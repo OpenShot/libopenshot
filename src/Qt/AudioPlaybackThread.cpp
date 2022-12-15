@@ -77,11 +77,17 @@ namespace openshot
 			deviceSetup.inputChannels = 0;
 			deviceSetup.outputChannels = channels;
 
+			int initial_rate = rate;
+			std::cout << "INITIAL RATE: " << initial_rate << std::endl;
+
 			// Loop through common sample rates, starting with the user's requested rate
 			// Not all sample rates are supported by audio devices, for example, many VMs
 			// do not support 48000 causing no audio device to be found.
-			int possible_rates[] = { rate, 48000, 44100, 22050 };
+
+			int possible_rates[] { initial_rate, 48000, 44100, 22050 };
 			for(int attempt_rate : possible_rates) {
+				std::cout << "testing rate: " << attempt_rate << std::endl;
+
 				// Resets everything to a default device setup
 				m_pInstance->audioDeviceManager.initialiseWithDefaultDevices(0, channels);
 
@@ -89,8 +95,6 @@ namespace openshot
 				m_pInstance->defaultSampleRate = attempt_rate;
 				deviceSetup.sampleRate = attempt_rate;
 				m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, false);
-
-				std::cout << "testing rate: " << attempt_rate << std::endl;
 
 				// Open the audio device with specific sample rate (if possible)
 				// Not all sample rates are supported by audio devices
@@ -163,6 +167,7 @@ namespace openshot
 		}
 
 		// Set local vars
+		std::cout << "AudioPlaybackThread sample rate: " << reader->info.sample_rate << std::endl;
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
