@@ -24,7 +24,7 @@ TEST_CASE( "Initialize Audio Device Manager Singleton", "[libopenshot][AudioDevi
 
     // Invalid sample rate
     AudioDeviceManagerSingleton *mng = AudioDeviceManagerSingleton::Instance(12300, 2);
-    if (mng->initialise_error.find("No Driver") == std::string::npos) {
+    if (mng->initialise_error.empty()) {
         // Ignore systems with "No Driver" returned in the audio device error
         CHECK((mng->defaultSampleRate == 48000 || mng->defaultSampleRate == 44100)); // verify common rate is returned
         mng->CloseAudioDevice();
