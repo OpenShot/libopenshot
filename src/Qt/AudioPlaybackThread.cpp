@@ -78,7 +78,6 @@ namespace openshot
 
 			// Loop through all device combinations (starting with the requested one)
 			for (auto attempt_device : devices) {
-				std::cout << "attempt_device: type: " << attempt_device.type << ", name: " << attempt_device.name << std::endl;
 				m_pInstance->currentAudioDevice = attempt_device;
 
 				// Resets everything to a default device setup
@@ -99,8 +98,6 @@ namespace openshot
 				// do not support 48000 causing no audio device to be found.
 				int possible_rates[] { rate, 48000, 44100, 22050 };
 				for(int attempt_rate : possible_rates) {
-					std::cout << "  testing rate: " << attempt_rate << std::endl;
-
 					// Update the audio device setup for the current sample rate
 					m_pInstance->defaultSampleRate = attempt_rate;
 					deviceSetup.sampleRate = attempt_rate;
@@ -118,7 +115,6 @@ namespace openshot
 					);
 
 					// Persist any errors detected
-					std::cout << "  errors: " << audio_error.toStdString() << std::endl;
 					m_pInstance->initialise_error = audio_error.toStdString();
 
 					// Determine if audio device was opened successfully, and matches the attempted sample rate
@@ -126,12 +122,7 @@ namespace openshot
 					foundAudioIODevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
 					if (foundAudioIODevice && foundAudioIODevice->getCurrentSampleRate() == attempt_rate) {
 						// Successfully tested a sample rate
-						std::cout << "	SUCCESS: rate: " << foundAudioIODevice->getCurrentSampleRate() << std::endl;
 						break;
-					} else if (foundAudioIODevice) {
-						std::cout << "	FAILED: rate does not match: " << foundAudioIODevice->getCurrentSampleRate() << std::endl;
-					} else {
-						std::cout << "	FAILED: no device found" << std::endl;
 					}
 				}
 
@@ -188,7 +179,6 @@ namespace openshot
 		}
 
 		// Set local vars
-		std::cout << "AudioPlaybackThread sample rate: " << reader->info.sample_rate << std::endl;
 		sampleRate = reader->info.sample_rate;
 		numChannels = reader->info.channels;
 
