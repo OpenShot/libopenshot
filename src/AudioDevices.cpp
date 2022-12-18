@@ -13,8 +13,6 @@
 
 #include "AudioDevices.h"
 
-#include <OpenShotAudio.h>
-
 using namespace openshot;
 
 using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
@@ -31,7 +29,7 @@ AudioDeviceList AudioDevices::getNames() {
     auto &types = manager->getAvailableDeviceTypes();
     for (auto* t : types) {
         t->scanForDevices();
-	const auto names = t->getDeviceNames();
+        const auto names = t->getDeviceNames();
         for (const auto& name : names) {
             m_devices.emplace_back(
                 name.toStdString(), t->getTypeName().toStdString());

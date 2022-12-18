@@ -47,93 +47,100 @@ namespace openshot
 			// Create the actual instance of device manager only once
 			m_pInstance = new AudioDeviceManagerSingleton;
 			auto* mgr = &m_pInstance->audioDeviceManager;
+			AudioIODevice *foundAudioIODevice = NULL;
 
-			// Get preferred audio device name and type (if any)
-			auto selected_device = juce::String(
-				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME);
-			auto selected_type = juce::String(
-				Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE);
+			// Get preferred audio device type and name (if any - these can be blank)
+			openshot::AudioDeviceInfo requested_device = {Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE,
+														  Settings::Instance()->PLAYBACK_AUDIO_DEVICE_NAME};
 
-			std::cout << "selected_device (before): " << selected_device.toStdString() << std::endl;
-            std::cout << "selected_type (before): " << selected_type.toStdString() << std::endl;
-
-			if (selected_type.isEmpty() && !selected_device.isEmpty()) {
-				// Look up type for the selected device
+			// Find missing device type (if needed)
+			if (requested_device.type.isEmpty() && !requested_device.name.isEmpty()) {
 				for (const auto t : mgr->getAvailableDeviceTypes()) {
+					t->scanForDevices();
 					for (const auto n : t->getDeviceNames()) {
-						if (selected_device.trim().equalsIgnoreCase(n.trim())) {
-							selected_type = t->getTypeName();
+						if (requested_device.name.trim().equalsIgnoreCase(n.trim())) {
+							requested_device.type = t->getTypeName();
 							break;
 						}
 					}
-					if(!selected_type.isEmpty())
-						break;
 				}
 			}
 
-            std::cout << "selected_device (after): " << selected_device.toStdString() << std::endl;
-            std::cout << "selected_type (after): " << selected_type.toStdString() << std::endl;
-
-			if (!selected_type.isEmpty()) {
-                std::cout << "setCurrentAudioDeviceType: " << selected_type.toStdString() << std::endl;
-				m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(selected_type, true);
+			// Populate all possible device types and device names (starting with the user's requested settings)
+			std::vector<openshot::AudioDeviceInfo> devices{ { requested_device } };
+			for (const auto t : mgr->getAvailableDeviceTypes()) {
+				t->scanForDevices();
+				for (const auto n : t->getDeviceNames()) {
+					AudioDeviceInfo device = { t->getTypeName(), n.trim() };
+					devices.push_back(device);
+				}
 			}
 
-			// Settings for audio device playback
-			AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
-			deviceSetup.inputChannels = 0;
-			deviceSetup.outputChannels = channels;
-
-			int initial_rate = rate;
-			std::cout << "INITIAL RATE: " << initial_rate << std::endl;
-
-			// Loop through common sample rates, starting with the user's requested rate
-			// Not all sample rates are supported by audio devices, for example, many VMs
-			// do not support 48000 causing no audio device to be found.
-
-			int possible_rates[] { initial_rate, 48000, 44100, 22050 };
-			for(int attempt_rate : possible_rates) {
-				std::cout << "testing rate: " << attempt_rate << std::endl;
+			// Loop through all device combinations (starting with the requested one)
+			for (auto attempt_device : devices) {
+				std::cout << "attempt_device: type: " << attempt_device.type << ", name: " << attempt_device.name << std::endl;
+				m_pInstance->currentAudioDevice = attempt_device;
 
 				// Resets everything to a default device setup
 				m_pInstance->audioDeviceManager.initialiseWithDefaultDevices(0, channels);
 
-				// Update the audio device setup for the current sample rate
-				m_pInstance->defaultSampleRate = attempt_rate;
-				deviceSetup.sampleRate = attempt_rate;
-				m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, true);
-
-				// Open the audio device with specific sample rate (if possible)
-				// Not all sample rates are supported by audio devices
-				juce::String audio_error = m_pInstance->audioDeviceManager.initialise(
-						0,	   // number of input channels
-						channels,	   // number of output channels
-						nullptr, // no XML settings..
-						true,	// select default device on failure
-						selected_device, // preferredDefaultDeviceName
-						&deviceSetup // sample_rate & channels
-				);
-
-				// Persist any errors detected
-				if (audio_error.isNotEmpty()) {
-					std::cout << "audio_error: " << audio_error.toStdString() << std::endl;
-					m_pInstance->initialise_error = audio_error.toStdString();
-				} else {
-					m_pInstance->initialise_error = "";
+				// Set device type (if any)
+				if (!attempt_device.type.isEmpty()) {
+					m_pInstance->audioDeviceManager.setCurrentAudioDeviceType(attempt_device.type, true);
 				}
 
-				// Determine if audio device was opened successfully, and matches the attempted sample rate
-				// If all rates fail to match, a default audio device and sample rate will be opened if possible
-				AudioIODevice *currentDevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
-				if (currentDevice && currentDevice->getCurrentSampleRate() == attempt_rate) {
-					std::cout << "SUCCESS: rate: " << currentDevice->getCurrentSampleRate() << std::endl;
+				// Settings for audio device playback
+				AudioDeviceManager::AudioDeviceSetup deviceSetup = AudioDeviceManager::AudioDeviceSetup();
+				deviceSetup.inputChannels = 0;
+				deviceSetup.outputChannels = channels;
+
+				// Loop through common sample rates, starting with the user's requested rate
+				// Not all sample rates are supported by audio devices, for example, many VMs
+				// do not support 48000 causing no audio device to be found.
+				int possible_rates[] { rate, 48000, 44100, 22050 };
+				for(int attempt_rate : possible_rates) {
+					std::cout << "  testing rate: " << attempt_rate << std::endl;
+
+					// Update the audio device setup for the current sample rate
+					m_pInstance->defaultSampleRate = attempt_rate;
+					deviceSetup.sampleRate = attempt_rate;
+					m_pInstance->audioDeviceManager.setAudioDeviceSetup(deviceSetup, true);
+
+					// Open the audio device with specific sample rate (if possible)
+					// Not all sample rates are supported by audio devices
+					juce::String audio_error = m_pInstance->audioDeviceManager.initialise(
+							0,		 // number of input channels
+							channels,					 // number of output channels
+							nullptr,		   // no XML settings..
+							true, // select default device on failure
+							attempt_device.name,  // preferredDefaultDeviceName
+							&deviceSetup				 // sample_rate & channels
+					);
+
+					// Persist any errors detected
+					std::cout << "  errors: " << audio_error.toStdString() << std::endl;
+					m_pInstance->initialise_error = audio_error.toStdString();
+
+					// Determine if audio device was opened successfully, and matches the attempted sample rate
+					// If all rates fail to match, a default audio device and sample rate will be opened if possible
+					foundAudioIODevice = m_pInstance->audioDeviceManager.getCurrentAudioDevice();
+					if (foundAudioIODevice && foundAudioIODevice->getCurrentSampleRate() == attempt_rate) {
+						// Successfully tested a sample rate
+						std::cout << "	SUCCESS: rate: " << foundAudioIODevice->getCurrentSampleRate() << std::endl;
+						break;
+					} else if (foundAudioIODevice) {
+						std::cout << "	FAILED: rate does not match: " << foundAudioIODevice->getCurrentSampleRate() << std::endl;
+					} else {
+						std::cout << "	FAILED: no device found" << std::endl;
+					}
+				}
+
+				if (foundAudioIODevice) {
+					// Successfully opened an audio device
 					break;
-				} else if (currentDevice) {
-                    std::cout << "FAILED: rate does not match: " << currentDevice->getCurrentSampleRate() << std::endl;
-				} else {
-                    std::cout << "FAILED: no device found" << std::endl;
 				}
 			}
+
 		}
 		return m_pInstance;
 	}
@@ -145,6 +152,9 @@ namespace openshot
 		audioDeviceManager.closeAudioDevice();
 		audioDeviceManager.removeAllChangeListeners();
 		audioDeviceManager.dispatchPendingMessages();
+
+		delete m_pInstance;
+		m_pInstance = NULL;
 	}
 
 	// Constructor
