@@ -169,6 +169,8 @@ void ZmqLogger::Close()
 	}
 }
 
+// Test commit
+
 // Append debug information
 void ZmqLogger::AppendDebugMethod(std::string method_name,
 				  std::string arg1_name, float arg1_value,
