@@ -170,7 +170,6 @@ void ZmqLogger::Close()
 
 	// Terminate zmq threads
 	if (context != NULL) {
-        context->shutdown();
         context->close();
 	}
 }
