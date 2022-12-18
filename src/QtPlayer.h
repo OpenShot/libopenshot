@@ -23,18 +23,18 @@
 
 namespace openshot
 {
-    using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
+	using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
 
-    /**
-     * @brief This class is used to playback a video from a reader.
-     *
-     */
-    class QtPlayer : public openshot::PlayerBase
-    {
+	/**
+	 * @brief This class is used to playback a video from a reader.
+	 *
+	 */
+	class QtPlayer : public openshot::PlayerBase
+	{
 	openshot::PlayerPrivate *p;
 	bool threads_started;
 
-    public:
+	public:
 	/// Default constructor
 	explicit QtPlayer();
 	explicit QtPlayer(openshot::RendererBase *rb);
@@ -48,11 +48,14 @@ namespace openshot
 	/// Get Error (if any)
 	std::string GetError();
 
-    /// Return the default audio sample rate (from the system)
-    double GetDefaultSampleRate();
+	/// Return the default audio sample rate (from the system)
+	double GetDefaultSampleRate();
 
 	/// Get Audio Devices from JUCE
 	AudioDeviceList GetAudioDeviceNames();
+
+	/// Get current audio device or last attempted
+	AudioDeviceInfo GetCurrentAudioDevice();
 
 	/// Play the video
 	void Play();
@@ -76,7 +79,7 @@ namespace openshot
 	void SetSource(const std::string &source);
 
 	/// Set the source JSON of an openshot::Timelime
-    void SetTimelineSource(const std::string &json);
+	void SetTimelineSource(const std::string &json);
 
 	/// Set the QWidget which will be used as the display (note: QLabel works well). This does not take a
 	/// normal pointer, but rather a LONG pointer id (and it re-casts the QWidget pointer inside libopenshot).
@@ -106,7 +109,7 @@ namespace openshot
 
 	/// Set the Volume (1.0 = normal volume, <1.0 = quieter, >1.0 louder)
 	void Volume(float new_volume);
-    };
+	};
 }
 
 #endif
