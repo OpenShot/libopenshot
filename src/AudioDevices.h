@@ -15,6 +15,7 @@
 
 #include <string>
 #include <vector>
+#include <OpenShotAudio.h>
 
 namespace openshot {
 /**
@@ -24,8 +25,18 @@ namespace openshot {
  */
 struct
 AudioDeviceInfo {
-	std::string name;
-	std::string type;
+	juce::String type;
+	juce::String name;
+
+	// Get the std::string device type
+	std::string get_type() {
+		return type.toStdString();
+	}
+
+	// Get the std::string device name
+	std::string get_name() {
+		return name.toStdString();
+	}
 };
 
 using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
@@ -34,7 +45,7 @@ using AudioDeviceList = std::vector<std::pair<std::string, std::string>>;
 class AudioDevices
 {
 public:
-        AudioDevices() = default;
+		AudioDevices() = default;
 
 	/// Return a vector of std::pair<> objects holding the
 	/// device name and type for each audio device detected
