@@ -12,6 +12,5 @@ Copyright: © copyright Blender Foundation | durian.blender.org
 License: CC-BY-3.0
 
 Files: thirdparty/jsoncpp/*
-Copyright: Copyright (c) 2007-2010 by Baptiste Lepilleur and
-The JsonCpp Authors
+Copyright: Copyright (c) 2007-2010 by Baptiste Lepilleur and The JsonCpp Authors
 License: CC0-1.0 or MIT
