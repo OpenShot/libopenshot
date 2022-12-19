@@ -167,6 +167,11 @@ void ZmqLogger::Close()
 		publisher->close();
 		publisher = NULL;
 	}
+
+	// Terminate zmq threads
+	if (context != NULL) {
+        context->close();
+	}
 }
 
 // Append debug information

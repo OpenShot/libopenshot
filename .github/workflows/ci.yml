@@ -12,7 +12,7 @@ jobs:
       matrix:
         sys:
           - { os: ubuntu-18.04, shell: bash }
-          - { os: ubuntu-latest, shell: bash }
+          - { os: ubuntu-20.04, shell: bash }
           - { os: windows-2022, shell: 'msys2 {0}' }
         compiler:
           - { cc: gcc, cxx: g++ }
@@ -84,7 +84,7 @@ jobs:
             libavutil-dev libswscale-dev libswresample-dev \
             libzmq3-dev libmagick++-dev libbabl-dev \
             libopencv-dev libprotobuf-dev protobuf-compiler \
-            cargo
+            cargo libomp5 libomp-dev
           # Install catch2 package from Ubuntu 20.10, since for some reason
           # even 20.04 only has Catch 1.12.1 available.
           wget https://launchpad.net/ubuntu/+archive/primary/+files/catch2_2.13.0-1_all.deb

@@ -35,6 +35,7 @@ class Frame;
 class PlayerPrivate;
 class QtPlayer;
 
+
 /**
  *  @brief Singleton wrapper for AudioDeviceManager (to prevent multiple instances).
  */
@@ -51,14 +52,17 @@ public:
 		std::string initialise_error;
 
 		/// Default sample rate (as detected)
-        double defaultSampleRate;
+		double defaultSampleRate;
+
+		/// Current open audio device (or last attempted device - if none were successful)
+		AudioDeviceInfo currentAudioDevice;
 
 		/// Override with default sample rate & channels (44100, 2) and no preferred audio device
 		static AudioDeviceManagerSingleton* Instance();
 
-        /// Override with custom sample rate & channels and no preferred audio device
-        /// sample rate and channels are only set on 1st call (when singleton is created)
-        static AudioDeviceManagerSingleton* Instance(int rate, int channels);
+		/// Override with custom sample rate & channels and no preferred audio device
+		/// sample rate and channels are only set on 1st call (when singleton is created)
+		static AudioDeviceManagerSingleton* Instance(int rate, int channels);
 
 		/// Public device manager property
 		juce::AudioDeviceManager audioDeviceManager;
@@ -67,11 +71,11 @@ public:
 		void CloseAudioDevice();
 	};
 
-    /**
-     *  @brief The audio playback thread
-     */
-    class AudioPlaybackThread : juce::Thread
-    {
+	/**
+	 *  @brief The audio playback thread
+	 */
+	class AudioPlaybackThread : juce::Thread
+	{
 		juce::AudioSourcePlayer player;
 		juce::AudioTransportSource transport;
 		juce::MixerAudioSource mixer;
@@ -81,7 +85,7 @@ public:
 		juce::WaitableEvent play;
 		bool is_playing;
 		juce::TimeSliceThread time_thread;
-        openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
+		openshot::VideoCacheThread *videoCache; /// The cache thread (for pre-roll checking)
 
 		/// Constructor
 		AudioPlaybackThread(openshot::VideoCacheThread* cache);
@@ -112,23 +116,29 @@ public:
 		/// Get Speed (The speed and direction to playback a reader (1=normal, 2=fast, 3=faster, -1=rewind, etc...)
 		int getSpeed() const { if (source) return source->getSpeed(); else return 1; }
 
-		/// Get Audio Error (if any)
+		/// Get audio initialization errors (if any)
 		std::string getError()
 		{
-		    return AudioDeviceManagerSingleton::Instance()->initialise_error;
+			return AudioDeviceManagerSingleton::Instance()->initialise_error;
 		}
 
-		/// Get detected audio sample rate (from default device)
+		/// Get detected audio sample rate (from active, open audio device)
 		double getDefaultSampleRate()
-        {
-            return AudioDeviceManagerSingleton::Instance()->defaultSampleRate;
-        }
-
-		/// Get Audio Device Names (if any)
-		std::vector<std::pair<std::string, std::string>> getAudioDeviceNames()
 		{
-                    AudioDevices devs;
-		    return devs.getNames();
+			return AudioDeviceManagerSingleton::Instance()->defaultSampleRate;
+		}
+
+		/// Get active, open audio device (or last attempted device if none were successful)
+		AudioDeviceInfo getCurrentAudioDevice()
+		{
+			return AudioDeviceManagerSingleton::Instance()->currentAudioDevice;
+		}
+
+		/// Get vector of audio device names & types
+		AudioDeviceList getAudioDeviceNames()
+		{
+			AudioDevices devs;
+			return devs.getNames();
 		};
 
 		friend class PlayerPrivate;

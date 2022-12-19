@@ -71,10 +71,15 @@ namespace openshot
         }
     }
 
-    /// Get Audio Devices from JUCE
+    /// Get vector of audio device names & types
     AudioDeviceList QtPlayer::GetAudioDeviceNames() {
         AudioDevices devs;
         return devs.getNames();
+    }
+
+    // Get current audio device or last attempted (if none succeeded)
+    AudioDeviceInfo QtPlayer::GetCurrentAudioDevice() {
+        return p->audioPlayback->getCurrentAudioDevice();
     }
 
     // Set the source JSON of an openshot::Timelime
