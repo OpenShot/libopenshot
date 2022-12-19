@@ -48,6 +48,10 @@ namespace openshot
 			m_pInstance = new AudioDeviceManagerSingleton;
 			auto* mgr = &m_pInstance->audioDeviceManager;
 			AudioIODevice *foundAudioIODevice = NULL;
+			m_pInstance->initialise_error = "";
+			m_pInstance->currentAudioDevice.name = "";
+			m_pInstance->currentAudioDevice.type = "";
+			m_pInstance->defaultSampleRate = 0.0;
 
 			// Get preferred audio device type and name (if any - these can be blank)
 			openshot::AudioDeviceInfo requested_device = {Settings::Instance()->PLAYBACK_AUDIO_DEVICE_TYPE,
