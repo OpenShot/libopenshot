@@ -123,10 +123,10 @@ std::shared_ptr<openshot::Frame> Mask::GetFrame(std::shared_ptr<openshot::Frame>
 		// Set the alpha channel to the gray value
 		if (replace_image) {
 			// Replace frame pixels with gray value (including alpha channel)
-			pixels[byte_index + 0] = gray_value;
-			pixels[byte_index + 1] = gray_value;
-			pixels[byte_index + 2] = gray_value;
-			pixels[byte_index + 3] = gray_value;
+			pixels[byte_index + 0] = constrain(255 * alpha_percent);
+			pixels[byte_index + 1] = constrain(255 * alpha_percent);
+			pixels[byte_index + 2] = constrain(255 * alpha_percent);
+			pixels[byte_index + 3] = constrain(255 * alpha_percent);
 		} else {
 			// Mulitply new alpha value with all the colors (since we are using a premultiplied
 			// alpha format)
