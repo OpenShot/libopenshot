@@ -112,10 +112,10 @@ std::shared_ptr<openshot::Frame> ColorShift::GetFrame(std::shared_ptr<openshot::
 			blue_starting_row_index = starting_row_index;
 			alpha_starting_row_index = starting_row_index;
 
-			red_pixel_offset = 0;
-			green_pixel_offset = 0;
-			blue_pixel_offset = 0;
-			alpha_pixel_offset = 0;
+			red_pixel_offset = col;
+			green_pixel_offset = col;
+			blue_pixel_offset = col;
+			alpha_pixel_offset = col;
 
 			// Get the RGBA value from each pixel (depending on offset)
 			R = temp_image[byte_index];
