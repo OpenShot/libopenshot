@@ -72,14 +72,14 @@ std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::
 	#pragma omp parallel for shared (pixels)
 	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-        // Calculate alpha % (to be used for removing pre-multiplied alpha value)
-        int A = pixels[pixel * 4 + 3];
-        float alpha_percent = A / 255.0;
+		// Calculate alpha % (to be used for removing pre-multiplied alpha value)
+		int A = pixels[pixel * 4 + 3];
+		float alpha_percent = A / 255.0;
 
-        // Get RGB values, and remove pre-multiplied alpha
-        int R = pixels[pixel * 4 + 0] / alpha_percent;
-        int G = pixels[pixel * 4 + 1] / alpha_percent;
-        int B = pixels[pixel * 4 + 2] / alpha_percent;
+		// Get RGB values, and remove pre-multiplied alpha
+		int R = pixels[pixel * 4 + 0] / alpha_percent;
+		int G = pixels[pixel * 4 + 1] / alpha_percent;
+		int B = pixels[pixel * 4 + 2] / alpha_percent;
 
 		/*
 		 * Common saturation adjustment
@@ -137,10 +137,10 @@ std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::
 		pixels[pixel * 4 + 1] = G;
 		pixels[pixel * 4 + 2] = B;
 
-        // Pre-multiply the alpha back into the color channels
-        pixels[pixel * 4 + 0] *= alpha_percent;
-        pixels[pixel * 4 + 1] *= alpha_percent;
-        pixels[pixel * 4 + 2] *= alpha_percent;
+		// Pre-multiply the alpha back into the color channels
+		pixels[pixel * 4 + 0] *= alpha_percent;
+		pixels[pixel * 4 + 1] *= alpha_percent;
+		pixels[pixel * 4 + 2] *= alpha_percent;
 	}
 
 	// return the modified frame

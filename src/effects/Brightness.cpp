@@ -63,14 +63,14 @@ std::shared_ptr<openshot::Frame> Brightness::GetFrame(std::shared_ptr<openshot::
 		// Compute contrast adjustment factor
 		float factor = (259 * (contrast_value + 255)) / (255 * (259 - contrast_value));
 
-        // Calculate alpha % (to be used for removing pre-multiplied alpha value)
-        int A = pixels[pixel * 4 + 3];
-        float alpha_percent = A / 255.0;
+		// Calculate alpha % (to be used for removing pre-multiplied alpha value)
+		int A = pixels[pixel * 4 + 3];
+		float alpha_percent = A / 255.0;
 
-        // Get RGB values, and remove pre-multiplied alpha
-        unsigned char R = pixels[pixel * 4 + 0] / alpha_percent;
-        unsigned char G = pixels[pixel * 4 + 1] / alpha_percent;
-        unsigned char B = pixels[pixel * 4 + 2] / alpha_percent;
+		// Get RGB values, and remove pre-multiplied alpha
+		unsigned char R = pixels[pixel * 4 + 0] / alpha_percent;
+		unsigned char G = pixels[pixel * 4 + 1] / alpha_percent;
+		unsigned char B = pixels[pixel * 4 + 2] / alpha_percent;
 
 		// Apply constrained contrast adjustment
 		R = constrain((factor * (R - 128)) + 128);
@@ -82,10 +82,10 @@ std::shared_ptr<openshot::Frame> Brightness::GetFrame(std::shared_ptr<openshot::
 		pixels[pixel * 4 + 1] = constrain(G + (255 * brightness_value));
 		pixels[pixel * 4 + 2] = constrain(B + (255 * brightness_value));
 
-        // Pre-multiply the alpha back into the color channels
-        pixels[pixel * 4 + 0] *= alpha_percent;
-        pixels[pixel * 4 + 1] *= alpha_percent;
-        pixels[pixel * 4 + 2] *= alpha_percent;
+		// Pre-multiply the alpha back into the color channels
+		pixels[pixel * 4 + 0] *= alpha_percent;
+		pixels[pixel * 4 + 1] *= alpha_percent;
+		pixels[pixel * 4 + 2] *= alpha_percent;
 	}
 
 	// return the modified frame
