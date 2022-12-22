@@ -69,15 +69,24 @@ std::shared_ptr<openshot::Frame> Hue::GetFrame(std::shared_ptr<openshot::Frame> 
 	#pragma omp parallel for shared (pixels)
 	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Get the RGB values from the pixel (ignore the alpha channel)
-		int R = pixels[pixel * 4];
-		int G = pixels[pixel * 4 + 1];
-		int B = pixels[pixel * 4 + 2];
+		// Calculate alpha % (to be used for removing pre-multiplied alpha value)
+		int A = pixels[pixel * 4 + 3];
+		float alpha_percent = A / 255.0;
+
+		// Get RGB values, and remove pre-multiplied alpha
+		int R = pixels[pixel * 4 + 0] / alpha_percent;
+		int G = pixels[pixel * 4 + 1] / alpha_percent;
+		int B = pixels[pixel * 4 + 2] / alpha_percent;
 
 		// Multiply each color by the hue rotation matrix
 		pixels[pixel * 4] = constrain(R * matrix[0] + G * matrix[1] + B * matrix[2]);
 		pixels[pixel * 4 + 1] = constrain(R * matrix[2] + G * matrix[0] + B * matrix[1]);
 		pixels[pixel * 4 + 2] = constrain(R * matrix[1] + G * matrix[2] + B * matrix[0]);
+
+		// Pre-multiply the alpha back into the color channels
+		pixels[pixel * 4 + 0] *= alpha_percent;
+		pixels[pixel * 4 + 1] *= alpha_percent;
+		pixels[pixel * 4 + 2] *= alpha_percent;
 	}
 
 	// return the modified frame

@@ -72,10 +72,14 @@ std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::
 	#pragma omp parallel for shared (pixels)
 	for (int pixel = 0; pixel < pixel_count; ++pixel)
 	{
-		// Get the RGB values from the pixel
-		int R = pixels[pixel * 4];
-		int G = pixels[pixel * 4 + 1];
-		int B = pixels[pixel * 4 + 2];
+		// Calculate alpha % (to be used for removing pre-multiplied alpha value)
+		int A = pixels[pixel * 4 + 3];
+		float alpha_percent = A / 255.0;
+
+		// Get RGB values, and remove pre-multiplied alpha
+		int R = pixels[pixel * 4 + 0] / alpha_percent;
+		int G = pixels[pixel * 4 + 1] / alpha_percent;
+		int B = pixels[pixel * 4 + 2] / alpha_percent;
 
 		/*
 		 * Common saturation adjustment
@@ -87,14 +91,9 @@ std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::
 						 (B * B * pB) );
 
 		// Adjust the saturation
-		R = p + (R - p) * saturation_value;
-		G = p + (G - p) * saturation_value;
-		B = p + (B - p) * saturation_value;
-
-		// Constrain the value from 0 to 255
-		R = constrain(R);
-		G = constrain(G);
-		B = constrain(B);
+		R = constrain(p + (R - p) * saturation_value);
+		G = constrain(p + (G - p) * saturation_value);
+		B = constrain(p + (B - p) * saturation_value);
 
 		/*
 		 * Color-separated saturation adjustment
@@ -134,9 +133,14 @@ std::shared_ptr<openshot::Frame> Saturation::GetFrame(std::shared_ptr<openshot::
 		B = constrain(B);
 
 		// Set all pixels to new value
-		pixels[pixel * 4]     = R;
+		pixels[pixel * 4 + 0] = R;
 		pixels[pixel * 4 + 1] = G;
 		pixels[pixel * 4 + 2] = B;
+
+		// Pre-multiply the alpha back into the color channels
+		pixels[pixel * 4 + 0] *= alpha_percent;
+		pixels[pixel * 4 + 1] *= alpha_percent;
+		pixels[pixel * 4 + 2] *= alpha_percent;
 	}
 
 	// return the modified frame
