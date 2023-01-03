@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include <iomanip>
 #include "Profiles.h"
 #include "Exceptions.h"
 
@@ -55,8 +56,9 @@ Profile::Profile(std::string path) {
 				int value_int = 0;
 
 				// update struct (based on line number)
-				if (setting == "description")
+				if (setting == "description") {
 					info.description = value;
+				}
 				else if (setting == "frame_rate_num") {
 					std::stringstream(value) >> value_int;
 					info.fps.num = value_int;
@@ -98,7 +100,7 @@ Profile::Profile(std::string path) {
 					info.pixel_format = value_int;
 				}
 			}
-            read_file = true;
+			read_file = true;
 			inputFile.close();
 		}
 
@@ -113,6 +115,78 @@ Profile::Profile(std::string path) {
 	if (!read_file)
 		// Error parsing profile file
 		throw InvalidFile("Profile could not be found or loaded (or is invalid).", path);
+}
+
+// Return a formatted FPS
+std::string Profile::formattedFPS(bool include_decimal) {
+	// Format FPS to use 2 decimals (if needed)
+	float fps = info.fps.ToFloat();
+	std::stringstream fps_string;
+	if (info.fps.den == 1) {
+		// For example: 24.0 will become 24
+		fps_string << std::fixed << std::setprecision(0) << fps;
+	} else {
+		// For example: 29.97002997 will become 29.97
+		fps_string << std::fixed << std::setprecision(2) << fps;
+		// Remove decimal place using QString (for convenience)
+		if (!include_decimal) {
+			QString fps_qstring = QString::fromStdString(fps_string.str());
+			fps_qstring.replace(".", "");
+			fps_string.str(fps_qstring.toStdString());
+		}
+	}
+	return fps_string.str();
+}
+
+// Return a unique key of this profile (1920x1080p2997_16:9)
+std::string Profile::Key() {
+	std::stringstream output;
+	std::string progressive_str = "p";
+	if (info.interlaced_frame) {
+		progressive_str = "i";
+	}
+	std::string fps_string = formattedFPS(false);
+	output << info.width << "x" << info.height << progressive_str << fps_string
+		<< "_" << info.display_ratio.num << ":" << info.display_ratio.den;
+	return output.str();
+}
+
+// Return the name of this profile (1920x1080p29.97)
+std::string Profile::ShortName() {
+	std::stringstream output;
+	std::string progressive_str = "p";
+	if (info.interlaced_frame) {
+		progressive_str = "i";
+	}
+	std::string fps_string = formattedFPS(true);
+	output << info.width << "x" << info.height << progressive_str << fps_string;
+	return output.str();
+}
+
+// Return a longer format name (1920x1080p @ 29.97 fps (16:9))
+std::string Profile::LongName() {
+	std::stringstream output;
+	std::string progressive_str = "p";
+	if (info.interlaced_frame) {
+		progressive_str = "i";
+	}
+	std::string fps_string = formattedFPS(true);
+	output << info.width << "x" << info.height << progressive_str << " @ " << fps_string
+		   << " fps (" << info.display_ratio.num << ":" << info.display_ratio.den << ")";
+	return output.str();
+}
+
+// Return a longer format name (1920x1080p @ 29.97 fps (16:9) HD 1080i 29.97 fps)
+std::string Profile::LongNameWithDesc() {
+	std::stringstream output;
+	std::string progressive_str = "p";
+	if (info.interlaced_frame) {
+		progressive_str = "i";
+	}
+	std::string fps_string = formattedFPS(true);
+	output << info.width << "x" << info.height << progressive_str << " @ " << fps_string
+		   << " fps (" << info.display_ratio.num << ":" << info.display_ratio.den << ") " << info.description;
+	return output.str();
 }
 
 // Generate JSON string of this object
