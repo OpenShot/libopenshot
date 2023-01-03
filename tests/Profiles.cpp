@@ -15,7 +15,22 @@
 
 #include "Profiles.h"
 
+TEST_CASE( "empty constructor", "[libopenshot][profile]" )
+{
+    openshot::Profile p1;
 
+    // Default values
+    CHECK(p1.info.width == 0);
+    CHECK(p1.info.height == 0);
+    CHECK(p1.info.fps.num == 0);
+    CHECK(p1.info.fps.den == 0);
+    CHECK(p1.info.display_ratio.num == 0);
+    CHECK(p1.info.display_ratio.den == 0);
+    CHECK(p1.info.pixel_ratio.num == 0);
+    CHECK(p1.info.pixel_ratio.den == 0);
+    CHECK(p1.info.interlaced_frame == false);
+
+}
 
 TEST_CASE( "constructor with example profiles", "[libopenshot][profile]" )
 {

@@ -16,6 +16,21 @@
 
 using namespace openshot;
 
+// default constructor
+Profile::Profile() {
+	// Initialize info values
+	info.description = "";
+	info.height = 0;
+	info.width = 0;
+	info.pixel_format = 0;
+	info.fps.num = 0;
+	info.fps.den = 0;
+	info.pixel_ratio.num = 0;
+	info.pixel_ratio.den = 0;
+	info.display_ratio.num = 0;
+	info.display_ratio.den = 0;
+	info.interlaced_frame = false;
+}
 
 // @brief Constructor for Profile.
 // @param path 	The folder path / location of a profile file
@@ -23,21 +38,11 @@ Profile::Profile(std::string path) {
 
 	bool read_file = false;
 
+	// Call default constructor
+	Profile();
+
 	try
 	{
-		// Initialize info values
-		info.description = "";
-		info.height = 0;
-		info.width = 0;
-		info.pixel_format = 0;
-		info.fps.num = 0;
-		info.fps.den = 0;
-		info.pixel_ratio.num = 0;
-		info.pixel_ratio.den = 0;
-		info.display_ratio.num = 0;
-		info.display_ratio.den = 0;
-		info.interlaced_frame = false;
-
 		QFile inputFile(path.c_str());
 		if (inputFile.open(QIODevice::ReadOnly))
 		{

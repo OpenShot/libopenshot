@@ -135,6 +135,9 @@ namespace openshot
 		/// Profile data stored here
 		ProfileInfo info;
 
+		/// @brief Default Constructor for Profile.
+		Profile();
+		
 		/// @brief Constructor for Profile.
 		/// @param path 	The folder path / location of a profile file
 		Profile(std::string path);
