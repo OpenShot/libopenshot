@@ -155,7 +155,7 @@ std::string Profile::Key() {
 	output << std::setfill('0') << std::setw(4) << info.height << std::setfill('\0') << progressive_str;
 	output << std::setfill('0') << std::setw(4) << fps_string << std::setfill('\0') << "_";
 	output << std::setfill('0') << std::setw(2) << info.display_ratio.num << std::setfill('\0') << ":";
-	output << std::setfill('0') << std::setw(2) << info.display_ratio.den;
+	output << std::setfill('0') << std::setw(2) << info.display_ratio.den << std::setfill('\0');
 	return output.str();
 }
 
