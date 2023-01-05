@@ -142,7 +142,7 @@ namespace openshot
 		/// @param path 	The folder path / location of a profile file
 		Profile(std::string path);
 
-		std::string Key(); ///< Return a unique key of this profile (1920x1080p2997_16:9)
+		std::string Key(); ///< Return a unique key of this profile with padding (01920x1080i2997_16:09)
 		std::string ShortName(); ///< Return the name of this profile (1920x1080p29.97)
 		std::string LongName(); ///< Return a longer format name (1920x1080p @ 29.97 fps (16:9))
 		std::string LongNameWithDesc(); ///< Return a longer format name with description (1920x1080p @ 29.97 fps (16:9) HD 1080i 29.97 fps)
