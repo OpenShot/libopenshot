@@ -41,6 +41,9 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	info.width = reader->info.width;
 	info.height = reader->info.height;
 
+    // Enable/Disable audio (based on settings)
+    info.has_audio = info.sample_rate > 0 && info.channels > 0;
+
 	// Used to toggle odd / even fields
 	field_toggle = true;
 
@@ -513,9 +516,12 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 					std::make_shared<QImage>(*even_frame->GetImage()), false);
 		}
 
+		// Determine if reader contains audio samples
+		bool reader_has_audio = frame->SampleRate() > 0 && frame->GetAudioChannelsCount() > 0;
+
 		// Resample audio on frame (if needed)
 		bool need_resampling = false;
-		if (info.has_audio &&
+		if ((info.has_audio && reader_has_audio) &&
 			(info.sample_rate != frame->SampleRate() ||
 			 info.channels != frame->GetAudioChannelsCount() ||
 			 info.channel_layout != frame->ChannelsLayout()))
@@ -784,6 +790,9 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.sample_rate = target_sample_rate;
 	info.channels = target_channels;
 	info.channel_layout = target_channel_layout;
+
+    // Enable/Disable audio (based on settings)
+    info.has_audio = info.sample_rate > 0 && info.channels > 0;
 
 	// Clear cache
 	final_cache.Clear();

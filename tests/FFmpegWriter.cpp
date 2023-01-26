@@ -20,6 +20,7 @@
 #include "FFmpegReader.h"
 #include "Fraction.h"
 #include "Frame.h"
+#include "Timeline.h"
 
 using namespace std;
 using namespace openshot;
@@ -182,4 +183,53 @@ TEST_CASE( "DisplayInfo", "[libopenshot][ffmpegwriter]" )
 
 	// Compare a [0, expected.size()) substring of output to expected
 	CHECK(output.str().substr(0, expected.size()) == expected);
+}
+
+TEST_CASE( "Gif", "[libopenshot][ffmpegwriter]" )
+{
+    // Reader
+    std::stringstream path;
+    path << TEST_MEDIA_PATH << "sintel_trailer-720p.mp4";
+
+    // Create Gif Clip
+    Clip clip_video(path.str());
+    clip_video.Layer(0);
+    clip_video.Position(0.0);
+    clip_video.Open();
+
+    // Create Timeline w/ 1 Gif Clip (with 0 sample rate, and 0 channels)
+    openshot::Timeline t(1280, 720, Fraction(30,1), 0, 0, LAYOUT_MONO);
+    t.AddClip(&clip_video);
+    t.Open();
+
+    /* WRITER ---------------- */
+    FFmpegWriter w("output1.gif");
+
+    // Set options (no audio options are set)
+    w.SetVideoOptions(true, "gif", Fraction(24,1), 1280, 720, Fraction(1,1), false, false, 15000000);
+
+    // Create streams
+    w.PrepareStreams();
+
+    // Open writer
+    w.Open();
+
+    // Write some frames
+    w.WriteFrame(&t, 1, 60);
+
+    // Close writer & reader
+    w.Close();
+    t.Close();
+
+    FFmpegReader r1("output1.gif");
+    r1.Open();
+
+    // Verify various settings on new Gif
+    CHECK(r1.GetFrame(1)->GetAudioChannelsCount() == 0);
+    CHECK(r1.GetFrame(1)->GetAudioSamplesCount() == 0);
+    CHECK(r1.info.fps.num == 24);
+    CHECK(r1.info.fps.den == 1);
+
+    // Close reader
+    r1.Close();
 }
