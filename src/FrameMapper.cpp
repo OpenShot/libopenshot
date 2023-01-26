@@ -41,8 +41,8 @@ FrameMapper::FrameMapper(ReaderBase *reader, Fraction target, PulldownType targe
 	info.width = reader->info.width;
 	info.height = reader->info.height;
 
-    // Enable/Disable audio (based on settings)
-    info.has_audio = info.sample_rate > 0 && info.channels > 0;
+	// Enable/Disable audio (based on settings)
+	info.has_audio = info.sample_rate > 0 && info.channels > 0;
 
 	// Used to toggle odd / even fields
 	field_toggle = true;
@@ -63,11 +63,11 @@ FrameMapper::~FrameMapper() {
 /// Get the current reader
 ReaderBase* FrameMapper::Reader()
 {
-    if (reader)
-        return reader;
-    else
-        // Throw error if reader not initialized
-        throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.");
+	if (reader)
+		return reader;
+	else
+		// Throw error if reader not initialized
+		throw ReaderClosed("No Reader has been initialized for FrameMapper.  Call Reader(*reader) before calling this method.");
 }
 
 void FrameMapper::AddField(int64_t frame)
@@ -87,14 +87,14 @@ void FrameMapper::AddField(Field field)
 
 // Clear both the fields & frames lists
 void FrameMapper::Clear() {
-    // Prevent async calls to the following code
-    const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
+	// Prevent async calls to the following code
+	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
-    // Clear the fields & frames lists
-    fields.clear();
-    fields.shrink_to_fit();
-    frames.clear();
-    frames.shrink_to_fit();
+	// Clear the fields & frames lists
+	fields.clear();
+	fields.shrink_to_fit();
+	frames.clear();
+	frames.shrink_to_fit();
 }
 
 // Use the original and target frame rates and a pull-down technique to create
@@ -117,14 +117,14 @@ void FrameMapper::Init()
 	Clear();
 
 	// Find parent position (if any)
-    Clip *parent = (Clip *) ParentClip();
-    if (parent) {
-        parent_position = parent->Position();
-        parent_start = parent->Start();
-    } else {
-        parent_position = 0.0;
-        parent_start = 0.0;
-    }
+	Clip *parent = (Clip *) ParentClip();
+	if (parent) {
+		parent_position = parent->Position();
+		parent_start = parent->Start();
+	} else {
+		parent_position = 0.0;
+		parent_start = 0.0;
+	}
 
 	// Mark as not dirty
 	is_dirty = false;
@@ -422,19 +422,19 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 	// Create a scoped lock, allowing only a single thread to run the following code at one time
 	const std::lock_guard<std::recursive_mutex> lock(getFrameMutex);
 
-    // Find parent properties (if any)
-    Clip *parent = (Clip *) ParentClip();
-    if (parent) {
-        float position = parent->Position();
-        float start = parent->Start();
-        if (parent_position != position || parent_start != start) {
-            // Force dirty if parent clip has moved or been trimmed
-            // since this heavily affects frame #s and audio mappings
-            is_dirty = true;
-        }
-    }
+	// Find parent properties (if any)
+	Clip *parent = (Clip *) ParentClip();
+	if (parent) {
+		float position = parent->Position();
+		float start = parent->Start();
+		if (parent_position != position || parent_start != start) {
+			// Force dirty if parent clip has moved or been trimmed
+			// since this heavily affects frame #s and audio mappings
+			is_dirty = true;
+		}
+	}
 
-    // Check if mappings are dirty (and need to be recalculated)
+	// Check if mappings are dirty (and need to be recalculated)
 	if (is_dirty)
 		Init();
 
@@ -543,7 +543,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 			copy_samples.sample_end += EXTRA_INPUT_SAMPLES;
 			int samples_per_end_frame =
 				Frame::GetSamplesPerFrame(copy_samples.frame_end, original,
-				                          reader->info.sample_rate, reader->info.channels);
+										  reader->info.sample_rate, reader->info.channels);
 			if (copy_samples.sample_end >= samples_per_end_frame)
 			{
 				// check for wrapping
@@ -559,7 +559,7 @@ std::shared_ptr<Frame> FrameMapper::GetFrame(int64_t requested_frame)
 				copy_samples.sample_start += EXTRA_INPUT_SAMPLES;
 				int samples_per_start_frame =
 					Frame::GetSamplesPerFrame(copy_samples.frame_start, original,
-					                          reader->info.sample_rate, reader->info.channels);
+											  reader->info.sample_rate, reader->info.channels);
 				if (copy_samples.sample_start >= samples_per_start_frame)
 				{
 					// check for wrapping
@@ -649,15 +649,15 @@ void FrameMapper::PrintMapping(std::ostream* out)
 	{
 		MappedFrame frame = frames[map - 1];
 		*out << "Target frame #: " << map
-		     << " mapped to original frame #:\t("
-		     << frame.Odd.Frame << " odd, "
-		     << frame.Even.Frame << " even)" << std::endl;
+			 << " mapped to original frame #:\t("
+			 << frame.Odd.Frame << " odd, "
+			 << frame.Even.Frame << " even)" << std::endl;
 
 		*out << "  - Audio samples mapped to frame "
-		     << frame.Samples.frame_start << ":"
-		     << frame.Samples.sample_start << " to frame "
-		     << frame.Samples.frame_end << ":"
-		     << frame.Samples.sample_end << endl;
+			 << frame.Samples.frame_start << ":"
+			 << frame.Samples.sample_start << " to frame "
+			 << frame.Samples.frame_end << ":"
+			 << frame.Samples.sample_end << endl;
 	}
 
 }
@@ -696,21 +696,21 @@ void FrameMapper::Close()
 		reader->Close();
 	}
 
-    // Clear the fields & frames lists
-    Clear();
+	// Clear the fields & frames lists
+	Clear();
 
-    // Mark as dirty
-    is_dirty = true;
+	// Mark as dirty
+	is_dirty = true;
 
-    // Clear cache
-    final_cache.Clear();
+	// Clear cache
+	final_cache.Clear();
 
-    // Deallocate resample buffer
-    if (avr) {
-        SWR_CLOSE(avr);
-        SWR_FREE(&avr);
-        avr = NULL;
-    }
+	// Deallocate resample buffer
+	if (avr) {
+		SWR_CLOSE(avr);
+		SWR_FREE(&avr);
+		avr = NULL;
+	}
 }
 
 
@@ -791,8 +791,8 @@ void FrameMapper::ChangeMapping(Fraction target_fps, PulldownType target_pulldow
 	info.channels = target_channels;
 	info.channel_layout = target_channel_layout;
 
-    // Enable/Disable audio (based on settings)
-    info.has_audio = info.sample_rate > 0 && info.channels > 0;
+	// Enable/Disable audio (based on settings)
+	info.has_audio = info.sample_rate > 0 && info.channels > 0;
 
 	// Clear cache
 	final_cache.Clear();
@@ -922,28 +922,28 @@ void FrameMapper::ResampleMappedAudio(std::shared_ptr<Frame> frame, int64_t orig
 
 	int nb_samples = 0;
 
-    // setup resample context
-    if (!avr) {
-        avr = SWR_ALLOC();
-        av_opt_set_int(avr, "in_channel_layout",  channel_layout_in_frame, 0);
-        av_opt_set_int(avr, "out_channel_layout", info.channel_layout,     0);
-        av_opt_set_int(avr, "in_sample_fmt",      AV_SAMPLE_FMT_S16,       0);
-        av_opt_set_int(avr, "out_sample_fmt",     AV_SAMPLE_FMT_S16,       0);
-        av_opt_set_int(avr, "in_sample_rate",     sample_rate_in_frame,    0);
-        av_opt_set_int(avr, "out_sample_rate",    info.sample_rate,        0);
-        av_opt_set_int(avr, "in_channels",        channels_in_frame,       0);
-        av_opt_set_int(avr, "out_channels",       info.channels,           0);
-        SWR_INIT(avr);
-    }
+	// setup resample context
+	if (!avr) {
+		avr = SWR_ALLOC();
+		av_opt_set_int(avr, "in_channel_layout",  channel_layout_in_frame, 0);
+		av_opt_set_int(avr, "out_channel_layout", info.channel_layout,	 0);
+		av_opt_set_int(avr, "in_sample_fmt",	  AV_SAMPLE_FMT_S16,	   0);
+		av_opt_set_int(avr, "out_sample_fmt",	 AV_SAMPLE_FMT_S16,	   0);
+		av_opt_set_int(avr, "in_sample_rate",	 sample_rate_in_frame,	0);
+		av_opt_set_int(avr, "out_sample_rate",	info.sample_rate,		0);
+		av_opt_set_int(avr, "in_channels",		channels_in_frame,	   0);
+		av_opt_set_int(avr, "out_channels",	   info.channels,		   0);
+		SWR_INIT(avr);
+	}
 
-    // Convert audio samples
-    nb_samples = SWR_CONVERT(avr,      // audio resample context
-        audio_converted->data,         // output data pointers
-        audio_converted->linesize[0],  // output plane size, in bytes. (0 if unknown)
-        audio_converted->nb_samples,   // maximum number of samples that the output buffer can hold
-        audio_frame->data,             // input data pointers
-        audio_frame->linesize[0],      // input plane size, in bytes (0 if unknown)
-        audio_frame->nb_samples);      // number of input samples to convert
+	// Convert audio samples
+	nb_samples = SWR_CONVERT(avr,	  // audio resample context
+		audio_converted->data,		 // output data pointers
+		audio_converted->linesize[0],  // output plane size, in bytes. (0 if unknown)
+		audio_converted->nb_samples,   // maximum number of samples that the output buffer can hold
+		audio_frame->data,			 // input data pointers
+		audio_frame->linesize[0],	  // input plane size, in bytes (0 if unknown)
+		audio_frame->nb_samples);	  // number of input samples to convert
 
 	// Create a new array (to hold all resampled S16 audio samples)
 	int16_t* resampled_samples = new int16_t[(nb_samples * info.channels)];
