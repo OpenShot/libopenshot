@@ -1,12 +1,12 @@
 /**
  * @file
- * @brief Unit tests for openshot::Point
+ * @brief Unit tests for openshot::Profile
  * @author Jonathan Thomas <jonathan@openshot.org>
  *
  * @ref License
  */
 
-// Copyright (c) 2008-2019 OpenShot Studios, LLC
+// Copyright (c) 2008-2023 OpenShot Studios, LLC
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
