@@ -89,8 +89,8 @@ Libraries and executables have been labeled in the list below to help distinguis
 *   <http://www.stack.nl/~dimitri/doxygen/> **(Executable)**
 *   This executable is used to auto-generate the documentation used by libopenshot.
 
-#### UnitTest++ (libunittest++)
-*   <https://github.com/unittest-cpp/> **(Library)**
+#### Catch2 (catch)
+*   <https://github.com/catchorg/Catch2/> **(Library)**
 
 *   This library is used to execute unit tests for libopenshot.
     It contains many macros used to keep our unit testing code clean and easy-to-follow.
