@@ -143,7 +143,7 @@ std::string Profile::formattedFPS(bool include_decimal) {
 	return fps_string.str();
 }
 
-// Return a unique key of this profile (01920x1080i2997_16:09)
+// Return a unique key of this profile (01920x1080i2997_16-09)
 std::string Profile::Key() {
 	std::stringstream output;
 	std::string progressive_str = "p";
@@ -154,7 +154,7 @@ std::string Profile::Key() {
 	output << std::setfill('0') << std::setw(5) << info.width << std::setfill('\0') << "x";
 	output << std::setfill('0') << std::setw(4) << info.height << std::setfill('\0') << progressive_str;
 	output << std::setfill('0') << std::setw(4) << fps_string << std::setfill('\0') << "_";
-	output << std::setfill('0') << std::setw(2) << info.display_ratio.num << std::setfill('\0') << ":";
+	output << std::setfill('0') << std::setw(2) << info.display_ratio.num << std::setfill('\0') << "-";
 	output << std::setfill('0') << std::setw(2) << info.display_ratio.den << std::setfill('\0');
 	return output.str();
 }

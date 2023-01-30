@@ -75,7 +75,7 @@ TEST_CASE( "24 fps names", "[libopenshot][profile]" )
     openshot::Profile p(path.str());
 
     // Default values
-    CHECK(p.Key() == "01280x0720p0024_16:09");
+    CHECK(p.Key() == "01280x0720p0024_16-09");
     CHECK(p.ShortName() == "1280x720p24");
     CHECK(p.LongName() == "1280x720p @ 24 fps (16:9)");
     CHECK(p.LongNameWithDesc() == "1280x720p @ 24 fps (16:9) HD 720p 24 fps");
@@ -89,7 +89,7 @@ TEST_CASE( "29.97 fps names", "[libopenshot][profile]" )
     openshot::Profile p(path.str());
 
     // Default values
-    CHECK(p.Key() == "01920x1080i2997_16:09");
+    CHECK(p.Key() == "01920x1080i2997_16-09");
     CHECK(p.ShortName() == "1920x1080i29.97");
     CHECK(p.LongName() == "1920x1080i @ 29.97 fps (16:9)");
     CHECK(p.LongNameWithDesc() == "1920x1080i @ 29.97 fps (16:9) HD 1080i 29.97 fps");
