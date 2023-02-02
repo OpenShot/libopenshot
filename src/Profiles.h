@@ -16,6 +16,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <math.h>
 #include <fstream>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -62,13 +63,89 @@ namespace openshot
 	 */
 	class Profile
 	{
+	private:
+		std::string formattedFPS(bool include_decimal); ///< Return a formatted FPS
+
+		/// Less than operator (compare profile objects)
+		/// Compare # of pixels, then FPS, then DAR
+		friend bool operator<(const Profile& l, const Profile& r)
+		{
+			double left_fps = l.info.fps.ToDouble();
+			double right_fps = r.info.fps.ToDouble();
+			double left_pixels = l.info.width * l.info.height;
+			double right_pixels = r.info.width * r.info.height;
+			double left_dar = l.info.display_ratio.ToDouble();
+			double right_dar = r.info.display_ratio.ToDouble();
+
+			if (left_pixels < right_pixels) {
+				// less pixels
+				return true;
+			} else {
+				if (left_fps < right_fps) {
+					// less FPS
+					return true;
+				} else {
+					if (left_dar < right_dar) {
+						// less DAR
+						return true;
+					} else {
+						return false;
+					}
+				}
+			}
+		}
+
+		/// Greater than operator (compare profile objects)
+		/// Compare # of pixels, then FPS, then DAR
+		friend bool operator>(const Profile& l, const Profile& r)
+		{
+			double left_fps = l.info.fps.ToDouble();
+			double right_fps = r.info.fps.ToDouble();
+			double left_pixels = l.info.width * l.info.height;
+			double right_pixels = r.info.width * r.info.height;
+			double left_dar = l.info.display_ratio.ToDouble();
+			double right_dar = r.info.display_ratio.ToDouble();
+
+			if (left_pixels > right_pixels) {
+				// less pixels
+				return true;
+			} else {
+				if (left_fps > right_fps) {
+					// less FPS
+					return true;
+				} else {
+					if (left_dar > right_dar) {
+						// less DAR
+						return true;
+					} else {
+						return false;
+					}
+				}
+			}
+		}
+
+		/// Equality operator (compare profile objects)
+		friend bool operator==(const Profile& l, const Profile& r)
+		{
+			return std::tie(l.info.width, l.info.height, l.info.fps.num, l.info.fps.den, l.info.display_ratio.num, l.info.display_ratio.den, l.info.interlaced_frame)
+				   == std::tie(r.info.width, r.info.height, r.info.fps.num, r.info.fps.den, r.info.display_ratio.num, r.info.display_ratio.den, r.info.interlaced_frame);
+		}
+
 	public:
 		/// Profile data stored here
 		ProfileInfo info;
 
+		/// @brief Default Constructor for Profile.
+		Profile();
+		
 		/// @brief Constructor for Profile.
 		/// @param path 	The folder path / location of a profile file
 		Profile(std::string path);
+
+		std::string Key(); ///< Return a unique key of this profile with padding (01920x1080i2997_16:09)
+		std::string ShortName(); ///< Return the name of this profile (1920x1080p29.97)
+		std::string LongName(); ///< Return a longer format name (1920x1080p @ 29.97 fps (16:9))
+		std::string LongNameWithDesc(); ///< Return a longer format name with description (1920x1080p @ 29.97 fps (16:9) HD 1080i 29.97 fps)
 
 		// Get and Set JSON methods
 		std::string Json() const; ///< Generate JSON string of this object

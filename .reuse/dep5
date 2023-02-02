@@ -3,7 +3,7 @@ Upstream-Name: libopenshot
 Upstream-Contact: Jonathan Thomas <jonathan@openshot.org>
 Source: https://github.com/OpenShot/libopenshot
 
-Files: examples/*.png examples/*.svg examples/*.wav examples/*.mp4 examples/*.avi doc/images/*
+Files: examples/*.png examples/*.svg examples/*.wav examples/*.mp4 examples/* doc/images/*
 Copyright: OpenShot Studios, LLC
 License: LGPL-3.0-or-later
 

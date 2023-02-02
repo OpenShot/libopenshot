@@ -35,6 +35,7 @@ set(OPENSHOT_TESTS
   FrameMapper
   KeyFrame
   Point
+  Profiles
   QtImageReader
   ReaderBase
   Settings
