@@ -75,7 +75,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx, int6
 FFmpegWriter::FFmpegWriter(const std::string& path) :
 		path(path), oc(NULL), audio_st(NULL), video_st(NULL), samples(NULL),
 		audio_outbuf(NULL), audio_outbuf_size(0), audio_input_frame_size(0), audio_input_position(0),
-		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(8), num_of_rescalers(32),
+		initial_audio_input_frame_size(0), img_convert_ctx(NULL), cache_size(1), num_of_rescalers(1),
 		rescaler_position(0), video_codec_ctx(NULL), audio_codec_ctx(NULL), is_writing(false), video_timestamp(0), audio_timestamp(0),
 		original_sample_rate(0), original_channels(0), avr(NULL), avr_planar(NULL), is_open(false), prepare_streams(false),
 		write_header(false), write_trailer(false), audio_encoder_buffer_size(0), audio_encoder_buffer(NULL) {
@@ -995,6 +995,12 @@ void FFmpegWriter::close_video(AVFormatContext *oc, AVStream *st)
 		}
 	}
 #endif // USE_HW_ACCEL
+
+	// Free any previous memory allocations
+	if (video_codec_ctx != nullptr) {
+		AV_FREE_CONTEXT(video_codec_ctx);
+		av_free(video_codec_ctx);
+	}
 }
 
 // Close the audio codec
@@ -1019,6 +1025,12 @@ void FFmpegWriter::close_audio(AVFormatContext *oc, AVStream *st)
 		SWR_CLOSE(avr_planar);
 		SWR_FREE(&avr_planar);
 		avr_planar = NULL;
+	}
+
+	// Free any previous memory allocations
+	if (audio_codec_ctx != nullptr) {
+		AV_FREE_CONTEXT(audio_codec_ctx);
+		av_free(audio_codec_ctx);
 	}
 }
 
